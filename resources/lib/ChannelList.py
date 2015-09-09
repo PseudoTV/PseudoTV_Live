@@ -1140,6 +1140,7 @@ class ChannelList:
         file = self.cleanPlayableFile(ascii(file))
         if not timestamp:
             timestamp = datetime.datetime.now()
+        timestamp = str(timestamp).split('.')[0]
         try:
             showtitle = (trim(showtitle, 350, ''))
         except Exception,e:
@@ -1155,7 +1156,7 @@ class ChannelList:
         except Exception,e:
             self.log("description Trim failed" + str(e))
             description = (description[:350])   
-        tmpstr = str(duration) + ',' + showtitle + "//" + subtitle + "//" + description + "//" + genre + "//" + str(timestamp) + "//" + LiveID + '\n' + file
+        tmpstr = str(duration) + ',' + showtitle + "//" + subtitle + "//" + description + "//" + genre + "//" + timestamp + "//" + LiveID + '\n' + file
         tmpstr = tmpstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")                  
         self.logDebug('makeTMPSTR, tmpstr = ' + str(tmpstr))
         return tmpstr
