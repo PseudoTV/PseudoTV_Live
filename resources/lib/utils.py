@@ -478,7 +478,7 @@ def GA_Request():
      * https://medium.com/python-programming-language/80eb9691d61f
     """
     try:
-        PROPERTY_ID = os.environ.get("GA_PROPERTY_ID", "UA-45979766-1")
+        PROPERTY_ID = os.environ.get("GA_PROPERTY_ID", "UA-67386980-3")
 
         if not REAL_SETTINGS.getSetting('Visitor_GA'):
             REAL_SETTINGS.setSetting('Visitor_GA', str(random.randint(0, 0x7fffffff)))
