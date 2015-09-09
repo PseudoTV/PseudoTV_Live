@@ -34,4 +34,4 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 
 
 ###Final Tasks before release candidate
-* Add Server/Client switch, allow PTVL to act as a standalone server, with client instances running from a central channel list.https://lh5.googleusercontent.com/-npenrFJTDvo/AAAAAAAAAAI/AAAAAAAAKFk/hSI-xxkw91g/s46-c-k-no/photo.jpg
+* Add Server/Client switch, allow PTVL to act as a standalone server, with client instances running from a central channel list
