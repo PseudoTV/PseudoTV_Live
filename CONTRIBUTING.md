@@ -25,7 +25,13 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 * Ondemand/APP interface
 * DVR recording/scheduling 
 * Schedule-Direct xmltv support
+* zap2it website parsing xmltv support
 * Activewindow playback support
-* Clean utils and replace redundant functions throughout code.
-* Random todo's can be found commented in code.
+* Clean utils and replace redundant functions throughout code
+* Random todo's can be found commented in code
 * Localize all strings to string.po
+* Improve channel configuration code
+
+
+###Final Tasks before release candidate
+* Add Server/Client switch, allow PTVL to act as a standalone server, with client instances running from a central channel list.https://lh5.googleusercontent.com/-npenrFJTDvo/AAAAAAAAAAI/AAAAAAAAKFk/hSI-xxkw91g/s46-c-k-no/photo.jpg
