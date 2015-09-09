@@ -14,9 +14,15 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 
 ### Beginner Tasks
 * Clean up all warnings
+* Complete help documents
 
 ###Intermediate Tasks
 * ...
 
 ###Unassigned Tasks
-* ...
+* Proper Youtube auth. and parsing
+* Ondemand/APP interface
+* DVR recording/scheduling 
+* Schedule-Direct xmltv support
+* Activewindow playback support
+* Clean utils and replace redundant functions throughout code.
