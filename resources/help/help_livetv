@@ -1,0 +1,24 @@
+[B]LiveTV uses a single stream source with matching listing data[/B]
+
+[COLOR=blue][B]Source:[/B][/COLOR] - Stream Source.
+
+[B]PVR[/B] - about setting
+[B]HDhomerun[B] - about setting
+[B]Local Video/Music[/B] - about setting
+[B]Plugin/UPNP[/B] - about setting
+[B]Kodi Favourites[/B] - about setting
+[B]Super Favourites[/B] - about setting
+[B]URL[/B] - about setting
+[B]Community/Donor List[/B] - about setting
+[B]IPTV/LiveStream/Navi-X[/B] - about setting
+
+[COLOR=blue][B]Click to browse:[/B][/COLOR] - Browse Source and select a single file or stream.
+
+[COLOR=blue][B]XMLTV Name:[/B][/COLOR] - Name of XMLTV file or Source, The list is pooled from both PTVL's files and the files found in the selected xmltv folder in settings.
+
+[COLOR=blue][B]Channel Name:[/B][/COLOR] - Name of source as it appears in the XMLTV file or Kodi's pvr backend.
+
+[COLOR=blue][B]Channel ID:[/B][/COLOR] - Automatically find matching Channel ID by Channel Name, else select manually.
+
+It's recommended you provide your own XMLTV files for dependability and performance. "ptvlguide" is a universal xmltv file that provides listing data for various PseudoTV Live friendly sources ie (ustvnow,filmon,pluto.tv,etc).
+"pvr" provides guide data from Kodi's pvr backend, zap2it and scheduledirect support coming soon.

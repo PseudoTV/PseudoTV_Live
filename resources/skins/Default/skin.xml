@@ -1,0 +1,12 @@
+<skin>
+  <defaultresolution>1080i</defaultresolution>
+  <defaultresolutionwide>1080i</defaultresolutionwide>
+  <version>2.0</version>
+  <!-- amount to zoom skin to remove overscan compensation -->
+  <zoom>0</zoom>
+  
+  <credits>
+    <skinname>PTVL</skinname>
+    <name>Lunatixz</name>
+  </credits>
+</skin>

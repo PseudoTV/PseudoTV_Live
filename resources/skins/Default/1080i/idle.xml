@@ -1,0 +1,252 @@
+﻿<window>
+    <allowoverlay>yes</allowoverlay> 
+    <onload>SetProperty(PTVL.Idle_Opened,true,10000)</onload>
+    <onunload>SetProperty(PTVL.Idle_Opened,false,10000)</onunload>
+  <coordinates>
+    <system>1</system>
+    <posx>0</posx>
+    <posy>0</posy>
+  </coordinates>
+  <animation effect="fade" time="250">WindowOpen</animation>
+  <animation effect="fade" time="250">WindowClose</animation>
+  <controls>
+    <control type="group">
+		<posx>0</posx> 
+		<posy>0</posy>  
+		<control type="image" id="100">
+			<description>background</description> 
+			<posx>0</posx> 
+			<posy>0</posy> 
+			<width>1920</width> 
+			<height>1080</height> 
+			<texture border="0">idle/header.png</texture> 
+		</control>
+		<control type="group" id="200">
+		    <posx>100</posx> 
+			<posy>100</posy> 
+			
+			<control type="image">
+				<description>background</description> 
+				<posx>-10</posx> 
+				<posy>-10</posy> 
+				<width>290</width> 
+				<height>150</height> 
+				<texture border="0">idle/base.png</texture> 
+			</control>
+			
+			<control type="group">
+				<posx>0</posx> 
+				<posy>0</posy> 
+			
+				<control type="image">
+					<posx>0</posx> 
+					<posy>0</posy> 
+					<width>129</width> 
+					<height>142</height> 
+					<texture border="0">idle/background/flip_bg.png</texture> 
+				</control>	
+			
+				<!-- 1 -->
+				<control type="image" id="2111">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="2112">
+					<posx>15</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<!-- 2 -->
+				<control type="image" id="2121">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="2122">
+					<posx>65</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+			
+			
+				<control type="image" id="210">
+					<posx>0</posx> 
+					<posy>0</posy> 
+					<width>129</width> 
+					<height>142</height> 
+					<texture border="0">idle/background/flip_bg.png</texture> 
+				</control>	
+			
+				<!-- 1 -->
+				<control type="image" id="21110">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="21120">
+					<posx>15</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<control type="image" id="211">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>83</height> 
+					<texture border="0">idle/Digits/0.png</texture> 
+				</control>
+				<!-- 2 -->
+				<control type="image" id="21210">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="21220">
+					<posx>65</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<control type="image" id="212">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>83</height> 
+					<texture border="0">idle/Digits/0.png</texture> 
+				</control>
+			</control>
+
+			<control type="group">
+				<posx>140</posx> 
+				<posy>0</posy> 
+				
+				<control type="image">
+					<posx>0</posx> 
+					<posy>0</posy> 
+					<width>129</width> 
+					<height>142</height> 
+					<texture border="0">idle/background/flip_bg.png</texture> 
+				</control>	
+			
+				<!-- 1 -->
+				<control type="image" id="2211">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="2212">
+					<posx>15</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<!-- 2 -->
+				<control type="image" id="2221">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="2222">
+					<posx>65</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+			
+			
+				<control type="image" id="220">
+					<posx>0</posx> 
+					<posy>0</posy> 
+					<width>129</width> 
+					<height>142</height> 
+					<texture border="0">idle/background/flip_bg.png</texture> 
+				</control>	
+				
+				<!-- 1 -->
+				<control type="image" id="22110">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="22120">
+					<posx>15</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<control type="image" id="221">
+					<posx>15</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>83</height> 
+					<texture border="0">idle/Digits/0.png</texture> 
+				</control>
+				<!-- 2 -->
+				<control type="image" id="22210">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>40</height> 
+					<texture border="0">idle/Digits/0(1).png</texture> 
+				</control>	
+				<control type="image" id="22220">
+					<posx>65</posx> 
+					<posy>64</posy> 
+					<width>48</width> 
+					<height>43</height>
+					<texture border="0">idle/Digits/0(2).png</texture> 
+				</control>	
+				<control type="image" id="222">
+					<posx>65</posx> 
+					<posy>24</posy> 
+					<width>48</width> 
+					<height>83</height> 
+					<texture border="0">idle/Digits/0.png</texture> 
+				</control>
+			</control>
+			
+			<control type="label" id="224">
+				<posx>70</posx> 
+				<posy>470</posy> 
+				<width>200</width> 
+				<height>20</height> 
+				<font>font10</font> 
+				<aligny>center</aligny> 
+				<textcolor>white</textcolor> 
+				<align>left</align> 
+				<visible>false</visible>
+		    </control>
+			
+		</control>
+		
+	
+
+	</control>	
+	
+  </controls>
+</window>

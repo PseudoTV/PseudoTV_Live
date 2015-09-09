@@ -1,0 +1,173 @@
+#   Copyright (C) 2015 Kevin S. Graer
+#
+#
+# This file is part of PseudoTV Live.
+#
+# PseudoTV is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PseudoTV is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+
+import xbmc, xbmcgui, xbmcaddon
+import sys, os, shutil
+
+from urllib import unquote
+from xml.dom.minidom import parse, parseString
+from resources.lib.utils import *
+from resources.lib.Globals import *
+from resources.lib.ChannelList import ChannelList
+from resources.lib.FileAccess import FileAccess
+
+class Main:
+
+    def __init__(self):
+        setProperty("PseudoTVRunning", "True")
+        REAL_SETTINGS.setSetting("convert","false")
+        if REAL_SETTINGS.getSetting("convert") != "true" or xbmcvfs.exists(os.path.join(ADDON_PATH,'convert.old')) == False:
+            ADDON_SETTINGS.loadSettings()
+            self.channelList = ChannelList()  
+            
+            try:
+                settingsFile = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
+                shutil.copy(settingsFile, xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pre.convert.xml')))
+                okDialog('PseudoTV Live is about to convert your plugin channels to the new format, please be patient, do not interrupt this process! You will be prompted when its finished.')
+            except:
+                xbmcvfs.rename(os.path.join(ADDON_PATH,'convert.py'), os.path.join(ADDON_PATH,'convert.old'))
+                REAL_SETTINGS.setSetting("convert","true")
+                setProperty("PseudoTVRunning", "False")
+                return
+                
+            show_busy_dialog()
+            self.updateListing()
+    
+    
+    def log(self, msg, level = xbmc.LOGDEBUG):
+        log('capture: ' + msg, level)
+
+
+    def updateListing(self, channel = -1):
+        self.log("updateListing")
+        self.file_detail_CHK = []
+        start = 0
+        end = 999
+        
+        if channel > -1:
+            start = channel - 1
+            end = channel
+
+        for i in range(start, end):
+            try:
+                self.chantype = 9999
+                chansetting1 = ''
+
+                try:
+                    self.channel = i + 1
+                    self.chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(self.channel) + "_type"))
+                    chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(self.channel) + "_1")
+                except:
+                    pass
+
+                if self.chantype == 15:
+                    self.setting1 = self.repairPluginFileList(chansetting1)        
+                    self.saveSettings()
+                    print 
+            except:
+                pass
+              
+        hide_busy_dialog()
+        REAL_SETTINGS.setSetting("convert","true")
+        try:
+            settingsFile = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))  
+            shutil.copy(settingsFile, xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.post.convert.xml')))
+            xbmcvfs.rename(os.path.join(ADDON_PATH,'convert.py'), os.path.join(ADDON_PATH,'convert.old'))
+        except:
+            pass
+        setProperty("PseudoTVRunning", "False")
+        okDialog('PseudoTV Live is finished converting your plugin channels.')
+        self.log("updateListing return")
+        
+        
+    def saveSettings(self):
+        self.log("saveSettings channel " + str(self.channel))
+        setting1 = "Channel_" + str(self.channel) + "_1"
+        ADDON_SETTINGS.setSetting(setting1, self.setting1)
+        self.log("saveSettings return")
+        
+
+    def repairPluginFileList(self, setting1, repair=True):
+        self.log('repairPluginFileList')
+        showList = []
+        DetailLST_CHK = []
+        PluginPathLst = []
+        
+        if setting1.endswith('/'):
+            setting1 = setting1[:-1]
+
+        try:
+            Directs = (setting1.split('/')) # split folders
+            Directs = ([x.replace('%2F','/') for x in Directs if x != '']) # remove empty elements, replace '%2F' with '/'
+            plugins = Directs[1] # element 1 in split is plugin name
+            Directs = Directs[2:]# slice two unwanted elements. ie (plugin:, plugin name)
+            plugin = 'plugin://' + plugins
+            PluginPath = (plugins.replace('plugin://','')).split('/')[0]
+            PluginName = (xbmcaddon.Addon(id=PluginPath)).getAddonInfo('name')
+            
+            if len(Directs) == 0:
+                lastfolder = PluginName
+            else:
+                DirectCount = len(Directs)
+                lastfolder = Directs[DirectCount-1]
+                
+            self.log('repairPluginFileList, Directs = ' + str(Directs))
+        except Exception,e:
+            self.log("repairPluginFileList, Failed! " + str(e))  
+        
+        Match = True
+        while Match:
+
+            DetailLST = self.channelList.PluginInfo(plugin)
+            
+            #end while when no more directories to walk
+            if len(Directs) <= 1:
+                Match = False
+            
+            #listitems return parent list during error, catch repeat list and return.
+            if self.file_detail_CHK == DetailLST:
+                return
+            else:
+                self.file_detail_CHK = DetailLST
+                
+            try:
+                for i in range(len(DetailLST)):
+                    Detail = (DetailLST[i]).split(',')
+                    filetype = Detail[0]
+                    title = Detail[1]
+                    title = self.channelList.CleanLabels(title)
+                    genre = Detail[2]
+                    dur = Detail[3]
+                    description = Detail[4]
+                    file = Detail[5]
+                                     
+                    if filetype == 'directory':
+                        CurDirect = self.channelList.CleanLabels(Directs[0])
+                        if CurDirect.lower() == title.lower():
+                            self.log('repairPluginFileList, Directory Match: ' + CurDirect.lower() + ' = ' + title.lower())
+                            PluginPathLst.append(file)
+                            Directs.pop(0) #remove old directory, search next element
+                            plugin = file
+                            break
+            except Exception,e:
+                self.log("repairPluginFileList, Failed! " + str(e))  
+        return plugin
+
+if (__name__ == "__main__"):
+    Main()
+xbmc.log('PseudoTV Live Convert Finished') 

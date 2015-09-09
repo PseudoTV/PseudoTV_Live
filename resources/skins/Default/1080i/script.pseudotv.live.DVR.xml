@@ -1,0 +1,291 @@
+<window>
+    <allowoverlay>yes</allowoverlay>   
+    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(9506)</onload>
+    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10004)</onload><!-- Activate random window, workaround for 9506 starting paused -->
+    <onload>SetProperty(PTVL.DVR_Opened,true,10000)</onload>
+    <onunload>SetProperty(PTVL.DVR_Opened,false,10000)</onunload>
+    <!-- <onunload>ActivateWindow(12005)</onunload> -->
+    
+    <coordinates>
+        <system>1</system>
+        <posx>0</posx>
+        <posy>0</posy>
+    </coordinates>
+    <animation effect="fade" time="500">WindowOpen</animation>
+    <animation effect="fade" time="250">WindowClose</animation>
+    <controls>
+        <control type="image">
+            <description>EPG Background</description>
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>1920</width>
+            <height>1080</height>
+            <texture>pstvlBackground1.png</texture>
+            <colordiffuse>FFFFFFFF</colordiffuse>
+        </control> 
+        <!-- Trending Box --> 
+        <control type="group"> 
+            <control type="label">
+                <posx>-15</posx>
+                <posy>0</posy>
+                <align>center</align>
+                <width>300</width>
+                <height>30</height>
+                <textcolor>C0C0C0C0</textcolor>
+                <font>font12</font>
+                <label>$INFO[Window(Home).Property(TrendingShows.1.Title)]</label>            
+                <visible>!Control.IsVisible(523)</visible>
+            </control>
+            <control type="image">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>360</width>      
+                <height>180</height>
+                <aspectratio align="center">keep</aspectratio>
+                <texture>$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]</texture>  
+                <visible>!Control.IsVisible(523)</visible>
+            </control> 
+            <control type="image">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>360</width>      
+                <height>180</height>
+                <aspectratio align="center">keep</aspectratio>
+                <texture>$INFO[Window(Home).Property(TrendingShows.1.Art(landscape))]</texture>  
+                <visible>!Control.IsVisible(523)</visible>
+            </control> 
+            <control type="label" id="522">
+                <posx>0</posx>
+                <posy>0</posy>
+                <width>360</width>      
+                <height>180</height>
+                <fadetime>250</fadetime>
+                <textcolor>C0C0C0C0</textcolor>
+                <font>font12</font>
+                <label>Trending Now</label>
+                <align>center</align>
+                <visible>!Control.IsVisible(523) + !IsEmpty(Window(Home).Property(TrendingShows.1.Title))</visible>
+            </control>
+        </control>   
+        <!-- VideoWindow Box --> 
+        <control type="grouplist" id="523">    
+            <posx>30</posx>
+            <posy>15</posy>
+            <itemgap>10</itemgap>
+            <orientation>vertical</orientation>
+            <control type="label">
+                <width>360</width>       
+                <height>24</height>
+                <font>font12</font>
+                <textcolor>C0C0C0C0</textcolor>
+                <align>center</align>
+                <scroll>true</scroll>
+                <scrollspeed>40</scrollspeed>
+                <label>  </label>
+                <aligny>center</aligny>
+            </control>   
+            <!-- #### Skinners Include Everything for videowindow patch to work #### -->
+            <!-- PATCH START -->
+            <control type="videowindow">
+                <description>video</description>
+                <width>360</width>      
+                <height>180</height>
+                <align>center</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+            </control>
+            <!-- PATCH END -->
+            <!-- ################################################################## -->
+        </control>
+        <!-- todo -->
+        <control type="grouplist">              
+            <posx>411</posx>
+            <posy>258</posy>
+            <itemgap>1</itemgap>
+            <orientation>horizontal</orientation>
+            <control type="label" id="215">
+                <description>EPG Label</description>            
+                <width>373</width>
+                <height>38</height>
+                <label>EPG</label>
+                <font>font12</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <textcolor>FFFFFFFF</textcolor>
+            </control>               
+            <control type="label" id="216">
+                <description>DVR Label</description>              
+                <width>373</width>
+                <height>38</height>
+                <label>DVR</label>
+                <font>font12</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <textcolor>FFFFFFFF</textcolor>
+            </control>               
+            <control type="label" id="217">
+                <description>OnDemand Label</description>               
+                <width>373</width>
+                <height>38</height>
+                <label>OnDemand</label>
+                <font>font12</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <textcolor>FFFFFFFF</textcolor>
+            </control>               
+            <control type="label" id="218">
+                <description>Apps Label</description>        
+                <width>373</width>
+                <height>38</height>
+                <label>Apps</label>
+                <font>font12</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <textcolor>FFFFFFFF</textcolor>
+            </control>   
+        </control>           
+        <!-- Twitter    -->
+        <control type="grouplist">
+            <posx>5</posx>
+            <posy>258</posy>
+            <align>left</align>
+            <orientation>horizontal</orientation>
+            <itemgap>1</itemgap>  
+            <!-- Twitter ICON -->
+            <control type="image">
+                <width>21</width>
+                <height>35</height>
+                <aspectratio>keep</aspectratio>
+                <aligny>center</aligny>
+                <align>left</align>
+                <visible>Control.IsVisible(131)</visible>
+                <texture colordiffuse="C0C0C0C0">rss.png</texture>
+                <!-- <texture>twitter.png</texture> -->
+            </control>
+            <!-- Twitter RSS -->
+            <control type="fadelabel" id = "131">
+                <description>ticker text</description>
+                <width>370</width>
+                <height>35</height>
+                <font>font10</font>
+                <aligny>center</aligny>
+                <align>left</align>
+                <scroll>true</scroll>
+                <scrollout>true</scrollout>
+                <pauseatend>900000</pauseatend>
+                <angle>90</angle>
+                <scrollspeed>40</scrollspeed>
+                <textcolor>C0C0C0C0</textcolor>
+                <textoffsetx>20</textoffsetx>
+                <resetonlabelchange>true</resetonlabelchange>
+                <visible>!IsEmpty(Control.GetLabel(131))</visible>
+                <label>Follow @PseudoTV_Live on Twitter</label>
+                <label>$INFO[Window(10000).Property(twitter.1.label)]</label>
+                <label>$INFO[Window(10000).Property(twitter.2.label)]</label>
+                <label>$INFO[Window(10000).Property(twitter.3.label)]</label>
+                <label>$INFO[Window(10000).Property(twitter.4.label)]</label>
+            </control>           
+            <control type="label">
+                <description>twit Sep</description>
+                <width>10</width>
+                <height>35</height>
+                <aspectratio>keep</aspectratio>
+                <align>center</align>
+                <aligny>center</aligny>
+                <label>|</label>
+                <font>font10</font>
+                <textcolor>C0C0C0C0</textcolor>
+                <visible>Control.IsVisible(131)</visible>
+            </control>  
+        </control>
+        <!--line 1 -->
+        <control type="grouplist">
+            <posx>430</posx>
+            <posy>20</posy>
+            <width>1400</width>
+            <orientation>horizontal</orientation>
+            <itemgap>5</itemgap>
+            <control type="label">
+                <description>Now Watching</description>
+                <width min="5" max="300">auto</width>
+                <height>30</height>
+                <font>font14</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>C0C0C0C0</textcolor>     
+                <label>NOW WATCHING:</label>     
+            </control>  
+            <control type="label">
+                <description>Show Title Label</description>
+                <width min="5" max="1100">auto</width>
+                <height>30</height>
+                <font>font14</font>
+                <textcolor>FF0297eb</textcolor>
+                <scroll>true</scroll>
+                <align>left</align>
+                <aligny>center</aligny>
+                <wrapmultiline>false</wrapmultiline>
+                <scrollspeed>40</scrollspeed>
+                <scrollsuffix> - </scrollsuffix>
+                <label>$INFO[Window(10000).Property(Playing.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(Playing.SEtitle)][/COLOR]</label>
+            </control>
+        </control>
+        <!--line 2 -->
+        <control type="grouplist">
+            <posx>430</posx>
+            <posy>60</posy>
+            <width>1400</width>
+            <orientation>vertical</orientation>
+            <itemgap>4</itemgap>
+           <control type="image">
+                <description>Seekbar Line</description>
+                <width>1400</width>
+                <height>4</height>
+                <texture>seek/progress_mid.png</texture>
+                <align>center</align>
+                <aligny>center</aligny>
+                <visible>!Control.IsVisible(515)</visible>
+            </control>
+            <control type="group" id="515">  
+                <control type="progress">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>1400</width>
+                    <height>4</height>
+                    <texturebg>seek/progress_back.png</texturebg>
+                    <lefttexture border="0">seek/progresscache_left.png</lefttexture>
+                    <midtexture border="0">seek/progresscache_mid.png</midtexture>
+                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>Player.ProgressCache</info>
+                </control>
+                <control type="progress">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>1400</width>
+                    <height>4</height>
+                    <texturebg>seek/progresscache_back.png</texturebg>
+                    <lefttexture border="0">seek/progress_left.png</lefttexture>
+                    <midtexture border="0">seek/progress_mid.png</midtexture>
+                    <righttexture border="0">seek/progress_right.png</righttexture>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>Player.Progress</info>
+                </control> 
+            </control>  
+            <control type="label">
+                <description>Show Description</description>
+                <width>1400</width>
+                <height>90</height>
+                <align>left</align>
+                <aligny>bottom</aligny>
+                <wrapmultiline>true</wrapmultiline>
+                <textcolor>FFFFFFFF</textcolor>
+                <label>$INFO[Window(10000).Property(Playing.Description)]</label>
+                <font>font12</font>
+            </control> 
+        </control>  
+    </controls>
+</window>

@@ -1,0 +1,252 @@
+<settings>
+<!--General-->
+    <category label="30000">
+        <setting label="30001" type="lsep"/>
+            <setting id="Config" type="action"   label="30002" action="RunScript($CWD/config.py)"/>
+            <setting label="30003" type="lsep"/>
+                <setting id="Auto_Start" type="bool"   label="30044" default="false"/>
+                <setting id="timer_amount" type="enum" values="0|5|10|15|20"   label="30045" subsetting="true" visible="eq(-1,true)" default="1"/>
+                <setting id="AutoOff" type="enum"   label="30004" values="Disable|30|60|90|120|150|180|210|240" default="0"/>
+                <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|Sleep PC|Shutdown PC|EG Trigger|CEC TVStandby" default="0"/>
+                <setting id="Idle_Screensaver" type="bool"   label="29999" default="false" />
+                <setting id="ForceChannelReset" type="bool"   label="30005" default="false" />
+                <setting id="ChannelResetSetting" type="enum"   label="30006" values="Automatic|Daily|Weekly|Monthly|Never|Every Time" default="0"/>
+                <setting id="StartMode" type="enum"   label="30007" values="Resume|Real Time|Random" default="1" />
+                <setting id="ThreadMode" type="enum"   label="30008" values="On|Minimum Use|Off" default="0" />
+                <setting id="EnableSettop" type="bool"   label="30998" default="false"/>
+                <setting id="REFRESH_INT" subsetting="true" visible="eq(-1,true)" type="enum"   label="31000" values="4|8|12|24" default="2"/>
+                <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="1"/>
+                <setting id="notify" type="bool"   label="30046" default="true"/>
+                <setting id="AutoBackup" type="bool"   label="30159" default="false"/>
+                <setting id="SFX_Enabled" type="bool"   label="30056" visible="false" default="true"/>
+    </category>
+<!--Tweaks-->
+    <category label="30300">
+        <setting id="os" type="enum" values="Android Arm|Android x86|ATV1 Linux|ATV1 Stock|ATV2|IOS|Linux 32bit|Linux 64bit|Mac 32bit|Mac 64bit|Rasberry Pi|Windows|TLBB" label="30401" default="11" />
+        <setting id="limit_preferred_language" type="select"   label="32055" values="Chinese|Dutch|English|Finnish|French|German|Hungarian|Italian|Japanese|Polish|Portuguese|Russian|Spanish|Swedish" default="English"/>
+        <setting id="limit_preferred_region" type="select"   label="32056" values="Andorra|United Arab Emirates|Afghanistan|Antigua and Barbuda|Anguilla|Albania|Armenia|Netherlands Antilles|Angola|Antarctica|Argentina|American Samoa|Austria|Australia|Aruba|Aland|Azerbaijan|Bosnia and Herzegovina|Barbados|Bangladesh|Belgium|Burkina Faso|Bulgaria|Bahrain|Burundi|Benin|Saint Barthelemy|Bermuda|Brunei|Bolivia|Brazil|Bahamas|Bhutan|Bouvet Island|Botswana|Belarus|Belize|Canada|Cocos (Keeling) Islands|Congo (Kinshasa)|Central African Republic|Congo (Brazzaville)|Switzerland|Cote dIvoire|Cook Islands|Chile|Cameroon|China|Colombia|Costa Rica|Cuba|Cape Verde|Christmas Island|Cyprus|Czech Republic|Germany|Djibouti|Denmark|Dominica|Dominican Republic|Algeria|Ecuador|Estonia|Egypt|Western Sahara|Eritrea|Spain|Ethiopia|Finland|Fiji|Falkland Islands|Micronesia|Faroe Islands|France|Gabon|United Kingdom|Grenada|Georgia|French Guiana|Guernsey|Ghana|Gibraltar|Greenland|Gambia|Guinea|Guadeloupe|Equatorial Guinea|Greece|South Georgia and South Sandwich Islands|Guatemala|Guam|Guinea-Bissau|Guyana|Hong Kong|Heard and McDonald Islands|Honduras|Croatia|Haiti|Hungary|Indonesia|name|English country name| |Ireland|Israel|Isle of Man|India|British Indian Ocean Territory|Iraq|Iran|Iceland|Italy|Jersey|Jamaica|Jordan|Japan|Kenya|Kyrgyzstan|Cambodia|Kiribati|Comoros|Saint Kitts and Nevis|North Korea|South Korea|Kuwait|Cayman Islands|Kazakhstan|Laos|Lebanon|Saint Lucia|Liechtenstein|Sri Lanka|Liberia|Lesotho|Lithuania|Luxembourg|Latvia|Libya|Morocco|Monaco|Moldova|Montenegro|Saint Martin|Madagascar|Marshall Islands|Macedonia|Mali|Myanmar|Mongolia|Macau|Northern Mariana Islands|Martinique|Mauritania|Montserrat|Malta|Mauritius|Maldives|Malawi|Mexico|Malaysia|Mozambique|Namibia|New Caledonia|Niger|Norfolk Island|Nigeria|Nicaragua|Netherlands|Norway|Nepal|Nauru|Niue|New Zealand|Oman|Panama|Peru|French Polynesia|Papua New Guinea|Philippines|Pakistan|Poland|Saint Pierre and Miquelon|Pitcairn|Puerto Rico|Palestine|Portugal|Palau|Paraguay|Qatar|Reunion|Romania|Serbia|Russian Federation|Rwanda|Saudi Arabia|Solomon Islands|Seychelles|Sudan|Sweden|Singapore|Saint Helena|Slovenia|Svalbard and Jan Mayen Islands|name|English country name| |Slovakia|Sierra Leone|San Marino|Senegal|Somalia|Suriname|Sao Tome and Principe|El Salvador|Syria|Swaziland|Turks and Caicos Islands|Chad|French Southern Lands|Togo|Thailand|Tajikistan|Tokelau|Timor-Leste|Turkmenistan|Tunisia|Tonga|Turkey|Trinidad and Tobago|Tuvalu|Taiwan|Tanzania|Ukraine|Uganda|United States Minor Outlying Islands|United States|Uruguay|Uzbekistan|Vatican City|Saint Vincent and the Grenadines|Venezuela|British Virgin Islands|Virgin Islands US|Vietnam|Vanuatu|Wallis and Futuna Islands|Samoa|Yemen|Mayotte|South Africa|Zambia|Zimbabwe" default="United States"/>
+        <setting id="quickflip" type="bool"   label="30374" default="false"/>
+        <setting id="DirectInput" type="bool"   label="30379" default="true"/>
+        <setting id="ChannelDelay" type="enum"   label="30302" default="0" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
+        <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
+        <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
+        <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
+        <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
+        <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
+        <setting id="EnhancedGuideData" type="bool"   label="30405" default="true" />
+        <setting id="HideClips" type="bool"   label="30215" default="true"/>
+        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="7"/>
+        <setting id="enable_mute" type="bool"   label="30373" default="false"/>
+    </category>
+<!--Visual-->
+    <category label="30200">
+        <setting id="SkinSelector" type="enum"  label="30202" values="Custom|Default|PTVL|Concast|Maverick|Z81" visible="false" default="1"/>
+        <setting id="ShowSeEp" type="bool"   label="30301" default="false"/>
+        <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/script.pseudotv.live/logos"/>
+        <setting id="Enable_FindLogo" type="bool"   label="34547" default="true"/>
+        <setting id="LogoDB_Fallback" subsetting="true" visible="eq(-1,true)"type="bool"   label="34548" default="true"/>
+        <setting id="LogoDB_Anymatch" subsetting="true" visible="eq(-2,true)"type="bool"   label="34549" default="true"/>
+        <setting id="LogoDB_Override" subsetting="true" visible="eq(-3,true)"type="bool"   label="34550" default="false"/>
+        <setting id="LogoDB_Type" subsetting="true" type="enum" visible="eq(-4,true)"   label="30376" values="Color Square|White Square|Color Wide|White Wide" default="2"/>
+        <!-- EPG -->
+        <setting label="30210" type="lsep"/>
+            <setting id="ClockMode" type="enum"   label="30211" default="0" values="12 Hour|24 Hour"/>
+            <setting id="EPGcolor_enabled"   label="30212" type="enum" values="Disabled|Genre|Chtype|Rating" default="1" />
+            <setting id="EPGcolor_MovieGenre" subsetting="true" type="bool"   label="30213" default="false" visible="eq(-1,1)" />
+            <setting id="EPGTextEnable" type="enum"   label="30214" values="Logo|Text" default="0"/>
+            <setting id="EPG.xInfo" type="bool"   label="30229" default="false" />
+        <!-- Overlay -->
+        <setting label="30220" type="lsep"/>
+            <setting id="COLOR_CHANNUM" type="enum"   label="30203" values="Holo|Cyan|Green|Gray|Light Gray|White" default="0"/>
+            <setting id="InfoOnChange" type="bool"   label="30221" default="true"/>
+            <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
+            <setting id="ShowChannelBug" type="bool"   label="30224" default="true"/>
+            <setting id="UNAlter_ChanBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
+            <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Overlay|PopUp|Classic" default="2"/>
+            <setting id="ComingUpArtwork" subsetting="true" visible="eq(-1,3)" type="enum"   label="30227" values="Poster|Fanart|Landscape|Logo|Clearart" default="1" />
+   </category>
+<!--PVR-->
+   <category label="30400">
+        <setting id="SyncXMLTV_Enabled"                   type="bool"   label="30397" default="true"/>
+        <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/script.pseudotv.live/cache/xmltv" />
+        <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
+        <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
+        <setting id="AutoJump" type="bool"   label="30408" default="false" />
+        <setting id="sickbeard.enabled"   label="30708" type="bool" default="false" />
+        <setting id="sickbeard.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:8081"/>
+        <setting id="sickbeard.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
+        <setting id="couchpotato.enabled"   label="30711" type="bool" default="false" />
+        <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
+        <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
+        <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/donordownload.py, -SimpleDownloader)"/>
+    </category>  
+<!--Autotune-->
+    <category label="30070">
+            <!-- Autotune Enable  -->
+            <setting id="Autotune"                            type="bool"   label="30071" default="false"/>
+            <setting id="Warning1"                            type="bool"   label="30072" subsetting="true" visible="eq(-1,true)" default="false"/>
+        <setting                                              type="lsep"   label="30099"                   visible="eq(-1,true)"                />
+            <!-- Autotune Playlists -->
+            <setting id="autoFindCustom"                      type="bool"   label="30077" subsetting="true" visible="eq(-2,true)" default="false"/>
+            <setting id="autoFindSuperFav"                    type="bool"   label="30093" subsetting="true" visible="eq(-3,true)" enable="false" default="false"/>
+        <setting                                              type="lsep"   label="30073"                   visible="eq(-4,true)"                />
+            <!-- Autotune LiveTV -->
+            <setting id="autoFindLivePVR"                     type="bool"   label="30075" subsetting="true" visible="eq(-5,true)" enable="Pvr.HasTVChannels" default="false"/>
+            <setting id="autoFindLiveHD"                      type="enum"   label="30097" subsetting="true" visible="eq(-6,true)" values=" |Dual - Strms|Prime/Extend - Favourites" default="0" />
+            <setting id="autoFindLiveHDPath"                  type="folder" label="30098" subsetting="true" visible="!eq(-1,0) + !eq(-1,2)" source="auto" default=""/>
+            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="true" visible="eq(-8,true)" enable="System.HasAddon(plugin.video.ustvnow)" default="false"/>
+            <!-- Autotune Local -->
+        <setting                                              type="lsep"   label="30076"                   visible="eq(-9,true)"/>
+            <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="true" visible="eq(-10,true)" enable="Library.HasContent(TVShows)"default="false"/>
+            <setting id="autoFindStudios"                     type="bool"   label="30079" subsetting="true" visible="eq(-11,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindTVGenres"                    type="bool"   label="30080" subsetting="true" visible="eq(-12,true)" enable="Library.HasContent(TVShows)"default="false"/>
+            <setting id="autoFindMovieGenres"                 type="bool"   label="30081" subsetting="true" visible="eq(-13,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindMixGenres"                   type="bool"   label="30082" subsetting="true" visible="eq(-14,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindRecent"                      type="bool"   label="30883" subsetting="true" visible="eq(-15,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFind3DMovies"                    type="bool"   label="30884" subsetting="true" visible="eq(-16,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindMusicGenres"                 type="bool"   label="30084" subsetting="true" visible="eq(-17,true)" enable="Library.HasContent(Music)" default="false"/>
+            <setting id="autoFindMusicVideosLocal"            type="folder" label="30089" subsetting="true" visible="eq(-18,true)"           source="auto"                               default=""/>  
+        <setting     id="AT_Community"                        type="bool"                                 visible="false"                                                              default="false" />  
+        <setting                                              type="lsep"   label="30110"                   visible="eq(-20,true)"/>
+            <setting id="autoFindCommunity_Youtube_Networks"  type="bool"   label="30115" subsetting="true" visible="eq(-21,true)" enable="eq(-2,true) + System.HasAddon(plugin.video.youtube)"                                 default="false"/>
+            <setting id="autoFindCommunity_Youtube_Channels"  type="bool"   label="30113" subsetting="true" visible="eq(-22,true)" enable="eq(-3,true) + System.HasAddon(plugin.video.youtube)"                                   default="false"/>
+            <setting id="autoFindCommunity_Youtube_Playlists" type="bool"   label="30114" subsetting="true" visible="eq(-23,true)" enable="eq(-4,true) + System.HasAddon(plugin.video.youtube)"                                   default="false"/>
+            <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="true" visible="eq(-24,true)" enable="eq(-5,true) + System.HasAddon(plugin.video.youtube)"                                  default="false"/>
+            <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="true" visible="eq(-25,true)" enable="eq(-6,true) + System.HasNetwork"                                  default="false"/>
+        <setting     id="AT_Donor"                            type="bool"                                   visible="false"                                                              default="false" />    
+        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true) + eq(-1,true)"                                        default="" /> 
+            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true) + eq(-2,true)" enable="System.HasAddon(plugin.video.youtube)"                                      default="false"/>
+            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true) + eq(-3,true)" enable="System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
+        <setting                                              type="lsep"   label="30782"                   visible="eq(-30,true)"     default="" /> 
+            <setting id="autoFindIPTV_Source"                 type="enum"   label="30965" subsetting="true" visible="eq(-31,true)" values=" |Local|Online" default="0" />
+            <setting id="autoFindIPTV_Path_Local"             type="file"   label="30966" subsetting="true" visible="eq(-32,true) + eq(-1,1)"             source="auto" default=""/>
+            <setting id="autoFindIPTV_Path_Online"            type="text"   label="30967" subsetting="true" visible="eq(-33,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto" default=""/>
+            <setting id="autoFindLive_Source"                 type="enum"   label="30969" subsetting="true" visible="eq(-34,true)"                         values=" |Local|Online" source="auto" default="0" />
+            <setting id="autoFindLive_Path_Local"             type="file"   label="30970" subsetting="true" visible="eq(-35,true) + eq(-1,1)"             default=""/>
+            <setting id="autoFindLive_Path_Online"            type="text"   label="30971" subsetting="true" visible="eq(-36,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto" default=""/>
+            <setting id="autoFindPLX_Source"                  type="enum"   label="30972" subsetting="true" visible="eq(-37,true)"                         values=" |Local|Online" default="0" />
+            <setting id="autoFindPLX_Path_Local"              type="file"   label="30973" subsetting="true" visible="eq(-38,true) + eq(-1,1)"             source="auto" default=""/>
+            <setting id="autoFindPLX_Path_Online"             type="text"   label="30974" subsetting="true" visible="eq(-39,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto" default=""/>
+        <setting                                              type="lsep"   label="30701"                   visible="eq(-40,true)"                                                                                            default="" /> 
+            <setting id="CN_TV"                               type="bool"   label="30702" subsetting="true" visible="eq(-41,true)"                                                                            default="true" />
+            <setting id="CN_Movies"                           type="bool"   label="30703" subsetting="true" visible="eq(-42,true)"                                                                              default="true" />
+            <setting id="CN_Episodes"                         type="bool"   label="30704" subsetting="true" visible="eq(-43,true)"                                                                               default="true" />
+            <setting id="CN_Sports"                           type="bool"   label="30705" subsetting="true" visible="eq(-44,true)"                                                                               default="true" />
+            <setting id="CN_Kids"                             type="bool"   label="30706" subsetting="true" visible="eq(-45,true)"                                                                               default="false" />
+            <setting id="CN_News"                             type="bool"   label="30707" subsetting="true" visible="eq(-46,true)"                                                                               default="true" />
+            <setting id="CN_Music"                            type="bool"   label="30712" subsetting="true" visible="eq(-47,true)"                                                                               default="true" />
+            <setting id="CN_Other"                            type="bool"   label="30713" subsetting="true" visible="eq(-48,true)"                                                                             default="true" />  
+            <!-- Autotune Options -->
+        <setting type="lsep"   label="30700"/>
+            <setting id="reserveChannels"                     type="bool"   label="30372" default="false"/>
+            <setting id="AT_LIMIT"                      type="enum"   label="33310" values="25|50|100|250|500|1000" default="0"/>
+            <setting id="PVR_Listing"                         type="enum"   label="30699" values="PVR Backend|xmltv File|ScheduleDirect (Coming Soon)|Zap2it (Coming Soon)|TMSAPI (Coming Soon)" default="0" />
+        <setting                                              type="sep"                  visible="true" />
+    </category>
+<!--BCTs-->   
+    <category label="30499">
+    <setting label="30500" type="lsep"/>
+        <setting label="30501" id="bumpers" type="enum" values="Disabled|Local|Internet" default="0" />
+        <setting label="30502" id="bumpersfolder" type="folder" source="auto" visible="eq(-1,1)" default="" />
+        <setting label="30503" id="numbumpers" type="enum" visible="!eq(-2,0)" values="1|2|3|4|5" default="0"/>
+        <setting label="39504" id="bumperratings" type="bool" visible="!eq(-3,0)" enabled="System.HasAddon(plugin.video.youtube)" default="false" />
+    <setting label="30510" type="lsep"/>
+        <setting label="39002" id="COM_Donor" type="bool" visible="false" default="false" />
+        <setting label="30511" id="commercials" type="enum" values="Disabled|Local|Youtube|Internet" default="0"/>
+        <setting label="30512" id="commercialsfolder" type="folder" source="auto" visible="eq(-1,1)" default=""/>
+        <setting label="30513" id="Advert" enable="eq(-3,true)" visible="eq(-2,3)" type="bool" default="false"/>
+        <setting label="30514" id="Advert_Region" subsetting="true" type="enum" enable="eq(-4,true)" visible="eq(-1,true) + eq(-3,3)" values="North America|Latin & South America|Western Asia & Northern Africa|Europe, Western Asia & Africa|Europe|Balkans|Asia Pacific|Africa" default="0"/>
+        <setting label="30515" id="Advert_Resolution" subsetting="true" type="enum" enable="eq(-5,true)" visible="eq(-2,true) + eq(-4,3)" values="360p|480p|720p" default="0"/>
+        <setting label="30516" id="adverts2_type" enable="eq(-6,true)" visible="eq(-5,3)" type="enum" values="Disabled|Recent Ads|Superbowl '13 Ads|Superbowl '14 Ads|Superbowl '15 Ads" default="0"/>
+        <setting label="30517" id="commercialschannel" type="text" visible="eq(-6,2)" enabled="System.HasAddon(plugin.video.youtube)" default="PLlwhS0wsCzbRNwJ4Epac4rHJJ_6m1JaBm,2,50,1"/>
+        <setting label="30519" id="AsSeenOn" visible="!eq(-7,0)" type="bool" enabled="System.HasAddon(plugin.video.youtube)" default="false" />
+        <setting label="30518" id="numcommercials" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
+    <setting label="30520" type="lsep"/>
+        <setting label="30521" id="trailers" type="enum" values="Disabled|Local|XBMC Library|Youtube|Internet" default="0"/>
+        <setting label="30522" id="trailersfolder" type="folder" source="auto" visible="eq(-1,1)" default="" />
+        <setting label="30523" id="trailersgenre" type="bool" visible="eq(-2,2)" default="false" />
+        <setting label="30524" id="Movietrailers" type="bool" visible="!eq(-3,0)" default="false" />
+        <setting label="30527" id="trailersHDnetType" type="enum" visible="eq(-4,4)" values="Latest|Most Watched|Coming Soon" default="2"/>
+        <setting label="30525" id="trailersResolution" subsetting="true" type="enum" visible="eq(-5,4)" values="480p|720p|1080p" default="1"/>
+        <setting label="30528" id="trailersTitleLimit" subsetting="true" type="enum" visible="eq(-6,4)" values="15|30|90|180|270|360" default="1"/>
+        <setting label="30517" id="trailerschannel" type="text" visible="eq(-7,3)" enabled="System.HasAddon(plugin.video.youtube)" default="MovieclipsCOMINGSOON,1,50,1" /> 
+        <setting label="30530" id="numtrailers" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
+    </category>
+<!--Sharing-->
+    <category label="30100">
+        <setting label="30101" type="lsep"/>
+            <setting id="ChannelSharing" type="bool"   label="30789" default="false" />
+            <setting id="HdhomerunMaster" subsetting="true" type="bool"   label="30011" default="true" visible="eq(-1,true)" />
+            <setting id="SettingsFolder" subsetting="true" type="folder" source="auto" visible="eq(-2,true)"   label="30010" default="" />
+        <setting label="30102" type="lsep"/>
+            <setting id="UPNP1" type="bool"   label="30103" default="false" />
+            <setting id="UPNP1_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
+            <setting id="UPNP1_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP2" type="bool"   label="30104" default="false" />
+            <setting id="UPNP2_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
+            <setting id="UPNP2_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP3" type="bool"   label="30105" default="false" />
+            <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
+            <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0" range="0,.10,5" option="float" />
+    </category>
+    <!--Donor-->
+    <category label="39000">
+        <setting id="Community_Enabled"   label="30905" type="bool" default="false"/>
+        <setting id="Community_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"   label="30776" values="False|True" default="0"/>
+        <setting id="Gmail_User" subsetting="true"   label="30906" visible="eq(-2,true)" type="text" default="User@gmail.com" />
+        <setting id="Gmail_Pass" subsetting="true"   label="30907" visible="eq(-3,true)" type="text" option="hidden" default="Password" />
+        <setting id="Donor_Enabled"   label="30901" type="bool" default="false"/>
+        <setting id="Donor_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"label="30777" values="False|True" default="0"/>
+        <setting id="Donor_UP" subsetting="true"   label="30902" visible="eq(-2,true)" option="hidden" type="text" default="Username:Password" />    
+        <setting label="30903"  subsetting="true" visible="eq(-3,true)" type="lsep" /> 
+        <setting type="sep" visible="true" />
+        <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
+    </category>
+    <!--Utilities-->
+    <category label="31900">  
+        <setting label="31999" type="lsep"/>
+        <setting id="Repair_Settings2" type="action"   label="31903" action="RunScript($CWD/utilities.py, -repairSettings2)"/>
+        <setting id="Backup_Settings2" type="action"   label="31901" action="RunScript($CWD/utilities.py, -backupSettings2)"/>
+        <setting id="Restore_Settings2" type="action"   label="31902" action="RunScript($CWD/utilities.py, -restoreSettings2)"/>
+        <setting id="Purge_Settings2" type="action"   label="31905" action="RunScript($CWD/utilities.py, -purgeSettings2)"/>
+        <setting id="Remove_Settings2" type="action"   label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
+        <setting id="ClearChanFavs" type="action"   label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
+        <setting label="31998" type="lsep"/>
+        <setting id="ClearLiveArt" type="bool"   label="30996" default="false"/>
+        <setting id="ClearCache" type="bool"   label="30988" default="false"/>
+    </category>
+    
+    <!-- Help -->
+    <category label="32900">  
+        <setting id="Show_Changelog" type="action"   label="32901" action="RunScript($CWD/utilities.py, -showChangelog)"/>
+        <setting id="Show_Readme" type="action"   label="32902" action="RunScript($CWD/utilities.py, -showReadme)"/>
+        <setting id="Show_Readme" type="action"   label="32903" action="RunScript($CWD/utilities.py, -showChtype)"/>
+        <setting id="UploadLog" type="action"   label="30989" action="RunScript($CWD/uploadLog.py)"/>
+        <setting type="sep" visible="true" />
+        <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
+    </category>
+    
+    <!--Debugging-->
+    <category label="30900">  
+        <setting label="30990" type="lsep"/>
+        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,4" option="int" default="2"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,60" option="int" default="30"/>
+        <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
+        <setting id="Override_ok" type="bool"   label="30991" default="true"/>
+        <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
+        <setting id="Include3D" type="bool"   label="39958" default="true"/>
+        <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
+        <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
+        <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
+        <setting id="plugin_ok_level" type="enum"   label="30994" values="Low|High" default="0"/>
+        <setting id="Override.LOWPOWER" type="bool"   label="30943" default="false"/>
+        <setting id="ga_disable" type="bool"   label="30992" default="false"/>
+        <setting label="36996" type="lsep"  visible="eq(-1,true)"/>
+        <setting label="36997" type="lsep"  visible="eq(-2,true)"/>
+        <setting label="30912" type="lsep"/>
+        <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
+        <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
+        <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
+    </category>
+</settings>

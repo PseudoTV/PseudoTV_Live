@@ -1,0 +1,10 @@
+[B]Custom playlists uses Kodi smartplaylist to populate channels[/B]
+
+[COLOR=blue][B]Playlist:[/B][/COLOR] - Location of Kodi Smartplaylist (*.xsp)
+
+[COLOR=blue][B]Edit SmartPlaylist:[/B][/COLOR] - Edit Smartplaylist rules.
+
+Custom playlists are the recommended method for creating channel's from Kodi library content.
+PseudoTV Live supports playlist types: Movies, Episodes and Music. Do not use "TV Shows".
+
+Preconfigured smartplaylists are available using the "Browse Community playlists" button.

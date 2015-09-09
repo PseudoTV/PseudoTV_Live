@@ -1,0 +1,63 @@
+[B]Channel Types:[/B]
+Channel Types are based on the source or type of media that will be used to populate channels.
+
+[COLOR=blue][B][CHtype 0]Custom Playlist[/B][/COLOR] - Uses a Kodi Smartplaylists (*.xsp) to create channels biased on the rules and filters added to the playlist. This Chtype provides the greatest amount of channel customization.
+[COLOR=blue][B][CHtype 1]TV Network - TV Network are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B][CHtype 2]Movie Studio[B][/COLOR] - Movie Studio's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B][CHtype 3]TV Genre[/B][/COLOR] - TV Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B][CHtype 4]Movie Genre[/B][/COLOR] - Movie Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B][CHtype 5]Mixed Genre[/B][/COLOR] - Mixed (TV/Movie) Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B][CHtype 6]TV Show[/B][/COLOR] - about setting
+[COLOR=blue][B][CHtype 7]Directory[/B][/COLOR] - about setting
+[COLOR=blue][B][CHtype 08]LiveTV[/B][/COLOR] - Is designed for any single video source that is accompanied by a XMLTV TV-Listings file. The XMLTV file provides EPG guide-data for live content.
+[COLOR=blue][B][CHtype 19]InternetTV[/B][/COLOR] - Similar to "LiveTV" this chtype is meant for any single video source that does not have a matching XMLTV file. You can customize the EPG listing data within settings.
+[COLOR=blue][B][CHtype 10]Youtube[/B][/COLOR] - Populate channels from Youtube.
+[COLOR=blue][B][CHtype 11]RSS[/B][/COLOR] - Currently only Atom/iTunes and some feedburner xml news feeds are compatible.
+[COLOR=blue][B][CHtype 12]Music[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B][CHtype 13]Music Videos[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B][CHtype 14]Exclusive[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B][CHtype 15]Plugin[/B][/COLOR] - Plugin; parses most modern Kodi plug-ins allowing PseudoTV Live to directly build channels from directories and files found within a Kodi plug-in.
+[COLOR=blue][B][CHtype 16]UPNP[/B][/COLOR] - Similar to the "Plugin" chtype, UPNP builds from external video servers like "Plex".
+[COLOR=blue][B]None[/B][/COLOR] - Clear and Disable Channel
+
+
+[B]Advanced Channel Rules:[/B]
+Advanced Channel Rules enable you to do various things such as changing the channel name, showing/hiding the channel logo, playing shows in order, scheduling or excluding shows and interleaving other channels, shows, adverts or bumpers.
+
+[COLOR=blue][B]Best-Effort Channel Scheduling[/B][/COLOR] - Want to watch The Daily Show every night at 7:00? Schedule your channel to play it.
+
+[COLOR=blue][B]Channel Logo[/B][/COLOR] - Does most of the videos on your CBS channel have the logo encoded into the video?
+Disable the drawing of the logo on that channel. (It will still show on the EPG)
+
+[COLOR=blue][B]Don't include a show[/B][/COLOR] - Exclude a show from your channel.
+
+[COLOR=blue][B]Don't play this channel[/B][/COLOR] - Since some rules use other channels as modifiers (scheduling and interleaving), you may
+not want that channel to actually be visible.
+
+[COLOR=blue][B]Force Random / Real-Time / Resume[/B][/COLOR] - While most people use Real-Time mode (as recommended), you can now have a channel
+be different from the rest.
+
+[COLOR=blue][B]Include Strms[/B][/COLOR] - Enable or Disable strms on a per channel basis
+
+[COLOR=blue][B]Include BCT's[/B][/COLOR] - Enable or Disable BCT's on a per channel basis
+
+[COLOR=blue][B]Filter 3D Media[/B][/COLOR] - Enable or Disable 3D Content on a per channel basis
+
+[COLOR=blue][B]Interleave another channel[/B][/COLOR] - Are you one of those people that likes bumpers? Create a channel that only has the
+bumpers and use this rule on your main channel to interleave those bumpers in between your shows. This rule is also useful for Adverts. (More on Interleaving in the next chapter)
+
+[COLOR=blue][B]Only play unwatched Items[/B][/COLOR] - If the channel contents change a lot, there's no reason to watch the same shows over and
+over. Hide things you've watched from this channel with ease.
+
+[COLOR=blue][B]Only play watched Items[/B][/COLOR] - Don't want to spoil a movie by accidentally seeing part of the middle? Hide shows that
+haven't been watched yet.
+
+[COLOR=blue][B]Pause when Not watching[/B][/COLOR] - Don't want to miss an episode of The Big Bang Theory? Make sure that if you're not
+watching it, it stays paused. This rule goes great with the "Play shows in order" and "Force resume" rules.
+
+[COLOR=blue][B]Play shows in Order[/B][/COLOR] - Now you can make sure that when you're watching Top Chef, the next episode that comes
+on will actually be the next episode in the series.
+
+[COLOR=blue][B]Set Channel Name[/B][/COLOR] - Useful for setting the name to a channel that was created from a Directory.
+
+[COLOR=blue][B]Reset every x Hours[/B][/COLOR] - Causes the channel to automatically be rebuilt every x hours. Recommend use with Settop Box Mode.

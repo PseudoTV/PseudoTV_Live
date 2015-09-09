@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+	<defaultcontrol>1001</defaultcontrol>
+	<coordinates>
+		<system>1</system>
+		<posx>0</posx>
+		<posy>0</posy>
+	</coordinates>
+	<controls>
+		<control type="image" id="997">
+			<texture>-</texture>
+		</control>
+		<control type="image" id="998">
+			<texture>-</texture>
+		</control>
+		<!-- Background -->
+		<include>DialogBackgroundImage</include>
+		<control type="image" id="999">
+			<left>628</left>
+			<top>420</top>
+			<width>664</width>
+			<height>240</height>
+			<texture border="32">dialogs/DialogMessageBackground.png</texture>
+		</control>
+		<control type="button" id="1001">
+			<left>705</left>
+			<top>502</top>
+			<width>500</width>
+			<height>76</height>
+			<align>center</align>
+			<aligny>top</aligny>
+			<font>MedUpper24</font>
+			<textoffsety>27</textoffsety>
+			<onleft>noop</onleft>
+			<onright>noop</onright>
+			<onup>1003</onup>
+			<ondown>1002</ondown>
+		</control>
+		<control type="button" id="1002">
+			<left>705</left>
+			<top>578</top>
+			<width>500</width>
+			<height>76</height>
+			<align>center</align>
+			<aligny>top</aligny>
+			<font>MedUpper24</font>
+			<textoffsety>27</textoffsety>
+			<onleft>noop</onleft>
+			<onright>noop</onright>
+			<onup>1001</onup>
+			<ondown>1003</ondown>
+		</control>
+		<control type="button" id="1003">
+			<left>705</left>
+			<top>654</top>
+			<width>500</width>
+			<height>76</height>
+			<align>center</align>
+			<aligny>top</aligny>
+			<font>MedUpper24</font>
+			<textoffsety>27</textoffsety>
+			<onleft>noop</onleft>
+			<onright>noop</onright>
+			<onup>1002</onup>
+			<ondown>1001</ondown>
+		</control>
+	</controls>
+</window>
