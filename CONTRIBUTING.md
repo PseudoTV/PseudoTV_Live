@@ -15,6 +15,7 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 ### Beginner Tasks
 * Clean up all warnings
 * Complete help documents
+* Translate strings for multi-language support
 
 ###Intermediate Tasks
 * ...
@@ -26,3 +27,5 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 * Schedule-Direct xmltv support
 * Activewindow playback support
 * Clean utils and replace redundant functions throughout code.
+* Random todo's can be found commented in code.
+* Localize all strings to string.po
