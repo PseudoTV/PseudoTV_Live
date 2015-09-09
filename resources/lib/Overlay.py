@@ -887,16 +887,20 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     # set the channel, the proper show offset, and time offset
     def setChannel(self, channel, quickflip=False):
         self.log('setChannel, channel = ' + str(channel))
-        if channel != -1:
-            self.background.setVisible(True)
-            self.getControl(102).setVisible(False)
-            self.getControl(120).setVisible(False)
-            self.getControl(103).setImage('NA.png')
-            timedif = 0
-            self.seektime = 0
-            self.infoOffset = 0
-            self.quickflipCount = 0
-            self.lastActionTime = 0
+        
+        # todo channellabeltimer generating false inputchannel = -1, need to track down issue
+        if channel == -1:
+            return
+            
+        self.background.setVisible(True)
+        self.getControl(102).setVisible(False)
+        self.getControl(120).setVisible(False)
+        self.getControl(103).setImage('NA.png')
+        timedif = 0
+        self.seektime = 0
+        self.infoOffset = 0
+        self.quickflipCount = 0
+        self.lastActionTime = 0
         
         if self.OnDemand == True:
             self.OnDemand = False
