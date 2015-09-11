@@ -75,7 +75,6 @@ class ChannelList:
         self.cached_json_detailed_trailers = []  
         self.cached_json_detailed_xmltvChannels_pvr = []
         self.cached_readXMLTV = []
-        self.autoplaynextitem = False
         self.sleepTime = 0
         self.threadPaused = False
         self.runningActionChannel = 0
@@ -1753,6 +1752,7 @@ class ChannelList:
             else:   
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
         if not showList:
+            # Add channel to ResetLST, on next update force channel rebuild
             self.setResetLST(self.settingChannel)
             chname = (self.getChannelName(9, self.settingChannel))
             if setting3 == 'ptvlguide':

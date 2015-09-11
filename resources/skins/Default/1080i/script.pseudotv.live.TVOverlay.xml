@@ -1,11 +1,11 @@
 <window>
     <allowoverlay>yes</allowoverlay>
-    <onload>SetProperty(OVERLAY.type1EXT,landscape,10000)</onload><!-- label 508 artwork -->
-    <onload>SetProperty(OVERLAY.type2EXT,poster,10000)</onload><!-- label 510 artwork -->
-    <onload>SetProperty(OVERLAY.type3EXT,landscape,10000)</onload><!-- onnow artwork -->
-    <onload>SetProperty(OVERLAY.type4EXT,landscape,10000)</onload><!-- coming up next artwork -->
-    <onload>SetProperty(EPG.type1EXT,landscape,10000)</onload><!-- epg label 508 artwork -->
-    <onload>SetProperty(EPG.type2EXT,poster,10000)</onload><!-- epg label 510 artwork -->
+    <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload><!-- label 508 artwork -->
+    <onload>SetProperty(OVERLAY.type2,poster,10000)</onload><!-- label 510 artwork -->
+    <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload><!-- onnow artwork -->
+    <onload>SetProperty(OVERLAY.type4,landscape,10000)</onload><!-- coming up next artwork -->
+    <onload>SetProperty(EPG.type1,landscape,10000)</onload><!-- epg label 508 artwork -->
+    <onload>SetProperty(EPG.type2,poster,10000)</onload><!-- epg label 510 artwork -->
     <onload>SetProperty(EPG.rowCount,6,10000)</onload><!-- epg row count -->
     <coordinates>
         <system>1</system>
@@ -23,7 +23,7 @@
             <aligny>center</aligny>
         </control>
         <control type="image">
-            <description>Channel Logo</description>
+            <description>Background Channel Logo</description>
             <posx>725</posx>
             <posy>225</posy>
             <width>480</width>
@@ -36,7 +36,7 @@
             <visible>Control.IsVisible(101)</visible>
         </control>
         <control type="label" id="101">
-            <description>Background Text</description>
+            <description>Background Background Text</description>
             <width>1920</width>
             <height>1080</height>
             <font>font30</font>
@@ -44,7 +44,7 @@
             <aligny>center</aligny>
         </control>  
         <control type="image" id="103">
-            <description>Channel Bug</description>
+            <description>Corner Channel Bug</description>
             <posx>350r</posx>
             <posy>188r</posy>
             <width>150</width>
@@ -257,7 +257,7 @@
                 <visible>Player.Seeking</visible>
             </control>
         </control> -->
-        <!-- moreinfo overlay -->
+        <!-- overlay -->
         <control type="group" id="222">
             <posx>0</posx>
             <posy>0</posy>            
@@ -273,16 +273,8 @@
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>            
-<!--             <control type="image">
-                <texture flipy="true">fade.png</texture>
-                <posx>0</posx>
-                <posy>560r</posy>
-                <width>1920</width>
-                <height>520</height>
-                <animation effect="fade" end="85" time="5">VisibleChange</animation>
-                <visible>Control.IsVisible(222)</visible>
-            </control> -->
             <control type="image">
                 <description>MoreInfo Overlay</description>
                 <width>1920</width>
@@ -326,6 +318,7 @@
                     <align>left</align>
                     <aligny>center</aligny>
                     <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <label>$INFO[Control.GetLabel(502)]</label>
                     <visible>!IsEmpty(Control.GetLabel(503))</visible>
                 </control>  
@@ -335,6 +328,7 @@
                     <height>30</height>
                     <font>font14</font>
                     <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <scroll>true</scroll>
                     <align>left</align>
                     <aligny>center</aligny>
@@ -391,6 +385,7 @@
                         <height>30</height>
                         <fadetime>250</fadetime>
                         <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                         <font>font12</font>
                         <align>left</align>
                         <aligny>center</aligny>
@@ -403,6 +398,7 @@
                         <height>30</height>
                         <fadetime>250</fadetime>
                         <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                         <font>font12</font>
                         <align>left</align>
                         <aligny>center</aligny>
@@ -414,6 +410,7 @@
                         <height>30</height>
                         <fadetime>250</fadetime>
                         <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                         <font>font12</font>
                         <align>right</align>
                         <aligny>center</aligny>
@@ -435,6 +432,7 @@
                     <aligny>bottom</aligny>
                     <wrapmultiline>true</wrapmultiline>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
                     <label>$INFO[Control.GetLabel(505)]</label>
                 </control>
@@ -450,6 +448,7 @@
                         <aligny>bottom</aligny>
                         <wrapmultiline>true</wrapmultiline>
                         <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                         <font>font12</font>
                         <label>$INFO[Window(10000).Property(OVERLAY.Genre),Genre: ]</label>
                     </control> 
@@ -460,6 +459,7 @@
                         <align>right</align>
                         <aligny>bottom</aligny>
                         <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                         <font>font12</font>
                         <label>$INFO[VideoPlayer.Premiered, Premièred ] $INFO[VideoPlayer.Studio, on ]</label>
                     </control>  
@@ -599,7 +599,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1015</onup>
@@ -613,7 +614,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1012</onup>
@@ -627,7 +629,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1013</onup>
@@ -641,7 +644,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1014</onup>
@@ -683,6 +687,7 @@
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>
             <!-- Starover -->
             <control type="image" id="104">
@@ -707,6 +712,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <visible>Control.IsVisible(104)</visible>
                 </control>
                 <control type="image">
@@ -768,6 +774,7 @@
                     <align>left</align>
                     <aligny>center</aligny>
                     <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <visible>!IsEmpty(Control.GetLabel(503))</visible>
                 </control>    
                 <control type="label">
@@ -776,6 +783,7 @@
                     <height>30</height>
                     <font>font14</font>
                     <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <scroll>true</scroll>
                     <align>left</align>
                     <aligny>center</aligny>
@@ -790,6 +798,7 @@
                     <height>30</height>
                     <font>font14</font>
                     <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <scroll>true</scroll>
                     <align>left</align>
                     <aligny>center</aligny>
@@ -808,6 +817,7 @@
                     <font>font14</font>
                     <visible>!IsEmpty(Control.GetLabel(503))</visible>
                     <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <visible>false</visible>
                 </control>
                 <control type="label" id="504">
@@ -816,6 +826,7 @@
                     <height>30</height>
                     <font>font14</font>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <scroll>true</scroll>
                     <align>left</align>
                     <aligny>center</aligny>
@@ -829,6 +840,7 @@
                     <height>30</height>
                     <font>font14</font>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <scroll>true</scroll>
                     <align>left</align>
                     <aligny>center</aligny>
@@ -890,6 +902,7 @@
                     <aligny>bottom</aligny>
                     <wrapmultiline>true</wrapmultiline>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
                 </control> 
             </control> 
@@ -917,6 +930,7 @@
                 <label>|</label>
                 <font>font14</font>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
             </control>  
             <control type="label">
@@ -927,6 +941,7 @@
                 <align>left</align>
                 <scroll>True</scroll>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <scrollsuffix>  •  </scrollsuffix>
                 <autoscroll time="1000" delay="1000" repeat="2000">True</autoscroll>
                 <scrollspeed>40</scrollspeed>
@@ -943,6 +958,7 @@
                 <label>|</label>
                 <font>font14</font>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
             </control>  
         </control>
@@ -984,6 +1000,7 @@
                     <scroll>false</scroll>
                     <scrollout>false</scrollout>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
                     <autoscroll time="2000" delay="0" repeat="0">Skin.HasSetting(AutoScroll)</autoscroll>
                 </control>           
@@ -992,6 +1009,7 @@
                     <font>font12</font>
                     <align>center</align>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <label>Coming Up Next</label>
                     <visible>false</visible>
                 </control>           
@@ -1000,6 +1018,7 @@
                     <font>font12</font>
                     <align>center</align>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <visible>false</visible>
                 </control>              
                 <control type="label" id="125">
@@ -1007,6 +1026,7 @@
                     <font>font12</font>
                     <align>center</align>
                     <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <visible>false</visible>
                 </control>  
             </control>
@@ -1095,7 +1115,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1011</onup>
@@ -1109,7 +1130,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1000</onup>
@@ -1123,7 +1145,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1001</onup>
@@ -1137,7 +1160,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1002</onup>
@@ -1151,7 +1175,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1003</onup>
@@ -1165,7 +1190,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1004</onup>
@@ -1179,7 +1205,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1005</onup>
@@ -1193,7 +1220,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1006</onup>
@@ -1207,7 +1235,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1007</onup>
@@ -1221,7 +1250,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1008</onup>
@@ -1235,7 +1265,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1009</onup>
@@ -1249,7 +1280,8 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font12</font>
-                    <textcolor>ffffffff</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocus.png</texturenofocus>
                     <onup>1010</onup>

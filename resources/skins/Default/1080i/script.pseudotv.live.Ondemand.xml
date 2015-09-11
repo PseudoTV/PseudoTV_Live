@@ -36,6 +36,7 @@
                 <height>24</height>
                 <font>font12</font>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
@@ -69,6 +70,7 @@
                 <height>24</height>
                 <font>font12</font>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
@@ -101,6 +103,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>               
             <control type="label" id="216">
                 <description>DVR Label</description>              
@@ -111,6 +114,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>               
             <control type="label" id="217">
                 <description>OnDemand Label</description>               
@@ -121,6 +125,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>               
             <control type="label" id="218">
                 <description>Apps Label</description>        
@@ -131,6 +136,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
             </control>   
         </control>           
         <!-- Twitter    -->
@@ -165,10 +171,11 @@
                 <angle>90</angle>
                 <scrollspeed>40</scrollspeed>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <textoffsetx>20</textoffsetx>
                 <resetonlabelchange>true</resetonlabelchange>
                 <visible>!IsEmpty(Control.GetLabel(138))</visible>
-                <label>Follow @PseudoTV_Live on Twitter</label>
+                <label></label>
                 <label>$INFO[Window(10000).Property(twitter.1.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.2.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.3.label)]</label>
@@ -184,6 +191,7 @@
                 <label>|</label>
                 <font>font10</font>
                 <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <visible>Control.IsVisible(138)</visible>
             </control>  
         </control>
@@ -201,7 +209,8 @@
                 <font>font14</font>
                 <align>left</align>
                 <aligny>center</aligny>
-                <textcolor>C0C0C0C0</textcolor>     
+                <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>     
                 <label>NOW WATCHING:</label>     
             </control>
             <control type="label">
@@ -210,6 +219,7 @@
                 <height>30</height>
                 <font>font14</font>
                 <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <scroll>true</scroll>
                 <align>left</align>
                 <aligny>center</aligny>
@@ -271,6 +281,7 @@
                 <aligny>bottom</aligny>
                 <wrapmultiline>true</wrapmultiline>
                 <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                 <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 <font>font12</font>
             </control> 

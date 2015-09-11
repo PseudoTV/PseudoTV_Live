@@ -549,15 +549,16 @@ def UpdateRSS_Thread():
     if now > SyncUpdateRSS:
         ##Push MSG
         try:
+            pushlist = ''
             pushrss = 'http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/push_msg.xml'
             file = open_url(pushrss)
             pushlist = file.read().replace('\n','').replace('\r','').replace('\t','')
             file.close()
         except Exception,e:
             log('utils: UpdateRSS_Thread, pushlist Failed! ' + str(e))
-            pushlist = ''
         ##Github RSS
         try:
+            gitlist = ''
             gitrss = 'http://github.com/Lunatixz.atom'
             d = feedparser.parse(gitrss)
             header = (d['feed']['title']).replace(' ',' Github ')
@@ -573,9 +574,10 @@ def UpdateRSS_Thread():
                     pass
         except Exception,e:
             log('utils: UpdateRSS_Thread, gitlist Failed! ' + str(e))
-            gitlist = ''
+        gitlist += 'Follow @PseudoTV_Live on Twitter'
         ##Twitter RSS
         try:
+            twitlist = []
             #twitrss ='http://feedtwit.com/f/pseudotv_live'
             twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=pseudotv_live'
             e = feedparser.parse(twitrss)
@@ -590,7 +592,6 @@ def UpdateRSS_Thread():
                     pass
         except Exception,e:
             log('utils: UpdateRSS_Thread, twitlist Failed! ' + str(e))
-            twitlist = ''
         UpdateRSS_NextRun = ((now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S.%f"))
         log('utils: UpdateRSS, Now = ' + str(now) + ', UpdateRSS_NextRun = ' + str(UpdateRSS_NextRun))
         setProperty("UpdateRSS_NextRun",str(UpdateRSS_NextRun))
@@ -1378,6 +1379,10 @@ def SyncXMLTV(force=False):
 def SyncXMLTV_Thread(force=False):
     log('utils: SyncXMLTV_Thread')
     now  = datetime.datetime.today()  
+    try:
+        force = REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true"
+    except:
+        REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
     try:
         SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
         if not SyncPTV_LastRun or FileAccess.exists(PTVLXML) == False or force == True:

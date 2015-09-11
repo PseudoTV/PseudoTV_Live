@@ -57,6 +57,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.channelLogos = ''
         self.textcolor = "FFFFFFFF"
         self.focusedcolor = "FF7d7d7d"
+        self.shadowcolor = "FF000000"
         self.clockMode = 0
         self.textfont  = "font14"
         self.startup = time.time()
@@ -145,6 +146,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             focusedcolor = int(self.getControl(99).getLabel(), 16)
             if focusedcolor > 0:
                 self.focusedcolor = hex(focusedcolor)[2:]
+                
+            shadowcolor = int(self.getControl(98).getLabel(), 16)
+            if shadowcolor > 0:
+                self.shadowColor = hex(shadowcolor)[2:]
             
             self.textfont = self.getControl(105).getLabel()
         except:
@@ -456,9 +461,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             playlistpos = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
             
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
-                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].getCurrentTitle() + " (paused)", focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor))
+                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].getCurrentTitle() + " (paused)", focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
             elif (chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < 900) or chname in BYPASS_EPG: #Under 15mins "Stacked"
-                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor))
+                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
             else:
                 # Find the show that was running at the given time
                 # Use the current time and show offset to calculate it
@@ -609,7 +614,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         # Filtered = True
                         
                         #Create Control array
-                        self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
+                        self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
 
                     totaltime += tmpdur
                     reftime += tmpdur
@@ -621,7 +626,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
                 # If there were no buttons added, show some default button
                 if len(self.channelButtons[row]) == 0:
-                    self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor))
+                    self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
         except:
             self.log("exception in setButtons", xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -1211,7 +1216,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 except:
                     pass
             else:
-                self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.25, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
+                self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.5, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
                 self.MyOverlayWindow.getTMPSTR_Thread.name = "getTMPSTR_Thread"  
                 if self.MyOverlayWindow.getTMPSTR_Thread.isAlive():
                     self.MyOverlayWindow.getTMPSTR_Thread.cancel()
@@ -1460,7 +1465,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.addControl(self.contextButtonB)
         self.contextButtonC = xbmcgui.ControlImage(ChanButtonx-4, ChanButtony+71, 258, 308, self.ButtonContextBackground)
         self.addControl(self.contextButtonC)
-        self.contextButtonF = xbmcgui.ControlButton(ChanButtonx-4, ChanButtony, ChanButtonw+8, ChanButtonh, '[ '+getProperty("EPG.Title")+' ]', focusTexture=self.ButtonContextFocus, noFocusTexture=self.ButtonContextFocus, alignment=4, textColor=self.textcolor, focusedColor=self.focusedcolor)
+        self.contextButtonF = xbmcgui.ControlButton(ChanButtonx-4, ChanButtony, ChanButtonw+8, ChanButtonh, '[ '+getProperty("EPG.Title")+' ]', focusTexture=self.ButtonContextFocus, noFocusTexture=self.ButtonContextFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor)
         self.addControl(self.contextButtonF)
         self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, self.textfont, self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
         self.addControl(self.contextButton)
