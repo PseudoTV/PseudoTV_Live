@@ -101,7 +101,7 @@ class MyPlayer(xbmc.Player):
         if self.isPlaybackValid() == True:
             start_time = self.getPlayerTime()
             start_title = self.getPlayerTitle()            
-            xbmc.sleep(1111)
+            xbmc.sleep(251)
             sample_time = self.getPlayerTime()
             sample_title = self.getPlayerTitle()
             if start_title == sample_title:
@@ -147,7 +147,6 @@ class MyPlayer(xbmc.Player):
     
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        self.overlay.background.setVisible(False)
         # close/reopen window after playback change to correct videowindow bug.
         if getProperty("PTVL.%s_Opened" % self.overlay.isWindowOpen()) == "true" and getProperty("PTVL.VideoWindow") == "true":
             self.log('onPlayBackStarted, Force Window Reload')
@@ -160,6 +159,7 @@ class MyPlayer(xbmc.Player):
                 self.overlay.waitForVideoPlayback(self.overlay.InfTimer)
             else:
                 self.overlay.setShowInfo()
+            self.overlay.background.setVisible(False) 
             
             if self.overlay.UPNP:
                 self.overlay.PlayUPNP(file, self.getPlayerTime())  
@@ -269,6 +269,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.maxChannels = 0
         self.triggercount = 0
         self.notPlayingCount = 0 
+        self.lastActionCount = 0
         self.ignoreInfoAction = False
         self.shortItemLength = 120
         self.runningActionChannel = 0
@@ -518,7 +519,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.Player.play(INTRO)
             time.sleep(17)
             REAL_SETTINGS.setSetting("INTRO_PLAYED","true")    
-            
+        self.background.setVisible(True)
         self.playerTimer.start()
         self.setChannel(self.currentChannel)
         self.startSleepTimer()
@@ -825,7 +826,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
 
     def lastActionTrigger(self, force=None):
-        self.notPlayingCount = 0
+        self.lastActionCount += 1
+        if self.lastActionCount > 3:
+            return self.setChannel(self.fixChannel(1))
         if force:
             self.notPlayingAction = force
         self.logDebug("lastActionTrigger = " + self.notPlayingAction)
@@ -888,6 +891,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if channel == -1:
             return
             
+        self.notPlayingCount = 0 
         self.background.setVisible(True)
         self.getControl(102).setVisible(False)
         self.getControl(120).setVisible(False)
@@ -1082,7 +1086,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.log("setChannel, Finished, unmuting");
             xbmc.executebuiltin("Mute()");
             
-        self.background.setVisible(False)
         self.logDebug("setChannel,self.seektime = " + str(self.seektime))
         self.getControl(517).setLabel(str(self.Player.getPlayerTime()))
         self.showChannelLabel(self.currentChannel)
@@ -2275,7 +2278,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             if self.triggercount == 30:
                 self.triggercount = 0      
                 GA_Request()
-                self.IdleTimer()
+            self.IdleTimer()
                 
             try:
                 # Resume playback for live streams, except pvr backend.
@@ -2288,24 +2291,26 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.lastPlayTime = self.Player.getPlayerTime()
                 self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
                 self.notPlayingCount = 0   
+                self.lastActionCount = 0
             else:        
                 self.notPlayingCount += 1
                 self.logDebug("notPlayingCount = " + str(self.notPlayingCount) + "/" + str(int(round((self.PlayTimeoutInt/2)))), notify=True)
-            self.playerTimer.start()
-            
+                
             if isLowPower != True:
                 if self.CloseDialog(['Dialogue OK']) == True:
                     if self.Player.isActuallyPlaying() == False:    
-                        self.lastActionTrigger()
+                        self.playerTimer.start()
+                        return self.lastActionTrigger()
                         
             if self.notPlayingCount >= int(round((self.PlayTimeoutInt/2))): 
                 self.CloseDialog()
                 if self.Player.isActuallyPlaying() == False:
-                    self.lastActionTrigger()
+                    self.playerTimer.start()
+                    return self.lastActionTrigger()
+                    
+        self.playerTimer.start()
 
-
-
-
+        
     def Paused(self, action=False):
         self.log('Paused')
         self.background.setVisible(True)
@@ -2358,10 +2363,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log('showReminder')
         Notify_Time, epochBeginDate = self.cleanReminderTime(tmpDate)
         if REAL_SETTINGS.getSetting("AutoJump") == "true":
-            if handle_wait(30,"Show Reminder",'[B]' + title + '[/B] on channel [B]' + str(channel), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?') == True:
+            if handle_wait(15,"Show Reminder",'[B]' + title + '[/B] on channel [B]' + str(channel), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?') == True:
                 self.setChannel(self.fixChannel(channel))
         else:
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live",title + ' starts in 30s', 4000, THUMB) )
+            for i in range(15):
+                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ('[B]' + title + '[/B] on', 'channel [B]' + str(channel) + '[/B] starts in %s' % str(15-i)+'s', 1000, THUMB) )
         self.removeReminder(tmpDate, title, channel, record)
             
             
@@ -2451,7 +2457,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         auto = True
             if auto == True:
                 now = time.time()
-                reminder_time = round(((epochBeginDate - now) / 60) - .5)#In minutes
+                reminder_time = round(((epochBeginDate - now) / 60) - .25)#In minutes
                 reminder_Threadtime = float(int(reminder_time)*60)#In seconds
                 # if int(reminder_Threadtime) > 0:
                 self.log('setReminder, setting ' + str([tmpDate, title, channel, record]))

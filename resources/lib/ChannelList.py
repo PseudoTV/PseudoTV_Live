@@ -2258,7 +2258,7 @@ class ChannelList:
         showList = []
         linesLST = []
         genre_filter = [setting1.lower()]
-        Playlist_List = 'http://raw.github.com/Lunatixz/pseudotv-live-community/master/youtube_playlists_networks.xml'
+        Playlist_List = 'http://raw.github.com/PseudoTV/pseudotv-live-community/master/youtube_playlists_networks.ini'
         linesLST = read_url_cached(Playlist_List, return_type='readlines')
         if linesLST:
             for i in range(len(linesLST)):
@@ -3410,7 +3410,7 @@ class ChannelList:
             if self.youtube_player != False:
                 try:
                     InternetBumperLST = []
-                    Bumper_List = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/bumpers.xml'
+                    Bumper_List = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/bumpers.ini'
                     linesLST = read_url_cached(Bumper_List, return_type='readlines')
                     for i in range(len(Bumper_List)):    
                         include = False                    
@@ -4592,14 +4592,14 @@ class ChannelList:
         ExternalSetting2List = []
         ExternalSetting3List = []
         ExternalSetting4List = []
-        RSSURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/rss.xml'
-        YoutubeChannelURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/youtube_channels.xml'
-        YoutubePlaylistURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/youtube_playlists.xml'
-        YoutubeChannelNetworkURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/youtube_channels_networks.xml'
-        YoutubePlaylistNetworkURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/youtube_playlists_networks.xml'
-        PluginURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/addons.ini'
-        InternetURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/internettv.ini'
-        LiveURL = 'http://raw.github.com/Lunatixz/PseudoTV_Lists/master/livetv.ini'
+        RSSURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/rss.ini'
+        YoutubeChannelURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_channels.ini'
+        YoutubePlaylistURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_playlists.ini'
+        YoutubeChannelNetworkURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_channels_networks.ini'
+        YoutubePlaylistNetworkURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_playlists_networks.ini'
+        PluginURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/addons.ini'
+        InternetURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/internettv.ini'
+        LiveURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/livetv.ini'
            
         if type == 'LiveTV':
             url = LiveURL

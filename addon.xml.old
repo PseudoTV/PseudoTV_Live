@@ -8,20 +8,20 @@
         <import addon="script.module.simplejson" version="3.3.0"/>
         <import addon="script.module.metahandler" version="2.7.0"/>
         <import addon="script.common.plugin.cache" version="2.5.5"/>
-        <import addon="script.module.addon.common" version="2.0.0"/>
+        <import addon="script.module.t0mm0.common" version="2.1.1"/>
         <import addon="script.module.beautifulsoup" version="3.2.1"/>
-        <import addon="script.artwork.downloader" optional="true"/>
-        <import addon="script.tv.show.next.aired" optional="true"/>
-        <import addon="script.module.simple.downloader" optional="true"/>
-        <import addon="script.module.youtube.dl" optional="true"/>
-        <import addon="plugin.program.super.favourites" optional="true"/>
+        <import addon="script.module.pil" optional="true"/>
+        <import addon="plugin.video.vimeo" optional="true"/>
         <import addon="script.extendedinfo" optional="true"/>
         <import addon="plugin.video.youtube" optional="true"/>
-        <import addon="plugin.video.vimeo" optional="true"/>
         <import addon="plugin.video.ustvnow" optional="true"/>
+        <import addon="script.module.youtube.dl" optional="true"/>
+        <import addon="script.artwork.downloader"optional="true"/>
+        <import addon="script.tv.show.next.aired" optional="true"/>
         <import addon="plugin.video.playonbrowser" optional="true"/>
-        <import addon="script.module.pil" optional="true"/>
         <import addon="context.pseudotv.live.export" optional="true"/>
+        <import addon="script.module.simple.downloader" optional="true"/>
+        <import addon="plugin.program.super.favourites" optional="true"/>
     </requires>
     <extension point="xbmc.python.script" library="default.py">
         <provides>Programs</provides>

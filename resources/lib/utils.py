@@ -361,16 +361,16 @@ def FindLogo(chtype, chname, mediapath=None):
 def findGithubLogo(chname): 
     log("utils: findGithubLogo")
     url = ''
-    baseurl='https://github.com/Lunatixz/PseudoTV_Logos/tree/master/%s' % chname[0]
+    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % chname[0]
     Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
     if not Studiolst:
-        miscurl='https://github.com/Lunatixz/PseudoTV_Logos/tree/master/0'
+        miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
         Misclst = fillGithubItems(miscurl, '.png', removeEXT=True)
         for i in range(len(Misclst)):
             Studio = Misclst[i]
             cchname = CleanCHname(chname)
             if uni((Studio).lower()) == uni(cchname.lower()):
-                url = 'https://raw.githubusercontent.com/Lunatixz/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
                 log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
                 break
     else:
@@ -378,7 +378,7 @@ def findGithubLogo(chname):
             Studio = Studiolst[i]
             cchname = CleanCHname(chname)
             if uni((Studio).lower()) == uni(cchname.lower()):
-                url = 'https://raw.githubusercontent.com/Lunatixz/PseudoTV_Logos/master/'+chname[0]+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/'+chname[0]+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
                 log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
                 break
     return url
@@ -1268,7 +1268,7 @@ def DonCHK():
            
 def ComCHK():
     # Community users are required to supply gmail info in-order to use the community submission tool, SEE DISCLAIMER!!
-    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/Lunatixz/PseudoTV_Lists
+    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists
     # Community lists includes: Youtube, Vimeo, RSS, Smartplaylists, LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and User installed and Kodi repository plugins (see isKodiRepo, isPlugin).
     if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != 'User@gmail.com':
         if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
@@ -1425,7 +1425,7 @@ def SyncXMLTV_Thread(force=False):
 
 def help(chtype):
     log('utils: help, ' + chtype)
-    HelpBaseURL = 'http://raw.github.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
+    HelpBaseURL = 'http://raw.github.com/PseudoTV/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
     type = (chtype).replace('None','General')
     URL = HelpBaseURL + (type.lower()).replace(' ','%20')
     log("utils: help URL = " + URL)
