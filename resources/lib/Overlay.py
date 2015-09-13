@@ -1307,19 +1307,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.getControl(504).setLabel(swtitle)
         self.getControl(505).setLabel(Description)
 
-        try:
-            ##LIVEID##
-            type = LiveID[0]
-            id = LiveID[1]
-            dbid, epid = splitDBID(LiveID[2])
-            playcount = int(LiveID[4])  
-            rating = LiveID[5]
-            year, title, showtitle = getTitleYear(title)
-            # SetProperties
-            setProperty("OVERLAY.TimeStamp",timestamp)
-            self.setProp(showtitle, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode)
-        except:
-            pass  
+        ##LIVEID##
+        type = LiveID[0]
+        id = LiveID[1]
+        dbid, epid = splitDBID(LiveID[2])
+        playcount = int(LiveID[4])  
+        rating = LiveID[5]
+        year, title, showtitle = getTitleYear(title)
+        # SetProperties
+        setProperty("OVERLAY.TimeStamp",timestamp)
+        self.setProp(showtitle, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode)
         self.setShowInfo_release = True
         
             

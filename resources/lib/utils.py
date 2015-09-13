@@ -302,7 +302,12 @@ def CleanCHname(text):
     text = text.replace(" LiveTV", "") 
     text = text.replace(" USTV", "")
     text = text.replace(" USTVnow", "")  
-    text = text.replace(" USTVNOW", "")  
+    text = text.replace(" USTVNOW", "") 
+    # # try removing number from channel ie NBC2 = NBC
+    # try:
+        # text = (re.compile('(.+?)(\d{1})$').findall(text))[0][0]
+    # except:
+        # pass
     return text
 
 def FindLogo_Thread(data):
@@ -1637,13 +1642,13 @@ def chkVersion():
     
     for vernum in match:
         log("utils: Current Version = " + str(vernum))
-    try:
-        link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
-        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-    except:
-        pass   
-        
+        try:
+            link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
+            link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+            match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+        except:
+            pass   
+            
     if len(match) > 0:
         if vernum != str(match[0]):
             if not isPlugin('repository.lunatixz'):
@@ -1738,9 +1743,6 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('EnhancedGuideData', "false")
             if MEDIA_LIMIT > 250:
                 REAL_SETTINGS.setSetting('MEDIA_LIMIT', "3")
-            if isDebug() == True:
-                if yesnoDialog('Its recommended you disable debug logging for standard use','Disable Debugging?') == True:
-                    REAL_SETTINGS.setSetting('enable_Debug', "false")
             if NOTIFY == True:
                 xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Settings Optimized For Performance", 1000, THUMB) )
     log("utils: chkLowPower = " + getProperty("PTVL.LOWPOWER"))
@@ -1867,6 +1869,10 @@ def preStart():
     # VideoWindow Patch.
     VideoWindow()
     
+    if isDebug() == True:
+        if yesnoDialog('Its recommended you disable debug logging for standard use','Disable Debugging?') == True:
+            REAL_SETTINGS.setSetting('enable_Debug', "false")
+            
     # Optimize settings based on sys.platform
     chkLowPower()
     

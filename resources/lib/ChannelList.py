@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import os, sys, re, unicodedata
+import os, sys, re, unicodedata, traceback
 import time, datetime, threading, _strptime, calendar
 import httplib, urllib, urllib2, feedparser, socket, json
 import base64, shutil, random, errno
@@ -1157,7 +1157,7 @@ class ChannelList:
             description = (description[:350])   
         tmpstr = str(duration) + ',' + showtitle + "//" + subtitle + "//" + description + "//" + genre + "//" + timestamp + "//" + LiveID + '\n' + file
         tmpstr = tmpstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")                  
-        self.logDebug('makeTMPSTR, tmpstr = ' + str(tmpstr))
+        self.logDebug('makeTMPSTR, tmpstr = ' + ascii(tmpstr))
         return tmpstr
 
         
@@ -5360,7 +5360,7 @@ class ChannelList:
                                         
         except Exception,e:
             self.log('getFileList, failed...' + str(e))
-            pass
+            self.logDebug(traceback.format_exc(), xbmc.LOGERROR)   
                              
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
