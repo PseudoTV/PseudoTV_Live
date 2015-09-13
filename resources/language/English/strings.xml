@@ -233,4 +233,5 @@
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
+    <string id="30944">Force LiveTV Channel Reset</string>
 </strings>

@@ -298,7 +298,7 @@ class ChannelList:
             pass
   
         # Force channel rebuild
-        if str(channel) in self.ResetLST:
+        if str(channel) in self.ResetLST or REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true":
             self.log('setupChannel, Channel ' + str(channel) + ' in ResetLST')
             self.delResetLST(channel)
             needsreset = True

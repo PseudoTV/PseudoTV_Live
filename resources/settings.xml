@@ -242,6 +242,7 @@
         <setting id="plugin_ok_level" type="enum"   label="30994" values="Low|High" default="0"/>
         <setting id="Override.LOWPOWER" type="bool"   label="30943" default="false"/>
         <setting id="ga_disable" type="bool"   label="30992" default="false"/>
+        <setting id="ForceLiveChannelReset" type="bool"   label="30944" default="false"/>
         <setting label="36996" type="lsep"  visible="eq(-1,true)"/>
         <setting label="36997" type="lsep"  visible="eq(-2,true)"/>
         <setting label="30912" type="lsep"/>

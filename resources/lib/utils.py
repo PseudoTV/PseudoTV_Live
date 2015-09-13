@@ -1642,13 +1642,13 @@ def chkVersion():
     
     for vernum in match:
         log("utils: Current Version = " + str(vernum))
-        try:
-            link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
-            link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-            match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-        except:
-            pass   
-            
+    try:
+        link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
+        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+    except:
+        pass   
+        
     if len(match) > 0:
         if vernum != str(match[0]):
             if not isPlugin('repository.lunatixz'):
@@ -1658,7 +1658,7 @@ def chkVersion():
                     getRepo()
             # else:
                 # get_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
-    
+
 def chkAutoplay():
     log('utils: chkAutoplay')
     fle = xbmc.translatePath("special://profile/guisettings.xml")
