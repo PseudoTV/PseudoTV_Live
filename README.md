@@ -1,106 +1,86 @@
-PseudoTV Live
-==================
+# PseudoTV Live
 
 - Channel surfing for your Video, LiveTV, InternetTV and Plugin sources
- 
 - Find support @ "ORG" http://forum.xbmc.org/showthread.php?tid=169032
 
-------------------
-Special thanks to:
-------------------
+## What is it?
 
-- XBMC - Foundation
+It's channel-surfing for your mediacenter.  Never again will you have to actually pick what you want to watch.  
+Use an electronic program guide (EPG) to view what's on or select a show to watch.  This script will let you create your own channels and, you know, watch them.  Doesn't actually sound useful when I have to write it in a readme.  
+Eh, try it and decide if it works for you...
 
-- jason102, angrycamel, jtucker1972 - Original code and project inspiration.
 
-- RagnaroktA - CE Intro Video, Visit http://www.cinemavision.org/
+## Features
 
-- Special Thanks to:
-  ARYEZ,thedarkonaut, tman12, peppy6582, earlieb, Steveb1968, kurumushi, twinther, LordIndy, ronie, mcorcoran, 
-  sphere, giftie, spoyser, Eldorados, lambda, kickin, bradvido88, Phil65, RagnaroktA, -bry
-  
-* All work is either original, or modified code from the properly credited creators.
 
-------------------
-What is it?
-------------------
+- Automatic channel creation based on your library, installed plugins and recommend online sources.
+- Optionally customize the channels you want with the in-app channel configuration tool.
+- Utilize the Kodi smartplaylist editor to create advanced channel setups.
+- Use an EPG and view what was on, is on, and will be on.  Would you rather see something that will be on later? Select it and watch it now!
+- Extended show information including a OnDemand menu.
+- Missed the beginning of a show? use the "Start Over" feature.
+- Want to pause a channel while you watch another?  And then come back to it and have it be paused still?  Sounds like a weird request to me, but if you want to do it you certainly can.  It's a feature!
+- An idle-timer makes sure you aren't spinning a hard-drive needlessly all night.
+- Accidental left the EPG open? or screen paused? No need to worry a handy clock screensaver displays when idle.
+- No need to wonder what's on next, toward the end of a program the "Coming Up Next" will display information on the upcoming program.
+- Multi-Action sleep timer, Turn the TV off? Shutdown Kodi? it's up to you.
+- Discover the other features on your own (so that I don't have to list them all...I'm lazy).
 
-    It's channel-surfing for your mediacenter.  Never again will you have to actually pick what you want to watch.  
-    Use an electronic program guide (EPG) to view what's on or select a show to watch.  This script will let you create
-    your own channels and, you know, watch them.  Doesn't actually sound useful when I have to write it in a readme.  
-    Eh, try it and decide if it works for you...
+## Setup
 
-------------------
-Features
-------------------
-
-    - Automatic channel creation based on your library, installed plugins and recommend online sources.
-    - Optionally customize the channels you want with the in-app channel configuration tool.
-    - Utilize the Kodi smartplaylist editor to create advanced channel setups.
-    - Use an EPG and view what was on, is on, and will be on.  Would you rather
-        see something that will be on later?  Select it and watch it now!
-    - Extended show information including a OnDemand menu.
-    - Missed the beginning of a show? use the "Start Over" feature.
-    - Want to pause a channel while you watch another?  And then come back to
-        it and have it be paused still?  Sounds like a weird request to me, but
-        if you want to do it you certainly can.  It's a feature!
-    - An idle-timer makes sure you aren't spinning a hard-drive needlessly all
-        night.
-    - Accidental left the EPG open? or screen paused? No need to worry a handy clock 
-      screensaver displays when idle.
-    - No need to wonder what's on next, toward the end of a program the "Coming Up Next" will display 
-      information on the upcoming program.
-    - Multi-Action sleep timer, Turn the TV off? Shutdown Kodi? it's up to you.
-    - Discover the other features on your own (so that I don't have to list
-        them all...I'm lazy).
-
-------------------
-Setup
-------------------
-
-    First, install it.  This is self-explanatory (hopefully).  Really, that's all that is necessary.  
-    Default channels will be created without any intervention.  You can choose to setup channels (next step) 
-    if you wish. Instructions to create your own channels.  Inside of the addon config, you may open the channel         
-    configuration tool.  Inside of here you can select a channel to modify.  You may then select it's type and any 
+- First, install a new repository, available official link: [Temporary Repository](https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip).  
+- AAccess the repository and look for add-on 'PseudoTV Live`, send and install the addon.
+- By Default, channels will be created without any intervention. You can choose to setup channels (next step) 
+if you wish. Instructions to create your own channels.  Inside of the addon config, you may open the channel configuration tool. Inside of here you can select a channel to modify.  You may then select it's type and any 
     options. For a basic setup, that's all you need to do.  It's worth noting that you may create a playlist using the 
     smart playlist editor and then select that playlist in the channel config tool (Custom Playlist channel type). 
     Additionally, you may select to add advanced rules to a certain channel. There are quite a few rules that are 
     currently available, and hopefully they should be relatively self-explanitory.  This is a readme and should include 
     descriptions of them all...who knows, maybe it will some day.
 
-------------------
-Controls
-------------------
 
-    There are only a few things you need to know in order to control everything. First of all, the Close/Exit button 
-    exits the script.  You may also press the Previous Menu ('Escape') button to do 
-    this (don't worry, it will prompt you to verify first).  Scroll through channels using the arrow up and down 
-    keys, or alternatively by pressing Page up or down. You can also jump through the EPG using page up and down.
-    Switch directly to a channel by inputting the channel number, or navigate to it in the EPG.
-    
-    To open the EPG, press the Select key ('Enter'). Move around using the arrow keys. Start a program by pressing 
-    Select.  Pressing Previous Menu ('Escape') will close the EPG. Pressing 'Context Menu' will reveal more options. 
-    
-    Press 'I' to display or hide the info window. When it is displayed, you can look at the next shows 
-    on this channel using arrow right. Pressing the arrow left reveals the "Sidebar" menu. 
-    Pressing the 'Context Menu' will show the "MoreInfo" bar.
- 
-    Additional controls: Use the keymap plugin to link these action to a remote key.
-    --------------------
-    Mute ('F8')
-    Last Channel Recall ('ACTION_SHIFT')
-    Favourite Channel Jump ('ACTION_SYMBOL')
-    Subtitles ('ACTION_SHOW_SUBTITLES'), ('ShowSubtitles')
-    Next Subtitle ('NextSubtitle')
-    Show Codec ('ACTION_SHOW_CODEC')
-    Sleep Timer ('ACTION_ASPECT_RATIO')
-    Record ('ACTION_RECORD') -- To be used with future PVR features.
-    
-------------------
-Settings
-------------------
+## Controls
 
-General Settings -
+
+There are only a few things you need to know in order to control everything. First of all, the ``Close/Exit`` button exits the script.  
+
+You may also press the Previous Menu ``Escape`` button to do this (don't worry, it will prompt you to verify first).  
+
+Scroll through channels using the arrow up and down keys, or alternatively by pressing Page up or down. 
+
+You can also jump through the EPG using ``page up`` and ``down``.
+
+Switch directly to a channel by inputting the ``channel number``, or navigate to it in the EPG.
+
+To open the EPG, press the Select key ``Enter``. 
+
+Move around using the arrow keys. Start a program by pressing ``Select``.  
+
+Pressing Previous Menu ``Escape`` will close the EPG. Pressing ``Context Menu`` will reveal more options. 
+
+Press ``I`` to display or hide the info window. 
+
+When it is displayed, you can look at the next shows on this channel using ``arrow right``. 
+
+Pressing the ``arrow left`` reveals the "Sidebar" menu.
+
+Pressing the ``Context Menu`` will show the "MoreInfo" bar.
+
+#### Additional controls: Use the keymap plugin to link these action to a remote key.
+
+- Mute ``F8``
+- Last Channel Recall ``ACTION_SHIFT``
+- Favourite Channel Jump ``ACTION_SYMBOL``
+- Subtitles ``ACTION_SHOW_SUBTITLES``, ``ShowSubtitles``
+- Next Subtitle ``NextSubtitle``
+- Show Codec ``ACTION_SHOW_CODEC``
+- Sleep Timer ``ACTION_ASPECT_RATIO``
+- Record ``ACTION_RECORD`` -- To be used with future PVR features.
+    
+
+## Settings
+
+### General Settings
 
 - Configure Channels: This is the channel configuration tool.  From here you can modify the settings for each individual channel.
 
@@ -135,8 +115,7 @@ you can have both computers playing the same lists at the same time.
 available from both computers that will keep the settings and channel infor-
 mation.
 
-
-Visual Settings -
+### Visual Settings
 
 - Info when Changing Channels: Pops up a small window on the bottom of the
 screen where the current show information is displayed when changing channels.
@@ -154,87 +133,83 @@ next when the current show is nearly finished.
 EPG, coming up next box, or info box.  This is helpful if you use bumpers or
 commercials.
 
-------------------------------------
-Key Features
-------------------------------------
 
-[  ] Online Channel configurations, Custom Skin's and Community Lists via Pseudotvlive.com website.
-[½] Full Kodi integration including Context Menu, Hot keys and Artwork.
-[✓] Overlay Sidebar ("On Now") Skinnable quick menu.
-[✓] "Coming Up Next"  Skinable Overlay.
-[  ] Enhanced EPG icon flags (rec, new, sickbeard, couchpotato, HD, PG rating).
-[✓] Dynamic artwork for EPG and Overlay.
-[✓] Enhanced Guide Data: "Find Missing Art/Info" using TVDB, TMDB, Fanart.TV
-[✓] Donor Features.
-[✓] Skin Selector.
-[½] Music Channel Type.
-[✓] Music Video Channels with Internet Streaming features.
-[✓] EZ channel configuration ("Autotune").
-[✓] EZ in-app channel configuration
-[✓] Ability to add channels via Kodi favourites list.
-[✓] EPG Guide Data Listings via PVR Backend
-[✓] Hdhomerun Support (Dual/Prime).
-[✓] USTVnow w/ EPG data(Auto Tune).
-[✓] Automatic Bumpers, Commercials, and Trailers w/ Online support ("BCT's").
-[✓] Youtube/RSS Channel types [size=xx-small]*parser core by peppy6582[/size]
-[✓] TVDB/TMDB/IMDB/Fanart.TV Integration w/ trakt support
-[½] Sickbeard / Couchpotato Integration (Map Record button to queue selected show for download, Visual indicators if show is managed by either program).
-[✓] Error handling (dead link) filter.
-[✓]  EPG Color Categories 
-[✓] Autostart Service [size=xx-small]*core created by Steveb1968 [/size]
-[✓] Channel Manager Tool (Windows Only)
-[  ] Android Companion Tool
-[  ] PVR (Recording Feature)
-[  ] Virtual Movie Poster (Showtime) Integration.
-[½] Kodi web interface w/EPG, Channel editor, Remote Control.
-[✓] Direct Plugin directory channel building (ie. Mylibrary method without the need to build strms).
-[✓] Direct Playon channel building (Requires Playon Software).
-[✓] Direct UPNP channel building (Requires UPNP Software or Devices).
-[✓] Kodi PVR Backend channel building.
-[✓] Classic Coming Up Next dialog artwork.
-[½] Vevo Music Video Channel w/ EPG Information
-[✓] Settop Box mode, 24/7 Operation w/ self updating channels.
-[✓] Multiroom Video Mirroring.
-[✓] Multiroom Channel sharing.
-[  ] EPG Guide data from Schedules Direct and zap2it.
+## Key Features
 
-✓ = Added to master
-½ = Added to master, but may not be functional.
+- [ ] Online Channel configurations, Custom Skin's and Community Lists via Pseudotvlive.com website.
+- [½] Full Kodi integration including Context Menu, Hot keys and Artwork.
+- [x] Overlay Sidebar ("On Now") Skinnable quick menu.
+- [x] "Coming Up Next"  Skinable Overlay.
+- [ ] Enhanced EPG icon flags (rec, new, sickbeard, couchpotato, HD, PG rating).
+- [x] Dynamic artwork for EPG and Overlay.
+- [x] Enhanced Guide Data: "Find Missing Art/Info" using TVDB, TMDB, Fanart.TV
+- [x] Donor Features.
+- [x] Skin Selector.
+- [½] Music Channel Type.
+- [x] Music Video Channels with Internet Streaming features.
+- [x] EZ channel configuration ("Autotune").
+- [x] EZ in-app channel configuration
+- [x] Ability to add channels via Kodi favourites list.
+- [x] EPG Guide Data Listings via PVR Backend
+- [x] Hdhomerun Support (Dual/Prime).
+- [x] USTVnow w/ EPG data(Auto Tune).
+- [x] Automatic Bumpers, Commercials, and Trailers w/ Online support ("BCT's").
+- [x] Youtube/RSS Channel types [size=xx-small]*parser core by peppy6582[/size]
+- [x] TVDB/TMDB/IMDB/Fanart.TV Integration w/ trakt support
+- [½] Sickbeard / Couchpotato Integration (Map Record button to queue selected show for download, Visual indicators if show is managed by either program).
+- [x] Error handling (dead link) filter.
+- [x]  EPG Color Categories 
+- [x] Autostart Service [size=xx-small]*core created by Steveb1968 [/size]
+- [x] Channel Manager Tool (Windows Only)
+- [ ] Android Companion Tool
+- [ ] PVR (Recording Feature)
+- [ ] Virtual Movie Poster (Showtime) Integration.
+- [½] Kodi web interface w/EPG, Channel editor, Remote Control.
+- [x] Direct Plugin directory channel building (ie. Mylibrary method without the need to build strms).
+- [x] Direct Playon channel building (Requires Playon Software).
+- [x] Direct UPNP channel building (Requires UPNP Software or Devices).
+- [x] Kodi PVR Backend channel building.
+- [x] Classic Coming Up Next dialog artwork.
+- [½] Vevo Music Video Channel w/ EPG Information
+- [x] Settop Box mode, 24/7 Operation w/ self updating channels.
+- [x] Multiroom Video Mirroring.
+- [x] Multiroom Channel sharing.
+- [ ] EPG Guide data from Schedules Direct and zap2it.
 
-------------------------------------
-Understanding Chtypes
-------------------------------------
+- [x] = Added to master
 
-(0).  - Custom Smartplaylist
-(1).  - TV networks
-(2).  - Movie Studios
-(3).  - TV Genre
-(4).  - Movie Genre
-(5).  - Mixed TV/Movie Genre
-(6).  - TV Show
-(7).  - Directory Channel
-(8).  - LiveTV, Use with a single video source and matching xmltv EPG data.
-(9).  - InternetTV, Use with a single video source and no matching EPG data. EPG data is provided manually via settings. 
-(10). - Youtube Channels
-(11). - RSS Feed
-(12). - Music Genres
-(13). - Music Videos
-(14). - Donor Extras Content
-(15). - Plugin generated channel (not for single source).
-(16). - UPNP generated channel (not for single source).
+- [½] = Added to master, but may not be functional.
 
-----------------------------------------
-Manual Configuration Examples - OUTDATED
-----------------------------------------
+## Understanding Chtypes
 
-[b][u]Configuration Examples:[/u][/b]
-[size=x-small]# = PTV Channel Number[/size]
+- (0).  - Custom Smartplaylist
+- (1).  - TV networks
+- (2).  - Movie Studios
+- (3).  - TV Genre
+- (4).  - Movie Genre
+- (5).  - Mixed TV/Movie Genre
+- (6).  - TV Show
+- (7).  - Directory Channel
+- (8).  - LiveTV, Use with a single video source and matching xmltv EPG data.
+- (9).  - InternetTV, Use with a single video source and no matching EPG data. EPG data is provided manually via settings. 
+- (10). - Youtube Channels
+- (11). - RSS Feed
+- (12). - Music Genres
+- (13). - Music Videos
+- (14). - Donor Extras Content
+- (15). - Plugin generated channel (not for single source).
+- (16). - UPNP generated channel (not for single source).
 
-[list]
+## Manual Configuration Examples - OUTDATED
+
+### Configuration Examples:
+
+`# = PTV Channel Number`
+
+
 LiveTV:
 Use this chtype to pair media sources with EPG data from xmltv listings.
-[list]
-[code]
+```
 <setting id="Channel_#_type" value="8" />
 <setting id="Channel_#_1" value="I60159.labs.zap2it.com" />
 <setting id="Channel_#_2" value="hdhomerun://xxxxxxxD-1/tuner1?channel=qam256:399000000&program=2" />
@@ -245,7 +220,7 @@ Use this chtype to pair media sources with EPG data from xmltv listings.
 <setting id="Channel_#_time" value="0" />
 <setting id="Channel_#_rule_1_id" value="1" />
 <setting id="Channel_#_rule_1_opt_1" value="NY1 Live" />
-[/code]
+```
 
 _type" value="8" --- LiveTV w/ XMLTV EPG Chtype
 _1" value="I60159.labs.zap2it.com" --- Zapit XMLTV Channel ID found in your XMLTV file.
@@ -704,14 +679,25 @@ All Id's must remain in skin, but you can change their visibility without issue.
 502 - show description/plot
 503 - show channel icons
 
-# TVOverlay.xml
+TVOverlay.xml
 
 
 
-------------------
-Credits
-------------------
 
-PseudoTV Live: Lunatixz
-PseudoTV: Jason102
-TVTime: Jtucker1972
+## Credits
+
+- PseudoTV Live: Lunatixz
+- PseudoTV: Jason102
+- TVTime: Jtucker1972
+
+
+### Special thanks to:
+
+- XBMC - Foundation
+- jason102, angrycamel, jtucker1972 - Original code and project inspiration.
+- RagnaroktA - CE Intro Video, Visit http://www.cinemavision.org/
+- Special Thanks to:
+  ARYEZ,thedarkonaut, tman12, peppy6582, earlieb, Steveb1968, kurumushi, twinther, LordIndy, ronie, mcorcoran, 
+  sphere, giftie, spoyser, Eldorados, lambda, kickin, bradvido88, Phil65, RagnaroktA, -bry
+
+``All work is either original, or modified code from the properly credited creators.``
