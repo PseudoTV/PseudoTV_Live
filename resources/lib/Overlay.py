@@ -163,7 +163,7 @@ class MyPlayer(xbmc.Player):
             self.overlay.showChannelLabel(self.overlay.currentChannel)
             
             if self.overlay.UPNP:
-                self.overlay.PlayUPNP(file, self.getPlayerTime())  
+                self.overlay.UPNPcontrol('play', file, self.getPlayerTime())  
 
             # devise a way to detect ondemand playback todo
             # file = xbmc.Player().getPlayingFile()
@@ -383,7 +383,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
         if self.UPNP == True:
             self.background.setLabel('Initializing: Video Mirroring')
-            self.StopUPNP()
+            self.UPNPcontrol('stop')
             time.sleep(5)
             
         updateDialog = xbmcgui.DialogProgress()
@@ -1081,7 +1081,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.toggleShowStartover(False)
                 
         if self.UPNP:
-            self.PlayUPNP(mediapath, self.seektime)
+            self.UPNPcontrol('play', mediapath, self.seektime)
         
         # Unmute
         if self.MUTE:
@@ -1121,6 +1121,26 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         return seektime    
 
         
+    def UPNPcontrol(self, func, file='', seektime=0):
+        self.log('UPNPcontrol') 
+        try:
+            self.UPNPcontrolTimer = threading.Timer(0.1, self.UPNPcontrol_thread, [func, file, seektime])
+            self.UPNPcontrolTimer.name = "UPNPcontrol"       
+            if self.UPNPcontrolTimer.isAlive():
+                self.UPNPcontrolTimer.cancel()
+            self.UPNPcontrolTimer.start()
+        except Exception,e:
+            self.log('UPNPcontrol, Failed!, ' + str(e))
+            pass 
+    
+
+    def UPNPcontrol_thread(self, func, file='', seektime=0):
+        if func == 'play':
+            self.PlayUPNP(file, seektime)
+        elif func == 'stop':
+            self.StopUPNP()
+
+            
     def PlayUPNP(self, file, seektime):
         self.log("PlayUPNP")
         file = file.replace("\\\\","\\")
@@ -1333,7 +1353,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         tmp = self.inputChannel
         self.inputChannel = tmp
         curlabel = 0
-
         if channel > 99:
             if FileAccess.exists(IMAGES_LOC):
                 self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel // 100) + '.png')
@@ -1379,16 +1398,24 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         if self.DirectInput == True:
             inputChannel = self.inputChannel
-            self.GotoChannelTimer = threading.Timer(.5, self.setChannel, [inputChannel])
-            self.GotoChannelTimer.name = "GotoChannel"
-            if self.GotoChannelTimer.isAlive():
-                self.GotoChannelTimer.cancel()
-            self.GotoChannelTimer.start()
+            if inputChannel != self.currentChannel:
+                self.GotoChannelTimer = threading.Timer(0.5, self.setChannel, [inputChannel])
+                self.GotoChannelTimer.name = "GotoChannel"
+                if self.GotoChannelTimer.isAlive():
+                    self.GotoChannelTimer.cancel()
+                self.GotoChannelTimer.start()
                 
         self.inputChannel = -1
         self.log('hideChannelLabel return')
 
-        
+            
+    def closePVRdialog(self):
+        xbmc.executebuiltin("Dialog.Close(numericinput[,true])")
+        # if getProperty("OVERLAY.Mediapath").startswith('pvr'):
+            # if self.CloseDialog(['Done']) == True:
+            # xbmc.executebuiltin("Action(Close[,numericinput])")
+            
+   
     def SideBarAction(self, type='OnDemand'):
         self.log('SideBarAction')        
         if type == 'Now Playing': 
@@ -1937,6 +1964,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.showInfo(self.InfTimer)         
 
         elif action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
+            self.closePVRdialog()
             self.notPlayingAction = 'Last'
             if self.inputChannel < 0:
                 self.inputChannel = action - ACTION_NUMBER_0
@@ -2814,7 +2842,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         curtime = time.time()
         updateDialog = xbmcgui.DialogProgress()
         updateDialog.create("PseudoTV Live", "Exiting")
-        self.StopUPNP()
+        self.UPNPcontrol('stop')
 
         if CHANNEL_SHARING == True and self.isMaster:
             updateDialog.update(0, "Exiting", "Removing File Locks")
