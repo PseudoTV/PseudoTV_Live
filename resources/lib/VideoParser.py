@@ -45,18 +45,22 @@ class VideoParser:
 
 
     def getVideoLength(self, filename):
-        self.log("getVideoLength" + filename)
+        self.log("getVideoLength, " + filename)
         if len(filename) == 0:
             self.log("No file name specified")
             return 0
 
         if FileAccess.exists(filename) == False:
-            self.log("Unable to find the file")
+            self.log("getVideoLength, Unable to find the file")
             return 0
 
         base, ext = os.path.splitext(filename)
         ext = ext.lower()
 
+        # if base.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
+            # self.log("getVideoLength, Invalid filetype found " + base)
+            # return
+        
         if ext in self.AVIExts:
             self.parser = AVIParser.AVIParser()
         elif ext in self.MP4Exts:
@@ -70,6 +74,6 @@ class VideoParser:
         elif ext in self.STRMExts:
             self.parser = STRMParser.STRMParser()
         else:
-            self.log("No parser found for extension " + ext)
+            self.log("getVideoLength, No parser found for extension " + ext)
             return 0
         return self.parser.determineLength(filename)

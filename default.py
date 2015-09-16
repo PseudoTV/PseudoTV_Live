@@ -34,7 +34,7 @@ __language__   = __settings__.getLocalizedString
 def PseudoTV():
     import resources.lib.Overlay as Overlay
     setProperty("PseudoTVRunning", "True")
-    
+
     try:
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
     except Exception,e:
@@ -59,6 +59,7 @@ def PseudoTV():
     
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
 if getProperty("PseudoTVRunning") != "True":
+    setProperty("PseudoTVRunning", "True")
     if hasVersionChanged(__version__) == True: 
         HandleUpgrade()
     else:

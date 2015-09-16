@@ -247,7 +247,6 @@ class ChannelList:
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
 
-    # Code for sending JSON through http adapted from code by sffjunkie (forum.xbmc.org/showthread.php?t=92196)
     def sendJSON(self, command):
         self.log('sendJSON')
         data = ''
@@ -1198,21 +1197,6 @@ class ChannelList:
         title = re.sub('\n|\s(|[(])(UK|US|AU|\d{4})(|[)])$|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
         return title
         
-        
-    def normalizeString(self, string):
-        try:
-            try: return string.decode('ascii').encode("utf-8")
-            except: pass
-            t = ''
-            for i in string:
-                c = unicodedata.normalize('NFKD',unicode(i,"ISO-8859-1"))
-                c = c.encode("ascii","ignore").strip()
-                if i == ' ': c = i
-                t += c
-            return t.encode("utf-8")
-        except:
-            return string
-
             
     def cleanLabels(self, text, format=''):
         self.logDebug('cleanLabels, IN = ' + text)
@@ -1255,6 +1239,18 @@ class ChannelList:
         text = text.replace(" [DRM]", "")
         text = text.replace(" (English Subtitled)", "")    
         text = text.strip()
+        text = self.uncleanString(text)
+        while text:
+            s = text[0]
+            e = text[-1]
+            if s in [u'\u200b', " ", "\n"]:
+                text = text[1:]
+            elif e in [u'\u200b', " ", "\n"]:
+                text = text[:-1]
+            elif s.startswith(".") and not s.startswith(".."):
+                text = text[1:]
+            else:
+                break
         if format == 'title':
             text = uni(text.title()).replace("'S","'s")
         elif format == 'upper':
@@ -1263,7 +1259,6 @@ class ChannelList:
             text = uni(text.lower())
         else:
             text = uni(text)
-        text = self.uncleanString(text)
         self.logDebug('cleanLabels, OUT = ' + text)
         return text
     
@@ -1282,7 +1277,7 @@ class ChannelList:
         rating = rating.replace('NOT RATED','NR')
         rating = rating.replace('UNRAT','NR')
         rating = rating.replace('NOT','NR')
-        return rating
+        return self.cleanLabels(rating, 'upper')
 
         
     def fillMusicInfo(self, sortbycount = False):
@@ -1586,12 +1581,14 @@ class ChannelList:
         
     # replace with json request info todo
     def isMedia3D(self, path):
-        if self.inc3D == True:
-            FILTER_3D = ['3d','sbs','fsbs','ftab','hsbs','h.sbs','h-sbs','htab','sbs3d','3dbd','halfsbs','half.sbs','half-sbs','fullsbs','full.sbs','full-sbs','3dsbs','3d.sbs']
-            for i in range(len(FILTER_3D)):
-                if FILTER_3D[i] in path.lower():   
-                    return True                        
-        return False
+        Media3D = False
+        # if self.inc3D == True:
+            # FILTER_3D = ['3d','sbs','fsbs','ftab','hsbs','h.sbs','h-sbs','htab','sbs3d','3dbd','halfsbs','half.sbs','half-sbs','fullsbs','full.sbs','full-sbs','3dsbs','3d.sbs']
+            # for i in range(len(FILTER_3D)):
+                # if FILTER_3D[i] in path.lower():   
+                    # Media3D = True  
+        self.log("isMedia3D = " + str(Media3D))                      
+        return Media3D
           
 
     def buildFileList(self, dir_name, channel, limit, FleType = 'video'): ##fix music channel todo
@@ -5053,6 +5050,7 @@ class ChannelList:
         self.log("getFileList")
         dirs = [] 
         fileList = []
+        tmpList = []
         seasoneplist = []
         dirlimit = limit
         LiveID = 'other|0|0|False|1|NR|'
@@ -5123,7 +5121,7 @@ class ChannelList:
                                     # Accurate duration
                                     if dur == 0:
                                         try:
-                                            dur = self.videoParser.getVideoLength((files.group(1)).replace("\\\\", "\\"))
+                                            dur = self.videoParser.getVideoLength(files.group(1).replace("\\\\", "\\"))
                                         except Exception,e:
                                             dur = 0
                                             
@@ -5142,14 +5140,14 @@ class ChannelList:
                                     else:
                                         # Include strms with no duration
                                         if dur == 0 and files.group(1).replace("\\\\", "\\")[-4:].lower() == 'strm':
-                                            dur = 3600    
+                                            dur = 3600
                                             
                                     if file.startswith('plugin'):
                                         if dur == 0:
                                             dur = 3600
-                                        # try and correct minutes to seconds
-                                        if dur < 120:
-                                            dur = self.durationInSeconds(dur)
+                                        # # try and correct minutes to seconds
+                                        # if dur >= 120:
+                                            # dur = self.durationInSeconds(dur)
                                         
                                     self.logDebug("getFileList, dur = " + str(dur))  
 
@@ -5336,27 +5334,26 @@ class ChannelList:
                                             except:
                                                 pass
                                         GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating]
-                                        tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file)                             
-                                        self.logDebug("getFileList, fileList Count = " + str(len(fileList)))
+                                        tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file)      
                                         
                                         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
                                             seasoneplist.append([seasonval, epval, tmpstr])                   
                                         else:
                                             # Filter 3D Media.
-                                            if self.isMedia3D((files.group(1)).replace("\\\\", "\\")) == True:
+                                            if self.isMedia3D(files.group(1).replace("\\\\", "\\")) == True:
                                                 if type == 'movie':
                                                     self.movie3Dlist.append(tmpstr)
                                             else:
-                                                fileList.append(tmpstr) 
+                                                fileList.append(tmpstr)             
                             else:
-                                self.log('getFileList, ' + label.lower() + ' in excludeLST')
-
+                                self.log('getFileList, ' + label.lower() + ' in excludeLST')           
             for item in dirs:
-                self.log('getFileList, recursive directory walk')
-
                 if self.filecount < limit:
                     #recursively scan all subfolders
-                    fileList += self.getFileList(self.requestList(item), channel, limit, excludeLST)
+                    self.log('getFileList, recursive directory walk')
+                    tmpList = self.getFileList(self.requestList(item), channel, limit-self.filecount, excludeLST)
+                    if tmpList:
+                        fileList += tmpList
                                         
         except Exception,e:
             self.log('getFileList, failed...' + str(e))

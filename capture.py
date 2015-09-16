@@ -126,7 +126,7 @@ class Main:
                     elif self.Path.lower().startswith('plugin://plugin.video.spotitube/?limit&mode=listyoutubeplaylist'):
                         self.chantype = 10
                         self.YTtype = 2
-                    elif self.Path.lower().startswith(('plugin', 'http', 'rtmp', 'pvr')):
+                    elif self.Path.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
                         if self.isPlayable == 'True':
                             if dlg.yesno("PseudoTV Live", 'Add source as', yeslabel="LiveTV", nolabel="InternetTV"):
                                 self.chantype = 8
@@ -135,8 +135,10 @@ class Main:
                         else:
                             if self.Path.lower().startswith(('pvr')):
                                 self.chantype = 8
-                            elif self.isFolder == 'True':
+                            elif self.isFolder == 'True' and self.Path.lower().startswith(('plugin')):
                                 self.chantype = 15
+                            elif self.isFolder == 'True' and self.Path.lower().startswith(('upnp')):
+                                self.chantype = 16
                     elif self.isFolder == 'True':
                         if self.DBIDType == 'tvshow':
                             self.chantype = 6

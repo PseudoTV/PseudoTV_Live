@@ -52,6 +52,9 @@ def ascii(string):
            string = string.encode('ascii', 'ignore')
     return string
     
+def removeNonAscii(s): 
+    return "".join(filter(lambda x: ord(x)<128, s))
+
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)

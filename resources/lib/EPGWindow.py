@@ -215,7 +215,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.channelLabel.append(xbmcgui.ControlImage(50 + (50 * i), 50, 50, 50, IMAGES_LOC + 'solid.png', colorDiffuse = self.channelbugcolor))
                 self.addControl(self.channelLabel[i])
                 self.channelLabel[i].setVisible(False)
-            self.channelLabelTimer = threading.Timer(1.0, self.hideChannelLabel)
+            self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)
         except:
             pass
         self.FEEDtoggle()
@@ -288,7 +288,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     plpos = self.determinePlaylistPosAtTime(starttime, (curchannel - 1))
                     mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(plpos))
                     self.getControl(321 + i).setImage('NA.png')
-                    FindLogo(chtype, chname, mediapath)
+                    if chtype in [6,7]:
+                        FindLogo(chtype, chname, mediapath)
                 else:
                     self.getControl(321 + i).setImage('NA.png')
             else:
@@ -836,33 +837,28 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     # Called from the timer to hide the channel label.
     def hideChannelLabel(self):
         self.log('hideChannelLabel')
-        self.channelLabelTimer = threading.Timer(1.0, self.hideChannelLabel)
-        try:
-            if self.GotoChannelTimer.isAlive():
-                self.GotoChannelTimer.cancel()
-        except:
-            pass     
-        try:
-            for i in range(3):
-                self.channelLabel[i].setVisible(False)
-        except:
-            pass
+        self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)
+        for i in range(3):
+            self.channelLabel[i].setVisible(False)
+
         inputChannel = self.inputChannel
-        self.GotoChannelTimer = threading.Timer(2.1, self.GotoChannel, [inputChannel])
+        self.GotoChannelTimer = threading.Timer(5.1, self.GotoChannel, [inputChannel])
+        self.GotoChannelTimer.name = "GotoChannel"
+        if self.GotoChannelTimer.isAlive():
+            self.GotoChannelTimer.cancel() 
         self.GotoChannelTimer.start()
-        self.inputChannel = -1
-        
+        self.inputChannel = -1  
+        self.log('hideChannelLabel return')
+     
           
     # Display the current channel based on self.currentChannel.
     # Start the timer to hide it.
     def showChannelLabel(self, channel):
         self.log('showChannelLabel ' + str(channel))
-        
-        try:
-            if self.channelLabelTimer.isAlive():
-                self.channelLabelTimer.cancel()
-        except:
-            pass            
+        self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)
+        self.channelLabelTimer.name = "ChannelLabel"
+        if self.channelLabelTimer.isAlive():
+            self.channelLabelTimer.cancel()         
             
         tmp = self.inputChannel
         self.hideChannelLabel()
@@ -885,8 +881,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel % 10) + '.png')
         self.channelLabel[curlabel].setVisible(True)
 
-        self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
-        self.channelLabelTimer.name = "ChannelLabel"
         self.channelLabelTimer.start()
         self.log('showChannelLabel return')
         
@@ -1189,7 +1183,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 except:
                     pass
             else:
-                self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.5, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
+                self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.1, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
                 self.MyOverlayWindow.getTMPSTR_Thread.name = "getTMPSTR_Thread"  
                 if self.MyOverlayWindow.getTMPSTR_Thread.isAlive():
                     self.MyOverlayWindow.getTMPSTR_Thread.cancel()

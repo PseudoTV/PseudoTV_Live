@@ -115,7 +115,7 @@ def isKodiRepo(plugin=''):
         return False
 
 def fillGithubItems(url, ext=None, removeEXT=False):
-    log("utils: fillGithubItems")
+    log("utils: fillGithubItems, url = " + url + ', ext = ' + ext)
     Sortlist = []
     try:
         list = []
@@ -129,6 +129,7 @@ def fillGithubItems(url, ext=None, removeEXT=False):
                         link = os.path.splitext(os.path.basename(link))[0]
             list.append(link.replace('&amp;','&'))
         Sortlist = sorted_nicely(list) 
+        log("utils: fillGithubItems, found %s items" % str(len(Sortlist)))
     except Exception,e:
         log("utils: fillGithubItems, Failed! " + str(e))
         log(traceback.format_exc(), xbmc.LOGERROR)
@@ -366,7 +367,7 @@ def FindLogo(chtype, chname, mediapath=None):
 def findGithubLogo(chname): 
     log("utils: findGithubLogo")
     url = ''
-    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % chname[0]
+    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % (chname[0]).upper()
     Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
     if not Studiolst:
         miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
@@ -719,7 +720,7 @@ def read_url_cached(url, userpass=False, return_type='read'):
         return response
     except Exception,e:
         log('utils: read_url_cached, Failed!,' + str(e))
-        
+  
 def open_url(url, userpass=None):
     log("utils: open_url, url = " + str(url))
     try:
@@ -1012,7 +1013,21 @@ def getPlatform():
 #####################
 # String/File Tools #
 #####################
-    
+            
+def normalizeString(string):
+    try:
+        try: return string.decode('ascii').encode("utf-8")
+        except: pass
+        t = ''
+        for i in string:
+            c = unicodedata.normalize('NFKD',unicode(i,"ISO-8859-1"))
+            c = c.encode("ascii","ignore").strip()
+            if i == ' ': c = i
+            t += c
+        return t.encode("utf-8")
+    except:
+        return string
+
 def encodeString(string):
     return (string.encode('base64')).replace('\n','').replace('\r','').replace('\t','')
     
@@ -1370,7 +1385,7 @@ def isDebug():
     return REAL_SETTINGS.getSetting('enable_Debug') == "true"
 
 def SyncXMLTV(force=False):
-    log('utils: SyncXMLTV')
+    log('utils: SyncXMLTV, force = ' + str(force))
     try:
         SyncXMLTVthread = threading.Timer(0.5, SyncXMLTV_Thread, [force])
         SyncXMLTVthread.name = "SyncXMLTVthread"
@@ -1382,12 +1397,8 @@ def SyncXMLTV(force=False):
         pass   
          
 def SyncXMLTV_Thread(force=False):
-    log('utils: SyncXMLTV_Thread')
-    now  = datetime.datetime.today()  
-    try:
-        force = REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true"
-    except:
-        REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
+    log('utils: SyncXMLTV_Thread, force = ' + str(force))
+    now  = datetime.datetime.today()
     try:
         SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
         if not SyncPTV_LastRun or FileAccess.exists(PTVLXML) == False or force == True:
@@ -1521,21 +1532,23 @@ def VideoWindowPatch():
     try:
         for n in range(len(PTVL_SKIN_WINDOW_FLE)):
             PTVL_SKIN_SELECT_FLE = xbmc.translatePath(os.path.join(PTVL_SKIN_SELECT, PTVL_SKIN_WINDOW_FLE[n]))
+            log('utils: VideoWindowPatch Patching ' + ascii(PTVL_SKIN_SELECT_FLE))
             #Patch Videowindow, by un-commenting code in epg.xml 
             f = FileAccess.open(PTVL_SKIN_SELECT_FLE, "r")
             linesLST = f.readlines()  
             f.close()
             
             for i in range(len(linesLST)):
-                lines = linesLST[i]
-                if lines in b:
+                line = linesLST[i]
+                if line in b:
                     replaceAll(PTVL_SKIN_SELECT_FLE,b,a)        
                     log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched b,a')
-                elif lines in d:
+                elif line in d:
                     replaceAll(PTVL_SKIN_SELECT_FLE,d,c)           
                     log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched d,c') 
                     
         #Patch dialogseekbar to ignore OSD for PTVL.
+        log('utils: VideoWindowPatch Patching ' + ascii(DSPath))
         f = FileAccess.open(DSPath, "r")
         lineLST = f.readlines()            
         f.close()

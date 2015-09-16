@@ -246,10 +246,9 @@ class Artdownloader:
             self.DownloadArtTimer.name = "DownloadArtTimer"
             if self.DownloadArtTimer.isAlive():
                 self.DownloadArtTimer.cancel()
-                self.DownloadArtTimer.join()
             self.DownloadArtTimer.start()
             # Sleep between Download, keeps cpu usage down and reduces the number of simultaneous threads.
-            xbmc.sleep(500)
+            # xbmc.sleep(500)
         except Exception,e:  
             self.log("DownloadArt, Failed" + str(e), xbmc.LOGERROR)
             
