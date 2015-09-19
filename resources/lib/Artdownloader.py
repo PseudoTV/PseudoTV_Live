@@ -201,7 +201,7 @@ class Artdownloader:
                 else:
                     if ENHANCED_DATA == True and id != '0':
                         self.logDebug('FindArtwork, Artwork Download')
-                        self.DownloadArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)                       
+                        self.DownloadArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
                         return cachefile
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed" + str(e), xbmc.LOGERROR)
@@ -241,11 +241,11 @@ class Artdownloader:
     def DownloadArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
         self.log('DownloadArt')
         try:
-            data = [type, id, arttype, cachefile, chname, mpath, arttypeEXT]
-            self.DownloadArtTimer = threading.Timer(0.5, self.DownloadArt_Thread, [data])
+            self.DownloadArtTimer = threading.Timer(1.0, self.DownloadArt_Thread, [type, id, arttype, cachefile, chname, mpath, arttypeEXT])
             self.DownloadArtTimer.name = "DownloadArtTimer"
             if self.DownloadArtTimer.isAlive():
                 self.DownloadArtTimer.cancel()
+                self.DownloadArtTimer.join()
             self.DownloadArtTimer.start()
             # Sleep between Download, keeps cpu usage down and reduces the number of simultaneous threads.
             # xbmc.sleep(500)
@@ -253,16 +253,8 @@ class Artdownloader:
             self.log("DownloadArt, Failed" + str(e), xbmc.LOGERROR)
             
                          
-    def DownloadArt_Thread(self, data):
-        self.logDebug('DownloadArt_Thread, data = ' + str(data))
-        type = data[0]
-        id = data[1]
-        arttype = data[2] 
-        cachefile = data[3]
-        chname = data[4] 
-        mpath = data[5] 
-        arttypeEXT = data[6]
-        self.log('DownloadArt')
+    def DownloadArt_Thread(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
+        self.log('DownloadArt_Thread')
         try:
             drive, Dpath = os.path.splitdrive(cachefile)
             path, filename = os.path.split(Dpath)
@@ -490,3 +482,5 @@ class Artdownloader:
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindBug Failed" + str(e), xbmc.LOGERROR)
             buggalo.onExceptionRaised()
+            
+            

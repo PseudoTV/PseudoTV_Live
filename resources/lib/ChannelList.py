@@ -24,12 +24,9 @@ import base64, shutil, random, errno
 
 
 from operator import itemgetter
-from optparse import OptionParser
 from parsers import HDTrailers
 from parsers import xmltv
 from utils import *
-from urllib import unquote
-from urllib import urlopen
 from xml.etree import ElementTree as ET
 from xml.dom.minidom import parse, parseString
 from subprocess import Popen, PIPE, STDOUT
@@ -43,8 +40,6 @@ from apis import sickbeard
 from apis import couchpotato
 from apis import tvdb
 from apis import tmdb
-from urllib2 import urlopen
-from urllib2 import HTTPError, URLError
 from datetime import date
 from datetime import timedelta
 from BeautifulSoup import BeautifulSoup
@@ -54,6 +49,7 @@ socket.setdefaulttimeout(30)
 try:
     from metahandler import metahandlers
 except Exception,e:  
+    ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-ChannelList: metahandler Import Failed" + str(e))    
 
 class ChannelList:
@@ -2884,7 +2880,7 @@ class ChannelList:
       
     def rtmpDump(self, stream):
         self.rtmpValid = False
-        url = unquote(stream)
+        url = urllib.unquote(stream)
         RTMPDUMP = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'lib', 'rtmpdump', self.OSpath))
         self.log("RTMPDUMP = " + RTMPDUMP)
         assert os.path.isfile(RTMPDUMP)
@@ -2920,19 +2916,11 @@ class ChannelList:
                 
     def url_ok(self, url):
         self.urlValid = False
-        url = unquote(url)
-        try: 
-            request = urllib2.Request(url)
-            request.get_method = lambda : 'HEAD'
-            try:
-                response = urllib2.urlopen(request)
-                self.log("url_ok, INFO: Connected...")
+        try:
+            if open_url(url):
                 self.urlValid = True
-            except urllib2.HTTPError:
-                self.log("url_ok, ERROR: HTTP URL NOT VALID, ERROR: " + str(e))
-                self.urlValid = False
-        except:
-            pass
+        except urllib2.HTTPError:
+            self.log("url_ok, ERROR: HTTP URL NOT VALID, ERROR: " + str(e))
         self.log("urlValid = " + str(self.urlValid))
         return self.urlValid
         
@@ -4745,7 +4733,7 @@ class ChannelList:
             for i in range(len(devices)):
                 url = (str(devices[i]).split(':url=')[1]).replace('>','')
                 try:
-                    list = list + urlopen(url).read()
+                    list = list + open_url(url).read()
                 except:
                     pass
             file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(list)
@@ -5045,7 +5033,7 @@ class ChannelList:
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)      
  
-            
+
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
         self.log("getFileList")
         dirs = [] 
@@ -5081,33 +5069,15 @@ class ChannelList:
                         #if core variables, proceed
                         if filetypes and labels:
                             filetype = filetypes.group(1)
-                            file = files.group(1)
+                            file = files.group(1).replace("\\\\", "\\")
                             label = self.cleanLabels(labels.group(1))
 
                             if label and label.lower() not in excludeLST:
                                 # if file[0:4] != 'upnp':
                                 if file.startswith('plugin%3A%2F%2F'):
-                                    file = unquote(file).replace('",return)','')
+                                    file = urllib.unquote(file).replace('",return)','')
                                 
-                                if filetype == 'directory' and self.filecount < limit:
-                                    self.log('getFileList, directory')
-                                    if self.filecount < limit:
-                                    
-                                        if file[0:6] == 'plugin':
-                                            #if no return, try unquote
-                                            if not self.requestList(file):
-                                                file = unquote(file).replace('",return)','')
-                                                #remove unwanted reference from super.favourites
-                                                try:
-                                                    file = (file.split('ActivateWindow(10025,"')[1])
-                                                except:
-                                                    pass
-
-                                        dirs.append(file)
-                                        self.dircount += 1
-                                        self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
-
-                                elif filetype == 'file' and self.filecount < limit:
+                                if filetype == 'file' and self.filecount < limit:
                                     self.log('getFileList, file')
                                     duration = re.search('"duration" *: *([0-9]*?),', f)
                                     
@@ -5121,7 +5091,7 @@ class ChannelList:
                                     # Accurate duration
                                     if dur == 0:
                                         try:
-                                            dur = self.videoParser.getVideoLength(files.group(1).replace("\\\\", "\\"))
+                                            dur = self.videoParser.getVideoLength(file)
                                         except Exception,e:
                                             dur = 0
                                             
@@ -5135,11 +5105,11 @@ class ChannelList:
                                             
                                     # Remove any file types that we don't want (ex. IceLibrary, ie. Strms)
                                     if self.incIceLibrary == False:
-                                        if files.group(1).replace("\\\\", "\\")[-4:].lower() == 'strm':
+                                        if file[-4:].lower() == 'strm':
                                             dur = 0
                                     else:
                                         # Include strms with no duration
-                                        if dur == 0 and files.group(1).replace("\\\\", "\\")[-4:].lower() == 'strm':
+                                        if dur == 0 and file[-4:].lower() == 'strm':
                                             dur = 3600
                                             
                                     if file.startswith('plugin'):
@@ -5157,7 +5127,8 @@ class ChannelList:
                                         epval = -1
 
                                         if self.background == False:
-                                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding %s Videos" % str(self.filecount))
+                                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding %s Videos" % str(self.filecount))                                           
+                                        self.log('getFileList, filecount = ' + str(self.filecount) +'/'+ str(limit))
                                         
                                         titles = re.search('"label" *: *"(.*?)",', f)
                                         showtitles = re.search('"showtitle" *: *"(.*?)",', f)
@@ -5320,19 +5291,10 @@ class ChannelList:
                                         if file.startswith('plugin'):
                                             #Remove PlayMedia to keep link from launching
                                             try:
-                                                file = ((file.split('PlayMedia%28%22'))[1]).replace('%22%29','')
-                                            except:
-                                                try:
-                                                    file = ((file.split('PlayMedia("'))[1]).replace('")','')
-                                                except:
-                                                    pass
-
-                                            if file.startswith('plugin%3A%2F%2F'):
-                                                file = unquote(file).replace('",return)','')
-                                            try:
-                                                file = file.split('&sf_options=')[0]
+                                                file = ((file.split('PlayMedia("'))[1]).replace('")','')
                                             except:
                                                 pass
+
                                         GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating]
                                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file)      
                                         
@@ -5340,20 +5302,41 @@ class ChannelList:
                                             seasoneplist.append([seasonval, epval, tmpstr])                   
                                         else:
                                             # Filter 3D Media.
-                                            if self.isMedia3D(files.group(1).replace("\\\\", "\\")) == True:
+                                            if self.isMedia3D(file) == True:
                                                 if type == 'movie':
                                                     self.movie3Dlist.append(tmpstr)
                                             else:
-                                                fileList.append(tmpstr)             
+                                                fileList.append(tmpstr)     
+                                
+                                elif filetype == 'directory' and self.filecount < limit:
+                                    self.log('getFileList, directory')
+                                    if self.background == False:
+                                        self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "searching %s Directories" % str(self.dircount+1))
+                                    
+                                    if file[0:6] == 'plugin':
+                                        #if no return, try unquote
+                                        if not self.requestList(file):
+                                            file = urllib.unquote(file).replace('",return)','')
+                                            #remove unwanted reference from super.favourites
+                                            try:
+                                                file = (file.split('ActivateWindow(10025,"')[1])
+                                            except:
+                                                pass
+                                    
+                                    self.log('getFileList, remaining filecount = ' + str(abs(self.filecount-limit)) +'/'+ str(dirlimit))
+                                    fileList.extend(self.getFileList(self.requestList(file), channel, abs(self.filecount-limit), excludeLST))
+                                    self.filecount += len(fileList)
+                                    self.dircount += 1
+                                self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
                             else:
                                 self.log('getFileList, ' + label.lower() + ' in excludeLST')           
-            for item in dirs:
-                if self.filecount < limit:
-                    #recursively scan all subfolders
-                    self.log('getFileList, recursive directory walk')
-                    tmpList = self.getFileList(self.requestList(item), channel, limit-self.filecount, excludeLST)
-                    if tmpList:
-                        fileList += tmpList
+            # for item in dirs:
+                # if self.filecount < limit:
+                    # #recursively scan all subfolders
+                    # self.log('getFileList, recursive directory walk')
+                    # tmpList = self.getFileList(self.requestList(item), channel, limit-self.filecount, excludeLST)
+                    # if tmpList:
+                        # fileList += tmpList
                                         
         except Exception,e:
             self.log('getFileList, failed...' + str(e))

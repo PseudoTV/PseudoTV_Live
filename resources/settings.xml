@@ -188,7 +188,7 @@
             <setting id="UPNP3" type="bool"   label="30105" default="false" />
             <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
             <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
-            <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0" range="0,.10,5" option="float" />
+            <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0.1" range="0,.01,5" option="float" />
     </category>
     <!--Donor-->
     <category label="39000">

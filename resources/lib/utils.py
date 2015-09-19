@@ -22,6 +22,7 @@ import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, js
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
 
+from functools import wraps
 from Globals import * 
 from FileAccess import FileAccess
 from Queue import Queue
@@ -139,26 +140,16 @@ def fillGithubItems(url, ext=None, removeEXT=False):
 # Art Tools #
 #############
 
-# def PreArtService():
+# def ArtServiceQueue(self):
     # ADDON_SETTINGS.loadSettings()
-    # exclude = ['#EXTM3U', '#EXTINF']
-    # i = 0
-    # lineLST = []
-    # newLST = []
     # ArtLST = []
-    
-    # for i in range(999):
+    # for i in range(1000):
+        # lineLST = []
         # try:
-            # try:
-                # chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i) + '_type'))
-                # chname = (self.channels[i - 1].name)
-                # fle = xbmc.translatePath(os.path.join(LOCK_LOC, ("channel_" + str(i) + '.m3u')))  
-            # except Exception,e:
-                # chtype = 9999
-                # fle = ''
-                # pass
-            
-            # if chtype >= 0 and fle != '':
+            # chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i+1) + '_type'))
+            # chname = (self.channels[i+1 - 1].name)
+            # fle = xbmc.translatePath(os.path.join(LOCK_LOC, ("channel_" + str(i+1) + '.m3u')))  
+            # if chtype != 9999:
                 # if FileAccess.exists(fle):
                     # f = FileAccess.open(fle, 'r')
                     # lineLST = f.readlines()
@@ -170,33 +161,33 @@ def fillGithubItems(url, ext=None, removeEXT=False):
                             # type = liveid.split('|')[0]
                             # id = liveid.split('|')[1]
                             # dbid, epid = splitDBID(liveid.split('|')[2])
-                        # elif line[0:7] not in exclude:
+                        # elif line[0:7] not in ['#EXTM3U', '#EXTINF']:
                             # mpath = getMpath(line)
                         # if type and mpath:
-                            # newLST = [type, chtype, chname, id, dbid, mpath]
-                            # ArtLST.append(newLST)
-        # except:
+                            # ArtLST.append([type, chtype, chname, id, dbid, mpath])
+        # except Exception,e:
+            # log("utils: ArtServiceQueue, Failed! " + str(e))
             # pass
+            
     # # shuffle list to evenly distribute queue
     # random.shuffle(ArtLST)
-    # log('utils: PreArtService, ArtLST Count = ' + str(len(ArtLST)))
+    # log('utils: ArtServiceQueue, ArtLST Count = ' + str(len(ArtLST)))
     # return ArtLST
 
         
     # def ArtService(self):
-        # if getProperty("PTVL.BackgroundLoading_Finished") == "true" and getProperty("ArtService_Running") == "false":
+        # if getProperty("PseudoTVRunning") != "True" and getProperty("ArtService_Running") == "false":
+            # setProperty("PseudoTVRunning","True")
             # setProperty("ArtService_Running","true")
             # start = datetime.datetime.today()
-            # ArtLst = self.PreArtService() 
+            # ArtLst = self.ArtServiceQueue() 
             # Types = []
             # cnt = 0
             # subcnt = 0
             # totcnt = 0
-            # lstcnt = int(len(ArtLst))
-            
-            # if NOTIFY == True:
-                # xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Spooler Started", 4000, THUMB) )
-            
+            # lstcnt = len(ArtLst)
+            # stdNotify("Artwork Spooler Started")
+
             # # Clear Artwork Cache Folders
             # if REAL_SETTINGS.getSetting("ClearLiveArtCache") == "true":
                 # artwork.delete("%") 
@@ -207,81 +198,58 @@ def fillGithubItems(url, ext=None, removeEXT=False):
                 # artwork5.delete("%")
                 # artwork6.delete("%")
                 # log('utils: ArtService, ArtCache Purged!')
-                # REAL_SETTINGS.setSetting('ClearLiveArtCache', "false")
-                
-                # if NOTIFY == True:
-                    # xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Artwork Cache Cleared", 4000, THUMB) )
-                # xbmc.sleep(5)
-                
-            # if getProperty("type1EXT_Overlay") != '':
-                # Types.append(getProperty("type1EXT_Overlay"))
-            # if getProperty("type2EXT_Overlay") != '':
-                # Types.append(getProperty("type1EXT_Overlay"))
-            # if getProperty("type3EXT_Overlay") != '':
-                # Types.append(getProperty("type3EXT_Overlay"))    
-              
-            # try:
-                # type1EXT_EPG = REAL_SETTINGS.getSetting('type1EXT_EPG')
-                # if type1EXT_EPG != '':
-                    # Types.append(type1EXT_EPG)
-            # except:
-                # pass        
-            # try:
-                # type2EXT_EPG = REAL_SETTINGS.getSetting('type2EXT_EPG')
-                # if type2EXT_EPG != '':
-                    # Types.append(type2EXT_EPG)
-            # except:
-                # pass
-                
+                # REAL_SETTINGS.setSetting('ClearLiveArtCache', "false")  
+                # stdNotify("Artwork Cache Cleared")
+
+            # artEXT_Types = ['type1','type2','type3','type4']
+            # for a in range(len(artExT_Types)):
+                # try:
+                    # Types.append(getProperty(("OVERLAY.%s")%artEXT_Types[a]))
+                # except:
+                    # pass
+                # try:
+                    # Types.append(getProperty(("EPG.%s")%artEXT_Types[a]))
+                # except:
+                    # pass
+            
             # Types = remove_duplicates(Types)
             # log('utils: ArtService, Types = ' + str(Types))  
             
             # for i in range(lstcnt): 
-                # if getProperty("PseudoTVRunning") == "True":
-                    # setDefault = ''
-                    # setImage = ''
-                    # setBug = ''
-                    # lineLST = ArtLst[i]
-                    # type = lineLST[0]
-                    # chtype = lineLST[1]
-                    # chname = lineLST[2]
-                    # id = lineLST[3]
-                    # dbid = lineLST[4]
-                    # mpath = lineLST[5]
-                    # cnt += 1
-                    
-                    # self.Artdownloader.FindLogo(chtype, chname, mpath)
-                    
-                    # for n in range(len(Types)):
-                        # typeEXT = str(Types[n])
-                        # if '.' in typeEXT:
-                            # self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, typeEXT)
-                            
-                    # if NOTIFY == True:
-                        # if lstcnt > 5000:
-                            # quartercnt = int(round(lstcnt / 4))
-                        # else:
-                            # quartercnt = int(round(lstcnt / 2))
-                        # if cnt > quartercnt:
-                            # totcnt = cnt + totcnt
-                            # subcnt = lstcnt - totcnt
-                            # percnt = int(round((float(subcnt) / float(lstcnt)) * 100))
-                            # cnt = 0
-                            # MSSG = ("Artwork Spooler"+' % '+"%d complete" %percnt) 
-                            # xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSSG, 4000, THUMB) )
+                # setDefault = ''
+                # setImage = ''
+                # setBug = ''
+                # lineLST = ArtLst[i]
+                # type = lineLST[0]
+                # chtype = lineLST[1]
+                # chname = lineLST[2]
+                # id = lineLST[3]
+                # dbid = lineLST[4]
+                # mpath = lineLST[5]
+                # cnt += 1
+                
+                # self.Artdownloader.FindLogo(chtype, chname, mpath)
+                # for n in range(len(Types)):
+                    # self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(Types[n]))
+
+                # if lstcnt > 5000:
+                    # quartercnt = int(round(lstcnt / 4))
                 # else:
-                    # return
-                    
+                    # quartercnt = int(round(lstcnt / 2))
+                # if cnt > quartercnt:
+                    # totcnt = cnt + totcnt
+                    # subcnt = lstcnt - totcnt
+                    # percnt = int(round((float(subcnt) / float(lstcnt)) * 100))
+                    # cnt = 0
+                    # stdNotify(("Artwork Spooler"+' % '+"%d complete" %percnt) )
+
             # stop = datetime.datetime.today()
             # finished = stop - start
-            # MSSG = ("Artwork Spooled in %d seconds" %finished.seconds) 
-            # log('utils: ArtService, ' + MSSG)  
             # setProperty("ArtService_Running","false")
-            # setProperty("PTVL.BackgroundLoading_Finished","true")
+            # setProperty("PseudoTVRunning","False")
             # REAL_SETTINGS.setSetting("ArtService_LastRun",str(stop))
-            
-            # if NOTIFY == True:
-                # xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSSG, 4000, THUMB) ) 
+            # stdNotify(("Artwork Spooled in %d seconds" %finished.seconds))
+            # log('utils: ArtService, ' + ("Artwork Spooled in %d seconds" %finished.seconds))
 
 ##############
 # LOGO Tools #
@@ -893,8 +861,9 @@ def infoDialog(str, header=ADDON_NAME, time=4000):
     try: xbmcgui.Dialog().notification(header, str, THUMB, time, sound=False)
     except: xbmc.executebuiltin("Notification(%s,%s, %s, %s)" % (header, str, time, THUMB))
 
-def Notify(header=ADDON_NAME, message="", icon=THUMB, time=5000, sound=False):
-    xbmcgui.Dialog().notification(heading=header, message=message, icon=icon, time=time, sound=sound)
+def stdNotify(message, time=4000, show=NOTIFY, sound=False, icon=THUMB, header=ADDON_NAME):
+    if show == True:
+        xbmcgui.Dialog().notification(heading=header, message=message, icon=icon, time=time, sound=sound)
 
 def DebugNotify(string):
     if DEBUG:

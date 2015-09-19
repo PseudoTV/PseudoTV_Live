@@ -73,6 +73,10 @@ class MyPlayer(xbmc.Player):
                 DebugNotify(msg)
     
     
+    def getPlayerFile(self):
+        return (xbmc.Player().getPlayingFile()).replace("\\\\","\\")
+    
+    
     def getPlayerTime(self):
         try:
             time = int(self.getTime())
@@ -163,7 +167,7 @@ class MyPlayer(xbmc.Player):
             self.overlay.showChannelLabel(self.overlay.currentChannel)
             
             if self.overlay.UPNP:
-                self.overlay.UPNPcontrol('play', file, self.getPlayerTime())  
+                self.overlay.UPNPcontrol('play', self.getPlayerFile(), self.getPlayerTime())  
 
             # devise a way to detect ondemand playback todo
             # file = xbmc.Player().getPlayingFile()
@@ -601,7 +605,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         else:
             self.isMaster = True
         
-        self.backupFiles(False)
+        self.backupFiles()
         self.timeStarted = time.time()
         self.channels = self.channelList.setupList(True)  
         # self.maxChannels = len(self.channels)   
@@ -677,7 +681,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.end()
 
 
-    def backupFiles(self, updatedlg):
+    def backupFiles(self, updatedlg=False):
         self.log('backupFiles')
 
         if CHANNEL_SHARING == False:
@@ -1121,26 +1125,79 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         return seektime    
 
         
-    def UPNPcontrol(self, func, file='', seektime=0):
-        self.log('UPNPcontrol') 
-        try:
-            self.UPNPcontrolTimer = threading.Timer(0.1, self.UPNPcontrol_thread, [func, file, seektime])
-            self.UPNPcontrolTimer.name = "UPNPcontrol"       
-            if self.UPNPcontrolTimer.isAlive():
-                self.UPNPcontrolTimer.cancel()
-            self.UPNPcontrolTimer.start()
-        except Exception,e:
-            self.log('UPNPcontrol, Failed!, ' + str(e))
-            pass 
+    # def UPNPcontrol(self, func, file='', seektime=0):
+        # self.log('UPNPcontrol') 
+        # try:
+            # self.UPNPcontrolTimer = threading.Timer(float(REAL_SETTINGS.getSetting("UPNP_OFFSET")), self.UPNPcontrol_thread, [func, file, seektime])
+            # self.UPNPcontrolTimer.name = "UPNPcontrol"       
+            # if self.UPNPcontrolTimer.isAlive():
+                # self.UPNPcontrolTimer.cancel()
+            # self.UPNPcontrolTimer.start()
+        # except Exception,e:
+            # self.log('UPNPcontrol, Failed!, ' + str(e))
+            # pass 
     
 
-    def UPNPcontrol_thread(self, func, file='', seektime=0):
+    def UPNPcontrol(self, func, file='', seektime=0):
         if func == 'play':
             self.PlayUPNP(file, seektime)
         elif func == 'stop':
             self.StopUPNP()
+        elif func == 'resume':
+            self.ResumeUPNP()
+        elif func == 'pause':
+            self.PauseUPNP()
+        elif func == 'rwd':
+            self.RWUPNP()
+        elif func == 'fwd':
+            self.FFUPNP()
 
-            
+              
+    def FFUPNP(self):
+        self.log("FFUPNP")
+        if REAL_SETTINGS.getSetting("UPNP1") == "true":
+            self.log('onAction, UPNP1 FF')
+            self.Upnp.FFUPNP(IPP1)
+        if REAL_SETTINGS.getSetting("UPNP2") == "true":
+            self.log('onAction, UPNP2 FF')
+            self.Upnp.FFUPNP(IPP2)
+        if REAL_SETTINGS.getSetting("UPNP3") == "true":
+            self.log('onAction, UPNP3 FF')
+            self.Upnp.FFUPNP(IPP3)
+        
+        
+    def RWUPNP(self):
+        self.log("RWUPNP")
+        if REAL_SETTINGS.getSetting("UPNP1") == "true":
+            self.log('onAction, UPNP1 RW')
+            self.Upnp.RWUPNP(IPP1)
+        if REAL_SETTINGS.getSetting("UPNP2") == "true":
+            self.log('onAction, UPNP2 RW')
+            self.Upnp.RWUPNP(IPP2)
+        if REAL_SETTINGS.getSetting("UPNP3") == "true":
+            self.log('onAction, UPNP3 RW')
+            self.Upnp.RWUPNP(IPP3)
+    
+    def PauseUPNP(self):
+        self.log("PauseUPNP")
+        if REAL_SETTINGS.getSetting("UPNP1") == "true":
+            self.Upnp.PauseUPNP(IPP1)
+        if REAL_SETTINGS.getSetting("UPNP2") == "true":
+            self.Upnp.PauseUPNP(IPP2)
+        if REAL_SETTINGS.getSetting("UPNP3") == "true":
+            self.Upnp.PauseUPNP(IPP3)
+    
+
+    def ResumeUPNP(self):
+        self.log("ResumeUPNP")
+        if REAL_SETTINGS.getSetting("UPNP1") == "true":
+            self.Upnp.ResumeUPNP(IPP1)
+        if REAL_SETTINGS.getSetting("UPNP2") == "true":
+            self.Upnp.ResumeUPNP(IPP2)
+        if REAL_SETTINGS.getSetting("UPNP3") == "true":
+            self.Upnp.ResumeUPNP(IPP3)
+    
+    
     def PlayUPNP(self, file, seektime):
         self.log("PlayUPNP")
         file = file.replace("\\\\","\\")
@@ -1890,19 +1947,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 xbmc.executebuiltin("ActivateWindow(10115)")
                 xbmc.executebuiltin("PlayerControl(SmallSkipBackward)")
                 self.log("onAction, SmallSkipBackward")
-                
-                try:
-                    if REAL_SETTINGS.getSetting("UPNP1") == "true":
-                        self.log('onAction, UPNP1 RW')
-                        self.Upnp.RWUPNP(IPP1)
-                    if REAL_SETTINGS.getSetting("UPNP2") == "true":
-                        self.log('onAction, UPNP2 RW')
-                        self.Upnp.RWUPNP(IPP2)
-                    if REAL_SETTINGS.getSetting("UPNP3") == "true":
-                        self.log('onAction, UPNP3 RW')
-                        self.Upnp.RWUPNP(IPP3)
-                except:
-                    pass
+                self.UPNPcontrol('rwd')
                     
         elif action == ACTION_MOVE_RIGHT:
             self.log("onAction, ACTION_MOVE_RIGHT")
@@ -1918,20 +1963,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 xbmc.executebuiltin("ActivateWindow(10115)")
                 xbmc.executebuiltin("PlayerControl(SmallSkipForward)")
                 self.log("onAction, SmallSkipForward")
-        
-                try:
-                    if REAL_SETTINGS.getSetting("UPNP1") == "true":
-                        self.log('onAction, UPNP1 FF')
-                        self.Upnp.FFUPNP(IPP1)
-                    if REAL_SETTINGS.getSetting("UPNP2") == "true":
-                        self.log('onAction, UPNP2 FF')
-                        self.Upnp.FFUPNP(IPP2)
-                    if REAL_SETTINGS.getSetting("UPNP3") == "true":
-                        self.log('onAction, UPNP3 FF')
-                        self.Upnp.FFUPNP(IPP3)
-                except:
-                    pass
-                    
+                self.UPNPcontrol('fwd')
+       
         elif action in ACTION_PREVIOUS_MENU:
             if self.showingMenuAlt:
                 self.MenuControl('MenuAlt',self.InfTimer,True)
@@ -2314,12 +2347,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if action and self.Player.isPlaying():
             json_query = ('{"jsonrpc":"2.0","method":"Player.PlayPause","params":{"playerid":1}, "id": 1}')
             self.channelList.sendJSON(json_query)
-        if REAL_SETTINGS.getSetting("UPNP1") == "true":
-            self.Upnp.PauseUPNP(IPP1)
-        if REAL_SETTINGS.getSetting("UPNP2") == "true":
-            self.Upnp.PauseUPNP(IPP2)
-        if REAL_SETTINGS.getSetting("UPNP3") == "true":
-            self.Upnp.PauseUPNP(IPP3)
+        self.UPNPcontrol('pause')
     
     
     def Resume(self, action=False):
@@ -2329,13 +2357,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if action and self.Player.isPlaybackPaused():
             json_query = ('{"jsonrpc":"2.0","method":"Player.PlayPause","params":{"playerid":1}, "id": 1}')
             self.channelList.sendJSON(json_query) 
-        if REAL_SETTINGS.getSetting("UPNP1") == "true":
-            self.Upnp.ResumeUPNP(IPP1)
-        if REAL_SETTINGS.getSetting("UPNP2") == "true":
-            self.Upnp.ResumeUPNP(IPP2)
-        if REAL_SETTINGS.getSetting("UPNP3") == "true":
-            self.Upnp.ResumeUPNP(IPP3)
-    
+        self.UPNPcontrol('resume')
     
     def setLastChannel(self, channel=None):
         if not channel:
@@ -2647,7 +2669,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             print MOVE_SFX
             xbmc.playSFX(MOVE_SFX)
      
-   
+        
+    def setProp(self, title, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, pType='OVERLAY'):
+        self.log("setProp")
+        self.setPropTimer = threading.Timer(0.1, self.setProp_thread, [title, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, pType])
+        self.setPropTimer.name = "setPropTimer"       
+        if self.setPropTimer.isAlive():
+            self.setPropTimer.cancel()
+        self.setPropTimer.start()
+
+        
     def setProp_thread(self, title, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, pType):
         self.log("setProp_thread")
 
@@ -2683,15 +2714,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.isManaged_Thread(pType)
         getRSSFeed(getProperty("OVERLAY.Genre"))
 
-        
-    def setProp(self, title, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, pType='OVERLAY'):
-        self.log("setProp")
-        self.setPropTimer = threading.Timer(0.1, self.setProp_thread, [title, year, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, pType])
-        self.setPropTimer.name = "setPropTimer"       
-        if self.setPropTimer.isAlive():
-            self.setPropTimer.cancel()
-        self.setPropTimer.start()
-
             
     def findArtwork_Thread(self, type, chtype, chname, id, dbid, mpath, typeEXT, key, pType):
         self.log('findArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', key = ' + key + ', pType = ' + str(pType))
@@ -2714,6 +2736,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.ArtThread.name = "ArtThread"     
             if self.ArtThread.isAlive():
                 self.ArtThread.cancel()
+                # self.ArtThread.join()
             self.ArtThread.start()
         except Exception,e:
             self.log('setArtwork, Failed!, ' + str(e))

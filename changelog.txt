@@ -1,3 +1,4 @@
+[*] Plugin/UPNP channel building tweaks.
 [*] Tweaked automatic channel reset and ptvlguide downloading.
 [*] Added "Force LiveTV Reset" under "Debugging", Enable if LiveTV EPG gets out of sync.
 [*] Improved "Quickflip", RSS artwork detection and Watched status flagging.

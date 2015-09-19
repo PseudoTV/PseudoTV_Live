@@ -58,15 +58,14 @@ def PseudoTV():
     setProperty("PseudoTVRunning", "False")
     
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
-if getProperty("PseudoTVRunning") != "True":
-    setProperty("PseudoTVRunning", "True")
-    if hasVersionChanged(__version__) == True: 
-        HandleUpgrade()
-    else:
-        chkVersion()
-        if preStart() == True:
-            #Start PseudoTV
-            PseudoTV()
+if hasVersionChanged(__version__) == True: 
+    HandleUpgrade()
 else:
-    log('default: Already running, exiting', xbmc.LOGERROR)
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running please wait and try again later.", 4000, THUMB) )
+    chkVersion()
+    if preStart() == True:
+        #Start PseudoTV
+        if getProperty("PseudoTVRunning") != "True":
+            PseudoTV()
+        else:
+            log('default: Already running, exiting', xbmc.LOGERROR)
+            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running please wait and try again later.", 4000, THUMB) )

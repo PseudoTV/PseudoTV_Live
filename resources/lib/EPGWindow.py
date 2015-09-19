@@ -1196,20 +1196,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             genre = self.MyOverlayWindow.channels[newchan - 1].getItemgenre(plpos)
             timestamp = (self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
             myLiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
-            LiveID = self.chanlist.unpackLiveID(myLiveID)
-            try:
-                self.getControl(503).setImage(ascii(self.channelLogos + (self.MyOverlayWindow.channels[newchan - 1].name + '.png')))
-            except:
-                pass
-                
+            LiveID = self.chanlist.unpackLiveID(myLiveID)      
+            self.getControl(503).setImage(ascii(self.channelLogos + (self.MyOverlayWindow.channels[newchan - 1].name + '.png')))
         try:
             SEinfo = SEtitle.split(' -')[0]
             season = int(SEinfo.split('x')[0])
             episode = int(SEinfo.split('x')[1])
         except:
             season = 0
-            episode = 0  
-            
+            episode = 0             
         try:
             if self.showSeasonEpisode:
                 eptitles = SEtitle.split('- ')
@@ -1224,20 +1219,18 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.getControl(500).setLabel((title).replace("*NEW*",""))
         self.getControl(501).setLabel(swtitle)
         self.getControl(502).setLabel(Description)
-        
-        try:
-            ##LIVEID##
-            type = LiveID[0]
-            id = LiveID[1]
-            dbid, epid = splitDBID(LiveID[2])
-            playcount = int(LiveID[4])
-            rating = LiveID[5]
-            year, title, showtitle = getTitleYear(title)
-            # SetProperties
-            setProperty("EPG.TimeStamp",timestamp)
-            self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
-        except:
-            pass  
+
+        ##LIVEID##
+        type = LiveID[0]
+        id = LiveID[1]
+        dbid, epid = splitDBID(LiveID[2])
+        playcount = int(LiveID[4])
+        rating = LiveID[5]
+        year, title, showtitle = getTitleYear(title)
+        # SetProperties
+        setProperty("EPG.TimeStamp",timestamp)
+        self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
+
    
     # using the currently selected button, play the proper shows
     def selectShow(self):
