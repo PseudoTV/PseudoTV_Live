@@ -324,7 +324,6 @@ class Main:
         setting2 = "Channel_" + chan + "_2"
         setting3 = "Channel_" + chan + "_3"
         setting4 = "Channel_" + chan + "_4"
-        channame = "Channel_" + chan + "_rule_1_opt_1"
 
         ADDON_SETTINGS.setSetting(chantype, str(self.chantype))
         ADDON_SETTINGS.setSetting(setting1, self.setting1)
@@ -332,10 +331,9 @@ class Main:
         ADDON_SETTINGS.setSetting(setting3, self.setting3)
         ADDON_SETTINGS.setSetting(setting4, self.setting4)
         ADDON_SETTINGS.setSetting(setting4, self.setting4)
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "2")
+        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "1")
         ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_id", "1")
-        ADDON_SETTINGS.setSetting(channame, self.channame)           
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_2_id", "12")        
+        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)      
         ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
         self.log("saveSettings return")
                 

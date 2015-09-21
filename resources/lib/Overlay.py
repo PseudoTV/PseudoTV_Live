@@ -383,7 +383,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         if REAL_SETTINGS.getSetting("SyncXMLTV_Enabled") == "true" and isDon() == True:  
             self.background.setLabel('Initializing: XMLTV Service')
-            SyncXMLTV_Thread(REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true")
+            SyncXMLTV(REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true")
             
         if self.UPNP == True:
             self.background.setLabel('Initializing: Video Mirroring')
@@ -559,7 +559,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         curtime = time.time()
         
         if REAL_SETTINGS.getSetting("SyncXMLTV_Enabled") == "true" and isDon() == True:  
-            SyncXMLTV_Thread(REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true")
+            SyncXMLTV(REAL_SETTINGS.getSetting('PTVLXML_FORCE') == "true")
             
         if CHANNEL_SHARING == True and self.isMaster:
             GlobalFileLock.unlockFile('MasterLock')

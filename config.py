@@ -641,7 +641,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.clearLabel()            
             select = selectDialog(self.pluginNameList, 'Select Plugin')
             if select != -1:
-                self.PluginSourceName = self.chnlst.CleanLabels((self.pluginNameList[select]))
+                self.PluginSourceName = self.chnlst.cleanLabels((self.pluginNameList[select]))
                 
                 if self.PluginSourceName == 'Community List':
                     Name, Option1, Option2, Option3, Option4 = self.fillSources('Plugin', 'Community List')
@@ -680,7 +680,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.PluginSourcePath = 'plugin://' + self.PluginSourcePath
                     self.getControl(280).setLabel(self.PluginSourceName) 
                     self.getControl(282).setLabel(self.PluginSourcePath)    
-                    Chname = self.chnlst.CleanLabels(self.getControl(280).getLabel())
+                    Chname = self.chnlst.cleanLabels(self.getControl(280).getLabel())
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", Chname)
@@ -708,7 +708,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     
                     # Normal Navigation
                     else:
-                        self.DirName += self.chnlst.CleanLabels(selectItem) + '/'
+                        self.DirName += self.chnlst.cleanLabels(selectItem) + '/'
                         PathName = PluginDirPathLst[select]
                         if self.DirName.startswith(' /'):
                             self.DirName = self.DirName[1:]
@@ -719,7 +719,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                             self.getControl(282).setLabel(PathName)
                             self.PluginSourcePathDir = PathName
                             
-                    Chname = self.chnlst.CleanLabels(selectItem + ' - ' + self.getControl(280).getLabel()) 
+                    Chname = self.chnlst.cleanLabels(selectItem + ' - ' + self.getControl(280).getLabel()) 
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                     ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", Chname)
@@ -1189,7 +1189,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 Detail = (DetailLST[i]).split(',')
                 filetype = Detail[0]
                 title = Detail[1]
-                title = self.chnlst.CleanLabels(title)
+                title = self.chnlst.cleanLabels(title)
                 genre = Detail[2]
                 dur = Detail[3]
                 description = Detail[4]
@@ -1251,7 +1251,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 hide_busy_dialog()
                 select = selectDialog(NameLst, 'Select Kodi PVR Channel')
                 if select != -1:
-                    name = self.chnlst.CleanLabels(NameLst[select], 'upper')
+                    name = self.chnlst.cleanLabels(NameLst[select], 'upper')
                     path = PathLst[select]
                     if len(path) > 0:
                         return name, path
@@ -1263,7 +1263,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 hide_busy_dialog()
                 select = selectDialog(NameLst, 'Select HDhomerun Channel')
                 if select != -1:
-                    name = self.chnlst.CleanLabels(NameLst[select], 'upper')
+                    name = self.chnlst.cleanLabels(NameLst[select], 'upper')
                     path = PathLst[select]
                     if len(path) > 0:
                         return name, path
@@ -1300,16 +1300,16 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 PathLst = []
                             else:
                                 path = PathLst[select]      
-                    return self.chnlst.CleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                    return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
                 else:
                     if isDon() == True:
                         select = selectDialog(self.pluginNameList[1:], 'Select Plugin')
                         if select != -1:
-                            return self.chnlst.CleanLabels((self.pluginNameList[1:])[select]), 'plugin://' + (self.pluginPathList[1:])[select]
+                            return self.chnlst.cleanLabels((self.pluginNameList[1:])[select]), 'plugin://' + (self.pluginPathList[1:])[select]
                     else:
                         select = selectDialog(self.pluginNameList, 'Select Plugin')
                         if select != -1:
-                            return self.chnlst.CleanLabels((self.pluginNameList)[select]), 'plugin://' + (self.pluginPathList)[select]
+                            return self.chnlst.cleanLabels((self.pluginNameList)[select]), 'plugin://' + (self.pluginPathList)[select]
            
             elif source == 'Playon':
                 self.log("Playon")
@@ -1331,13 +1331,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 PathLst = []
                             else:
                                 path = PathLst[select]      
-                    return self.chnlst.CleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                    return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
                 else:
                     NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo('plugin://plugin.video.Playonbrowser'))
                     hide_busy_dialog()
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
-                        return self.chnlst.CleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                        return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
                     
             elif source == 'UPNP':
                 self.log("UPNP")
@@ -1373,7 +1373,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         hide_busy_dialog()
                         select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                         if select != -1:
-                            name = self.chnlst.CleanLabels(NameLst[select])
+                            name = self.chnlst.cleanLabels(NameLst[select])
                             path = PathLst[select]
                             if name.startswith('[F]'):
                                 #remove unwanted reference to superfavourites 
@@ -1400,7 +1400,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     hide_busy_dialog()
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
-                        return self.chnlst.CleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                        return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
                     
             elif source == 'URL':
                 self.log("URL")
@@ -1460,16 +1460,16 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         select = selectDialog(NameLst, 'Select InternetTV')
                         if select != -1:
                             self.getControl(226).setLabel(Option1LST[select])
-                            self.getControl(222).setLabel(self.chnlst.CleanLabels(Option3LST[select]))
-                            self.getControl(223).setLabel(self.chnlst.CleanLabels(Option4LST[select]))
-                            return self.chnlst.CleanLabels(NameLst[select]), PathLst[select]
+                            self.getControl(222).setLabel(self.chnlst.cleanLabels(Option3LST[select]))
+                            self.getControl(223).setLabel(self.chnlst.cleanLabels(Option4LST[select]))
+                            return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                             
                     elif type == 'Plugin':
                         self.log("Community List, Plugin")
                         NameLst, Option1LST, Option2LST, Option3LST, Option4LST = self.chnlst.fillExternalList('Plugin','')
                         select = selectDialog(NameLst, 'Select Plugin')
                         if select != -1:
-                            return self.chnlst.CleanLabels(NameLst[select]), Option1LST[select], Option2LST[select], Option3LST[select], (Option4LST[select]).replace('0','Default').replace('1','Random').replace('2','Reverse') 
+                            return self.chnlst.cleanLabels(NameLst[select]), Option1LST[select], Option2LST[select], Option3LST[select], (Option4LST[select]).replace('0','Default').replace('1','Random').replace('2','Reverse') 
                 else:
                     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Please Configure Community List Access", 1000, THUMB) )
 
@@ -1583,7 +1583,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             setting2 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2"))
             setting3 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3"))
             setting4 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4"))
-            channame = self.chnlst.CleanLabels(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_1_opt_1"))
+            channame = self.chnlst.cleanLabels(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_1_opt_1"))
         except:
             pass
             

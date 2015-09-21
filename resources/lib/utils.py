@@ -982,7 +982,15 @@ def getPlatform():
 #####################
 # String/File Tools #
 #####################
-            
+           
+def cleanMovieTitle(title):
+    title = re.sub('\n|([[].+?[]])|([(].+?[)])|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
+    return title
+ 
+def cleanTVTitle(title):
+    title = re.sub('\n|\s(|[(])(UK|US|AU|\d{4})(|[)])$|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
+    return title  
+             
 def normalizeString(string):
     try:
         try: return string.decode('ascii').encode("utf-8")
@@ -1227,6 +1235,16 @@ def Restore(bak, org):
 # PTVL Tools #
 ##############
 
+def PlaylistLimit():  
+    if getPlatform() == 'Windows':
+        Playlist_Limit = FILELIST_LIMIT[2]
+    elif isLowPower != True:
+        Playlist_Limit = FILELIST_LIMIT[1]
+    else:
+        Playlist_Limit = FILELIST_LIMIT[0]
+    log('utils: PlaylistLimit = ' + str(Playlist_Limit))
+    return Playlist_Limit
+
 def isDon():
     val = REAL_SETTINGS.getSetting("Verified_Donor") == "true"
     setProperty("Verified_Donor", str(val))
@@ -1355,18 +1373,6 @@ def isDebug():
 
 def SyncXMLTV(force=False):
     log('utils: SyncXMLTV, force = ' + str(force))
-    try:
-        SyncXMLTVthread = threading.Timer(0.5, SyncXMLTV_Thread, [force])
-        SyncXMLTVthread.name = "SyncXMLTVthread"
-        if SyncXMLTVthread.isAlive():
-            SyncXMLTVthread.cancel()      
-        SyncXMLTVthread.start()
-    except Exception,e:
-        log('utils: SyncXMLTV, Failed!,' + str(e))
-        pass   
-         
-def SyncXMLTV_Thread(force=False):
-    log('utils: SyncXMLTV_Thread, force = ' + str(force))
     now  = datetime.datetime.today()
     try:
         SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
