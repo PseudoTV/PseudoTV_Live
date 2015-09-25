@@ -534,6 +534,7 @@ class ChannelList:
         israndom = False  
         isreverse = False
         fileList = []
+        bctType = None
         
         #Set Local Limit or Global
         if chtype in [7,10,11,15,16] and setting3 != '' and len(setting3) > 0:
@@ -677,31 +678,18 @@ class ChannelList:
             xml.close()
 
             if self.getSmartPlaylistType(dom) == 'mixed':
-                if self.incBCTs == True:
-                    self.log("makeChannelList, adding CTs to mixed...")
-                    PrefileList = self.buildMixedFileList(dom, channel, limit)
-                    fileList = self.insertBCTfiles(channel, PrefileList, 'mixed')
-                else:
-                    fileList = self.buildMixedFileList(dom, channel, limit)
-
+                bctType = 'mixed'
+                fileList = self.buildMixedFileList(dom, channel, limit)
+                
             elif self.getSmartPlaylistType(dom) == 'movies':
+                bctType = 'movies'
                 if REAL_SETTINGS.getSetting('Movietrailers') != 'true':
                     self.incBCTs == False
-                    
-                if self.incBCTs == True:
-                    self.log("makeChannelList, adding Trailers to movies...")
-                    PrefileList = self.buildFileList(fle, channel, limit)
-                    fileList = self.insertBCTfiles(channel, PrefileList, 'movies')
-                else:
-                    fileList = self.buildFileList(fle, channel, limit)
+                fileList = self.buildFileList(fle, channel, limit)
             
             elif self.getSmartPlaylistType(dom) == 'episodes':
-                if self.incBCTs == True:
-                    self.log("makeChannelList, adding BCT's to episodes...")
-                    PrefileList = self.buildFileList(fle, channel, limit)
-                    fileList = self.insertBCTfiles(channel, PrefileList, 'episodes')
-                else:
-                    fileList = self.buildFileList(fle, channel, limit)
+                bctType = 'episodes'
+                fileList = self.buildFileList(fle, channel, limit)
             else:
                 fileList = self.buildFileList(fle, channel, limit)
 
@@ -766,7 +754,11 @@ class ChannelList:
         else:
             if len(fileList) > self.Playlist_Limit:
                 fileList = fileList[:self.Playlist_Limit]
-
+        
+        # inject BCT into filelist
+        if self.incBCTs == True and bctType != None:
+            fileList = self.insertBCT(chtype, channel, fileList, bctType)
+            
         # Write each entry into the new playlist
         for string in fileList:
             channelplaylist.write(uni("#EXTINF:") + uni(string) + uni("\n"))
@@ -1052,6 +1044,9 @@ class ChannelList:
             setting1 = os.path.join(setting1,'')
         LocalLST = self.walk(setting1)
 
+        if self.background == False:
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing Directories")
+            
         for i in range(len(LocalLST)):         
             if self.threadPause() == False:
                 del fileList[:]
@@ -1090,7 +1085,7 @@ class ChannelList:
         self.log("packGenreLiveID, GenreLiveID = " + str(GenreLiveID))
         if len(GenreLiveID) == 7:
             genre = GenreLiveID[0]
-            LiveID = '|'.join(uni(str(x)) for x in GenreLiveID[1:]) + '|'
+            LiveID = '|'.join(str(x) for x in GenreLiveID[1:]) + '|'
             return genre, LiveID
         
         
@@ -1101,7 +1096,7 @@ class ChannelList:
         return LiveID
 
     
-    def makeTMPSTR(self, duration, showtitle, subtitle, description, GenreLiveID, file, timestamp=''):
+    def makeTMPSTR(self, duration, showtitle, subtitle, description, GenreLiveID, file, timestamp=None):
         genre, LiveID = self.packGenreLiveID(GenreLiveID)
         showtitle = self.cleanLabels(showtitle)
         subtitle = self.cleanLabels(subtitle)
@@ -1128,7 +1123,6 @@ class ChannelList:
             description = (description[:350])   
         tmpstr = str(duration) + ',' + showtitle + "//" + subtitle + "//" + description + "//" + genre + "//" + timestamp + "//" + LiveID + '\n' + file
         tmpstr = tmpstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")                  
-        # self.logDebug('makeTMPSTR, tmpstr = ' + ascii(tmpstr))
         return tmpstr
 
         
@@ -1153,7 +1147,7 @@ class ChannelList:
     
     def uncleanString(self, string):
         self.logDebug("uncleanString")
-        newstr = string
+        newstr = uni(string)
         newstr = newstr.replace('&amp;', '&')
         newstr = newstr.replace('&gt;', '>')
         newstr = newstr.replace('&lt;', '<')
@@ -1203,16 +1197,17 @@ class ChannelList:
         text = text.replace("//",'/')
         text = text.replace('plugin.video.','')
         text = text.replace('plugin.audio.','')
-        text = self.uncleanString(text.strip())
 
         if format == 'title':
-            text = uni(text.title()).replace("'S","'s")
+            text = text.title().replace("'S","'s")
         elif format == 'upper':
-            text = uni(text.upper())
+            text = text.upper()
         elif format == 'lower':
-            text = uni(text.lower())
+            text = text.lower()
         else:
-            text = uni(text)
+            text = text
+            
+        text = text.strip()
         self.logDebug('cleanLabels, OUT = ' + text)
         return text
     
@@ -1225,13 +1220,13 @@ class ChannelList:
         rating = rating.replace('UK:','')
         rating = rating.replace('UNRATED','NR')
         rating = rating.replace('NOTRATED','NR')
+        rating = rating.replace('UNKNOWN','NR')
         rating = rating.replace('N/A','NR')
         rating = rating.replace('NA','NR')
         rating = rating.replace('APPROVED','NR')
         rating = rating.replace('NOT RATED','NR')
-        rating = rating.replace('UNRAT','NR')
-        rating = rating.replace('NOT','NR')
-        return self.cleanLabels(rating, 'upper')
+        rating = rating.split(' ')[0]
+        return rating[0:5]
 
         
     def fillMusicInfo(self, sortbycount = False):
@@ -1240,7 +1235,7 @@ class ChannelList:
         json_query = ('{"jsonrpc": "2.0", "method": "AudioLibrary.GetAlbums", "params": {"properties":["genre"]}, "id": 1}')
         
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Music")
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing Music")
 
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
@@ -1299,7 +1294,7 @@ class ChannelList:
         json_query = ('{"jsonrpc": "2.0", "method": "VideoLibrary.GetTVShows", "params": {"properties":["studio", "genre"]}, "id": 1}')
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Videos")
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing TV Shows")
 
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
@@ -1316,7 +1311,7 @@ class ChannelList:
 
             if match:
                 network = (match.group(1).split(','))[0]
-                network = network.strip('"').strip()
+                network = (network.strip('"').strip())
                 found = False
 
                 for item in range(len(self.networkList)):
@@ -1348,13 +1343,13 @@ class ChannelList:
             match = re.search('"label" *: *"(.*?)",', f)
 
             if match:
-                show = match.group(1).strip()
+                show = (match.group(1).strip())
                 self.showList.append([show, network])
                 
             match = re.search('"genre" *: *\[(.*?)\]', f)
 
             if match:
-                genres = match.group(1).split(',')
+                genres = (match.group(1).split(','))
                 
                 for genre in genres:
                     found = False
@@ -1395,11 +1390,7 @@ class ChannelList:
 
         if (len(self.showList) == 0) and (len(self.showGenreList) == 0) and (len(self.networkList) == 0):
             self.logDebug(json_folder_detail)
-            
-        self.showList = removeStringElem(self.showList)
-        self.showGenreList = removeStringElem(self.showGenreList)
-        self.networkList = removeStringElem(self.networkList)
-        
+
         self.log("found shows " + str(self.showList))
         self.log("found genres " + str(self.showGenreList))
         self.log("fillTVInfo return " + str(self.networkList))
@@ -1411,7 +1402,7 @@ class ChannelList:
         json_query = ('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["studio", "genre"]}, "id": 1}')
 
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Videos")
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing Movies")
 
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
@@ -1510,8 +1501,8 @@ class ChannelList:
         if (len(self.movieGenreList) == 0) and (len(self.studioList) == 0):
             self.logDebug(json_folder_detail)
 
-        self.movieGenreList = removeStringElem(self.movieGenreList)
-        self.studioList = removeStringElem(self.studioList)
+        self.movieGenreList = (self.movieGenreList)
+        self.studioList = (self.studioList)
         
         self.log("found genres " + str(self.movieGenreList))
         self.log("fillMovieInfo return " + str(self.studioList))
@@ -1553,7 +1544,7 @@ class ChannelList:
         self.file_detail_CHK = []
         
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Videos, querying database")
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying Kodi database")
         
         fileList = self.getFileList(self.requestList(dir_name), channel, limit)
         self.log("buildFileList return")
@@ -1567,14 +1558,14 @@ class ChannelList:
         fileList = []  
         self.file_detail_CHK = []
         
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Videos, parsing plugin")
-        
         if setting1.endswith('/'):
             setting1 = setting1[:-1]
             
         PluginPath = (setting1.replace('plugin://','')).split('/')[0]
         PluginName = (xbmcaddon.Addon(id=PluginPath)).getAddonInfo('name')
+        
+        if self.background == False:
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing plugin - %s"%PluginName)
         
         try:
             excludeLST = setting2.split(',')
@@ -1598,7 +1589,7 @@ class ChannelList:
         self.file_detail_CHK = []
         
         if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Videos, parsing upnp")
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "parsing upnp source")
         
         if setting1.endswith('/'):
             setting1 = setting1[:-1]
@@ -1650,6 +1641,16 @@ class ChannelList:
         except AttributeError:
             return int((delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10 ** 6)) / 10 ** 6
 
+            
+    def getPVRChannels(self):
+        self.log("getPVRChannels") 
+        return chanNumLST, chanNameLST
+        
+        
+    def getPVRlistings(self, channelid):
+        self.log("getPVRChannels")  
+        return listings
+            
             
     def parsePVRDate(self, dateString):
         if dateString is not None:
@@ -1780,7 +1781,7 @@ class ChannelList:
                                     if icon.startswith('http'):
                                         thumburl = encodeString(icon)
                                     elif icon.startswith('"photos"'):
-                                        thumburl = encodeString(((cleanHTML(icon)).replace('"}]',"").replace("\/","\\")).rsplit(':"', 1)[1])
+                                        thumburl = encodeString(((cleanHTML(icon)).replace('"}]',"").replace("\/","//")).rsplit(':"', 1)[1])
                                     elif icon.startswith('&quot;photos&quot;:'):
                                         icon = (icon.split('&quot;photos&quot;:')[1]).replace('\/','/').replace('&quot;','')
                                         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(icon)
@@ -2024,12 +2025,6 @@ class ChannelList:
                         ratings = re.search('"rating" *: *"(.*?)"', f)   
                         if ratings != None and len(ratings.group(1)) > 0:
                             rating = self.cleanRating(ratings.group(1))
-                            if type == 'movie':
-                                rating = rating[0:5]
-                                try:
-                                    rating = rating.split(' ')[0]
-                                except:
-                                    pass
                         else:
                             rating = 'NR'
 
@@ -2190,6 +2185,7 @@ class ChannelList:
                 showList = self.getYoutubeVideos(2, setting1, '', limit, YTMSG)
             elif setting2 == '5':
                 YTMSG = 'Search Querys'
+                showList = self.getYoutubeVideos(5, setting1, '', limit, YTMSG)
             elif setting2 == '7':
                 YTMSG = 'MultiTube Playlists'
                 showList = self.BuildMultiYoutubeChannelNetwork(setting1, setting2, setting3, setting4, limit)
@@ -2397,26 +2393,41 @@ class ChannelList:
         self.log("getYoutubeVideos, YT_Type = " + str(YT_Type) + ', YT_ID = ' + YT_ID) 
         region = 'US' #todo
         lang = xbmc.getLanguage(xbmc.ISO_639_1)
-        Last_YT_NextPG = YT_NextPG        
+        Last_YT_NextPG = YT_NextPG      
+        if YT_Type == 5:
+            try:
+                safesearch, YT_ID = YT_ID.split('|')
+            except:
+                safesearch = 'none'
         youtubeApiUrl = 'https://www.googleapis.com/youtube/v3/'
         youtubeChannelsApiUrl = (youtubeApiUrl + 'channels?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         youtubeSearchApiUrl = (youtubeApiUrl + 'search?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         youtubePlaylistApiUrl = (youtubeApiUrl + 'playlistItems?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         requestChannelVideosInfo = (youtubeSearchApiUrl + 'channelId=%s&part=id&order=date&pageToken=%s&maxResults=50' % (YT_ID, YT_NextPG))
         requestPlaylistInfo = (youtubePlaylistApiUrl+ 'part=snippet&maxResults=50&playlistId=%s&pageToken=%s' % (YT_ID, YT_NextPG))
-
+        requestSearchVideosInfo = (youtubeSearchApiUrl + 'safeSearch=%s&q=%s&part=snippet&order=date&pageToken=%s&maxResults=50' % (safesearch.lower(), YT_ID.replace(' ','%20'), YT_NextPG))
+    
+    # https://www.googleapis.com/youtube/v3/search?part=snippet&q=movies&type=channel&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c movie channels
+    # https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=UCczhp4wznQWonO7Pb8HQ2MQ&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c
+    
+    
         if YT_Type == 1:
             if YT_ID[0:2] != 'UC':
                 YT_ID = self.getYoutubeUserID(YT_ID)
-                self.getYoutubeVideos(YT_Type, YT_ID, YT_NextPG, limit, YTMSG)  
+                return self.getYoutubeVideos(YT_Type, YT_ID, YT_NextPG, limit, YTMSG)  
             else:
                 YT_URL_Search = requestChannelVideosInfo
+                self.logDebug("getYoutubeVideos, requestChannelVideosInfo = " + YT_URL_Search) 
         elif YT_Type == 2:
             YT_URL_Search = requestPlaylistInfo
-
+            self.logDebug("getYoutubeVideos, requestPlaylistInfo = " + YT_URL_Search) 
+            
+        elif YT_Type == 5:
+            YT_URL_Search = requestSearchVideosInfo
+            self.logDebug("getYoutubeVideos, requestSearchVideosInfo = " + YT_URL_Search) 
+            
         try:
             detail = re.compile( "{(.*?)}", re.DOTALL ).findall(read_url_cached(YT_URL_Search))
-        
             if self.background == False:
                 self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Youtube, parsing " + str(YTMSG))     
             
@@ -3185,39 +3196,28 @@ class ChannelList:
         return PreShowLST
 
 
-    def insertBCTfiles(self, channel, fileList, type):
-        self.log("insertBCTfiles, channel = " + str(channel))
-        bctFileList = []
+    def insertBCT(self, chtype, channel, fileList, type):
+        self.log("insertBCT, channel = " + str(channel))
+        GenreLiveID = ['Unknown', 'other', '0', '0', False, '1', 'NR']
         newFileList = []
-        fileListNum = len(fileList)
-        FileListMediaLST = []
-        LiveID = 'tvshow|0|0|False|1|NR|'
-        CommercialsType = REAL_SETTINGS.getSetting("commercials")
-        
-        chtype = (ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
-        setting1 = (ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1'))
-        
-        if chtype == '0':
-            directory, filename = os.path.split(setting1)
-            filename = (filename.split('.'))
-            chname = (filename[0])
+        title = ''
+        description = ''
+        chsetting1 = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1')
+
+        # Parse BCT functions
+        if chtype <= 7 or chtype == 12:
+            chname = self.getChannelName(chtype, chsetting1)
         else:
-            chname = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")  
+            chname = self.getChannelName(chtype, channel)
         
         #Bumpers
-        BumperNum = 0
         BumperLST = []
-        BumpersType = REAL_SETTINGS.getSetting("bumpers")
-        numBumpers = int(REAL_SETTINGS.getSetting("numbumpers")) + 1
-        
+        BumpersType = REAL_SETTINGS.getSetting("bumpers")      
         if BumpersType != "0" and type != 'movies': 
             BumperLST = self.getBumperList(BumpersType, chname)
             
             if BumperLST and len(BumperLST) > 0:
                 random.shuffle(BumperLST)
-                
-            BumperNum = len(BumperLST)
-            self.log("insertBCTfiles, Bumpers.numBumpers = " + str(numBumpers))
         
         #Ratings
         if BumpersType!= "0" and type == 'movies' and REAL_SETTINGS.getSetting('bumperratings') == 'true':
@@ -3228,98 +3228,74 @@ class ChannelList:
             fileList = self.get3DList(chtype, chname, channel, fileList)
             
         #Commercial
-        CommercialNum = 0
         CommercialLST = []
-        numCommercials = int(REAL_SETTINGS.getSetting("numcommercials")) + 1
+        CommercialsType = REAL_SETTINGS.getSetting("commercials") 
         if CommercialsType != '0' and type != 'movies':
             CommercialLST = self.getCommercialList(CommercialsType)
             
             if CommercialLST and len(CommercialLST) > 0:
                 random.shuffle(CommercialLST)
-            
-            CommercialNum = len(CommercialLST)#number of Commercial items in full list
-            self.log("insertBCTfiles, Commercials.numCommercials = " + str(numCommercials))
-        
+
         #Trailers
-        TrailerNum = 0
         TrailerLST = []
         TrailersType = REAL_SETTINGS.getSetting("trailers")
         trailersgenre = REAL_SETTINGS.getSetting("trailersgenre")
         trailersHDnetType = REAL_SETTINGS.getSetting("trailersHDnetType")
         trailerschannel = REAL_SETTINGS.getSetting("trailerschannel")
-        numTrailers = int(REAL_SETTINGS.getSetting("numtrailers")) + 1
-        
+
         if REAL_SETTINGS.getSetting('trailers') != '0':
             TrailerLST = self.getTrailerList(chtype, chname, TrailersType, trailersgenre, trailersHDnetType, trailerschannel)
             if TrailerLST and len(TrailerLST) > 0:
                 random.shuffle(TrailerLST)
-            TrailerNum = len(TrailerLST)#number of trailer items in full list
-            self.logDebug("insertBCTfiles, trailers.numTrailers = " + str(numTrailers))    
 
-        for i in range(fileListNum):
-            bctDur = 0
-            bctFileList = []
-            BumperMedia = ''
-            BumperMediaLST = []
-            CommercialMedia = ''
-            CommercialMediaLST = []
-            trailerMedia = ''
-            trailerMediaLST = []
-            File = ''
-            
-            if BumperNum > 0:
-                for n in range(numBumpers):
+        # Inject BCTs into filelist          
+        for i in range(len(fileList)):
+            bctDur = 0 #todo automatic time filler (round shows to the 30/60min intervals)
+            newFileList.append(fileList[i])
+            FileListDur, FileListMedia = fileList[i].split(',')
+            FileListDur = int(FileListDur)
+            if len(BumperLST) > 0:
+                for n in range(int(REAL_SETTINGS.getSetting("numbumpers")) + 1):
+                    tmpstr = ''
                     if self.background == False:
                         self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Bumpers")
                     Bumper = random.choice(BumperLST)#random fill Bumper per show by user selected amount
-                    BumperDur = int(Bumper.split(',')[0]) #duration of Bumper
+                    BumperDur, BumperMedia = Bumper.split(',')
+                    BumperDur = int(BumperDur)
                     bctDur += BumperDur
-                    BumperMedia = Bumper.split(',', 1)[-1] #link of Bumper
-                    BumperMedia = ('#EXTINF:' + str(BumperDur) + ',//////Bumper////' + LiveID + '\n' + uni(BumperMedia))
-                    BumperMediaLST.append(BumperMedia)
-            
-            if CommercialNum > 0:
-                for n in range(numCommercials):    
+                    tmpstr = self.makeTMPSTR(BumperDur, chname, 'Bumper', 'Bumper', GenreLiveID, BumperMedia)
+                    newFileList.append(tmpstr)
+
+            if len(CommercialLST) > 0:
+                for n in range(int(REAL_SETTINGS.getSetting("numcommercials")) + 1): 
+                    tmpstr = ''   
                     if self.background == False:
                         self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Commercials")
                     Commercial = random.choice(CommercialLST)#random fill Commercial per show by user selected amount
-                    CommercialDur = int(Commercial.split(',')[0]) #duration of Commercial
+                    CommercialDur, CommercialMedia = Commercial.split(',')
+                    CommercialDur = int(CommercialDur)
                     bctDur += CommercialDur
-                    CommercialMedia = Commercial.split(',', 1)[-1] #link of Commercial
-                    CommercialMedia = ('#EXTINF:' + str(CommercialDur) + ',//////Commercial////' + LiveID + '\n' + uni(CommercialMedia))
-                    CommercialMediaLST.append(CommercialMedia)
+                    tmpstr = self.makeTMPSTR(CommercialDur, chname, 'Commercial', 'Commercial', GenreLiveID, CommercialMedia)
+                    newFileList.append(tmpstr)
 
-            if TrailerNum > 0:
-                for n in range(numTrailers):    
+            if len(TrailerLST) > 0:
+                for n in range(int(REAL_SETTINGS.getSetting("numtrailers")) + 1):    
+                    tmpstr = ''
                     if self.background == False:
                         self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Trailers")
                     trailer = random.choice(TrailerLST)#random fill trailers per show by user selected amount
-                    trailerDur = int(trailer.split(',')[0]) #duration of trailer
+                    trailerDur, trailerMedia = trailer.split(',') #duration of trailer
+                    trailerDur = int(trailerDur)
                     bctDur += trailerDur
-                    trailerMedia = trailer.split(',', 1)[-1] #link of trailer
-                    trailerMedia = ('#EXTINF:' + str(trailerDur) + ',//////Trailer////' + LiveID + '\n' + uni(trailerMedia))
-                    trailerMediaLST.append(trailerMedia)   
-
-            bctFileList.extend(BumperMediaLST)
-            bctFileList.extend(CommercialMediaLST)
-            bctFileList.extend(trailerMediaLST)
-            random.shuffle(bctFileList)       
-            
-            if len(bctFileList) > 0:                
-                File = (fileList[i] + '\n')
-            else: 
-                File = fileList[i]
-                
-            File = uni(File + '\n'.join(bctFileList))
-            newFileList.append(File)
+                    tmpstr = self.makeTMPSTR(trailerDur, chname, 'Trailer', 'Trailer', GenreLiveID, trailerMedia)
+                    newFileList.append(tmpstr)
         return newFileList
+
         
- 
     def getBumperList(self, BumpersType, chname):
         self.log("getBumperList")
         BumperLST = []
-        duration = 0
-        
+        BumperCNT = 0
         #Local
         if BumpersType == "1":  
             self.log("getBumperList, Local - " + chname)
@@ -3334,12 +3310,13 @@ class ChannelList:
                     LocalBumper = ''
                     LocalLST = self.walk(PATH)
 
-                    for i in range(len(LocalLST)):    
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Local Bumpers")
+                    for i in range(len(LocalLST)):  
                         filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
                         duration = self.videoParser.getVideoLength(filename)
                         if duration > 0:
+                            BumperCNT += 1
+                            if self.background == False:
+                                self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying %s Local Bumpers"%str(BumperCNT))
                             LocalBumper = (str(duration) + ',' + filename)
                             LocalBumperLST.append(LocalBumper)
                     BumperLST.extend(LocalBumperLST)                
@@ -3358,10 +3335,6 @@ class ChannelList:
                     linesLST = read_url_cached(Bumper_List, return_type='readlines')
                     for i in range(len(Bumper_List)):    
                         include = False                    
-                    
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Internet Bumpers")
-                        
                         lines = str(linesLST[i]).replace('\n','')
                         lines = lines.split('|')
                         ChannelName = lines[0]
@@ -3383,14 +3356,17 @@ class ChannelList:
                                     if duration > 0:
                                         include = True
                             if include == True:
+                                BumperCNT += 1
+                                if self.background == False:
+                                    self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying %s Internet Bumpers"%str(BumperCNT))
                                 InternetBumper = (str(duration) + ',' + url)
                                 InternetBumperLST.append(InternetBumper)
-                    BumperLST.extend(InternetBumperLST)#Put local bumper list into master bumper list.                
+                    BumperLST.extend(InternetBumperLST)                
                 except: 
                     pass
         return BumperLST   
         
-
+        
     def getRatingList(self, chtype, chname, channel, fileList):
         self.log("getRatingList")
         newFileList = []
@@ -3401,7 +3377,7 @@ class ChannelList:
             Ratings = (['NR','qlRaA8tAfc0'],['R','s0UuXOKjH-w'],['NC-17','Cp40pL0OaiY'],['PG-13','lSg2vT5qQAQ'],['PG','oKrzhhKowlY'],['G','QTKEIFyT4tk'],['18','g6GjgxMtaLA'],['16','zhB_xhL_BXk'],['12','o7_AGpPMHIs'],['6','XAlKSm8D76M'],['0','_YTMglW0yk'])
     
             for i in range(len(fileList)):
-                file = fileList[i]
+                newFileList.append(fileList[i])
                 lineLST = (fileList[i]).split('movie|')[1]
                 mpaa = (lineLST.split('\n')[0]).split('|')[4]
                 
@@ -3416,7 +3392,7 @@ class ChannelList:
                 URL = self.youtube_player + ID
                 dur = (self.getYoutubeMeta(ID))[2]   
                 GenreLiveID = ['Unknown', 'movie', '0', '0', False, '1', mpaa]
-                tmpstr = self.makeTMPSTR(dur, '', '', 'Rating', GenreLiveID, URL) + '\n' + '#EXTINF:' + file
+                tmpstr = self.makeTMPSTR(dur, chname, 'Rating', 'Rating', GenreLiveID, URL)
                 newFileList.append(tmpstr)
             return newFileList
         else:
@@ -3754,7 +3730,7 @@ class ChannelList:
             self.log("getTrailerList, Local Json")
             JsonTrailerLST = []
             json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetMovies","params":{"properties":["genre","trailer","runtime"]}, "id": 1}')
-            genre = ascii(chname)
+            genre = chname
             if self.youtube_player != False:
                 try:
                     if not self.cached_json_detailed_trailers:
@@ -4000,7 +3976,7 @@ class ChannelList:
     #Parse Plugin, return essential information. Not tmpstr
     def PluginInfo(self, path):
         self.log("PluginInfo") 
-        json_query = uni('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"%s","properties":["genre","runtime","description"]},"id":1}' % path)
+        json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"%s","properties":["genre","runtime","description"]},"id":1}' % path)
         json_folder_detail = self.sendJSON(json_query)
         file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
         Detail = ''
@@ -4161,7 +4137,7 @@ class ChannelList:
                 self.log("findZap2itID, pvr backend")             
                 if not self.cached_json_detailed_xmltvChannels_pvr:
                     self.log("findZap2itID, no cached_json_detailed_xmltvChannels")
-                    json_query = uni('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
+                    json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
                     json_detail = self.sendJSON(json_query)
                     self.cached_json_detailed_xmltvChannels_pvr = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
                 file_detail = self.cached_json_detailed_xmltvChannels_pvr
@@ -4367,7 +4343,7 @@ class ChannelList:
         
     def fillPluginList(self):
         self.log('fillPluginList')
-        json_query = uni('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.video","content":"video","enabled":true,"properties":["path","name"]}, "id": 1 }')
+        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.video","content":"video","enabled":true,"properties":["path","name"]}, "id": 1 }')
         json_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
         TMPpluginList = []
@@ -4398,7 +4374,7 @@ class ChannelList:
         TMPPVRList = []
         PVRNameList = []
         PVRPathList = []
-        json_query = uni('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
+        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
         json_detail = self.sendJSON(json_query)
         file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)  
         self.cached_json_detailed_xmltvChannels_pvr = [] 
@@ -4454,7 +4430,7 @@ class ChannelList:
         TMPPVRList = []
         PVRNameList = []
         PVRPathList = []
-        json_query = uni('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"pvr://channels/tv/All channels/","properties":["thumbnail"]},"id": 1 }')
+        json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"pvr://channels/tv/All channels/","properties":["thumbnail"]},"id": 1 }')
         json_detail = self.sendJSON(json_query)
         file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)  
         self.cached_json_detailed_xmltvChannels_pvr = []             
@@ -4498,7 +4474,7 @@ class ChannelList:
     def fillFavourites(self):
         self.log('fillFavourites')
         show_busy_dialog()
-        json_query = uni('{"jsonrpc":"2.0","method":"Favourites.GetFavourites","params":{"properties":["path","thumbnail"]},"id":1}')
+        json_query = ('{"jsonrpc":"2.0","method":"Favourites.GetFavourites","params":{"properties":["path","thumbnail"]},"id":1}')
         json_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
         TMPfavouritesList = []
@@ -4584,13 +4560,13 @@ class ChannelList:
 
                 if len(line) == 7:
                     if not str(line).startswith(';'):
-                        genre = uni(line[0])
-                        chtype = uni(line[1])
-                        setting_1 = uni(line[2])
-                        setting_2 = uni(line[3])
-                        setting_3 = uni(line[4])
-                        setting_4 = uni(line[5])
-                        channel_name = uni(self.cleanLabels(line[6], 'title'))
+                        genre = (line[0])
+                        chtype = (line[1])
+                        setting_1 = (line[2])
+                        setting_2 = (line[3])
+                        setting_3 = (line[4])
+                        setting_4 = (line[5])
+                        channel_name = self.cleanLabels(line[6], 'title')
                         
                         if genre.lower() == 'tv':
                             genre = '[COLOR=yellow]'+genre+'[/COLOR]'
@@ -4895,6 +4871,7 @@ class ChannelList:
         
         
     def getEnhancedEPGdata(self, type, showtitle, year, genre, rating):
+        cleantitle = showtitle
         if ENHANCED_DATA == True:
             year, cleantitle, showtitle = getTitleYear(showtitle, year)
             if year == 0 or year == '0':
@@ -4909,6 +4886,7 @@ class ChannelList:
         
         
     def getEnhancedGuideData(self, showtitle, year, imdbnumber, genre, rating, type, tagline=''):
+        cleantitle = showtitle
         if ENHANCED_DATA == True:
             showtitle, cleantitle, genre, rating, year = self.getEnhancedEPGdata(type, showtitle, year, genre, rating)
             imdbnumber = self.getEnhancedIDs(type, cleantitle, year, imdbnumber)
@@ -4978,14 +4956,14 @@ class ChannelList:
 
     def requestItem(self, file, fletype='video'):
         self.log("requestItem") 
-        json_query = uni('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}')
+        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}')
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
            
            
     def requestList(self, path, fletype='video'):
         self.log("requestList") 
-        json_query = uni('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
+        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)      
  
@@ -5001,12 +4979,12 @@ class ChannelList:
         else:
             self.file_detail_CHK = file_detail
         
-        try:
-            for f in file_detail:
-                if self.threadPause() == False:
-                    del fileList[:]
-                    break
-                        
+        for f in file_detail:
+            if self.threadPause() == False:
+                del fileList[:]
+                break
+                    
+            try:
                 tmpstr = ''
                 files = re.search('"file" *: *"(.*?)",', f)
                 
@@ -5021,7 +4999,7 @@ class ChannelList:
                         #if core variables, proceed
                         if filetypes and labels:
                             filetype = filetypes.group(1)
-                            file = files.group(1).replace("\\\\", "\\")
+                            file = (files.group(1).replace("\\\\", "\\"))
                             label = self.cleanLabels(labels.group(1))
 
                             if label and label.lower() not in excludeLST:
@@ -5124,12 +5102,6 @@ class ChannelList:
                                         
                                         if ratings != None and len(ratings.group(1)) > 0:
                                             rating = self.cleanRating(ratings.group(1))
-                                            if type == 'movie':
-                                                rating = rating[0:5]
-                                                try:
-                                                    rating = rating.split(' ')[0]
-                                                except:
-                                                    pass
                                         else:
                                             rating = 'NR'
 
@@ -5215,7 +5187,11 @@ class ChannelList:
                                                     showtitle = labels.group(1)
                                                     
                                                 taglines = re.search('"tagline" *: *"(.*?)"', f)
-                                                if taglines and len(taglines.group(1)) > 0:
+                                                if taglines and len(taglines.group(1)) > 50:
+                                                    subtitle = ''
+                                                    if description and len(description) < 50:
+                                                        description = (taglines.group(1)).replace('\\','')
+                                                elif taglines and len(taglines.group(1)) > 0:
                                                     subtitle = (taglines.group(1)).replace('\\','')
                                                 else:
                                                     subtitle = ''# todo customize missing taglines by media type  
@@ -5282,10 +5258,10 @@ class ChannelList:
                                 self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
                             else:
                                 self.log('getFileList, ' + label.lower() + ' in excludeLST')                                        
-        except Exception,e:
-            self.log('getFileList, failed...' + str(e))
-            self.logDebug(traceback.format_exc(), xbmc.LOGERROR)
-            
+            except Exception,e:
+                self.log('getFileList, failed...' + str(e))
+                self.logDebug(traceback.format_exc(), xbmc.LOGERROR)
+                
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
@@ -5294,7 +5270,7 @@ class ChannelList:
 
         # Stop playback when called during plugin parsing.
         if self.background == False:
-            json_query = '{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}'
+            json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
                                                                                
         self.log("getFileList, fileList return = " + str(len(fileList)))                       

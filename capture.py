@@ -120,10 +120,10 @@ class Main:
                     
                     if self.Path[-3:].lower() == 'xsp':
                         self.chantype = 0
-                    elif self.Path.lower().startswith('plugin://plugin.video.youtube/channel'):
+                    elif self.Path.lower().startswith('plugin://plugin.video.youtube/channel/'):
                         self.chantype = 10
                         self.YTtype = 1
-                    elif self.Path.lower().startswith('plugin://plugin.video.spotitube/?limit&mode=listyoutubeplaylist'):
+                    elif self.Path.lower().startswith(('plugin://plugin.video.youtube/playlist/','plugin://plugin.video.spotitube/?limit&mode=listyoutubeplaylist')):
                         self.chantype = 10
                         self.YTtype = 2
                     elif self.Path.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
@@ -191,11 +191,10 @@ class Main:
             
         elif self.chantype == 10:
             if self.YTtype == 1:
-                YTstring = 'plugin://plugin.video.youtube/channel/'
+                self.setting1 = ((self.Path).replace('plugin://plugin.video.youtube/channel/','')).replace('/','')
             elif self.YTtype == 2:
-                YTstring = 'plugin://plugin.video.spotitube/?limit&mode=listyoutubeplaylist&type=browse&url='
-            
-            self.setting1 = ((self.Path.lower()).replace(YTstring,'')).replace('/','')
+                self.setting1 = ((self.Path).replace('plugin://plugin.video.','').replace('youtube/playlist/','').replace('spotitube/?limit&mode=listyoutubeplaylist&type=browse&url=','')).replace('/','')
+
             self.setting2 = str(self.YTtype)
             self.setting3 = str(MEDIA_LIMIT)
             self.setting4 = '0'

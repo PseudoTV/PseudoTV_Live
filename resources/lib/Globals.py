@@ -52,8 +52,8 @@ def utf(string):
            string = string.encode('utf-8', 'ignore' )
     return string
 
-def removeNonAscii(s): 
-    return "".join(filter(lambda x: ord(x)<128, s))
+def removeNonAscii(string): 
+    return "".join(filter(lambda x: ord(x)<128, string))
 
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
@@ -69,6 +69,7 @@ TVDB_API_KEY = REAL_SETTINGS.getSetting("TVDB_API")
 TMDB_API_KEY = REAL_SETTINGS.getSetting("TMDB_API")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANTV_API")
 YT_API_KEY = 'AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c'
+GBOX_API_KEY = 'rKPHzBmsYrFYROD98HS0Bt6rScBccAVm'
 LOGODB_API_KEY = '8332'
 
 # Timers

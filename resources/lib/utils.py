@@ -984,14 +984,21 @@ def getPlatform():
 #####################
            
 def cleanMovieTitle(title):
+    log("utils: cleanMovieTitle")
     title = re.sub('\n|([[].+?[]])|([(].+?[)])|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
     return title
  
 def cleanTVTitle(title):
+    log("utils: cleanTVTitle")
     title = re.sub('\n|\s(|[(])(UK|US|AU|\d{4})(|[)])$|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
     return title  
+
+def cleanEncoding(string):
+    string = ''.join(chr(ord(c)) for c in string)
+    return ''.join(chr(ord(c)) for c in string).decode('utf8')
              
 def normalizeString(string):
+    log("utils: normalizeString")
     try:
         try: return string.decode('ascii').encode("utf-8")
         except: pass

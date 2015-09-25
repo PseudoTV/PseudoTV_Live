@@ -464,7 +464,7 @@ class Artdownloader:
                 else:
                     DefaultBug = os.path.join(IMAGES_LOC,'Default.png')
             
-            if chtype == 8:
+            if chtype in [8,9]:
                 return 'NA.png'
             else:
                 if REAL_SETTINGS.getSetting('UNAlter_ChanBug') == 'true':

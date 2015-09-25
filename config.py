@@ -531,16 +531,16 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         #Youtube
         elif controlId == 230:      # Youtube Type, left
             self.changeListData(self.YoutubeList, 232, -1)
-            
-            if (self.getControl(232).getLabel()).startswith('Multi'):
+            if (self.getControl(232).getLabel()) in ['Multi Channel','Multi Playlist']:
                 self.getControl(239).setVisible(True)
                 self.getControl(239).setLabel('Separate MultiTube with [COLOR=blue][B]|[/B][/COLOR], eg. ESPN[COLOR=blue][B]|[/B][/COLOR]ESPN2')
-            elif (self.getControl(232).getLabel()).startswith('Search'):
+            elif (self.getControl(232).getLabel()) == 'Search Query':
                 self.getControl(239).setVisible(True)
                 self.getControl(239).setLabel('Search w/[COLOR=red]Safesearch [moderate|strict][/COLOR], eg. (Football+Soccer) or (Football Soccer) or ([COLOR=red]strict|[/COLOR]Dick+Cheney)')
             else:
                 self.getControl(239).setVisible(False)
                 
+            # Community List browse button visible toggle
             if self.getControl(232).getLabel() in self.YTFilter:
                 self.getControl(233).setVisible(False)
             else:
@@ -551,17 +551,17 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.clearLabel(236)
                 
         elif controlId == 231:      # Youtube Type, right
-            self.changeListData(self.YoutubeList, 232, 1)  
-            
-            if (self.getControl(232).getLabel()).startswith('Multi'):
+            self.changeListData(self.YoutubeList, 232, 1)             
+            if (self.getControl(232).getLabel()).startswith(('Multi Channel','Multi Playlist')):
                 self.getControl(239).setVisible(True)
                 self.getControl(239).setLabel('Separate MultiTube with [COLOR=blue][B]|[/B][/COLOR], eg. ESPN[COLOR=blue][B]|[/B][/COLOR]ESPN2')
-            elif (self.getControl(232).getLabel()).startswith('Search'):
+            elif (self.getControl(232).getLabel()) == 'Search Query':
                 self.getControl(239).setVisible(True)
                 self.getControl(239).setLabel('Search w/[COLOR=red]Safesearch [moderate|strict][/COLOR], eg. (Football+Soccer) or (Football Soccer) or ([COLOR=red]strict|[/COLOR]Dick+Cheney)')
             else:
                 self.getControl(239).setVisible(False)
                 
+            # Community List browse button visible toggle
             if self.getControl(232).getLabel() in self.YTFilter:
                 self.getControl(233).setVisible(False)
             else:
@@ -1130,8 +1130,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.SortOrderList = ['Default','Random','Reverse','']
         self.ExternalPlaylistSources = ['Local File','URL']
         self.SourceList = ['PVR','HDhomerun','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','URL','M3U Playlist','XML Playlist','PLX Playlist']
-        self.YoutubeList = ['Channel','Playlist','User Subscription','User Favorites','Search Query','Multi Playlist','Multi Channel','Raw gdata','Seasonal']
-        self.YTFilter = ['User Subscription','User Favorites','Search Query','Raw gdata']
+        # self.YoutubeList = ['Channel','Playlist','User Subscription','User Favorites','Search Query','Multi Playlist','Multi Channel','Seasonal']
+        self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
+        self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
         if self.chnlst.plugin_ok('plugin.program.super.favourites'):
             self.chnlst.pluginPathList = ['plugin.program.super.favourites'] + self.chnlst.pluginPathList

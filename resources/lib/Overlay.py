@@ -886,7 +886,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             direction = -1
         if self.channels[channel - 1].isValid == False:
             return self.fixChannel(channel + direction, increasing)
-        self.setLastChannel()
         return channel
         
             
@@ -896,7 +895,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # todo channellabeltimer generating false inputchannel = -1, need to track down cause
         if channel == -1:
             return
-            
+        elif self.currentChannel != self.getLastChannel()
+            self.setLastChannel()
+                
         self.notPlayingCount = 0 
         self.background.setVisible(True)
         self.getControl(102).setVisible(False)
@@ -2359,6 +2360,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.channelList.sendJSON(json_query) 
         self.UPNPcontrol('resume')
     
+    
     def setLastChannel(self, channel=None):
         if not channel:
             try:
@@ -2708,26 +2710,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         setProperty("%s.Cleantitle"%pType,cleantitle)
         setProperty("%s.ID"%pType,str(id))
         setProperty("%s.Tagline"%pType,tagline)
-        self.findArtwork_Thread(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type1")%pType)), 'type1ART', pType)
-        self.findArtwork_Thread(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type2")%pType)), 'type2ART', pType)
+        self.setArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type1")%pType)), 'type1ART', pType)
+        self.setArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type2")%pType)), 'type2ART', pType)
         self.isNEW_Thread(pType)
         self.isManaged_Thread(pType)
         getRSSFeed(getProperty("OVERLAY.Genre"))
 
             
-    def findArtwork_Thread(self, type, chtype, chname, id, dbid, mpath, typeEXT, key, pType):
-        self.log('findArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', key = ' + key + ', pType = ' + str(pType))
-        try:
-            setImage = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, typeEXT)
-            if FileAccess.exists(setImage) == False:
-                setImage = self.Artdownloader.SetDefaultArt(chname, mpath, typeEXT)
-            self.logDebug('findArtwork_Thread, setImage = ' + setImage)   
-            setProperty(("%s.%s" %(pType, key)),setImage)
-        except Exception,e:
-            self.log('findArtwork_Thread, Failed!, ' + str(e))
-            pass
-    
-    
     def setArtwork(self, type, chtype, chname, id, dbid, mpath, typeEXT, typeART='type1ART', pType='OVERLAY'):
         self.log('setArtwork')  
         # print type, chtype, chname, id, dbid, mpath, typeEXT, typeART, pType
@@ -2743,6 +2732,19 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             pass  
     
      
+    def findArtwork_Thread(self, type, chtype, chname, id, dbid, mpath, typeEXT, key, pType):
+        self.log('findArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', key = ' + key + ', pType = ' + str(pType))
+        try:
+            setImage = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, typeEXT)
+            if FileAccess.exists(setImage) == False:
+                setImage = self.Artdownloader.SetDefaultArt(chname, mpath, typeEXT)
+            self.logDebug('findArtwork_Thread, setImage = ' + setImage)   
+            setProperty(("%s.%s" %(pType, key)),setImage)
+        except Exception,e:
+            self.log('findArtwork_Thread, Failed!, ' + str(e))
+            pass
+    
+    
     def isNEW_Thread(self, pType):
         self.log("isNEW_Thread")
         try:
