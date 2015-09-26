@@ -1151,11 +1151,12 @@ class ChannelList:
         newstr = newstr.replace('&amp;', '&')
         newstr = newstr.replace('&gt;', '>')
         newstr = newstr.replace('&lt;', '<')
-        return newstr
+        return uni(newstr)
               
               
     def cleanLabels(self, text, format=''):
         self.logDebug('cleanLabels, IN = ' + text)
+        text = uni(text)
         text = re.sub('\[COLOR (.+?)\]', '', text)
         text = re.sub('\[/COLOR\]', '', text)
         text = re.sub('\[COLOR=(.+?)\]', '', text)
@@ -1207,13 +1208,14 @@ class ChannelList:
         else:
             text = text
             
-        text = text.strip()
+        text = uni(text.strip())
         self.logDebug('cleanLabels, OUT = ' + text)
         return text
     
     
     def cleanRating(self, rating):
         self.logDebug("cleanRating")
+        rating = uni(rating)
         rating = self.cleanLabels(rating,'upper')
         rating = rating.replace('RATED ','')
         rating = rating.replace('US:','')
@@ -1226,7 +1228,7 @@ class ChannelList:
         rating = rating.replace('APPROVED','NR')
         rating = rating.replace('NOT RATED','NR')
         rating = rating.split(' ')[0]
-        return rating[0:5]
+        return uni(rating[0:5])
 
         
     def fillMusicInfo(self, sortbycount = False):
@@ -1391,8 +1393,8 @@ class ChannelList:
         if (len(self.showList) == 0) and (len(self.showGenreList) == 0) and (len(self.networkList) == 0):
             self.logDebug(json_folder_detail)
 
-        self.log("found shows " + str(self.showList))
-        self.log("found genres " + str(self.showGenreList))
+        self.logDebug("found shows " + str(self.showList))
+        self.logDebug("found genres " + str(self.showGenreList))
         self.log("fillTVInfo return " + str(self.networkList))
 
 
@@ -2143,7 +2145,6 @@ class ChannelList:
     def buildInternetTVFileList(self, setting1, setting2, setting3, setting4, limit):
         self.log('buildInternetTVFileList')
         showList = []
-        seasoneplist = []
         showcount = 0
         dur = 0
         
@@ -2478,7 +2479,6 @@ class ChannelList:
     def createRSSFileList(self, setting1, setting2, setting3, setting4, limit):
         self.log("createRSSFileList")
         showList = []
-        seasoneplist = []
         showcount = 0
         runtime = 0
         genre = 'Unknown'
@@ -3252,8 +3252,6 @@ class ChannelList:
         for i in range(len(fileList)):
             bctDur = 0 #todo automatic time filler (round shows to the 30/60min intervals)
             newFileList.append(fileList[i])
-            FileListDur, FileListMedia = fileList[i].split(',')
-            FileListDur = int(FileListDur)
             if len(BumperLST) > 0:
                 for n in range(int(REAL_SETTINGS.getSetting("numbumpers")) + 1):
                     tmpstr = ''
@@ -4971,6 +4969,7 @@ class ChannelList:
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
         self.log("getFileList")
         fileList = []
+        seasoneplist = []
         dirlimit = limit
 
         #listitems return parent items during error, catch repeat list and return.
@@ -5227,7 +5226,7 @@ class ChannelList:
                                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file)      
                                         
                                         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
-                                            seasoneplist.append([seasonval, epval, tmpstr])                   
+                                            seasoneplist.append([seasonval, epval, tmpstr])
                                         else:
                                             # Filter 3D Media.
                                             if self.isMedia3D(file) == True:

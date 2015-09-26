@@ -1,6 +1,7 @@
+[*] Proper handling of unicode strings.
 [*] Various tweaks and debugging.
-[*] Youtube search query fixed.
-[*] Tweaked sorting, Reverse, Random and Default. 
+[*] Youtube search query channel restored.
+[*] Tweaked sorting; Reverse, Random and Default. 
 [*] Plugin/UPNP channel building tweaks.
 [*] Tweaked automatic channel reset and ptvlguide downloading.
 [*] Added "Force LiveTV Reset" under "Debugging", Enable if LiveTV EPG gets out of sync.

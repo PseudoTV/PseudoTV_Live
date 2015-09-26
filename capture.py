@@ -16,74 +16,57 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
 import sys, os
+import xbmc, xbmcgui, xbmcaddon
 
 from urllib import unquote
 from xml.dom.minidom import parse, parseString
 from resources.lib.utils import *
 from resources.lib.Globals import *
 from resources.lib.ChannelList import ChannelList
-from resources.lib.FileAccess import FileAccess
 
 class Main:
-
-    def __init__(self):
-        self._parse_argv()
-    
-    
+  
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('capture: ' + msg, level)
 
-
-    def _parse_argv(self):
-        self.handle = None
-        self.infos = []
-        self.params = {" Label": None,
-                       " Path": None,
-                       " FileName": None,
-                       " DBIDType": None,
-                       " AddonName": None,
-                       " AddonType": None,
-                       " Description": None,
-                       " isPlayable": None,
-                       " isFolder": None}
-        for arg in sys.argv:
-            if arg == 'script.pseudotv.live':
-                continue
-            param = (arg.replace('"', '').replace("'", " ").replace("[ ", " ").replace(" ]", " ").replace("' ", "'").replace(" ' ", "'"))
-            try:
-                self.params[param.split("=")[0]] = "=".join(param.split("=")[1:]).strip()
-            except:
-                pass
-                
-        self.log("params = " + str(self.params))
-        self.Label = self.params[" Label"] = self.params.get(" Label", "").strip()
-        self.Path = self.params[" Path"] = self.params.get(" Path", "").strip()
-        self.FileName = self.params[" FileName"] = self.params.get(" FileName", "").strip()
-        self.DBIDType = self.params[" DBIDType"] = self.params.get(" DBIDType", "").strip()
-        self.AddonName = self.params[" AddonName"] = self.params.get(" AddonName", "").strip()
-        self.AddonType = self.params[" AddonType"] = self.params.get(" AddonType", "").strip()
         
-        try:
-            self.Description = self.params[" Description"] = self.params.get(" Description", "").strip()
-        except:
-            self.Description = self.params[" Description"] = self.params.get("Description", "").strip()
+    def __init__(self):
+        self.log("__init__")
+        # InfoLabel Parameters  
+        self.Label       = xbmc.getInfoLabel('ListItem.Label')
+        self.Path        = xbmc.getInfoLabel('ListItem.FolderPath')
+        self.FileName    = xbmc.getInfoLabel('ListItem.FilenameAndPath')
+        self.DBIDType    = xbmc.getInfoLabel('ListItem.DBTYPE')
+        self.AddonName   = xbmc.getInfoLabel('Container.PluginName')
+        self.AddonType   = xbmc.getInfoLabel('Container.Property(addoncategory)')
+        self.Description = xbmc.getInfoLabel('ListItem.Property(Addon.Description)')
+        self.plot        = xbmc.getInfoLabel('ListItem.Plot')
+        self.plotOutline = xbmc.getInfoLabel('ListItem.PlotOutline')
+        self.isPlayable  = xbmc.getInfoLabel('ListItem.Property(IsPlayable)').lower() == 'true'
+        self.isFolder    = xbmc.getCondVisibility('ListItem.IsFolder') == 1
         
-        self.isPlayable = self.params[" isPlayable"] = self.params.get(" isPlayable", "").strip()
-        self.isFolder = self.params[" isFolder"] = self.params.get(" isFolder", "").strip()
-        
+        if not self.plot:
+            if self.plotOutline:
+                self.Description = self.plotOutline
+            elif not self.Description:   
+                self.Description = self.Label
+        else:  
+            self.Description = self.plot
+          
         if self.AddonName:
             ADDON = xbmcaddon.Addon(id=self.AddonName)
             ADDON_ID = ADDON.getAddonInfo('id')
             self.AddonName = ADDON.getAddonInfo('name')
+            
         self.chnlst = ChannelList()
         self.Label = self.chnlst.cleanLabels(self.Label)
         self.Description  = self.chnlst.cleanLabels(self.Description)
         self.AddonName = self.chnlst.cleanLabels(self.AddonName)
+        self.log("%s, %s, %s, %s, %s, %s, %s, %s, %s"%(self.Label,self.Path,self.FileName,self.DBIDType,self.AddonName,self.AddonType,self.Description,str(self.isPlayable),str(self.isFolder)))
         self.ImportChannel()
-        
-        
+   
+   
     def ImportChannel(self):
         self.log("ImportChannel")
         show_busy_dialog()
@@ -127,7 +110,7 @@ class Main:
                         self.chantype = 10
                         self.YTtype = 2
                     elif self.Path.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
-                        if self.isPlayable == 'True':
+                        if self.isPlayable == True:
                             if dlg.yesno("PseudoTV Live", 'Add source as', yeslabel="LiveTV", nolabel="InternetTV"):
                                 self.chantype = 8
                             else:
@@ -135,11 +118,11 @@ class Main:
                         else:
                             if self.Path.lower().startswith(('pvr')):
                                 self.chantype = 8
-                            elif self.isFolder == 'True' and self.Path.lower().startswith(('plugin')):
+                            elif self.isFolder == True and self.Path.lower().startswith(('plugin')):
                                 self.chantype = 15
-                            elif self.isFolder == 'True' and self.Path.lower().startswith(('upnp')):
+                            elif self.isFolder == True and self.Path.lower().startswith(('upnp')):
                                 self.chantype = 16
-                    elif self.isFolder == 'True':
+                    elif self.isFolder == True:
                         if self.DBIDType == 'tvshow':
                             self.chantype = 6
                         elif self.DBIDType == '':
@@ -149,6 +132,7 @@ class Main:
                     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel "+str(self.channel)+" already in use", 1000, THUMB) )
             else:
                 available = True
+        self.log("chantype = "+str(self.chantype))
             
             
     def buildChannel(self):
@@ -158,7 +142,8 @@ class Main:
         
         if self.chantype == 0:
             self.setting1 = xbmc.translatePath(self.Path)
-            self.channame = self.getSmartPlaylistName(self.Path)
+            self.channame = self.chnlst.getSmartPlaylistName(self.Path)
+        
         elif self.chantype == 6:
             self.setting1 = self.Label
             self.setting2 = '4'
@@ -177,7 +162,7 @@ class Main:
                 dname = "USTVnow - "+self.Label
             else:
                 dname = self.Label
-
+                
             self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xmltvFle)
             self.channame = self.Label+" USTV"
             self.setting2 = self.Path
@@ -243,7 +228,7 @@ class Main:
                     pass
 
                 if chantype == 0:
-                    newlabel = self.getSmartPlaylistName(chansetting1)
+                    newlabel = self.chnlst.getSmartPlaylistName(chansetting1)
                 elif chantype == 1 or chantype == 2 or chantype == 5 or chantype == 6:
                     newlabel = chansetting1
                 elif chantype == 3:
@@ -283,34 +268,6 @@ class Main:
         self.log("updateListing return")
              
              
-    def getSmartPlaylistName(self, fle):
-        self.log("getSmartPlaylistName " + fle)
-        fle = xbmc.translatePath(fle)
-
-        try:
-            xml = FileAccess.open(fle, "r")
-        except:
-            self.log('Unable to open smart playlist')
-            return ''
-
-        try:
-            dom = parse(xml)
-        except:
-            xml.close()
-            self.log("getSmartPlaylistName return unable to parse")
-            return ''
-
-        xml.close()
-
-        try:
-            plname = dom.getElementsByTagName('name')
-            self.log("getSmartPlaylistName return " + plname[0].childNodes[0].nodeValue)
-            return plname[0].childNodes[0].nodeValue
-        except:
-            self.playlist('Unable to find element name')
-
-        self.log("getSmartPlaylistName return")
-
 
     def saveSettings(self):
         self.log("saveSettings channel " + str(self.channel))
@@ -330,10 +287,11 @@ class Main:
         ADDON_SETTINGS.setSetting(setting3, self.setting3)
         ADDON_SETTINGS.setSetting(setting4, self.setting4)
         ADDON_SETTINGS.setSetting(setting4, self.setting4)
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "1")
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_id", "1")
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)      
-        ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
+        if chantype > 6:
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "1")
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_id", "1")
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)      
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
         self.log("saveSettings return")
                 
 if (__name__ == "__main__"):

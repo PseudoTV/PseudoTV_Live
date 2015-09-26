@@ -892,12 +892,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     # set the channel, the proper show offset, and time offset
     def setChannel(self, channel, quickflip=False):
         self.log('setChannel, channel = ' + str(channel))
-        # todo channellabeltimer generating false inputchannel = -1, need to track down cause
         if channel == -1:
             return
-        elif self.currentChannel != self.getLastChannel()
+        elif self.currentChannel != self.getLastChannel():
             self.setLastChannel()
-                
+
         self.notPlayingCount = 0 
         self.background.setVisible(True)
         self.getControl(102).setVisible(False)
@@ -2362,6 +2361,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     
     
     def setLastChannel(self, channel=None):
+        self.log('setLastChannel') 
         if not channel:
             try:
                 channel = self.currentChannel
@@ -2374,9 +2374,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log('getLastChannel') 
         try:
             LastChannel = int(REAL_SETTINGS.getSetting('LastChannel'))
-            return LastChannel
         except:
-            pass
+            LastChannel = 1
+        return LastChannel
         
         
     def showReminder(self, tmpDate, title, channel, record):
@@ -2733,7 +2733,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     
      
     def findArtwork_Thread(self, type, chtype, chname, id, dbid, mpath, typeEXT, key, pType):
-        self.log('findArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', key = ' + key + ', pType = ' + str(pType))
+        self.log('findArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', key = ' + key + ', pType = ' + str(pType))  
         try:
             setImage = self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, typeEXT)
             if FileAccess.exists(setImage) == False:

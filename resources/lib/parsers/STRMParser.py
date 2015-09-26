@@ -66,6 +66,6 @@ class STRMParser:
                 except Exception,e:
                     duration = 0
                     
-        file.close()
+            file.close()
         return duration
         self.log('script.pseudotv-STRMParser: duration = ' + str(duration))

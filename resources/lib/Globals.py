@@ -34,7 +34,7 @@ def log(msg, level = xbmc.LOGDEBUG):
     except Exception,e:
         pass
 
-def uni(string, encoding = 'utf-8'):
+def utf(string, encoding = 'utf-8'):
     if isinstance(string, basestring):
         if not isinstance(string, unicode):
             string = unicode(string, encoding, 'ignore')
@@ -46,7 +46,7 @@ def ascii(string):
            string = string.encode('ascii', 'ignore')
     return string
     
-def utf(string):
+def uni(string):
     if isinstance(string, basestring):
         if isinstance(string, unicode):
            string = string.encode('utf-8', 'ignore' )

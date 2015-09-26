@@ -898,7 +898,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")
             chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
             chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3")
-            chansetting4 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4")).replace('0','Default').replace('1','Random').replace('2','Reverse')
+            chansetting4 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4"))
             channame = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_1_opt_1")
         except:
             self.log("Unable to get some setting")
@@ -1301,7 +1301,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 PathLst = []
                             else:
                                 path = PathLst[select]      
-                    return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                    return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                 else:
                     if isDon() == True:
                         select = selectDialog(self.pluginNameList[1:], 'Select Plugin')
@@ -1332,13 +1332,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 PathLst = []
                             else:
                                 path = PathLst[select]      
-                    return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                    return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                 else:
                     NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo('plugin://plugin.video.Playonbrowser'))
                     hide_busy_dialog()
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
-                        return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                        return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                     
             elif source == 'UPNP':
                 self.log("UPNP")
@@ -1395,13 +1395,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 PathLst = []
                             else:
                                 path = PathLst[select] 
-                    return name.replace('[D]','').replace('[F]',''), path   
+                    return name, path   
                 else:
                     NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo('plugin://plugin.program.super.favourites'))
                     hide_busy_dialog()
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
-                        return self.chnlst.cleanLabels(NameLst[select]).replace('[D]','').replace('[F]',''), PathLst[select]
+                        return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                     
             elif source == 'URL':
                 self.log("URL")

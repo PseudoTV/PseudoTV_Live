@@ -21,7 +21,7 @@
         <import addon="plugin.video.playonbrowser" version="1.0.3" optional="true"/>
         <import addon="plugin.video.ustvnow" version="12.0.3" optional="true"/>    
         <import addon="script.module.pil" version="0.0.1" optional="true"/>
-        <import addon="context.pseudotv.live.export" version="1.0.0" optional="true"/>
+        <import addon="context.pseudotv.live.export" version="1.0.4" optional="true"/>
     </requires>
     <extension point="xbmc.python.script" library="default.py">
         <provides>Programs</provides>
