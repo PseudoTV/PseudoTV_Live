@@ -279,12 +279,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.getControl(311 + i).setLabel(str(curchannel))
             
             if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":
-                chname = (self.MyOverlayWindow.channels[curchannel - 1].name)
+                chname = self.MyOverlayWindow.getChname(curchannel - 1)
                 chlogo = self.channelLogos + chname + ".png"
                 if FileAccess.exists(chlogo):
                     self.getControl(321 + i).setImage(chlogo)
                 elif REAL_SETTINGS.getSetting('Enable_FindLogo') == "true":  
-                    chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchannel) + '_type'))         
+                    chtype = self.MyOverlayWindow.getChtype(curchannel)        
                     plpos = self.determinePlaylistPosAtTime(starttime, (curchannel - 1))
                     mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(plpos))
                     self.getControl(321 + i).setImage('NA.png')
@@ -428,8 +428,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             basex, basey = self.getControl(111 + row).getPosition()
             baseh = self.getControl(111 + row).getHeight()
             basew = self.getControl(111 + row).getWidth()
-            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(curchannel) + '_type'))
-            chname = ascii(self.MyOverlayWindow.channels[curchannel - 1].name)
+            chtype = self.MyOverlayWindow.getChtype(curchannel)      
+            chname = self.MyOverlayWindow.getChname(curchannel - 1)
             
             if xbmc.Player().isPlaying() == False:
                 self.log('No video is playing, not adding buttons')
@@ -529,9 +529,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                             shouldskip = True
                     
                     # Don't show very short videos
-                    # if chtype not in [0,2,4,5] and self.MyOverlayWindow.hideShortItems and shouldskip == False:
                     if self.MyOverlayWindow.hideShortItems and shouldskip == False:
                         if chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength:
+                            shouldskip = True
+                            tmpdur = 0
+                        elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < 900:
                             shouldskip = True
                             tmpdur = 0
                         else:
@@ -1134,7 +1136,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 mediapath = self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos)
             except:
                 mediapath = self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos)
-        chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))         
+        chtype = self.MyOverlayWindow.getChtype(newchan)
         
         #Change Label when Dynamic artwork enabled
         if self.infoOffset > 0:
@@ -1151,7 +1153,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.getControl(515).setVisible(False)
             self.getControl(516).setLabel('ON NOW:')
 
-        chname = self.MyOverlayWindow.channels[newchan - 1].name
+        chname = self.MyOverlayWindow.getChname(newchan - 1)
         self.SetMediaInfo(chtype, chname, mediapath, newchan, plpos)
         
         
@@ -1258,7 +1260,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     chnoffset += 1
 
             plpos = self.determinePlaylistPosAtTime(starttime, newchan)
-            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(newchan) + '_type'))
+            chtype = self.MyOverlayWindow.getChtype(newchan)
             if plpos == -1:
                 self.log('Unable to find the proper playlist to set from EPG', xbmc.LOGERROR)
                 return
@@ -1336,7 +1338,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def determinePlaylistPosAtTime(self, starttime, channel):
         self.logDebug('determinePlaylistPosAtTime ' + str(starttime) + ', ' + str(channel))
         channel = self.MyOverlayWindow.fixChannel(channel)
-        chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
+        chtype = self.MyOverlayWindow.getChtype(channel)
         self.lastExitTime = ADDON_SETTINGS.getSetting("LastExitTime")     
         
         try:
@@ -1412,8 +1414,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 return self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos)
         except:
             pass
-
-            
+        
+       
     def showContextMenu(self):
         self.log('showContextMenu')
         self.showingContext = True

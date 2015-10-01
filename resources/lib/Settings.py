@@ -26,7 +26,6 @@ from FileAccess import FileAccess
 class Settings:
     def __init__(self):
         self.logfile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))
-        self.repairfile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.repair.xml'))
         self.currentSettings = []
         self.alwaysWrite = 1
 
@@ -108,7 +107,7 @@ class Settings:
         if self.alwaysWrite == 1:
             self.writeSettings()
 
-
+            
     def writeSettings(self):
         try:
             fle = FileAccess.open(self.logfile, "w")
@@ -131,11 +130,11 @@ class Settings:
     def writeSettingsNew(self, updateDialog):
         self.log("writeSettingsNew")
         updateDialog.update(90, "Repairing Channel Configurations", "Saving Changes")
-        if FileAccess.exists(self.repairfile):
-            xbmcvfs.delete(self.repairfile)
+        if FileAccess.exists(Globals.SETTINGS_FLE_REPAIR):
+            xbmcvfs.delete(Globals.SETTINGS_FLE_REPAIR)
             
         try:
-            fle = FileAccess.open(self.repairfile, "w")
+            fle = FileAccess.open(Globals.SETTINGS_FLE_REPAIR, "w")
         except Exception,e:
             self.log("Unable to open the file for writing")
             return
@@ -152,9 +151,9 @@ class Settings:
         fle.write(flewrite)
         fle.close()
         
-        if FileAccess.exists(self.repairfile):
+        if FileAccess.exists(Globals.SETTINGS_FLE_REPAIR):
             xbmcvfs.delete(self.logfile)
-            xbmcvfs.rename(self.repairfile, self.logfile)
+            xbmcvfs.rename(Globals.SETTINGS_FLE_REPAIR, self.logfile)
         
 
     def repairSettings(self):

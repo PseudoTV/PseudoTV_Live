@@ -40,7 +40,6 @@ class Migrate:
     
     def migrate(self):
         self.log("migrate")
-        settingsFile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))    
         chanlist = ChannelList.ChannelList()
         chanlist.background = True
         chanlist.forceReset = True
@@ -55,12 +54,10 @@ class Migrate:
         
     def autoTune(self):
         self.log('autoTune, Init')
-        curtime = time.time()
         chanlist = ChannelList.ChannelList()
         chanlist.background = True
         chanlist.makenewlists = True
         chanlist.forceReset = True
-        settingsFile = xbmc.translatePath(os.path.join(Globals.SETTINGS_LOC, 'settings2.xml'))   
         
         #Reserve channel check            
         if Globals.REAL_SETTINGS.getSetting("reserveChannels") == "true":
@@ -776,7 +773,7 @@ class Migrate:
             NameLst, Option1LST, Option2LST, Option3LST, Option4LST = chanlist.fillExternalList('UPNP','','Community',True)
             channelNum = self.tuneList(channelNum, '16', NameLst, Option1LST, Option2LST, Option3LST, Option4LST)
 
-        # Extras - Popcorn Movies
+        # Exclusive - Popcorn Movies
         self.updateDialogProgress = 80
         if Globals.REAL_SETTINGS.getSetting("autoFindPopcorn") == "true" and isDon() == True:
             self.log("autoTune, adding Popcorn Movies")
@@ -808,7 +805,7 @@ class Migrate:
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")
                 channelNum += 1
                 
-        # Extras - Cinema Experience 
+        # Exclusive - Cinema Experience 
         self.updateDialogProgress = 81
         if Globals.REAL_SETTINGS.getSetting("autoFindCinema") != "0" and isDon() == True:
             self.log("autoTune, adding Cinema Experience ")
@@ -838,7 +835,7 @@ class Migrate:
             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No")    
             channelNum += 1
                   
-        # Extras - IPTV
+        # Exclusive - IPTV
         self.updateDialogProgress = 82
         if Globals.REAL_SETTINGS.getSetting("autoFindIPTV_Source") != "0":
             self.log("autoTune, adding IPTV Channels")
@@ -852,7 +849,7 @@ class Migrate:
             NameLst, PathLst = chanlist.ListTuning('IPTV',IPTVurl)
             channelNum = self.tuneList(channelNum, '9', NameLst, '5400', PathLst, NameLst, 'IPTV M3U')
 
-        # Extras - XML Playlist
+        # Exclusive - XML Playlist
         self.updateDialogProgress = 83
         if Globals.REAL_SETTINGS.getSetting("autoFindLive_Source") != "0":
             self.log("autoTune, adding XML Channels")
@@ -866,7 +863,7 @@ class Migrate:
             NameLst, PathLst = chanlist.ListTuning('LS',LSTVurl)
             channelNum = self.tuneList(channelNum, '9', NameLst, '5400', PathLst, NameLst, 'XML')
 
-        # Extras - PLX Playlist
+        # Exclusive - PLX Playlist
         self.updateDialogProgress = 83
         if Globals.REAL_SETTINGS.getSetting("autoFindPLX_Source") != "0":
             self.log("autoTune, adding PLX Channels")
@@ -922,7 +919,7 @@ class Migrate:
         Globals.REAL_SETTINGS.setSetting("autoFindLive_Source","0")    
         Globals.REAL_SETTINGS.setSetting("autoFindPLX_Source","0")    
         Globals.REAL_SETTINGS.setSetting("ForceChannelReset","true")
-        Globals.ADDON_SETTINGS.setSetting('LastExitTime', str(int(curtime)))
+        Globals.ADDON_SETTINGS.setSetting('LastExitTime', str(int(time.time())))
         self.updateDialog.close()
 
         

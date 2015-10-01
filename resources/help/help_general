@@ -35,7 +35,7 @@ Disable the drawing of the logo on that channel. (It will still show on the EPG)
 not want that channel to actually be visible.
 
 [COLOR=blue][B]Force Random / Real-Time / Resume[/B][/COLOR] - While most people use Real-Time mode (as recommended), you can now have a channel
-be different from the rest.
+be different from the rest. Not to be confused with random sorting this rule simply starts each channel from a random position on each load. 
 
 [COLOR=blue][B]Include Strms[/B][/COLOR] - Enable or Disable strms on a per channel basis
 

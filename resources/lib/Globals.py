@@ -52,9 +52,6 @@ def uni(string):
            string = string.encode('utf-8', 'ignore' )
     return string
 
-def removeNonAscii(string): 
-    return "".join(filter(lambda x: ord(x)<128, string))
-
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -133,7 +130,7 @@ BACKUP_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'backups'))
 try:
     UPASS = REAL_SETTINGS.getSetting('Donor_UP')
 except:
-    UPASS = "user:password"
+    UPASS = "Username:Password"
 
 PTVLURL = 'http://pseudotvlive.com/ptvl/'
 PTVLURLUP = 'http://%s@pseudotvlive.com/ptvl/' %UPASS
@@ -210,7 +207,14 @@ SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 OS_SET = int(REAL_SETTINGS.getSetting("os"))   
 ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true'
 FILELIST_LIMIT = [4096,8192,16384]
- 
+
+# Settings2 filepaths
+SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
+SETTINGS_FLE_REPAIR = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.repair.xml'))
+SETTINGS_FLE_PENDING = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pending.xml'))
+SETTINGS_FLE_LASTRUN = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.lastrun.xml'))
+SETTINGS_FLE_PRETUNE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pretune.xml'))
+
 # common cache globals
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)

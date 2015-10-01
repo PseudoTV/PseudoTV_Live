@@ -47,12 +47,6 @@ if sys.version_info < (2, 7):
 else:
     import json
 
-# Settings2 filepaths
-settingFileAccess = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
-nsettingFileAccess = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.lastrun.xml'))
-atsettingFileAccess = xbmc.translatePath(os.path.join(BACKUP_LOC, 'settings2.pretune.xml'))
-bksettingFileAccess = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
-
 # Videowindow filepaths
 Path = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', '1080i'))
 flePath = xbmc.translatePath(os.path.join(Path, 'custom_script.pseudotv.live_9506.xml'))
@@ -116,7 +110,7 @@ def isKodiRepo(plugin=''):
         return False
 
 def fillGithubItems(url, ext=None, removeEXT=False):
-    log("utils: fillGithubItems, url = " + url + ', ext = ' + ext)
+    log("utils: fillGithubItems, url = " + url)
     Sortlist = []
     try:
         list = []
@@ -300,11 +294,11 @@ def FindLogo_Thread(data):
         url = findLogodb(chname, user_region, user_type, useMix, useAny)
         if url:
             return GrabLogo(url, chname)
-    if chtype in [0,1,2,3,4,5,12,13,14]:
+    if chtype in [0,1,2,3,4,5,8,9,12,13,14]:
         log("utils: FindLogo_Thread, findGithubLogo")
         url = findGithubLogo(chname)
         if url:
-            return GrabLogo(url, chname) 
+            return GrabLogo(url, chname)
     mpath = getMpath(data[2])
     if mpath and (chtype == 6):
         log("utils: FindLogo_Thread, local logo")
@@ -331,6 +325,9 @@ def FindLogo(chtype, chname, mediapath=None):
     except Exception,e:
         log('utils: FindLogo, Failed!,' + str(e))
         pass   
+         
+def FindLogo_Default(chname, chpath):
+    log('utils: FindLogo_Default')
          
 def findGithubLogo(chname): 
     log("utils: findGithubLogo")
@@ -691,6 +688,7 @@ def read_url_cached(url, userpass=False, return_type='read'):
   
 def open_url(url, userpass=None):
     log("utils: open_url, url = " + str(url))
+    page = ''
     try:
         request = urllib2.Request(url)
         if userpass:
@@ -708,8 +706,8 @@ def open_url(url, userpass=None):
         return page
     except urllib2.HTTPError, e:
         log("utils: open_url, Failed! " + str(e) + ',' + str(e.fp.read()))
-        
-  
+        return page
+         
 def retrieve_url(url, userpass, dest):
     log("utils: retrieve_url")
     try:
@@ -877,9 +875,13 @@ def selectDialog(list, header=ADDON_NAME, autoclose=0):
         select = xbmcgui.Dialog().select(header, list, autoclose)
         return select
 
-def yesnoDialog(str1, str2='', header=ADDON_NAME, str3='', str4=''):
-    answer = xbmcgui.Dialog().yesno(header, str1, str2, '', str4, str3)
+def yesnoDialog(str1, str2='', header=ADDON_NAME, yes='', no=''):
+    answer = xbmcgui.Dialog().yesno(header, str1, str2, '', yes, no)
     return answer
+     
+def browse(type, heading, shares, mask='', useThumbs=False, treatAsFolder=False, path='', enableMultiple=False):
+    retval = xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, path, enableMultiple)
+    return retval
      
 ##################
 # Property Tools #
@@ -982,7 +984,10 @@ def getPlatform():
 #####################
 # String/File Tools #
 #####################
-           
+      
+def removeNonAscii(string): 
+    return "".join(filter(lambda x: ord(x)<128, string))
+     
 def cleanMovieTitle(title):
     log("utils: cleanMovieTitle")
     title = re.sub('\n|([[].+?[]])|([(].+?[)])|\s(vs|v[.])\s|(:|;|-|"|,|\'|\_|\.|\?)|\s', '', title).lower()
@@ -1245,7 +1250,7 @@ def Restore(bak, org):
 def PlaylistLimit():  
     if getPlatform() == 'Windows':
         Playlist_Limit = FILELIST_LIMIT[2]
-    elif isLowPower != True:
+    elif isLowPower() != True:
         Playlist_Limit = FILELIST_LIMIT[1]
     else:
         Playlist_Limit = FILELIST_LIMIT[0]
@@ -1264,27 +1269,12 @@ def isCom():
     log('utils: isCom = ' + str(val))
     return val
         
-def DonCHK():
-    # Access tv meta, commercials, adverts and various legal custom videos from a private server.
-    if REAL_SETTINGS.getSetting("Donor_Enabled") == "true" and REAL_SETTINGS.getSetting("Donor_UP") != 'Username:Password': 
-        try:
-            open_url(PTVLURL + 'ce.ini', UPASS).read()
-            if REAL_SETTINGS.getSetting("Donor_Verified") != "1": 
-                REAL_SETTINGS.setSetting("AT_Donor", "true")
-                REAL_SETTINGS.setSetting("COM_Donor", "true")
-                REAL_SETTINGS.setSetting("Verified_Donor", "true")
-                REAL_SETTINGS.setSetting("Donor_Verified", "1")
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Donor Access Activated", 1000, THUMB) )
-        except:
-            DonFailed()
-    else:
-        DonFailed()
-           
 def ComCHK():
+    log('utils: ComCHK')      
     # Community users are required to supply gmail info in-order to use the community submission tool, SEE DISCLAIMER!!
     # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists
     # Community lists includes: Youtube, Vimeo, RSS, Smartplaylists, LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and User installed and Kodi repository plugins (see isKodiRepo, isPlugin).
-    if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != 'User@gmail.com':
+    if REAL_SETTINGS.getSetting("Community_Enabled") == "true":
         if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
             REAL_SETTINGS.setSetting("AT_Community","true")
             REAL_SETTINGS.setSetting("Verified_Community", "true")
@@ -1296,6 +1286,25 @@ def ComCHK():
             REAL_SETTINGS.setSetting("Verified_Community", "false")
             REAL_SETTINGS.setSetting("Community_Verified", "0")
        
+def DonCHK():
+    log('utils: DonCHK')     
+    # Access tv meta, commercials, adverts and various legal custom videos from a private server.
+    if REAL_SETTINGS.getSetting("Donor_Enabled") == "true": 
+        try:
+            list = getDonlist('ce.ini', test=True)
+            if len(list) == 0:
+                raise Exception()
+            if REAL_SETTINGS.getSetting("Donor_Verified") != "1": 
+                REAL_SETTINGS.setSetting("AT_Donor", "true")
+                REAL_SETTINGS.setSetting("COM_Donor", "true")
+                REAL_SETTINGS.setSetting("Verified_Donor", "true")
+                REAL_SETTINGS.setSetting("Donor_Verified", "1")
+                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Donor Access Activated", 1000, THUMB) )
+        except:
+            DonFailed()
+    else:
+        DonFailed()
+           
 def DonFailed():
     if REAL_SETTINGS.getSetting("Donor_Verified") != "0": 
         REAL_SETTINGS.setSetting("AT_Donor", "false")
@@ -1303,10 +1312,13 @@ def DonFailed():
         REAL_SETTINGS.setSetting("Verified_Donor", "false")
         REAL_SETTINGS.setSetting("Donor_Verified", "0")
      
-def getDonlist(list):
+def getDonlist(list, test=False):
     log("getDonlist")  
     nlist = []
-    list = read_url_cached(PTVLURL + list, UPASS, return_type='readlines')
+    if test:
+        list = open_url(PTVLURL + list, UPASS).readlines()
+    else:
+        list = read_url_cached(PTVLURL + list, UPASS, return_type='readlines')
     for i in range(len(list)):
         try:
             nline = (list[i]).replace('\r\n','')
@@ -1340,12 +1352,12 @@ def getTitleYear(showtitle, showyear=0):
     return year, title, showtitle
 
 def splitDBID(dbid):
-    log('utils: splitDBID')
     try:
         epid = dbid.split(':')[1]
         dbid = dbid.split(':')[0]
     except:
         epid = '0'
+    log('utils: splitDBID, dbid = '+dbid+', epid = '+epid)
     return dbid, epid
     
 def getMpath(mediapath):
@@ -1379,21 +1391,32 @@ def isDebug():
     return REAL_SETTINGS.getSetting('enable_Debug') == "true"
 
 def SyncXMLTV(force=False):
-    log('utils: SyncXMLTV, force = ' + str(force))
+    try:
+        if REAL_SETTINGS.getSetting("SyncXMLTV_Enabled") == "true" and isDon() == True: 
+            SyncXMLTVtimer = threading.Timer(0.1, SyncXMLTV_NEW, [force])
+            SyncXMLTVtimer.name = "SyncXMLTVtimer"     
+            if SyncXMLTVtimer.isAlive():
+                SyncXMLTVtimer.cancel()
+            SyncXMLTVtimer.start()
+    except Exception,e:
+        log('SyncXMLTV_NEW, Failed!, ' + str(e))
+        pass  
+        
+def SyncXMLTV_NEW(force=False):
+    log('utils: SyncXMLTV_NEW, force = ' + str(force))
     now  = datetime.datetime.today()
     try:
         SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
         if not SyncPTV_LastRun or FileAccess.exists(PTVLXML) == False or force == True:
             raise exception()
     except:
-        SyncPTV_LastRun = "1970-01-01 23:59:00.000000"
-        REAL_SETTINGS.setSetting("SyncPTV_NextRun",SyncPTV_LastRun)
+        REAL_SETTINGS.setSetting("SyncPTV_NextRun","1970-01-01 23:59:00.000000")
+        SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
 
     try:
         SyncPTV = datetime.datetime.strptime(SyncPTV_LastRun, "%Y-%m-%d %H:%M:%S.%f")
     except:
-        SyncPTV_LastRun = "1970-01-01 23:59:00.000000"
-        SyncPTV = datetime.datetime.strptime(SyncPTV_LastRun, "%Y-%m-%d %H:%M:%S.%f")
+        SyncPTV = datetime.datetime.strptime("1970-01-01 23:59:00.000000", "%Y-%m-%d %H:%M:%S.%f")
     
     if now > SyncPTV:         
         #Remove old file before download
@@ -1478,7 +1501,13 @@ def parseFeed(link):
     # except Exception,e:
         # log("getRSSFeed Failed!" + str(e))
         # pass
-    
+
+
+def changeChannelNum(channel, new_channel):
+    log("utils: changeChannelNum")
+    replaceAll(SETTINGS_FLE,"Channel_"+str(channel)+"_","Channel_"+str(new_channel)+"_") 
+        
+        
 ####################
 # VideoWindow Hack #
 ####################
@@ -1790,19 +1819,21 @@ def chkSettings2():
             
     if Normal_Shutdown == False:
         log('utils: chkSettings2, Setting2 Restore') 
-        if getSize(settingFileAccess) < 100 and getSize(nsettingFileAccess) > 100:
-            Restore(nsettingFileAccess, settingFileAccess)    
+        if getSize(SETTINGS_FLE) < 100 and getSize(SETTINGS_FLE_LASTRUN) > 100:
+            Restore(SETTINGS_FLE_LASTRUN, SETTINGS_FLE)    
     else:
         log('utils: chkSettings2, Setting2 Backup') 
-        if getSize(settingFileAccess) > 100:
-            Backup(settingFileAccess, nsettingFileAccess)
-            if REAL_SETTINGS.getSetting("AutoBackup") == "true":
-                Backup(settingFileAccess, bksettingFileAccess)
+        if getSize(SETTINGS_FLE) > 100:
+            Backup(SETTINGS_FLE, SETTINGS_FLE_LASTRUN)
+            if REAL_SETTINGS.getSetting("AutoBackup") == "true":               
+                SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
+                Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
     return True
     
 def backupSettings2():
     log('utils: backupSettings2')
-    Backup(settingFileAccess, bksettingFileAccess)
+    SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
+    Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
 
 def restoreSettings2():
     log('utils: restoreSettings2')
@@ -1815,7 +1846,7 @@ def restoreSettings2():
     select = selectDialog(backuplist, 'Select backup to restore')   
     if select != -1:
         if dlg.yesno("PseudoTV Live", 'Restoring will remove current channel configurations, Are you sure?'):                        
-            Restore(((backuplist[select])+'.xml'), settingFileAccess)
+            Restore(((backuplist[select])+'.xml'), SETTINGS_FLE)
             xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Restore Complete", 1000, THUMB) )
 
 def purgeSettings2():

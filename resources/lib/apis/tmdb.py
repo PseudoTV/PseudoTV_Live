@@ -194,13 +194,11 @@ class TMDB(object):
                                                           "Size", item.get('width'), item.get('height')))})
             except Exception, e:
                 log( 'Problem report: %s' %str( e ), xbmc.LOGNOTICE )
-            if image_list == []:
-                raise
-            else:
+            if image_list != []:
                 # Sort the list before return. Last sort method is primary
                 image_list = sorted(image_list, key=itemgetter('rating'), reverse=True)
                 image_list = sorted(image_list, key=itemgetter('language'))
-                return image_list
+            return image_list
 
 
 def _search_movie(medianame,year=''):

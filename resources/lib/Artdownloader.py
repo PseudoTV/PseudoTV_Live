@@ -144,10 +144,13 @@ class Artdownloader:
             arttype = arttypeEXT.split(".")[0]
             fle = id + '-' + arttypeEXT
             ext = arttypeEXT.split('.')[1]
-            cachedthumb = xbmc.getCacheThumbName(os.path.join(mpath, fle))
+            cachedthumb = xbmc.getCacheThumbName(os.path.join(removeNonAscii(mpath), fle))
             cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + "." + ext)).replace("\\", "/")
-                    
-            if FileAccess.exists(cachefile):
+            
+            if isLowPower() == True:
+                return setImage
+            
+            elif FileAccess.exists(cachefile):
                 self.logDebug('FindArtwork, Artwork Cache')
                 return cachefile   
                 
@@ -174,19 +177,18 @@ class Artdownloader:
                     elif FileAccess.exists(artSeason_fallback):
                         return artSeason_fallback    
             
-                if isLowPower != True:
-                    self.logDebug('FindArtwork, chtype <= 7 - JSON/DBID')
-                    SetImage = self.JsonArt(type, chname, mpath, arttypeEXT)
+                self.logDebug('FindArtwork, chtype <= 7 - JSON/DBID')
+                SetImage = self.JsonArt(type, chname, mpath, arttypeEXT)
+                if FileAccess.exists(SetImage):
+                    return SetImage
+                elif dbid != '0':
+                    SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
                     if FileAccess.exists(SetImage):
                         return SetImage
-                    elif dbid != '0':
-                        SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
-                        if FileAccess.exists(SetImage):
-                            return SetImage
-                    if ENHANCED_DATA == True and id != '0':
-                        self.logDebug('FindArtwork, Artwork Download')
-                        self.DownloadArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
-                        return cachefile
+                if ENHANCED_DATA == True and id != '0':
+                    self.logDebug('FindArtwork, Artwork Download')
+                    self.DownloadArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                    return cachefile
             else:
                 if id == '0':
                     if chtype == 8 and dbid != '0':
@@ -241,17 +243,17 @@ class Artdownloader:
     def DownloadArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
         self.log('DownloadArt')
         try:
-            self.DownloadArtTimer = threading.Timer(1.0, self.DownloadArt_Thread, [type, id, arttype, cachefile, chname, mpath, arttypeEXT])
+            # self.DownloadArt_Thread(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+            self.DownloadArtTimer = threading.Timer(0.5, self.DownloadArt_Thread, [type, id, arttype, cachefile, chname, mpath, arttypeEXT])
             self.DownloadArtTimer.name = "DownloadArtTimer"
             if self.DownloadArtTimer.isAlive():
                 self.DownloadArtTimer.cancel()
-                self.DownloadArtTimer.join()
+                # self.DownloadArtTimer.join()
             self.DownloadArtTimer.start()
-            # Sleep between Download, keeps cpu usage down and reduces the number of simultaneous threads.
-            # xbmc.sleep(500)
         except Exception,e:  
             self.log("DownloadArt, Failed" + str(e), xbmc.LOGERROR)
-            
+            self.logDebug(traceback.format_exc(), xbmc.LOGERROR)
+
                          
     def DownloadArt_Thread(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
         self.log('DownloadArt_Thread')
@@ -348,8 +350,9 @@ class Artdownloader:
             self.DownloadArt(type, id, self.getFallback_Arttype(arttype), cachefile, chname, mpath, self.getFallback_Arttype(arttype))                
         except Exception,e:  
             self.log("DownloadArt, Failed!" + str(e), xbmc.LOGERROR)
-            
-            
+            self.logDebug(traceback.format_exc(), xbmc.LOGERROR)
+           
+           
     def DownloadMetaArt(self, type, fle, id, typeEXT, ART_LOC):
         self.log('DownloadMetaArt')
         ArtPath = os.path.join(ART_LOC, fle)
@@ -374,8 +377,7 @@ class Artdownloader:
             output.close()
             setImage = ArtPath
         except Exception,e:  
-            self.log("script.pseudotv.live-Artdownloader: DownloadMetaArt Failed" + str(e), xbmc.LOGERROR)
-            buggalo.onExceptionRaised()      
+            self.log("script.pseudotv.live-Artdownloader: DownloadMetaArt Failed" + str(e), xbmc.LOGERROR) 
         return setImage
         
 
@@ -403,9 +405,8 @@ class Artdownloader:
                                             return download_silent(fanPath,FilePath)
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: Fanart_Download Failed" + str(e), xbmc.LOGERROR)
-            buggalo.onExceptionRaised()      
-
-            
+   
+    
     def AlphaLogo(self, org, mod):
         self.log("AlphaLogo")
         try:
@@ -481,6 +482,3 @@ class Artdownloader:
                             return self.ConvertBug(BugFLE, cachefile)
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindBug Failed" + str(e), xbmc.LOGERROR)
-            buggalo.onExceptionRaised()
-            
-            

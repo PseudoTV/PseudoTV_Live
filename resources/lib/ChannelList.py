@@ -537,17 +537,19 @@ class ChannelList:
         bctType = None
         
         #Set Local Limit or Global
-        if chtype in [7,10,11,15,16] and setting3 != '' and len(setting3) > 0:
+        if chtype in [7,10,11,15,16] and setting3 and len(setting3) > 0:
             try:
                 limit = int(setting3)
             except:
                 limit = MEDIA_LIMIT
+            if limit == 0:
+                limit = 10000
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
                 limit = 259200
             elif chtype == 9:
-                limit = 72
+                limit = 24
             elif MEDIA_LIMIT == 0:
                 limit = 10000
             else:
@@ -625,10 +627,10 @@ class ChannelList:
             self.log("Building Music Videos")
             fileList = self.MusicVideos(setting1, setting2, setting3, setting4, limit)    
             
-        # Extras
+        # Exclusive
         elif chtype == 14 and isDon() == True:
-            self.log("Extras, " + setting1 + "...")
-            fileList = self.extras(setting1, setting2, setting3, setting4, channel, limit)     
+            self.log("Exclusive, " + setting1 + "...")
+            fileList = self.Exclusive(setting1, setting2, setting3, setting4, channel, limit)     
             
         # Direct Plugin
         elif chtype == 15:
@@ -1080,21 +1082,24 @@ class ChannelList:
         return fileList
 
         
-    # pack to string for playlist
+    # pack string for playlist
     def packGenreLiveID(self, GenreLiveID):
         self.log("packGenreLiveID, GenreLiveID = " + str(GenreLiveID))
         if len(GenreLiveID) == 7:
             genre = GenreLiveID[0]
             LiveID = '|'.join(str(x) for x in GenreLiveID[1:]) + '|'
             return genre, LiveID
+        else:
+            return 'Unknown', 'other|0|0|False|1|NR|'
         
         
-    # unpack to list for parsing
+    # unpack list for parsing
     def unpackLiveID(self, LiveID):
         self.log("unpackLiveID, LiveID = " + LiveID)
+        print len(LiveID)
         LiveID = LiveID.split('|')
         return LiveID
-
+    
     
     def makeTMPSTR(self, duration, showtitle, subtitle, description, GenreLiveID, file, timestamp=None):
         genre, LiveID = self.packGenreLiveID(GenreLiveID)
@@ -2395,19 +2400,20 @@ class ChannelList:
         region = 'US' #todo
         lang = xbmc.getLanguage(xbmc.ISO_639_1)
         Last_YT_NextPG = YT_NextPG      
-        if YT_Type == 5:
-            try:
-                safesearch, YT_ID = YT_ID.split('|')
-            except:
-                safesearch = 'none'
         youtubeApiUrl = 'https://www.googleapis.com/youtube/v3/'
         youtubeChannelsApiUrl = (youtubeApiUrl + 'channels?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         youtubeSearchApiUrl = (youtubeApiUrl + 'search?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         youtubePlaylistApiUrl = (youtubeApiUrl + 'playlistItems?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
         requestChannelVideosInfo = (youtubeSearchApiUrl + 'channelId=%s&part=id&order=date&pageToken=%s&maxResults=50' % (YT_ID, YT_NextPG))
         requestPlaylistInfo = (youtubePlaylistApiUrl+ 'part=snippet&maxResults=50&playlistId=%s&pageToken=%s' % (YT_ID, YT_NextPG))
-        requestSearchVideosInfo = (youtubeSearchApiUrl + 'safeSearch=%s&q=%s&part=snippet&order=date&pageToken=%s&maxResults=50' % (safesearch.lower(), YT_ID.replace(' ','%20'), YT_NextPG))
     
+        if YT_Type == 5:
+            try:
+                safesearch, YT_ID = YT_ID.split('|')
+            except:
+                safesearch = 'none'
+            requestSearchVideosInfo = (youtubeSearchApiUrl + 'safeSearch=%s&q=%s&part=snippet&order=date&pageToken=%s&maxResults=50' % (safesearch.lower(), YT_ID.replace(' ','%20'), YT_NextPG))
+            
     # https://www.googleapis.com/youtube/v3/search?part=snippet&q=movies&type=channel&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c movie channels
     # https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=UCczhp4wznQWonO7Pb8HQ2MQ&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c
     
@@ -3957,8 +3963,8 @@ class ChannelList:
         return video
         
         
-    def extras(self, setting1, setting2, setting3, setting4, channel, limit):
-        self.log("extras")
+    def Exclusive(self, setting1, setting2, setting3, setting4, channel, limit):
+        self.log("Exclusive")
         showList = []
         if setting1.lower() == 'popcorn' and isDon() == True:
             showList = self.popcorn(setting2, setting3, setting4, channel)
@@ -4765,7 +4771,7 @@ class ChannelList:
                 year = 0
         except Exception,e:
             year = 0
-            self.log("getYear, Failed! " + str(e))
+            self.logDebug("getYear, Failed! " + str(e))
         return year
         
         
@@ -4778,7 +4784,7 @@ class ChannelList:
                 tvdbid = 0
         except Exception,e:
             tvdbid = 0
-            self.log("getTVDBID, Failed! " + str(e))
+            self.logDebug("getTVDBID, Failed! " + str(e))
         return tvdbid
          
          
@@ -4791,7 +4797,7 @@ class ChannelList:
                 imdbid = 0
         except Exception,e:
             imdbid = 0
-            self.log("getIMDBIDmovie, Failed! " + str(e))
+            self.logDebug("getIMDBIDmovie, Failed! " + str(e))
         return imdbid
 
         
@@ -4826,7 +4832,7 @@ class ChannelList:
                 rating = 'NR'
         except Exception,e:
             rating = 'NR'
-            self.log("getRating, Failed! " + str(e))
+            self.logDebug("getRating, Failed! " + str(e))
         return self.cleanRating(rating)
         
 
@@ -4839,7 +4845,7 @@ class ChannelList:
                 tagline = ''
         except Exception,e:
             tagline = ''
-            self.log("getTagline, Failed! " + str(e))
+            self.logDebug("getTagline, Failed! " + str(e))
         return tagline
                 
 
@@ -4852,7 +4858,7 @@ class ChannelList:
                 imdbid = 0
         except Exception,e:
             imdbid = 0
-            self.log("getIMDBIDtv, Failed! " + str(e))
+            self.logDebug("getIMDBIDtv, Failed! " + str(e))
         return imdbid
         
         
@@ -4864,7 +4870,7 @@ class ChannelList:
                 tvdbid = 0
         except Exception,e:
             tvdbid = 0
-            self.log("getTVDBIDbyZap2it, Failed! " + str(e))
+            self.logDebug("getTVDBIDbyZap2it, Failed! " + str(e))
         return tvdbid
         
         
@@ -4875,9 +4881,9 @@ class ChannelList:
             if year == 0 or year == '0':
                 year = self.getYear(type, showtitle)
             if genre == 'Unknown':
-                genre = self.getGenre(type, cleantitle, year)
+                genre = self.getGenre(type, cleantitle, str(year))
             if rating == 'NR':
-                rating = self.getRating(type, cleantitle, year)
+                rating = self.getRating(type, cleantitle, str(year))
         year, cleantitle, showtitle = getTitleYear(showtitle, year)
         self.logDebug("getEnhancedEPGdata, return: cleantitle = " + cleantitle + ", year = " + str(year) + ", genre = " + genre + ", rating = " + rating)
         return showtitle, cleantitle, genre, rating, year
@@ -4890,7 +4896,7 @@ class ChannelList:
             imdbnumber = self.getEnhancedIDs(type, cleantitle, year, imdbnumber)
             if type == 'movie': 
                 if not tagline:
-                    tagline = self.getTagline(cleantitle, year)
+                    tagline = self.getTagline(cleantitle, str(year))
             else:
                 tagline = ''
                 # tagline = seasontitle and info todo
@@ -4903,10 +4909,10 @@ class ChannelList:
     def getEnhancedIDs(self, type, cleantitle, year, imdbnumber):
         if type == 'movie': 
             if imdbnumber == 0 or imdbnumber == '0':
-                imdbnumber = self.getIMDBIDmovie(cleantitle, year)
+                imdbnumber = self.getIMDBIDmovie(cleantitle, str(year))
         else:
             if imdbnumber == 0 or imdbnumber == '0':
-                imdbnumber = self.getTVDBID(cleantitle, year)  
+                imdbnumber = self.getTVDBID(cleantitle, str(year))
         self.logDebug("getEnhancedIDs, return: id = " + str(imdbnumber))
         return imdbnumber
             
@@ -5018,7 +5024,7 @@ class ChannelList:
                                         pass
                                         
                                     # Accurate duration
-                                    if dur == 0:
+                                    if dur == 0 and isLowPower() != True:
                                         try:
                                             dur = self.videoParser.getVideoLength(file)
                                         except Exception,e:
@@ -5041,12 +5047,12 @@ class ChannelList:
                                         # if dur == 0 and file[-4:].lower() == 'strm':
                                             # dur = 3600
                                             
-                                    # if file.startswith('plugin'):
-                                        # if dur == 0:
-                                            # dur = 3600
-                                        # # try and correct minutes to seconds
-                                        # if dur >= 120:
-                                            # dur = self.durationInSeconds(dur)
+                                    if file.startswith('plugin'):
+                                        if dur == 0:
+                                            dur = 3600
+                                        else:
+                                            # try and correct minutes to seconds
+                                            dur = self.durationInSeconds(dur)
                                         
                                     self.logDebug("getFileList, dur = " + str(dur))  
 

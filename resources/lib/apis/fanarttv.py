@@ -17,7 +17,7 @@
 #    along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import sys, xbmc, xbmcgui
-import unicodedata, urllib, urllib2, socket
+import unicodedata, urllib, urllib2, socket, traceback
 
 # Use json instead of simplejson when python v2.7 or greater
 if sys.version_info < (2, 7):
@@ -31,6 +31,8 @@ from urllib2 import HTTPError, URLError
 from resources.lib.utils import *
 from language import *
 
+socket.setdefaulttimeout(30)
+ 
 API_KEY = FANARTTV_API_KEY
 API_URL_TV = 'http://api.fanart.tv/webservice/series/%s/%s/json/all/1/2'
 API_URL_MOVIE = 'http://api.fanart.tv/webservice/movie/%s/%s/json/all/1/2/'
@@ -105,17 +107,16 @@ class fanarttv:
                                                    'language': item.get('lang'),
                                                    'votes': item.get('likes'),
                                                    'generalinfo': generalinfo})
-                if image_list == []:
-                    raise
-                else:
-                    # Sort the list before return. Last sort method is primary
-                    image_list = sorted(image_list, key=itemgetter('votes'), reverse=True)
-                    image_list = sorted(image_list, key=itemgetter('size'), reverse=False)
-                    image_list = sorted(image_list, key=itemgetter('language'))
-                    return image_list
         except Exception,e:
             log("fanarttv: get_image_list_TV, Failed! " + str(e))  
-            return image_list
+            log(traceback.format_exc(), xbmc.LOGERROR)
+            
+        if image_list != []:
+            # Sort the list before return. Last sort method is primary
+            image_list = sorted(image_list, key=itemgetter('votes'), reverse=True)
+            image_list = sorted(image_list, key=itemgetter('size'), reverse=False)
+            image_list = sorted(image_list, key=itemgetter('language'))
+        return image_list
 
 
     def get_image_list_Movie(self, media_id):
@@ -163,14 +164,12 @@ class fanarttv:
                                                    'disctype': item.get('disc_type','n/a'),
                                                    'discnumber': item.get('disc','n/a'),
                                                    'generalinfo': generalinfo})
-                if image_list == []:
-                    raise
-                else:
-                    # Sort the list before return. Last sort method is primary
-                    image_list = sorted(image_list, key=itemgetter('votes'), reverse=True)
-                    image_list = sorted(image_list, key=itemgetter('size'), reverse=False)
-                    image_list = sorted(image_list, key=itemgetter('language'))
-                    return image_list
         except Exception,e:
             log("fanarttv: get_image_list_Movie, Failed! " + str(e))  
-            return image_list
+            log(traceback.format_exc(), xbmc.LOGERROR)
+        if image_list != []:
+            # Sort the list before return. Last sort method is primary
+            image_list = sorted(image_list, key=itemgetter('votes'), reverse=True)
+            image_list = sorted(image_list, key=itemgetter('size'), reverse=False)
+            image_list = sorted(image_list, key=itemgetter('language'))
+        return image_list

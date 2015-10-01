@@ -66,10 +66,11 @@ def showInfo(addonID=None, type='changelog'):
 
 def DeleteSettings2():
     log('utilities: DeleteSettings2')
-    if xbmcvfs.exists(os.path.join(SETTINGS_LOC, 'settings2.xml')):
+    if xbmcvfs.exists(SETTINGS_FLE):
         if dlg.yesno("PseudoTV Live", "Delete Current Channel Configurations?"):
             try:
-                xbmcvfs.delete(xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml')))
+                REAL_SETTINGS.setSetting("CurrentChannel","1")
+                xbmcvfs.delete(SETTINGS_FLE)
                 xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel Configurations Cleared", 1000, THUMB) )
             except:
                 pass

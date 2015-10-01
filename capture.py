@@ -228,18 +228,19 @@ class Main:
                     pass
 
                 if chantype == 0:
-                    newlabel = self.chnlst.getSmartPlaylistName(chansetting1)
-                elif chantype == 1 or chantype == 2 or chantype == 5 or chantype == 6:
-                    newlabel = chansetting1
-                elif chantype == 3:
+                    newlabel = self.getSmartPlaylistName(chansetting1) + " - Playlist"
+                elif chantype == 5:
+                    newlabel = chansetting1 + " - Mixed"
+                elif chantype in [1,3,6]:
                     newlabel = chansetting1 + " - TV"
-                elif chantype == 4:
+                elif chantype in [2,4]:
                     newlabel = chansetting1 + " - Movies"
                 elif chantype == 7:
                     if chansetting1[-1] == '/' or chansetting1[-1] == '\\':
                         newlabel = os.path.split(chansetting1[:-1])[1]
                     else:
                         newlabel = os.path.split(chansetting1)[1]
+                    newlabel = newlabel + " - Directory" 
                 elif chantype == 8:
                     newlabel = channame + " - LiveTV"
                 elif chantype == 9:
@@ -253,11 +254,12 @@ class Main:
                 elif chantype == 13:
                     newlabel = channame + " - Music Videos"
                 elif chantype == 14:
-                    newlabel = channame + " - Exclusive"
+                    newlabel = channame + " - Extra"
                 elif chantype == 15:
                     newlabel = channame + " - Plugin"
                 elif chantype == 16:
                     newlabel = channame + " - UPNP"
+                    
                 if newlabel:
                     newlabel = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ newlabel+'[/COLOR]'
                 else:

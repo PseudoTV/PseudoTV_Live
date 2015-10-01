@@ -35,7 +35,7 @@
         <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
         <setting id="EnhancedGuideData" type="bool"   label="30405" default="true" />
         <setting id="HideClips" type="bool"   label="30215" default="true"/>
-        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="7"/>
+        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="5"/>
         <setting id="enable_mute" type="bool"   label="30373" default="false"/>
     </category>
 <!--Visual-->
