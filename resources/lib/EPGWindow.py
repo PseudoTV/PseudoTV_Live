@@ -278,7 +278,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         for i in range(self.rowCount): 
             self.getControl(311 + i).setLabel(str(curchannel))
             
-            if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":
+            if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":     
                 chname = self.MyOverlayWindow.getChname(curchannel - 1)
                 chlogo = self.channelLogos + chname + ".png"
                 if FileAccess.exists(chlogo):

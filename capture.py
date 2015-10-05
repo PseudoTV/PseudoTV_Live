@@ -254,7 +254,7 @@ class Main:
                 elif chantype == 13:
                     newlabel = channame + " - Music Videos"
                 elif chantype == 14:
-                    newlabel = channame + " - Extra"
+                    newlabel = channame + " - Exclusive"
                 elif chantype == 15:
                     newlabel = channame + " - Plugin"
                 elif chantype == 16:

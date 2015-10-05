@@ -142,7 +142,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         set2 = ''
         set3 = ''
         set4 = ''
-        channame = ''
 
         try:
             chantype = int(ADDON_SETTINGS.getSetting("Channel_" + chan + "_type"))
@@ -153,8 +152,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         setting2 = "Channel_" + chan + "_2"
         setting3 = "Channel_" + chan + "_3"
         setting4 = "Channel_" + chan + "_4"
-        channame = ADDON_SETTINGS.getSetting("Channel_" + chan + "_rule_1_opt_1")
-
+        
         if chantype == 0:
             ADDON_SETTINGS.setSetting(setting1, self.getControl(330).getLabel2())
         elif chantype == 1:
@@ -234,14 +232,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         set2 = ''
         set3 = ''
         set4 = ''
-        name = ''
 
         try:
             set1 = ADDON_SETTINGS.getSetting(setting1)
             set2 = ADDON_SETTINGS.getSetting(setting2)
             set3 = ADDON_SETTINGS.getSetting(setting3)
             set4 = ADDON_SETTINGS.getSetting(setting4)
-            name = ADDON_SETTINGS.getSetting("Channel_" + chan + "_rule_1_opt_1")
         except:
             pass
 
@@ -290,10 +286,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         
         elif controlId == 110:      # Change channel type left
             self.changeChanType(self.channel, -1)
-            # self.clearLabel()
+            self.resetLabels()
         elif controlId == 111:      # Change channel type right
             self.changeChanType(self.channel, 1)
-            # self.clearLabel()
+            self.resetLabels()
         elif controlId == 112:      # Ok button
             self.saveSettings()
             self.hideChanDetails()
@@ -332,7 +328,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             
         elif controlId == 332:      # Community Playlists button
             self.log("Community Playlists")
-            show_busy_dialog()
             try:
                 url='https://github.com/Lunatixz/PseudoTV_Playlists'
                 XSPlist = fillGithubItems(url,".xsp")
@@ -344,7 +339,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.getControl(330).setLabel(self.getSmartPlaylistName(XSPfile), label2=XSPfile)
             except:
                 pass
-            hide_busy_dialog()
                 
         elif controlId == 140:      # Network TV channel, left
             self.changeListData(self.networkList, 142, -1)
@@ -377,9 +371,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             if retval and len(retval) > 0:
                 self.getControl(200).setLabel(retval)       
         elif controlId == 201:    # setLabel MediaLimit, select 
-            self.getControl(201).setLabel(self.listLimits())
+            self.getControl(201).setLabel(self.setLimit())
         elif controlId == 202:    # setLabel SortOrder, select 
-            self.getControl(202).setLabel(self.listSorts()) 
+            self.getControl(202).setLabel(self.setSort()) 
             
         #LiveTV
         elif controlId == 211:    # LiveTV Browse, select
@@ -566,8 +560,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "2")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", 'Seasonal') 
-                ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_2_id", "13")
-                ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_2_opt_1", "168") 
             else:
                 try:
                     Name, Option1, Option2, Option3, Option4 = self.fillSources('YouTube', 'Community List', self.getControl(232).getLabel())
@@ -578,15 +570,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         title, genre = Name.split(' - ')
                     except:
                         title = Name
-                        
-                    #Set Channel Name
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", title)                 
+                    self.setChname(title)           
                 except:
-                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Select Youtube Type First", 1000, THUMB) )     
+                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Select Youtube Type", 1000, THUMB) )     
                     pass
-                
         elif controlId == 234:    # Youtube Channel, input
             retval = dlg.input(self.getControl(234).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:
@@ -594,11 +581,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
                 ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", retval)  
-        
         elif controlId == 235:    # Youtube MediaLimit, select 
-            self.getControl(235).setLabel(self.listLimits())
+            self.setLimit(235)
         elif controlId == 236:    # Youtube SortOrder, select 
-            self.getControl(236).setLabel(self.listSorts()) 
+            self.setSort(236)  
         
         #RSS
         elif controlId == 240:    # RSS Community List, Select
@@ -606,27 +592,22 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(241).setLabel(Option1)
             self.getControl(242).setLabel(Option3)
             self.getControl(243).setLabel(Option4)
-            #Set Channel Name
-            ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
-            ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
-            ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", Name) 
-            
+            self.setChname(Name)  
         elif controlId == 241:    # RSS Feed URL, input
             retval = dlg.input(self.getControl(241).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:
                 self.getControl(241).setLabel(retval) 
-        elif controlId == 242:    # Youtube MediaLimit, select
-            self.getControl(242).setLabel(self.listLimits())
-        elif controlId == 243:    # Youtube SortOrder, select 
-            self.getControl(243).setLabel(self.listSorts()) 
+        elif controlId == 242:    # RSS MediaLimit, select 
+            self.setLimit(242)
+        elif controlId == 243:    # RSS SortOrder, select 
+            self.setSort(243)  
 
         #Plugin
         elif controlId == 280:# Browse plugin list
-            self.clearLabel()            
             select = selectDialog(self.pluginNameList, 'Select Plugin')
             if select != -1:
+                self.clearLabel(281)
                 self.PluginSourceName = self.chnlst.cleanLabels((self.pluginNameList[select]))
-                
                 if self.PluginSourceName == 'Community List':
                     Name, Option1, Option2, Option3, Option4 = self.fillSources('Plugin', 'Community List')
                     PLname, CHname = Name.split(' | ')
@@ -637,103 +618,84 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.getControl(280).setLabel(PLname)
                     
                     if not Dirname:
-                        self.getControl(281).setLabel(' ')
+                        self.clearLabel(281)
                     else:
                         self.getControl(281).setLabel(Dirname)
                     
                     if not Option1:
-                        self.getControl(282).setLabel(' ')
+                        self.clearLabel(282)
                     else:
                         self.getControl(282).setLabel(Option1)
                         
-                    self.getControl(283).setLabel(Option2)
-                    
                     if not Option2:
-                        self.getControl(283).setLabel(' ')
+                        self.clearLabel(283)
                     else:
                         self.getControl(283).setLabel(Option2)
 
                     self.getControl(284).setLabel(Option3)
                     self.getControl(284).setLabel(Option3)
                     self.getControl(285).setLabel(Option4)
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", CHname)
                 else:                     
                     self.PluginSourcePath = self.pluginPathList[select]
                     self.PluginSourcePath = 'plugin://' + self.PluginSourcePath
                     self.getControl(280).setLabel(self.PluginSourceName) 
                     self.getControl(282).setLabel(self.PluginSourcePath)    
-                    Chname = self.chnlst.cleanLabels(self.getControl(280).getLabel())
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", Chname)
+                    CHname = self.chnlst.cleanLabels(self.getControl(280).getLabel())
+                self.setChname(CHname)     
                 
         elif controlId == 281:# Browse Plugin Directories
-            show_busy_dialog()
-            try:
-                # Recursive Browse
-                if len(self.getControl(281).getLabel()) > 1:
-                    PluginDirNameLst, PluginDirPathLst = self.parsePlugin(self.chnlst.PluginInfo(self.PluginSourcePathDir), 'Dir')
-                # Firsttime Browse
-                else:
-                    self.DirName = ''
-                    self.PluginSourcePathDir = ''
-                    PluginDirNameLst, PluginDirPathLst = self.parsePlugin(self.chnlst.PluginInfo(self.PluginSourcePath), 'Dir')
-
-                select = selectDialog(PluginDirNameLst, 'Select [COLOR=red][D][/COLOR]irectory')
-                if select != -1:
-                    selectItem = PluginDirNameLst[select]
-                    
-                    # Return to menu
-                    if PluginDirPathLst[select] == 'Return':
-                        self.DirName = ''
-                        self.PluginSourcePathDir = ''  
-                    
-                    # Normal Navigation
-                    else:
-                        self.DirName += self.chnlst.cleanLabels(selectItem) + '/'
-                        PathName = PluginDirPathLst[select]
-                        if self.DirName.startswith(' /'):
-                            self.DirName = self.DirName[1:]
-                        elif self.DirName.startswith('/'):
-                            self.DirName = self.DirName
-                        if len(self.DirName) > 0:
-                            self.getControl(281).setLabel(self.DirName)
-                            self.getControl(282).setLabel(PathName)
-                            self.PluginSourcePathDir = PathName
-                            
-                    Chname = self.chnlst.cleanLabels(selectItem + ' - ' + self.getControl(280).getLabel()) 
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rulecount", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_id", "1")
-                    ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_rule_1_opt_1", Chname)
-            except:
-                pass
-            hide_busy_dialog()
+            # Recursive Browse
+            if len(self.getControl(281).getLabel()) > 1:
+                PluginDirNameLst, PluginDirPathLst = self.parsePlugin(self.chnlst.PluginInfo(self.PluginSourcePathDir), 'Dir')
             
+            # Firsttime Browse
+            else:
+                self.DirName = ''
+                self.PluginSourcePathDir = ''
+                PluginDirNameLst, PluginDirPathLst = self.parsePlugin(self.chnlst.PluginInfo(self.PluginSourcePath), 'Dir')
+
+            select = selectDialog(PluginDirNameLst, 'Select [COLOR=red][D][/COLOR]irectory')
+            if select != -1:
+                selectItem = PluginDirNameLst[select]
+                
+                # Return to menu
+                if PluginDirPathLst[select] == 'Return':
+                    self.DirName = ''
+                    self.PluginSourcePathDir = ''  
+                
+                # Normal Navigation
+                else:
+                    self.DirName += self.chnlst.cleanLabels(selectItem) + '/'
+                    PathName = PluginDirPathLst[select]
+                    if self.DirName.startswith(' /'):
+                        self.DirName = self.DirName[1:]
+                    elif self.DirName.startswith('/'):
+                        self.DirName = self.DirName
+                    if len(self.DirName) > 0:
+                        self.getControl(281).setLabel(self.DirName)
+                        self.getControl(282).setLabel(PathName)
+                        self.PluginSourcePathDir = PathName           
+                self.setChname(self.chnlst.cleanLabels(selectItem) )
         elif controlId == 283:    # Plugin Exclude, input
-            retval = dlg.input(self.getControl(283).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
-            if retval and len(retval) > 0:
-                self.getControl(283).setLabel(retval)
+            self.setExclude(283)
         elif controlId == 284:    # Plugin MediaLimit, select 
-            self.getControl(284).setLabel(self.listLimits())
+            self.setLimit(284)
         elif controlId == 285:    # Plugin SortOrder, select 
-            self.getControl(285).setLabel(self.listSorts()) 
+            self.setSort(285) 
+            
         #UPNP
         elif controlId == 290:      # UPNP Source, select 
             retval = self.fillSources('Directory', 'UPNP')
             if retval and len(retval) > 0:
                 self.getControl(291).setLabel(retval)
                 self.getControl(292).setLabel(retval)
-
         elif controlId == 293:    # UPNP Exclude, input
-            retval = dlg.input(self.getControl(293).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
-            if retval and len(retval) > 0:
-                self.getControl(293).setLabel(retval)
+            self.setExclude(293)
         elif controlId == 294:    # UPNP MediaLimit, select 
-            self.getControl(294).setLabel(self.listLimits())
+            self.setLimit(294)
         elif controlId == 295:    # UPNP SortOrder, select 
-            self.getControl(295).setLabel(self.listSorts()) 
+            self.setSort(295) 
+            
         self.log("onClick return")
 
 
@@ -876,6 +838,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         chansetting3 = ''
         chansetting4 = ''
         channame = ''
+        self.rulecount = 0
         
         try:
             chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_type"))
@@ -883,7 +846,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
             chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3")
             chansetting4 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4"))
-            channame = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_1_opt_1")
+            channame = self.getChname(channel)
+            try:
+                self.rulecount = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rulecount"))
+            except:
+                self.rulecount = 0
         except:
             self.log("Unable to get some setting")
 
@@ -1199,7 +1166,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         except:
             hide_busy_dialog()
             buggalo.onExceptionRaised() 
-             
+                       
+         
+    def resetLabels(self):
+        self.log("resetLabels")
+        self.clearLabel(280) # Browse plugin list
+        self.clearLabel(281) # Browse Plugin Directories
+            
             
     def clearLabel(self, id=-1):
         self.log("clearLabel, id = " + str(id))
@@ -1221,7 +1194,64 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         except:
                             pass
 
-                            
+               
+    def setReset(self, hours, channel=None):
+        if not channel:
+            channel = self.channel
+        self.rulecount += 1
+        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(self.rulecount))
+        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" %str(self.rulecount), "13")
+        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(self.rulecount), str(hours))
+
+ 
+    def getChname(self, channel=None):
+        if not channel:
+            channel = self.channel
+        for i in range(RULES_PER_PAGE):         
+            try:
+                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
+                    return ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1))
+            except:
+                pass
+        
+        
+    def setChname(self, name, channel=None):
+        if not channel:
+            channel = self.channel
+        if not self.getChname(channel):
+            self.rulecount += 1
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(self.rulecount))
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" %str(self.rulecount), "1")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(self.rulecount), name)
+        else:
+            for i in range(RULES_PER_PAGE):         
+                try:
+                    if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1), name)
+                        break
+                except:
+                    pass
+        
+
+    def setExclude(self, key):
+        # todo add multiselect dialog via jarvis
+        retval = dlg.input(self.getControl(key).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
+        if retval and len(retval) > 0:
+            return self.getControl(key).setLabel(retval)
+        
+
+    def setLimit(self, key):
+        select = selectDialog(self.MediaLimitList, 'Select Media Limit')
+        if select != -1:
+            return self.getControl(key).setLabel(self.MediaLimitList[select])
+    
+    
+    def setSort(self, key):
+        select = selectDialog(self.SortOrderList, 'Select Sorting Order')
+        if select != -1:
+            return self.getControl(key).setLabel(self.SortOrderList[select])
+
+            
     def fillSources(self, type, source, path=None):
         self.log("fillSources, type = " + type + ", source = " + source)
         if path:
@@ -1630,25 +1660,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             pass   
 
             
-    def listLimits(self):
-        select = selectDialog(self.MediaLimitList, 'Select Media Limit')
-        if select != -1:
-            return self.MediaLimitList[select]
-    
-    
-    def listSorts(self):
-        select = selectDialog(self.SortOrderList, 'Select Sorting Order')
-        if select != -1:
-            return self.SortOrderList[select]
-
-            
     def writeChanges(self):
         ADDON_SETTINGS.writeSettings()
 
         if CHANNEL_SHARING:
             realloc = REAL_SETTINGS.getSetting('SettingsFolder')
             FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
-            
+
             
     def updateListing(self, channel = -1):
         self.log("updateListing")

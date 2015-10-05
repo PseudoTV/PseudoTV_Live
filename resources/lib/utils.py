@@ -466,7 +466,7 @@ def GA_Request():
         else:
             OPTIONS = OPTIONS+ ['Com:False']
                     
-        if isPlugin('context.pseudotv.live.export'):
+        if isContextInstalled():
             OPTIONS = OPTIONS + ['CM:True']
         else:
             OPTIONS = OPTIONS + ['CM:False']
@@ -944,7 +944,12 @@ def getXBMCVersion():
     return int((xbmc.getInfoLabel('System.BuildVersion').split('.'))[0])
  
 def getPlatform():
-    log("utils: getPlatform")
+    platform = chkPlatform()
+    log("utils: getPlatform = " + platform)
+    return platform
+    
+def chkPlatform():
+    log("utils: chkPlatform")
     if xbmc.getCondVisibility('system.platform.osx'):
         return "OSX"
     elif xbmc.getCondVisibility('system.platform.atv2'):
@@ -1313,7 +1318,7 @@ def DonFailed():
         REAL_SETTINGS.setSetting("Donor_Verified", "0")
      
 def getDonlist(list, test=False):
-    log("getDonlist")  
+    log('utils: getDonlist')
     nlist = []
     if test:
         list = open_url(PTVLURL + list, UPASS).readlines()
@@ -1446,7 +1451,7 @@ def SyncXMLTV_NEW(force=False):
 
 def help(chtype):
     log('utils: help, ' + chtype)
-    HelpBaseURL = 'http://raw.github.com/PseudoTV/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
+    HelpBaseURL = 'https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
     type = (chtype).replace('None','General')
     URL = HelpBaseURL + (type.lower()).replace(' ','%20')
     log("utils: help URL = " + URL)
@@ -1516,22 +1521,21 @@ def VideoWindow():
     log("utils: VideoWindow, VWPath = " + str(VWPath))
     #Copy VideoWindow Patch file
     try:
-        if getProperty("PseudoTVRunning") != "True":
-            if not FileAccess.exists(VWPath):
-                log("utils: VideoWindow, VWPath not found")
-                FileAccess.copy(flePath, VWPath)
-                if FileAccess.exists(VWPath):
-                    log('utils: custom_script.pseudotv.live_9506.xml Copied')
-                    xbmc.executebuiltin("ReloadSkin()")
-                    VideoWindowPatch()   
-                else:
-                    raise exception()
-            else:
-                log("utils: VideoWindow, VWPath found")
-                VideoWindowPatch()  
-                
+        if not FileAccess.exists(VWPath):
+            log("utils: VideoWindow, VWPath not found")
+            FileAccess.copy(flePath, VWPath)
             if FileAccess.exists(VWPath):
-                setProperty("PTVL.VideoWindow","true")
+                log('utils: custom_script.pseudotv.live_9506.xml Copied')
+                xbmc.executebuiltin("ReloadSkin()")
+                VideoWindowPatch()   
+            else:
+                raise exception()
+        else:
+            log("utils: VideoWindow, VWPath found")
+            VideoWindowPatch()  
+            
+        if FileAccess.exists(VWPath):
+            setProperty("PTVL.VideoWindow","true")
     except Exception:
         VideoWindowUninstall()
         VideoWindowUnpatch()
@@ -1625,7 +1629,49 @@ def VideoWindowUninstall():
 ######################
 # PreStart Functions #
 ######################
-
+   
+def getGithubZip(url, lib, addonpath, MSG):
+    log('utils: getGithubZip, url = ' + url)
+    # Delete old install package
+    try: 
+        FileAccess.delete(lib)
+        log('utils: deleted old package')
+    except: 
+        pass  
+    try:
+        download(url, lib, '')
+        log('utils: downloaded new package')
+        all(lib,addonpath,'')
+        log('utils: extracted new package')
+        MSG = MSG + ' Installed'
+    except: 
+        MSG = MSG + ' Failed to install, Try Again Later'
+        pass
+        
+    xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSG, 1000, THUMB) )
+    return  
+    
+def isContextInstalled():
+    context = isPlugin('context.pseudotv.live.export')
+    log('utils: isContextInstalled = ' + str(context))
+    return context
+      
+def getContext():  
+    log('utils: getContext')
+    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.4.zip'
+    name = 'context.pseudotv.live.export.zip' 
+    MSG = 'PseudoTV Live Context Export'    
+    path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
+    addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
+    lib = os.path.join(path,name)
+    getGithubZip(url, lib, addonpath, MSG)
+    
+def isRepoInstalled():
+    repo = isPlugin('repository.lunatixz')
+    log('utils: isRepoInstalled = ' + str(repo))
+    return repo
+      
 def getRepo():
     log('utils: getRepo')
     url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
@@ -1634,28 +1680,8 @@ def getRepo():
     path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
     addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
     lib = os.path.join(path,name)
-    log('utils: URL = ' + url)
+    getGithubZip(url, lib, addonpath, MSG)
     
-    # Delete old install package
-    try: 
-        FileAccess.delete(lib)
-        log('utils: deleted old package')
-    except: 
-        pass
-        
-    try:
-        download(url, lib, '')
-        log('utils: downloaded new package')
-        all(lib,addonpath,'')
-        log('utils: extracted new package')
-    except: 
-        MSG = 'Failed to install Lunatixz Repository, Try Again Later'
-        pass
-        
-    xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSG, 1000, THUMB) )
-    return
- 
 def chkVersion():
     log('utils: chkVersion')
     curver = xbmc.translatePath(os.path.join(ADDON_PATH,'addon.xml'))    
@@ -1675,13 +1701,8 @@ def chkVersion():
         
     if len(match) > 0:
         if vernum != str(match[0]):
-            if not isPlugin('repository.lunatixz'):
-                dialog = xbmcgui.Dialog()
-                confirm = xbmcgui.Dialog().yesno('[B]PseudoTV Live Update Available![/B]', "Your version is outdated." ,'The current available version is '+str(match[0]),'Would you like to install the PseudoTV Live repository to stay updated?',"Cancel","Install")
-                if confirm:
-                    getRepo()
-            # else:
-                # get_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
+            if isRepoInstalled() == False:
+                getRepo()
 
 def chkAutoplay():
     log('utils: chkAutoplay')
@@ -1883,7 +1904,11 @@ def HandleUpgrade():
     
     # Force Channel rebuild
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
-    
+             
+    # Install PTVL Isengard Context Export
+    if getXBMCVersion() > 14 and isContextInstalled() == False:
+        getContext()
+        
     # Check if autoplay is enabled
     chkAutoplay()
     
@@ -1898,7 +1923,7 @@ def preStart():
     if isDebug() == True:
         if yesnoDialog('Its recommended you disable debug logging for standard use','Disable Debugging?') == True:
             REAL_SETTINGS.setSetting('enable_Debug', "false")
-            
+
     # Optimize settings based on sys.platform
     chkLowPower()
     

@@ -935,12 +935,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             else:
                 self.channels[self.currentChannel - 1].setPaused(False)
         self.currentChannel = channel      
-        chname = self.getChname()
-        chtype = self.getChtype()
+        chname = self.getChname(self.currentChannel - 1)
+        chtype = self.getChtype(self.currentChannel)
         self.background.setLabel(('Loading: %s') % chname)
         
-        if FileAccess.exists(self.channelLogos + chname + '.png'):
-            chlogo = self.channelLogos + chname + '.png'
+        if FileAccess.exists(os.path.join(self.channelLogos,chname + '.png')):
+            chlogo = xbmc.translatePath(os.path.join(self.channelLogos,chname + '.png'))
         else:
             chlogo = 'logo.png'
         setProperty("OVERLAY.LOGOART",chlogo)
@@ -1023,10 +1023,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.log("setChannel, about to mute");
             xbmc.executebuiltin("Mute()");
                     
-        if mediapath.startswith('PlayMedia') or (chtype in [8,9] and mediapath.startswith('plugin')):
+        if mediapath.startswith('plugin') and chtype in [8,9]:      
             if not mediapath.startswith('PlayMedia'):
                 mediapath = ('PlayMedia('+mediapath+')')
-            xbmc.executebuiltin(tidy(mediapath).replace(',', ''))
+            if mediapath.startswith('PlayMedia'):
+                self.playsetresolved(mediapath, 'PlayMedia')
+            # else:
+                # self.playsetresolved(mediapath)
         else:
             setProperty("PTVL.Current_PlaylistPosition",str(self.channels[self.currentChannel - 1].playlistPosition))
             self.Player.playselected(int(getProperty("PTVL.Current_PlaylistPosition")))
@@ -1250,7 +1253,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
     def setShowInfo(self):
         self.log('setShowInfo')
-        chtype = self.getChtype()
+        chtype = self.getChtype(self.currentChannel)
         
         if self.infoOffset > 0:
             self.getControl(502).setLabel('COMING UP:') 
@@ -1304,7 +1307,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
             mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))   
         self.log('setShowInfo, setshowposition = ' + str(position))  
-        chname = self.getChname()
+        chname = self.getChname(self.currentChannel - 1)
         chnum = str(self.currentChannel)
         self.SetMediaInfo(chtype, chname, chnum, mediapath, position)
         
@@ -1424,8 +1427,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             # self.showInfo(5.0)
         
         if self.showChannelBug == True:
-            chtype = self.getChtype()     
-            chname = self.getChname()
+            chtype = self.getChtype(self.currentChannel)     
+            chname = self.getChname(self.currentChannel - 1)
             self.getControl(103).setImage(self.Artdownloader.FindBug(chtype, chname))
         self.getControl(300).setLabel(self.channels[self.currentChannel - 1].name)
 
@@ -1528,11 +1531,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 return xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=%s,id=%s)" % (info, YTinfo)) 
 
             elif getProperty(("%s.Type")%pType) == 'tvshow':
-                if getProperty(("%s.Season")%pType) != '0' and getProperty(("%s.Episode")%pType) != '0':
+                if (getProperty(("%s.DBID")%pType) != '0' or getProperty(("%s.ID")%pType) != '0') and getProperty(("%s.Season")%pType) != '0' and getProperty(("%s.Episode")%pType) != '0':
                     info = 'seasoninfo'
                     return xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=%s,dbid=%s,%s=%s,%s=%s,season=%s)" % (info, getProperty(("%s.DBID")%pType), title, getProperty(("%s.Title")%pType), dbtype, getProperty(("%s.ID")%pType), getProperty(("%s.Season")%pType)))
-        
-        return xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=%s,%s=%s,%s=%s)" % (info, title, getProperty(("%s.Title")%pType), dbtype, getProperty(("%s.ID")%pType))) 
+        elif getProperty(("%s.ID")%pType) != '0':
+            return xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=%s,%s=%s,%s=%s)" % (info, title, getProperty(("%s.Title")%pType), dbtype, getProperty(("%s.ID")%pType))) 
 
         
     def hideInfo(self):
@@ -1566,7 +1569,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         if self.hideShortItems:
             position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
-            if self.getChtype() <= 7 and self.channels[self.currentChannel - 1].getItemDuration(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()) < self.shortItemLength:
+            if self.getChtype(self.currentChannel) <= 7 and self.channels[self.currentChannel - 1].getItemDuration(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()) < self.shortItemLength:
                 return
                 
         self.hidePOP()
@@ -1684,7 +1687,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.hideShortItems:
             #Skip short videos
             position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
-            if self.getChtype() <= 7 and self.channels[self.currentChannel - 1].getItemDuration(position) < self.shortItemLength:
+            if self.getChtype(self.currentChannel) <= 7 and self.channels[self.currentChannel - 1].getItemDuration(position) < self.shortItemLength:
                 return
 
         self.showingPop = True
@@ -2173,9 +2176,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                             
                     self.log('notification.init')     
                     mediapath = (self.channels[self.currentChannel - 1].getItemFilename(nextshow))
-                    chname = self.getChname()
+                    chname = self.getChname(self.currentChannel - 1)
                     ChannelLogo = (self.channelLogos + (self.channels[self.currentChannel - 1].name) + '.png')
-                    chtype = self.getChtype()
+                    chtype = self.getChtype(self.currentChannel)
                     ShowTitle = self.channels[self.currentChannel - 1].getItemTitle(nextshow).replace(',', '')
                     myLiveID = self.channels[self.currentChannel - 1].getItemLiveID(nextshow)
                     type = (self.channelList.unpackLiveID(myLiveID))[0]
@@ -2376,11 +2379,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log('showReminder')
         Notify_Time, epochBeginDate = self.cleanReminderTime(tmpDate)
         if REAL_SETTINGS.getSetting("AutoJump") == "true":
-            if handle_wait(15,"Show Reminder",'[B]' + title + '[/B] on channel [B]' + str(channel), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?') == True:
+            if handle_wait(15,"Show Reminder",'[B]%s[/B] on channel [B]%s[/B] at [B]%s[/B] ?'%(title,str(channel),str(Notify_Time))) == True:
                 self.setChannel(self.fixChannel(channel))
         else:
             for i in range(15):
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ('[B]' + title + '[/B] on', 'channel [B]' + str(channel) + '[/B] starts in %s' % str(15-i)+'s', 1000, THUMB) )
+                xbmc.executebuiltin("Notification([B]%s[/B] on, channel [B]%s[/B] starts in %s's, %d, %s)" % (title,str(channel),str(15-i), 1000, THUMB) )
         self.removeReminder(tmpDate, title, channel, record)
             
             
@@ -2388,7 +2391,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log('removeReminder')
         Notify_Time, epochBeginDate = self.cleanReminderTime(tmpDate)
         if auto == False:
-            if not dlg.yesno("PseudoTV Live", "Would you like to remove the reminder for [B]", title + '[/B] on channel [B]' + str(channel), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+            if not dlg.yesno("PseudoTV Live", 'Would you like to remove the reminder for [B]%s[/B] on channel [B]%s[/B] at [B]%s[/B] ?'%(title,str(channel),str(Notify_Time))):
                 return
         ReminderLst = str(tmpDate)+','+title+','+str(channel)+','+str(record)
         self.ReminderLst = removeStringElem(self.ReminderLst, ReminderLst)
@@ -2466,7 +2469,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if self.isReminder(tmpDate, title, channel) == True:
                     self.removeReminder(tmpDate, title, channel, record, auto=False)
                 else:
-                    if dlg.yesno("PseudoTV Live", "Would you like to set a reminder for [B]", title + '[/B] on channel [B]' + str(channel), '[/B]at [B]'+ str(Notify_Time) + '[/B] ?'):
+                    if dlg.yesno("PseudoTV Live", "Would you like to set a reminder for [B]%s[/B] on channel [B]%s[/B] at [B]%s[/B] ?"%(title,str(channel),str(Notify_Time))):
                         auto = True
             if auto == True:
                 now = time.time()
@@ -3174,22 +3177,22 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.myApps.doModal()
 
           
-    def getChtype(self, channel=None):
-        if not channel:
-            channel = self.currentChannel
+    def getChtype(self, channel):
         try:
-            return int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
+            Chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
         except:
-            return 0
-
+            Chtype = 0
+        self.logDebug('getChtype, channel = '+str(channel)+', Chtype = ' + str(Chtype))
+        return Chtype
            
-    def getChname(self, channel=None):
-        if not channel:
-            channel = self.currentChannel - 1
+           
+    def getChname(self, channel):
         try:
-            return self.channels[channel].name
+            Chname = self.channels[channel].name
         except:
-            return ''
+            Chname = ''
+        self.logDebug('getChname, channel = '+str(channel)+', Chname = ' + Chname)
+        return Chname
            
            
     def toggleSetVisible(self, key):
@@ -3201,8 +3204,22 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
     def setVisible(self, key, state):
         self.getControl(key).setVisible(state)
-
         
+        
+    def playsetresolved(self, url, setresolved=True):
+        if setresolved == True:
+            item = xbmcgui.ListItem(getProperty("OVERLAY.Title"), iconImage=getProperty("OVERLAY.LOGOART"))
+            item.setInfo(type='Video', infoLabels={'Title':getProperty("OVERLAY.Title")})
+            item.setProperty("IsPlayable","true")
+            item.setPath(url)
+            self.Player.play(item)
+            # xbmcplugin.setResolvedUrl(pluginhandle, True, )
+        elif setresolved == 'PlayMedia':
+            # if not mediapath.startswith('PlayMedia'):
+            # mediapath = ('PlayMedia('+mediapath+')')
+            xbmc.executebuiltin(tidy(url).replace(',', ''))
+        else:
+            xbmc.executebuiltin('XBMC.RunPlugin('+url+')')
 # xbmc.executebuiltin('StartAndroidActivity("com.netflix.mediaclient"),return')
 # call weather
 # http://localhost:9000/jsonrpc?request={"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"weather"},"id":18}

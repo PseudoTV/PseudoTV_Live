@@ -101,6 +101,7 @@ class ChannelList:
         self.tmdbAPI = tmdb.TMDB()  
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
+        self.Playlist_Limit = PlaylistLimit()
         self.findMaxChannels()
         
         if self.backgroundUpdating > 0:
@@ -265,7 +266,6 @@ class ChannelList:
         needsreset = False
         self.background = background
         self.settingChannel = channel
-        self.Playlist_Limit = PlaylistLimit()
         
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
@@ -3502,31 +3502,31 @@ class ChannelList:
         #Internet
         elif CommercialsType == '3' and isDon() == True:
             self.log("getCommercialList, Internet") 
-            Advert = REAL_SETTINGS.getSetting("Advert")
-            Advert_Region = REAL_SETTINGS.getSetting("Advert_Region")
-            Advert_Resolution = REAL_SETTINGS.getSetting("Advert_Resolution")
-            adverts2_type = REAL_SETTINGS.getSetting("adverts2_type")
-            InternetCommercialLST = []
-            if self.background == False:
-                self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(channel), "adding Internet Commercials")
-            InternetCommercialLST = self.InternetCommercial(Advert, Advert_Region, Advert_Resolution, adverts2_type)
-            CommercialLST.extend(InternetCommercialLST)  
+            CommercialLST.extend(self.InternetCommercial())
         return CommercialLST 
    
         
-    def InternetCommercial(self, Advert, Advert_Region, Advert_Resolution, adverts2_type):
+    def InternetCommercial(self):
         self.log("InternetCommercial")
+        Advert = REAL_SETTINGS.getSetting("Advert")
+        Advert_Region = REAL_SETTINGS.getSetting("Advert_Region")
+        Advert_Resolution = REAL_SETTINGS.getSetting("Advert_Resolution")
+        adverts2_type = REAL_SETTINGS.getSetting("adverts2_type")
+        
         InternetCommercialLST1 = []
         InternetCommercialLST2 = []
         CommercialLST = []
         duration = 0
-
+        
         try:
             line = getDonlist('adverts.ini')
             if not line:
-                raise
+                raise Exception()
         except:
             return
+                
+        if self.background == False:
+            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding Internet Commercials")
                 
         if REAL_SETTINGS.getSetting("Advert") == 'true' and REAL_SETTINGS.getSetting("commercials") == '3':
             self.log("InternetCommercial, advert")

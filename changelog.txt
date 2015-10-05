@@ -1,3 +1,5 @@
+[*] Reminder Autojump fixed.
+[*] [COLOR=blue][B]^ v.0.6.8 ^[/B][/COLOR]
 [*] Proper handling of unicode strings.
 [*] Various tweaks and debugging.
 [*] Youtube search query channel restored.
