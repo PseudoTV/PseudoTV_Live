@@ -114,9 +114,9 @@
             <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="true" visible="eq(-24,true)" enable="eq(-5,true) + System.HasAddon(plugin.video.youtube)"                                  default="false"/>
             <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="true" visible="eq(-25,true)" enable="eq(-6,true) + System.HasNetwork"                                  default="false"/>
         <setting     id="AT_Donor"                            type="bool"                                   visible="false"                                                              default="false" />    
-        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true) + eq(-1,true)"                                        default="" /> 
-            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true) + eq(-2,true)" enable="System.HasAddon(plugin.video.youtube)"                                      default="false"/>
-            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true) + eq(-3,true)" enable="System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
+        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true)"                                        default="" /> 
+            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true)"  enable="eq(-2,true) + System.HasAddon(plugin.video.youtube)"                                      default="false"/>
+            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true)" enable="eq(-3,true) + System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
         <setting                                              type="lsep"   label="30782"                   visible="eq(-30,true)"     default="" /> 
             <setting id="autoFindIPTV_Source"                 type="enum"   label="30965" subsetting="true" visible="eq(-31,true)" values=" |Local|Online" default="0" />
             <setting id="autoFindIPTV_Path_Local"             type="file"   label="30966" subsetting="true" visible="eq(-32,true) + eq(-1,1)"             source="auto" default=""/>
@@ -231,7 +231,7 @@
     <category label="30900">  
         <setting label="30990" type="lsep"/>
         <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,4" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,60" option="int" default="30"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,60" option="int" default="60"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>
         <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />

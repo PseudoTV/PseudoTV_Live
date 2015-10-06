@@ -64,7 +64,6 @@
                 <aligny>center</aligny>
             </control>   
             <!-- #### Skinners Include Everything for videowindow patch to work #### -->
-            <!-- PATCH START -->
             <control type="videowindow">
                 <description>video</description>
                 <width>360</width>      

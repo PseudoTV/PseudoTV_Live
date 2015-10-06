@@ -2708,8 +2708,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         setProperty("%s.Tagline"%pType,tagline)
         self.setArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type1")%pType)), 'type1ART', pType)
         self.setArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(getProperty(("%s.type2")%pType)), 'type2ART', pType)
-        self.isNEW_Thread(pType)
-        self.isManaged_Thread(pType)
+        self.isNew(pType)
+        self.isManaged(pType)
         getRSSFeed(getProperty("OVERLAY.Genre"))
 
             

@@ -47,7 +47,7 @@
             <!-- #### Skinners Include Everything for videowindow patch to work #### -->
             <!-- PATCH START -->
             <control type="videowindow">
-                <description>video</description>
+                <description>video</description> 
                 <width>360</width>      
                 <height>180</height>
                 <align>center</align>

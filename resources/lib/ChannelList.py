@@ -555,7 +555,7 @@ class ChannelList:
             else:
                 limit = MEDIA_LIMIT
             self.log("makeChannelList, Using Global Parse-limit " + str(limit))
-            
+
         # Directory
         if chtype == 7:
             fileList = self.createDirectoryPlaylist(setting1, setting3, setting4, limit)     
@@ -2382,16 +2382,19 @@ class ChannelList:
     def getYoutubeUserID(self, YTid):
         self.logDebug("getYoutubeUserID, IN = " + YTid)
         YT_ID = 'UC'
-        region = 'US' #todo
-        lang = xbmc.getLanguage(xbmc.ISO_639_1)
-        youtubeApiUrl = 'https://www.googleapis.com/youtube/v3/'
-        youtubeChannelsApiUrl = (youtubeApiUrl + 'channels?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
-        requestParametersChannelId = (youtubeChannelsApiUrl + 'forUsername=%s&part=id' % (YTid))
-        f = read_url_cached(requestParametersChannelId)
-        YT_IDS = re.search('"id" *: *"(.*?)"', f)
-        if YT_IDS:
-            YT_ID = YT_IDS.group(1)
-        self.logDebug("getYoutubeUserID, OUT = " + YT_ID)
+        try:
+            region = 'US' #todo
+            lang = xbmc.getLanguage(xbmc.ISO_639_1)
+            youtubeApiUrl = 'https://www.googleapis.com/youtube/v3/'
+            youtubeChannelsApiUrl = (youtubeApiUrl + 'channels?key=%s&chart=mostPopular&regionCode=%s&hl=%s&' % (YT_API_KEY, region, lang))
+            requestParametersChannelId = (youtubeChannelsApiUrl + 'forUsername=%s&part=id' % (YTid))
+            f = read_url_cached(requestParametersChannelId)
+            YT_IDS = re.search('"id" *: *"(.*?)"', f)
+            if YT_IDS:
+                YT_ID = YT_IDS.group(1)
+            self.logDebug("getYoutubeUserID, OUT = " + YT_ID)
+        except Exception,e:
+            self.log('getYoutubeUserID, Failed! ' + str(e), xbmc.LOGERROR)
         return YT_ID
             
             

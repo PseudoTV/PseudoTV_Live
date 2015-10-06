@@ -39,8 +39,10 @@ def autostart():
     IDLE_TIME = AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] 
     sleep(IDLE_TIME)
     xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
-
-chkChanges()
+    
+if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
+    chkChanges()
+    
 if REAL_SETTINGS.getSetting("Auto_Start") == "true":
     autostart()
     
