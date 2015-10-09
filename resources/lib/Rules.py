@@ -1584,7 +1584,6 @@ class HandleChannelLogo(BaseRule):
         return channeldata
 
 
-
 class EvenShowsRule(BaseRule):
     def __init__(self):
         self.name = "Even Show Distribution"
@@ -1609,7 +1608,7 @@ class EvenShowsRule(BaseRule):
 
 
     def validate(self):
-        self.validateDigitBox(0, 1, 20, 1)
+        self.validateDigitBox(0, 1, 20, 2)
 
 
     def runAction(self, actionid, channelList, filelist):
@@ -1635,7 +1634,7 @@ class EvenShowsRule(BaseRule):
                             showname = item[loc + 1:loc2]
                             showname = showname.lower()
 
-                            if showname != lastshow.lower():
+                            if showname == lastshow:
                                 inarow += 1
                                 self.log("same show now at " + str(inarow))
                                 
@@ -1672,10 +1671,9 @@ class EvenShowsRule(BaseRule):
                     showname = item[loc + 1:loc2]
                     showname = showname.lower()
 
-                    if showname != lastshow.lower():
+                    if showname != lastshow:
                         self.log("insertNewShow found " + showname)
                         filelist.pop(index)
                         return item
                         
         return ''
-

@@ -28,9 +28,17 @@ try:
 except Exception,e:
     import storageserverdummy as StorageServer
 
+# Plugin Info
+ADDON_ID = 'script.pseudotv.live'
+REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_ID = REAL_SETTINGS.getAddonInfo('id')
+ADDON_NAME = REAL_SETTINGS.getAddonInfo('name')
+ADDON_PATH = (REAL_SETTINGS.getAddonInfo('path').decode('utf-8'))
+ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+
 def log(msg, level = xbmc.LOGDEBUG):
     try:
-        xbmc.log(ADDON_ID + '-' + ascii(msg), level)
+        xbmc.log(ADDON_ID + '-' + ADDON_VERSION + '-' + ascii(msg), level)
     except Exception,e:
         pass
 
@@ -51,15 +59,6 @@ def uni(string):
         if isinstance(string, unicode):
            string = string.encode('utf-8', 'ignore' )
     return string
-
-# Plugin Info
-ADDON_ID = 'script.pseudotv.live'
-REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_ID = REAL_SETTINGS.getAddonInfo('id')
-ADDON_NAME = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH = (REAL_SETTINGS.getAddonInfo('path').decode('utf-8'))
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-xbmc.log(ADDON_ID +' '+ ADDON_NAME +' '+ ADDON_PATH +' '+ ADDON_VERSION)
 
 # API Keys
 TVDB_API_KEY = REAL_SETTINGS.getSetting("TVDB_API")
@@ -219,7 +218,8 @@ SETTINGS_FLE_PRETUNE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
 monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))
-# common cache artwork
+
+# common cache artwork (Only needed for Artwork Spooler Service)
 artwork = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork",((24 * 7) * 4))         #Artwork Purge
 artwork1 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork1",((24 * 7) * 4))       #Artwork Purge
 artwork2 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork2",((24 * 7) * 4))       #Artwork Purge
@@ -308,9 +308,9 @@ ACTION_PREVIOUS_MENU = (9, 10, 92, 247, 257, 275, 61467, 61448)
 ACTION_DELETE_ITEM = 80
 ACTION_SHOW_INFO = 11
 ACTION_PAUSE = 12
-ACTION_PLAYER_PLAYPAUSE = 229 #// Play/pause. If playing it pauses, if paused it plays.
+ACTION_PLAYER_PLAYPAUSE = 249 #Play/pause. If playing it pauses, if paused it plays.
 ACTION_STOP = 13
-ACTION_OSD = 122
+ACTION_OSD = 124
 ACTION_NUMBER_0 = 58
 ACTION_NUMBER_1 = 59
 ACTION_NUMBER_2 = 60
@@ -366,13 +366,16 @@ UTC_XMLTV = []
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
 BYPASS_SEEK = ['plugin.video.vevo_tv','plugin.video.g4tv','plugin.video.ustvnow']
 
-# Bypass EPG (paused/stacked) by channel name - Removed "(Stacked)" from EPG
-BYPASS_EPG = ['PseudoCinema']
+# Bypass EPG and "stack" by channel name
+BYPASS_EPG =  ['PseudoCinema']
+
+# Bypass "stacked" EPG by channel name
+BYPASS_EPG_STACK = []
 
 # Bypass Overlay Coming up next by channel name - keep "ComingUp Next" from displaying
 BYPASS_OVERLAY = ['PseudoCinema']
 
-# Superfavourites Unwanted strings
+# Plugin exclusion strings
 SF_FILTER = ['isearch', 'iplay - kodi playlist manager','create new super folder','explore kodi favourites']
 EX_FILTER = SF_FILTER + ['video resolver settings','<<','back','previous','home','search','find','clips','seasons','trailers']
 

@@ -39,32 +39,29 @@ except:
 class EPGWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
+        self.channelLabel = []    
+        self.channelLogos = ''
+        self.textcolor = "FFFFFFFF"
+        self.focusedcolor = "FF7d7d7d"
+        self.shadowcolor = "FF000000"
+        self.textfont  = "font14"
+        self.infoOffsetV = 0
+        self.clockMode = 0
+        self.inputChannel = -1
         self.focusRow = 0
         self.focusIndex = 0
         self.focusTime = 0
         self.focusEndTime = 0
         self.shownTime = 0
-        self.centerChannel = 0
-        self.buttonCache = []
-        self.buttonCount = 0
-        self.actionSemaphore = threading.BoundedSemaphore()
-        self.channelLogos = ''
-        self.textcolor = "FFFFFFFF"
-        self.focusedcolor = "FF7d7d7d"
-        self.shadowcolor = "FF000000"
-        self.clockMode = 0
-        self.textfont  = "font14"
-        self.lastActionTime = time.time()
-        # self.startup = time.time()
-        self.showingInfo = False
         self.infoOffset = 0
-        self.infoOffsetV = 0
-        self.Artdownloader = Artdownloader()
-        self.inputChannel = -1
-        self.channelLabel = []    
-        self.channelbugcolor = CHANBUG_COLOR
-        self.chanlist = ChannelList()
+        self.centerChannel = 0
+        self.showingInfo = False
         self.showingContext = False
+        self.chanlist = ChannelList()
+        self.lastActionTime = time.time()
+        self.Artdownloader = Artdownloader()
+        self.actionSemaphore = threading.BoundedSemaphore()
+        self.channelbugcolor = CHANBUG_COLOR
         self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
         self.timeButtonBar = MEDIA_LOC + TIME_BAR
         
@@ -81,7 +78,16 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
         self.toRemove = []
 
-        
+                    
+    def log(self, msg, level = xbmc.LOGDEBUG):
+        log('EPGWindow: ' + msg, level)
+
+    
+    def logDebug(self, msg, level = xbmc.LOGDEBUG):
+        if isDebug() == True:
+            log('EPGWindow: ' + msg, level)
+                
+    
     def onFocus(self, controlid):
         pass
 
@@ -99,20 +105,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(101 + i).setLabel(now.strftime("%H:%M"))
             now = now + delta
         self.log('setTimeLabels return')
-            
 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('EPGWindow: ' + msg, level)
-
-    
-    def logDebug(self, msg, level = xbmc.LOGDEBUG):
-        if isDebug() == True:
-            log('EPGWindow: ' + msg, level)
-                
-    
+        
     def onInit(self):
         self.log('onInit')
-        now = datetime.datetime.now()        
+        now = datetime.datetime.now()     
+        
         if self.clockMode == "0":
             timeex = now.strftime("%I:%M%p").lower()
         else:
@@ -133,6 +131,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
         self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
         self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+        
         self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='font12', noFocusTexture=self.timeButtonNoFocus)
         self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
         self.addControl(self.currentTime)
@@ -207,9 +206,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(523).setVisible(True)
             else:
                 raise Exception()
-        except:
+        except Exception,e:
             self.log('VideoWindow = False')
             self.getControl(523).setVisible(False)
+            
         try:
             for i in range(3):
                 self.channelLabel.append(xbmcgui.ControlImage(50 + (50 * i), 50, 50, 50, IMAGES_LOC + 'solid.png', colorDiffuse = self.channelbugcolor))
@@ -218,6 +218,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)
         except:
             pass
+            
         self.FEEDtoggle()
         self.log('onInit return')
 
@@ -445,7 +446,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             playlistpos = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
                 self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].getCurrentTitle() + " (paused)", focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
-            elif (chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < 900) or chname in BYPASS_EPG: #Under 15mins "Stacked"
+            elif (chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < 900 and chname not in BYPASS_EPG_STACK) or chname in BYPASS_EPG: #Under 15mins "Stacked"
                 self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].name, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
             else:
                 # Find the show that was running at the given time
@@ -887,8 +888,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.log('showChannelLabel return')
         
             
-    def GotoChannel(self,inchannel):
-        print 'GotoChannel'
+    def GotoChannel(self, inchannel):
+        self.log('GotoChannel, inchannel = ' + str(inchannel))
+        self.log('GotoChannel, centerChannel = ' + str(self.centerChannel))
         try:
             if self.GotoChannelTimer.isAlive():
                 self.GotoChannelTimer.cancel()
@@ -896,17 +898,18 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             pass
         try:
             if inchannel > self.centerChannel:
-                newchannel = self.MyOverlayWindow.fixChannel(inchannel+2)
+                increasing = False
             else:
-                newchannel = self.MyOverlayWindow.fixChannel(inchannel+2,False)
-            
-            self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel))
+                increasing = True
+                
+            newchannel = inchannel + 2
+            self.log('GotoChannel, newchannel = ' + str(newchannel))
+            self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel, increasing))
             self.setProperButton(0)
             self.inputChannel = -1
             self.log('GotoChannel return')
         except Exception,e:
-            print str(e)
-            pass
+            self.log('GotoChannel Failed! ' + str(e))
             
            
     def GoPgDown(self):
@@ -942,7 +945,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             if self.focusRow == self.rowCount - 1:
                 self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel + 1))
                 self.focusRow = self.rowCount - 2
-
             self.setProperButton(self.focusRow + 1)
             self.log('goDown return')
         except:
@@ -958,7 +960,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             if self.focusRow == 0:
                 self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel - 1, False))
                 self.focusRow = 1
-
             self.setProperButton(self.focusRow - 1)
             self.log('goUp return')
         except:
@@ -1052,7 +1053,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             if selectedtime >= starttime and selectedtime <= endtime:
                 return i
-
         return -1
 
 

@@ -441,8 +441,8 @@ class Artdownloader:
             converted_img.save(mod)
             return mod
         except Exception,e:  
-            self.log("script.pseudotv.live-Artdownloader: ConvertBug Failed" + str(e), xbmc.LOGERROR)
-            return 'NA.png'
+            self.log("script.pseudotv.live-Artdownloader: ConvertBug Failed " + str(e), xbmc.LOGERROR)
+            return org
             
         
     def FindBug(self, chtype, chname):

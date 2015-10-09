@@ -103,16 +103,7 @@ class ChannelListThread(threading.Thread):
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
         self.chanlist.sleepTime = 3
         InfoTimer = INFOBAR_TIMER[int(REAL_SETTINGS.getSetting('InfoTimer'))]
-        # self.myOverlay.ArtServiceThread = threading.Timer(float(InfoTimer), self.myOverlay.ArtService)
-        # self.myOverlay.ArtServiceThread.name = "ArtServiceThread"
-        # self.myOverlay.ArtServiceThread.start()
-        setProperty("PTVL.BackgroundLoading_Finished","true")
-
-        if REAL_SETTINGS.getSetting("EnableSettop") == "true":
-            self.log('onInit, Settop Enabled')
-            self.myOverlay.channelThread_Timer = threading.Timer(float(SETTOP_REFRESH), self.myOverlay.Settop)
-            self.myOverlay.channelThread_Timer.name = "channelThread_Timer"
-            self.myOverlay.channelThread_Timer.start() 
+        self.myOverlay.postBackgroundLoading()
             
         while True:
             for i in range(self.myOverlay.maxChannels):

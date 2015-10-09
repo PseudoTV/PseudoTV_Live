@@ -1,3 +1,6 @@
+[*] Tweaked RSS parsing and In-App Channel Manager.
+[*] Peformance optimizations and Fixed "Coming Up Next" Popup.
+[*] Added Youtube Live Feed support to LiveTV and InternetTV. Complete URL or YoutubeID ex. 'https://www.youtube.com/watch?v=y60wDzZt8yg' or 'y60wDzZt8yg'.
 [*] Reminder Autojump fixed, Autotuining and Youtube tweaked.
 [*] LowPower Tweaks, added extremely aggressive feature restrictions to ATV2, iOS, rPi and Android Devices. LowPower Override found in "Debugging".  
 [*] [COLOR=blue][B]^ v.0.6.8 ^[/B][/COLOR]

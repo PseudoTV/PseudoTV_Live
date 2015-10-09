@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os, re, sys, time, zipfile, threading, requests, random, traceback, pyfscache
+import gc, os, re, sys, time, zipfile, threading, requests, random, traceback, pyfscache
 import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, json, urlparse, HTMLParser
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
@@ -50,7 +50,7 @@ else:
 # Videowindow filepaths
 Path = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', '1080i'))
 flePath = xbmc.translatePath(os.path.join(Path, 'custom_script.pseudotv.live_9506.xml'))
-PTVL_SKIN_WINDOW_FLE = ['script.pseudotv.live.EPG.xml','script.pseudotv.live.OnDemand.xml','script.pseudotv.live.DVR.xml','script.pseudotv.live.Apps.xml']     
+PTVL_SKIN_WINDOW_FLE = ['script.pseudotv.live.EPG.xml','script.pseudotv.live.Ondemand.xml','script.pseudotv.live.DVR.xml','script.pseudotv.live.Apps.xml']     
 VWPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'custom_script.pseudotv.live_9506.xml'))  
 DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
 
@@ -315,13 +315,14 @@ def FindLogo_Thread(data):
 def FindLogo(chtype, chname, mediapath=None):
     log("utils: FindLogo")
     try:
-        data = [chtype, chname, mediapath]
-        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [data])
-        FindLogoThread.name = "FindLogoThread"
-        if FindLogoThread.isAlive():
-            FindLogoThread.cancel()
-            FindLogoThread.join()            
-        FindLogoThread.start()
+        if isLowPower() != True:
+            data = [chtype, chname, mediapath]
+            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [data])
+            FindLogoThread.name = "FindLogoThread"
+            if FindLogoThread.isAlive():
+                FindLogoThread.cancel()
+                FindLogoThread.join()            
+            FindLogoThread.start()
     except Exception,e:
         log('utils: FindLogo, Failed!,' + str(e))
         pass   
@@ -463,13 +464,14 @@ def GA_Request():
         
         if getProperty("Verified_Community") == "True":
             OPTIONS = OPTIONS + ['Com:'+REAL_SETTINGS.getSetting('Gmail_User')]
-        else:
-            OPTIONS = OPTIONS+ ['Com:False']
                     
         if isContextInstalled():
             OPTIONS = OPTIONS + ['CM:True']
-        else:
-            OPTIONS = OPTIONS + ['CM:False']
+            
+        if isLowPower():
+            OPTIONS = OPTIONS + ['LP:True']
+
+        OPTIONS = OPTIONS + ['OS:'+getPlatform()+'']
             
         OPTIONLST = "/".join(OPTIONS)
         DATA = {"utmwv": "5.2.2d",
@@ -674,7 +676,7 @@ def download_silent(url, dest):
     except Exception,e:
         log('utils: download_silent, Failed!,' + str(e))
         
-@cache_weekly
+@cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):
     log("utils: read_url_cached")
     try:
@@ -965,6 +967,8 @@ def chkPlatform():
         return "Darwin"
     elif xbmc.getCondVisibility('system.platform.linux'):
         return "Linux"
+    elif xbmc.getCondVisibility('system.platform.xbox'):
+        return "Linux"
     elif xbmc.getCondVisibility('system.platform.linux.raspberryPi'): 
         REAL_SETTINGS.setSetting('os', "10")
         return "rPi"
@@ -1247,272 +1251,7 @@ def Restore(bak, org):
                 pass
         xbmcvfs.rename(bak, org)
         xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Restore Complete, Restarting...", 1000, THUMB) )
-    
-##############
-# PTVL Tools #
-##############
-
-def PlaylistLimit():  
-    if getPlatform() == 'Windows':
-        Playlist_Limit = FILELIST_LIMIT[2]
-    elif isLowPower() != True:
-        Playlist_Limit = FILELIST_LIMIT[1]
-    else:
-        Playlist_Limit = FILELIST_LIMIT[0]
-    log('utils: PlaylistLimit = ' + str(Playlist_Limit))
-    return Playlist_Limit
-
-def isDon():
-    val = REAL_SETTINGS.getSetting("Verified_Donor") == "true"
-    setProperty("Verified_Donor", str(val))
-    log('utils: isDon = ' + str(val))
-    return val
-    
-def isCom():
-    val = REAL_SETTINGS.getSetting("Verified_Community") == "true"
-    setProperty("Verified_Community", str(val))
-    log('utils: isCom = ' + str(val))
-    return val
-        
-def ComCHK():
-    log('utils: ComCHK')      
-    # Community users are required to supply gmail info in-order to use the community submission tool, SEE DISCLAIMER!!
-    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists
-    # Community lists includes: Youtube, Vimeo, RSS, Smartplaylists, LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and User installed and Kodi repository plugins (see isKodiRepo, isPlugin).
-    if REAL_SETTINGS.getSetting("Community_Enabled") == "true":
-        if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
-            REAL_SETTINGS.setSetting("AT_Community","true")
-            REAL_SETTINGS.setSetting("Verified_Community", "true")
-            REAL_SETTINGS.setSetting("Community_Verified", "1")
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Community List Activated", 1000, THUMB) )
-    else:
-        if REAL_SETTINGS.getSetting("Community_Verified") != "0": 
-            REAL_SETTINGS.setSetting("AT_Community","false")
-            REAL_SETTINGS.setSetting("Verified_Community", "false")
-            REAL_SETTINGS.setSetting("Community_Verified", "0")
-       
-def DonCHK():
-    log('utils: DonCHK')     
-    # Access tv meta, commercials, adverts and various legal custom videos from a private server.
-    if REAL_SETTINGS.getSetting("Donor_Enabled") == "true": 
-        try:
-            list = getDonlist('ce.ini', test=True)
-            if len(list) == 0:
-                raise Exception()
-            if REAL_SETTINGS.getSetting("Donor_Verified") != "1": 
-                REAL_SETTINGS.setSetting("AT_Donor", "true")
-                REAL_SETTINGS.setSetting("COM_Donor", "true")
-                REAL_SETTINGS.setSetting("Verified_Donor", "true")
-                REAL_SETTINGS.setSetting("Donor_Verified", "1")
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Donor Access Activated", 1000, THUMB) )
-        except:
-            DonFailed()
-    else:
-        DonFailed()
-           
-def DonFailed():
-    if REAL_SETTINGS.getSetting("Donor_Verified") != "0": 
-        REAL_SETTINGS.setSetting("AT_Donor", "false")
-        REAL_SETTINGS.setSetting("COM_Donor", "false")
-        REAL_SETTINGS.setSetting("Verified_Donor", "false")
-        REAL_SETTINGS.setSetting("Donor_Verified", "0")
-     
-def getDonlist(list, test=False):
-    log('utils: getDonlist')
-    nlist = []
-    if test:
-        list = open_url(PTVLURL + list, UPASS).readlines()
-    else:
-        list = read_url_cached(PTVLURL + list, UPASS, return_type='readlines')
-    for i in range(len(list)):
-        try:
-            nline = (list[i]).replace('\r\n','')
-            nlist.append(nline)
-        except:
-            pass
-    return nlist
-
-def getTitleYear(showtitle, showyear=0):  
-    # extract year from showtitle, merge then return
-    try:
-        labelshowtitle = re.compile('(.+?) [(](\d{4})[)]$').findall(showtitle)
-        title = labelshowtitle[0][0]
-        year = int(labelshowtitle[0][1])
-    except Exception,e:
-        try:
-            year = int(((showtitle.split(' ('))[1]).replace(')',''))
-            title = ((showtitle.split('('))[0])
-        except Exception,e:
-            if showyear != 0:
-                showtitle = showtitle + ' ('+str(showyear)+')'
-                year, title, showtitle = getTitleYear(showtitle, showyear)
-            else:
-                title = showtitle
-                year = 0
-    if year == 0 and int(showyear) !=0:
-        year = int(showyear)
-    if year != 0 and '(' not in title:
-        showtitle = title + ' ('+str(year)+')' 
-    log("utils: getTitleYear, return " + str(year) +', '+ title +', '+ showtitle) 
-    return year, title, showtitle
-
-def splitDBID(dbid):
-    try:
-        epid = dbid.split(':')[1]
-        dbid = dbid.split(':')[0]
-    except:
-        epid = '0'
-    log('utils: splitDBID, dbid = '+dbid+', epid = '+epid)
-    return dbid, epid
-    
-def getMpath(mediapath):
-    log('utils: getMpath')
-    try:
-        if mediapath[0:5] == 'stack':
-            smpath = (mediapath.split(' , ')[0]).replace('stack://','').replace('rar://','')
-            mpath = (os.path.split(smpath)[0]) + '/'
-        elif mediapath[0:6] == 'plugin':
-            mpath = 'plugin://' + mediapath.split('/')[2] + '/'
-        elif mediapath[0:4] == 'upnp':
-            mpath = 'upnp://' + mediapath.split('/')[2] + '/'
-        else:
-            mpath = (os.path.split(mediapath)[0]) + '/'
-    except Exception,e:
-        mpath = mediapath
-    return mpath
-
-def EXTtype(arttype): 
-    arttype = arttype.replace('.png','').replace('.jpg','')
-    JPG = ['banner', 'fanart', 'folder', 'landscape', 'poster']
-    PNG = ['character', 'clearart', 'logo', 'disc']
-    if arttype in JPG:
-        arttypeEXT = (arttype + '.jpg')
-    else:
-        arttypeEXT = (arttype + '.png')
-    log('utils: EXTtype = ' + str(arttypeEXT))
-    return arttypeEXT
-
-def isDebug():
-    return REAL_SETTINGS.getSetting('enable_Debug') == "true"
-
-def SyncXMLTV(force=False):
-    try:
-        if REAL_SETTINGS.getSetting("SyncXMLTV_Enabled") == "true" and isDon() == True: 
-            SyncXMLTVtimer = threading.Timer(0.1, SyncXMLTV_NEW, [force])
-            SyncXMLTVtimer.name = "SyncXMLTVtimer"     
-            if SyncXMLTVtimer.isAlive():
-                SyncXMLTVtimer.cancel()
-            SyncXMLTVtimer.start()
-    except Exception,e:
-        log('SyncXMLTV_NEW, Failed!, ' + str(e))
-        pass  
-        
-def SyncXMLTV_NEW(force=False):
-    log('utils: SyncXMLTV_NEW, force = ' + str(force))
-    now  = datetime.datetime.today()
-    try:
-        SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
-        if not SyncPTV_LastRun or FileAccess.exists(PTVLXML) == False or force == True:
-            raise exception()
-    except:
-        REAL_SETTINGS.setSetting("SyncPTV_NextRun","1970-01-01 23:59:00.000000")
-        SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
-
-    try:
-        SyncPTV = datetime.datetime.strptime(SyncPTV_LastRun, "%Y-%m-%d %H:%M:%S.%f")
-    except:
-        SyncPTV = datetime.datetime.strptime("1970-01-01 23:59:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-    
-    if now > SyncPTV:         
-        #Remove old file before download
-        if FileAccess.exists(PTVLXML):
-            try:
-                FileAccess.delete(PTVLXML)
-                log('utils: SyncXMLTV, Removed old PTVLXML')
-            except:
-                log('utils: SyncXMLTV, Removing old PTVLXML Failed!')
-                
-        if retrieve_url(PTVLXMLURL, UPASS, PTVLXMLZIP):
-            if FileAccess.exists(PTVLXMLZIP):
-                all(PTVLXMLZIP,XMLTV_CACHE_LOC)
-                try:
-                    FileAccess.delete(PTVLXMLZIP)
-                    log('utils: SyncXMLTV, Removed PTVLXMLZIP')
-                except:
-                    log('utils: SyncXMLTV, Removing PTVLXMLZIP Failed!')
-            
-            if FileAccess.exists(PTVLXML):
-                log('utils: SyncXMLTV, ptvlguide.xml download successful!')  
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Guidedata Update Complete", 1000, THUMB) )  
-                SyncPTV_NextRun = ((now + datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S.%f"))
-                log('utils: SyncXMLTV, Now = ' + str(now) + ', SyncPTV_NextRun = ' + str(SyncPTV_NextRun))
-                REAL_SETTINGS.setSetting("SyncPTV_NextRun",str(SyncPTV_NextRun))
-                REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
-
-def help(chtype):
-    log('utils: help, ' + chtype)
-    HelpBaseURL = 'https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
-    type = (chtype).replace('None','General')
-    URL = HelpBaseURL + (type.lower()).replace(' ','%20')
-    log("utils: help URL = " + URL)
-    title = type + ' Configuration Help'
-    f = open_url(URL)
-    text = f.read()
-    showText(title, text)
-    
-def listXMLTV():
-    log("utils: listXMLTV")
-    xmltvLst = []   
-    EXxmltvLst = ['pvr','scheduledirect (Coming Soon)','zap2it (Coming Soon)']
-    dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
-    dir,file = xbmcvfs.listdir(XMLTV_LOC)
-    xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
-    xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
-    select = selectDialog(xmltvLst, 'Select xmltv file')
-
-    if select != -1:
-        return xmltvLst[select]        
-        
-def xmltvFile(setting3):
-    log("utils: xmltvFile")                
-    if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
-        xmltvFle = setting3
-    elif setting3.lower() == 'ptvlguide':
-        xmltvFle = PTVLXML
-    else:
-        xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
-    return xmltvFle
-
-def getRSSFeed(genre):
-    log("utils: getRSSFeed, genre = " + genre)
-    feed = ''
-    if genre.lower() == 'news':
-        feed = 'http://feeds.bbci.co.uk/news/rss.xml'
-    # todo parse git list pair rss by genre
-    parseFeed(feed)
-    
-def parseFeed(link):
-    log("utils: parseFeed")
-    # RSSlst = ''
-    # try:
-        # feed = feedparser.parse(link)
-        # header = (feed['feed']['title'])
-        # title = feed['entries'][1].title
-        # description =  feed['entries'][1].summary,
-        # RSSlst = '[B]'+ header + "[/B]: "
-        # for i in range(0,len(feed['entries'])):
-            # RSSlst += ('[B]'+replaceXmlEntities(feed['entries'][i].title) + "[/B] - " + replaceXmlEntities((feed['entries'][i].summary).split('<')[0]))
-        # setProperty("RSS.FEED", utf(RSSlst))
-    # except Exception,e:
-        # log("getRSSFeed Failed!" + str(e))
-        # pass
-
-
-def changeChannelNum(channel, new_channel):
-    log("utils: changeChannelNum")
-    replaceAll(SETTINGS_FLE,"Channel_"+str(channel)+"_","Channel_"+str(new_channel)+"_") 
-        
-        
+         
 ####################
 # VideoWindow Hack #
 ####################
@@ -1521,21 +1260,24 @@ def VideoWindow():
     log("utils: VideoWindow, VWPath = " + str(VWPath))
     #Copy VideoWindow Patch file
     try:
-        if not FileAccess.exists(VWPath):
-            log("utils: VideoWindow, VWPath not found")
-            FileAccess.copy(flePath, VWPath)
-            if FileAccess.exists(VWPath):
-                log('utils: custom_script.pseudotv.live_9506.xml Copied')
-                xbmc.executebuiltin("ReloadSkin()")
-                VideoWindowPatch()   
-            else:
-                raise exception()
+        if isLowPower() == True:
+            raise Exception()
         else:
-            log("utils: VideoWindow, VWPath found")
-            VideoWindowPatch()  
-            
-        if FileAccess.exists(VWPath):
-            setProperty("PTVL.VideoWindow","true")
+            if not FileAccess.exists(VWPath):
+                log("utils: VideoWindow, VWPath not found")
+                FileAccess.copy(flePath, VWPath)
+                if FileAccess.exists(VWPath):
+                    log('utils: custom_script.pseudotv.live_9506.xml Copied')
+                    xbmc.executebuiltin("ReloadSkin()")
+                    VideoWindowPatch()   
+                else:
+                    raise Exception()
+            else:
+                log("utils: VideoWindow, VWPath found")
+                VideoWindowPatch()  
+                
+            if FileAccess.exists(VWPath):
+                setProperty("PTVL.VideoWindow","true")
     except Exception:
         VideoWindowUninstall()
         VideoWindowUnpatch()
@@ -1545,22 +1287,22 @@ def VideoWindow():
 def VideoWindowPatch():
     log("utils: VideoWindowPatch")
     try:
-        for n in range(len(PTVL_SKIN_WINDOW_FLE)):
-            PTVL_SKIN_SELECT_FLE = xbmc.translatePath(os.path.join(PTVL_SKIN_SELECT, PTVL_SKIN_WINDOW_FLE[n]))
-            log('utils: VideoWindowPatch Patching ' + ascii(PTVL_SKIN_SELECT_FLE))
-            #Patch Videowindow, by un-commenting code in epg.xml 
-            f = FileAccess.open(PTVL_SKIN_SELECT_FLE, "r")
-            linesLST = f.readlines()  
-            f.close()
+        # for n in range(len(PTVL_SKIN_WINDOW_FLE)):
+            # PTVL_SKIN_SELECT_FLE = xbmc.translatePath(os.path.join(PTVL_SKIN_SELECT, PTVL_SKIN_WINDOW_FLE[n]))
+            # log('utils: VideoWindowPatch Patching ' + ascii(PTVL_SKIN_SELECT_FLE))
+            # #Patch Videowindow, by un-commenting code in epg.xml 
+            # f = FileAccess.open(PTVL_SKIN_SELECT_FLE, "r")
+            # linesLST = f.readlines()  
+            # f.close()
             
-            for i in range(len(linesLST)):
-                line = linesLST[i]
-                if line in b:
-                    replaceAll(PTVL_SKIN_SELECT_FLE,b,a)        
-                    log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched b,a')
-                elif line in d:
-                    replaceAll(PTVL_SKIN_SELECT_FLE,d,c)           
-                    log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched d,c') 
+            # for i in range(len(linesLST)):
+                # line = (linesLST[i]).replace('\n','').replace('\t','').replace('\r','')
+                # if line == b:
+                    # replaceAll(PTVL_SKIN_SELECT_FLE,b,a)        
+                    # log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched b,a')
+                # elif line == d:
+                    # replaceAll(PTVL_SKIN_SELECT_FLE,d,c)           
+                    # log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' Patched d,c') 
                     
         #Patch dialogseekbar to ignore OSD for PTVL.
         log('utils: VideoWindowPatch Patching ' + ascii(DSPath))
@@ -1588,20 +1330,20 @@ def VideoWindowPatch():
 def VideoWindowUnpatch():
     log("utils: VideoWindowUnpatch")
     try:
-        for n in range(len(PTVL_SKIN_WINDOW_FLE)):
-            PTVL_SKIN_SELECT_FLE = xbmc.translatePath(os.path.join(PTVL_SKIN_SELECT, PTVL_SKIN_WINDOW_FLE[n]))
-            #unpatch videowindow
-            f = FileAccess.open(PTVL_SKIN_SELECT_FLE, "r")
-            linesLST = f.readlines()    
-            f.close()
-            for i in range(len(linesLST)):
-                lines = linesLST[i]
-                if lines in a:
-                    replaceAll(PTVL_SKIN_SELECT_FLE,a,b)
-                    log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' UnPatched a,b')
-                elif lines in c:
-                    replaceAll(PTVL_SKIN_SELECT_FLE,c,d)          
-                    log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' UnPatched c,d')
+        # for n in range(len(PTVL_SKIN_WINDOW_FLE)):
+            # PTVL_SKIN_SELECT_FLE = xbmc.translatePath(os.path.join(PTVL_SKIN_SELECT, PTVL_SKIN_WINDOW_FLE[n]))
+            # #unpatch videowindow
+            # f = FileAccess.open(PTVL_SKIN_SELECT_FLE, "r")
+            # linesLST = f.readlines()    
+            # f.close()
+            # for i in range(len(linesLST)):
+                # line = (linesLST[i]).replace('\n','').replace('\t','').replace('\r','')
+                # if line == a:
+                    # replaceAll(PTVL_SKIN_SELECT_FLE,a,b)
+                    # log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' UnPatched a,b')
+                # elif line == c:
+                    # replaceAll(PTVL_SKIN_SELECT_FLE,c,d)          
+                    # log('utils: '+PTVL_SKIN_WINDOW_FLE[n]+' UnPatched c,d')
                 
         #unpatch seekbar
         f = FileAccess.open(DSPath, "r")
@@ -1777,22 +1519,32 @@ def chkLowPower():
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
         if getPlatform() in ['ATV2','iOS','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true") 
-            REAL_SETTINGS.setSetting('AT_LIMIT', "25")
+            REAL_SETTINGS.setSetting('AT_LIMIT', "0")
+            REAL_SETTINGS.setSetting('ThreadMode', "2")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
+            REAL_SETTINGS.setSetting('UPNP1', "false")
+            REAL_SETTINGS.setSetting('UPNP2', "false")
+            REAL_SETTINGS.setSetting('UPNP3', "false")
             REAL_SETTINGS.setSetting('HideClips', "false")
             REAL_SETTINGS.setSetting('EPGTextEnable', "1")
+            REAL_SETTINGS.setSetting('quickflip', "false")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
+            REAL_SETTINGS.setSetting('EnableSettop', "false")
+            REAL_SETTINGS.setSetting('UNAlter_ChanBug', "true")
             REAL_SETTINGS.setSetting('Enable_FindLogo', "false")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
             REAL_SETTINGS.setSetting('EnhancedGuideData', "false")
+            REAL_SETTINGS.setSetting('sickbeard.enabled', "false")
+            REAL_SETTINGS.setSetting('couchpotato.enabled', "false")
             if MEDIA_LIMIT > 250:
                 REAL_SETTINGS.setSetting('MEDIA_LIMIT', "3")
             if NOTIFY == True:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Settings Optimized For Performance", 1000, THUMB) )
+                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Settings Optimized For Performance", 4000, THUMB) )
     log("utils: chkLowPower = " + getProperty("PTVL.LOWPOWER"))
 
 def isLowPower():
+    # log("utils: isLowPower = " + str(getProperty("PTVL.LOWPOWER") == "true"))
     return getProperty("PTVL.LOWPOWER") == "true"
              
 def ClearPlaylists():
@@ -1917,15 +1669,15 @@ def HandleUpgrade():
     
 def preStart(): 
     log('utils: preStart')
-    # VideoWindow Patch.
-    VideoWindow()
+    # Optimize settings based on sys.platform
+    chkLowPower()
     
     if isDebug() == True:
         if yesnoDialog('Its recommended you disable debug logging for standard use','Disable Debugging?') == True:
             REAL_SETTINGS.setSetting('enable_Debug', "false")
 
-    # Optimize settings based on sys.platform
-    chkLowPower()
+    # VideoWindow Patch.
+    VideoWindow()
     
     # Clear filelist Caches    
     if REAL_SETTINGS.getSetting("ClearCache") == "true":
@@ -1938,3 +1690,280 @@ def preStart():
     # Backup/Restore settings2
     if chkSettings2() == True:
         return True
+        
+##############
+# PTVL Tools #
+##############
+
+def PlaylistLimit():  
+    if getPlatform() == 'Windows':
+        Playlist_Limit = FILELIST_LIMIT[2]
+    elif isLowPower() != True:
+        Playlist_Limit = FILELIST_LIMIT[1]
+    else:
+        Playlist_Limit = FILELIST_LIMIT[0]
+    log('utils: PlaylistLimit = ' + str(Playlist_Limit))
+    return Playlist_Limit
+
+def isDon():
+    val = REAL_SETTINGS.getSetting("Verified_Donor") == "true"
+    setProperty("Verified_Donor", str(val))
+    log('utils: isDon = ' + str(val))
+    return val
+    
+def isCom():
+    val = REAL_SETTINGS.getSetting("Verified_Community") == "true"
+    setProperty("Verified_Community", str(val))
+    log('utils: isCom = ' + str(val))
+    return val
+        
+def ComCHK():
+    log('utils: ComCHK')      
+    # Community users are required to supply gmail info in-order to use the community submission tool, SEE DISCLAIMER!!
+    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists
+    # Community lists includes: Youtube, Vimeo, RSS, Smartplaylists, LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and User installed and Kodi repository plugins (see isKodiRepo, isPlugin).
+    if REAL_SETTINGS.getSetting("Community_Enabled") == "true":
+        if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
+            REAL_SETTINGS.setSetting("AT_Community","true")
+            REAL_SETTINGS.setSetting("Verified_Community", "true")
+            REAL_SETTINGS.setSetting("Community_Verified", "1")
+            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Community List Activated", 1000, THUMB) )
+    else:
+        if REAL_SETTINGS.getSetting("Community_Verified") != "0": 
+            REAL_SETTINGS.setSetting("AT_Community","false")
+            REAL_SETTINGS.setSetting("Verified_Community", "false")
+            REAL_SETTINGS.setSetting("Community_Verified", "0")
+       
+def DonCHK():
+    log('utils: DonCHK')     
+    # Access tv meta, commercials, adverts and various legal custom videos from a private server.
+    if REAL_SETTINGS.getSetting("Donor_Enabled") == "true": 
+        try:
+            list = getDonlist('ce.ini', test=True)
+            if len(list) == 0:
+                raise Exception()
+            if REAL_SETTINGS.getSetting("Donor_Verified") != "1": 
+                REAL_SETTINGS.setSetting("AT_Donor", "true")
+                REAL_SETTINGS.setSetting("COM_Donor", "true")
+                REAL_SETTINGS.setSetting("Verified_Donor", "true")
+                REAL_SETTINGS.setSetting("Donor_Verified", "1")
+                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Donor Access Activated", 1000, THUMB) )
+        except:
+            DonFailed()
+    else:
+        DonFailed()
+           
+def DonFailed():
+    if REAL_SETTINGS.getSetting("Donor_Verified") != "0": 
+        REAL_SETTINGS.setSetting("AT_Donor", "false")
+        REAL_SETTINGS.setSetting("COM_Donor", "false")
+        REAL_SETTINGS.setSetting("Verified_Donor", "false")
+        REAL_SETTINGS.setSetting("Donor_Verified", "0")
+     
+def getDonlist(list, test=False):
+    log('utils: getDonlist')
+    nlist = []
+    if test:
+        list = open_url(PTVLURL + list, UPASS).readlines()
+    else:
+        list = read_url_cached(PTVLURL + list, UPASS, return_type='readlines')
+    for i in range(len(list)):
+        try:
+            nline = (list[i]).replace('\r\n','')
+            nlist.append(nline)
+        except:
+            pass
+    return nlist
+
+def getTitleYear(showtitle, showyear=0):  
+    # extract year from showtitle, merge then return
+    try:
+        labelshowtitle = re.compile('(.+?) [(](\d{4})[)]$').findall(showtitle)
+        title = labelshowtitle[0][0]
+        year = int(labelshowtitle[0][1])
+    except Exception,e:
+        try:
+            year = int(((showtitle.split(' ('))[1]).replace(')',''))
+            title = ((showtitle.split('('))[0])
+        except Exception,e:
+            if showyear != 0:
+                showtitle = showtitle + ' ('+str(showyear)+')'
+                year, title, showtitle = getTitleYear(showtitle, showyear)
+            else:
+                title = showtitle
+                year = 0
+    if year == 0 and int(showyear) !=0:
+        year = int(showyear)
+    if year != 0 and '(' not in title:
+        showtitle = title + ' ('+str(year)+')' 
+    log("utils: getTitleYear, return " + str(year) +', '+ title +', '+ showtitle) 
+    return year, title, showtitle
+
+def splitDBID(dbid):
+    try:
+        epid = dbid.split(':')[1]
+        dbid = dbid.split(':')[0]
+    except:
+        epid = '0'
+    log('utils: splitDBID, dbid = '+dbid+', epid = '+epid)
+    return dbid, epid
+    
+def getMpath(mediapath):
+    log('utils: getMpath')
+    try:
+        if mediapath[0:5] == 'stack':
+            smpath = (mediapath.split(' , ')[0]).replace('stack://','').replace('rar://','')
+            mpath = (os.path.split(smpath)[0]) + '/'
+        elif mediapath[0:6] == 'plugin':
+            mpath = 'plugin://' + mediapath.split('/')[2] + '/'
+        elif mediapath[0:4] == 'upnp':
+            mpath = 'upnp://' + mediapath.split('/')[2] + '/'
+        else:
+            mpath = (os.path.split(mediapath)[0]) + '/'
+    except Exception,e:
+        mpath = mediapath
+    return mpath
+
+def EXTtype(arttype): 
+    arttype = arttype.replace('.png','').replace('.jpg','')
+    JPG = ['banner', 'fanart', 'folder', 'landscape', 'poster']
+    PNG = ['character', 'clearart', 'logo', 'disc']
+    if arttype in JPG:
+        arttypeEXT = (arttype + '.jpg')
+    else:
+        arttypeEXT = (arttype + '.png')
+    log('utils: EXTtype = ' + str(arttypeEXT))
+    return arttypeEXT
+
+def isDebug():
+    return REAL_SETTINGS.getSetting('enable_Debug') == "true"
+
+def SyncXMLTV(force=False):
+    try:
+        if REAL_SETTINGS.getSetting("SyncXMLTV_Enabled") == "true" and isDon() == True: 
+            SyncXMLTVtimer = threading.Timer(0.1, SyncXMLTV_NEW, [force])
+            SyncXMLTVtimer.name = "SyncXMLTVtimer"     
+            if SyncXMLTVtimer.isAlive():
+                SyncXMLTVtimer.cancel()
+            SyncXMLTVtimer.start()
+    except Exception,e:
+        log('SyncXMLTV_NEW, Failed!, ' + str(e))
+        pass  
+        
+def SyncXMLTV_NEW(force=False):
+    log('utils: SyncXMLTV_NEW, force = ' + str(force))
+    now  = datetime.datetime.today()
+    try:
+        try:
+            SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
+            if not SyncPTV_LastRun or FileAccess.exists(PTVLXML) == False or force == True:
+                raise exception()
+        except:
+            REAL_SETTINGS.setSetting("SyncPTV_NextRun","1970-01-01 23:59:00.000000")
+            SyncPTV_LastRun = REAL_SETTINGS.getSetting('SyncPTV_NextRun')
+
+        try:
+            SyncPTV = datetime.datetime.strptime(SyncPTV_LastRun, "%Y-%m-%d %H:%M:%S.%f")
+        except:
+            SyncPTV = datetime.datetime.strptime("1970-01-01 23:59:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+            
+        if now > SyncPTV:         
+            #Remove old file before download
+            if FileAccess.exists(PTVLXML):
+                try:
+                    FileAccess.delete(PTVLXML)
+                    log('utils: SyncXMLTV, Removed old PTVLXML')
+                except:
+                    log('utils: SyncXMLTV, Removing old PTVLXML Failed!')
+                    
+            if retrieve_url(PTVLXMLURL, UPASS, PTVLXMLZIP):
+                if FileAccess.exists(PTVLXMLZIP):
+                    all(PTVLXMLZIP,XMLTV_CACHE_LOC)
+                    try:
+                        FileAccess.delete(PTVLXMLZIP)
+                        log('utils: SyncXMLTV, Removed PTVLXMLZIP')
+                    except:
+                        log('utils: SyncXMLTV, Removing PTVLXMLZIP Failed!')
+                
+                if FileAccess.exists(PTVLXML):
+                    log('utils: SyncXMLTV, ptvlguide.xml download successful!')  
+                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live","Guidedata Update Complete", 1000, THUMB) )  
+                    SyncPTV_NextRun = ((now + datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S.%f"))
+                    log('utils: SyncXMLTV, Now = ' + str(now) + ', SyncPTV_NextRun = ' + str(SyncPTV_NextRun))
+                    REAL_SETTINGS.setSetting("SyncPTV_NextRun",str(SyncPTV_NextRun))
+                    REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
+    except Exception,e:
+        log("utils: SyncXMLTV_NEW Failed!" + str(e))
+        
+def help(chtype):
+    log('utils: help, ' + chtype)
+    HelpBaseURL = 'https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/resources/help/help_'
+    type = (chtype).replace('None','General')
+    URL = HelpBaseURL + (type.lower()).replace(' ','%20')
+    log("utils: help URL = " + URL)
+    title = type + ' Configuration Help'
+    f = open_url(URL)
+    text = f.read()
+    showText(title, text)
+    
+def listXMLTV():
+    log("utils: listXMLTV")
+    xmltvLst = []   
+    EXxmltvLst = ['pvr','scheduledirect (Coming Soon)','zap2it (Coming Soon)']
+    dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
+    dir,file = xbmcvfs.listdir(XMLTV_LOC)
+    xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
+    xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
+    select = selectDialog(xmltvLst, 'Select xmltv file')
+
+    if select != -1:
+        return xmltvLst[select]        
+        
+def xmltvFile(setting3):
+    log("utils: xmltvFile")                
+    if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
+        xmltvFle = setting3
+    elif setting3.lower() == 'ptvlguide':
+        xmltvFle = PTVLXML
+    else:
+        xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+    return xmltvFle
+
+def getRSSFeed(genre):
+    log("utils: getRSSFeed, genre = " + genre)
+    feed = ''
+    if genre.lower() == 'news':
+        feed = 'http://feeds.bbci.co.uk/news/rss.xml'
+    # todo parse git list pair rss by genre
+    parseFeed(feed)
+    
+def parseFeed(link):
+    log("utils: parseFeed")
+    # RSSlst = ''
+    # try:
+        # feed = feedparser.parse(link)
+        # header = (feed['feed']['title'])
+        # title = feed['entries'][1].title
+        # description =  feed['entries'][1].summary,
+        # RSSlst = '[B]'+ header + "[/B]: "
+        # for i in range(0,len(feed['entries'])):
+            # RSSlst += ('[B]'+replaceXmlEntities(feed['entries'][i].title) + "[/B] - " + replaceXmlEntities((feed['entries'][i].summary).split('<')[0]))
+        # setProperty("RSS.FEED", utf(RSSlst))
+    # except Exception,e:
+        # log("getRSSFeed Failed!" + str(e))
+        # pass
+
+def correctYoutubeSetting2(setting2):
+    setting2 = setting2.replace('Multi Playlist','7').replace('Multi Channel','8').replace('Raw gdata','9')
+    setting2 = setting2.replace('User Favorites','4').replace('Search Query','5').replace('User Subscription','3')
+    setting2 = setting2.replace('Seasonal','31').replace('Channel','1').replace('Playlist','2')
+    return setting2
+    
+def purgeGarbage(): 
+    threshold = gc.get_threshold()
+    log("utils: purgeGarbage, Garbage collection thresholds: %s" % (str(threshold)))
+    collected = gc.collect()
+    log("utils: purgeGarbage, Garbage collector: collected %d objects." % (collected))
+    log("utils: purgeGarbage, Cleaning...")
+    gc.collect()
+    log("utils: purgeGarbage, Finished!")

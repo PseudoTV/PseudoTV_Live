@@ -476,12 +476,14 @@ class ChannelList:
                 return ''
             elif chtype == 0:
                 return self.getSmartPlaylistName(setting1)
-            elif chtype == 1 or chtype == 2 or chtype == 5 or chtype == 6 or chtype == 12:
+            elif chtype == 1 or chtype == 2 or chtype == 6 or chtype == 12:
                 return setting1
             elif chtype == 3:
                 return setting1 + " TV"
             elif chtype == 4:
                 return setting1 + " Movies"
+            elif chtype == 5:
+                return setting1 + " Mixed"
             elif chtype == 12:
                 return setting1 + " Music"
             elif chtype == 7:
@@ -490,13 +492,23 @@ class ChannelList:
                 else:
                     return os.path.split(setting1)[1]
         else:
-            #setting1 == channel number
-            chname = ADDON_SETTINGS.getSetting("Channel_" + str(setting1) + "_rule_1_opt_1")
-            if len(chname) != 0:
-                return chname
+            #setting1 = channel number
+            chname = self.getChname(setting1)
+            return chname
         return ''
+        
+        
+    def getChname(self, channel=None):
+        if not channel:
+            channel = self.settingChannel
+        for i in range(RULES_PER_PAGE):         
+            try:
+                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
+                    return ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1))
+            except:
+                pass
 
-
+                
     # Open the smart playlist and read the name out of it...this is the channel name
     def getSmartPlaylistName(self, fle):
         self.log('getSmartPlaylistName')
@@ -533,8 +545,8 @@ class ChannelList:
         fileListCHK = False
         israndom = False  
         isreverse = False
-        fileList = []
         bctType = None
+        fileList = []
         
         #Set Local Limit or Global
         if chtype in [7,10,11,15,16] and setting3 and len(setting3) > 0:
@@ -547,7 +559,7 @@ class ChannelList:
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
-                limit = 259200
+                limit = 172800
             elif chtype == 9:
                 limit = 24
             elif MEDIA_LIMIT == 0:
@@ -562,41 +574,28 @@ class ChannelList:
             
         # LiveTV
         elif chtype == 8:
-            self.log("Building LiveTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
-            
-            # HDHomeRun #
-            if setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "true":
-                #If you're using a HDHomeRun Dual and want Tuner 1 assign false. *Thanks Blazin912*
-                self.log("Building LiveTV using tuner0")
-                setting2 = re.sub(r'\d/tuner\d',"0/tuner0",setting2)
-            elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
-                self.log("Building LiveTV using tuner1")
-                setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
-            
-            # Validate Feed #
             if self.Valid_ok(setting2) == True:
+                self.log("Building LiveTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
+                # HDHomeRun #
+                if setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "true":
+                    #If you're using a HDHomeRun Dual and want Tuner 1 assign false. *Thanks Blazin912*
+                    self.log("Building LiveTV using tuner0")
+                    setting2 = re.sub(r'\d/tuner\d',"0/tuner0",setting2)
+                elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
+                    self.log("Building LiveTV using tuner1")
+                    setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
                 fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit)
-            else:
-                self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return
                 
         # InternetTV  
         elif chtype == 9:
-            self.log("Building InternetTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
-            # Validate Feed #
-            fileListCHK = self.Valid_ok(setting2)
-            if fileListCHK == True:
+            if self.Valid_ok(setting2) == True:
+                self.log("Building InternetTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
                 fileList = self.buildInternetTVFileList(setting1, setting2, setting3, setting4, limit)
-            else:
-                self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return 
-                
+
         # Youtube                          
         elif chtype == 10:
             if self.youtube_player_ok() != False:
-                setting2 = setting2.replace('Multi Playlist','7').replace('Multi Channel','8').replace('Raw gdata','9')
-                setting2 = setting2.replace('User Favorites','4').replace('Search Query','5').replace('User Subscription','3')
-                setting2 = setting2.replace('Seasonal','31').replace('Channel','1').replace('Playlist','2')
+                setting2 = correctYoutubeSetting2(setting2)
                 self.log("Building Youtube Channel " + setting1 + " using type " + setting2 + "...")
                 
                 if setting2 == '31':
@@ -605,22 +604,13 @@ class ChannelList:
                     #If Month != Update
                     if setting1.lower() != month.lower():
                         ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_1", month)   
-                        setting1 = month
-                        
                 fileList = self.createYoutubeFilelist(setting1, setting2, setting3, setting4, limit)
-            else:
-                self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'self.youtube_player invalid: ' + str(setting2))
-                return   
-                
+
         # RSS/iTunes/feedburner/Podcast   
-        elif chtype == 11:# Validate Feed #
-            fileListCHK = self.Valid_ok(setting1)
-            if fileListCHK == True:
+        elif chtype == 11:
+            if self.Valid_ok(setting1) == True:
                 self.log("Building RSS Feed " + setting1 + " using type " + setting2 + "...")
                 fileList = self.createRSSFileList(setting1, setting2, setting3, setting4, limit)      
-            else:
-                self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return   
                 
         # MusicVideos
         elif chtype == 13:
@@ -628,21 +618,17 @@ class ChannelList:
             fileList = self.MusicVideos(setting1, setting2, setting3, setting4, limit)    
             
         # Exclusive
-        elif chtype == 14 and isDon() == True:
-            self.log("Exclusive, " + setting1 + "...")
-            fileList = self.Exclusive(setting1, setting2, setting3, setting4, channel, limit)     
+        elif chtype == 14:
+            if isDon() == True:
+                self.log("Exclusive, " + setting1 + "...")
+                fileList = self.Exclusive(setting1, setting2, setting3, setting4, channel, limit)     
             
         # Direct Plugin
         elif chtype == 15:
-            # Validate Plugin - only parse plugins currently installed.
-            fileListCHK = self.plugin_ok(setting1)
-            if fileListCHK == True:
+            if self.Valid_ok(setting1) == True:
                 self.log("Building Plugin Channel, " + setting1 + "...")
                 fileList = self.buildPluginFileList(setting1, setting2, setting3, setting4, limit)    
-            else:
-                self.log('makeChannelList, CHANNEL: ' + str(channel) + ', CHTYPE: ' + str(chtype), 'fileListCHK invalid: ' + str(setting2))
-                return 
-                
+
         # Direct UPNP
         elif chtype == 16:
             self.log("Building UPNP Channel, " + setting1 + "...")
@@ -676,7 +662,6 @@ class ChannelList:
                 self.log('makeChannelList Problem parsing playlist ' + fle, xbmc.LOGERROR)
                 xml.close()
                 return False
-
             xml.close()
 
             if self.getSmartPlaylistType(dom) == 'mixed':
@@ -692,12 +677,12 @@ class ChannelList:
             elif self.getSmartPlaylistType(dom) == 'episodes':
                 bctType = 'episodes'
                 fileList = self.buildFileList(fle, channel, limit)
+                
             else:
                 fileList = self.buildFileList(fle, channel, limit)
 
             try:
                 order = dom.getElementsByTagName('order')
-
                 if order[0].childNodes[0].nodeValue.lower() == 'random':
                     israndom = True
             except Exception,e:
@@ -714,8 +699,8 @@ class ChannelList:
             return False
 
         if append == False:
-            channelplaylist.write(uni("#EXTM3U\n"))
             #first queue m3u
+            channelplaylist.write(uni("#EXTM3U\n"))
             
         if not fileList or len(fileList) == 0:  
             self.log("Unable to get information about channel " + str(channel), xbmc.LOGERROR)
@@ -765,13 +750,13 @@ class ChannelList:
         for string in fileList:
             channelplaylist.write(uni("#EXTINF:") + uni(string) + uni("\n"))
             
+        del fileList[:]
         channelplaylist.close()
         self.log('makeChannelList return')
         return True
 
         
     def makeTypePlaylist(self, chtype, setting1, setting2):
-    
         if chtype == 1:
             if len(self.networkList) == 0:
                 self.fillTVInfo()
@@ -813,7 +798,6 @@ class ChannelList:
             if len(self.musicGenreList) == 0:
                 self.fillMusicInfo()
             return self.createGenrePlaylist('songs', chtype, setting1)
-
         self.log('makeTypePlaylists invalid channel type: ' + str(chtype))
         return ''    
 
@@ -1135,6 +1119,8 @@ class ChannelList:
         self.logDebug('cleanPlayableFile')
         if self.youtube_player_ok() != False:
             self.youtube_player = self.youtube_player_ok()
+            file = file.replace('http://www.youtube.com/watch?v=', self.youtube_player)
+            file = file.replace('https://www.youtube.com/watch?v=', self.youtube_player)
             file = file.replace('plugin://plugin.video.bromix.youtube/play/?video_id=', self.youtube_player)
             file = file.replace('plugin://plugin.video.youtube/?action=play_video&videoid=', self.youtube_player)
         file = file.replace("\\\\", "\\")
@@ -2487,18 +2473,14 @@ class ChannelList:
     
     def createRSSFileList(self, setting1, setting2, setting3, setting4, limit):
         self.log("createRSSFileList")
-        showList = []
-        showcount = 0
-        runtime = 0
-        genre = 'Unknown'
-        rating = 'NR'
-        
+        fileList = []
+        filecount = 0        
         self.youtube_player = self.youtube_player_ok()
         feed = feedparser.parse(setting1)
         
         for i in range(len(feed['entries'])):   
             if self.threadPause() == False:
-                del showList[:]
+                del fileList[:]
                 break
             try:
                 showtitle = feed.channel.title
@@ -2507,10 +2489,12 @@ class ChannelList:
                 if self.background == False:
                     self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding RSS, parsing " + showtitle)
                     
-                if 'author_detail' in feed.entries[i]:
-                    studio = feed.entries[i].author_detail['name']  
-                else:
-                    self.log("createRSSFileList, Invalid author_detail")  
+                # if 'author_detail' in feed.entries[i]:
+                    # studio = feed.entries[i].author_detail['name']  
+                # elif 'itunes:author' in feed.entries[i]:
+                    # studio = feed.entries[i]['author']
+                # else:
+                    # self.log("createRSSFileList, Invalid author_detail")  
 
                 try:
                     # todo parse itune:image
@@ -2552,8 +2536,7 @@ class ChannelList:
                         runtimex = feed.entries[i]['blip_runtime']
                     except Exception,e:
                         runtimex = 0
-                if runtimex == 0:
-                    runtimex = 1800
+                self.logDebug("createRSSFileList, runtimex = " + str(runtimex)) 
                 
                 if feed.channel.has_key("tags"):
                     genre = str(feed.channel.tags[0]['term'])
@@ -2572,41 +2555,35 @@ class ChannelList:
                     showepisodenuma = str(showepisodenuma)
                     showepisodenuma = showepisodenuma.replace("['tm_hour=", "")
                     showepisodenuma = showepisodenuma.replace(",']", "")  
-                    
-                    if len(runtimex) > 4:
-                        runtime = runtimex.split(':')[-2]
-                        runtimel = runtimex.split(':')[-3]
-                        runtime = int(runtime)
-                        runtimel = int(runtimel)
-                        runtime = runtime + (runtimel*60)
-                    if not len(runtimex) > 4:
-                        runtimex = int(runtimex)
-                        runtime = round(runtimex/60.0)
-                        runtime = int(runtime)
+                    print runtimex
+                    try:
+                        hours, minutes, seconds = map(int, runtimex.split(':'))
+                    except ValueError:
+                        hours = 0
+                        minutes, seconds = map(int, runtimex.split(':'))
+                    runtime = (hours*3600) + (minutes*60) + seconds                    
+                    self.logDebug("createRSSFileList, runtime = " + str(runtime)) 
                 except Exception,e:
                     pass
                 
-                if runtime >= 1:
-                    duration = runtime
-                else:
-                    duration = 800
-                duration = round(duration*60.0)
-                duration = int(duration)
+                if runtime == 0:
+                    runtime = 800
+                duration = int(runtime)
                 url = url.replace("&amp;amp;feature=youtube_gdata", "").replace("http://www.youtube.com/watch?hd=1&v=", self.youtube_player).replace("http://www.youtube.com/watch?v=", self.youtube_player)
                 GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR'] 
                 tmpstr = self.makeTMPSTR(duration, eptitle, "RSS - " + showtitle, epdesc, GenreLiveID, url)
-                showList.append(tmpstr)
-                showcount += 1
+                fileList.append(tmpstr)
+                filecount += 1
                                     
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding %s Videos" % str(showcount))
+                    self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "adding %s Videos" % str(filecount))
                 
-                if showcount > limit:
+                if filecount > limit:
                     break
             except Exception,e:
                 pass
-        return showList
-
+        return fileList
+     
      
     def MusicVideos(self, setting1, setting2, setting3, setting4, limit):
         self.log("MusicVideos")
@@ -4554,11 +4531,12 @@ class ChannelList:
             url = RSSURL
             id = '1'
         try:
+            # responce = open_url(url).readlines()
             responce = read_url_cached(url, return_type='readlines')
             data = removeStringElem(responce)#remove empty lines
             for i in range(len(data)):
                 Pluginvalid = False
-                line = str(data[i]).replace("\n","").replace('""',"")
+                line = data[i].replace("\n","").replace('""',"")
 
                 if type == 'RSS' or source == 'Channel' or source == 'Playlist':
                     line = line.split(",")
@@ -4573,7 +4551,7 @@ class ChannelList:
                         setting_2 = (line[3])
                         setting_3 = (line[4])
                         setting_4 = (line[5])
-                        channel_name = self.cleanLabels(line[6], 'title')
+                        channel_name = self.cleanLabels(line[6])
                         
                         if genre.lower() == 'tv':
                             genre = '[COLOR=yellow]'+genre+'[/COLOR]'
@@ -5277,7 +5255,7 @@ class ChannelList:
                 fileList.append(seepitem[2])
 
         # Stop playback when called during plugin parsing.
-        if self.background == False:
+        if self.background == False and xbmc.Player().isPlaying():
             json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
                                                                                
