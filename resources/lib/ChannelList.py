@@ -3492,10 +3492,8 @@ class ChannelList:
         Advert_Region = REAL_SETTINGS.getSetting("Advert_Region")
         Advert_Resolution = REAL_SETTINGS.getSetting("Advert_Resolution")
         adverts2_type = REAL_SETTINGS.getSetting("adverts2_type")
-        
-        InternetCommercialLST1 = []
-        InternetCommercialLST2 = []
         CommercialLST = []
+        CommercialCount = 0
         duration = 0
         
         try:
@@ -3608,15 +3606,16 @@ class ChannelList:
                                 MatchResURL = MatchResURL.replace("http://en-files"+baseurl.replace("http://www",""), "")                          
                             duration = 30
                             InternetCommercial = (str(duration) + ',' + str(MatchResURL))
-                            InternetCommercialLST1.append(InternetCommercial)
+                            CommercialLST.append(InternetCommercial)
+                            CommercialCount += 1
+                            if self.background == False:
+                                self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying %s Internet Commercials"%str(CommercialCount))
                         except Exception,e:
                             self.log("InternetCommercial, adverts Failed!" + str(e), xbmc.LOGERROR)
                             pass
-            CommercialLST.extend(InternetCommercialLST1)
 
         if REAL_SETTINGS.getSetting("adverts2_type") != '0' and REAL_SETTINGS.getSetting("commercials") == '3':
             self.log("InternetCommercial, adverts")        
-            
             try:
                 baseurl = (line[6])
                 adverts2 = {}
@@ -3647,12 +3646,14 @@ class ChannelList:
                         duration = self.parseYoutubeDuration('P'+(re.compile('"duration" content="(.+?)"').findall(link))[0])
                         source = (re.compile(";return (.+?);}").findall(link))[1]
                         result = eval(source)
-                        # print mF, mE, mP, mM, mH, source, result, duration
                         InternetCommercial2 = (str(duration) + ',' + result)
-                        InternetCommercialLST2.append(InternetCommercial2)
+                        CommercialCount += 1
+                        CommercialLST.append(InternetCommercial2)
+                        # print mF, mE, mP, mM, mH, source, result, duration
+                        if self.background == False:
+                            self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying %s Internet Commercials"%str(CommercialCount))
                     except:
                         pass
-                CommercialLST.extend(InternetCommercialLST2)
             except Exception,e:
                 self.log("InternetCommercial, Failed!" + str(e), xbmc.LOGERROR)
                 pass

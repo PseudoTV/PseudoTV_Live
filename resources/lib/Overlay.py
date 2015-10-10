@@ -161,10 +161,10 @@ class MyPlayer(xbmc.Player):
         if self.isPlaybackValid():
             self.overlay.clearProp()
             if self.overlay.infoOnChange == True and self.overlay.infoOnChangeUnlocked == True:
+                self.overlay.setShowInfo()
                 self.overlay.waitForVideoPlayback(self.overlay.InfTimer)
             else:
                 self.overlay.setShowInfo()
-            self.overlay.showChannelLabel(self.overlay.currentChannel)
             
             if self.overlay.UPNP:
                 self.overlay.UPNPcontrol('play', self.getPlayerFile(), self.getPlayerTime())
@@ -925,17 +925,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.channels[self.currentChannel - 1].setAccessTime(time.time())
             else:
                 self.channels[self.currentChannel - 1].setPaused(False)
+                
         self.currentChannel = channel      
         chname = self.getChname(self.currentChannel - 1)
         chtype = self.getChtype(self.currentChannel)
         self.background.setLabel(('Loading: %s') % chname)
+        setProperty("OVERLAY.LOGOART",xbmc.translatePath(os.path.join(self.channelLogos,chname + '.png')))
         
-        if FileAccess.exists(os.path.join(self.channelLogos,chname + '.png')):
-            chlogo = xbmc.translatePath(os.path.join(self.channelLogos,chname + '.png'))
-        else:
-            chlogo = 'logo.png'
-        setProperty("OVERLAY.LOGOART",chlogo)
-                             
         if chname == 'PseudoCinema':
             self.Cinema_Mode = True
         else:
@@ -1022,8 +1018,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             # else:
                 # self.playsetresolved(mediapath)
         else:
-            setProperty("PTVL.Current_PlaylistPosition",str(self.channels[self.currentChannel - 1].playlistPosition))
-            self.Player.playselected(int(getProperty("PTVL.Current_PlaylistPosition")))
+            playPOS = self.channels[self.currentChannel - 1].playlistPosition
+            setProperty("PTVL.Current_PlaylistPosition",str(playPOS))
+            self.Player.playselected(playPOS)
         self.log("setChannel, playing file = " + ascii(mediapath));
         
         # set the time offset
@@ -1085,8 +1082,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.logDebug("setChannel,self.seektime = " + str(self.seektime))
         self.getControl(517).setLabel(str(self.Player.getPlayerTime()))
         self.lastActionTime = time.time()
-        self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL_END, channel, self.channels[channel - 1])   
+        self.showChannelLabel(self.currentChannel)
         self.infoOnChangeUnlocked = True
+        self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL_END, channel, self.channels[channel - 1])
         self.egTrigger('PseudoTV_Live - Loading: %s' % chname)
         self.log('setChannel, setChannel return')
                
@@ -1421,15 +1419,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             chtype = self.getChtype(self.currentChannel)     
             chname = self.getChname(self.currentChannel - 1)
             self.getControl(103).setImage(self.Artdownloader.FindBug(chtype, chname))
+        
         self.getControl(300).setLabel(self.channels[self.currentChannel - 1].name)
-
+        
         if xbmc.getCondVisibility('Player.ShowInfo'):
             json_query = '{"jsonrpc": "2.0", "method": "Input.Info", "id": 1}'
             self.ignoreInfoAction = True
             self.channelList.sendJSON(json_query);
             
         self.channelLabelTimer.start()
-        self.startNotificationTimer(10.0)
+        self.startNotificationTimer()
         self.log('showChannelLabel return')
 
         
@@ -1557,14 +1556,15 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             pass
         self.infoTimer = threading.Timer(timer, self.hideInfo)
         self.infoTimer.name = "InfoTimer"
+        infoOffset = self.infoOffset
         
-        if self.hideShortItems:
-            position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
-            if self.getChtype(self.currentChannel) <= 7 and self.channels[self.currentChannel - 1].getItemDuration(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()) < self.shortItemLength:
-                return
+        # Skip BCT's and short items
+        if self.hideShortItems and int(getProperty("OVERLAY.Chtype")) <= 7:
+            while self.channels[self.currentChannel - 1].getItemDuration(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset) < self.shortItemLength:
+                self.infoOffset += 1
+            self.setShowInfo()
                 
         self.hidePOP()
-        self.setShowInfo()
         self.getControl(222).setVisible(False)
         self.getControl(102).setVisible(True)
         self.showingInfo = True
@@ -1931,6 +1931,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if self.infoOffset < 0:
                     self.MenuControl('Menu',self.InfTimer)
                 elif not self.showingMenu:
+                    self.setShowInfo()
                     self.showInfo(self.InfTimer)
             elif self.showingInfo == False and int(getProperty("OVERLAY.Chtype")) != 8 and int(getProperty("OVERLAY.Chtype")) != 9 and (getProperty("OVERLAY.Mediapath"))[0:4] != 'rtmp' and (getProperty("OVERLAY.Mediapath"))[0:4] != 'rtsp' and not getProperty("OVERLAY.Mediapath").startswith('PlayMedia'):
                 xbmc.executebuiltin("ActivateWindow(10115)")
@@ -1946,6 +1947,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.MenuControl('Menu',self.InfTimer,True)
             elif self.showingInfo and not self.showingStartover:
                 self.infoOffset += 1
+                self.setShowInfo()
                 self.showInfo(self.InfTimer)
             elif int(getProperty("OVERLAY.Chtype")) != 8 and int(getProperty("OVERLAY.Chtype")) != 9 and (getProperty("OVERLAY.Mediapath"))[0:4] != 'rtmp' and (getProperty("OVERLAY.Mediapath"))[0:4] != 'rtsp' and not getProperty("OVERLAY.Mediapath").startswith('PlayMedia'):
                 xbmc.executebuiltin("ActivateWindow(10115)")
@@ -2074,12 +2076,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     
     def startNotificationTimer(self, timertime = NOTIFICATION_CHECK_TIME):
         self.log("startNotificationTimer")
-        self.notificationTimer = threading.Timer(timertime, self.notificationAction)
-        self.notificationTimer.name = "NotificationTimer"
         if self.notificationTimer.isAlive():
             self.notificationTimer.cancel()
 
+        self.notificationTimer = threading.Timer(timertime, self.notificationAction)
+
         if self.Player.stopped == False:
+            self.notificationTimer.name = "NotificationTimer"
             self.notificationTimer.start()
 
             
@@ -2131,9 +2134,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
     def notificationAction(self):
         self.log("notificationAction")
-        ClassicPOPUP = False
         docheck = False
-        
+
+        if self.showNextItem == False:
+            return
+            
         if self.Player.isPlaying():
             if self.notificationLastChannel != self.currentChannel:
                 docheck = True
@@ -2164,73 +2169,61 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                             if self.channels[self.currentChannel - 1].getItemDuration(nextshow) >= self.shortItemLength:
                                 break
                             nextshow = self.channels[self.currentChannel - 1].fixPlaylistIndex(nextshow + 1)
-                            
-                    self.log('notification.init')     
-                    mediapath = (self.channels[self.currentChannel - 1].getItemFilename(nextshow))
-                    chname = self.getChname(self.currentChannel - 1)
-                    ChannelLogo = (self.channelLogos + (self.channels[self.currentChannel - 1].name) + '.png')
-                    chtype = self.getChtype(self.currentChannel)
-                    ShowTitle = self.channels[self.currentChannel - 1].getItemTitle(nextshow).replace(',', '')
-                    myLiveID = self.channels[self.currentChannel - 1].getItemLiveID(nextshow)
-                    type = (self.channelList.unpackLiveID(myLiveID))[0]
-                    id = (self.channelList.unpackLiveID(myLiveID))[1]
-                    dbid, epid = splitDBID((self.channelList.unpackLiveID(myLiveID))[2])
-                    mpath = getMpath(mediapath)
-                    
-                    try:
-                        ShowEpisode = (self.channels[self.currentChannel - 1].getItemEpisodeTitle(nextshow).replace(',', ''))
-                        ShowEpisode = ShowEpisode.split("- ")[1]
-                    except:
-                        ShowEpisode = (self.channels[self.currentChannel - 1].getItemEpisodeTitle(nextshow).replace(',', ''))
-                        pass
-
-                    #ArtType for Classic
-                    if REAL_SETTINGS.getSetting("EnableComingUp") == "3":
-                        self.log('notification, Classic')  
-                        ArtType = {}
-                        ArtType['0'] = 'poster'
-                        ArtType['1'] = 'fanart' 
-                        ArtType['2'] = 'landscape'        
-                        ArtType['3'] = 'logo'       
-                        ArtType['4'] = 'clearart'              
-                        ArtType = EXTtype(ArtType[REAL_SETTINGS.getSetting('ComingUpArtwork')]) #notification art type for classic
-
-                    #ArtType for Popup
-                    elif REAL_SETTINGS.getSetting("EnableComingUp") == "2":
-                        self.log('notification, Popup')  
-                        try:
-                            ArtType = EXTtype(getProperty("OVERLAY.type4"))
-                            self.getControl(124).setLabel(ShowTitle)
-                            self.getControl(125).setLabel(ShowEpisode)
-                        except:
-                            #No Overlay Popup code in skin, default to Cassic Popup
-                            ClassicPOPUP = True
-                            pass
-
-                    # Execute notification
-                    if self.showNextItem == True:
-                        # Classic/Popup note
-                        if REAL_SETTINGS.getSetting("EnableComingUp") != "1":
-                            self.log('notification, classic/popup')      
-                            if self.showingInfo == False and self.notificationShowedNotif == False:
-                                if REAL_SETTINGS.getSetting("EnableComingUp") == "3" or ClassicPOPUP == True:
-                                    NotifyTHUMB = self.findArtwork(type, chtype, chname, id, dbid, mpath, ArtType)
-                                    xbmc.executebuiltin('XBMC.Notification(%s, %s, %s, %s)' % ('Coming Up: '+ShowTitle, self.channels[self.currentChannel - 1].getItemTitle(nextshow).replace(',', ''), str(NOTIFICATION_DISPLAY_TIME * 2000), NotifyTHUMB))
-                                else:
-                                    self.setArtwork(type, chtype, chname, id, dbid, mpath, ArtType, 'type4ART', 'OVERLAY')
-                                    self.showPOP(self.InfTimer + 2.5)
-                                self.notificationShowedNotif = True
-
-                        # Overlay notification
-                        else:
-                            self.log('notification, Overlay') 
-                            self.infoOffset = ((nextshow) - self.notificationLastShow)
-                            self.log('notification, Overlay infoOffset = ' + str(self.infoOffset))
-                            self.showInfo(self.InfTimer)
-                            self.notificationShowedNotif = True
+                    self.notificationTrigger(nextshow)
+                    self.notificationShowedNotif = True
         self.startNotificationTimer()
 
             
+    def notificationTrigger(self, nextshow):      
+        self.log('notificationTrigger')   
+        ComingUpType = int(REAL_SETTINGS.getSetting("EnableComingUp"))
+        
+        # Nextshow Info
+        chtype = self.getChtype(self.currentChannel)
+        chname = self.getChname(self.currentChannel - 1)
+        mediapath = (self.channels[self.currentChannel - 1].getItemFilename(nextshow))
+        ChannelLogo = (self.channelLogos + (self.channels[self.currentChannel - 1].name) + '.png')
+        myLiveID = self.channels[self.currentChannel - 1].getItemLiveID(nextshow)
+        type = (self.channelList.unpackLiveID(myLiveID))[0]
+        id = (self.channelList.unpackLiveID(myLiveID))[1]
+        dbid, epid = splitDBID((self.channelList.unpackLiveID(myLiveID))[2])
+        mpath = getMpath(mediapath)
+        ShowTitle = self.channels[self.currentChannel - 1].getItemTitle(nextshow).replace(',', '')
+        try:
+            ShowEpisode = (self.channels[self.currentChannel - 1].getItemEpisodeTitle(nextshow).replace(',', ''))
+            ShowEpisode = ShowEpisode.split("- ")[1]
+        except:
+            ShowEpisode = (self.channels[self.currentChannel - 1].getItemEpisodeTitle(nextshow).replace(',', ''))
+            pass
+            
+        if self.showingInfo == False and self.notificationShowedNotif == False:
+            if ComingUpType == 3:
+                self.log('notificationTrigger, Classic')  
+                ArtType = {}
+                ArtType['0'] = 'poster'
+                ArtType['1'] = 'fanart' 
+                ArtType['2'] = 'landscape'        
+                ArtType['3'] = 'logo'       
+                ArtType['4'] = 'clearart'              
+                ArtType = EXTtype(ArtType[REAL_SETTINGS.getSetting('ComingUpArtwork')])
+                NotifyTHUMB = self.findArtwork(type, chtype, chname, id, dbid, mpath, ArtType)
+                xbmc.executebuiltin('XBMC.Notification(%s, %s, %s, %s)' % ('Coming Up: '+ShowTitle, ShowEpisode, str(NOTIFICATION_DISPLAY_TIME * 2000), NotifyTHUMB))
+            
+            elif ComingUpType == 2:
+                self.log('notificationTrigger, PopUp')  
+                ArtType = EXTtype(getProperty("OVERLAY.type4"))
+                self.getControl(124).setLabel(ShowTitle)
+                self.getControl(125).setLabel(ShowEpisode)
+                self.setArtwork(type, chtype, chname, id, dbid, mpath, ArtType, 'type4ART', 'OVERLAY')
+                self.showPOP(self.InfTimer + 2.5)
+                
+            elif ComingUpType == 1:
+                self.log('notificationTrigger, Overlay')  
+                self.infoOffset = ((nextshow) - self.notificationLastShow)
+                self.log('notification, Overlay infoOffset = ' + str(self.infoOffset))
+                self.showInfo(self.InfTimer)
+
+                
     def currentWindow(self):
         currentWindow = ''
         # return current window label via json, xbmcgui.getCurrentWindowId does not return accurate id.
@@ -3197,18 +3190,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             Chname = ''
         self.logDebug('getChname, channel = '+str(channel)+', Chname = ' + Chname)
         return Chname
-           
-           
-    def toggleSetVisible(self, key):
-        if self.getControl(key).getVisible == True:
-            self.setVisible(key, False)
-        else:
-            self.setVisible(key, True)
-            
-            
-    def setVisible(self, key, state):
-        self.getControl(key).setVisible(state)
-        
+
         
     def postBackgroundLoading(self):
         purgeGarbage()
@@ -3237,6 +3219,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             xbmc.executebuiltin(tidy(url).replace(',', ''))
         else:
             xbmc.executebuiltin('XBMC.RunPlugin('+url+')')
+     
 # xbmc.executebuiltin('StartAndroidActivity("com.netflix.mediaclient"),return')
 # call weather
 # http://localhost:9000/jsonrpc?request={"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"weather"},"id":18}

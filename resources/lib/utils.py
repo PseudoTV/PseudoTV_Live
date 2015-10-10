@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import gc, os, re, sys, time, zipfile, threading, requests, random, traceback, pyfscache
+import os, re, sys, time, zipfile, threading, requests, random, traceback, pyfscache
 import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, json, urlparse, HTMLParser
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
@@ -35,6 +35,11 @@ from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
 
 socket.setdefaulttimeout(30)
+
+try:
+    import gc
+except:
+    pass
 
 # Commoncache plugin import
 try:
@@ -689,7 +694,7 @@ def read_url_cached(url, userpass=False, return_type='read'):
         log('utils: read_url_cached, Failed!,' + str(e))
   
 def open_url(url, userpass=None):
-    log("utils: open_url, url = " + str(url))
+    log("utils: open_url")
     page = ''
     try:
         request = urllib2.Request(url)
@@ -1491,13 +1496,46 @@ def chkChanges():
     log("utils: chkChanges")
     ComCHK()
     DonCHK()
-    # todo add bcts
+    
+    CURR_BUMPER = REAL_SETTINGS.getSetting('bumpers')
+    try:
+        CURR_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
+    except:
+        REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
+    LAST_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
+    
+    if CURR_BUMPER != LAST_BUMPER:
+        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
+        REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
+        
+    CURR_COMMERCIALS = REAL_SETTINGS.getSetting('commercials')
+    try:
+        CURR_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
+    except:
+        REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
+    LAST_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
+    
+    if CURR_COMMERCIALS != LAST_COMMERCIALS:
+        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
+        REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
+        
+    CURR_TRAILERS = REAL_SETTINGS.getSetting('trailers')
+    try:
+        CURR_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
+    except:
+        REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
+    LAST_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
+    
+    if CURR_TRAILERS != LAST_TRAILERS:
+        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
+        REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
+    
     CURR_ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData')
     try:
         LAST_ENHANCED_DATA = REAL_SETTINGS.getSetting('Last_EnhancedGuideData')
     except:
         REAL_SETTINGS.setSetting('Last_EnhancedGuideData', CURR_ENHANCED_DATA)
-        LAST_ENHANCED_DATA = REAL_SETTINGS.getSetting('Last_EnhancedGuideData')
+    LAST_ENHANCED_DATA = REAL_SETTINGS.getSetting('Last_EnhancedGuideData')
     
     if CURR_ENHANCED_DATA != LAST_ENHANCED_DATA:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
@@ -1508,7 +1546,7 @@ def chkChanges():
         LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
     except:
         REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
-        LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
+    LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
     
     if CURR_MEDIA_LIMIT != LAST_MEDIA_LIMIT:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
@@ -1960,10 +1998,14 @@ def correctYoutubeSetting2(setting2):
     return setting2
     
 def purgeGarbage(): 
-    threshold = gc.get_threshold()
-    log("utils: purgeGarbage, Garbage collection thresholds: %s" % (str(threshold)))
-    collected = gc.collect()
-    log("utils: purgeGarbage, Garbage collector: collected %d objects." % (collected))
-    log("utils: purgeGarbage, Cleaning...")
-    gc.collect()
-    log("utils: purgeGarbage, Finished!")
+    try:
+        # threshold = gc.get_threshold()
+        # log("utils: purgeGarbage, Garbage collection thresholds: %s" % (str(threshold)))
+        collected = gc.collect()
+        log("utils: purgeGarbage, Garbage collector: collected %d objects." % (collected))
+        log("utils: purgeGarbage, Cleaning...")
+        gc.collect()
+        log("utils: purgeGarbage, Finished!")
+    except Exception,e:
+        log("purgeGarbage Failed!" + str(e))
+        

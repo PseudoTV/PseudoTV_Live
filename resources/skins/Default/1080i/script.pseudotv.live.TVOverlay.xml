@@ -31,7 +31,7 @@
             <aspectratio>keep</aspectratio>
             <align>center</align>
             <aligny>center</aligny>
-            <texture>$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
+            <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             <visible>Control.IsVisible(101)</visible>
         </control>

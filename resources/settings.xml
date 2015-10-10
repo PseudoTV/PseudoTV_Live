@@ -172,6 +172,7 @@
         <setting label="30517" id="trailerschannel" type="text" visible="eq(-7,3)" enabled="System.HasAddon(plugin.video.youtube)" default="MovieclipsCOMINGSOON,1,50,1" /> 
         <setting label="30530" id="numtrailers" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
     </category>
+    
 <!--Sharing-->
     <category label="30100">
         <setting label="30101" type="lsep"/>
@@ -190,7 +191,8 @@
             <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
             <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0.1" range="0,.01,5" option="float" />
     </category>
-    <!--Donor-->
+    
+<!--Donor-->
     <category label="39000">
         <setting id="Community_Enabled"   label="30905" type="bool" default="false"/>
         <setting id="Community_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"   label="30776" values="False|True" default="0"/>
@@ -203,7 +205,8 @@
         <setting type="sep" visible="true" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>
-    <!--Utilities-->
+    
+<!--Utilities-->
     <category label="31900">  
         <setting label="31999" type="lsep"/>
         <setting id="Repair_Settings2" type="action"   label="31903" action="RunScript($CWD/utilities.py, -repairSettings2)"/>
@@ -217,7 +220,7 @@
         <setting id="ClearCache" type="bool"   label="30988" default="false"/>
     </category>
     
-    <!-- Help -->
+<!-- Help -->
     <category label="32900">  
         <setting id="Show_Changelog" type="action"   label="32901" action="RunScript($CWD/utilities.py, -showChangelog)"/>
         <setting id="Show_Readme" type="action"   label="32902" action="RunScript($CWD/utilities.py, -showReadme)"/>
@@ -227,11 +230,11 @@
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>
     
-    <!--Debugging-->
+<!--Debugging-->
     <category label="30900">  
         <setting label="30990" type="lsep"/>
         <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,4" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,60" option="int" default="60"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,90" option="int" default="90"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>
         <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
