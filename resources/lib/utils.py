@@ -460,15 +460,17 @@ def GA_Request():
         if not REAL_SETTINGS.getSetting('Visitor_GA'):
             REAL_SETTINGS.setSetting('Visitor_GA', str(random.randint(0, 0x7fffffff)))
         VISITOR = REAL_SETTINGS.getSetting("Visitor_GA")
-        OPTIONS = ['PTVL',str(ADDON_VERSION),str(VISITOR)]
+        
+        OPTIONS = ['PTVL:'+str(ADDON_VERSION)+'']
+        OPTIONS = OPTIONS + ['USER:'+str(VISITOR)+'']
+        OPTIONS = OPTIONS + ['KODI:'+str(getXBMCVersion())+'']
+        OPTIONS = OPTIONS + ['OS:'+getProperty("PTVL.Platform")+'']
         
         if getProperty("Verified_Donor") == "True":
-            OPTIONS = OPTIONS + ['Donor:'+(REAL_SETTINGS.getSetting('Donor_UP')).split(':')[0]]
-        else:
-            OPTIONS = OPTIONS+ ['FreeUser']
+            OPTIONS = OPTIONS + ['DONOR:'+(REAL_SETTINGS.getSetting('Donor_UP')).split(':')[0]]
         
         if getProperty("Verified_Community") == "True":
-            OPTIONS = OPTIONS + ['Com:'+REAL_SETTINGS.getSetting('Gmail_User')]
+            OPTIONS = OPTIONS + ['COM:'+REAL_SETTINGS.getSetting('Gmail_User')]
                     
         if isContextInstalled():
             OPTIONS = OPTIONS + ['CM:True']
@@ -476,8 +478,6 @@ def GA_Request():
         if isLowPower():
             OPTIONS = OPTIONS + ['LP:True']
 
-        OPTIONS = OPTIONS + ['OS:'+getPlatform()+'']
-            
         OPTIONLST = "/".join(OPTIONS)
         DATA = {"utmwv": "5.2.2d",
         "utmn": str(random.randint(1, 9999999999)),
@@ -953,31 +953,32 @@ def getXBMCVersion():
 def getPlatform():
     platform = chkPlatform()
     log("utils: getPlatform = " + platform)
+    setProperty("PTVL.Platform",platform)
     return platform
     
 def chkPlatform():
     log("utils: chkPlatform")
-    if xbmc.getCondVisibility('system.platform.osx'):
+    if xbmc.getCondVisibility('System.Platform.OSX'):
         return "OSX"
-    elif xbmc.getCondVisibility('system.platform.atv2'):
+    elif xbmc.getCondVisibility('System.Platform.ATV2'):
         REAL_SETTINGS.setSetting('os', "4")
         return "ATV2"
-    elif xbmc.getCondVisibility('system.platform.ios'):
+    elif xbmc.getCondVisibility('System.Platform.IOS'):
         REAL_SETTINGS.setSetting('os', "5")
         return "iOS"
-    elif xbmc.getCondVisibility('system.platform.windows'):
+    elif xbmc.getCondVisibility('System.Platform.Windows'):
         REAL_SETTINGS.setSetting('os', "11")
         return "Windows"
-    elif xbmc.getCondVisibility('system.platform.darwin'):
+    elif xbmc.getCondVisibility('System.Platform.Darwin'):
         return "Darwin"
-    elif xbmc.getCondVisibility('system.platform.linux'):
+    elif xbmc.getCondVisibility('System.Platform.Linux'):
         return "Linux"
-    elif xbmc.getCondVisibility('system.platform.xbox'):
+    elif xbmc.getCondVisibility('System.Platform.Xbox'):
         return "Linux"
-    elif xbmc.getCondVisibility('system.platform.linux.raspberryPi'): 
+    elif xbmc.getCondVisibility('System.Platform.Linux.RaspberryPi'): 
         REAL_SETTINGS.setSetting('os', "10")
         return "rPi"
-    elif xbmc.getCondVisibility('system.platform.android'): 
+    elif xbmc.getCondVisibility('System.Platform.Android'): 
         return "Android"
     elif REAL_SETTINGS.getSetting("os") in ['0','1']: 
         return "Android"
@@ -2009,3 +2010,5 @@ def purgeGarbage():
     except Exception,e:
         log("purgeGarbage Failed!" + str(e))
         
+def isScanningVideo():
+    return bool(xbmc.getCondVisibility("Library.IsScanningVideo"))

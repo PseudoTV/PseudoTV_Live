@@ -105,7 +105,7 @@ class MyPlayer(xbmc.Player):
         if self.isPlaybackValid() == True:
             start_time = self.getPlayerTime()
             start_title = self.getPlayerTitle()            
-            xbmc.sleep(251)
+            xbmc.sleep(10)
             sample_time = self.getPlayerTime()
             sample_title = self.getPlayerTitle()
             if start_title == sample_title:
@@ -2886,7 +2886,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def clearProp(self, pType='OVERLAY'):
         self.log("clearProp")   
         clearProperty("%s.type1ART"%pType)
-        clearProperty("%s.type2ART"%pType)    
+        clearProperty("%s.type2ART"%pType) 
+        clearProperty("%s.type3ART"%pType) 
+        clearProperty("%s.type4ART"%pType)    
         clearProperty("%s.Year"%pType)
         clearProperty("%s.ID"%pType)
         clearProperty("%s.Genre"%pType)

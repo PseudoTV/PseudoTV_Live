@@ -3812,10 +3812,10 @@ class ChannelList:
       
     def InternetTrailer(self, Cinema):
         self.log("InternetTrailer, Cinema = " + str(Cinema))
-        InternetTrailersLST1 = []
         TrailerLST = []
         duration = 0
         youtube_plugin = self.youtube_player_ok()
+        TrailersCount = 0
         
         if Cinema == 1:
             TRes = '720p'
@@ -3901,8 +3901,10 @@ class ChannelList:
                             except:
                                 duration = 120
                             InternetTrailers = (str(duration) + ',' + str(playable_url))
-                            InternetTrailersLST1.append(InternetTrailers)
-                TrailerLST.extend(InternetTrailersLST1)
+                            TrailerLST.append(InternetTrailers)  
+                            TrailersCount += 1
+                            if self.background == False:
+                                self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "querying %s Internet Trailers"%str(TrailersCount))
         except Exception,e:
             self.log("InternetTrailer Failed! " + str(e))
             pass
