@@ -5034,6 +5034,9 @@ class ChannelList:
                                     if file.startswith('plugin'):
                                         if dur == 0:
                                             dur = 3600
+                                        elif 'plugin.video.emby' in file:
+                                            # Duration is already in seconds
+                                            pass
                                         else:
                                             # try and correct minutes to seconds
                                             dur = self.durationInSeconds(dur)
