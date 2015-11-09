@@ -1,3 +1,15 @@
+[*] Youtube "Stacked" Now enabled/disabled with "Hide very short videos".
+[*] Changed messaging system, Disabling Notification now disables more prompts and added channel logos to relevant notifications.
+[*] Tweaked Channel Changing performance and Quickflip detection.
+[*] Duration detection tweaks and Fully upgraded FANART.TV API to v3
+[*] In-app configuration and "Browse Community List" tweaks.
+[*] New "search" plugin *Thanks marcelveldt **Requires "script.skin.helper.service"
+[*] Plugin/UPNP duration fixed, log debugging tweaked and log submission fixed.
+[*] [COLOR=blue][B]^ v.0.7.0 ^[/B][/COLOR]
+[*] Tweaked not playing detection, and Force Stop trigger.
+[*] Tweaked LowPower profiles, users need to set "Device Type".
+[*] Fixed backup restore Utility
+[*] [COLOR=blue][B]^ v.0.6.9 ^[/B][/COLOR]
 [*] Tweaked RSS parsing and In-App Channel Manager.
 [*] Peformance optimizations and Fixed "Coming Up Next" Popup.
 [*] Added Youtube Live Feed support to LiveTV and InternetTV. Complete URL or YoutubeID ex. 'https://www.youtube.com/watch?v=y60wDzZt8yg' or 'y60wDzZt8yg'.

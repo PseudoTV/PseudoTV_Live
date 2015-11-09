@@ -34,11 +34,37 @@ from language import *
 socket.setdefaulttimeout(30)
  
 API_KEY = FANARTTV_API_KEY
-API_URL_TV = 'http://api.fanart.tv/webservice/series/%s/%s/json/all/1/2'
-API_URL_MOVIE = 'http://api.fanart.tv/webservice/movie/%s/%s/json/all/1/2/'
+API_URL_TV = 'http://webservice.fanart.tv/v3/tv/%s?api_key=%s'
+API_URL_MOVIE = 'http://webservice.fanart.tv/v3/movies/%s?api_key=%s'
+# API_URL_TV = 'http://api.fanart.tv/webservice/series/%s/%s/json/all/1/2'
+# API_URL_MOVIE = 'http://api.fanart.tv/webservice/movie/%s/%s/json/all/1/2/'
 
+IMAGE_TYPES_MOVIES = ['clearlogo',
+                      'clearart',
+                      'hdclearart',
+                      'movielogo',
+                      'hdmovielogo',
+                      'movieart',
+                      'moviedisc',
+                      'hdmovieclearart',
+                      'moviethumb',
+                      'moviebanner']
+
+IMAGE_TYPES_SERIES = ['clearlogo',
+                      'hdtvlogo',
+                      'clearart',
+                      'hdclearart',
+                      'tvthumb',
+                      'seasonthumb',
+                      'characterart',
+                      'tvbanner',
+                      'seasonbanner']
+                      
 IMAGE_TYPES = ['clearlogo',
                'hdtvlogo',
+               'tvposter',
+               'seasonposter',
+               'showbackground',
                'clearart',
                'hdclearart',
                'tvthumb',
@@ -56,25 +82,25 @@ IMAGE_TYPES = ['clearlogo',
                
 class fanarttv:
     def __init__(self):
-        self.name = 'fanarttv'
+        self.name = 'fanart.tv - TV API'
                
 
     def get_image_list_TV(self, media_id):
         log("fanarttv: get_image_list_TV")
         image_list = []   
         try:
-            data = get_data(API_URL_TV%(API_KEY,media_id), 'json')
+            data = get_data(API_URL_TV%(media_id,API_KEY), 'json')
             if data == 'Empty' or not data:
                 return image_list
             else:
-                # split 'name' and 'data'
-                for title, value in data.iteritems():
-                    for art in IMAGE_TYPES:
-                        if value.has_key(art):
-                            for item in value[art]:
+                for value in data.iteritems():
+                    for art in IMAGE_TYPES_SERIES:
+                        if art == value[0]:
+                            for item in value[1]:
                                 # Check on what type and use the general tag
-                                arttypes = {'clearlogo': 'clearlogo',
-                                            'hdtvlogo': 'clearlogo',
+                                arttypes = {'clearlogo': 'logo',
+                                            'hdtvlogo': 'logo',
+                                            'tvposter': 'poster',
                                             'clearart': 'clearart',
                                             'hdclearart': 'clearart',
                                             'tvthumb': 'landscape',
@@ -123,15 +149,14 @@ class fanarttv:
         log("fanarttv: get_image_list_Movie")
         image_list = []   
         try:
-            data = get_data(API_URL_MOVIE%(API_KEY, media_id), 'json')
+            data = get_data(API_URL_MOVIE%(media_id, API_KEY), 'json')
             if data == 'Empty' or not data:
                 return image_list
             else:
-                # split 'name' and 'data'
-                for title, value in data.iteritems():
-                    for art in IMAGE_TYPES:
-                        if value.has_key(art):
-                            for item in value[art]:
+                for value in data.iteritems():
+                    for art in IMAGE_TYPES_MOVIES:
+                        if art == value[0]:
+                            for item in value[1]:
                                 # Check on what type and use the general tag
                                 arttypes = {'movielogo': 'clearlogo',
                                             'moviedisc': 'discart',
@@ -167,6 +192,7 @@ class fanarttv:
         except Exception,e:
             log("fanarttv: get_image_list_Movie, Failed! " + str(e))  
             log(traceback.format_exc(), xbmc.LOGERROR)
+            
         if image_list != []:
             # Sort the list before return. Last sort method is primary
             image_list = sorted(image_list, key=itemgetter('votes'), reverse=True)

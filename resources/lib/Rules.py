@@ -490,7 +490,6 @@ class ScheduleChannelRule(BaseRule):
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
             return "Schedule Channel " + self.optionValues[0]
-
         return self.name
 
 
@@ -554,7 +553,6 @@ class ScheduleChannelRule(BaseRule):
 
         if (actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED) and (self.hasRun == False):
             self.runSchedulingRules(channelList, channeldata)
-
         return channeldata
 
 
@@ -1028,6 +1026,7 @@ class InterleaveChannel(BaseRule):
             
             realindex = random.randint(minint, maxint)
             startindex = 0
+            
             # Use more memory, but greatly speed up the process by just putting everything into a new list
             newfilelist = []
             self.log("Length of original list: " + str(len(filelist)))
@@ -1653,7 +1652,6 @@ class EvenShowsRule(BaseRule):
                                 inarow = 0
             except:
                 pass
-
         return filelist
         
         

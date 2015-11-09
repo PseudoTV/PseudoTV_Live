@@ -40,22 +40,20 @@ class APPS(xbmcgui.WindowXMLDialog):
         
         
     def log(self, msg, level = xbmc.LOGDEBUG):
-        log('Ondemand: ' + msg, level)
+        log('APPS: ' + msg, level)
 
-    
-    def logDebug(self, msg, level = xbmc.LOGDEBUG):
-        if isDebug() == True:
-            log('Ondemand: ' + msg, level)
-                
+
     def onInit(self):
         self.log('onInit')
         
         
     def onAction(self, act):
-        self.logDebug('onAction ' + str(act.getId()))
+        self.log('onAction ' + str(act.getId()))
         action = act.getId()
+        if action in ACTION_PREVIOUS_MENU:
+            self.closeAPPS()  
         
-        if action == ACTION_TELETEXT_RED:
+        elif action == ACTION_TELETEXT_RED:
             self.log('ACTION_TELETEXT_RED')
             self.MyOverlayWindow.windowSwap('EPG')
         
@@ -97,5 +95,4 @@ class APPS(xbmcgui.WindowXMLDialog):
                 
     def closeAPPS(self):
         self.log('closeAPPS')
-        self.close()        
-        
+        self.close()

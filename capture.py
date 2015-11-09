@@ -129,7 +129,7 @@ class Main:
                             self.chantype = 7                        
                     self.buildChannel()
                 else:
-                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel "+str(self.channel)+" already in use", 1000, THUMB) )
+                    infoDialog("Channel "+str(self.channel)+" already in use")
             else:
                 available = True
         self.log("chantype = "+str(self.chantype))

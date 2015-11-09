@@ -17,14 +17,7 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 
 import re, sys, types
-
-if sys.hexversion >= 0x2050000:
-    from xml.etree.cElementTree import ElementTree, Element, SubElement, tostring
-else:
-    try:
-        from cElementTree import ElementTree, Element, SubElement, tostring
-    except ImportError:
-        from elementtree.ElementTree import ElementTree, Element, SubElement, tostring
+from xml.etree import ElementTree
 
 # The Python-XMLTV version
 VERSION = "1.4.3"

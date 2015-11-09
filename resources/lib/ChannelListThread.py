@@ -64,8 +64,7 @@ class ChannelListThread(threading.Thread):
         # Don't load invalid channels if minimum threading mode is on
         if self.fullUpdating and self.myOverlay.isMaster:
             if validchannels < self.chanlist.enteredChannelCount:
-                title = 'PseudoTV Live, Background Loading...'
-                xbmc.executebuiltin('XBMC.Notification(%s, %s, %s)' % (title, 4000 , THUMB))
+                infoDialog("Background Loading...")
 
             for i in range(self.myOverlay.maxChannels):
                 if self.myOverlay.channels[i].isValid == False:
@@ -89,12 +88,10 @@ class ChannelListThread(threading.Thread):
                                     return
 
                                 time.sleep(1)
-
                             self.myOverlay.channels[i] = self.chanlist.channels[i]
 
                             if self.myOverlay.channels[i].isValid == True:
-                                title = "PseudoTV Live, Channel " + str(i + 1) + " Added"
-                                xbmc.executebuiltin('XBMC.Notification(%s, %s, %s)' % (title, 4000, THUMB))              
+                                OptNotify("Channel " + str(i + 1) + " Added", icon=self.myOverlay.getChlogo(i + 1))      
                     except Exception,e:
                         self.log("Unknown Channel Creation Exception", xbmc.LOGERROR)
                         self.log(traceback.format_exc(), xbmc.LOGERROR)

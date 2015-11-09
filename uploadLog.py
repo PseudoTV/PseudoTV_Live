@@ -3,6 +3,7 @@ import urllib, urllib2, smtplib
 import xbmcaddon, xbmcgui
 
 from resources.lib.Globals import *
+from resources.lib.utils import *
 from xbmc import getCondVisibility as condition, translatePath as translate, log as xbmc_log
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
@@ -34,11 +35,9 @@ REPLACES = (
     (UPASS, "user:password"),
     (PASS, "user:password"),
     (USER, "user:password"),
-    (REAL_SETTINGS.getSetting('Gmail_Pass'),'PASSWORD'),
+    (REAL_SETTINGS.getSetting('Gmail_Pass'),'PASSWORD'))
 
 class LogUploader(object):
-
-
     def __init__(self):
         self.log('started')
         self.get_settings()
@@ -143,7 +142,7 @@ class LogUploader(object):
         SMTP_PORT = 587
         try:
             if password == 'Password' or password == '':
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Please Configure Community Gmail Info", 1000, THUMB) )
+                ErrorNotify("Please Configure Community gmail address")
                 raise
                 
             body = "" + body + ""
@@ -161,9 +160,9 @@ class LogUploader(object):
             session.login(sender, password)
             session.sendmail(sender, recipient, headers + "\r\n\r\n" + body)
             session.quit()
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Email Sent", 1000, THUMB) )
+            infoDialog("Email Sent")
         except:
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Email Failed!", 1000, THUMB) )
+            ErrorNotify("Email Failed!")
         
         
     def __get_logs(self):

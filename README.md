@@ -1,7 +1,7 @@
 # PseudoTV Live
 
 - Channel surfing for your Video, LiveTV, InternetTV and Plugin sources
-- Find support @ kodi forums http://forum.xbmc.org/showthread.php?tid=169032
+- Find support @ kodi forums http://forum.kodi.tv/showthread.php?tid=244889
 
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/fanart.jpg)
 

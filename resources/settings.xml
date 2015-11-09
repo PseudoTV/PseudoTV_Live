@@ -14,15 +14,15 @@
                 <setting id="StartMode" type="enum"   label="30007" values="Resume|Real Time|Random" default="1" />
                 <setting id="ThreadMode" type="enum"   label="30008" values="On|Minimum Use|Off" default="0" />
                 <setting id="EnableSettop" type="bool"   label="30998" default="false"/>
-                <setting id="REFRESH_INT" subsetting="true" visible="eq(-1,true)" type="enum"   label="31000" values="6|12|24" default="2"/>
+                <setting id="REFRESH_INT" subsetting="true" visible="eq(-1,true)" type="enum"   label="31000" values="3|6|12|24" default="2"/>
                 <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="1"/>
-                <setting id="notify" type="bool"   label="30046" default="true"/>
+                <setting id="EnableNotify" type="bool"   label="30046" default="true"/>
                 <setting id="AutoBackup" type="bool"   label="30159" default="false"/>
                 <setting id="SFX_Enabled" type="bool"   label="30056" visible="false" default="true"/>
     </category>
 <!--Tweaks-->
     <category label="30300">
-        <setting id="os" type="enum" values="Android Arm|Android x86|ATV1 Linux|ATV1 Stock|ATV2|IOS|Linux 32bit|Linux 64bit|Mac 32bit|Mac 64bit|Rasberry Pi|Windows|TLBB" label="30401" default="11" />
+        <setting id="platform" type="enum" values="Android|ATV|IOS|PowerPC|Rasberry Pi|Intel Budget|Intel Core|AMD Budget|AMD FX" label="30401" default="6" />
         <setting id="limit_preferred_language" type="select"   label="32055" values="Chinese|Dutch|English|Finnish|French|German|Hungarian|Italian|Japanese|Polish|Portuguese|Russian|Spanish|Swedish" default="English"/>
         <setting id="limit_preferred_region" type="select"   label="32056" values="Andorra|United Arab Emirates|Afghanistan|Antigua and Barbuda|Anguilla|Albania|Armenia|Netherlands Antilles|Angola|Antarctica|Argentina|American Samoa|Austria|Australia|Aruba|Aland|Azerbaijan|Bosnia and Herzegovina|Barbados|Bangladesh|Belgium|Burkina Faso|Bulgaria|Bahrain|Burundi|Benin|Saint Barthelemy|Bermuda|Brunei|Bolivia|Brazil|Bahamas|Bhutan|Bouvet Island|Botswana|Belarus|Belize|Canada|Cocos (Keeling) Islands|Congo (Kinshasa)|Central African Republic|Congo (Brazzaville)|Switzerland|Cote dIvoire|Cook Islands|Chile|Cameroon|China|Colombia|Costa Rica|Cuba|Cape Verde|Christmas Island|Cyprus|Czech Republic|Germany|Djibouti|Denmark|Dominica|Dominican Republic|Algeria|Ecuador|Estonia|Egypt|Western Sahara|Eritrea|Spain|Ethiopia|Finland|Fiji|Falkland Islands|Micronesia|Faroe Islands|France|Gabon|United Kingdom|Grenada|Georgia|French Guiana|Guernsey|Ghana|Gibraltar|Greenland|Gambia|Guinea|Guadeloupe|Equatorial Guinea|Greece|South Georgia and South Sandwich Islands|Guatemala|Guam|Guinea-Bissau|Guyana|Hong Kong|Heard and McDonald Islands|Honduras|Croatia|Haiti|Hungary|Indonesia|name|English country name| |Ireland|Israel|Isle of Man|India|British Indian Ocean Territory|Iraq|Iran|Iceland|Italy|Jersey|Jamaica|Jordan|Japan|Kenya|Kyrgyzstan|Cambodia|Kiribati|Comoros|Saint Kitts and Nevis|North Korea|South Korea|Kuwait|Cayman Islands|Kazakhstan|Laos|Lebanon|Saint Lucia|Liechtenstein|Sri Lanka|Liberia|Lesotho|Lithuania|Luxembourg|Latvia|Libya|Morocco|Monaco|Moldova|Montenegro|Saint Martin|Madagascar|Marshall Islands|Macedonia|Mali|Myanmar|Mongolia|Macau|Northern Mariana Islands|Martinique|Mauritania|Montserrat|Malta|Mauritius|Maldives|Malawi|Mexico|Malaysia|Mozambique|Namibia|New Caledonia|Niger|Norfolk Island|Nigeria|Nicaragua|Netherlands|Norway|Nepal|Nauru|Niue|New Zealand|Oman|Panama|Peru|French Polynesia|Papua New Guinea|Philippines|Pakistan|Poland|Saint Pierre and Miquelon|Pitcairn|Puerto Rico|Palestine|Portugal|Palau|Paraguay|Qatar|Reunion|Romania|Serbia|Russian Federation|Rwanda|Saudi Arabia|Solomon Islands|Seychelles|Sudan|Sweden|Singapore|Saint Helena|Slovenia|Svalbard and Jan Mayen Islands|name|English country name| |Slovakia|Sierra Leone|San Marino|Senegal|Somalia|Suriname|Sao Tome and Principe|El Salvador|Syria|Swaziland|Turks and Caicos Islands|Chad|French Southern Lands|Togo|Thailand|Tajikistan|Tokelau|Timor-Leste|Turkmenistan|Tunisia|Tonga|Turkey|Trinidad and Tobago|Tuvalu|Taiwan|Tanzania|Ukraine|Uganda|United States Minor Outlying Islands|United States|Uruguay|Uzbekistan|Vatican City|Saint Vincent and the Grenadines|Venezuela|British Virgin Islands|Virgin Islands US|Vietnam|Vanuatu|Wallis and Futuna Islands|Samoa|Yemen|Mayotte|South Africa|Zambia|Zimbabwe" default="United States"/>
         <setting id="quickflip" type="bool"   label="30374" default="false"/>
@@ -42,7 +42,7 @@
     <category label="30200">
         <setting id="SkinSelector" type="enum"  label="30202" values="Custom|Default|PTVL|Concast|Maverick|Z81" visible="false" default="1"/>
         <setting id="ShowSeEp" type="bool"   label="30301" default="false"/>
-        <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/script.pseudotv.live/logos"/>
+        <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/addon_data/script.pseudotv.live/logos/"/>
         <setting id="Enable_FindLogo" type="bool"   label="34547" default="true"/>
         <setting id="LogoDB_Fallback" subsetting="true" visible="eq(-1,true)"type="bool"   label="34548" default="true"/>
         <setting id="LogoDB_Anymatch" subsetting="true" visible="eq(-2,true)"type="bool"   label="34549" default="true"/>
@@ -68,7 +68,7 @@
 <!--PVR-->
    <category label="30400">
         <setting id="SyncXMLTV_Enabled"                   type="bool"   label="30397" default="true"/>
-        <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/script.pseudotv.live/cache/xmltv" />
+        <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv" />
         <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
         <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
         <setting id="AutoJump" type="bool"   label="30408" default="false" />
@@ -233,8 +233,8 @@
 <!--Debugging-->
     <category label="30900">  
         <setting label="30990" type="lsep"/>
-        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,4" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,90" option="int" default="90"/>
+        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>
         <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
@@ -252,5 +252,6 @@
         <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
         <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
         <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
+        <setting id="APIs" option="hidden" visible="true" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|" />  
     </category>
 </settings>

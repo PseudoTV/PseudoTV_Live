@@ -19,6 +19,12 @@
 import os, sys, re, shutil, threading
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
+try:
+    import buggalo
+    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
+except:
+    pass
+    
 from resources.lib.Globals import *
 from resources.lib.utils import *
 
@@ -32,34 +38,36 @@ __version__    = __settings__.getAddonInfo('version')
 __language__   = __settings__.getLocalizedString
        
 def PseudoTV():
-    import resources.lib.Overlay as Overlay
-    setProperty("PseudoTVRunning", "True")
-    if hasVersionChanged(__version__) == True: 
-        HandleUpgrade()
-    else:
-        chkVersion()
-        if preStart() == True:
-            try:
-                MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
-            except Exception,e:
-                log('default: PseudoTV Overlay Failed! ' + str(e))
-                Error('PseudoTV Live','Error loading "' + Skin_Select + '" skin!','Verify selected skin.') 
-                return
-                
-            for curthread in threading.enumerate():
-                # try:
-                log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
-                if curthread.name != "MainThread":
-                    try:
-                        curthread.join()      
-                    except: 
-                        pass
-                    log("Joined " + curthread.name)               
-                # except: 
-                    # pass
+    try:
+        setProperty("PseudoTVRunning", "True")
+        import resources.lib.Overlay as Overlay
+        
+        if hasVersionChanged(__version__) == True: 
+            HandleUpgrade()
+        else:
+            chkVersion()
+            
+        preStart()
+    
+        MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
 
-            del MyOverlayWindow
-    setProperty("PseudoTVRunning", "False")
+        for curthread in threading.enumerate():
+            log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
+            if curthread.name != "MainThread":
+                try:
+                    curthread.join()      
+                except: 
+                    pass
+                log("Joined " + curthread.name)               
+                
+        del MyOverlayWindow
+        setProperty("PseudoTVRunning", "False")    
+    except Exception,e:
+        log('default: PseudoTV Overlay Failed! ' + str(e))
+        setProperty("PseudoTVRunning", "False")
+        buggalo.onExceptionRaised()
+        return
+        
     
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
@@ -67,4 +75,4 @@ if getProperty("PseudoTVRunning") != "True":
     PseudoTV()
 else:
     log('default: Already running, exiting', xbmc.LOGERROR)
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Already running please wait and try again later.", 4000, THUMB) )
+    ErrorNotify("Already running please wait and try again later.")

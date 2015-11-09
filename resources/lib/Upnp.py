@@ -48,9 +48,8 @@ class Upnp:
             s.shutdown(socket.SHUT_RDWR)
             s.close()
         except:
-            if NOTIFY == True:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", xbmc_host + " Failed to respond.", 1000, THUMB) )
-        
+            ErrorNotify("Unable to connect with " + xbmc_host,"Video Mirroring Failed!")
+            
         
     def SendUPNP(self, IPP, file, seektime):
         self.log('SendUPNP')

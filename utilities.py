@@ -71,7 +71,7 @@ def DeleteSettings2():
             try:
                 REAL_SETTINGS.setSetting("CurrentChannel","1")
                 xbmcvfs.delete(SETTINGS_FLE)
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel Configurations Cleared", 1000, THUMB) )
+                infoDialog("Channel Configurations Cleared")
             except:
                 pass
     # Return to PTVL Settings
@@ -80,7 +80,7 @@ def DeleteSettings2():
 def ClearChanFavorites():
     log('utilities: ClearChanFavorites')
     REAL_SETTINGS.setSetting("FavChanLst","0")
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel Favourites Cleared", 1000, THUMB) )
+    infoDialog("Channel Favourites Cleared")
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
                    

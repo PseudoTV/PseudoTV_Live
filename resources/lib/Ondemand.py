@@ -33,7 +33,7 @@ except:
 class Ondemand(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
-
+        
         
     def onFocus(self, controlid):
         pass
@@ -43,19 +43,17 @@ class Ondemand(xbmcgui.WindowXMLDialog):
         log('Ondemand: ' + msg, level)
 
     
-    def logDebug(self, msg, level = xbmc.LOGDEBUG):
-        if isDebug() == True:
-            log('Ondemand: ' + msg, level)
-                
     def onInit(self):
         self.log('onInit')
         
         
     def onAction(self, act):
-        self.logDebug('onAction ' + str(act.getId()))
+        self.log('onAction ' + str(act.getId()))
         action = act.getId()
-        
-        if action == ACTION_TELETEXT_RED:
+        if action in ACTION_PREVIOUS_MENU:
+            self.closeOndemand()   
+            
+        elif action == ACTION_TELETEXT_RED:
             self.log('ACTION_TELETEXT_RED')
             self.MyOverlayWindow.windowSwap('EPG')
         

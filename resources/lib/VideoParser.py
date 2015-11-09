@@ -36,30 +36,30 @@ class VideoParser:
         self.MP4Exts = ['.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov']
         self.MKVExts = ['.mkv']
         self.FLVExts = ['.flv']
-        self.TSExts  = ['.ts', '.m2ts']
+        self.TSExts  = ['.ts', '.m2ts', '.mts']
         self.STRMExts = ['.strm']
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('VideoParser: ' + msg, level)
-
+        
 
     def getVideoLength(self, filename):
         self.log("getVideoLength, " + filename)
         if len(filename) == 0:
-            self.log("No file name specified")
+            self.log("getVideoLength, No file name specified")
             return 0
 
         if FileAccess.exists(filename) == False:
-            self.log("getVideoLength, Unable to find the file")
-            return 0
+            if filename[0:6].lower() == 'smb://':
+                self.log("getVideoLength, Unknown SMB file found, Trying to mount drive")
+                filename = FileAccess._openSMB(filename)
+            else:
+                self.log("getVideoLength, Unable to find the file")
+                return 0
 
         base, ext = os.path.splitext(filename)
         ext = ext.lower()
-
-        # if base.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
-            # self.log("getVideoLength, Invalid filetype found " + base)
-            # return
         
         if ext in self.AVIExts:
             self.parser = AVIParser.AVIParser()

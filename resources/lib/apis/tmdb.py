@@ -68,9 +68,9 @@ class TMDB(object):
         
     def getMovie(self, movieName, year):
         try:
-            response = json.loads(read_url_cached(self._buildUrl('search/movie', {'query' : movieName, 'year' : year}, headers={"Accept": "application/json"})))
+            response = json.loads(read_url_cached_monthly(self._buildUrl('search/movie', {'query' : movieName, 'year' : year}, headers={"Accept": "application/json"})))
             if response['total_results'] > 0:
-                response = json.loads(read_url_cached(self._buildUrl('movie/%s' % (response['results'][0]['id']), headers={"Accept": "application/json"})))
+                response = json.loads(read_url_cached_monthly(self._buildUrl('movie/%s' % (response['results'][0]['id']), headers={"Accept": "application/json"})))
             else:
                 response = json.loads('{"imdb_id":"", "poster_path":""}')
         except:
@@ -79,7 +79,7 @@ class TMDB(object):
 
         
     def getMPAA(self, imdbid):
-        response = json.loads(read_url_cached(self._buildUrl('https://api.themoviedb.org/3/movie/'+imdbid+'/releases?api_key='+self.apikey+'&language=en', headers={"Accept": "application/json"})))
+        response = json.loads(read_url_cached_monthly(self._buildUrl('https://api.themoviedb.org/3/movie/'+imdbid+'/releases?api_key='+self.apikey+'&language=en', headers={"Accept": "application/json"})))
         response = response.split("certification': u'")[1]
         response = response.split("'}")[0]
         return response
@@ -194,6 +194,7 @@ class TMDB(object):
                                                           "Size", item.get('width'), item.get('height')))})
             except Exception, e:
                 log( 'Problem report: %s' %str( e ), xbmc.LOGNOTICE )
+            
             if image_list != []:
                 # Sort the list before return. Last sort method is primary
                 image_list = sorted(image_list, key=itemgetter('rating'), reverse=True)

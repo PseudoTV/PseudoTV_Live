@@ -181,7 +181,7 @@ class Migrate:
                 for PVRnum in range(len(PVRNameList)):
                     CHSetName = ''
                     CHzapit = ''
-                    PVRName = chanlist.cleanLabels(PVRNameList[PVRnum], 'upper')
+                    PVRName = chanlist.cleanLabels(PVRNameList[PVRnum])
                     chid = PVRName.split(' - ')[0]
                     CHname = PVRName.split(' - ')[1]
                     path = PVRPathList[PVRnum]

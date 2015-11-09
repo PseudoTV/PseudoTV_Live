@@ -33,8 +33,8 @@ SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile')
 THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/' + 'icon.png')
 
 def autostart():
-    xbmc.log('script.pseudotv.live-Service: autostart')   
-    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("AutoStart PseudoTV Live","Service Starting...", 4000, THUMB) )
+    xbmc.log('script.pseudotv.live-Service: autostart')
+    infoDialog("AutoStart Enabled")
     AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
     IDLE_TIME = AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] 
     sleep(IDLE_TIME)
@@ -42,18 +42,18 @@ def autostart():
     
 if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
     chkChanges()
-    
-if REAL_SETTINGS.getSetting("Auto_Start") == "true":
-    autostart()
+    if REAL_SETTINGS.getSetting("Auto_Start") == "true":
+        autostart()
     
 # monitor class causes severe performance issues, resorted to while loop
-somethingChanged = False
+hasSomethingChanged = False
 while (not xbmc.abortRequested):
     if getProperty("PseudoTVRunning") != "True":
+        chkAPIS(REAL_SETTINGS.getSetting('APIs'))
         if xbmc.getCondVisibility('Window.IsActive(addonsettings)') == True:
-            somethingChanged = True
+            hasSomethingChanged = True
         else:
-            if somethingChanged == True:
-                somethingChanged = False
+            if hasSomethingChanged == True:
+                hasSomethingChanged = False
                 chkChanges()
     xbmc.sleep(1000)

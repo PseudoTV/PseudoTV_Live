@@ -55,7 +55,7 @@ class TVDB(object):
     def getIdByZap2it(self, zap2it_id):
         log("tvdb: getIdByZap2it")
         try:
-            response = read_url_cached(self._buildUrl('GetSeriesByRemoteID.php', {'zap2it' : zap2it_id}))
+            response = read_url_cached_monthly(self._buildUrl('GetSeriesByRemoteID.php', {'zap2it' : zap2it_id}))
             tvdbidRE = re.compile('<id>(.+?)</id>', re.DOTALL)
             match = tvdbidRE.search(response)
             if match:
@@ -69,7 +69,7 @@ class TVDB(object):
     def getIdByIMDB(self, imdb_id):
         log("tvdb: getIdByIMDB")
         try:
-            response = read_url_cached(self._buildUrl('GetSeriesByRemoteID.php', {'apikey' : self.api_key, 'imdbid' : imdb_id}))
+            response = read_url_cached_monthly(self._buildUrl('GetSeriesByRemoteID.php', {'apikey' : self.api_key, 'imdbid' : imdb_id}))
             imdbidRE = re.compile('<id>(.+?)</id>', re.DOTALL)
             match = imdbidRE.search(response)
 
@@ -84,7 +84,7 @@ class TVDB(object):
     def getEpisodeByAirdate(self, tvdbid, airdate):
         log("tvdb: getEpisodeByAirdate")
         try:
-            response = read_url_cached(self._buildUrl('GetEpisodeByAirDate.php', {'apikey' : self.api_key, 'seriesid' : tvdbid, 'airdate' : airdate}))
+            response = read_url_cached_monthly(self._buildUrl('GetEpisodeByAirDate.php', {'apikey' : self.api_key, 'seriesid' : tvdbid, 'airdate' : airdate}))
             return response
         except Exception,e:
             return ''
@@ -93,7 +93,7 @@ class TVDB(object):
     def getEpisodeByID(self, tvdbid):
         log("tvdb: getEpisodeByID")
         try:
-            response = read_url_cached(self._buildUrl(self.api_key + '/series/' + tvdbid + '/all/en.xml'))
+            response = read_url_cached_monthly(self._buildUrl(self.api_key + '/series/' + tvdbid + '/all/en.xml'))
             return response
         except Exception,e:
             return ''
@@ -103,7 +103,7 @@ class TVDB(object):
         log("tvdb: getIdByShowName")
         try:
             #NOTE: This assumes an exact match. It is possible to get multiple results though. This could be smarter
-            response = read_url_cached(self._buildUrl('GetSeries.php', {'seriesname' : showName}))
+            response = read_url_cached_monthly(self._buildUrl('GetSeries.php', {'seriesname' : showName}))
             tvdbidRE = re.compile('<id>(.+?)</id>', re.DOTALL)
             match = tvdbidRE.search(response)
             if match:
@@ -113,11 +113,11 @@ class TVDB(object):
         except Exception,e:
             return 0
 
-            
+
     def getBannerByID(self, tvdbid, type):
         log("tvdb: getBannerByID")
         try:
-            response = read_url_cached(self._buildUrl(self.api_key + '/series/' + tvdbid + '/banners.xml'))
+            response = read_url_cached_monthly(self._buildUrl(self.api_key + '/series/' + tvdbid + '/banners.xml'))
             tree = ET.fromstring(response)
             images = []
             banner_data = tree.find("Banners")
@@ -140,12 +140,12 @@ class TVDB(object):
         except Exception,e:
             return ''
 
-            
+    
     def getIMDBbyShowName(self, showName):
         log("tvdb: getIMDBbyShowName")
         try:
             #NOTE: This assumes an exact match. It is possible to get multiple results though. This could be smarter
-            response = read_url_cached(self._buildUrl('GetSeries.php', {'seriesname' : showName}))
+            response = read_url_cached_monthly(self._buildUrl('GetSeries.php', {'seriesname' : showName}))
             tvdbidRE = re.compile('<IMDB_ID>(.+?)</IMDB_ID>', re.DOTALL)
             match = tvdbidRE.search(response)
             if match:
@@ -155,7 +155,7 @@ class TVDB(object):
         except Exception,e:
             return ''
 
-            
+
     def get_image_list(self, media_id):
         log("tvdb: get_image_list")
         image_list = []
@@ -224,8 +224,11 @@ class TVDB(object):
 
                 if info:
                     image_list.append(info)
-        except:
-            raise
+                    
+        except Exception,e:
+            log("tvdb: get_image_list, Failed! " + str(e))  
+            log(traceback.format_exc(), xbmc.LOGERROR)
+            
         if image_list != []:
             # Sort the list before return. Last sort method is primary
             image_list = sorted(image_list, key=itemgetter('rating'), reverse=True)

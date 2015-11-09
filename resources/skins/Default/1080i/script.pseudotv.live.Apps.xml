@@ -1,79 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
 <window>
     <allowoverlay>yes</allowoverlay>  
     <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(9506)</onload>
     <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10004)</onload><!-- Activate random window, workaround for 9506 starting paused -->
+    <onunload>ActivateWindow(12005)</onunload>
     <onload>SetProperty(PTVL.APPS_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.APPS_Opened,false,10000)</onunload>
-    <!-- <onunload>ActivateWindow(12005)</onunload> -->
+    <zorder>1</zorder>
     <coordinates>
         <system>1</system>
         <posx>0</posx>
         <posy>0</posy>
     </coordinates>
-    <animation effect="fade" time="500">WindowOpen</animation>
-    <animation effect="fade" time="250">WindowClose</animation>
+<!--     <animation effect="fade" time="5">WindowOpen</animation>
+    <animation effect="fade" time="5">WindowClose</animation> -->
     <controls>
         <control type="image">
-            <description>EPG Background</description>
+            <description>APP Background</description>
             <posx>0</posx>
             <posy>0</posy>
             <width>1920</width>
             <height>1080</height>
-            <texture>pstvlBackground3.png</texture>
+            <texture>APPSbackground.png</texture>
             <colordiffuse>FFFFFFFF</colordiffuse>
         </control>  
-        <!-- Trending Box --> 
-        <control type="group"> 
-            <control type="label">
-                <posx>-15</posx>
-                <posy>0</posy>
-                <align>center</align>
-                <width>300</width>
-                <height>30</height>
-                <textcolor>C0C0C0C0</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
-                <label>$INFO[Window(Home).Property(TrendingShows.1.Title)]</label>            
-                <visible>!Control.IsVisible(523)</visible>
-            </control>
-            <control type="image">
-                <posx>0</posx>
-                <posy>0</posy>
-                <width>360</width>      
-                <height>180</height>
-                <aspectratio align="center">keep</aspectratio>
-                <texture>$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]</texture>  
-                <visible>!Control.IsVisible(523)</visible>
-            </control> 
-            <control type="image">
-                <posx>0</posx>
-                <posy>0</posy>
-                <width>360</width>      
-                <height>180</height>
-                <aspectratio align="center">keep</aspectratio>
-                <texture>$INFO[Window(Home).Property(TrendingShows.1.Art(landscape))]</texture>  
-                <visible>!Control.IsVisible(523)</visible>
-            </control> 
-            <control type="label" id="522">
-                <posx>0</posx>
-                <posy>0</posy>
-                <width>360</width>      
-                <height>180</height>
-                <fadetime>250</fadetime>
-                <textcolor>C0C0C0C0</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
-                <label>Trending Now</label>
-                <align>center</align>
-                <visible>!Control.IsVisible(523) + !IsEmpty(Window(Home).Property(TrendingShows.1.Title))</visible>
-            </control>
-        </control>   
-        <!-- VideoWindow Box --> 
-        <control type="grouplist" id="523">    
+
+        <control type="image">
+            <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">APPSoverlay.png</texture>
+            <width>1920</width>
+            <height>1080</height>
+            <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation>
+        </control>
+
+<!-- VideoWindow Box --> 
+        <control type="grouplist">
+
+
             <posx>30</posx>
             <posy>15</posy>
+
             <itemgap>10</itemgap>
             <orientation>vertical</orientation>
+            <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+            <control type="label" id="523"> 
+
+                <width>360</width>       
+                <height>24</height>
+                <font>font12</font>
+                <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+
+
+
+
+
+
+
+
+
+
+
+                <align>center</align>
+                <scroll>true</scroll>
+                <scrollspeed>40</scrollspeed>
+
+                <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
+                <visible>Control.IsVisible(523)</visible>
+
+
+
+
+
+
+
+
+
+
+
+
+
+                <aligny>center</aligny>
+            </control>   
+            <!-- #### Skinners Include Everything for videowindow patch to work #### -->
+            <!-- PATCH START -->
+            <control type="videowindow">
+                <description>video</description> 
+
+
+
+
+                <width>360</width>      
+                <height>180</height>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                <align>center</align>
+
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <visible>Control.IsVisible(523)</visible>
+            </control>
+            <!-- PATCH END -->
+            <!-- ################################################################## -->
+        </control>
+        <!-- Static VideoWindow Box --> 
+        <control type="grouplist">
+            <posx>30</posx>
+            <posy>15</posy>
+
+            <itemgap>10</itemgap> 
+
+            <orientation>vertical</orientation>
+            <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             <control type="label">
                 <width>360</width>       
                 <height>24</height>
@@ -83,22 +146,37 @@
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
-                <label>  </label>
+
+                <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
+                <visible>!Control.IsVisible(523)</visible>
+
                 <aligny>center</aligny>
-            </control>   
-            <!-- #### Skinners Include Everything for videowindow patch to work #### -->
-            <!-- PATCH START --> 
-            <control type="videowindow">
-                <description>video</description>
+
+
+
+
+
+            </control>
+            <control type="image">
+
+
+
+
+
                 <width>360</width>      
                 <height>180</height>
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+
+                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type1ART)]</texture>
+                <visible>!Control.IsVisible(523)</visible>
+
             </control>
-            <!-- PATCH END -->
-            <!-- ################################################################## -->
+
+
+
+
         </control>
         <!-- todo -->
         <control type="grouplist">              
@@ -298,5 +376,6 @@
                 <font>font12</font>
             </control> 
         </control>
+
     </controls>
 </window>

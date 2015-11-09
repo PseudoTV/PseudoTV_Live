@@ -23,21 +23,38 @@ from FileAccess import *
 from Artdownloader import *
 from utils import *
 
+try:
+    import buggalo
+    buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
+except:
+    pass
+      
+      
 class DVR(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
-        self.Reminder = SETTINGS_LOC + '/' + 'reminders.ini'
+        # self.Reminder = SETTINGS_LOC + '/' + 'reminders.ini'
 
-             
+        
+    def onFocus(self, controlid):
+        pass
+        
+        
+    def log(self, msg, level = xbmc.LOGDEBUG):
+        log('PVR: ' + msg, level)
+       
+       
     def onInit(self):
         self.log('onInit')
         
         
     def onAction(self, act):
-        self.logDebug('onAction ' + str(act.getId()))
+        self.log('onAction ' + str(act.getId()))
         action = act.getId()
+        if action in ACTION_PREVIOUS_MENU:
+            self.closeDVR()  
         
-        if action == ACTION_TELETEXT_RED:
+        elif action == ACTION_TELETEXT_RED:
             self.log('ACTION_TELETEXT_RED')
             self.MyOverlayWindow.windowSwap('EPG')
         
@@ -77,13 +94,6 @@ class DVR(xbmcgui.WindowXMLDialog):
         elif action == ACTION_SELECT_ITEM:
             print 'ACTION_SELECT_ITEM'
                 
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('PVR: ' + msg, level)
-
-    
-    def logDebug(self, msg, level = xbmc.LOGDEBUG):
-        if isDebug() == True:
-            log('PVR: ' + msg, level)
             
     def SetReminder(self):
         print 'setreminder'

@@ -19,7 +19,7 @@
         <string id="30056">Use Navigation Sound Effects</string>
 
 <string id="30300">Tweaks</string>
-    <string id="30401">Operating System</string>  
+    <string id="30401">Device Type</string>  
     <string id="32055">Preferred Language</string>  
     <string id="32056">Preferred Region</string>  
     <string id="30374">Enable Quickflip</string>
@@ -193,12 +193,12 @@
     <string id="30907">Enter your gmail password</string>
     
 <string id="31900">Utilities</string>
-    <string id="31997">Clear Channel Favourites</string>
     <string id="31999">Channel Configuration Tools</string>
+    <string id="31997">Clear Channel Favourites</string>
     <string id="31901">Backup Configurations</string>
     <string id="31902">Restore Configurations</string>
     <string id="31903">Repair Configurations</string>                         
-    <string id="31904">Clear Current Channel Configurations</string>                 
+    <string id="31904">Delete Channel Configurations</string>                 
     <string id="31905">Purge all Backups</string>
     <string id="31998">Cache Tools</string>
     <string id="30995">Clear BCT Cache</string>
@@ -214,9 +214,9 @@
     <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
 <string id="30900">Debugging</string>
+    <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30309">Wait for Playback (seconds)</string> 
     <string id="30319">Force Playback timeout (seconds)</string> 
-    <string id="30990">DEBUGGING: (Use with Caution!)</string>    
     <string id="30993">Enable Debugging</string>
     <string id="39999">Enable Cache</string>
     <string id="39958">Include 3D Files</string>
@@ -224,14 +224,13 @@
     <string id="39997">Include BCT Files</string>
     <string id="30994">Plugin Validation Level</string> 
     <string id="30991">Override Stream Validation</string>
-    <string id="30981">Override Optimized OS Configurations</string>
     <string id="30992">Disable Google Analytics</string>
-    <string id="36996">Opting out? No personal information is ever tracked,</string>
+    <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
-    <string id="30943">Override Optimized Settings</string>
-    <string id="30912">Optional Personal APIKEY</string>
+    <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
+    <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
-    <string id="30944">Force LiveTV Channel Reset</string>
+    <string id="30944">Force LiveTV reset on startup </string>
 </strings>

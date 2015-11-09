@@ -78,19 +78,82 @@ class FileAccess:
 
 
     @staticmethod
-    def openSMB(filename, mode, encoding = "utf-8"):
+    def _openSMB(filename, mode, encoding = "utf-8"):
         fle = 0
 
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
-
-            try:
-                fle = codecs.open(newname, mode, encoding)
-            except Exception,e:
-                fle = 0
+        elif os.name.lower() == 'posix':
+            newname = '//' + filename[6:]
+            return mountPosixSMB(newname)
+        try:
+            fle = codecs.open(newname, mode, encoding)
+        except Exception,e:
+            fle = 0
         return fle
+        
+        
+    @staticmethod
+    def mountPosixSMB(filename):
+        if not os.path.exists(Globals.MOUNT_LOC):
+            os.makedirs(Globals.MOUNT_LOC)
 
+        if Globals.mountedFS == True:
+            newfilename = xbmc.translatePath(os.path.join(Globals.MOUNT_LOC, os.path.split(filename)[1]))
 
+            if os.path.exists(newfilename):
+                return newfilename
+
+            pipe = os.popen("umount \"" + Globals.MOUNT_LOC + "\"")
+            Globals.mountedFS = False
+
+        newfilename = mountFs(filename, 'cifs')
+
+        if os.path.exists(newfilename):
+            Globals.mountedFS = True
+            return newfilename
+
+        newfilename = mountFs(filename, 'smbfs')
+
+        if os.path.exists(newfilename):
+            Globals.mountedFS = True
+            return newfilename
+
+        return filename
+
+        
+    @staticmethod
+    def mountFs(filename, fstype):
+        dirpart, filename = os.path.split(filename)
+        pipe = os.popen("mount -t " + fstype + " \"" + dirpart + "\" \"" + Globals.MOUNT_LOC + "\"")
+        newfilename = xbmc.translatePath(os.path.join(Globals.MOUNT_LOC, filename))
+
+        if os.path.exists(newfilename):
+            return newfilename
+
+        # Only try adding "Guest" if there is no username already there
+        if dirpart.find('@') == -1:
+            dirpart = "//Guest:@" + dirpart[2:]
+            pipe = os.popen("mount -t " + fstype + " \"" + dirpart + "\" \"" + Globals.MOUNT_LOC + "\"")
+
+            if os.path.exists(newfilename):
+                return newfilename
+
+        # Seperate the username and password and try that
+        username = dirpart[2:dirpart.find(':')]
+        password = dirpart[dirpart.find(':') + 1:dirpart.find('@')]
+        dirpart = '//' + dirpart[dirpart.find('@') + 1:]
+        pipe = os.popen("mount -t cifs \"" + dirpart + "\" \"" + Globals.MOUNT_LOC + "\" -o username=" + username + ",password=" + password)
+        return newfilename
+    
+    
+    @staticmethod
+    def finish():
+        if Globals.mountedFS == True:
+            pipe = os.popen("umount \"" + Globals.MOUNT_LOC + "\"")
+            Globals.mountedFS = False
+            
+            
     @staticmethod
     def existsSMB(filename):
         if os.name.lower() == 'nt':
@@ -165,14 +228,14 @@ class FileAccess:
         
 class VFSFile:
     def __init__(self, filename, mode):
-        # Globals.log("VFSFile: trying to open " + filename)
+        Globals.log("VFSFile: trying to open " + filename)
 
         if mode == 'w':
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:        
             self.currentFile = xbmcvfs.File(filename)
 
-        # Globals.log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
+        Globals.log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
         
         if self.currentFile == None:
             Globals.log("VFSFile: Couldnt open " + filename, xbmc.LOGERROR)
@@ -215,6 +278,7 @@ class VFSFile:
         loc = self.currentFile.seek(0, 1)
         return loc
 
+        
 class FileLock:
     def __init__(self):
         random.seed()

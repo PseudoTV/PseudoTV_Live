@@ -77,7 +77,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.doModal()
             self.log("__init__ return")
         else:
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Not available while running.", 4000, THUMB) )
+            infoDialog("Not available while running.")
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
@@ -138,8 +138,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.changeChanNum(curchan)
                 self.updateListing(curchan)
             else:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Not available while running.", 4000, THUMB) )
-            
+                infoDialog("Not available while running.")
+
             
     def saveSettings(self):
         self.log("saveSettings channel " + str(self.channel))
@@ -308,7 +308,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
                 self.changeChanNum(self.channel)
             else:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Not available while running.", 4000, THUMB) )   
+                infoDialog("Not available while running.")
         elif controlId == 555:      # Help Guide
             help((self.getControl(109).getLabel()).replace('None','General'))
         elif controlId == 114:      # Rules button
@@ -337,11 +337,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 332:      # Community Playlists button
             self.log("Community Playlists")
             try:
-                url='https://github.com/Lunatixz/PseudoTV_Playlists'
+                url='https://github.com/PseudoTV/PseudoTV_Playlists'
                 XSPlist = fillGithubItems(url,".xsp")
                 select = selectDialog(XSPlist, 'Select Community Playlist')
                 if select != -1:
-                    XSPurl = 'https://raw.githubusercontent.com/Lunatixz/PseudoTV_Playlists/master/' + ((XSPlist[select]).replace('&','&amp;').replace(' ','%20'))
+                    XSPurl = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Playlists/master/' + ((XSPlist[select]).replace('&','&amp;').replace(' ','%20'))
                     XSPfile = xbmc.translatePath(os.path.join(XSP_LOC,XSPlist[select]))
                     download(XSPurl,XSPfile)
                     self.getControl(330).setLabel(self.getSmartPlaylistName(XSPfile), label2=XSPfile)
@@ -386,18 +386,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         #LiveTV
         elif controlId == 211:    # LiveTV Browse, select
             if self.LockBrowse:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "File Already Selected", 1000, THUMB) )     
+                infoDialog("File Already Selected")
                 return
             elif len(self.getControl(211).getLabel()) > 1:
                 title, retval = self.fillSources('LiveTV', self.getControl(214).getLabel(), self.getControl(217).getLabel())
             else:
-                try:
-                    title, retval = self.fillSources('LiveTV', self.getControl(214).getLabel())   
-                    if len(retval) > 0 and self.getControl(214).getLabel() == 'Plugin':
-                        self.getControl(217).setLabel(retval)
-                        title, retval = self.fillSources('LiveTV', self.getControl(214).getLabel(), self.getControl(217).getLabel())
-                except:
-                    pass
+                title, retval = self.fillSources('LiveTV', self.getControl(214).getLabel())
+                if retval and len(retval) > 0 and self.getControl(214).getLabel() == 'Plugin':
+                    self.getControl(217).setLabel(retval)
+                    title, retval = self.fillSources('LiveTV', self.getControl(214).getLabel(), self.getControl(217).getLabel())
                     
             if retval and len(retval) > 0:
                 if self.getControl(214).getLabel() == 'PVR' or self.getControl(214).getLabel() == 'HDhomerun':
@@ -425,7 +422,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 216:    # LiveTV Channel ID, select
             setting3 = self.getControl(212).getLabel()
             if len(setting3) <= 1:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Enter Channel & XMLTV Name", 4000, THUMB) )
+                infoDialog("Enter Channel & XMLTV Name")
             else:              
                 if setting3 == 'ptvlguide':
                     SyncXMLTV()
@@ -452,7 +449,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             
         elif controlId == 221:    # InternetTV Browse, select
             if self.LockBrowse:
-                xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "File Already Selected", 1000, THUMB) )     
+                infoDialog("File Already Selected")
                 return
             elif len(self.getControl(221).getLabel()) > 1:
                 title, retval = self.fillSources('InternetTV', self.getControl(224).getLabel(), self.getControl(227).getLabel())
@@ -570,7 +567,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         title = Name
                     self.setChname(title)           
                 except:
-                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Select Youtube Type", 1000, THUMB) )     
+                    infoDialog("Select Youtube Type")
                     pass
         elif controlId == 234:    # Youtube Channel, input
             retval = dlg.input(self.getControl(234).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
@@ -1155,8 +1152,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             return PluginNameLst, PluginPathLst
         except:
             hide_busy_dialog()
-            buggalo.onExceptionRaised() 
-                       
+            
          
     def resetLabels(self):
         self.log("resetLabels")
@@ -1519,8 +1515,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         if select != -1:
                             return self.chnlst.cleanLabels(NameLst[select]), Option1LST[select], Option2LST[select], Option3LST[select], (Option4LST[select]).replace('0','Default').replace('1','Random').replace('2','Reverse') 
                 else:
-                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Please Configure Community List Access", 1000, THUMB) )
-
+                    infoDialog("Please Enable Community List Access") 
                     
             elif source == 'M3U Playlist':
                 self.log("M3U")
@@ -1541,8 +1536,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         if select != -1:
                             return NameLst[select], PathLst[select]  
                     else:
-                        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Invalid Selection", 1000, THUMB) )     
-                        
+                        infoDialog("Invalid Selection") 
             elif source == 'XML Playlist':
                 self.log("XML")
                 select = selectDialog(self.ExternalPlaylistSources, 'Select XML Source')
@@ -1562,8 +1556,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         if select != -1:    
                             return NameLst[select], PathLst[select]  
                     else:
-                        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Invalid Selection", 1000, THUMB) )  
-            
+                        infoDialog("Invalid Selection") 
             elif source == 'PLX Playlist':
                 self.log("PLX")
                 select = selectDialog(self.ExternalPlaylistSources, 'Select PLX Source')
@@ -1582,12 +1575,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         if select != -1:
                             return NameLst[select], PathLst[select]
                     else:
-                        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Invalid Selection", 1000, THUMB) )  
+                        infoDialog("Invalid Selection") 
             else:
                 return  
         except:
             hide_busy_dialog()
-            buggalo.onExceptionRaised() 
             
 
     def deleteChannel(self, curchan):
@@ -1614,7 +1606,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(retval) + "_type"))
                         if chantype == 9999:
                             raise Exception()
-                        xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Channel "+str(retval)+" already in use", 1000, THUMB) )
+                        infoDialog("Channel "+str(retval)+" already in use")
                     except:
                         inuse = True
                         if dlg.yesno("PseudoTV Live","Do you want to save channel " + str(channel) + " to " + str(retval) + " ?"):
@@ -1670,7 +1662,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 else:
                     # todo retval = dlg.input('Enter Playlist Name', type=xbmcgui.INPUT_ALPHANUM)
                     # if retval and len(retval) > 0:
-                    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Please Edit Playlist Name.", 4000, THUMB) )
+                    infoDialog("Please Edit Playlist Name.")
         else:
             # # prevent plugins not in kodis repo from being submitted.
             # if type in ['8','9','15'] and setting1.startswith('plugin'):
@@ -1714,7 +1706,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             okDialog('Thank you for your submission, Please wait 24-48hrs to process your submission.','[COLOR=red]Warning!! repeat spammers will be banned!![/COLOR]')
         except Exception,e:
             self.log("listSubmisson, Failed! " + str(e))  
-            xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", 'Submission Failed!', 1000, THUMB) )  
+            ErrorNotify("Submission Failed!") 
             pass   
 
             
