@@ -1572,7 +1572,6 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('ThreadMode', "2")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('EPGTextEnable', "1")
-            REAL_SETTINGS.setSetting('quickflip', "false")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EnableSettop', "false")
             REAL_SETTINGS.setSetting('UNAlter_ChanBug', "true")
@@ -2016,10 +2015,11 @@ def correctYoutubeSetting2(setting2):
     setting2 = setting2.replace('User Favorites','4').replace('Search Query','5').replace('User Subscription','3')
     setting2 = setting2.replace('Seasonal','31').replace('Channel','1').replace('Playlist','2')
     return setting2
-    
+     
 def purgeGarbage(): 
     try:
-        if getProperty("PTVL.BackgroundLoading") == "false":
+        # only purge when not building channel lists.
+        if isBackgroundLoading() == False:
             # threshold = gc.get_threshold()
             # log("utils: purgeGarbage, Garbage collection thresholds: %s" % (str(threshold)))
             collected = gc.collect()

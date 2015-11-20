@@ -519,7 +519,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:
                             shouldskip = True
                             tmpdur = 0
-                        elif chtype != 8:
+                        elif chtype not in [8,9]:
                             nextlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos + 1)
                             prevlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos - 1)
 

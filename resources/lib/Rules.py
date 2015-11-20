@@ -29,7 +29,7 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), EvenShowsRule(), ForceRandom(), ForceRealTime(), ForceResume(), Handle3D(), HandleIceLibrary(), HandleBCT(), HandlePOP(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), RenameRule(), SetResetTime()]
+        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), ForceRandom(), ForceRealTime(), ForceResume(), Handle3D(), HandleIceLibrary(), HandleBCT(), HandlePOP(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), EvenShowsRule(), RenameRule(), SetResetTime()]
 
 
     def getRuleCount(self):
@@ -996,12 +996,16 @@ class InterleaveChannel(BaseRule):
                 startingep = int(self.optionValues[3])
                 numbereps = int(self.optionValues[4])
                 startfrom = int(self.optionValues[5])
+                chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(chan) + '_type'))
             except:
                 self.log("Except when reading params")
 
             if chan > channelList.maxChannels or chan < 1 or minint < 1 or maxint < 1 or startingep < 1 or numbereps < 1:
                 return filelist
 
+            if chtype >= 10:
+                return filelist
+            
             if minint > maxint:
                 v = minint
                 minint = maxint
@@ -1048,27 +1052,22 @@ class InterleaveChannel(BaseRule):
                     newstr = uni(newstr)
                     newstr = newstr.replace("\\n", " ").replace("\\r", " ").replace("\\\"", "\"")
                     newstr = uni(newstr) + uni('\n') + uni(channelList.channels[chan - 1].getItemFilename(startingep - 1))                  
-                    # newstr = str(channelList.channels[chan - 1].getItemDuration(startingep - 1)) + ',' + channelList.channels[chan - 1].getItemTitle(startingep - 1)
-                    # newstr += "//" + channelList.channels[chan - 1].getItemEpisodeTitle(startingep - 1)
-                    # newstr += "//" + channelList.channels[chan - 1].getItemDescription(startingep - 1) + '\n' + channelList.channels[chan - 1].getItemFilename(startingep - 1)
                     newfilelist.append(newstr)
                     # Moved startingep to FOR loop - otherwise it just adds the same file multiple times
-                    startingep += 1
-                    
+                    startingep += 1        
                 realindex += random.randint(minint, maxint)
                 
     
             while startindex < len(filelist):
                 newfilelist.append(filelist[startindex])
                 startindex += 1
-
+                
             startingep = channelList.channels[chan - 1].fixPlaylistIndex(startingep) + 1
             # Write starting episode
             self.optionValues[2] = str(startingep)
             ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rule_' + str(curruleid + 1) + '_opt_4', self.optionValues[2])
             self.log("Done interleaving, new length is " + str(len(newfilelist)))
             return newfilelist
-
         return filelist
 
 
@@ -1187,7 +1186,6 @@ class OnlyUnWatchedRule(BaseRule):
         return filedata
 
 
-
 class PlayShowInOrder(BaseRule):
     def __init__(self):
         self.name = "Play TV Shows In Order"
@@ -1294,7 +1292,6 @@ class PlayShowInOrder(BaseRule):
                             break
 
             curindex += 1
-
         return filelist
 
 
@@ -1579,7 +1576,6 @@ class HandleChannelLogo(BaseRule):
         elif actionid == RULES_ACTION_OVERLAY_SET_CHANNEL_END:
             overlay.showChannelBug = self.storedLogoValue
             self.log("set channel bug to " + str(overlay.showChannelBug))
-
         return channeldata
 
 
@@ -1607,7 +1603,7 @@ class EvenShowsRule(BaseRule):
 
 
     def validate(self):
-        self.validateDigitBox(0, 1, 20, 2)
+        self.validateDigitBox(0, 1, 20, 1)
 
 
     def runAction(self, actionid, channelList, filelist):
@@ -1615,7 +1611,7 @@ class EvenShowsRule(BaseRule):
             self.validate()
             
             try:
-                opt = int(self.optionValues[0])
+                opt = int(self.optionValues[0]) + 1
                 self.log("Allowed shows in a row: " + str(opt))
                 lastshow = ''
                 realindex = 0
@@ -1623,7 +1619,7 @@ class EvenShowsRule(BaseRule):
 
                 for index in range(len(filelist)):
                     item = filelist[index]
-                    self.log("index " + str(index) + " is " + item)
+                    # self.log("index " + str(index) + " is " + item)
                     loc = item.find(',')
 
                     if loc > -1:
@@ -1632,7 +1628,8 @@ class EvenShowsRule(BaseRule):
                         if loc2 > -1:
                             showname = item[loc + 1:loc2]
                             showname = showname.lower()
-
+                            self.log("showname is " + showname)
+                                    
                             if showname == lastshow:
                                 inarow += 1
                                 self.log("same show now at " + str(inarow))
@@ -1672,6 +1669,5 @@ class EvenShowsRule(BaseRule):
                     if showname != lastshow:
                         self.log("insertNewShow found " + showname)
                         filelist.pop(index)
-                        return item
-                        
+                        return item         
         return ''

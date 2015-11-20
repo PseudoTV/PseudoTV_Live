@@ -77,13 +77,14 @@ class ChannelList:
         self.runningActionId = 0
         self.enteredChannelCount = 0   
         self.startDate = 0
-        self.setupDate = 0
+        self.startTime = 0
         self.background = True    
         self.videoParser = VideoParser()
         random.seed() 
     
     
     def readConfig(self):
+        self.startTime = time.time()
         self.ResetLST = (REAL_SETTINGS.getSetting("ResetLST")).split(',')
         self.log('Channel Reset List is ' + str(self.ResetLST))
         self.channelResetSetting = int(REAL_SETTINGS.getSetting("ChannelResetSetting"))
@@ -151,7 +152,7 @@ class ChannelList:
             if self.background == False:
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
                 self.updateDialog.update(self.updateDialogProgress, "Initializing Channel " + str(i + 1), "waiting for file lock")
-                self.myOverlay.setBackgroundLabel("Initializing: Channels (" + str(self.updateDialogProgress) + "%)")
+                self.myOverlay.setBackgroundLabel("Initializing: Channel List (" + str(int(i * 100 // self.maxChannels)) + "%)")
                 setProperty('loading.progress',str(self.updateDialogProgress))
             self.channels.append(Channel())
             
@@ -268,7 +269,6 @@ class ChannelList:
         needsreset = False
         self.background = background
         self.settingChannel = channel
-        self.setupDate = datetime.datetime.now()
         
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
@@ -323,10 +323,10 @@ class ChannelList:
                     if self.channelResetSetting == 0 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                         createlist = False
   
-                    # Reset livetv after two days
-                    if self.channelResetSetting == 0 and chtype == 8 and timedif < (60 * 60 * 24 * 2):
-                        createlist = False
-                    
+                    # Reset livetv after 24hrs
+                    if chtype == 8 and self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
+                        needsreset = True
+
                     if self.channelResetSetting > 0 and self.channelResetSetting < 4:
 
                         if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
@@ -567,9 +567,9 @@ class ChannelList:
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
-                limit = 259200
+                limit = 86400
             elif chtype == 9:
-                limit = 24
+                limit = int(86400 / int(setting1))
             elif MEDIA_LIMIT == 0:
                 limit = 10000
             else:
@@ -739,16 +739,16 @@ class ChannelList:
             fileList.reverse()
             msg = 'reversing'
         
-        self.log("makeChannelList, Using Media Sort " + msg)
-        fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
-        self.channels[channel - 1].isRandom = israndom
-
         if append:
             if len(fileList) + self.channels[channel - 1].Playlist.size() > self.Playlist_Limit:
                 fileList = fileList[:(self.Playlist_Limit - self.channels[channel - 1].Playlist.size())]
         else:
             if len(fileList) > self.Playlist_Limit:
                 fileList = fileList[:self.Playlist_Limit]
+        
+        self.log("makeChannelList, Using Media Sort " + msg)
+        self.channels[channel - 1].isRandom = israndom
+        fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
         
         # inject BCT into filelist
         if self.incBCTs == True and bctType != None:
@@ -1543,13 +1543,11 @@ class ChannelList:
         self.filecount = 0
         fileList = []
         self.file_detail_CHK = []
+        self.startDate = self.startTime
         
         if self.background == False:
-            self.startDate = self.setupDate
             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying Kodi database")
-        else:
-            self.startDate = datetime.datetime.now()
-            
+
         fileList = self.getFileList(self.requestList(dir_name), channel, limit)
         self.log("buildFileList return")
         return fileList
@@ -1561,6 +1559,7 @@ class ChannelList:
         self.filecount = 0
         fileList = []  
         self.file_detail_CHK = []
+        self.startDate = self.startTime
         
         if setting1.endswith('/'):
             setting1 = setting1[:-1]
@@ -1637,7 +1636,7 @@ class ChannelList:
         return fileList
 
         
-    # *Thanks sphere, taken from plugin.video.ted.talks
+    # *Thanks sphere, adapted from plugin.video.ted.talks
     # People still using Python <2.7 201303 :(
     def __total_seconds__(self, delta):
         try:
@@ -1645,18 +1644,19 @@ class ChannelList:
         except AttributeError:
             return int((delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10 ** 6)) / 10 ** 6
 
-            
+    #todo
     def getPVRChannels(self):
         self.log("getPVRChannels") 
         return chanNumLST, chanNameLST
         
-        
+  #todo  
     def getPVRlistings(self, channelid):
         self.log("getPVRChannels")  
         return listings
             
             
     def parsePVRDate(self, dateString):
+        self.log("parsePVRDate") 
         if dateString is not None:
             t = time.strptime(dateString, '%Y-%m-%d %H:%M:%S')
             tmpDate = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
@@ -1669,6 +1669,7 @@ class ChannelList:
    
    
     def parseUTCXMLTVDate(self, dateString):
+        self.log("parseUTCXMLTVDate") 
         if dateString is not None:
             if dateString.find(' ') != -1:
                 # remove timezone information
@@ -1684,6 +1685,7 @@ class ChannelList:
        
        
     def parseXMLTVDate(self, dateString, offset=0):
+        self.log("parseXMLTVDate") 
         if dateString is not None:
             if dateString.find(' ') != -1:
                 # remove timezone information
@@ -2018,7 +2020,6 @@ class ChannelList:
                                 dur = int(runtimes.group(1)) * 60
                             else:
                                 dur = ((stopDate - startDate).seconds)   
-                 
                  
                         years = re.search('"year" *: *([\d.]*\d+)', f)
                         # if possible find year by title
@@ -2551,8 +2552,11 @@ class ChannelList:
                 self.log("createRSSFileList, runtimex = " + str(runtimex)) 
                 
                 if feed.channel.has_key("tags"):
-                    genre = str(feed.channel.tags[0]['term'])
-                
+                    genre = feed.channel.tags[0]['term']
+                    genre = uni(genre)
+                else:
+                    genre = "Unknown"
+
                 try:
                     time = (str(feed.entries[i].published_parsed)).replace("time.struct_time", "")                        
                     showseason = [word for word in time.split() if word.startswith('tm_mon=')]
@@ -5239,14 +5243,8 @@ class ChannelList:
                                                 showtitle = cleantitle # Use cleantitle without (year) for tvshows
 
                                         # accurate real-time scheduling does not apply to chtypes <= 7, only chtype = 8. Doesn't hurt to keep track of it anyway, future feature?
-                                        now = datetime.datetime.now()
-                                        stopDate = self.startDate + datetime.timedelta(seconds=dur)
-                                        
-                                        if now > self.startDate and now <= stopDate:
-                                            timestamp = self.startDate
-                                        else:
-                                            timestamp = stopDate
-                                        self.startDate = stopDate
+                                        timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
+                                        self.startDate += dur
                                         
                                         GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating]
                                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file, timestamp)      
@@ -5301,7 +5299,7 @@ class ChannelList:
         self.log("getFileList, fileList return = " + str(len(fileList)))                       
         return fileList
 
-        
+
     def setResetLST(self, channel=None):
         if not channel:
             channel = self.settingChannel
