@@ -169,12 +169,14 @@ class Settings:
             MSG = "Channel Repair Failed!"
 
             for i in range(999):
+                self.setSetting('Channel_' + str(i + 1) + '_time', '0')
+                self.setSetting('Channel_' + str(i + 1) + '_changed', "True")
                 updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Scanning Channel " + str(i+1))
                 for n in range(len(self.currentSettings)):
-                    if (self.currentSettings[n][0]).startswith('Channel_'+ str(i+1) + '_'):
-                        updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Repairing Channel " + str(i+1))
-                        self.amendedSettings.append(self.currentSettings[n])
-    
+                    if (self.currentSettings[n][0]).startswith('Channel_'+ str(i + 1) + '_'):
+                        updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Analyzing Channel " + str(i+1))
+                        if self.currentSettings[n] not in self.amendedSettings:
+                            self.amendedSettings.append(self.currentSettings[n])
             self.writeSettingsNew(updateDialog)
             MSG = "Channel Configurations Repaired"
             updateDialog.close()

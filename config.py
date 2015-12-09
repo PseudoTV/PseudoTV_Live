@@ -38,8 +38,7 @@ try:
 except:
     pass
     
-NUMBER_CHANNEL_TYPES = 17
-
+    
 class ConfigWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")

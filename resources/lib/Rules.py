@@ -996,14 +996,13 @@ class InterleaveChannel(BaseRule):
                 startingep = int(self.optionValues[3])
                 numbereps = int(self.optionValues[4])
                 startfrom = int(self.optionValues[5])
-                chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(chan) + '_type'))
             except:
                 self.log("Except when reading params")
 
             if chan > channelList.maxChannels or chan < 1 or minint < 1 or maxint < 1 or startingep < 1 or numbereps < 1:
                 return filelist
 
-            if chtype >= 10:
+            if channelList.getChtype(chan) in [10,11]:
                 return filelist
             
             if minint > maxint:
@@ -1366,7 +1365,7 @@ class SetResetTime(BaseRule):
             if rightnow >= nextreset:
                 channeldata.isValid = False
                 ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_changed', 'True')
-                nextreset = rightnow + ((60 * 60 * numhours) - 120) #58min hour.
+                nextreset = rightnow + ((60 * 60 * numhours) - 900) #45min hour.
                 ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_SetResetTime', str(nextreset))
 
         return channeldata

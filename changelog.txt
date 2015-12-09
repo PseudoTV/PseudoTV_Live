@@ -1,3 +1,8 @@
+[*] Settop timer removed, When enabled PTVL checks every hour if a channel needs updating. (ie. LiveTV every 24hrs, "Time between channel resets" preference or Advanced Channel rule "Reset Every x Hours")
+[*] Miscellaneous tweaks and corrections. 
+[*] Holiday easter egg?
+[*] Fixed interleaving, Coming up Next Notification and LiveTV rebuild after 24hrs.
+[*] VideoWindow enabled for "LowPower" devices.
 [*] Youtube "Stacked" Now enabled/disabled with "Hide very short videos".
 [*] Changed messaging system, Disabling Notification now disables more prompts and added channel logos to relevant notifications.
 [*] Tweaked Channel Changing performance and Quickflip detection.

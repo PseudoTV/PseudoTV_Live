@@ -36,11 +36,6 @@ from urllib2 import HTTPError, URLError
 
 socket.setdefaulttimeout(30)
 
-try:
-    import gc
-except:
-    pass
-
 # Commoncache plugin import
 try:
     import StorageServer
@@ -1309,24 +1304,24 @@ def VideoWindow():
     log("utils: VideoWindow, VWPath = " + str(VWPath))
     #Copy VideoWindow Patch file
     try:
-        if isLowPower() == True:
-            raise Exception()
-        else:
-            if not FileAccess.exists(VWPath):
-                log("utils: VideoWindow, VWPath not found")
-                FileAccess.copy(flePath, VWPath)
-                if FileAccess.exists(VWPath):
-                    log('utils: custom_script.pseudotv.live_9506.xml Copied')
-                    xbmc.executebuiltin("ReloadSkin()")
-                    VideoWindowPatch()   
-                else:
-                    raise Exception()
-            else:
-                log("utils: VideoWindow, VWPath found")
-                VideoWindowPatch()  
-                
+        # if isLowPower() == True:
+            # raise Exception()
+        # else:
+        if not FileAccess.exists(VWPath):
+            log("utils: VideoWindow, VWPath not found")
+            FileAccess.copy(flePath, VWPath)
             if FileAccess.exists(VWPath):
-                setProperty("PTVL.VideoWindow","true")
+                log('utils: custom_script.pseudotv.live_9506.xml Copied')
+                xbmc.executebuiltin("ReloadSkin()")
+                VideoWindowPatch()   
+            else:
+                raise Exception()
+        else:
+            log("utils: VideoWindow, VWPath found")
+            VideoWindowPatch()  
+            
+        if FileAccess.exists(VWPath):
+            setProperty("PTVL.VideoWindow","true")
     except Exception:
         VideoWindowPatch() 
         VideoWindowUninstall()  
@@ -1462,7 +1457,7 @@ def chkVersion():
             if isRepoInstalled() == False:
                 getRepo()
 
-def chkAutoplay():
+def chkAutoplay(silent=False):
     log('utils: chkAutoplay')
     fle = xbmc.translatePath("special://profile/guisettings.xml")
     try:
@@ -1476,10 +1471,13 @@ def chkAutoplay():
         log('utils: chkAutoplay, Musicautoplaynextitem is ' + str(Musicautoplaynextitem)) 
         totcnt = Videoautoplaynextitem + Musicautoplaynextitem
         if totcnt > 0:
-            okDialog("Its recommended you disable Kodi's"+' "Play the next video/song automatically" ' + "feature found under Kodi's video/playback and music/playback settings.")
+            setProperty("PTVL.Autoplay","true")
+            if not silent:
+                okDialog("Its recommended you disable Kodi's"+' "Play the next video/song automatically" ' + "feature found under Kodi's video/playback and music/playback settings.")
         else:
-            raise exception()
+            raise Exception()
     except:
+        setProperty("PTVL.Autoplay","false") 
         pass
         
 def chkSources():
@@ -1737,6 +1735,9 @@ def preStart():
 
     # VideoWindow Patch.
     VideoWindow()
+    
+    # Check if autoplay is enabled
+    chkAutoplay(True)
     
     # Clear filelist Caches    
     if REAL_SETTINGS.getSetting("ClearCache") == "true":
@@ -2018,6 +2019,7 @@ def correctYoutubeSetting2(setting2):
      
 def purgeGarbage(): 
     try:
+        import gc
         # only purge when not building channel lists.
         if isBackgroundLoading() == False:
             # threshold = gc.get_threshold()

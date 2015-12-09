@@ -14,7 +14,6 @@
                 <setting id="StartMode" type="enum"   label="30007" values="Resume|Real Time|Random" default="1" />
                 <setting id="ThreadMode" type="enum"   label="30008" values="On|Minimum Use|Off" default="0" />
                 <setting id="EnableSettop" type="bool"   label="30998" default="false"/>
-                <setting id="REFRESH_INT" subsetting="true" visible="eq(-1,true)" type="enum"   label="31000" values="3|6|12|24" default="2"/>
                 <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="1"/>
                 <setting id="EnableNotify" type="bool"   label="30046" default="true"/>
                 <setting id="AutoBackup" type="bool"   label="30159" default="false"/>

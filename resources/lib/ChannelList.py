@@ -20,7 +20,7 @@ import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import os, sys, re, unicodedata, traceback
 import time, datetime, threading, _strptime, calendar
 import httplib, urllib, urllib2, feedparser, socket, json
-import base64, shutil, random, errno 
+import base64, shutil, random, errno
 
 
 from operator import itemgetter
@@ -46,6 +46,12 @@ from BeautifulSoup import BeautifulSoup
 
 socket.setdefaulttimeout(30)
 
+# Commoncache plugin import
+try:
+    import StorageServer
+except Exception,e:
+    import storageserverdummy as StorageServer
+    
 try:
     from metahandler import metahandlers
 except Exception,e:  
@@ -75,7 +81,7 @@ class ChannelList:
         self.threadPaused = False
         self.runningActionChannel = 0
         self.runningActionId = 0
-        self.enteredChannelCount = 0   
+        self.enteredChannelCount = 0
         self.startDate = 0
         self.startTime = 0
         self.background = True    
@@ -106,11 +112,15 @@ class ChannelList:
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
         self.Playlist_Limit = PlaylistLimit()
         self.findMaxChannels()
-        
-        # if self.backgroundUpdating > 0:
-            # self.updateDialog = xbmcgui.DialogProgress()
-        # else:
-        self.updateDialog = xbmcgui.DialogProgressBG()
+                
+        if REAL_SETTINGS.getSetting("EnableSettop") == "true":
+            self.backgroundUpdating = 0
+            self.channelResetSetting = 0
+            
+        if self.backgroundUpdating > 0:
+            self.updateDialog = xbmcgui.DialogProgress()
+        else:
+            self.updateDialog = xbmcgui.DialogProgressBG()
             
         if self.forceReset:
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false")
@@ -295,13 +305,20 @@ class ChannelList:
             needsreset = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_changed') == 'True'
         except:
             pass
-  
-        # Force channel rebuild
-        if str(channel) in self.ResetLST or REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true":
-            self.log('setupChannel, Channel ' + str(channel) + ' in ResetLST')
-            self.delResetLST(channel)
-            needsreset = True
+                     
+        # Handle LiveTV
+        if chtype == 8:                        
+            # Force livetv rebuild
+            forcerebuild = REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true"
+            if str(channel) in self.ResetLST or forcerebuild == True:
+                self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
+                needsreset = True
+                self.delResetLST(channel)
 
+        if needsreset:
+            self.log('setupChannel ' + str(channel) + ', needsreset = True')
+            self.channels[channel - 1].isSetup = False
+            
         # If possible, use an existing playlist
         # Don't do this if we're appending an existing channel
         # Don't load if we need to reset anyway
@@ -309,46 +326,43 @@ class ChannelList:
             try:
                 self.channels[channel - 1].totalTimePlayed = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_time', True))
                 createlist = True
-
+            
                 if self.background == False:
                     self.updateDialog.update(self.updateDialogProgress, "Initializing Channel " + str(channel), "reading playlist")
 
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
                     self.channels[channel - 1].fileName = CHANNELS_LOC + 'channel_' + str(channel) + '.m3u'
-                    timedif = time.time() - self.lastResetTime
                     returnval = True
-
-                    # If this channel has been watched for longer than it lasts, reset the channel
-                    if self.channelResetSetting == 0 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
-                        createlist = False
-  
-                    # Reset livetv after 24hrs
-                    if chtype == 8 and self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
-                        needsreset = True
-
-                    if self.channelResetSetting > 0 and self.channelResetSetting < 4:
-
-                        if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
+                    
+                    if chtype == 8: 
+                        # Reset livetv after 24hrs
+                        if self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
+                            createlist = False
+                    else:
+                        # If this channel has been watched for longer than it lasts, reset the channel
+                        if self.channelResetSetting == 0 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                             createlist = False
 
-                        if self.channelResetSetting == 2 and timedif < (60 * 60 * 24 * 7):
-                            createlist = False
+                        if self.channelResetSetting > 0 and self.channelResetSetting < 4:
+                            timedif = time.time() - self.lastResetTime
+                            if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
+                                createlist = False
 
-                        if self.channelResetSetting == 3 and timedif < (60 * 60 * 24 * 30):
-                            createlist = False
+                            if self.channelResetSetting == 2 and timedif < (60 * 60 * 24 * 7):
+                                createlist = False
 
-                        if timedif < 0:
-                            createlist = False
+                            if self.channelResetSetting == 3 and timedif < (60 * 60 * 24 * 30):
+                                createlist = False
 
-                    if self.channelResetSetting == 4:
-                        createlist = False
+                            if timedif < 0:
+                                createlist = False
+
+                        if self.channelResetSetting == 4:
+                            createlist = False
             except:
                 pass
-            
-        if needsreset:
-            self.channels[channel - 1].isSetup = False
-            
+
         if createlist or needsreset:
             self.channels[channel - 1].isValid = False
 
@@ -505,6 +519,15 @@ class ChannelList:
         return ''
         
         
+    def getChtype(self, channel=None):
+        if not channel:
+            channel = self.settingChannel   
+        try:
+            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
+        except:
+            return 9999
+        
+        
     def getChname(self, channel=None):
         if not channel:
             channel = self.settingChannel
@@ -567,7 +590,7 @@ class ChannelList:
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
-                limit = 86400
+                limit = 259200 #72hrs
             elif chtype == 9:
                 limit = int(86400 / int(setting1))
             elif MEDIA_LIMIT == 0:
@@ -674,20 +697,20 @@ class ChannelList:
 
             if self.getSmartPlaylistType(dom) == 'mixed':
                 bctType = 'mixed'
-                fileList = self.buildMixedFileList(dom, channel, limit)
+                fileList = self.buildMixedFileList(dom, channel, 10000)
                 
             elif self.getSmartPlaylistType(dom) == 'movies':
                 bctType = 'movies'
                 if REAL_SETTINGS.getSetting('Movietrailers') != 'true':
                     self.incBCTs == False
-                fileList = self.buildFileList(fle, channel, limit)
+                fileList = self.buildFileList(fle, channel, 10000)
             
             elif self.getSmartPlaylistType(dom) == 'episodes':
                 bctType = 'episodes'
-                fileList = self.buildFileList(fle, channel, limit)
+                fileList = self.buildFileList(fle, channel, 10000)
                 
             else:
-                fileList = self.buildFileList(fle, channel, limit)
+                fileList = self.buildFileList(fle, channel, 10000)
 
             try:
                 order = dom.getElementsByTagName('order')
@@ -1644,14 +1667,18 @@ class ChannelList:
         except AttributeError:
             return int((delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10 ** 6)) / 10 ** 6
 
+            
     #todo
     def getPVRChannels(self):
         self.log("getPVRChannels") 
+        # {"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"alltv","properties":["thumbnail","channel"]},"id":1}
         return chanNumLST, chanNameLST
+        
         
   #todo  
     def getPVRlistings(self, channelid):
         self.log("getPVRChannels")  
+        # {"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":2,"properties":["title","plot","starttime","endtime","runtime","genre","episodename","thumbnail","episodenum","episodepart"]},"id":18}
         return listings
             
             
@@ -1716,7 +1743,10 @@ class ChannelList:
                 REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'true')
                 showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, and only available after donation. Thank You...', 24)  
             else:
-                showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.', 24)        
+                showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.', 24)
+        else:
+            if setting3 == 'ptvlguide':
+                REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
         return showList     
         
         
@@ -4911,30 +4941,28 @@ class ChannelList:
         return imdbnumber
             
             
-    # filelist cache is redundant too m3u, possible future use?
+    # filelist cache is redundant to m3u, possible future use?
     def getFileListCache(self, chtype, channel, purge=False):
         self.log("getFileListCache")
         #Cache name
         cachetype = str(chtype) + ':' + str(channel)
         
-        #Set Life of cache
-        if chtype <= 7:
-            life = SETTOP_REFRESH - 1000
-        elif chtype == 8:
-            life = 44
+        #Set Life of cache, value needs to be lower than reset time.
+        if chtype <= 7 or chtype >= 10:
+            life = (SETTOP_REFRESH - 900) / 60
         else:
-            life = 22
+            life = 18
             
         self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
-        if purge:
+        if purge == True:
             self.FileListCache.delete("%")
 
          
     def clearFileListCache(self, chtype=9999, channel=9999):
         self.log("clearFileListCache")
-        if channel == 9999:
+        if chtype == 9999 and channel == 9999:
             for n in range(999):
-                for i in range(15):
+                for i in range(NUMBER_CHANNEL_TYPES):
                     try:
                         self.getFileListCache(i+1, n+1, True)
                     except:

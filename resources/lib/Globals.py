@@ -74,8 +74,6 @@ ART_TIMER = [6,12,24,48,72]
 SHORT_CLIP_ENUM = [15,30,60,90,120,240,360,480]#in seconds
 INFOBAR_TIMER = [3,5,10,15,20,25]#in seconds
 LIMIT_VALUES = [25,50,100,250,500,1000,5000,0]#Media Per/Channel, 0 = Unlimited
-REFRESH_INT = [10800,21600,43200,86400]#in seconds (3|6|12|24hrs)
-REFRESH_HOUR = [4,8,12,24]#in seconds (4|8|12|24hrs)
 TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
@@ -104,6 +102,9 @@ MODE_STARTMODES = MODE_RANDOM | MODE_REALTIME | MODE_RESUME
 
 # Maximum is 10
 RULES_PER_PAGE = 7
+
+# Chtype Limit
+NUMBER_CHANNEL_TYPES = 17
 
 #UPNP Clients
 IPP1 = REAL_SETTINGS.getSetting("UPNP1_IPP")
@@ -234,12 +235,10 @@ artwork6 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwo
 # pyfscache globals
 cache_daily = pyfscache.FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = pyfscache.FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
-cache_monthly = pyfscache.FSCache(REQUESTS_LOC, days=31, hours=0, minutes=0)
+cache_monthly = pyfscache.FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
     
-if REAL_SETTINGS.getSetting('EnableSettop') == 'true': 
-    SETTOP_REFRESH = REFRESH_INT[int(REAL_SETTINGS.getSetting('REFRESH_INT'))] 
-else:
-    SETTOP_REFRESH = 72000
+# 1hr re    
+SETTOP_REFRESH = 3600
 
 try:
     MEDIA_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]

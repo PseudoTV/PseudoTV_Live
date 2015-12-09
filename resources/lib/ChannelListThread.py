@@ -64,7 +64,7 @@ class ChannelListThread(threading.Thread):
         # Don't load invalid channels if minimum threading mode is on
         if self.fullUpdating and self.myOverlay.isMaster:
             if validchannels < self.chanlist.enteredChannelCount:
-                infoDialog("Background Loading...")
+                DebugNotify("Background Loading...")
 
             for i in range(self.myOverlay.maxChannels):
                 if self.myOverlay.channels[i].isValid == False:
@@ -98,15 +98,14 @@ class ChannelListThread(threading.Thread):
                         return
 
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
-        self.chanlist.sleepTime = 3
-        InfoTimer = INFOBAR_TIMER[int(REAL_SETTINGS.getSetting('InfoTimer'))]
         self.myOverlay.postBackgroundLoading()
-            
+        self.chanlist.sleepTime = 3
+        
         while True:
             for i in range(self.myOverlay.maxChannels):
                 try:
                     modified = True
-                    while modified == True and self.myOverlay.channels[i].getTotalDuration() < PREP_CHANNEL_TIME and self.myOverlay.channels[i].Playlist.size() < 4096:
+                    while modified == True and self.myOverlay.channels[i].getTotalDuration() < PREP_CHANNEL_TIME and self.myOverlay.channels[i].Playlist.size() < self.chanlist.Playlist_Limit:
                         try:
                             # If minimum updating is on, don't attempt to load invalid channels
                             if self.fullUpdating == False and self.myOverlay.channels[i].isValid == False and self.myOverlay.isMaster:
@@ -119,6 +118,7 @@ class ChannelListThread(threading.Thread):
                                 return
 
                             time.sleep(2)
+                            
                             try:
                                 curtotal = self.myOverlay.channels[i].getTotalDuration()
                                 if self.myOverlay.isMaster:
@@ -192,8 +192,8 @@ class ChannelListThread(threading.Thread):
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 
-            # If we're master, wait 30 minutes in between checks.  If not, wait 5 minutes.
-            while (timeslept < 1800 and self.myOverlay.isMaster == True) or (timeslept < 300 and self.myOverlay.isMaster == False):
+            # If we're master, wait 15 minutes in between checks.  If not, wait 5 minutes.
+            while (timeslept < 900 and self.myOverlay.isMaster == True) or (timeslept < 300 and self.myOverlay.isMaster == False):
                 if self.myOverlay.isExiting:
                     self.log("IsExiting")
                     return
