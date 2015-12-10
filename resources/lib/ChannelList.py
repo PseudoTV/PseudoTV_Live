@@ -490,31 +490,32 @@ class ChannelList:
                     ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_time', str(self.channels[channel - 1].totalTimePlayed))
 
 
-    def getChannelName(self, chtype, setting1):
+    def getChannelName(self, chtype, opt):
         chname = ''
         if chtype <= 7 or chtype == 12:
-            if len(setting1) == 0:
+            # opt = setting1
+            if len(opt) == 0:
                 return ''
             elif chtype == 0:
-                return self.getSmartPlaylistName(setting1)
-            elif chtype == 1 or chtype == 2 or chtype == 6 or chtype == 12:
-                return setting1
+                return self.getSmartPlaylistName(opt)
+            elif chtype == 1 or chtype == 2 or chtype == 6:
+                return opt
             elif chtype == 3:
-                return setting1 + " TV"
+                return opt + " TV"
             elif chtype == 4:
-                return setting1 + " Movies"
+                return opt + " Movies"
             elif chtype == 5:
-                return setting1 + " Mixed"
+                return opt + " Mixed"
             elif chtype == 12:
-                return setting1 + " Music"
+                return opt + " Music"
             elif chtype == 7:
-                if setting1[-1] == '/' or setting1[-1] == '\\':
-                    return os.path.split(setting1[:-1])[1]
+                if opt[-1] == '/' or opt[-1] == '\\':
+                    return os.path.split(opt[:-1])[1]
                 else:
-                    return os.path.split(setting1)[1]
+                    return os.path.split(opt)[1]
         else:
-            #setting1 = channel number
-            chname = self.getChname(setting1)
+            #opt = channel number
+            chname = self.getChname(opt)
             return chname
         return ''
         
@@ -523,7 +524,7 @@ class ChannelList:
         if not channel:
             channel = self.settingChannel   
         try:
-            chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
+            return int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
         except:
             return 9999
         
@@ -578,15 +579,13 @@ class ChannelList:
         fileList = []
         
         #Set Local Limit or Global
-        if chtype in [7,10,11,15,16] and setting3 and len(setting3) > 0:
+        if chtype in [7,10,11,15,16] and setting3:
             try:
                 limit = int(setting3)
                 if isLowPower() == True:
                     raise Exception()
             except Exception,e:
                 limit = MEDIA_LIMIT
-            if limit == 0:
-                limit = 10000
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
@@ -5051,9 +5050,9 @@ class ChannelList:
                                         dur = int(duration.group(1))
                                     except Exception,e:
                                         dur = 0
-                                        
+
                                     # Accurate duration
-                                    if dur == 0 and isLowPower() != True:
+                                    if not file.startswith(("plugin", "upnp")) and dur == 0 and isLowPower() != True:
                                         try:
                                             dur = self.videoParser.getVideoLength(file)
                                             dur_accurate = True
@@ -5067,19 +5066,15 @@ class ChannelList:
                                             dur = int(duration.group(1))
                                         except Exception,e:
                                             dur = 0
-                                            
+                                                                                                                               
+                                    if file.startswith(("plugin", "upnp")) and dur == 0:
+                                        dur = 3600    
+                                             
                                     # Remove any file types that we don't want (ex. IceLibrary, ie. Strms)
                                     if self.incIceLibrary == False:
                                         if file[-4:].lower() == 'strm':
                                             dur = 0
-                                    # else:
-                                        # # Include strms with no duration
-                                        # if dur == 0 and file[-4:].lower() == 'strm':
-                                            # dur = 3600
                                             
-                                    if file.startswith('plugin'):
-                                        if dur == 0:
-                                            dur = 3600                            
                                     self.log("getFileList, dur = " + str(dur))  
 
                                     if dur > 0:

@@ -1660,8 +1660,9 @@ def chkSettings2():
     
 def backupSettings2():
     log('utils: backupSettings2')
-    SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
-    Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
+    if getSize(SETTINGS_FLE) > SETTINGS_FLE_DEFAULT_SIZE:
+        SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
+        Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
 
 def restoreSettings2():
     log('utils: restoreSettings2')
@@ -1673,9 +1674,11 @@ def restoreSettings2():
         select = selectDialog(backuplist, 'Select backup to restore')   
         if select != -1:
             RESTORE_FILE = backuplist[select]+'.xml'
+            RESTORE_FLEPATH = os.path.join(BACKUP_LOC, RESTORE_FILE)
             if dlg.yesno("PseudoTV Live", 'Restoring will remove current channel configurations, Are you sure?'):
-                Restore(os.path.join(BACKUP_LOC, RESTORE_FILE, SETTINGS_FLE))
-                return infoDialog("Restore Complete")
+                Restore(RESTORE_FLEPATH, SETTINGS_FLE)
+                if getSize(SETTINGS_FLE) == getSize(RESTORE_FLEPATH):
+                    return infoDialog("Restore Complete")
     else:
         return infoDialog("No Backups found")
         

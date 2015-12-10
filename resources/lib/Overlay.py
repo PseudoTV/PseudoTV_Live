@@ -901,7 +901,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
  
                 epochBeginDate = time.mktime(t)
-                position = self.channels[channel].playlistPosition
+                position = self.channels[channel].playlistPosition + self.infoOffset
                 
                 #loop till we get to the current show this is done to display the correct show on the info listing for Live TV types
                 while epochBeginDate + self.channels[channel].getCurrentDuration() <  time.time():
@@ -1335,6 +1335,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     epochBeginDate += self.channels[self.currentChannel - 1].getCurrentDuration()
                     self.channels[self.currentChannel - 1].addShowPosition(1)
                     position = self.channels[self.currentChannel - 1].playlistPosition
+                position += self.infoOffset
             else: #original code
                 position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset
         self.log('setShowInfo, setshowposition = ' + str(position))  
@@ -3225,18 +3226,18 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
           
     def getChtype(self, channel):
         try:
-            Chtype = self.channels[channel-1].type
+            chtype = self.channels[channel-1].type
         except:
-            Chtype = int(self.channelList.getChtype(channel))
-        return Chtype
+            chtype = self.channelList.getChtype(channel)
+        return chtype
            
            
     def getChname(self, channel):
         try:
-            Chname = self.channels[channel-1].name
+            chname = self.channels[channel-1].name
         except:
-            Chname = self.channelList.getChname(channel)
-        return Chname
+            chname = self.channelList.getChname(channel)
+        return chname
 
         
     def getChlogo(self, channel, fallback=True):

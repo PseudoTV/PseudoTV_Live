@@ -68,7 +68,6 @@ def PseudoTV():
         buggalo.onExceptionRaised()
         return
         
-    
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
 if getProperty("PseudoTVRunning") != "True":

@@ -162,25 +162,35 @@ class Settings:
         
         if xbmcgui.Dialog().yesno("PseudoTV Live", "Repair Channel Configurations?"):
             self.loadSettings()
+            chanErrors = ''
             self.amendedSettings = []
+            self.amendedErrors = []
             
             updateDialog = xbmcgui.DialogProgress()
             updateDialog.create("PseudoTV Live", "Repairing Channel Configurations")
             MSG = "Channel Repair Failed!"
-
+            MSG1 = ""
+            
             for i in range(999):
+                list(set(self.amendedErrors))
                 self.setSetting('Channel_' + str(i + 1) + '_time', '0')
                 self.setSetting('Channel_' + str(i + 1) + '_changed', "True")
                 updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Scanning Channel " + str(i+1))
                 for n in range(len(self.currentSettings)):
                     if (self.currentSettings[n][0]).startswith('Channel_'+ str(i + 1) + '_'):
-                        updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Analyzing Channel " + str(i+1))
+                        updateDialog.update(int(i * .07) + 1, "Repairing Channel Configurations", "Analyzing Channel " + str(i+1), MSG1)
                         if self.currentSettings[n] not in self.amendedSettings:
                             self.amendedSettings.append(self.currentSettings[n])
+                        else:
+                            self.amendedErrors.append(i + 1)
+                            
+                    if len(self.amendedErrors) > 0:
+                        MSG1 = "Errors found on channels " + str(list(set(self.amendedErrors)))
+                        
             self.writeSettingsNew(updateDialog)
-            MSG = "Channel Configurations Repaired"
+            MSG = "Channel Repair Complete"
             updateDialog.close()
-            xbmcgui.Dialog().ok("PseudoTV Live", "Repairing Channel Configurations Complete", "")
+            xbmcgui.Dialog().ok("PseudoTV Live", MSG, MSG1)
         
         # Return to PTVL Settings
         Globals.REAL_SETTINGS.openSettings()
