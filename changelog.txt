@@ -1,3 +1,5 @@
+[*] Tweaked Stream validation, users can install ffmpeg and rtmpdump for added functionality.
+[*] Fixed Seasonal Youtube Channel can be added thru in-app channel manager or via Autotuning.
 [*] Channel repair & backup/restore tools tweaked
 [*] Settop timer removed, When enabled PTVL checks every hour if a channel needs updating. (ie. LiveTV every 24hrs, "Time between channel resets" preference or Advanced Channel rule "Reset Every x Hours")
 [*] Miscellaneous tweaks and corrections. 

@@ -33,6 +33,7 @@ class Channel:
         self.isPaused = False
         self.isValid = False
         self.isRandom = False
+        self.isReverse = False
         self.mode = 0
         self.ruleList = []
         self.channelNumber = 0

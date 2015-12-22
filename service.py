@@ -17,9 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import os
+import os, time
 
-from time import sleep
 from resources.lib.utils import *
 
 # Plugin Info
@@ -36,8 +35,7 @@ def autostart():
     xbmc.log('script.pseudotv.live-Service: autostart')
     infoDialog("AutoStart Enabled")
     AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
-    IDLE_TIME = AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] 
-    sleep(IDLE_TIME)
+    xbmc.sleep(AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] * 1000)
     xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
     
 if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:

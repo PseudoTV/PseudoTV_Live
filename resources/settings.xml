@@ -22,6 +22,7 @@
 <!--Tweaks-->
     <category label="30300">
         <setting id="platform" type="enum" values="Android|ATV|IOS|PowerPC|Raspberry Pi|Intel Budget|Intel Core|AMD Budget|AMD FX" label="30401" default="6" />
+        <setting id="os" type="enum" values="Android Arm|Android x86|ATV1 Linux|ATV1 Stock|ATV2|IOS|Linux 32bit|Linux 64bit|Mac 32bit|Mac 64bit|Rasberry Pi|Windows|TLBB" label="30402" default="11" />
         <setting id="limit_preferred_language" type="select"   label="32055" values="Chinese|Dutch|English|Finnish|French|German|Hungarian|Italian|Japanese|Polish|Portuguese|Russian|Spanish|Swedish" default="English"/>
         <setting id="limit_preferred_region" type="select"   label="32056" values="Andorra|United Arab Emirates|Afghanistan|Antigua and Barbuda|Anguilla|Albania|Armenia|Netherlands Antilles|Angola|Antarctica|Argentina|American Samoa|Austria|Australia|Aruba|Aland|Azerbaijan|Bosnia and Herzegovina|Barbados|Bangladesh|Belgium|Burkina Faso|Bulgaria|Bahrain|Burundi|Benin|Saint Barthelemy|Bermuda|Brunei|Bolivia|Brazil|Bahamas|Bhutan|Bouvet Island|Botswana|Belarus|Belize|Canada|Cocos (Keeling) Islands|Congo (Kinshasa)|Central African Republic|Congo (Brazzaville)|Switzerland|Cote dIvoire|Cook Islands|Chile|Cameroon|China|Colombia|Costa Rica|Cuba|Cape Verde|Christmas Island|Cyprus|Czech Republic|Germany|Djibouti|Denmark|Dominica|Dominican Republic|Algeria|Ecuador|Estonia|Egypt|Western Sahara|Eritrea|Spain|Ethiopia|Finland|Fiji|Falkland Islands|Micronesia|Faroe Islands|France|Gabon|United Kingdom|Grenada|Georgia|French Guiana|Guernsey|Ghana|Gibraltar|Greenland|Gambia|Guinea|Guadeloupe|Equatorial Guinea|Greece|South Georgia and South Sandwich Islands|Guatemala|Guam|Guinea-Bissau|Guyana|Hong Kong|Heard and McDonald Islands|Honduras|Croatia|Haiti|Hungary|Indonesia|name|English country name| |Ireland|Israel|Isle of Man|India|British Indian Ocean Territory|Iraq|Iran|Iceland|Italy|Jersey|Jamaica|Jordan|Japan|Kenya|Kyrgyzstan|Cambodia|Kiribati|Comoros|Saint Kitts and Nevis|North Korea|South Korea|Kuwait|Cayman Islands|Kazakhstan|Laos|Lebanon|Saint Lucia|Liechtenstein|Sri Lanka|Liberia|Lesotho|Lithuania|Luxembourg|Latvia|Libya|Morocco|Monaco|Moldova|Montenegro|Saint Martin|Madagascar|Marshall Islands|Macedonia|Mali|Myanmar|Mongolia|Macau|Northern Mariana Islands|Martinique|Mauritania|Montserrat|Malta|Mauritius|Maldives|Malawi|Mexico|Malaysia|Mozambique|Namibia|New Caledonia|Niger|Norfolk Island|Nigeria|Nicaragua|Netherlands|Norway|Nepal|Nauru|Niue|New Zealand|Oman|Panama|Peru|French Polynesia|Papua New Guinea|Philippines|Pakistan|Poland|Saint Pierre and Miquelon|Pitcairn|Puerto Rico|Palestine|Portugal|Palau|Paraguay|Qatar|Reunion|Romania|Serbia|Russian Federation|Rwanda|Saudi Arabia|Solomon Islands|Seychelles|Sudan|Sweden|Singapore|Saint Helena|Slovenia|Svalbard and Jan Mayen Islands|name|English country name| |Slovakia|Sierra Leone|San Marino|Senegal|Somalia|Suriname|Sao Tome and Principe|El Salvador|Syria|Swaziland|Turks and Caicos Islands|Chad|French Southern Lands|Togo|Thailand|Tajikistan|Tokelau|Timor-Leste|Turkmenistan|Tunisia|Tonga|Turkey|Trinidad and Tobago|Tuvalu|Taiwan|Tanzania|Ukraine|Uganda|United States Minor Outlying Islands|United States|Uruguay|Uzbekistan|Vatican City|Saint Vincent and the Grenadines|Venezuela|British Virgin Islands|Virgin Islands US|Vietnam|Vanuatu|Wallis and Futuna Islands|Samoa|Yemen|Mayotte|South Africa|Zambia|Zimbabwe" default="United States"/>
         <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
@@ -36,6 +37,8 @@
         <setting id="HideClips" type="bool"   label="30215" default="true"/>
         <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="5"/>
         <setting id="enable_mute" type="bool"   label="30373" default="false"/>
+        <setting id="SeekForward" type="enum" label="30446" values="10 sec|30 sec|60 sec|3 min|5 min|10 min|30 min" default="1"/>
+        <setting id="SeekBackward" type="enum" label="30447" values="-10 sec|-30 sec|-60 sec|-3 min|-5 min|-10 min|-30 min" default="1"/>
     </category>
 <!--Visual-->
     <category label="30200">
@@ -113,9 +116,9 @@
             <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="true" visible="eq(-24,true)" enable="eq(-5,true) + System.HasAddon(plugin.video.youtube)"                                  default="false"/>
             <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="true" visible="eq(-25,true)" enable="eq(-6,true) + System.HasNetwork"                                  default="false"/>
         <setting     id="AT_Donor"                            type="bool"                                   visible="false"                                                              default="false" />    
-        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true)"                                        default="" /> 
-            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true)"  enable="eq(-2,true) + System.HasAddon(plugin.video.youtube)"                                      default="false"/>
-            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true)" enable="eq(-3,true) + System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
+        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true) + eq(-1,true)"                                        default="" /> 
+            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true) + eq(-2,true)"  enable="eq(-2,true) + System.HasAddon(plugin.video.youtube)"                                      default="false"/>
+            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true) + eq(-3,true)" enable="eq(-3,true) + System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
         <setting                                              type="lsep"   label="30782"                   visible="eq(-30,true)"     default="" /> 
             <setting id="autoFindIPTV_Source"                 type="enum"   label="30965" subsetting="true" visible="eq(-31,true)" values=" |Local|Online" default="0" />
             <setting id="autoFindIPTV_Path_Local"             type="file"   label="30966" subsetting="true" visible="eq(-32,true) + eq(-1,1)"             source="auto" default=""/>
@@ -197,11 +200,10 @@
         <setting id="Community_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"   label="30776" values="False|True" default="0"/>
         <setting id="Gmail_User" subsetting="true"   label="30906" visible="eq(-2,true)" type="text" default="User@gmail.com" />
         <setting id="Gmail_Pass" subsetting="true"   label="30907" visible="eq(-3,true)" type="text" option="hidden" default="Password" />
-        <setting id="Donor_Enabled"   label="30901" type="bool" default="false"/>
-        <setting id="Donor_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"label="30777" values="False|True" default="0"/>
-        <setting id="Donor_UP" subsetting="true"   label="30902" visible="eq(-2,true)" option="hidden" type="text" default="Username:Password" />    
+        <setting id="Donor_Enabled"   label="30901" type="bool" default="false" visible="false"/>
+        <setting id="Donor_Verified" subsetting="true" type="enum" enable="false" visible="false" label="30777" values="False|True" default="0"/>
+        <setting id="Donor_UP" subsetting="true"   label="30902" visible="false" type="text" default="Username:Password" />    
         <setting label="30903"  subsetting="true" visible="eq(-3,true)" type="lsep" /> 
-        <setting type="sep" visible="true" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>
     
@@ -232,8 +234,6 @@
 <!--Debugging-->
     <category label="30900">  
         <setting label="30990" type="lsep"/>
-        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>
         <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
@@ -241,16 +241,21 @@
         <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
         <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
         <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
-        <setting id="plugin_ok_level" type="enum"   label="30994" values="Low|High" default="0"/>
         <setting id="Override.LOWPOWER" type="bool"   label="30943" default="false"/>
         <setting id="ga_disable" type="bool"   label="30992" default="false"/>
         <setting id="ForceLiveChannelReset" type="bool"   label="30944" default="false"/>
         <setting label="36996" type="lsep"  visible="eq(-1,true)"/>
         <setting label="36997" type="lsep"  visible="eq(-2,true)"/>
+        <setting label="30308" type="lsep"/>
+        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
         <setting label="30912" type="lsep"/>
         <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
         <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
         <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
-        <setting id="APIs" option="hidden" visible="true" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|" />  
+        <setting id="APIs" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|" />  
+        <setting label="30197" type="lsep"/>
+        <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg/bin/"/>
+        <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\rtmpdump.exe"/>
     </category>
 </settings>

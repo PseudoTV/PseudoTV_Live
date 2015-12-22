@@ -35,7 +35,10 @@ ADDON_ID = REAL_SETTINGS.getAddonInfo('id')
 ADDON_NAME = REAL_SETTINGS.getAddonInfo('name')
 ADDON_PATH = (REAL_SETTINGS.getAddonInfo('path').decode('utf-8'))
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+ICON = os.path.join(ADDON_PATH, 'icon.png')
+FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
+PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
 
 def log(msg, level = xbmc.LOGDEBUG):
     if DEBUG != True and level == xbmc.LOGDEBUG:
@@ -74,6 +77,8 @@ ART_TIMER = [6,12,24,48,72]
 SHORT_CLIP_ENUM = [15,30,60,90,120,240,360,480]#in seconds
 INFOBAR_TIMER = [3,5,10,15,20,25]#in seconds
 LIMIT_VALUES = [25,50,100,250,500,1000,5000,0]#Media Per/Channel, 0 = Unlimited
+SEEK_FORWARD = [10, 30, 60, 180, 300, 600, 1800]
+SEEK_BACKWARD = [-10, -30, -60, -180, -300, -600, -1800]
 TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
@@ -205,6 +210,7 @@ GlobalFileLock = FileLock()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true'
+FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" 
 FILELIST_LIMIT = [4096,8192,16384]
 MAXFILE_DURATION = 16000
 RSS_REFRESH = 900

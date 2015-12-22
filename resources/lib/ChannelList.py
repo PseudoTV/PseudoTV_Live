@@ -69,13 +69,11 @@ class ChannelList:
         self.musicGenreList = []
         self.pluginPathList = []
         self.pluginNameList = []
+        self.PVRList = []
+        self.HDHRList = []
         self.showList = []
         self.channels = []
         self.file_detail_CHK = []
-        self.cached_json_detailed_TV = []
-        self.cached_json_detailed_Movie = []
-        self.cached_json_detailed_trailers = []  
-        self.cached_json_detailed_xmltvChannels_pvr = []
         self.cached_readXMLTV = []
         self.sleepTime = 0
         self.threadPaused = False
@@ -113,19 +111,15 @@ class ChannelList:
         self.Playlist_Limit = PlaylistLimit()
         self.findMaxChannels()
                 
-        if REAL_SETTINGS.getSetting("EnableSettop") == "true":
+        if SETTOP:
             self.backgroundUpdating = 0
             self.channelResetSetting = 0
-            
-        if self.backgroundUpdating > 0:
-            self.updateDialog = xbmcgui.DialogProgress()
-        else:
-            self.updateDialog = xbmcgui.DialogProgressBG()
+        self.updateDialog = xbmcgui.DialogProgressBG()
             
         if self.forceReset:
-            REAL_SETTINGS.setSetting("INTRO_PLAYED","false")
-            REAL_SETTINGS.setSetting('StartupMessage', 'false')    
-            REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
+            REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
+            REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset  
+            REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
             self.forceReset = False
 
         try:
@@ -230,6 +224,8 @@ class ChannelList:
             except Exception,e:
                 pass
 
+            # todo move channel validation check here
+            
             if chtype == 0:
                 if FileAccess.exists(xbmc.translatePath(chsetting1)):
                     self.maxChannels = i + 1
@@ -238,11 +234,12 @@ class ChannelList:
                 if len(chsetting1) > 0:
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
-                    
+   
             if self.forceReset and (chtype != 9999):
                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
                 
-            if REAL_SETTINGS.getSetting('Enable_FindLogo') == "true":
+            # find missing channel logos
+            if FIND_LOGOS:
                 if self.background == False:
                     self.myOverlay.setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
                 if chtype not in [6,7,9999]:
@@ -335,10 +332,15 @@ class ChannelList:
                     self.channels[channel - 1].fileName = CHANNELS_LOC + 'channel_' + str(channel) + '.m3u'
                     returnval = True
                     
-                    if chtype == 8: 
+                    if chtype == 8:
+                        # Reset livetv after 4hrs
+                        if chsetting3 == 'ustvnow':
+                            if self.channels[channel - 1].totalTimePlayed > (60 * 60 * 4):
+                                self.setResetLST(channel)
                         # Reset livetv after 24hrs
-                        if self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
-                            createlist = False
+                        elif self.channels[channel - 1].totalTimePlayed > (60 * 60 * 24):
+                            self.setResetLST(channel)
+                        createlist = False             
                     else:
                         # If this channel has been watched for longer than it lasts, reset the channel
                         if self.channelResetSetting == 0 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
@@ -520,18 +522,14 @@ class ChannelList:
         return ''
         
         
-    def getChtype(self, channel=None):
-        if not channel:
-            channel = self.settingChannel   
+    def getChtype(self, channel): 
         try:
             return int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
         except:
             return 9999
         
         
-    def getChname(self, channel=None):
-        if not channel:
-            channel = self.settingChannel
+    def getChname(self, channel):
         for i in range(RULES_PER_PAGE):         
             try:
                 if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
@@ -579,7 +577,9 @@ class ChannelList:
         fileList = []
         
         #Set Local Limit or Global
-        if chtype in [7,10,11,15,16] and setting3:
+        if chtype in [7,10,11,15,16]:
+            setting3 = setting3.replace('Unlimited','0')
+            setting4 = setting4.replace('Default','0').replace('Random','1').replace('Reverse','2') 
             try:
                 limit = int(setting3)
                 if isLowPower() == True:
@@ -631,9 +631,9 @@ class ChannelList:
                 if setting2 == '31':
                     today = datetime.datetime.now()
                     month = today.strftime('%B')
-                    #If Month != Update
                     if setting1.lower() != month.lower():
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_1", month)   
+                        setting1 = month
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_1", month)
                 fileList = self.createYoutubeFilelist(setting1, setting2, setting3, setting4, limit)
 
         # RSS/iTunes/feedburner/Podcast   
@@ -720,8 +720,9 @@ class ChannelList:
 
         try:
             if append == True:
-                channelplaylist = FileAccess.open(CHANNELS_LOC + "channel_" + str(channel) + ".m3u", "r+")
+                channelplaylist = FileAccess.open(CHANNELS_LOC + "channel_" + str(channel) + ".m3u", "r")
                 channelplaylist.seek(0, 2)
+                channelplaylist.close()
             else:
                 channelplaylist = FileAccess.open(CHANNELS_LOC + "channel_" + str(channel) + ".m3u", "w")
         except Exception,e:
@@ -738,8 +739,7 @@ class ChannelList:
             return False
 
         # Set Media Sort
-        setting4 = setting4.replace('Default','0').replace('Random','1').replace('Reverse','2') 
-        if chtype in [7, 10, 11, 12, 13, 15, 16]:
+        if chtype in [7, 10, 11, 12, 13, 15, 16] and self.myOverlay.isMaster == True:
             if setting4 == '1':
                 #RANDOM
                 israndom = True
@@ -768,18 +768,20 @@ class ChannelList:
             if len(fileList) > self.Playlist_Limit:
                 fileList = fileList[:self.Playlist_Limit]
         
-        self.log("makeChannelList, Using Media Sort " + msg)
         self.channels[channel - 1].isRandom = israndom
+        self.channels[channel - 1].isReverse = isreverse
+        self.log("makeChannelList, Using Media Sort " + msg)
         fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
         
         # inject BCT into filelist
-        if self.incBCTs == True and bctType != None:
+        if self.incBCTs == True and bctType != None and self.myOverlay.isMaster == True:
             fileList = self.insertBCT(chtype, channel, fileList, bctType)
             
         # Write each entry into the new playlist
         for string in fileList:
             channelplaylist.write(uni("#EXTINF:") + uni(string) + uni("\n"))
-            
+         
+        # cleanup   
         del fileList[:]
         channelplaylist.close()
         self.log('makeChannelList return')
@@ -931,6 +933,7 @@ class ChannelList:
                 if curitem == a.lower():
                     newlist.append(item)
                     break
+                    
         return newlist
     
     
@@ -1069,7 +1072,7 @@ class ChannelList:
                 break
                 
             LocalFLE = (LocalLST[i])[0]
-            duration = self.videoParser.getVideoLength(LocalFLE)
+            duration = self.getDuration(LocalFLE)
                                             
             if duration == 0 and LocalFLE[-4:].lower() == 'strm':
                 duration = 3600
@@ -1093,6 +1096,9 @@ class ChannelList:
                     
         if filecount == 0:
             self.log('Unable to access Videos files in ' + setting1)
+            
+        # cleanup   
+        del LocalLST[:]
         return fileList
 
         
@@ -1125,6 +1131,7 @@ class ChannelList:
         if not timestamp:
             timestamp = datetime.datetime.now()
         timestamp = str(timestamp).split('.')[0]
+
         try:
             showtitle = (trim(showtitle, 350, ''))
         except Exception,e:
@@ -1213,6 +1220,7 @@ class ChannelList:
         text = text.replace("\n", "")
         text = text.replace("\r", "")
         text = text.replace("\t", "")
+        text = text.replace("/",'')
         text = text.replace("\ ",'')
         text = text.replace("/ ",'')
         text = text.replace("\\",'/')
@@ -1229,7 +1237,7 @@ class ChannelList:
         else:
             text = text
             
-        text = uni(text.strip())
+        text = self.uncleanString(text.strip())
         self.log('cleanLabels, OUT = ' + text)
         return text
     
@@ -1666,21 +1674,7 @@ class ChannelList:
         except AttributeError:
             return int((delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10 ** 6)) / 10 ** 6
 
-            
-    #todo
-    def getPVRChannels(self):
-        self.log("getPVRChannels") 
-        # {"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"alltv","properties":["thumbnail","channel"]},"id":1}
-        return chanNumLST, chanNameLST
-        
-        
-  #todo  
-    def getPVRlistings(self, channelid):
-        self.log("getPVRChannels")  
-        # {"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":2,"properties":["title","plot","starttime","endtime","runtime","genre","episodename","thumbnail","episodenum","episodepart"]},"id":18}
-        return listings
-            
-            
+
     def parsePVRDate(self, dateString):
         self.log("parsePVRDate") 
         if dateString is not None:
@@ -1738,13 +1732,9 @@ class ChannelList:
             # Add channel to ResetLST, on next update force channel rebuild
             self.setResetLST(self.settingChannel)
             chname = (self.getChannelName(9, self.settingChannel))
-            if setting3 == 'ptvlguide':
-                REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'true')
-                showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, and only available after donation. Thank You...', 24)  
-            else:
-                showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.', 24)
+            showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.', 24)
         else:
-            if setting3 == 'ptvlguide':
+            if setting3 in ['ptvlguide']:
                 REAL_SETTINGS.setSetting('PTVLXML_FORCE', 'false')
         return showList     
         
@@ -1754,7 +1744,6 @@ class ChannelList:
         showList = []
         showcount = 0          
         now = datetime.datetime.now()
-                
         try:
             # local or url xmltv file
             if setting3[0:4] == 'http':
@@ -1873,7 +1862,7 @@ class ChannelList:
                                 else:
                                     ignoreParse = False
                                     
-                                if setting3.lower() == 'ptvlguide':
+                                if setting3 in ['ptvlguide']:
                                     stopDate = self.parseUTCXMLTVDate(elem.get('stop'))
                                     startDate = self.parseUTCXMLTVDate(elem.get('start'))
                                 else:
@@ -2238,7 +2227,7 @@ class ChannelList:
         showList = []
         linesLST = []
         genre_filter = [setting1.lower()]
-        Playlist_List = 'http://raw.github.com/PseudoTV/pseudotv-live-community/master/youtube_playlists_networks.ini'
+        Playlist_List = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_playlists_networks.ini'
         linesLST = read_url_cached(Playlist_List, return_type='readlines')
         if linesLST:
             for i in range(len(linesLST)):
@@ -2263,6 +2252,8 @@ class ChannelList:
                                 showList.extend(tmpstr) 
                 except:
                     pass
+        # cleanup   
+        del linesLST[:]
         return showList
     
     
@@ -2447,7 +2438,6 @@ class ChannelList:
             
     # https://www.googleapis.com/youtube/v3/search?part=snippet&q=movies&type=channel&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c movie channels
     # https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=UCczhp4wznQWonO7Pb8HQ2MQ&key=AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c
-    
     
         if YT_Type == 1:
             if YT_ID[0:2] != 'UC':
@@ -2654,6 +2644,8 @@ class ChannelList:
 
     def myMusicTV(self, setting1, setting2, setting3, setting4, limit):
         self.log("myMusicTV")
+        #todo replace dead api with youtube lastfm search
+        
         # path = xbmc.translatePath("special://profile/addon_data/plugin.video.my_music_tv/cache/plist")
         # fle = os.path.join(path,setting2+".xml.plist")
         # showcount = 0
@@ -2756,7 +2748,7 @@ class ChannelList:
                 try:
                     if event == "end":
                         if elem.tag == "programme":
-                            if xmlfle.lower() in 'ptvlguide':
+                            if xmlfle.lower() in ['ptvlguide']:
                                 stopDate = self.parseUTCXMLTVDate(elem.get('stop'))
                                 startDate = self.parseUTCXMLTVDate(elem.get('start'))
                             else:
@@ -2772,20 +2764,26 @@ class ChannelList:
         return isCurrent
                 
                 
-    def xmltv_ok(self, setting3):
-        self.log("xmltv_ok, setting3 = " + setting3)
+    def xmltv_ok(self, path):
+        self.log("xmltv_ok, setting3 = " + path)
         xmltvValid = False
-        if setting3[0:4] == 'http':
-            self.xmlTvFile = setting3
-            xmltvValid = self.url_ok(setting3)
-        elif setting3.lower() in ['pvr','zap2it','scheduledirect']:
+        if path[0:4] == 'http':
+            self.xmlTvFile = path
+            xmltvValid = self.url_ok(path)
+        elif path.lower() in ['pvr','zap2it','scheduledirect']:
             xmltvValid = True
-        elif setting3.lower() == 'ptvlguide':
+        elif path.lower() == 'ustvnow':
+            USTV_ID = 'plugin.video.ustvnow'
+            USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
+            self.xmlTvFile = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
+            if FileAccess.exists(self.xmlTvFile):
+                xmltvValid = True
+        elif path.lower() == 'ptvlguide':
             self.xmlTvFile = PTVLXML
             if FileAccess.exists(self.xmlTvFile):
                 xmltvValid = True
-        elif setting3 != '':
-            self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+        elif path != '':
+            self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(path) +'.xml'))
             if FileAccess.exists(self.xmlTvFile):
                 xmltvValid = True
         # if xmltvValid == True and self.isXMLTVCurrent(self.xmlTvFile) != True:
@@ -2794,135 +2792,173 @@ class ChannelList:
         return xmltvValid
            
 
-    def Valid_ok(self, setting2):
-        self.log("Valid_ok_NEW")
+    def Valid_ok(self, url):
+        self.log("Valid_ok")
         #plugin check  
-        if setting2[0:6] == 'plugin':  
-            return self.plugin_ok(setting2)  
+        if url[0:6] == 'plugin':  
+            return self.plugin_ok(url)  
         #Override Check# 
         elif REAL_SETTINGS.getSetting('Override_ok') == "true":
             return True
         #rtmp check
-        elif setting2[0:4] == 'rtmp':
-            return True
-            # todo user path to rtmpdump bin
-            # return self.rtmpDump(setting2)  
+        elif url[0:4] == 'rtmp':
+            return self.rtmpDump(url)  
         #http check     
-        elif setting2[0:4] == 'http':
-            return self.url_ok(setting2)
+        elif url[0:4] == 'http':
+            return self.url_ok(url)
         #strm check  
-        elif setting2[-4:] == 'strm':         
-            return self.strm_ok(setting2)
+        elif url[-4:] == 'strm':         
+            return self.strm_ok(url)
         #pvr check
-        elif setting2[0:3] == 'pvr':
+        elif url[0:3] == 'pvr':
             return True  
         #upnp check
-        elif setting2[0:4] == 'upnp':
+        elif url[0:4] == 'upnp':
             return True 
         #udp check
-        elif setting2[0:3] == 'udp':
+        elif url[0:3] == 'udp':
             return True  
         #rtsp check
-        elif setting2[0:4] == 'rtsp':
+        elif url[0:4] == 'rtsp':
             return True  
         #HDHomeRun check
-        elif setting2[0:9] == 'hdhomerun':
+        elif url[0:9] == 'hdhomerun':
             return True  
   
   
-    def strm_ok(self, setting2):
-        self.log("strm_ok, " + str(setting2))
-        self.strmFailed = False
-        self.strmValid = False
-        rtmpOK = True
-        urlOK = True
-        pluginOK = True
+    def strm_ok(self, url):
+        self.log("strm_ok, " + str(url))
+        strmValid = False
         lines = ''
-        youtube_plugin = self.youtube_player_ok()
-             
-        # if youtube_plugin != False:
-            # fallback = youtube_plugin + 'h9Rl0A60qq4'
-        # else:
-            # fallback = INTRO
-
         try:
-            f = FileAccess.open(setting2, "r")
+            f = FileAccess.open(url, "r")
             linesLST = f.readlines()
             self.log("strm_ok.Lines = " + str(linesLST))
             f.close()
 
             for i in range(len(set(linesLST))):
                 lines = linesLST[i]
-                self.strmValid = self.Valid_ok(lines)
-
-                # if self.strmValid == False:
-                    # self.log("strm_ok, failed strmCheck; writing fallback video")
-                    # f = FileAccess.open(setting2, "w")
-                    # for i in range(len(linesLST)):
-                        # lines = linesLST[i]
-                        # if lines != fallback:
-                            # f.write(lines + '\n')
-                        # self.log("strm_ok, file write lines = " + str(lines))
-                    # f.write(fallback)
-                    # f.close()
-                    # self.strmValid = True 
-                               
+                strmValid = self.Valid_ok(lines)
+                if strmValid == True:
+                    return strmValid             
         except Exception,e:
             pass
-        return self.strmValid   
+        # if strmValid == False:
+            # self.writeStrm_ok(url)
+        return strmValid   
 
+        
+    def writeStrm_ok(self, url, fallback=INTRO_TUBE):
+        self.log("writeStrm_ok, " + str(url))
+        try:
+            f = FileAccess.open(url, "w")
+            for i in range(len(linesLST)):
+                lines = linesLST[i]
+                if lines != fallback:
+                    f.write(lines + '\n')
+                self.log("strm_ok, file write lines = " + str(lines))
+            f.write(fallback)
+            f.close()         
+        except Exception,e:
+            pass
+        
 
-    def getffprobeLength(filename):
-        FFPROBE = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'lib', 'ffprobe', self.FFpath))
-        result = subprocess.Popen([FFPROBE, filename],
-        stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-        return [x for x in result.stdout.readlines() if "Duration" in x]
+    def getDuration(self, filename):
+        self.log("getDuration")
+        duration = 0
+        duration = self.videoParser.getVideoLength(filename)
+        if duration == 0:
+            duration = self.getffprobeLength(filename)
+        return duration
+        
+        
+    def getffprobeLength(self, filename):
+        self.log("getffprobeLength")
+        try:
+            FFPROBE = os.path.join(xbmc.translatePath(REAL_SETTINGS.getSetting('ffmpegPath')),'ffprobe.exe')
+            result = subprocess.Popen([FFPROBE, filename])
+            stdout = subprocess.PIPE, stderr = subprocess.STDOUT
+            duration = [x for x in result.stdout.readlines() if "Duration" in x]
+        except:
+            duration = 0
+        return duration
       
       
     def rtmpDump(self, stream):
-        self.rtmpValid = False
-        url = urllib.unquote(stream)
-        RTMPDUMP = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'lib', 'rtmpdump', self.OSpath))
-        self.log("RTMPDUMP = " + RTMPDUMP)
-        assert os.path.isfile(RTMPDUMP)
-        
-        if "playpath" in url:
-            url = re.sub(r'playpath',"-y playpath",url)
-            self.log("playpath url = " + str(url))
-            command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-            self.log("RTMPDUMP command = " + str(command))
-        else:
-            command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-            self.log("RTMPDUMP command = " + str(command))
-       
-        CheckRTMP = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-        output = CheckRTMP.communicate()[0]
-        
-        if "ERROR: RTMP_ReadPacket" in output:
-            self.log("rtmpDump, ERROR: RTMP_ReadPacket")
-            self.rtmpValid = False 
-        elif "ERROR: Problem accessing the DNS." in output:
-            self.rtmpValid = False    
-            self.log("rtmpDump, ERROR: Problem accessing the DNS.")
-        elif "INFO: Connected..." in output:
-            self.log("rtmpDump, INFO: Connected...")
-            self.rtmpValid = True
-        else:
-            self.log("rtmpDump, ERROR?: Unknown response..." + str(output))
-            self.rtmpValid = False
-        
-        self.log("rtmpValid = " + str(self.rtmpValid))
-        return self.rtmpValid
+        self.log("rtmpDump")
+        rtmpValid = False
+        try:
+            # OSplat = REAL_SETTINGS.getSetting('os')
+            # if OSplat == '0':
+                # OSpath = 'androidarm/rtmpdump'
+            # elif OSplat == '1':
+                # OSpath = 'android86/rtmpdump'
+            # elif OSplat == '2':
+                # OSpath = 'atv1linux/rtmpdump'
+            # elif OSplat == '3':
+                # OSpath = 'atv1stock/rtmpdump'
+            # elif OSplat == '4':
+                # OSpath = 'atv2/rtmpdump'
+            # elif OSplat == '5':
+                # OSpath = 'ios/rtmpdump'
+            # elif OSplat == '6':
+                # OSpath = 'linux32/rtmpdump'
+            # elif OSplat == '7':
+                # OSpath = 'linux64/rtmpdump'
+            # elif OSplat == '8':
+                # OSpath = 'mac32/rtmpdump'
+            # elif OSplat == '9':
+                # OSpath = 'mac64/rtmpdump'
+            # elif OSplat == '10':
+                # OSpath = 'pi/rtmpdump'
+            # elif OSplat == '11':
+                # OSpath = 'win/rtmpdump.exe'
+            # elif OSplat == '12':
+                # OSpath = '/usr/bin/rtmpdump'
+                
+            url = urllib.unquote(stream)
+            RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
+            self.log("RTMPDUMP = " + RTMPDUMP)
+            assert os.path.isfile(RTMPDUMP)
+            
+            if "playpath" in url:
+                url = re.sub(r'playpath',"-y playpath",url)
+                self.log("playpath url = " + str(url))
+                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
+                self.log("RTMPDUMP command = " + str(command))
+            else:
+                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
+                self.log("RTMPDUMP command = " + str(command))
+           
+            CheckRTMP = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+            output = CheckRTMP.communicate()[0]
+            
+            if "ERROR: RTMP_ReadPacket" in output:
+                self.log("rtmpDump, ERROR: RTMP_ReadPacket")
+                rtmpValid = False 
+            elif "ERROR: Problem accessing the DNS." in output:
+                rtmpValid = False    
+                self.log("rtmpDump, ERROR: Problem accessing the DNS.")
+            elif "INFO: Connected..." in output:
+                self.log("rtmpDump, INFO: Connected...")
+                rtmpValid = True
+            else:
+                self.log("rtmpDump, ERROR?: Unknown response..." + str(output))
+                rtmpValid = False
+        except:
+            pass
+        self.log("rtmpValid = " + str(rtmpValid))
+        return rtmpValid
         
                 
     def url_ok(self, url):
-        self.urlValid = False
+        urlValid = False
         try:
             if open_url(url):
-                self.urlValid = True
-        except urllib2.HTTPError:
+                urlValid = True
+        except urllib2.HTTPError,e:
             self.log("url_ok, ERROR: HTTP URL NOT VALID, ERROR: " + str(e))
-        self.log("urlValid = " + str(self.urlValid))
+        self.log("urlValid = " + str(urlValid))
         return self.urlValid
         
 
@@ -3221,6 +3257,12 @@ class ChannelList:
             PreShowLST.extend(TrailersStrLST)
             PreShowLST.extend(PreMovieLST)
             PreShowLST.extend(fileList)
+            
+        # cleanup   
+        del fileList[:]
+        del fleList[:]
+        del TrailersStrLST[:]
+        del TrailersLST[:]
         return PreShowLST
 
 
@@ -3315,13 +3357,20 @@ class ChannelList:
                     bctDur += trailerDur
                     tmpstr = self.makeTMPSTR(trailerDur, chname, 'Trailer', 'Trailer', GenreLiveID, trailerMedia)
                     newFileList.append(tmpstr)
+        # cleanup   
+        del fileList[:]
+        del BumperLST[:]
+        del CommercialLST[:]
+        del TrailerLST[:]
         return newFileList
 
         
     def getBumperList(self, BumpersType, chname):
         self.log("getBumperList")
-        BumperLST = []
         BumperCNT = 0
+        BumperLST = []
+        LocalBumperLST = []
+        InternetBumperLST = []
         #Local
         if BumpersType == "1":  
             self.log("getBumperList, Local - " + chname)
@@ -3331,14 +3380,13 @@ class ChannelList:
             
             if FileAccess.exists(PATH):
                 try:
-                    LocalBumperLST = []
                     LocalFLE = ''
                     LocalBumper = ''
                     LocalLST = self.walk(PATH)
 
                     for i in range(len(LocalLST)):  
                         filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
-                        duration = self.videoParser.getVideoLength(filename)
+                        duration = self.getDuration(filename)
                         if duration > 0:
                             BumperCNT += 1
                             if self.background == False:
@@ -3356,7 +3404,6 @@ class ChannelList:
             duration = 15
             if self.youtube_player != False:
                 try:
-                    InternetBumperLST = []
                     Bumper_List = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/bumpers.ini'
                     linesLST = read_url_cached(Bumper_List, return_type='readlines')
                     for i in range(len(Bumper_List)):    
@@ -3390,6 +3437,9 @@ class ChannelList:
                     BumperLST.extend(InternetBumperLST)                
                 except: 
                     pass
+        # cleanup   
+        del LocalBumperLST[:]
+        del InternetBumperLST[:]
         return BumperLST   
         
         
@@ -3420,6 +3470,8 @@ class ChannelList:
                 GenreLiveID = ['Unknown', 'movie', '0', '0', False, '1', mpaa]
                 tmpstr = self.makeTMPSTR(dur, chname, 'Rating', 'Rating', GenreLiveID, URL)
                 newFileList.append(tmpstr)
+            # cleanup   
+            del fileList[:]
             return newFileList
         else:
             return fileList
@@ -3427,15 +3479,17 @@ class ChannelList:
     
     def getCommercialList(self, CommercialsType):  
         self.log("getCommercialList") 
-        CommercialLST = []
         duration = 0
+        CommercialLST = []
+        AsSeenOnCommercialLST = []    
+        LocalCommercialLST = []
+        YoutubeCommercialLST = []
         channel = self.settingChannel
 
         #Youtube - As Seen On TV
         if REAL_SETTINGS.getSetting('AsSeenOn') == 'true' and CommercialsType != '0':
             self.log("getCommercialList, AsSeenOn")
-            try:
-                AsSeenOnCommercialLST = []          
+            try:      
                 YoutubeLST = self.createYoutubeFilelist('PL_ikfJ-FJg77ioZ9nPuhJxuMe9GKu7plT|PL_ikfJ-FJg774gky7eu8DroAqCR_COS79|PL_ikfJ-FJg75N3Gn6DjL0ZArAcfcGigLY|PL_ikfJ-FJg765O5ppOPGTpQht1LwXmck4|PL_ikfJ-FJg75wIMSXOTdq0oMKm63ucQ_H|PL_ikfJ-FJg77yht1Z6Xembod33QKUtI2Y|PL_ikfJ-FJg77PW8AJ3yk5HboSwWatCg5Z|PL_ikfJ-FJg75v4dTW6P0m4cwEE4-Oae-3|PL_ikfJ-FJg76zae4z0TX2K4i_l5Gg-Flp|PL_ikfJ-FJg74_gFvBqCfDk2E0YN8SsGS8|PL_ikfJ-FJg758W7GVeTVZ4aBAcCBda63J', '7', '100', '1', limit)
                 for i in range(len(YoutubeLST)): 
                 
@@ -3462,7 +3516,6 @@ class ChannelList:
             
             if FileAccess.exists(PATH): 
                 try:
-                    LocalCommercialLST = []
                     LocalFLE = ''
                     LocalCommercial = ''
                     LocalLST = self.walk(PATH)
@@ -3472,7 +3525,7 @@ class ChannelList:
                             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Local Commercials")
                         
                         filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
-                        duration = self.videoParser.getVideoLength(filename)
+                        duration = self.getDuration(filename)
                         
                         if duration == 0:
                             duration = 30
@@ -3489,7 +3542,6 @@ class ChannelList:
         elif CommercialsType == '2':
             self.log("getCommercialList, Youtube") 
             try:
-                YoutubeCommercialLST = []
                 YoutubeCommercial = REAL_SETTINGS.getSetting('commercialschannel') # info,type,limit
                 YoutubeCommercial = YoutubeCommercial.split(',')    
                 setting1 = YoutubeCommercial[0]
@@ -3518,6 +3570,10 @@ class ChannelList:
         elif CommercialsType == '3' and isDon() == True:
             self.log("getCommercialList, Internet") 
             CommercialLST.extend(self.InternetCommercial())
+        # cleanup   
+        del AsSeenOnCommercialLST[:]
+        del LocalCommercialLST[:]
+        del YoutubeCommercialLST[:]
         return CommercialLST 
    
         
@@ -3700,8 +3756,11 @@ class ChannelList:
     
     def getTrailerList(self, chtype, chname, TrailersType, trailersgenre, trailersHDnetType, trailerschannel):
         self.log("getTrailerList")
-        TrailerLST = []
         duration = 0
+        TrailerLST = []
+        LocalTrailerLST = []
+        JsonTrailerLST = []
+        YoutubeTrailerLST = []
         genre = ''
         channel = self.settingChannel
         self.youtube_player = self.youtube_player_ok()
@@ -3719,7 +3778,6 @@ class ChannelList:
             
             if FileAccess.exists(PATH):
                 try:
-                    LocalTrailerLST = []
                     LocalFLE = ''
                     LocalTrailer = ''
                     LocalLST = self.walk(PATH)
@@ -3732,7 +3790,7 @@ class ChannelList:
                         LocalFLE = LocalLST[i]
                         
                         if '-trailer' in LocalFLE:
-                            duration = self.videoParser.getVideoLength(LocalFLE)
+                            duration = self.getDuration(LocalFLE)
                             
                             if duration == 0:
                                 duration = 120
@@ -3748,15 +3806,11 @@ class ChannelList:
         #XBMC Library - Local Json
         if TrailersType == '2':
             self.log("getTrailerList, Local Json")
-            JsonTrailerLST = []
             json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetMovies","params":{"properties":["genre","trailer","runtime"]}, "id": 1}')
             genre = chname
             if self.youtube_player != False:
                 try:
-                    if not self.cached_json_detailed_trailers:
-                        self.log('getTrailerList, json_detail creating cache')
-                        self.cached_json_detailed_trailers = self.sendJSON(json_query)   
-                    json_detail = self.cached_json_detailed_trailers.encode('utf-8')   
+                    json_detail = self.sendJSON(json_query)
                     self.log('getTrailerList, json_detail using cache')
 
                     if REAL_SETTINGS.getSetting('trailersgenre') == 'true' and GenreChtype == True:
@@ -3808,7 +3862,6 @@ class ChannelList:
         if TrailersType == '3':
             self.log("getTrailerList, Youtube")
             try:
-                YoutubeTrailerLST = []
                 YoutubeTrailers = REAL_SETTINGS.getSetting('trailerschannel') # info,type,limit
                 YoutubeTrailers = YoutubeTrailers.split(',')
                 setting1 = YoutubeTrailers[0]
@@ -3842,6 +3895,10 @@ class ChannelList:
                 TrailerLST = self.InternetTrailer()
             except Exception,e:
                 self.log("getTrailerList Failed!" + str(e), xbmc.LOGERROR)
+        # cleanup   
+        del LocalTrailerLST[:]
+        del JsonTrailerLST[:]
+        del YoutubeTrailerLST[:]
         return TrailerLST
         
       
@@ -3978,6 +4035,8 @@ class ChannelList:
                 for item in dirs:
                     # recursively scan all subfolders
                     video += self.walk(os.path.join(folder,item,'')) # make sure paths end with a slash
+        # cleanup   
+        del folders[:]
         return video
         
         
@@ -4081,6 +4140,7 @@ class ChannelList:
         if threading.activeCount() > 1:
             while self.threadPaused == True and self.myOverlay.isExiting == False:
                 time.sleep(self.sleepTime)
+                
             # This will fail when using config.py
             try:
                 if self.myOverlay.isExiting == True:
@@ -4142,11 +4202,9 @@ class ChannelList:
             except Exception,e:
                 self.log("readXMLTV, Failed! " + str(e))
                 return ['XMLTV ERROR : IMPROPER FORMATING']
-                    
- 
+
+                
     def findZap2itID(self, CHname, filename):
-        if len(CHname) <= 1:
-            CHname = 'Unknown'
         self.log("findZap2itID, CHname = " + CHname)
         show_busy_dialog()
         orgCHname = CHname
@@ -4155,41 +4213,18 @@ class ChannelList:
         sorted_XMLTVMatchlst = []
         found = False
         try:
-            if filename == 'pvr':
-                self.log("findZap2itID, pvr backend")             
-                if not self.cached_json_detailed_xmltvChannels_pvr:
-                    self.log("findZap2itID, no cached_json_detailed_xmltvChannels")
-                    json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
-                    json_detail = self.sendJSON(json_query)
-                    self.cached_json_detailed_xmltvChannels_pvr = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
-                file_detail = self.cached_json_detailed_xmltvChannels_pvr
-                
-                for f in file_detail:
-                    CHids = re.search('"channelid" *: *(.*?),', f)
-                    dnames = re.search('"label" *: *"(.*?)"', f)
-                    thumbs = re.search('"thumbnail" *: *"(.*?)"', f)
-                   
-                    if CHids and dnames:
-                        CHid = CHids.group(1)
-                        dname = dnames.group(1)       
-                        CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
-                        matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHid)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHid)+' '+orgCHname.upper(), orgCHname]
-                        dnameID = dname + ' : ' + CHid
-                        self.log("findZap2itID, dnameID = " + dnameID)
-                        XMLTVMatchlst.append(dnameID)
-            else:
-                XMLTVMatchlst = self.readXMLTV(filename)
-                try:
-                    CHnum = int(CHname.split(' ')[0])
-                    CHname = (CHname.split(' ')[1]).upper()
-                except:
-                    CHnum = 0
-                    pass
-                
-                CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
-                matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHnum)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHnum)+' '+orgCHname.upper(), orgCHname]
-                self.log("findZap2itID, Cleaned CHname = " + CHname)
-                
+            XMLTVMatchlst = self.readXMLTV(filename)
+            try:
+                CHnum = int(CHname.split(' ')[0])
+                CHname = (CHname.split(' ')[1]).upper()
+            except:
+                CHnum = 0
+                pass
+            
+            CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
+            matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHnum)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHnum)+' '+orgCHname.upper(), orgCHname]
+            self.log("findZap2itID, Cleaned CHname = " + CHname)
+            
             sorted_XMLTVMatchlst = sorted_nicely(XMLTVMatchlst)
             for n in range(len(sorted_XMLTVMatchlst)):
                 try:
@@ -4222,8 +4257,8 @@ class ChannelList:
                         except:
                             pass
                             
-                        line = dname + ' : ' + CHid 
-                        if dname[0:3] != 'en': 
+                        line = '[COLOR=blue][B]'+dname+'[/B][/COLOR] : ' + CHid
+                        if dname[0:3] != 'en':
                             XMLTVMatchlst.append(line)
                     except:
                         hide_busy_dialog()
@@ -4232,11 +4267,10 @@ class ChannelList:
                 if XMLTVMatchlst:
                     select = selectDialog(XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname, 30000)
                     if select != -1:
-                        dnameID = XMLTVMatchlst[select]
+                        dnameID = self.cleanString(XMLTVMatchlst[select])
                         CHid = dnameID.split(' : ')[1]
                         dnameID = dnameID.split(' : ')[0]
-                        return dnameID, CHid
-                    
+                        return dnameID, CHid          
         except Exception,e:
             hide_busy_dialog()
             self.log("findZap2itID, Failed! " + str(e))
@@ -4288,6 +4322,9 @@ class ChannelList:
                 IPTVPathList.append((SortIPTVList[n]).split('@#@')[1])
         
         hide_busy_dialog()
+        # cleanup   
+        del SortIPTVList[:]
+        del TMPIPTVList[:]
         return IPTVNameList, IPTVPathList
 
    
@@ -4391,109 +4428,55 @@ class ChannelList:
         if len(TMPpluginList) == 0:
             self.pluginNameList = ['No Kodi plugins unavailable!']
     
-    
+
+    def getPVRChannels(self):
+        self.log("getPVRChannels")
+        Channels = []
+        json_detail = self.sendJSON('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"alltv","properties":["thumbnail","channel"]},"id":2}')
+        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
+        for f in file_detail:
+            try:
+                CHids = re.search('"channelid" *: *(.*?),', f)
+                if CHids and len(CHids.group(1)) > 0:
+                    CHnames = re.search('"label" *: *"(.*?)"', f)
+                    CHthmbs = re.search('"thumbnail" *: *"(.*?)"', f)
+                    CHid = CHids.group(1) or ''
+                    CHname = CHnames.group(1) or ''
+                    CHthmb = CHthmbs.group(1) or ''
+                    Channels.append([CHid,CHname,unquote(CHthmb)])
+            except:
+                pass
+        return Channels
+        
+        
+    def getPVRLink(self, channel):
+        self.log('getPVRLink')
+        if getXBMCVersion() < 14:
+            PVRverPath = "pvr://channels/tv/All TV channels/"
+        else:
+            PVRverPath = "pvr://channels/tv/All channels/"   
+        PVRPath = xbmcvfs.listdir(PVRverPath)
+        return os.path.join(PVRverPath,PVRPath[1][channel])
+
+        
     def fillPVR(self):
         self.log('fillPVR')
-        show_busy_dialog()
-        TMPPVRList = []
         PVRNameList = []
         PVRPathList = []
-        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":2,"properties":["thumbnail"]},"id": 1 }')
-        json_detail = self.sendJSON(json_query)
-        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)  
-        self.cached_json_detailed_xmltvChannels_pvr = [] 
-        self.XBMCVersion = getXBMCVersion()
+        PVRIconList = []
+        PVRChannels = self.getPVRChannels()
         
-        #PVR Path by XBMC Version
-        if self.XBMCVersion < 14:
-            PVRverPath = "pvr://channels/tv/All TV channels/"
-        elif self.XBMCVersion == 14:
-            PVRverPath = "pvr://channels/tv/All channels/"    
-        else:
-            PVRNameList, PVRPathList = self.fillIsengardPVR()
-            return PVRNameList, PVRPathList
-            
-        try:         
-            for f in file_detail:
-                CHid = 0
-                CHname = ''
-                thumb = ''
-                CHids = re.search('"channelid" *: *(.*?),', f)
-                CHnames = re.search('"label" *: *"(.*?)"', f)
-                thumbs = re.search('"thumbnail" *: *"(.*?)"', f)
-                
-                if CHids and CHnames:
-                    CHid = int(CHids.group(1))
-                    CHname = CHnames.group(1)
-                    
-                    #Download icon to channel logo folder
-                    if thumbs and ENHANCED_DATA == True:
-                        thumb = thumbs.group(1)
-                        GrabLogo(thumb, CHname + ' PVR')
-                                               
-                    name = '[COLOR=blue][B]'+str(CHid)+'[/B][/COLOR] - ' + CHname
-                    path = PVRverPath + str(CHid - 1) + ".pvr"
-                    TMPPVRList.append(name+'@#@'+path)  
-
-            SortedPVRList = sorted_nicely(TMPPVRList)
-            for i in range(len(SortedPVRList)):  
-                PVRNameList.append((SortedPVRList[i]).split('@#@')[0])  
-                PVRPathList.append((SortedPVRList[i]).split('@#@')[1])          
-        except Exception,e:
-            self.log("fillPVR, Failed! " + str(e))
-
-        if len(TMPPVRList) == 0:
+        for i in range(len(PVRChannels)):
+            CHid = PVRChannels[i][0]
+            CHname = self.cleanLabels(PVRChannels[i][1])
+            thumb = PVRChannels[i][2]
+            PVRNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
+            PVRPathList.append(self.getPVRLink(i))
+            PVRIconList.append(thumb)
+        if len(PVRNameList) == 0:
             PVRNameList = ['Kodi PVR is empty or unavailable!']
-        hide_busy_dialog() 
-        return PVRNameList, PVRPathList
+        self.PVRList = [PVRNameList, PVRPathList, PVRIconList]
 
-        
-    def fillIsengardPVR(self):
-        self.log('fillIsengardPVR')
-        show_busy_dialog()
-        TMPPVRList = []
-        PVRNameList = []
-        PVRPathList = []
-        json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"pvr://channels/tv/All channels/","properties":["thumbnail"]},"id": 1 }')
-        json_detail = self.sendJSON(json_query)
-        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)  
-        self.cached_json_detailed_xmltvChannels_pvr = []             
-        try:         
-            for f in file_detail:
-                CHid = 0
-                CHname = ''
-                thumb = ''
-                files = re.search('"file" *: *(.*?),', f)
-                CHids = re.search('"id" *: *(.*?),', f)
-                CHnames = re.search('"label" *: *"(.*?)"', f)
-                thumbs = re.search('"thumbnail" *: *"(.*?)"', f)
-                
-                if files and CHnames and CHids:
-                    CHid = CHids.group(1)
-                    file = files.group(1)
-                    CHname = CHnames.group(1)
-                    
-                    #Download icon to channel logo folder
-                    if thumbs and ENHANCED_DATA == True:
-                        thumb = thumbs.group(1)
-                        GrabLogo(thumb, CHname + ' PVR')
-                                               
-                    name = '[COLOR=blue][B]'+str(CHid)+'[/B][/COLOR] - ' + CHname
-                    path = file.replace('"','')
-                    TMPPVRList.append(name+'@#@'+path)  
-
-            SortedPVRList = sorted_nicely(TMPPVRList)
-            for i in range(len(SortedPVRList)):  
-                PVRNameList.append((SortedPVRList[i]).split('@#@')[0])  
-                PVRPathList.append((SortedPVRList[i]).split('@#@')[1])          
-        except Exception,e:
-            self.log("fillPVR, Failed! " + str(e))
-
-        if len(TMPPVRList) == 0:
-            PVRNameList = ['Kodi PVR is empty or unavailable!']
-        hide_busy_dialog() 
-        return PVRNameList, PVRPathList
-        
         
     def fillFavourites(self):
         self.log('fillFavourites')
@@ -4683,78 +4666,79 @@ class ChannelList:
         return ExternalNameList, ExternalSetting1List, ExternalSetting2List, ExternalSetting3List, ExternalSetting4List
               
         
-    def fillHDHR(self,favorite=False):
-        self.log("fillHDHR")
-        show_busy_dialog()
-        self = []
-        Favlist = []
-        HDHRNameList = ['']
-        HDHRPathList  = ['']
+    def getHDHRChannels(self, favorite=False):
+        self.log("getHDHRChannels")
+        Channels = []
+        FavChannels = []
         list = ''
-        try:
-            devices = hdhr.discover()
-            for i in range(len(devices)):
-                url = (str(devices[i]).split(':url=')[1]).replace('>','')
-                try:
-                    list = list + open_url(url).read()
-                except:
-                    pass
+        devices = hdhr.discover()
+        for i in range(len(devices)):
+            url = (str(devices[i]).split(':url=')[1]).replace('>','')
+            try:
+                list = list + open_url(url).read()
+            except:
+                pass
             file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(list)
-            
             for f in file_detail:
-                match = ''
-                link = ''
-                chnum = 0
                 fav = False
                 drm = False
-                tmp = ''
-                match = re.search('"GuideName" *: *"(.*?)",', f)    
-                if match != None and len(match.group(1)) > 0:
-                    chname = match.group(1)
-                    links = re.search('"URL" *: *"(.*?)"', f)
-                    chnums = re.search('"GuideNumber" *: *"([\d.]*\d+)"', f)
-                    favs = re.search('"Favorite" *: *([\d.]*\d+)', f)
-                    drms = re.search('"DRM" *: *([\d.]*\d+)', f)
+                try:
+                    match = re.search('"GuideName" *: *"(.*?)",', f)    
+                    if match and len(match.group(1)) > 0:
+                        chname = match.group(1)
+                        links = re.search('"URL" *: *"(.*?)"', f)
+                        chnums = re.search('"GuideNumber" *: *"([\d.]*\d+)"', f)
+                        favs = re.search('"Favorite" *: *([\d.]*\d+)', f)
+                        drms = re.search('"DRM" *: *([\d.]*\d+)', f)
 
-                    if links != None and len(links.group(1)) > 0:
-                        link = links.group(1)
+                        if links != None and len(links.group(1)) > 0:
+                            link = links.group(1)
 
-                    if chnums != None and len(chnums.group(1)) > 0:
-                        chnum = chnums.group(1)
+                        if chnums != None and len(chnums.group(1)) > 0:
+                            chnum = chnums.group(1)
 
-                    if favs != None and len(favs.group(1)) > 0:
-                        fav = bool(favs.group(1))
-                        
-                    if drms != None and len(drms.group(1)) > 0:
-                        drm = bool(drms.group(1))
-
-                    if fav:
-                        chname = chname+'[COLOR=gold] [Favorite][/COLOR]'
-                    if drm:
-                        chname = chname+'[COLOR=red] [DRM][/COLOR]'
-                                           
-                    chname = '[COLOR=blue][B]'+chnum+'[/B][/COLOR] - ' + chname
-                    # '@#@' lazy sort as string, todo convert to dict
-                    tmp = chname + '@#@' + link
+                        if favs != None and len(favs.group(1)) > 0:
+                            fav = bool(favs.group(1))
+                            
+                        if drms != None and len(drms.group(1)) > 0:
+                            drm = bool(drms.group(1))
+                                        
+                        if fav == True:
+                            FavChannels.append([chnum,chname,fav,drm,link])
+                        Channels.append([chnum,chname,fav,drm,link])
+                except:
+                    pass
+        if favorite == True:
+            return FavChannels
+        else:
+            return Channels
+         
                     
-                    if favorite:
-                        if favs:
-                            self.append(tmp)
-                    else:
-                        self.append(tmp)
-            Sortself = sorted_nicely(self)
+    def fillHDHR(self,favorite=False):
+        self.log("fillHDHR")
+        Favlist = []
+        HDHRNameList = []
+        HDHRPathList  = []
+        HDHRChannels = self.getHDHRChannels(favorite)
+        for i in range(len(HDHRChannels)):
+            chnum = HDHRChannels[i][0]
+            chname = self.cleanLabels(HDHRChannels[i][1])
+            fav = HDHRChannels[i][2]
+            drm = HDHRChannels[i][3]
+            link = HDHRChannels[i][4]
             
-            for n in range(len(Sortself)):
-                if Sortself[n] != None:
-                    HDHRNameList.append((Sortself[n]).split('@#@')[0])   
-                    HDHRPathList.append((Sortself[n]).split('@#@')[1])
-        except Exception,e:
-            self.log("fillHDHR, Failed! " + str(e))
+            if fav == True:
+                chname = chname+'[COLOR=gold] [Favorite][/COLOR]'
+            if drm == True:
+                chname = chname+'[COLOR=red] [DRM][/COLOR]' 
+            chname = '[COLOR=blue][B]'+chnum+'[/B][/COLOR] - ' + chname
+            
+            HDHRNameList.append(chname)
+            HDHRPathList.append(link)
 
-        if len(self) == 0:
+        if len(HDHRNameList) == 0:
             HDHRNameList = ['HDHR ERROR: Unable to find device or favorite channels']
-        hide_busy_dialog()
-        return removeStringElem(HDHRNameList), removeStringElem(HDHRPathList)
+        self.HDHRList = [HDHRNameList, HDHRPathList]
 
         
     def sbManaged(self, tvdbid):
@@ -5054,7 +5038,7 @@ class ChannelList:
                                     # Accurate duration
                                     if not file.startswith(("plugin", "upnp")) and dur == 0 and isLowPower() != True:
                                         try:
-                                            dur = self.videoParser.getVideoLength(file)
+                                            dur = self.getDuration(file)
                                             dur_accurate = True
                                         except Exception,e:
                                             dur = 0
@@ -5319,7 +5303,9 @@ class ChannelList:
             json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
                                                                                
-        self.log("getFileList, fileList return = " + str(len(fileList)))                       
+        self.log("getFileList, fileList return = " + str(len(fileList)))      
+        # cleanup   
+        del seasoneplist[:]                 
         return fileList
 
 

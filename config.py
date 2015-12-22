@@ -1047,16 +1047,19 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.getControl(106).setVisible(False)
         self.dlg = xbmcgui.DialogProgress()
         self.dlg.create("PseudoTV Live", "Preparing Configuration")
-        self.dlg.update(1)        
-        self.dlg.update(50)
-        self.chnlst.fillMusicInfo()       
-        self.dlg.update(60)
-        self.chnlst.fillTVInfo()
-        self.dlg.update(70)
+        self.dlg.update(10)    
+        self.chnlst.fillMusicInfo()     
+        self.dlg.update(20)   
+        self.chnlst.fillTVInfo()   
+        self.dlg.update(30)
         self.chnlst.fillMovieInfo()
-        self.dlg.update(80)
+        self.dlg.update(40)
         self.chnlst.fillPluginList()
-        self.dlg.update(90)
+        self.dlg.update(50)
+        self.chnlst.fillPVR()
+        self.dlg.update(60)
+        self.chnlst.fillHDHR()
+        self.dlg.update(70)
         self.mixedGenreList = self.chnlst.makeMixedList(self.chnlst.showGenreList, self.chnlst.movieGenreList) + ['']
         self.networkList = self.chnlst.networkList + ['']
         self.studioList = self.chnlst.studioList + ['']
@@ -1095,6 +1098,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.mixedGenreList.sort(key=lambda x: x.lower())
         self.listcontrol = self.getControl(102)
 
+        self.dlg.update(80)
         for i in range(999):
             theitem = xbmcgui.ListItem()
             theitem.setLabel(str(i + 1))
@@ -1281,10 +1285,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         # Parse Source, return title, path
         try:
             if source == 'PVR':
-                self.log("PVR")
                 show_busy_dialog()
-                NameLst, PathLst = self.chnlst.fillPVR()
-                hide_busy_dialog()
+                self.log("PVR")
+                NameLst, PathLst, IconLst = self.chnlst.PVRList
+                hide_busy_dialog() 
                 select = selectDialog(NameLst, 'Select Kodi PVR Channel')
                 if select != -1:
                     name = self.chnlst.cleanLabels(NameLst[select], 'upper')
@@ -1295,7 +1299,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             elif source == 'HDhomerun':
                 self.log("HDhomerun")
                 show_busy_dialog()
-                NameLst, PathLst = self.chnlst.fillHDHR()
+                NameLst, PathLst = self.chnlst.HDHRList
                 hide_busy_dialog()
                 select = selectDialog(NameLst, 'Select HDhomerun Channel')
                 if select != -1:

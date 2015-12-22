@@ -112,7 +112,7 @@ def isKodiRepo(plugin=''):
 def fillGithubItems(url, ext=None, removeEXT=False):
     log("utils: fillGithubItems, url = " + url)
     Sortlist = []
-    show_busy_dialog()
+    # show_busy_dialog()
     try:
         list = []
         catlink = re.compile('title="(.+?)">').findall(read_url_cached(url))
@@ -131,7 +131,7 @@ def fillGithubItems(url, ext=None, removeEXT=False):
     except Exception,e:
         log("utils: fillGithubItems, Failed! " + str(e))
         log(traceback.format_exc(), xbmc.LOGERROR)
-    hide_busy_dialog()
+    # hide_busy_dialog()
     return Sortlist
 
 #############
@@ -276,19 +276,32 @@ def CleanCHname(text):
     # except:
         # pass
     return text
-
-def FindLogo_Thread(data):
-    log("utils: FindLogo_Thread, " + str(data))
-    chtype = int(data[0])
-    chname = data[1]
-    url = ''
-    LogoName = chname + '.png'
-    LogoFolder = os.path.join(LOGO_LOC,LogoName)
-    log("utils: FindLogo_Thread, LogoFolder = " + LogoFolder)
+  
+def FindLogo(chtype, chname, mediapath=None):
+    if FIND_LOGOS == True and isLowPower() != True:
+        try:
+            if FindLogoThread.isAlive():
+                FindLogoThread.cancel()
+                FindLogoThread.join()
+        except:
+            pass
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        FindLogoThread.name = "FindLogoThread"       
+        FindLogoThread.start()
     
-    if FileAccess.exists(LOGO_LOC) == False:
+def FindLogo_Thread(chtype, chname, mediapath):
+    url = None
+    LogoName = chname + '.png'
+    LogoPath = os.path.join(LOGO_LOC,LogoName)
+    
+    # if logo exists & logo override is disabled return
+    if FileAccess.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+        return
+    elif FileAccess.exists(LOGO_LOC) == False:
         FileAccess.makedirs(LOGO_LOC)
+    log("utils: FindLogo_Thread, LogoFile = " + LogoPath)
         
+    # thelogodb search
     if chtype in [0,1,8,9]:
         log("utils: FindLogo_Thread, findLogodb")
         user_region = REAL_SETTINGS.getSetting('limit_preferred_region')
@@ -297,15 +310,19 @@ def FindLogo_Thread(data):
         useAny = REAL_SETTINGS.getSetting('LogoDB_Anymatch') == "true"
         url = findLogodb(chname, user_region, user_type, useMix, useAny)
         if url:
-            GrabLogo(url, chname)
+            return GrabLogo(url, chname)
+            
+    # github search
     if chtype in [0,1,2,3,4,5,8,9,12,13,14]:
         log("utils: FindLogo_Thread, findGithubLogo")
         url = findGithubLogo(chname)
         if url:
-            GrabLogo(url, chname)
-    mpath = getMpath(data[2])
-    if mpath and (chtype == 6):
-        log("utils: FindLogo_Thread, local logo")
+            return GrabLogo(url, chname)
+            
+    # local tvshow logo search
+    if mediapath and chtype == 6:
+        log("utils: FindLogo_Thread, local TVlogo")
+        mpath = getMpath(mediapath)
         smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
         artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
         artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
@@ -314,51 +331,36 @@ def FindLogo_Thread(data):
         elif FileAccess.exists(artSeason): 
             url = artSeason
         if url:
-            GrabLogo(url, chname) 
-  
-def FindLogo(chtype, chname, mediapath=None):
-    log("utils: FindLogo")
-    try:
-        if REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" and isLowPower() != True:
-            data = [chtype, chname, mediapath]
-            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [data])
-            FindLogoThread.name = "FindLogoThread"
-            if FindLogoThread.isAlive():
-                FindLogoThread.cancel()
-                FindLogoThread.join()            
-            FindLogoThread.start()
-    except Exception,e:
-        log('utils: FindLogo, Failed!,' + str(e))
-        pass   
-         
+            return GrabLogo(url, chname)
+            
+    # todo google image logo search
+
+def GrabLogo(url, chname):
+    log("utils: GrabLogo, url = " + url)        
+    LogoFile = os.path.join(LOGO_LOC, chname + '.png')
+    url = url.replace('.png/','.png').replace('.jpg/','.jpg')
+    log("utils: GrabLogo, LogoFile = " + LogoFile)
+   
+    if REAL_SETTINGS.getSetting('LogoDB_Override') == "true":
+        try:
+            FileAccess.delete(LogoFile)
+            log("utils: GrabLogo, removed old logo")   
+        except:
+            pass
+    
+    if FileAccess.exists(LogoFile) == False:
+        log("utils: GrabLogo, downloading new logo")   
+        if url.startswith('image'):
+            url = (unquote(url)).replace("image://",'')
+            return GrabLogo(url, chname)
+        elif url.startswith('http'):
+            return download_silent(url, LogoFile)
+        else:
+            return FileAccess.copy(xbmc.translatePath(url), LogoFile) 
+     
 def FindLogo_Default(chname, chpath):
     log('utils: FindLogo_Default')
-         
-def findGithubLogo(chname): 
-    log("utils: findGithubLogo")
-    url = ''
-    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % (chname[0]).upper()
-    Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
-    if not Studiolst:
-        miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
-        Misclst = fillGithubItems(miscurl, '.png', removeEXT=True)
-        for i in range(len(Misclst)):
-            Studio = Misclst[i]
-            cchname = CleanCHname(chname)
-            if uni((Studio).lower()) == uni(cchname.lower()):
-                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
-                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
-                break
-    else:
-        for i in range(len(Studiolst)):
-            Studio = Studiolst[i]
-            cchname = CleanCHname(chname)
-            if uni((Studio).lower()) == uni(cchname.lower()):
-                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/'+chname[0]+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
-                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
-                break
-    return url
-           
+
 def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
     try:
         clean_chname = (CleanCHname(chname))
@@ -408,44 +410,46 @@ def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
             random.shuffle(MatchLst)
             image = MatchLst[0]
             log('utils: findLogodb, Logo Match: ' + str(image))
+        
+        # cleanup
+        del MatchLst[:]
+        del mixRegionMatch[:]
+        del mixTypeMatch[:]
+        
         return image 
     except Exception,e:
         log("utils: findLogodb, Failed! " + str(e))
-
+         
+def findGithubLogo(chname): 
+    log("utils: findGithubLogo, chname = " + chname)
+    url = ''
+    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % (chname[0]).upper()
+    Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
+    if not Studiolst:
+        miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
+        Misclst = fillGithubItems(miscurl, '.png', removeEXT=True)
+        for i in range(len(Misclst)):
+            Studio = Misclst[i]
+            cchname = CleanCHname(chname)
+            if uni((Studio).lower()) == uni(cchname.lower()):
+                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
+                break
+    else:
+        for i in range(len(Studiolst)):
+            Studio = Studiolst[i]
+            cchname = CleanCHname(chname)
+            if uni((Studio).lower()) == uni(cchname.lower()):
+                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/'+chname[0]+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
+                break
+    return url
+           
 def hasAPI(key):
     if isPlugin(key) == True:
         params = decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9')
         set_Kodi_JSON(params %key)
         
-def GrabLogo(url, Chname):
-    log("utils: GrabLogo, url = " + url)        
-    try:
-        LogoFile = os.path.join(LOGO_LOC, Chname + '.png')
-        url = url.replace('.png/','.png').replace('.jpg/','.jpg')
-        log("utils: GrabLogo, LogoFile = " + LogoFile)
-       
-        if REAL_SETTINGS.getSetting('LogoDB_Override') == "true":
-            try:
-                FileAccess.delete(LogoFile)
-                log("utils: GrabLogo, removed old logo")   
-            except:
-                pass
-        
-        if FileAccess.exists(LogoFile) == False:
-            log("utils: GrabLogo, downloading new logo")   
-            if url.startswith('image'):
-                url = (unquote(url)).replace("image://",'')
-                if url.startswith('http'):
-                    return download_silent(url, LogoFile)
-                else:
-                    FileAccess.copy(url, LogoFile) 
-            elif url.startswith('http'):
-                return download_silent(url, LogoFile)
-            else:
-                return FileAccess.copy(xbmc.translatePath(url), LogoFile) 
-    except Exception,e:
-        log("utils: GrabLogo, Failed! " + str(e))
-     
 #######################
 # Communication Tools #
 #######################
@@ -869,7 +873,7 @@ def show_busy_dialog():
 def hide_busy_dialog():
     xbmc.executebuiltin('Dialog.Close(busydialog)')
     while xbmc.getCondVisibility('Window.IsActive(busydialog)'):
-        time.sleep(.1)
+        xbmc.sleep(100)
         
 def Error(header, line1= '', line2= '', line3= ''):
     dlg = xbmcgui.Dialog()
@@ -994,9 +998,11 @@ def getXBMCVersion():
     return int((xbmc.getInfoLabel('System.BuildVersion').split('.'))[0])
  
 def getPlatform():
-    platform = chkPlatform()
+    platform = getProperty("PTVL.Platform")
+    if not platform:
+        platform = chkPlatform()
+        setProperty("PTVL.Platform",platform)
     log("utils: getPlatform = " + platform)
-    setProperty("PTVL.Platform",platform)
     return platform
     
 def chkPlatform():
@@ -1678,6 +1684,7 @@ def restoreSettings2():
             if dlg.yesno("PseudoTV Live", 'Restoring will remove current channel configurations, Are you sure?'):
                 Restore(RESTORE_FLEPATH, SETTINGS_FLE)
                 if getSize(SETTINGS_FLE) == getSize(RESTORE_FLEPATH):
+                    REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
                     return infoDialog("Restore Complete")
     else:
         return infoDialog("No Backups found")
@@ -1860,6 +1867,27 @@ def getTitleYear(showtitle, showyear=0):
     log("utils: getTitleYear, return " + str(year) +', '+ title +', '+ showtitle) 
     return year, title, showtitle
 
+       
+def SEinfo(SEtitle, showSE=True):        
+    try:
+        SEinfo = SEtitle.split(' -')[0]
+        season = int(SEinfo.split('x')[0])
+        episode = int(SEinfo.split('x')[1])
+    except:
+        season = 0
+        episode = 0   
+    try:
+        if showSE and season != 0 and episode != 0:
+            eptitles = SEtitle.split('- ')
+            eptitle = (eptitles[1] + (' - ' + eptitles[2] if len(eptitles) > 2 else ''))
+            swtitle = ('S' + ('0' if season < 10 else '') + str(season) + 'E' + ('0' if episode < 10 else '') + str(episode) + ' - ' + (eptitle)).replace('  ',' ')
+        else:
+            swtitle = SEtitle   
+    except:
+        swtitle = SEtitle
+    return season, episode, swtitle
+    
+    
 def splitDBID(dbid):
     try:
         epid = dbid.split(':')[1]
@@ -2015,12 +2043,14 @@ def parseFeed(link):
         # pass
 
 def correctYoutubeSetting2(setting2):
+    log("utils: correctYoutubeSetting2")
     setting2 = setting2.replace('Multi Playlist','7').replace('Multi Channel','8').replace('Raw gdata','9')
     setting2 = setting2.replace('User Favorites','4').replace('Search Query','5').replace('User Subscription','3')
     setting2 = setting2.replace('Seasonal','31').replace('Channel','1').replace('Playlist','2')
     return setting2
      
 def purgeGarbage(): 
+    log("utils: purgeGarbage")
     try:
         import gc
         # only purge when not building channel lists.
@@ -2048,3 +2078,16 @@ def updateLibrary(type='video', path=''):
     
 def isBackgroundLoading():
     return getProperty("PTVL.BackgroundLoading") == 'true'
+    
+def splitStringItem(string, opt='@#@'):
+    log("utils: splitStringItem")
+    return string.split(opt)
+    
+def joinListItem(list, opt='@#@'):
+    log("utils: joinListItem")
+    try:
+        return opt.join(list)
+    except:
+        return str(list)
+# def createListItem(list)
+# def addListItem(item)

@@ -725,16 +725,9 @@
             </control>  
         </control>            
         <!-- info overlay -->
-        <control type="group" id="102">     
-<!--             <control type="image">
-                <texture>fade.png</texture>
-                <posx>0</posx>
-                <posy>295r</posy>
-                <width>1920</width>
-                <height>785</height>
-                <animation effect="fade" end="85" time="5">VisibleChange</animation>
-                <visible>Control.IsVisible(102)</visible>
-            </control> -->
+        <control type="group" id="102">   
+            <animation effect="fade" start="0" end="100" time="300" condition="Control.IsVisible(102)">Conditional</animation>
+            <visible>Player.HasVideo + !Window.IsActive(videoosd)</visible>  
             <control type="image">
                 <description>Info Overlay </description>
                 <width>1920</width>

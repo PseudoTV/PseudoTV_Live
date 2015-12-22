@@ -173,19 +173,15 @@ class Migrate:
         if Globals.REAL_SETTINGS.getSetting("autoFindLivePVR") == "true":
             self.log("autoTune, adding Live PVR Channels")
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding PVR Channels"," ")
-            PVRnum = 0
-            chanlist.cached_readXMLTV = []
-            try:
-                PVRNameList, PVRPathList = chanlist.fillPVR()
-
-                for PVRnum in range(len(PVRNameList)):
-                    CHSetName = ''
-                    CHzapit = ''
-                    PVRName = chanlist.cleanLabels(PVRNameList[PVRnum])
-                    chid = PVRName.split(' - ')[0]
-                    CHname = PVRName.split(' - ')[1]
-                    path = PVRPathList[PVRnum]
-                
+            PVRChannels = chanlist.getPVRChannels(True)
+            for i in range(len(PVRChannels)):
+                try:
+                    CHid = PVRChannels[i][0]
+                    CHname = chanlist.cleanLabels(PVRChannels[i][1])
+                    CHthmb = PVRChannels[i][2]
+                    GrabLogo(CHthmb, CHname + ' PVR')
+                    
+                    # parse external xmltv file, else use pvr backend.
                     if Globals.REAL_SETTINGS.getSetting("PVR_Listing") == '1':
                         listing = 'xmltv'
                         xmltvLOC = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("xmltvLOC"))
@@ -194,17 +190,13 @@ class Migrate:
                             CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
                     else:
                         listing = 'pvr'
-                        CHSetName, CHzapit = chanlist.findZap2itID(CHname, listing)
-                    
-                    if not CHSetName:
+                        CHzapit = CHid
                         CHSetName = CHname
-                    if not CHzapit:
-                        CHzapit = "NA"
 
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHzapit)
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", path)
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", chanlist.getPVRLink(i))
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", listing)
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
@@ -212,8 +204,8 @@ class Migrate:
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                        
                     self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding PVR Channels",CHname)  
                     channelNum += 1 
-            except:
-                pass
+                except:
+                    pass
         
         # LiveTV - HDHomeRun
         self.updateDialogProgress = 11
@@ -267,34 +259,28 @@ class Migrate:
             elif Globals.REAL_SETTINGS.getSetting("autoFindLiveHD") == "2":
                 self.log("autoTune, adding Live HDHomeRun UPNP Channels")
                 self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding HDHomeRun UPNP Channels"," ")
-                HDUPNPnum = 0
-                try:
-                    HDHRNameList, HDHRPathList = chanlist.fillHDHR(True)
-                    HDHRNameList = HDHRNameList[1:]
-                    HDHRPathList = HDHRPathList[1:]
-                    
-                    for HDUPNPnum in range(len(HDHRNameList)):
-                        HDHRname = HDHRNameList[HDUPNPnum]
-                        CHSetName = ''
-                        CHzapit = ''
-
-                        CHid = HDHRname.split(' - ')[0]
-                        CHname = HDHRname.split(' - ')[1]
-                        CHname = chanlist.cleanLabels(CHname, 'upper')
-                        path = HDHRPathList[HDUPNPnum]
+                HDHRChannels = chanlist.getHDHRChannels(True)
+                for i in range(len(HDHRChannels)):
+                    try:
+                        CHid = HDHRChannels[i][0]
+                        CHname = chanlist.cleanLabels(HDHRChannels[i][1])
+                        link = HDHRChannels[i][4]
 
                         if xbmcvfs.exists(xmlTvFile): 
                             CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
-                                
+                        else:
+                            okDialog('Unable to locate your xmltv.xml file','Please check your settings')
+                            return
+                              
                         if not CHSetName:
                             CHSetName = CHname
                         if not CHzapit:
-                            CHzapit = "NA"
+                            CHzapit = CHname
                                 
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHzapit)
-                        Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", path)
+                        Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", link)
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "xmltv")
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
@@ -302,9 +288,9 @@ class Migrate:
                         Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                        
                         self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding HDHomeRun UPNP Channels",CHname)  
                         channelNum += 1 
-                except Exception,e:
-                    self.log("autoFindLiveHD 2, Failed! " + str(e))
-             
+                    except Exception,e:
+                        self.log("autoFindLiveHD 2, Failed! " + str(e))
+         
         # LiveTV - USTVnow
         self.updateDialogProgress = 13
         if Globals.REAL_SETTINGS.getSetting("autoFindUSTVNOW") == "true":
@@ -337,9 +323,9 @@ class Migrate:
                             # CHSetName, CHzapit = chanlist.findZap2itID('USTVnow - ' + CHname, PTVLXML)
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", "USTVnow - "+CHname)
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHname)
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", file)
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ptvlguide")
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ustvnow")
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' USTV')   

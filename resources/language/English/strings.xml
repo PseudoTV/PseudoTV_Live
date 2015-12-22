@@ -19,7 +19,8 @@
         <string id="30056">Use Navigation Sound Effects</string>
 
 <string id="30300">Tweaks</string>
-    <string id="30401">Device Type</string>  
+    <string id="30401">Choose Your Device Type</string>  
+    <string id="30402">Choose Your Operating System</string>  
     <string id="32055">Preferred Language</string>  
     <string id="32056">Preferred Region</string>  
     <string id="30374">Enable Quickflip</string>
@@ -39,6 +40,8 @@
     <string id="30159">Enable Automatic Channel Backup</string>
     <string id="31311">Start Over Option after</string>
     <string id="31315">SmartSeek Strms Over</string>
+    <string id="30447">Seek step backward [I](Isengard)[/I]</string>
+    <string id="30446">Seek step forward [I](Isengard)[/I]</string>
     
 <string id="30100">Sharing</string>
     <string id="30101">Channel Sharing:</string>
@@ -182,7 +185,7 @@
                 <string id="30528">HD-Trailers.net Movie Title Limit</string>
                 <string id="30530">Number of Trailers Between Shows</string>
                 
-<string id="39000">Community/Donor</string>
+<string id="39000">Community</string>
     <string id="30776">Community Verified:</string>
     <string id="30777">Donor Verified:</string>
     <string id="30901">Enable Donor Features</string>
@@ -215,22 +218,25 @@
     
 <string id="30900">Debugging</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
-    <string id="30309">Wait for Playback (seconds)</string> 
-    <string id="30319">Force Playback timeout (seconds)</string> 
-    <string id="30993">Enable Debugging</string>
-    <string id="39999">Enable Cache</string>
-    <string id="39958">Include 3D Files</string>
-    <string id="30997">Include Strm Files</string>
-    <string id="39997">Include BCT Files</string>
-    <string id="30994">Plugin Validation Level</string> 
+    <string id="30993">Enable Log Debugging</string>
+    <string id="39999">Enable File Cache</string>
+    <string id="39958">Include 3D Content (Global)</string>
+    <string id="30997">Include Strm Content (Global)</string>
+    <string id="39997">Include BCT Content (Global)</string>
     <string id="30991">Override Stream Validation</string>
     <string id="30992">Disable Google Analytics</string>
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
     <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
+    <string id="30308">Playback Timers</string>
+    <string id="30309">Wait for Playback (seconds)</string> 
+    <string id="30319">Force Playback timeout (seconds)</string> 
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
-    <string id="30944">Force LiveTV reset on startup </string>
+    <string id="30944">Force LiveTV reset on every startup</string>
+    <string id="30197">Binaries (Optional)</string>
+    <string id="30198">ffprobe location</string>
+    <string id="30199">rtmpdump location</string>
 </strings>

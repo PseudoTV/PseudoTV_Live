@@ -1182,6 +1182,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             myLiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
             LiveID = self.chanlist.unpackLiveID(myLiveID)     
             self.getControl(503).setImage(self.MyOverlayWindow.getChlogo(newchan))
+        
         try:
             SEinfo = SEtitle.split(' -')[0]
             season = int(SEinfo.split('x')[0])
@@ -1211,6 +1212,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         playcount = int(LiveID[4])
         rating = LiveID[5]
         year, title, showtitle = getTitleYear(title)
+        
         # SetProperties
         setProperty("EPG.TimeStamp",timestamp)
         self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
