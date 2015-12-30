@@ -44,8 +44,9 @@ def PseudoTV():
         
         if hasVersionChanged(__version__) == True: 
             HandleUpgrade()
-        else:
-            chkVersion()
+        # Disabled for Kodi Repo Compliance
+        # else:
+            # chkVersion()
             
         preStart()
     

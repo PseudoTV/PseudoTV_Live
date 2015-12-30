@@ -83,9 +83,9 @@ TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
 ALLOW_CHANNEL_HISTORY_TIME = 60 * 60 * 24 * 1
-NOTIFICATION_CHECK_TIME = 5
+NOTIFICATION_CHECK_TIME = 15
 NOTIFICATION_TIME_BEFORE_END = 240
-NOTIFICATION_DISPLAY_TIME = 8
+NOTIFICATION_DISPLAY_TIME = 6
 
 # Rules/Modes
 RULES_ACTION_START = 1
@@ -243,7 +243,7 @@ cache_daily = pyfscache.FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = pyfscache.FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
 cache_monthly = pyfscache.FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
     
-# 1hr re    
+# 1hr refresh 
 SETTOP_REFRESH = 3600
 
 try:

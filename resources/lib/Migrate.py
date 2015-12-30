@@ -173,7 +173,7 @@ class Migrate:
         if Globals.REAL_SETTINGS.getSetting("autoFindLivePVR") == "true":
             self.log("autoTune, adding Live PVR Channels")
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding PVR Channels"," ")
-            PVRChannels = chanlist.getPVRChannels(True)
+            PVRChannels = chanlist.getPVRChannels()
             for i in range(len(PVRChannels)):
                 try:
                     CHid = PVRChannels[i][0]
@@ -259,7 +259,7 @@ class Migrate:
             elif Globals.REAL_SETTINGS.getSetting("autoFindLiveHD") == "2":
                 self.log("autoTune, adding Live HDHomeRun UPNP Channels")
                 self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding HDHomeRun UPNP Channels"," ")
-                HDHRChannels = chanlist.getHDHRChannels(True)
+                HDHRChannels = chanlist.getHDHRChannels()
                 for i in range(len(HDHRChannels)):
                     try:
                         CHid = HDHRChannels[i][0]
@@ -326,9 +326,11 @@ class Migrate:
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHname)
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", file)
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ustvnow")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' USTV')   
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' USTV') 
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "13")
+                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", "3")   
                             Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                           
                             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels",CHname)
                             channelNum += 1
@@ -761,12 +763,12 @@ class Migrate:
 
         # Exclusive - Popcorn Movies
         self.updateDialogProgress = 80
-        if Globals.REAL_SETTINGS.getSetting("autoFindPopcorn") == "true" and isDon() == True:
+        if Globals.REAL_SETTINGS.getSetting("autoFindPopcorn") == "true":
             self.log("autoTune, adding Popcorn Movies")
-            self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Popcorn Movies"," ")
-            
-            if Youtube != False:
-            
+            popcornCHK = getProperty("PTVL.POPCORN")
+            if popcornCHK and Youtube != False:
+                self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Popcorn Movies"," ")
+
                 # AT_PopCat = ['action','adventure','animation','british','comedy','crime','disaster','documentary','drama','eastern','erotic','family','fan+film','fantasy','film+noir','foreign','history','holiday','horror','indie','kids','music','musical','mystery','neo-noir','road+movie','romance','science+fiction','short','sport','sports+film','suspense','thriller','tv+movie','war','western']
                 # ATPopCat = AT_PopCat[int(Globals.REAL_SETTINGS.getSetting('autoFindPopcornGenre'))]
                    
@@ -793,33 +795,35 @@ class Migrate:
                 
         # Exclusive - Cinema Experience 
         self.updateDialogProgress = 81
-        if Globals.REAL_SETTINGS.getSetting("autoFindCinema") != "0" and isDon() == True:
+        if Globals.REAL_SETTINGS.getSetting("autoFindCinema") != "0":
             self.log("autoTune, adding Cinema Experience ")
-            self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Cinema Experience"," ")
-            flename = chanlist.createCinemaExperiencePlaylist() #create playlist
-            try:
-                THEME_NAMES = ['Disabled','Default','IMAX']
-                THEME = THEME_NAMES[int(Globals.REAL_SETTINGS.getSetting('autoFindCinema'))]
-            except:
-                THEME = 'IMAX'
-            
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "14")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", "cinema")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", flename)
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", THEME)
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", '')            
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "5")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", "PseudoCinema")  
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "8")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "14")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", "No")  
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_id", "17")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_opt_1", "No")  
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_id", "15")
-            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No")    
-            channelNum += 1
+            cinemaCHK = getProperty("PTVL.CINEMA")
+            if cinemaCHK:
+                self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Cinema Experience"," ")
+                flename = chanlist.createCinemaExperiencePlaylist() #create playlist
+                try:
+                    THEME_NAMES = ['Disabled','Default','IMAX']
+                    THEME = THEME_NAMES[int(Globals.REAL_SETTINGS.getSetting('autoFindCinema'))]
+                except:
+                    THEME = 'IMAX'
+                
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "14")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", "cinema")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", flename)
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", THEME)
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", '')            
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "5")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", "PseudoCinema")  
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "8")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "14")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", "No")  
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_id", "17")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_opt_1", "No")  
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_id", "15")
+                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No")    
+                channelNum += 1
                   
         # Exclusive - IPTV
         self.updateDialogProgress = 82

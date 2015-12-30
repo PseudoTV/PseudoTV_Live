@@ -422,10 +422,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             setting3 = self.getControl(212).getLabel()
             if len(setting3) <= 1:
                 infoDialog("Enter Channel & XMLTV Name")
-            else:              
-                if setting3 == 'ptvlguide':
-                    SyncXMLTV()
-                
+            else:                              
                 dname = self.getControl(213).getLabel()
                 xmltvFle = xmltvFile(setting3)
                 dnameID, CHid = self.chnlst.findZap2itID(dname, xmltvFle)
@@ -1702,7 +1699,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         try:
             sender = (REAL_SETTINGS.getSetting('Gmail_User'))            
             if sender == 'email@gmail.com':
-                okDialog('Enter your gmail address & password','Found in settings under the "Community/Donor" tab')
+                okDialog('Enter your gmail address & password','Found in settings under the "Community" tab')
                 return
             sendGmail(subject, body, attach)
             MSG = 'Submisson Complete'

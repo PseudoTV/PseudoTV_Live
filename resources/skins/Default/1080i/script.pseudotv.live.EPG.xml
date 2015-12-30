@@ -825,7 +825,7 @@
             <align>center</align>
             <aspectratio>keep</aspectratio>
             <!-- <texture background="true">http://localhost:52307/getthumb&amp;title=$INFO[Window(10000).Property(EPG.Title)]&amp;dbid=$INFO[EPG.DBID]&amp;type=landscape,fanart</texture> -->
-            <texture fallback="">$INFO[Window(10000).Property(EPG.type1ART)]</texture>
+            <texture fallback="">$INFO[Window(10000).Property(EPG.landscape)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
         </control>        
         <control type="image" id="510">
@@ -838,7 +838,7 @@
             <align>center</align>
             <aspectratio>keep</aspectratio>
             <visible>false</visible>
-            <texture fallback="">$INFO[Window(10000).Property(EPG.type2ART)]</texture>
+            <texture fallback="">$INFO[Window(10000).Property(EPG.poster)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
         </control>          
         <control type="image" id="511">

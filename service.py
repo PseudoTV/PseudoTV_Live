@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import os, time
+import os
 
 from resources.lib.utils import *
 
@@ -47,7 +47,6 @@ if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
 hasSomethingChanged = False
 while (not xbmc.abortRequested):
     if getProperty("PseudoTVRunning") != "True":
-        chkAPIS(REAL_SETTINGS.getSetting('APIs'))
         if xbmc.getCondVisibility('Window.IsActive(addonsettings)') == True:
             hasSomethingChanged = True
         else:

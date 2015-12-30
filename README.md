@@ -136,53 +136,6 @@ next when the current show is nearly finished.
 EPG, coming up next box, or info box.  This is helpful if you use bumpers or
 commercials.
 
-
-## Key Features
-
-- [ ] Online Channel configurations, Custom Skin's and Community Lists via Pseudotvlive.com website.
-- [½] Full Kodi integration including Context Menu, Hot keys and Artwork.
-- [x] Overlay Sidebar ("On Now") Skinnable quick menu.
-- [x] "Coming Up Next"  Skinable Overlay.
-- [ ] Enhanced EPG icon flags (rec, new, sickbeard, couchpotato, HD, PG rating).
-- [x] Dynamic artwork for EPG and Overlay.
-- [x] Enhanced Guide Data: "Find Missing Art/Info" using TVDB, TMDB, Fanart.TV
-- [x] Donor Features.
-- [x] Skin Selector.
-- [½] Music Channel Type.
-- [x] Music Video Channels with Internet Streaming features.
-- [x] EZ channel configuration ("Autotune").
-- [x] EZ in-app channel configuration
-- [x] Ability to add channels via Kodi favourites list.
-- [x] EPG Guide Data Listings via PVR Backend
-- [x] Hdhomerun Support (Dual/Prime).
-- [x] USTVnow w/ EPG data(Auto Tune).
-- [x] Automatic Bumpers, Commercials, and Trailers w/ Online support ("BCT's").
-- [x] Youtube/RSS Channel types [size=xx-small]*parser core by peppy6582[/size]
-- [x] TVDB/TMDB/IMDB/Fanart.TV Integration w/ trakt support
-- [½] Sickbeard / Couchpotato Integration (Map Record button to queue selected show for download, Visual indicators if show is managed by either program).
-- [x] Error handling (dead link) filter.
-- [x]  EPG Color Categories 
-- [x] Autostart Service [size=xx-small]*core created by Steveb1968 [/size]
-- [x] Channel Manager Tool (Windows Only)
-- [ ] Android Companion Tool
-- [ ] PVR (Recording Feature)
-- [ ] Virtual Movie Poster (Showtime) Integration.
-- [½] Kodi web interface w/EPG, Channel editor, Remote Control.
-- [x] Direct Plugin directory channel building (ie. Mylibrary method without the need to build strms).
-- [x] Direct Playon channel building (Requires Playon Software).
-- [x] Direct UPNP channel building (Requires UPNP Software or Devices).
-- [x] Kodi PVR Backend channel building.
-- [x] Classic Coming Up Next dialog artwork.
-- [½] Vevo Music Video Channel w/ EPG Information
-- [x] Settop Box mode, 24/7 Operation w/ self updating channels.
-- [x] Multiroom Video Mirroring.
-- [x] Multiroom Channel sharing.
-- [ ] EPG Guide data from Schedules Direct and zap2it.
-
-- [x] = Added to master
-
-- [½] = Added to master, but may not be functional.
-
 ## Understanding Chtypes
 
 - (0).  - Custom Smartplaylist
@@ -199,7 +152,7 @@ commercials.
 - (11). - RSS Feed
 - (12). - Music Genres
 - (13). - Music Videos
-- (14). - Donor Extras Content
+- (14). - Extra Content
 - (15). - Plugin generated channel (not for single source).
 - (16). - UPNP generated channel (not for single source).
 

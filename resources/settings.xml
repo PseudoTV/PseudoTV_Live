@@ -64,8 +64,7 @@
             <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
             <setting id="ShowChannelBug" type="bool"   label="30224" default="true"/>
             <setting id="UNAlter_ChanBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
-            <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Overlay|PopUp|Classic" default="2"/>
-            <setting id="ComingUpArtwork" subsetting="true" visible="eq(-1,3)" type="enum"   label="30227" values="Poster|Fanart|Landscape|Logo|Clearart" default="1" />
+            <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Info Bar|On Screen PopUp|Notification" default="2"/>
    </category>
 <!--PVR-->
    <category label="30400">
@@ -80,7 +79,7 @@
         <setting id="couchpotato.enabled"   label="30711" type="bool" default="false" />
         <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
         <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
-        <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/donordownload.py, -SimpleDownloader)"/>
+        <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
     </category>  
 <!--Autotune-->
     <category label="30070">
@@ -115,10 +114,10 @@
             <setting id="autoFindCommunity_Youtube_Playlists" type="bool"   label="30114" subsetting="true" visible="eq(-23,true)" enable="eq(-4,true) + System.HasAddon(plugin.video.youtube)"                                   default="false"/>
             <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="true" visible="eq(-24,true)" enable="eq(-5,true) + System.HasAddon(plugin.video.youtube)"                                  default="false"/>
             <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="true" visible="eq(-25,true)" enable="eq(-6,true) + System.HasNetwork"                                  default="false"/>
-        <setting     id="AT_Donor"                            type="bool"                                   visible="false"                                                              default="false" />    
-        <setting                                              type="lsep"   label="30090"                   visible="eq(-27,true) + eq(-1,true)"                                        default="" /> 
-            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true) + eq(-2,true)"  enable="eq(-2,true) + System.HasAddon(plugin.video.youtube)"                                      default="false"/>
-            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true) + eq(-3,true)" enable="eq(-3,true) + System.HasAddon(plugin.video.youtube)"                                      values=" |Default|IMAX" default="1" />  
+        <setting     id=""                                    type="bool"                                   visible="false"                                                              default="false" />    
+        <setting                                              type="lsep"   label="30090"                   visible="true"                                        default="" /> 
+            <setting id="autoFindPopcorn"                     type="bool"   label="30092" subsetting="true" visible="eq(-28,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"                                      default="false"/>
+            <setting id="autoFindCinema"                      type="enum"   label="30908" subsetting="true" visible="eq(-29,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"                                      values=" |Default|IMAX" default="1" />  
         <setting                                              type="lsep"   label="30782"                   visible="eq(-30,true)"     default="" /> 
             <setting id="autoFindIPTV_Source"                 type="enum"   label="30965" subsetting="true" visible="eq(-31,true)" values=" |Local|Online" default="0" />
             <setting id="autoFindIPTV_Path_Local"             type="file"   label="30966" subsetting="true" visible="eq(-32,true) + eq(-1,1)"             source="auto" default=""/>
@@ -153,14 +152,14 @@
         <setting label="30503" id="numbumpers" type="enum" visible="!eq(-2,0)" values="1|2|3|4|5" default="0"/>
         <setting label="39504" id="bumperratings" type="bool" visible="!eq(-3,0)" enabled="System.HasAddon(plugin.video.youtube)" default="false" />
     <setting label="30510" type="lsep"/>
-        <setting label="39002" id="COM_Donor" type="bool" visible="false" default="false" />
+        <setting label="39002" id="" type="bool" visible="false" default="false" />
         <setting label="30511" id="commercials" type="enum" values="Disabled|Local|Youtube|Internet" default="0"/>
         <setting label="30512" id="commercialsfolder" type="folder" source="auto" visible="eq(-1,1)" default=""/>
-        <setting label="30513" id="Advert" enable="eq(-3,true)" visible="eq(-2,3)" type="bool" default="false"/>
-        <setting label="30514" id="Advert_Region" subsetting="true" type="enum" enable="eq(-4,true)" visible="eq(-1,true) + eq(-3,3)" values="North America|Latin & South America|Western Asia & Northern Africa|Europe, Western Asia & Africa|Europe|Balkans|Asia Pacific|Africa" default="0"/>
-        <setting label="30515" id="Advert_Resolution" subsetting="true" type="enum" enable="eq(-5,true)" visible="eq(-2,true) + eq(-4,3)" values="360p|480p|720p" default="0"/>
-        <setting label="30516" id="adverts2_type" enable="eq(-6,true)" visible="eq(-5,3)" type="enum" values="Disabled|Recent Ads|Superbowl '13 Ads|Superbowl '14 Ads|Superbowl '15 Ads" default="0"/>
-        <setting label="30517" id="commercialschannel" type="text" visible="eq(-6,2)" enabled="System.HasAddon(plugin.video.youtube)" default="PLlwhS0wsCzbRNwJ4Epac4rHJJ_6m1JaBm,2,50,1"/>
+        <setting label="30513" id="Advert" enable="System.HasAddon(plugin.video.pseudo.companion)" visible="eq(-2,3)" type="bool" default="false"/>
+        <setting label="30514" id="Advert_Region" subsetting="true" type="enum" enable="System.HasAddon(plugin.video.pseudo.companion)" visible="eq(-1,true) + eq(-3,3)" values="North America|Latin & South America|Western Asia & Northern Africa|Europe, Western Asia & Africa|Europe|Balkans|Asia Pacific|Africa" default="0"/>
+        <setting label="30515" id="Advert_Resolution" subsetting="true" type="enum" enable="System.HasAddon(plugin.video.pseudo.companion)" visible="eq(-2,true) + eq(-4,3)" values="360p|480p|720p" default="0"/>
+        <setting label="30516" id="adverts2_type" enable="System.HasAddon(plugin.video.pseudo.companion)" visible="eq(-5,3)" type="enum" values="Disabled|Recent Ads|Superbowl '13 Ads|Superbowl '14 Ads|Superbowl '15 Ads" default="0"/>
+        <setting label="30517" id="commercialschannel" type="text" visible="eq(-6,2)" enabled="System.HasAddon(plugin.video.youtube)" default="PLlwhS0wsCzbRNwJ4Epac4rHJJ_6m1JaBm"/>
         <setting label="30519" id="AsSeenOn" visible="!eq(-7,0)" type="bool" enabled="System.HasAddon(plugin.video.youtube)" default="false" />
         <setting label="30518" id="numcommercials" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
     <setting label="30520" type="lsep"/>
@@ -171,7 +170,7 @@
         <setting label="30527" id="trailersHDnetType" type="enum" visible="eq(-4,4)" values="Latest|Most Watched|Coming Soon" default="2"/>
         <setting label="30525" id="trailersResolution" subsetting="true" type="enum" visible="eq(-5,4)" values="480p|720p|1080p" default="1"/>
         <setting label="30528" id="trailersTitleLimit" subsetting="true" type="enum" visible="eq(-6,4)" values="15|30|90|180|270|360" default="1"/>
-        <setting label="30517" id="trailerschannel" type="text" visible="eq(-7,3)" enabled="System.HasAddon(plugin.video.youtube)" default="MovieclipsCOMINGSOON,1,50,1" /> 
+        <setting label="30517" id="trailerschannel" type="text" visible="eq(-7,3)" enabled="System.HasAddon(plugin.video.youtube)" default="PL1DD10E84B9B08A35" /> 
         <setting label="30530" id="numtrailers" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
     </category>
     
@@ -194,16 +193,11 @@
             <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0.1" range="0,.01,5" option="float" />
     </category>
     
-<!--Donor-->
     <category label="39000">
         <setting id="Community_Enabled"   label="30905" type="bool" default="false"/>
         <setting id="Community_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"   label="30776" values="False|True" default="0"/>
         <setting id="Gmail_User" subsetting="true"   label="30906" visible="eq(-2,true)" type="text" default="User@gmail.com" />
         <setting id="Gmail_Pass" subsetting="true"   label="30907" visible="eq(-3,true)" type="text" option="hidden" default="Password" />
-        <setting id="Donor_Enabled"   label="30901" type="bool" default="false" visible="false"/>
-        <setting id="Donor_Verified" subsetting="true" type="enum" enable="false" visible="false" label="30777" values="False|True" default="0"/>
-        <setting id="Donor_UP" subsetting="true"   label="30902" visible="false" type="text" default="Username:Password" />    
-        <setting label="30903"  subsetting="true" visible="eq(-3,true)" type="lsep" /> 
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>
     
@@ -255,7 +249,7 @@
         <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
         <setting id="APIs" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|" />  
         <setting label="30197" type="lsep"/>
-        <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg/bin/"/>
-        <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\rtmpdump.exe"/>
+        <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
+        <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>
     </category>
 </settings>

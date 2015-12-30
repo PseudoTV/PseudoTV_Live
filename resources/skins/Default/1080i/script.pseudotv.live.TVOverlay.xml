@@ -1,13 +1,15 @@
 <window>
     <allowoverlay>yes</allowoverlay>
-    <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload><!-- label 508 artwork -->
-    <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload><!-- label 508 artwork -->
-    <onload>SetProperty(OVERLAY.type2,poster,10000)</onload><!-- label 510 artwork -->
-    <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload><!-- onnow artwork -->
-    <onload>SetProperty(OVERLAY.type4,landscape,10000)</onload><!-- coming up next artwork -->
-    <onload>SetProperty(EPG.type1,landscape,10000)</onload><!-- epg label 508 artwork -->
-    <onload>SetProperty(EPG.type2,poster,10000)</onload><!-- epg label 510 artwork -->
-    <onload>SetProperty(EPG.rowCount,6,10000)</onload><!-- epg row count --> 
+    <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload>
+    <onload>SetProperty(OVERLAY.type2,poster,10000)</onload>
+    <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload>
+    <onload>SetProperty(OVERLAY.type4,poster,10000)</onload>
+    <onload>SetProperty(OVERLAY.ONNOW_TYPE,landscape,10000)</onload>
+    <onload>SetProperty(EPG.type1,landscape,10000)</onload>
+    <onload>SetProperty(EPG.type2,poster,10000)</onload>
+    <onload>SetProperty(EPG.type3,landscape,10000)</onload>
+    <onload>SetProperty(EPG.type4,poster,10000)</onload>
+    <onload>SetProperty(EPG.rowCount,6,10000)</onload>
     <coordinates>
         <system>1</system>
         <posx>0</posx>
@@ -359,7 +361,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type2ART)]</texture>
+                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.poster)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>        
             <control type="image">
@@ -799,7 +801,7 @@
                 <height>180</height>
                 <align>center</align>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type1ART)]</texture>
+                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>         
             <control type="image" id="511">
@@ -1045,7 +1047,7 @@
                     <height>180</height>
                     <align>center</align>
                     <aspectratio>keep</aspectratio>
-                    <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type4ART)]</texture>
+                    <texture fallback="">$INFO[Window(10000).Property(OVERLAY.NEXT.landscape)]</texture>
                     <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
                 </control>
                 <control type="fadelabel">
@@ -1055,43 +1057,18 @@
                     <width>400</width>
                     <height>40</height>
                     <visible>true</visible>
-                    <pauseatend>2666</pauseatend>
-                    <info>Control.GetLabel(123)</info><!--Comingup-->
-                    <info>Control.GetLabel(124)</info><!--ShowTitle-->
-                    <!-- <info>Control.GetLabel(125)</info><!--ShowEpisode/Tagline -->
+                    <pauseatend>2700</pauseatend>
+                    <label>Coming Up Next</label>
+                    <label>Coming Up Next</label>
+                    <label>$INFO[Window(10000).Property(OVERLAY.NEXT.Title)]</label>
                     <font>font16</font>
                     <scroll>false</scroll>
                     <scrollout>false</scrollout>
                     <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
+                    <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
                     <autoscroll time="2000" delay="0" repeat="0">Skin.HasSetting(AutoScroll)</autoscroll>
-                </control>           
-                <control type="label" id="123">
-                    <description>ComingUp Title</description>
-                    <font>font12</font>
-                    <align>center</align>
-                    <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                    <label>Coming Up Next</label>
-                    <visible>false</visible>
-                </control>           
-                <control type="label" id="124">
-                    <description>Notification Title</description>
-                    <font>font12</font>
-                    <align>center</align>
-                    <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                    <visible>false</visible>
-                </control>              
-                <control type="label" id="125">
-                    <description>Notification Episode/Tagline</description>
-                    <font>font12</font>
-                    <align>center</align>
-                    <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                    <visible>false</visible>
-                </control>  
+                </control>                    
             </control>
         </control>
          <!-- Overlay Sidebar Menu -->
@@ -1153,7 +1130,7 @@
                 <height>180</height>
                 <aspectratio>keep</aspectratio>
                 <visible>Control.IsVisible(130)</visible>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type3ART)]</texture>
+                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.ONNOW_ART)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>
             <control type="label" id="132">

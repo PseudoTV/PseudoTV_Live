@@ -126,10 +126,10 @@
                             <string id="30113">Find Recommended Youtube Channels</string>
                             <string id="30114">Find Recommended Youtube Playlists</string>
                             <string id="30817">Find Seasonal Youtube Playlists</string>
-                            <string id="30090">Donor Extras:</string>  
                                 <string id="30116">Find LiveTV Channels</string>
                                 <string id="30117">Find InternetTV Channels</string>
                                 <string id="30111">Find Plugin Channels</string>
+                                <string id="30090">Extras:</string>
                                 <string id="30092">Popcorn Movie Channel</string>
                                 <string id="30950">PseudoCinema Movie Channel</string>  
                                 <string id="30908">PseudoCinema Experience</string>
@@ -172,7 +172,7 @@
             <string id="30514">Select Region</string>
             <string id="30515">Preferred Commercial Resolution</string>
             <string id="30516">Enable iSpot.tv*, Select Type</string>
-            <string id="30517">Youtube Configuration</string>
+            <string id="30517">Youtube Playlist</string>
             <string id="30518">Number of Commercials Between Shows</string>
             <string id="30519">Add As Seen On TV Commercials</string>
             <string id="30520">(T)railers:</string> 
@@ -187,10 +187,6 @@
                 
 <string id="39000">Community</string>
     <string id="30776">Community Verified:</string>
-    <string id="30777">Donor Verified:</string>
-    <string id="30901">Enable Donor Features</string>
-    <string id="30902">Enter Username:Password</string>
-    <string id="30903">Thank you for your support!</string>
     <string id="30905">Enable Community List</string>
     <string id="30906">Enter your gmail address</string>
     <string id="30907">Enter your gmail password</string>
@@ -235,8 +231,8 @@
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
-    <string id="30944">Force LiveTV reset on every startup</string>
+    <string id="30944">Force LiveTV reset on every startup (Can Fix EPG Sync issues)</string>
     <string id="30197">Binaries (Optional)</string>
-    <string id="30198">ffprobe location</string>
-    <string id="30199">rtmpdump location</string>
+    <string id="30198">ffmepg path</string>
+    <string id="30199">rtmpdump path</string>
 </strings>
