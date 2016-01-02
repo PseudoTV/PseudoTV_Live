@@ -97,10 +97,10 @@ class FSCache(object):
       >>> c['some_key'] = "some_value"
       >>> c['some_key']
       'some_value'
-      >>> xbmcvfs.listdir('cache/dir')
+      >>> xbmcvfs.listdir('cache/dir')[0]
       ['PXBZzwEy3XnbOweuMtoPj9j=PwkfAsTXexmW2v05JD']
       >>> c.expire('some_key')
-      >>> xbmcvfs.listdir('cache/dir')
+      >>> xbmcvfs.listdir('cache/dir')[0]
       []
       >>> c['some_key'] = "some_value"
       >>> @c
@@ -195,31 +195,32 @@ class FSCache(object):
     else:
       msg = "Object for key `%s` has not been loaded" % str(k)
       raise CacheError, msg
-      
+
+
   def __contains__(self, k):
     """
     Returns ``True`` if an object keyed by `k` is
     in the cache on the file system, ``False`` otherwise.
     """
-    try:
-        digest = make_digest(k)
-        if digest in self._loaded:
-          contents = self._loaded[digest]
-          isin = True
-        else:
-          try:
-            contents = self._load(digest, k)
-            isin = True
-          except CacheError:
-            isin = False
-        if isin:
-          if contents.expired():
-            self.expire(k)
-            isin = False
-        return isin
-    except:
-        pass
-    
+
+    digest = make_digest(k)
+    if digest in self._loaded:
+      contents = self._loaded[digest]
+      isin = True
+    else:
+      try:
+        contents = self._load(digest, k)
+        isin = True
+      except CacheError:
+        isin = False
+    if isin:
+      if contents.expired():
+        self.expire(k)
+        isin = False
+    return isin
+
+
+
   def __call__(self, f):
     """
     Returns a cached function from function `f` using `self`
@@ -248,18 +249,18 @@ class FSCache(object):
     This method is part of the implementation of :class:`FSCache`,
     so don't use it as part of the API.
     """
-    try:
-      path = os.path.join(self._path, digest)
-      if xbmcvfs.exists(path):
-        contents = load(path)
-      else:
-        msg = "Object for key `%s` does not exist." % (k,)
-        raise CacheError, msg
-      self._loaded[digest] = contents
-      return contents
-    except:
-      pass
-    
+
+    path = os.path.join(self._path, digest)
+    if os.path.exists(path):
+      contents = load(path)
+    else:
+      msg = "Object for key `%s` does not exist." % (k,)
+      raise CacheError, msg
+    self._loaded[digest] = contents
+    return contents
+
+
+
   def _remove(self, k):
     """
     Removes the cache item keyed by `k` from the file system.
@@ -345,7 +346,7 @@ class FSCache(object):
     filesystem. These are not keys but one-way hashes
     (or "digests") of the keys created by :func:`make_digest`.
     """
-    return xbmcvfs.listdir(self._path)
+    return xbmcvfs.listdir(self._path)[0]
   def clear(self):
     """
     Unloads all loaded cache items from memory.
@@ -357,7 +358,7 @@ class FSCache(object):
     Be careful, this empties the cache from both the filesystem
     and memory!
     """
-    files = xbmcvfs.listdir(self._path)
+    files = xbmcvfs.listdir(self._path)[0]
     for f in files:
       path = os.path.join(self._path, f)
       xbmcvfs.delete(path)
@@ -390,13 +391,16 @@ def make_digest(k):
   >>> make_digest(adict)
   'a2VKynHgDrUIm17r6BQ5QcA5XVmqpNBmiKbZ9kTu0A'
   """
-  try:
-    s = cPickle.dumps(k)
-    h = hashlib.sha256(s).digest()
-    b64 = base64.urlsafe_b64encode(h)[:-2]
-    return b64.replace('-', '=')
-  except:
-    pass
+
+
+  s = cPickle.dumps(k)
+  h = hashlib.sha256(s).digest()
+  b64 = base64.urlsafe_b64encode(h)[:-2]
+  return b64.replace('-', '=')
+
+
+
+
 
 def load(filename):
   """

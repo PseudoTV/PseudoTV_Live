@@ -18,8 +18,9 @@
 
 import os, sys, re
 import xbmcaddon, xbmc, xbmcgui, xbmcvfs
-import Settings, pyfscache
+import Settings
 
+from pyfscache import *
 from FileAccess import FileLock
 
 # Commoncache plugin import
@@ -215,6 +216,8 @@ FILELIST_LIMIT = [4096,8192,16384]
 MAXFILE_DURATION = 16000
 RSS_REFRESH = 900
 ONNOW_REFRESH = 450
+SETTOP_REFRESH = 3600
+SETTOP_RESCHEDULE = 900
 
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
@@ -239,12 +242,9 @@ artwork5 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwo
 artwork6 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork6",((24 * 7) * 4))       #Artwork Purge
 
 # pyfscache globals
-cache_daily = pyfscache.FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
-cache_weekly = pyfscache.FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
-cache_monthly = pyfscache.FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
-    
-# 1hr refresh 
-SETTOP_REFRESH = 3600
+cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
+cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
+cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 
 try:
     MEDIA_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]

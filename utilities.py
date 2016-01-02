@@ -117,3 +117,5 @@ elif sys.argv[1] == '-repairSettings2':
     Setfun.repairSettings()
 elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
+elif sys.argv[1] == '-GetRepo':
+    getRepo()

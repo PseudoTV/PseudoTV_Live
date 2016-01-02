@@ -62,12 +62,10 @@ def PseudoTV():
                 log("Joined " + curthread.name)               
                 
         del MyOverlayWindow
-        setProperty("PseudoTVRunning", "False")    
     except Exception,e:
         log('default: PseudoTV Overlay Failed! ' + str(e))
-        setProperty("PseudoTVRunning", "False")
         buggalo.onExceptionRaised()
-        return
+    setProperty("PseudoTVRunning", "False")
         
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)

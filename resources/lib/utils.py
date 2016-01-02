@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import os, re, sys, time, zipfile, threading, requests, random, traceback, pyfscache
+import os, re, sys, time, zipfile, threading, requests, random, traceback
 import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, json, urlparse, HTMLParser
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
@@ -33,6 +33,7 @@ from email import Encoders
 from xml.dom.minidom import parse, parseString
 from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
+from pyfscache import *
 
 socket.setdefaulttimeout(30)
 
@@ -281,15 +282,12 @@ def CleanCHnameSeq(text):
         
 def FindLogo(chtype, chname, mediapath=None):
     if FIND_LOGOS == True and isLowPower() != True:
-        try:
-            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-            FindLogoThread.name = "FindLogoThread"  
-            if FindLogoThread.isAlive():
-                FindLogoThread.cancel()
-                FindLogoThread.join()
-            FindLogoThread.start()
-        except:
-            pass     
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        FindLogoThread.name = "FindLogoThread"
+        if FindLogoThread.isAlive():
+            FindLogoThread.cancel()
+            FindLogoThread.join()
+        FindLogoThread.start()
 
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
@@ -512,15 +510,12 @@ def GA_Request():
 
 def UpdateRSS():
     log('utils: UpdateRSS')
-    try:
-        UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-        UpdateRSSthread.name = "UpdateRSSthread"
-        if UpdateRSSthread.isAlive():
-            UpdateRSSthread.cancel()      
-        UpdateRSSthread.start()
-    except Exception,e:
-        log('utils: UpdateRSS, Failed!,' + str(e))
-        pass   
+    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+    UpdateRSSthread.name = "UpdateRSSthread"
+    if UpdateRSSthread.isAlive():
+        UpdateRSSthread.cancel()  
+        UpdateRSSthread.join()   
+    UpdateRSSthread.start()
           
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
@@ -695,25 +690,22 @@ def download(url, dest, dp = None):
     except Exception,e:
         log('utils: download, Failed!,' + str(e))
      
-def download_silent_thread(data):
+def download_silent_thread(url, dest):
     log('download_silent_thread')
     try:
-        urllib.urlretrieve(data[0], data[1])
+        urllib.urlretrieve(url, dest)
     except Exception,e:
         log('utils: download_silent_thread, Failed!,' + str(e))
          
 def download_silent(url, dest):
     log('download_silent')
-    try:
-        data = [url, dest]
-        download_silentThread = threading.Timer(0.5, download_silent_thread, [data])
-        download_silentThread.name = "download_silentThread"
-        if download_silentThread.isAlive():
-            download_silentThread.cancel()
-            download_silentThread.join()
-        download_silentThread.start()
-    except Exception,e:
-        log('utils: download_silent, Failed!,' + str(e))
+    download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
+    download_silentThread.name = "download_silentThread"
+    if download_silentThread.isAlive():
+        download_silentThread.cancel()
+        download_silentThread.join()
+    time.sleep(0.5)
+    download_silentThread.start()
         
 @cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):
@@ -1563,7 +1555,7 @@ def chkChanges():
 def chkLowPower(): 
     setProperty("PTVL.LOWPOWER","false") 
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
-        if getPlatform() in ['PowerPC','ATV','iOS','XBOX','rPi','Android','APU']:
+        if getPlatform() in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true") 
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
             REAL_SETTINGS.setSetting('ThreadMode', "2")

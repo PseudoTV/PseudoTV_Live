@@ -114,7 +114,6 @@ class ChannelList:
         if SETTOP:
             self.backgroundUpdating = 0
             self.channelResetSetting = 0
-        self.updateDialog = xbmcgui.DialogProgressBG()
             
         if self.forceReset:
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
@@ -126,6 +125,8 @@ class ChannelList:
             self.lastResetTime = int(ADDON_SETTINGS.getSetting("LastResetTime"))
         except Exception,e:
             self.lastResetTime = 0
+            
+        self.updateDialog = xbmcgui.DialogProgressBG()
 
         try:
             self.lastExitTime = int(ADDON_SETTINGS.getSetting("LastExitTime"))
@@ -153,19 +154,20 @@ class ChannelList:
         for i in range(self.maxChannels):
             if self.background == False:
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, "Initializing Channel " + str(i + 1), "waiting for file lock")
+                self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(i + 1), "waiting for file lock")
                 self.myOverlay.setBackgroundLabel("Initializing: Channel List (" + str(int(i * 100 // self.maxChannels)) + "%)")
                 setProperty('loading.progress',str(self.updateDialogProgress))
             self.channels.append(Channel())
             
-            try:
-                # If the user pressed cancel, stop everything and exit
-                if self.updateDialog.iscanceled():
-                    self.log('Update channels cancelled')
-                    self.updateDialog.close()
-                    return None
-            except:
-                pass
+            # try:
+                # # If the user pressed cancel, stop everything and exit
+                # if self.updateDialog.iscanceled():
+                    # self.log('Update channels cancelled')
+                    # self.updateDialog.close()
+                    # return None
+            # except:
+                # pass
+                
             self.setupChannel(i + 1, self.background, makenewlists, False)
             
             if self.channels[i].isValid:
@@ -271,7 +273,6 @@ class ChannelList:
         chsetting2 = ''
         chsetting3 = ''
         chsetting4 = ''
-        needsreset = False
         self.background = background
         self.settingChannel = channel
         
@@ -302,7 +303,7 @@ class ChannelList:
             needsreset = False
                      
         # Handle LiveTV
-        if chtype == 8:                        
+        if chtype == 8:  
             # Force livetv rebuild
             forcerebuild = REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true"
             if str(channel) in self.ResetLST or forcerebuild == True:
@@ -323,7 +324,7 @@ class ChannelList:
                 createlist = True
             
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Initializing Channel " + str(channel), "reading playlist")
+                    self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "reading playlist")
 
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
@@ -334,14 +335,12 @@ class ChannelList:
                     if self.channelResetSetting == 0:
                     
                         # Reset livetv after 24hrs
-                        if chtype == 8 and self.channels[channel - 1].totalTimePlayed > (60 * 60 * 24):
-                            self.setResetLST(channel)
-                            createlist = False  
+                        if chtype == 8 and self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
+                            createlist = False
                             
                         # If this channel has been watched for longer than it lasts, reset the channel
-                        if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
-                            createlist = False
-                               
+                        elif self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                            createlist = False    
 
                     elif self.channelResetSetting > 0 and self.channelResetSetting < 4:
                         timedif = time.time() - self.lastResetTime
@@ -413,7 +412,7 @@ class ChannelList:
         # Don't clear history when appending channels
         if self.background == False and append == False and self.myOverlay.isMaster:
             self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, "Initializing Channel " + str(channel), "clearing history")
+            self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "clearing history")
             self.clearPlaylistHistory(channel)
 
         if append == False:
@@ -586,7 +585,7 @@ class ChannelList:
             self.log("makeChannelList, Overriding Global Parse-limit to " + str(limit))
         else:
             if chtype == 8:
-                limit = 259200 #72hrs
+                limit = 259200 #72hrs (seconds)
             elif chtype == 9:
                 limit = int(86400 / int(setting1))
             elif MEDIA_LIMIT == 0:
@@ -2774,6 +2773,10 @@ class ChannelList:
             self.xmlTvFile = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
             if FileAccess.exists(self.xmlTvFile):
                 xmltvValid = True
+            else:
+                if getProperty('PTVL.USTVnow.CHK') != 'true':
+                    setProperty('PTVL.USTVnow.CHK','true')
+                    okDialog('Please configure the USTVnow plugin to genreate necessary files')
         elif path.lower() == 'ptvlguide':
             self.xmlTvFile = PTVLXML
             if FileAccess.exists(self.xmlTvFile):

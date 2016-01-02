@@ -920,6 +920,10 @@ class Migrate:
         
         for i in range(len(NameLst)):
             found = True
+  
+            if filecount > Globals.AT_LIMIT:
+                break
+                
             try:
                 title = chanlist.cleanLabels(NameLst[i])
                 try:
@@ -941,12 +945,12 @@ class Migrate:
                 if Option4LST == 'M3U' or Option4LST == 'XML' or Option4LST == 'PLX':
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", str(Option1LST))
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", str(Option2LST[i]))
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Option3LST[i]))
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Globals.MEDIA_LIMIT))
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", str(Option4LST))
                 else:
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", str(Option1LST[i]).replace(',','|'))
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", str(Option2LST[i]))
-                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Option3LST[i]))
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Globals.MEDIA_LIMIT))
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", str(Option4LST[i]))
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
@@ -954,10 +958,6 @@ class Migrate:
                 Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")
                 channelNum += 1
                 filecount += 1
-                
-                if filecount > Globals.AT_LIMIT:
-                    break
-                
             except Exception,e:
                 self.log('tuneList Failed ' + str(e))
                 pass

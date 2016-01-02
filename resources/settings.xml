@@ -27,7 +27,6 @@
         <setting id="limit_preferred_region" type="select"   label="32056" values="Andorra|United Arab Emirates|Afghanistan|Antigua and Barbuda|Anguilla|Albania|Armenia|Netherlands Antilles|Angola|Antarctica|Argentina|American Samoa|Austria|Australia|Aruba|Aland|Azerbaijan|Bosnia and Herzegovina|Barbados|Bangladesh|Belgium|Burkina Faso|Bulgaria|Bahrain|Burundi|Benin|Saint Barthelemy|Bermuda|Brunei|Bolivia|Brazil|Bahamas|Bhutan|Bouvet Island|Botswana|Belarus|Belize|Canada|Cocos (Keeling) Islands|Congo (Kinshasa)|Central African Republic|Congo (Brazzaville)|Switzerland|Cote dIvoire|Cook Islands|Chile|Cameroon|China|Colombia|Costa Rica|Cuba|Cape Verde|Christmas Island|Cyprus|Czech Republic|Germany|Djibouti|Denmark|Dominica|Dominican Republic|Algeria|Ecuador|Estonia|Egypt|Western Sahara|Eritrea|Spain|Ethiopia|Finland|Fiji|Falkland Islands|Micronesia|Faroe Islands|France|Gabon|United Kingdom|Grenada|Georgia|French Guiana|Guernsey|Ghana|Gibraltar|Greenland|Gambia|Guinea|Guadeloupe|Equatorial Guinea|Greece|South Georgia and South Sandwich Islands|Guatemala|Guam|Guinea-Bissau|Guyana|Hong Kong|Heard and McDonald Islands|Honduras|Croatia|Haiti|Hungary|Indonesia|name|English country name| |Ireland|Israel|Isle of Man|India|British Indian Ocean Territory|Iraq|Iran|Iceland|Italy|Jersey|Jamaica|Jordan|Japan|Kenya|Kyrgyzstan|Cambodia|Kiribati|Comoros|Saint Kitts and Nevis|North Korea|South Korea|Kuwait|Cayman Islands|Kazakhstan|Laos|Lebanon|Saint Lucia|Liechtenstein|Sri Lanka|Liberia|Lesotho|Lithuania|Luxembourg|Latvia|Libya|Morocco|Monaco|Moldova|Montenegro|Saint Martin|Madagascar|Marshall Islands|Macedonia|Mali|Myanmar|Mongolia|Macau|Northern Mariana Islands|Martinique|Mauritania|Montserrat|Malta|Mauritius|Maldives|Malawi|Mexico|Malaysia|Mozambique|Namibia|New Caledonia|Niger|Norfolk Island|Nigeria|Nicaragua|Netherlands|Norway|Nepal|Nauru|Niue|New Zealand|Oman|Panama|Peru|French Polynesia|Papua New Guinea|Philippines|Pakistan|Poland|Saint Pierre and Miquelon|Pitcairn|Puerto Rico|Palestine|Portugal|Palau|Paraguay|Qatar|Reunion|Romania|Serbia|Russian Federation|Rwanda|Saudi Arabia|Solomon Islands|Seychelles|Sudan|Sweden|Singapore|Saint Helena|Slovenia|Svalbard and Jan Mayen Islands|name|English country name| |Slovakia|Sierra Leone|San Marino|Senegal|Somalia|Suriname|Sao Tome and Principe|El Salvador|Syria|Swaziland|Turks and Caicos Islands|Chad|French Southern Lands|Togo|Thailand|Tajikistan|Tokelau|Timor-Leste|Turkmenistan|Tunisia|Tonga|Turkey|Trinidad and Tobago|Tuvalu|Taiwan|Tanzania|Ukraine|Uganda|United States Minor Outlying Islands|United States|Uruguay|Uzbekistan|Vatican City|Saint Vincent and the Grenadines|Venezuela|British Virgin Islands|Virgin Islands US|Vietnam|Vanuatu|Wallis and Futuna Islands|Samoa|Yemen|Mayotte|South Africa|Zambia|Zimbabwe" default="United States"/>
         <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
         <setting id="DirectInput" type="bool"   label="30379" default="true"/>
-        <setting id="ChannelDelay" type="enum"   label="30302" default="0" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
         <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
@@ -61,6 +60,7 @@
         <setting label="30220" type="lsep"/>
             <setting id="COLOR_CHANNUM" type="enum"   label="30203" values="Holo|Cyan|Green|Gray|Light Gray|White" default="0"/>
             <setting id="InfoOnChange" type="bool"   label="30221" default="true"/>
+            <setting id="infoOnStart" type="bool"   label="30227" default="false"/>         
             <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
             <setting id="ShowChannelBug" type="bool"   label="30224" default="true"/>
             <setting id="UNAlter_ChanBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
@@ -140,7 +140,7 @@
             <!-- Autotune Options -->
         <setting type="lsep"   label="30700"/>
             <setting id="reserveChannels"                     type="bool"   label="30372" default="false"/>
-            <setting id="AT_LIMIT"                      type="enum"   label="33310" values="25|50|100|250|500|1000" default="0"/>
+            <setting id="AT_LIMIT"                      type="enum"   label="33310" values="25|50|100|250|500|1000" default="4"/>
             <setting id="PVR_Listing"                         type="enum"   label="30699" values="PVR Backend|xmltv File|ScheduleDirect (Coming Soon)|Zap2it (Coming Soon)|TMSAPI (Coming Soon)" default="0" />
         <setting                                              type="sep"                  visible="true" />
     </category>
@@ -227,22 +227,25 @@
     
 <!--Debugging-->
     <category label="30900">  
-        <setting label="30990" type="lsep"/>
-        <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
-        <setting id="Override_ok" type="bool"   label="30991" default="true"/>
-        <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
+        <setting label="30308" type="lsep"/>
+        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
+        <setting id="seekDelay" type="enum"   label="30306" default="1" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
+        <setting id="channelDelay" type="enum"   label="30302" default="0" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
+        <setting label="30914" type="lsep"/>
         <setting id="Include3D" type="bool"   label="39958" default="true"/>
         <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
         <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
         <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
+        <setting label="30990" type="lsep"/>
+        <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
+        <setting id="Override_ok" type="bool"   label="30991" default="true"/>
+        <setting id="Cache_Enabled"   label="39999" type="bool" default="true" />
         <setting id="Override.LOWPOWER" type="bool"   label="30943" default="false"/>
         <setting id="ga_disable" type="bool"   label="30992" default="false"/>
         <setting id="ForceLiveChannelReset" type="bool"   label="30944" default="false"/>
         <setting label="36996" type="lsep"  visible="eq(-1,true)"/>
         <setting label="36997" type="lsep"  visible="eq(-2,true)"/>
-        <setting label="30308" type="lsep"/>
-        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
         <setting label="30912" type="lsep"/>
         <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
         <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
@@ -251,5 +254,6 @@
         <setting label="30197" type="lsep"/>
         <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>
+        <setting id="GetRepo" type="action"   label="30720" option="close" action="RunScript($CWD/utilities.py, -GetRepo)"/>
     </category>
 </settings>

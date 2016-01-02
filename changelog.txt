@@ -1,7 +1,10 @@
+[*] Fixed media seeking issues caused by subtitle encoding.
+[*] Removed 'PowerPC' and "APU" from LowPower profile.
 [*] Native USTVnow xmltv support (requires Official USTVnow plugin). Listings are limited to six hr intervals.
 [*] Cleaned and tweaked old functions for performance, Overhauled Artwork code.
 [*] Removed 'Notification' Comingup Next Artwork Selection from settings.
 [*] PseudoCompanion support added.
+[*] Expended info properites, increasing skinning support.
 [*] [COLOR=blue][B]^ v.0.7.2 ^[/B][/COLOR]
 [*] Tweaked Stream validation, users can install ffmpeg and rtmpdump for added functionality.
 [*] Fixed Seasonal Youtube Channel can be added thru in-app channel manager or via Autotuning.

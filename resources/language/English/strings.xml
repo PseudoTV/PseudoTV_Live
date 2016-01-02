@@ -24,7 +24,6 @@
     <string id="32055">Preferred Language</string>  
     <string id="32056">Preferred Region</string>  
     <string id="30374">Enable Quickflip</string>
-    <string id="30302">Channel Change Delay (seconds)</string>
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
@@ -77,6 +76,7 @@
     <string id="30220">Overlay Options:</string>
         <string id="30203">Select Overlay Number Color</string>
         <string id="30221">Show info when changing channels</string>
+        <string id="30227">Show info when show starts</string>
         <string id="30222">Info window duration (seconds)</string>   
         <string id="30224">Always show channel bug</string>
         <string id="30228">Use Unaltered Channel bug</string>
@@ -213,26 +213,30 @@
     <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
 <string id="30900">Debugging</string>
-    <string id="30990">DEBUGGING: (Use with Caution!)</string>
-    <string id="30993">Enable Log Debugging</string>
-    <string id="39999">Enable File Cache</string>
+    <string id="30308">Playback Timers: (Use with Caution!)</string>
+    <string id="30309">Wait for Playback (seconds)</string> 
+    <string id="30319">Force Playback timeout (seconds)</string> 
+    <string id="30302">Channel Change Delay (seconds)</string>
+    <string id="30306">Seek Delay (seconds)</string>
+    <string id="30914">Controls: (Use with Caution!)</string>
     <string id="39958">Include 3D Content (Global)</string>
     <string id="30997">Include Strm Content (Global)</string>
     <string id="39997">Include BCT Content (Global)</string>
+    <string id="30990">DEBUGGING: (Use with Caution!)</string>
+    <string id="30993">Enable Log Debugging</string>
+    <string id="39999">Enable File Cache</string>
     <string id="30991">Override Stream Validation</string>
     <string id="30992">Disable Google Analytics</string>
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
     <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
-    <string id="30308">Playback Timers</string>
-    <string id="30309">Wait for Playback (seconds)</string> 
-    <string id="30319">Force Playback timeout (seconds)</string> 
+    <string id="30944">Force LiveTV reset on every startup</string>
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
-    <string id="30944">Force LiveTV reset on every startup (Can Fix EPG Sync issues)</string>
-    <string id="30197">Binaries (Optional)</string>
+    <string id="30197">binaries (Optional)</string>
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>
+    <string id="30720">Download Lunatixz Repository</string>
 </strings>

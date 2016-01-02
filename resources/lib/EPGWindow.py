@@ -195,15 +195,16 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             return
         
         #Check if VideoWindow Patch found, Toggle Visible.
-        try:
-            if getProperty("PTVL.VideoWindow") == "true":
-                self.log('VideoWindow = True')
-                self.getControl(523).setVisible(True)
-            else:
-                raise Exception()
-        except Exception,e:
-            self.log('VideoWindow = False')
-            self.getControl(523).setVisible(False)
+        setProperty("PTVL.VideoWindow","true")
+        # try:
+            # if getProperty("PTVL.VideoWindow") == "true":
+                # self.log('VideoWindow = True')
+                # self.getControl(523).setVisible(True)
+            # else:
+                # raise Exception()
+        # except Exception,e:
+            # self.log('VideoWindow = False')
+            # self.getControl(523).setVisible(False)
             
         try:
             for i in range(3):
