@@ -704,8 +704,8 @@ def download_silent(url, dest):
     if download_silentThread.isAlive():
         download_silentThread.cancel()
         download_silentThread.join()
-    time.sleep(0.5)
     download_silentThread.start()
+    time.sleep(0.5)
         
 @cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):

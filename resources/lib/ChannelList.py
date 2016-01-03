@@ -1222,6 +1222,7 @@ class ChannelList:
         text = text.replace("/ ",'')
         text = text.replace("\\",'/')
         text = text.replace("//",'/')
+        text = text.replace('/"','')
         text = text.replace('plugin.video.','')
         text = text.replace('plugin.audio.','')
 
@@ -1738,7 +1739,6 @@ class ChannelList:
         self.log("fillLiveTV")
         showList = []
         showcount = 0          
-        now = datetime.datetime.now()
         try:
             # local or url xmltv file
             if setting3[0:4] == 'http':
@@ -1850,13 +1850,14 @@ class ChannelList:
                                     type = 'movie'
                                 else:
                                     type = 'tvshow'
-                                       
+
                                 #filter unwanted ids by title
                                 if showtitle == ('Paid Programming') or subtitle == ('Paid Programming') or description == ('Paid Programming'):
                                     ignoreParse = True
                                 else:
                                     ignoreParse = False
-                                    
+                                   
+                                now = datetime.datetime.now() 
                                 if setting3 in ['ptvlguide']:
                                     stopDate = self.parseUTCXMLTVDate(elem.get('stop'))
                                     startDate = self.parseUTCXMLTVDate(elem.get('start'))
@@ -1864,6 +1865,27 @@ class ChannelList:
                                     stopDate = self.parseXMLTVDate(elem.get('stop'), offset)
                                     startDate = self.parseXMLTVDate(elem.get('start'), offset)
                                 
+                                #skip old shows that have already ended
+                                if now > stopDate:
+                                    continue
+                                
+                                #adjust the duration of the current show
+                                if now > startDate and now <= stopDate:
+                                    try:
+                                        dur = ((stopDate - startDate).seconds)
+                                    except Exception,e:
+                                        dur = 3600  #60 minute default
+                                        
+                                #use the full duration for an upcoming show
+                                if now < startDate:
+                                    try:
+                                        dur = (stopDate - startDate).seconds
+                                    except Exception,e:
+                                        dur = 3600  #60 minute default
+                                                            
+                                if type == 'tvshow' and dur == 10800:
+                                    type = 'movie'
+                                       
                                 #Enable Enhanced Parsing for current and future shows only
                                 if ignoreParse == False:   
                                     if (((now > startDate and now <= stopDate) or (now < startDate))):  
@@ -1933,24 +1955,6 @@ class ChannelList:
                                     playcount = 1
                                 else:
                                     playcount = 1                        
-
-                                #skip old shows that have already ended
-                                if now > stopDate:
-                                    continue
-                                
-                                #adjust the duration of the current show
-                                if now > startDate and now <= stopDate:
-                                    try:
-                                        dur = ((stopDate - startDate).seconds)
-                                    except Exception,e:
-                                        dur = 3600  #60 minute default
-                                        
-                                #use the full duration for an upcoming show
-                                if now < startDate:
-                                    try:
-                                        dur = (stopDate - startDate).seconds
-                                    except Exception,e:
-                                        dur = 3600  #60 minute default
 
                                 if type == 'tvshow':
                                     episodetitle = (('0' if seasonNumber < 10 else '') + str(seasonNumber) + 'x' + ('0' if episodeNumber < 10 else '') + str(episodeNumber) + ' - '+ (subtitle)).replace('  ',' ')
@@ -4818,6 +4822,7 @@ class ChannelList:
                                 
                                 elif filetype == 'directory' and self.filecount < limit:
                                     self.log('getFileList, directory')
+
                                     if self.background == False:
                                         self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "searching Directory - %s" % label)
                                     
@@ -4825,17 +4830,19 @@ class ChannelList:
                                         #if no return, try unquote
                                         if not self.requestList(file):
                                             file = urllib.unquote(file).replace('",return)','')
-                                            #remove unwanted reference from super.favourites
-                                            try:
-                                                file = (file.split('ActivateWindow(10025,"')[1])
-                                            except:
-                                                pass
-                                    
-                                    self.log('getFileList, remaining filecount = ' + str(abs(self.filecount-limit)) +'/'+ str(dirlimit))
-                                    fileList.extend(self.getFileList(self.requestList(file), channel, abs(self.filecount-limit), excludeLST))
-                                    self.filecount += len(fileList)
+                                            # todo fix super fav support
+                                            # remove unwanted reference from super.favourites
+                                            # try:
+                                                # file = (file.split('ActivateWindow(10025,"')[1])
+                                            # except:
+                                                # pass
+                                
+                                    fileList.extend(self.getFileList(self.requestList(file), channel, limit, excludeLST))
                                     self.dircount += 1
-                                self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
+                                    self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
+                                    
+                                elif self.filecount >= limit:
+                                    break
                             else:
                                 self.log('getFileList, ' + label.lower() + ' in excludeLST')                                        
             except Exception,e:
@@ -4854,7 +4861,7 @@ class ChannelList:
             self.sendJSON(json_query);  
                                                                                
         self.log("getFileList, fileList return = " + str(len(fileList)))      
-        # cleanup   
+        # cleanup  
         del seasoneplist[:]                 
         return fileList
 

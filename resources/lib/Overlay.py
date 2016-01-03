@@ -291,6 +291,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.runningActionChannel = 0
         self.channelDelay = 0
         self.seekDelay = 0
+        self.cron_uptime = 0
         self.channelbugcolor = CHANBUG_COLOR
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
         self.InfTimer = INFOBAR_TIMER[int(REAL_SETTINGS.getSetting('InfoTimer'))]
@@ -865,20 +866,14 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         setProperty("OVERLAY.OnNextInfoArtLst", '$#$'.join((OnNextInfoArtLst)))
 
         
-    def clearOnNow(self, force=False):
-        self.log('clearOnNow, force = ' + str(force))
-        try:
-            if force == True or len(self.OnNowTitleLst) < self.maxChannels:
-                self.OnNowArtLst = []
-                self.OnNowTitleLst = []
-                clearProperty("OVERLAY.OnNowTitleLst")
-                clearProperty("OVERLAY.OnNowInfoLst")
-                clearProperty("OVERLAY.OnNowInfoArtLst")
-                clearProperty("OVERLAY.OnNextTitleLst")
-                clearProperty("OVERLAY.OnNextInfoLst")
-                clearProperty("OVERLAY.OnNextInfoArtLst")
-        except:
-            pass
+    def clearOnNow(self):
+        self.log('clearOnNow')
+        clearProperty("OVERLAY.OnNowTitleLst")
+        clearProperty("OVERLAY.OnNowInfoLst")
+        clearProperty("OVERLAY.OnNowInfoArtLst")
+        clearProperty("OVERLAY.OnNextTitleLst")
+        clearProperty("OVERLAY.OnNextInfoLst")
+        clearProperty("OVERLAY.OnNextInfoArtLst")
 
             
     def channelUp(self):
@@ -2379,7 +2374,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.notPlayingCount += 1
                 if self.notPlayingCount > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
                     DebugNotify("notPlayingCount = " + str(self.notPlayingCount) + "/" + str(int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))))
-            self.startPlayerTimer(self.ActionTimeInt)
 
             # disable dialog checks while system is taxed or on low end hardware
             if isLowPower() == False and isBackgroundLoading() == False:
@@ -2391,7 +2385,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if self.Player.isActuallyPlaying() == False:
                     self.CloseDialog()
                     self.ForceStop()
-                    self.lastActionTrigger()
+                    self.lastActionTrigger()            
+        self.startPlayerTimer(self.ActionTimeInt)
                 
                 
     def SkipNext(self):
@@ -3039,7 +3034,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         self.setBackgroundVisible(True)        
         self.isExiting = True 
-        self.clearOnNow(True)
+        self.clearOnNow()
         self.clearProp('OVERLAY.NEXT')
         self.clearProp('OVERLAY')
         self.clearProp('EPG')
@@ -3521,6 +3516,29 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         print self.Player.getAvailableSubtitleStreams()
         return FileAccess.exists(self.Player.getSubtitles()) == True
 
+        
+    def cronThread(self, timer=0.5):
+        self.log("cronThread")
+        cronThread_Timer = threading.Timer(timer, self.cronJob)
+        cronThread_Timer.name = "cronThread_Timer"
+        if cronThread_Timer.isAlive():
+            cronThread_Timer.cancel()
+            cronThread_Timer.join()
+        cronThread_Timer.start()
+
+        
+    def cronJob(self):
+        self.log("cronJob, uptime = " + str(self.cron_uptime))
+        self.cron_uptime += 1 # life       
+        time.sleep(0.5)
+        self.cronThread(timer)
+            
+            
+        # move thread timers here:
+        # playtimer, notificationtimer, idle, sleep
+        
+        
+        
 # xbmc.executebuiltin('StartAndroidActivity("com.netflix.mediaclient"),return')
 # call weather
 # http://localhost:9000/jsonrpc?request={"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"weather"},"id":18}
