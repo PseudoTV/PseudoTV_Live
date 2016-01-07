@@ -82,7 +82,7 @@
         <string id="30228">Use Unaltered Channel bug</string>
         <string id="30226">Show Coming Up Next box</string>
         <string id="30229">Use Classic Coming Up Next box</string>
-        <string id="30227">Coming Up Artwork Type</string>
+        <string id="30329">Enable Subtitles when Available</string>
 <string id="30400">DVR</string>  
 	<string id="30397">Enable XMLTV Service</string>
 	<string id="30404">XMLTV file location</string>
@@ -146,9 +146,10 @@
                                 <string id="30974">Enter PLX URL</string>
                    
     <string id="30700">AutoTune Options:</string>
-    <string id="33310">AutoTune Limit Per Channel</string>
+    <string id="33310">AutoTune Channel Limit</string>
     <string id="30372">Reserve Channels 501-999 for AutoTuning</string>
-    <string id="30699">Kodi PVR Guide Data from</string>
+    <string id="30699">Kodi PVR GuideData from</string>
+    <string id="30771">Select XMLTV.xml file</string>
     <string id="30701">AutoTune Genres:</string>
     <string id="30702">TV</string>
     <string id="30703">Movies</string>
@@ -186,6 +187,8 @@
                 <string id="30530">Number of Trailers Between Shows</string>
                 
 <string id="39000">Community</string>
+    <string id="39001">Community Lists require a vaild email in-order to submit updates.</string>
+    <string id="39002">Users cannot access the list until they are willing to submit entries.</string>
     <string id="30776">Community Verified:</string>
     <string id="30905">Enable Community List</string>
     <string id="30906">Enter your gmail address</string>
@@ -217,7 +220,6 @@
     <string id="30309">Wait for Playback (seconds)</string> 
     <string id="30319">Force Playback timeout (seconds)</string> 
     <string id="30302">Channel Change Delay (seconds)</string>
-    <string id="30306">Seek Delay (seconds)</string>
     <string id="30914">Controls: (Use with Caution!)</string>
     <string id="39958">Include 3D Content (Global)</string>
     <string id="30997">Include Strm Content (Global)</string>
@@ -238,5 +240,6 @@
     <string id="30197">binaries (Optional)</string>
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>
+    <string id="30897">Miscellaneous</string>
     <string id="30720">Download Lunatixz Repository</string>
 </strings>

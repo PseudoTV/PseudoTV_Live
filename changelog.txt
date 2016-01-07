@@ -1,3 +1,7 @@
+[*] New! Subtitles toggle in sidebar w/subtitle search.
+[*] Global Enable/Disable Subtitles control under "Visual Settings".
+[*] Rewrote reminders to accommodate artwork for PseudoCompanion
+[*] Tweaked Plugin filecounts, added PseudoCompanion functions
 [*] Fixed media seeking issues caused by subtitle encoding.
 [*] Removed 'PowerPC' and "APU" from LowPower profile.
 [*] Native USTVnow xmltv support (requires Official USTVnow plugin). Listings are limited to six hr intervals.

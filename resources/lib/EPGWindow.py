@@ -430,8 +430,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.toRemove.extend(self.channelButtons[row])
             del self.channelButtons[row][:]
 
-            # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
-            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
+            # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
             
             # if the channel is paused, then only 1 button needed
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
@@ -546,8 +546,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         type = LiveID[0]
                         rating = LiveID[5]
                         
-                        if self.MyOverlayWindow.isReminder(timestamp, mylabel, curchannel) == True:
-                            mylabel = mylabel + ' ' + u'\U0001F551'
+                        if self.MyOverlayWindow.isReminder(str(chtype), str(curchannel), timestamp, pType='EPG') == True:
+                            # mylabel = mylabel + ' ' + u'\U0001F551'
+                            mylabel = mylabel + ' ' + '*'
                         
                         if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":                  
                             if rating != 'NR':
@@ -1181,8 +1182,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             genre = self.MyOverlayWindow.channels[newchan - 1].getItemgenre(plpos)
             timestamp = (self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
             myLiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
-            LiveID = self.chanlist.unpackLiveID(myLiveID)     
-            self.getControl(503).setImage(self.MyOverlayWindow.getChlogo(newchan))
+            LiveID = self.chanlist.unpackLiveID(myLiveID)    
+            Chlogo = self.MyOverlayWindow.getChlogo(newchan)
+            self.getControl(503).setImage(Chlogo)
         
         try:
             SEinfo = SEtitle.split(' -')[0]
@@ -1216,6 +1218,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
         # SetProperties
         setProperty("EPG.TimeStamp",timestamp)
+        setProperty("EPG.LOGOART",Chlogo)
         self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
 
    
@@ -1409,7 +1412,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, self.textfont, self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
         self.addControl(self.contextButton)
         self.ContextList = ['More Info','Find Similar','Record Show','Set Reminder']
-        if self.MyOverlayWindow.isReminder(getProperty("EPG.TimeStamp"), getProperty("EPG.Title"), int(getProperty("EPG.Chnum"))) == True:
+        if self.MyOverlayWindow.isReminder(getProperty("EPG.Chtype"), getProperty("EPG.Chnum"), getProperty("EPG.TimeStamp"), pType='EPG') == True:
             self.ContextList = replaceStringElem(self.ContextList,'Set Reminder','Remove Reminder')
         self.contextButton.addItems(items=self.ContextList)
         self.setFocus(self.contextButton)

@@ -117,7 +117,8 @@ class ChannelList:
             
         if self.forceReset:
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
-            REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset  
+            REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
+            REAL_SETTINGS.setSetting('ReminderLst', '') # Reset Reminders
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
             self.forceReset = False
 
@@ -152,6 +153,7 @@ class ChannelList:
             
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
+            self.myOverlay.setStatusLabel("Updating Channel " + str(i + 1))
             if self.background == False:
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
                 self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(i + 1), "waiting for file lock")
@@ -239,7 +241,7 @@ class ChannelList:
                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
                 
             # find missing channel logos
-            if FIND_LOGOS:
+            if FIND_LOGOS == True:
                 if self.background == False:
                     self.myOverlay.setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
                 if chtype not in [6,7,9999]:
@@ -3749,8 +3751,10 @@ class ChannelList:
                                 name = ascii(title.text.replace('<display-name>','').replace('</display-name>','').replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','').replace("'",'').replace(')',''))
                                 channel = name+' : '+id
                                 self.cached_readXMLTV.append(channel)
+                f.close()
                 return self.cached_readXMLTV
             except Exception,e:
+                f.close()
                 self.log("readXMLTV, Failed! " + str(e))
                 return ['XMLTV ERROR : IMPROPER FORMATING']
 
@@ -3821,7 +3825,9 @@ class ChannelList:
                         dnameID = self.cleanString(XMLTVMatchlst[select])
                         CHid = dnameID.split(' : ')[1]
                         dnameID = dnameID.split(' : ')[0]
-                        return dnameID, CHid          
+                        return dnameID, CHid
+                    else:
+                        return CHname, '0'
         except Exception,e:
             hide_busy_dialog()
             self.log("findZap2itID, Failed! " + str(e))

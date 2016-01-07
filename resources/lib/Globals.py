@@ -42,6 +42,7 @@ DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
 
 def log(msg, level = xbmc.LOGDEBUG):
+    xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', msg)
     if DEBUG != True and level == xbmc.LOGDEBUG:
         return
     xbmc.log(ADDON_ID + '-' + ADDON_VERSION + '-' + uni(msg), level)
@@ -87,6 +88,7 @@ ALLOW_CHANNEL_HISTORY_TIME = 60 * 60 * 24 * 1
 NOTIFICATION_CHECK_TIME = 15
 NOTIFICATION_TIME_BEFORE_END = 240
 NOTIFICATION_DISPLAY_TIME = 6
+REMINDER_COUNTDOWN = 15
 
 # Rules/Modes
 RULES_ACTION_START = 1

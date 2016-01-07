@@ -119,3 +119,4 @@ elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
 elif sys.argv[1] == '-GetRepo':
     getRepo()
+        

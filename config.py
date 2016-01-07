@@ -410,7 +410,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.setChname(title)    
             
         elif controlId == 212:    # LiveTV XMLTV Name, Select
-            self.getControl(212).setLabel(listXMLTV())
+            self.getControl(212).setLabel(self.listXMLTV())
         
         elif controlId == 213:    # LiveTV Channel Name, input
             retval = dlg.input(self.getControl(213).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
@@ -424,7 +424,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 infoDialog("Enter Channel & XMLTV Name")
             else:                              
                 dname = self.getControl(213).getLabel()
-                xmltvFle = xmltvFile(setting3)
+                xmltvFle = self.xmltvflePath(setting3)
                 dnameID, CHid = self.chnlst.findZap2itID(dname, xmltvFle)
                 if dnameID != 'XMLTV ERROR':
                     self.getControl(216).setLabel(CHid)
@@ -1716,6 +1716,42 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         if CHANNEL_SHARING:
             realloc = REAL_SETTINGS.getSetting('SettingsFolder')
             FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
+
+            
+    def listXMLTV(self):
+        self.log("listXMLTV")
+        xmltvLst = []   
+        EXxmltvLst = ['pvr','Enter URL','scheduledirect (Coming Soon)']
+        if isPlugin('plugin.video.ustvnow'):
+            EXxmltvLst.append('ustvnow')
+        dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
+        dir,file = xbmcvfs.listdir(XMLTV_LOC)
+        xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
+        xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
+        select = selectDialog(xmltvLst, 'Select xmltv file')
+
+        if select != -1:
+            if xmltvLst[select] == 'Enter URL':
+                retval = dlg.input(xmltvLst[select], type=xbmcgui.INPUT_ALPHANUM)
+                if retval and len(retval) > 0:
+                    return retval
+            else:
+                return xmltvLst[select]        
+            
+            
+    def xmltvflePath(self, setting3):
+        self.log("xmltvflePath")                
+        if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
+            xmltvFle = setting3
+        elif setting3.lower() == 'ptvlguide':
+            xmltvFle = PTVLXML
+        elif setting3.lower() == 'ustvnow':
+            USTV_ID = 'plugin.video.ustvnow'
+            USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
+            xmltvFle = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
+        else:
+            xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+        return xmltvFle
 
             
     def updateListing(self, channel = -1):

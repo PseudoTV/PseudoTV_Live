@@ -185,7 +185,7 @@ class Migrate:
                     if Globals.REAL_SETTINGS.getSetting("PVR_Listing") == '1':
                         listing = 'xmltv'
                         xmltvLOC = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("xmltvLOC"))
-                        xmlTvFile = os.path.join(xmltvLOC, 'xmltv.xml')
+                        xmlTvFile = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("PVR_XMLTVpath"))
                         if xbmcvfs.exists(xmlTvFile): 
                             CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
                     else:

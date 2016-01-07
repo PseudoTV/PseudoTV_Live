@@ -1419,13 +1419,17 @@ def isRepoInstalled():
       
 def getRepo():
     log('utils: getRepo')
-    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
-    name = 'repository.lunatixz.zip' 
-    MSG = 'Lunatixz Repository Installed'    
-    path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
-    addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
-    lib = os.path.join(path,name)
-    getGithubZip(url, lib, addonpath, MSG)
+    if isRepoInstalled() == False:
+        if dlg.yesno("PseudoTV Live", 'Install the Lunatixz Repository?'):   
+            url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
+            name = 'repository.lunatixz.zip' 
+            MSG = 'Lunatixz Repository Installed'    
+            path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
+            addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
+            lib = os.path.join(path,name)
+            getGithubZip(url, lib, addonpath, MSG)
+    else:
+        infoDialog('Lunatixz Repository Already Installed')
     
 # def chkVersion():
     # log('utils: chkVersion')
@@ -1808,26 +1812,29 @@ def getTitleYear(showtitle, showyear=0):
     return year, title, showtitle
 
        
-def SEinfo(SEtitle, showSE=True):        
-    try:
-        SEinfo = SEtitle.split(' -')[0]
-        season = int(SEinfo.split('x')[0])
-        episode = int(SEinfo.split('x')[1])
-    except:
-        season = 0
-        episode = 0   
-    try:
-        if showSE and season != 0 and episode != 0:
-            eptitles = SEtitle.split('- ')
-            eptitle = (eptitles[1] + (' - ' + eptitles[2] if len(eptitles) > 2 else ''))
-            swtitle = ('S' + ('0' if season < 10 else '') + str(season) + 'E' + ('0' if episode < 10 else '') + str(episode) + ' - ' + (eptitle)).replace('  ',' ')
-        else:
-            swtitle = SEtitle   
-    except:
-        swtitle = SEtitle
-    return season, episode, swtitle
+def SEinfo(SEtitle, showSE=True):
+    if SEtitle:
+        try:
+            SEinfo = SEtitle.split(' -')[0]
+            season = int(SEinfo.split('x')[0])
+            episode = int(SEinfo.split('x')[1])
+        except:
+            season = 0
+            episode = 0   
+        try:
+            if showSE and season != 0 and episode != 0:
+                eptitles = SEtitle.split('- ')
+                eptitle = (eptitles[1] + (' - ' + eptitles[2] if len(eptitles) > 2 else ''))
+                swtitle = ('S' + ('0' if season < 10 else '') + str(season) + 'E' + ('0' if episode < 10 else '') + str(episode) + ' - ' + (eptitle)).replace('  ',' ')
+            else:
+                swtitle = SEtitle   
+        except:
+            swtitle = SEtitle
+        return season, episode, swtitle
+    else:
+        return 0, 0, ''
     
-    
+
 def splitDBID(dbid):
     try:
         epid = dbid.split(':')[1]
@@ -1877,31 +1884,6 @@ def help(chtype):
     f = open_url(URL)
     text = f.read()
     showText(title, text)
-    
-def listXMLTV():
-    log("utils: listXMLTV")
-    xmltvLst = []   
-    EXxmltvLst = ['pvr','scheduledirect (Coming Soon)']
-    if isPlugin('plugin.video.ustvnow'):
-        EXxmltvLst.append('ustvnow')
-    dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
-    dir,file = xbmcvfs.listdir(XMLTV_LOC)
-    xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
-    xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
-    select = selectDialog(xmltvLst, 'Select xmltv file')
-
-    if select != -1:
-        return xmltvLst[select]        
-        
-def xmltvFile(setting3):
-    log("utils: xmltvFile")                
-    if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
-        xmltvFle = setting3
-    elif setting3.lower() == 'ptvlguide':
-        xmltvFle = PTVLXML
-    else:
-        xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
-    return xmltvFle
 
 def getRSSFeed(genre):
     log("utils: getRSSFeed, genre = " + genre)
