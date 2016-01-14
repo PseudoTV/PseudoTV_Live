@@ -12,7 +12,7 @@
         <string id="30006">Time between channel resets</string>
         <string id="30007">Default channel times at startup</string>
         <string id="30008">Background Updating</string>  
-        <string id="30998">Enable Settop Box Mode</string>
+        <string id="30998">Enable Settop Box Mode [Experimental]</string>
         <string id="31000">Refresh Interval (Hours)</string>
         <string id="30289">Update channels after library scan</string>
         <string id="30046">Show Notifications</string>
@@ -72,7 +72,7 @@
         <string id="30212">EPG Color by</string>
         <string id="30213">Include Movie Genres</string>
         <string id="30214">Menu uses Channel</string>
-        <string id="30229">Show Detailed Info ie."[TV-14]"</string>
+        <string id="30229">Show extra epg Tags (ie. HD,CC,Ratings)</string>
     <string id="30220">Overlay Options:</string>
         <string id="30203">Select Overlay Number Color</string>
         <string id="30221">Show info when changing channels</string>

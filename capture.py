@@ -156,7 +156,7 @@ class Main:
             self.channame = self.Label
             
         elif self.chantype == 8: 
-            xmltvFle = xmltvFile(listXMLTV())
+            xmltvFle = xmltvflePath(listXMLTV())
             if self.Path.startswith('plugin://plugin.video.ustvnow'):
                 self.Label = self.Label.split(' - ')[0]
                 dname = "USTVnow - "+self.Label

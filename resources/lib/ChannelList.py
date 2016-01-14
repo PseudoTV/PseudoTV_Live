@@ -91,13 +91,12 @@ class ChannelList:
         self.startTime = time.time()
         self.ResetLST = (REAL_SETTINGS.getSetting("ResetLST")).split(',')
         self.log('Channel Reset List is ' + str(self.ResetLST))
-        self.channelResetSetting = int(REAL_SETTINGS.getSetting("ChannelResetSetting"))
-        self.log('Channel Reset Setting is ' + str(self.channelResetSetting))
         self.forceReset = REAL_SETTINGS.getSetting('ForceChannelReset') == "true"
         self.log('Force Reset is ' + str(self.forceReset))
         self.startMode = int(REAL_SETTINGS.getSetting("StartMode"))
         self.log('Start Mode is ' + str(self.startMode))
         self.backgroundUpdating = int(REAL_SETTINGS.getSetting("ThreadMode"))
+        self.channelResetSetting = int(REAL_SETTINGS.getSetting("ChannelResetSetting"))
         self.inc3D = REAL_SETTINGS.getSetting('Include3D') == "true"
         self.log("Include 3D is " + str(self.inc3D))
         self.incIceLibrary = REAL_SETTINGS.getSetting('IncludeIceLib') == "true"
@@ -114,11 +113,16 @@ class ChannelList:
         if SETTOP:
             self.backgroundUpdating = 0
             self.channelResetSetting = 0
+        self.log('Background Updating is ' + str(self.backgroundUpdating))
+        self.log('Channel Reset Setting is ' + str(self.channelResetSetting))
             
         if self.forceReset:
+            ClearCache()
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
             REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
+            REAL_SETTINGS.setSetting('ResetLST', '') # Reset ResetLST
             REAL_SETTINGS.setSetting('ReminderLst', '') # Reset Reminders
+            REAL_SETTINGS.setSetting('FavChanLst', '') # Reset FavChannels
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
             self.forceReset = False
 
@@ -126,14 +130,16 @@ class ChannelList:
             self.lastResetTime = int(ADDON_SETTINGS.getSetting("LastResetTime"))
         except Exception,e:
             self.lastResetTime = 0
-            
-        self.updateDialog = xbmcgui.DialogProgressBG()
-
         try:
             self.lastExitTime = int(ADDON_SETTINGS.getSetting("LastExitTime"))
         except Exception,e:
             self.lastExitTime = int(time.time())
-            
+                      
+        if self.backgroundUpdating > 0:
+            self.updateDialog = xbmcgui.DialogProgress()
+        else:
+            self.updateDialog = xbmcgui.DialogProgressBG()
+
             
     def setupList(self, background=False):
         self.readConfig()
@@ -153,7 +159,6 @@ class ChannelList:
             
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
-            self.myOverlay.setStatusLabel("Updating Channel " + str(i + 1))
             if self.background == False:
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
                 self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(i + 1), "waiting for file lock")
@@ -161,14 +166,14 @@ class ChannelList:
                 setProperty('loading.progress',str(self.updateDialogProgress))
             self.channels.append(Channel())
             
-            # try:
-                # # If the user pressed cancel, stop everything and exit
-                # if self.updateDialog.iscanceled():
-                    # self.log('Update channels cancelled')
-                    # self.updateDialog.close()
-                    # return None
-            # except:
-                # pass
+            try:
+                # If the user pressed cancel, stop everything and exit
+                if self.updateDialog.iscanceled():
+                    self.log('Update channels cancelled')
+                    self.updateDialog.close()
+                    return None
+            except:
+                pass
                 
             self.setupChannel(i + 1, self.background, makenewlists, False)
             
@@ -275,6 +280,7 @@ class ChannelList:
         chsetting2 = ''
         chsetting3 = ''
         chsetting4 = ''
+        needsreset = False
         self.background = background
         self.settingChannel = channel
         
@@ -314,8 +320,10 @@ class ChannelList:
                 self.delResetLST(channel)
 
         if needsreset:
-            self.log('setupChannel ' + str(channel) + ', needsreset = True')
             self.channels[channel - 1].isSetup = False
+            
+        self.log('setupChannel ' + str(channel) + ', needsreset = ' + str(needsreset))
+        self.log('setupChannel ' + str(channel) + ', makenewlist = ' + str(makenewlist))
             
         # If possible, use an existing playlist
         # Don't do this if we're appending an existing channel
@@ -324,28 +332,29 @@ class ChannelList:
             try:
                 self.channels[channel - 1].totalTimePlayed = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_time', True))
                 createlist = True
-            
+
                 if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "reading playlist")
+                    self.updateDialog.update(self.updateDialogProgress, "Loading Channel " + str(channel), "reading playlist")
+                else:
+                    self.log('setupChannel, Loading Channel ' + str(channel) + ' reading playlist')
 
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
                     self.channels[channel - 1].fileName = CHANNELS_LOC + 'channel_' + str(channel) + '.m3u'
                     returnval = True
-                    
-                    # Automatic Channel Reset
+
                     if self.channelResetSetting == 0:
-                    
                         # Reset livetv after 24hrs
                         if chtype == 8 and self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
                             createlist = False
-                            
+                        
                         # If this channel has been watched for longer than it lasts, reset the channel
-                        elif self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
-                            createlist = False    
+                        if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                            createlist = False
 
-                    elif self.channelResetSetting > 0 and self.channelResetSetting < 4:
+                    if self.channelResetSetting > 0 and self.channelResetSetting < 4:
                         timedif = time.time() - self.lastResetTime
+                    
                         if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
                             createlist = False
 
@@ -358,11 +367,11 @@ class ChannelList:
                         if timedif < 0:
                             createlist = False
 
-                    elif self.channelResetSetting == 4:
+                    if self.channelResetSetting == 4:
                         createlist = False
-            except:
-                pass
-
+            except Exception,e:
+                self.log('setupChannel ' + str(channel) + ', _time Failed! ' + str(e))
+                
         if createlist or needsreset:
             self.channels[channel - 1].isValid = False
 
@@ -393,6 +402,8 @@ class ChannelList:
             if self.background == False:
                 self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
                 self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "")
+            else:
+                self.log('setupChannel, Updating Channel ' + str(channel))
             
             if self.makeChannelList(channel, chtype, chsetting1, chsetting2, chsetting3, chsetting4, append) == True:
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
@@ -411,12 +422,16 @@ class ChannelList:
                     
         self.runActions(RULES_ACTION_BEFORE_CLEAR, channel, self.channels[channel - 1])
 
-        # Don't clear history when appending channels
-        if self.background == False and append == False and self.myOverlay.isMaster:
-            self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-            self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "clearing history")
+        # Don't clear history when appending channels            
+        if append == False and self.myOverlay.isMaster:
             self.clearPlaylistHistory(channel)
-
+            
+            if self.background == False:
+                self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
+                self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "clearing history")
+            else:
+                self.log('setupChannel, Initializing: Channel ' + str(channel) + " clearing history")
+            
         if append == False:
             self.runActions(RULES_ACTION_BEFORE_TIME, channel, self.channels[channel - 1])
 
@@ -444,6 +459,9 @@ class ChannelList:
             self.runActions(RULES_ACTION_FINAL_MADE, channel, self.channels[channel - 1])
         else:
             self.runActions(RULES_ACTION_FINAL_LOADED, channel, self.channels[channel - 1])
+            
+        self.log('setupChannel ' + str(channel) + ', append = ' + str(append))
+        self.log('setupChannel ' + str(channel) + ', createlist = ' + str(createlist))
         return returnval
 
         
@@ -838,9 +856,9 @@ class ChannelList:
         fle.write('    <match>'+match+'</match>\n')
 
 
-    def writeXSPFooter(self, fle, limit, order):
+    def writeXSPFooter(self, fle, limit, sort, order='ascending'):
         fle.write('    <limit>'+str(limit)+'</limit>\n')
-        fle.write('    <order direction="ascending">'+order+'</order>\n')
+        fle.write('    <order direction="'+order+'">'+sort+'</order>\n')
         fle.write('</smartplaylist>\n')
             
         
@@ -1024,10 +1042,7 @@ class ChannelList:
             return ''
 
         self.writeXSPHeader(fle, "episodes", 'Recently Added TV', 'all')
-        fle.write('    <rule field="dateadded" operator="inthelast">\n')
-        fle.write('        <value>14</value>\n')
-        fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded")
+        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded", "descending")
         fle.close()
         return flename
         
@@ -1041,10 +1056,7 @@ class ChannelList:
             return ''
 
         self.writeXSPHeader(fle, "movies", 'Recently Added Movies', 'all')
-        fle.write('    <rule field="dateadded" operator="inthelast">\n')
-        fle.write('        <value>14</value>\n')
-        fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded")
+        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded", "descending")
         fle.close()
         return flename
         
@@ -1084,7 +1096,7 @@ class ChannelList:
                 title = (os.path.split(LocalFLE)[1])
                 title = os.path.splitext(title)[0].replace('.', ' ')
                 description = LocalFLE.replace('//','/').replace('/','\\')
-                GenreLiveID = ['Unknown', 'other', '0', '0', False, '1', 'NR']
+                GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR', False, False, 0]
                 tmpstr = self.makeTMPSTR(duration, title, 'Directory Video', description, GenreLiveID, LocalFLE)
                 fileList.append(tmpstr)
                     
@@ -1102,13 +1114,10 @@ class ChannelList:
     # pack string for playlist
     def packGenreLiveID(self, GenreLiveID):
         self.log("packGenreLiveID, GenreLiveID = " + str(GenreLiveID))
-        if len(GenreLiveID) == 7:
-            genre = GenreLiveID[0]
-            LiveID = '|'.join(str(x) for x in GenreLiveID[1:]) + '|'
-            return genre, LiveID
-        else:
-            return 'Unknown', 'other|0|0|False|1|NR|'
-        
+        genre = GenreLiveID[0]
+        LiveID = '|'.join(str(x) for x in GenreLiveID[1:])
+        return genre, LiveID
+
         
     # unpack list for parsing
     def unpackLiveID(self, LiveID):
@@ -1225,6 +1234,7 @@ class ChannelList:
         text = text.replace("\\",'/')
         text = text.replace("//",'/')
         text = text.replace('/"','')
+        text = text.replace('*NEW*','')
         text = text.replace('plugin.video.','')
         text = text.replace('plugin.audio.','')
 
@@ -1777,6 +1787,9 @@ class ChannelList:
                     LiveID = 'tvshow|0|0|False|1|NR|'
                     thumburl = 0
                     rating = 'NR'
+                    HD = False
+                    CC = False
+                    Stars = 0
                     
                     if event == "end":
                         if elem.tag == "programme":
@@ -1852,6 +1865,17 @@ class ChannelList:
                                     type = 'movie'
                                 else:
                                     type = 'tvshow'
+                                        
+                                for HDLst in elem.findall('video'):
+                                    if HDLst.find('quality').text == 'HDTV':
+                                        HD = True
+                                        break
+                                    print 'HD', HD
+                                    
+                                for StarLst in elem.findall('star-rating'):
+                                    Stars = convert_to_stars(convert_to_float((StarLst.find('value').text)))
+                                    break
+                                    print 'stars', Stars
 
                                 #filter unwanted ids by title
                                 if showtitle == ('Paid Programming') or subtitle == ('Paid Programming') or description == ('Paid Programming'):
@@ -1903,8 +1927,7 @@ class ChannelList:
                                         year, title, showtitle = getTitleYear(showtitle, year)            
                                         if type == 'tvshow' and ENHANCED_DATA == True:
                                             #Decipher the TVDB ID by using the Zap2it ID in dd_progid
-                                            episodeNumList = elem.findall("episode-num")
-                                            
+                                            episodeNumList = elem.findall("episode-num") 
                                             for epNum in episodeNumList:
                                                 if epNum.attrib["system"] == 'dd_progid':
                                                     dd_progid = epNum.text
@@ -1963,7 +1986,7 @@ class ChannelList:
                                     if str(episodetitle[0:5]) == '00x00':
                                         episodetitle = episodetitle.split("- ", 1)[-1]
                                     subtitle = episodetitle
-                                GenreLiveID = [genre,type,id,thumburl,False,playcount,rating] 
+                                GenreLiveID = [genre,type,id,thumburl,False,playcount,rating, HD, CC, Stars]
                                 tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, setting2, startDate)
                                 showList.append(tmpstr)
                                 showcount += dur
@@ -2146,7 +2169,7 @@ class ChannelList:
                                 episodetitle = episodetitle.split("- ", 1)[-1]
                             subtitle = episodetitle
                          
-                        GenreLiveID = [genre,type,id,thumburl,False,playcount,rating] 
+                        GenreLiveID = [genre,type,id,thumburl,False,playcount,rating, False, False, 0]
                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, setting2, startDate)
                         showList.append(tmpstr)
                         showcount += dur
@@ -2184,7 +2207,7 @@ class ChannelList:
         else:
             dur = 5400  #90 minute default
                 
-        GenreLiveID = ['Unknown','other',0,0,False,0,'NR'] 
+        GenreLiveID = ['Unknown','other',0,0,False,1,'NR', False, False, 0]
         tmpstr = self.makeTMPSTR(dur, title, "InternetTV", description, GenreLiveID, setting2)
         for i in range(limit):
             showList.append(tmpstr)
@@ -2480,7 +2503,7 @@ class ChannelList:
                             except:
                                 Genre = 'Unknown' 
                                 
-                            GenreLiveID = [Genre,'youtube',0,VidID,False,1,'NR'] 
+                            GenreLiveID = [Genre,'youtube',0,VidID,False,1,'NR', False, False, 0]
                             tmpstr = self.makeTMPSTR(YT_Meta[2], YT_Meta[0], "Youtube - " + YT_Meta[4], YT_Meta[1], GenreLiveID, self.youtube_player_ok() + VidID)   
                             self.log("createYoutubeFilelist, CHANNEL: " + str(self.settingChannel) + ", " + YT_Meta[0] + "  DUR: " + str(YT_Meta[2]))
                             self.YT_showList.append(tmpstr)
@@ -2606,7 +2629,7 @@ class ChannelList:
                     runtime = 800
                 duration = int(runtime)
                 url = url.replace("&amp;amp;feature=youtube_gdata", "").replace("http://www.youtube.com/watch?hd=1&v=", self.youtube_player).replace("http://www.youtube.com/watch?v=", self.youtube_player)
-                GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR'] 
+                GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR', False, False, 0]
                 tmpstr = self.makeTMPSTR(duration, eptitle, "RSS - " + showtitle, epdesc, GenreLiveID, url)
                 fileList.append(tmpstr)
                 filecount += 1
@@ -2637,16 +2660,10 @@ class ChannelList:
                 msg_type = "My MusicTV"
                 showList = self.myMusicTV(setting1, setting2, setting3, setting4, limit)             
         return showList
-    
-    
-    def lastFM(self, setting1, setting2, setting3, setting4, limit):
-        self.log("lastFM")
-       
+           
 
     def myMusicTV(self, setting1, setting2, setting3, setting4, limit):
         self.log("myMusicTV")
-        #todo replace dead api with youtube lastfm search
-        
         # path = xbmc.translatePath("special://profile/addon_data/plugin.video.my_music_tv/cache/plist")
         # fle = os.path.join(path,setting2+".xml.plist")
         # showcount = 0
@@ -2776,13 +2793,12 @@ class ChannelList:
         elif path.lower() == 'ustvnow':
             USTV_ID = 'plugin.video.ustvnow'
             USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
-            self.xmlTvFile = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
-            if FileAccess.exists(self.xmlTvFile):
-                xmltvValid = True
+            if USTV_SETTINGS.getSetting('write_type') == 0:
+                okDialog('Please configure USTVnow plugin to genreate necessary files')                
             else:
-                if getProperty('PTVL.USTVnow.CHK') != 'true':
-                    setProperty('PTVL.USTVnow.CHK','true')
-                    okDialog('Please configure the USTVnow plugin to genreate necessary files')
+                self.xmlTvFile = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
+                if FileAccess.exists(self.xmlTvFile):
+                    xmltvValid = True
         elif path.lower() == 'ptvlguide':
             self.xmlTvFile = PTVLXML
             if FileAccess.exists(self.xmlTvFile):
@@ -3002,7 +3018,7 @@ class ChannelList:
 
     def insertBCT(self, chtype, channel, fileList, type):
         self.log("insertBCT, channel = " + str(channel))
-        GenreLiveID = ['Unknown', 'other', '0', '0', False, '1', 'NR']
+        GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR', False, False, 0]
         newFileList = []
         title = ''
         description = ''
@@ -3201,7 +3217,7 @@ class ChannelList:
                         ID = rating[1]
                 URL = self.youtube_player + ID
                 dur = (self.getYoutubeMeta(ID))[2]   
-                GenreLiveID = ['Unknown', 'movie', '0', '0', False, '1', mpaa]
+                GenreLiveID = ['Unknown', 'movie', 0, 0, False, 1, mpaa, False, False, 0]
                 tmpstr = self.makeTMPSTR(dur, chname, 'Rating', 'Rating', GenreLiveID, URL)
                 newFileList.append(tmpstr)
             # cleanup   
@@ -4198,7 +4214,7 @@ class ChannelList:
                             if url.startswith('http'):
                                 Pluginvalid = self.Valid_ok(url)
                                 if Pluginvalid != False:
-                                    # append as string element for easier sorting, todo sort using dict.
+                                    # append as string element for easier sorting; todo dict, sort using keys.
                                     TMPExternalList.append(channel_name+'@#@'+url+'@#@'+''+'@#@'+''+'@#@'+'')
                                     
             if Random == True:
@@ -4295,6 +4311,9 @@ class ChannelList:
 
         if len(HDHRNameList) == 0:
             HDHRNameList = ['HDHR ERROR: Unable to find device or favorite channels']
+        
+        # cleanup
+        del HDHRChannels[:]
         self.HDHRList = [HDHRNameList, HDHRPathList]
 
         
@@ -4532,14 +4551,14 @@ class ChannelList:
 
     def requestItem(self, file, fletype='video'):
         self.log("requestItem") 
-        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}')
+        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating","streamdetails"]}, "id": 1}')
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
            
            
     def requestList(self, path, fletype='video'):
         self.log("requestList") 
-        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
+        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating","streamdetails"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)      
  
@@ -4639,7 +4658,9 @@ class ChannelList:
                                         playcounts = re.search('"playcount" *: *([\d.]*\d+),', f)
                                         imdbnumbers = re.search('"imdbnumber" *: *"(.*?)",', f)
                                         ratings = re.search('"mpaa" *: *"(.*?)",', f)
+                                        starss = re.search('"rating" *: *([\d.]*\d+),', f)
                                         descriptions = re.search('"description" *: *"(.*?)",', f)
+                                        streamdetails = re.search('"streamdetails" *: *{(.*?)},', f)
 
                                         #tvshow check
                                         if showtitles != None and len(showtitles.group(1)) > 0:
@@ -4657,42 +4678,56 @@ class ChannelList:
                                             year = int(years.group(1))
                                         except:
                                             year = 0
+                                        self.log("getFileList, year = " + str(year))  
 
                                         if genres != None and len(genres.group(1)) > 0:
                                             genre = ((genres.group(1).split(',')[0]).replace('"',''))
                                         else:
                                             genre = 'Unknown'
+                                        self.log("getFileList, genre = " + str(genre))  
                                             
                                         if playcounts != None and len(playcounts.group(1)) > 0:
                                             playcount = int(playcounts.group(1))
                                         else:
-                                            playcount = 1
-                                
+                                            playcount = 1                             
                                         self.log("getFileList, playcount = " + str(playcount))  
                                         
                                         if ratings != None and len(ratings.group(1)) > 0:
                                             rating = self.cleanRating(ratings.group(1))
                                         else:
                                             rating = 'NR'
+                                        self.log("getFileList, rating = " + str(rating))  
+                                            
+                                        if starss != None and len(starss.group(1)) > 0:
+                                            stars = "%.1f" % round(float(starss.group(1)))
+                                        else:
+                                            stars = 0
+                                        self.log("getFileList, stars = " + str(stars))  
+                                            
+                                        hd = False
+                                        # if widths != None and len(widths.group(1)) > 0:
+                                            # self.log("getFileList, width = " + str(widths.group(1)))
+                                            # if int(widths.group(1)) >= 720:
+                                                # hd = True
+                                        # self.log("getFileList, hd = " + str(hd)) 
 
                                         if imdbnumbers != None and len(imdbnumbers.group(1)) > 0:
                                             imdbnumber = imdbnumbers.group(1)
                                         else:
                                             imdbnumber = 0
+                                        self.log("getFileList, imdbnumber = " + str(imdbnumber))
 
                                         if epids != None and len(epids.group(1)) > 0:
                                             epid = int(epids.group(1))
                                         else:
                                             epid = 0
-                                            
                                         self.log("getFileList, epid = " + str(epid))
                                         
                                         if dbids != None and len(dbids.group(1)) > 0:
                                             dbid = int(dbids.group(1))
                                         else:
                                             dbid = 0
-                                            
-                                        self.log("getFileList, dbid = " + str(dbid))
+                                        self.log("getFileList, dbid = " + str(dbid)) 
                                         
                                         if plots and len(plots.group(1)) > 0:
                                             theplot = (plots.group(1)).replace('\\','').replace('\n','')
@@ -4813,7 +4848,7 @@ class ChannelList:
                                         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
                                         self.startDate += dur
                                         
-                                        GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating]
+                                        GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating, hd, False, stars]
                                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file, timestamp)      
                                         
                                         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:

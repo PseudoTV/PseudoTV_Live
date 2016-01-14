@@ -70,9 +70,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             self.rowCount = 6
         self.channelButtons = [None] * self.rowCount
+        self.channelTags = [None] * self.rowCount
         
         for i in range(self.rowCount):
             self.channelButtons[i] = []
+            self.channelTags[i] = []
             
         self.clockMode = ADDON_SETTINGS.getSetting("ClockMode")
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
@@ -265,6 +267,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             if singlerow == -1 or singlerow == i:
                 self.setButtons(starttime, basecur, i)
                 myadds.extend(self.channelButtons[i])
+                myadds.extend(self.channelTags[i])
             basecur = self.MyOverlayWindow.fixChannel(basecur + 1)
         basecur = curchannel
 
@@ -428,7 +431,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             # Backup all of the buttons to an array
             self.toRemove.extend(self.channelButtons[row])
+            self.toRemove.extend(self.channelTags[row])
             del self.channelButtons[row][:]
+            del self.channelTags[row][:]
 
             playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
             # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
@@ -545,17 +550,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         LiveID = self.chanlist.unpackLiveID(myLiveID)
                         type = LiveID[0]
                         rating = LiveID[5]
-                        
-                        if self.MyOverlayWindow.isReminder(str(chtype), str(curchannel), timestamp, pType='EPG') == True:
-                            # mylabel = mylabel + ' ' + u'\U0001F551'
-                            mylabel = mylabel + ' ' + '*'
-                        
-                        if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":                  
-                            if rating != 'NR':
-                                Rat = ' [' + rating + ']'
-                            else:
-                                Rat = ''  
-                            mylabel = (mylabel + Rat).replace('()','').replace('[]','')
+                        hd = LiveID[6] == 'True'
+                        cc = LiveID[7] == 'True'
+                        stars = LiveID[8]
+                        rec = self.MyOverlayWindow.isRecord(str(chtype), str(curchannel), timestamp, pType='EPG')
+                        sch = self.MyOverlayWindow.isReminder(str(chtype), str(curchannel), timestamp, pType='EPG')
+                        EPGtags = {'REC': rec, 'SCH': sch, 'RATING': rating, 'HD': hd, 'CC': cc, 'STARS': stars} 
                             
                         if REAL_SETTINGS.getSetting('EPGcolor_enabled') == '1':
                             if type == 'movie' and REAL_SETTINGS.getSetting('EPGcolor_MovieGenre') == "false":
@@ -576,7 +576,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         
                         #Create Control array
                         self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
-
+                        self.addButtonTags(row, xpos, basey, width, baseh, mylabel, EPGtags)
+                        
                     totaltime += tmpdur
                     reftime += tmpdur
                     playlistpos += 1
@@ -588,10 +589,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 # If there were no buttons added, show some default button
                 if len(self.channelButtons[row]) == 0:
                     self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
+
         except:
             self.log("exception in setButtons", xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)
-            
+        
         self.log('setButtons return')
         return True
 
@@ -620,25 +622,25 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     self.infoOffset = 0
                     self.infoOffsetV = 0
             
-            elif action == ACTION_MOVE_DOWN: 
+            elif action in ACTION_MOVE_DOWN: 
                 if not self.showingContext:
                     self.GoDown()    
                 if self.showingInfo:  
                     self.infoOffsetV -= 1
                     
-            elif action == ACTION_MOVE_UP:
+            elif action in ACTION_MOVE_UP:
                 if not self.showingContext:
                     self.GoUp()         
                 if self.showingInfo: 
                     self.infoOffsetV += 1
 
-            elif action == ACTION_MOVE_LEFT: 
+            elif action in ACTION_MOVE_LEFT: 
                 if not self.showingContext:
                     self.GoLeft()           
                 if self.showingInfo:
                     self.infoOffset -= 1
             
-            elif action == ACTION_MOVE_RIGHT: 
+            elif action in ACTION_MOVE_RIGHT: 
                 if not self.showingContext:
                     self.GoRight()           
                 if self.showingInfo:
@@ -650,7 +652,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     self.infoOffset = 0
                     self.infoOffsetV = 0
             
-            elif action == ACTION_SELECT_ITEM:
+            elif action in ACTION_SELECT_ITEM:
                 if self.showingContext:
                     pos = self.contextButton.getSelectedPosition()  
                     if pos == 0:
@@ -675,13 +677,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.infoOffsetV = 0
                         self.lastActionTime = time.time()
                 
-            elif action == ACTION_PAGEDOWN: 
+            elif action in ACTION_PAGEDOWN: 
                 if not self.showingContext:
                     self.GoPgDown()  
                 if self.showingInfo:  
                     self.infoOffsetV -= 6       
 
-            elif action == ACTION_PAGEUP: 
+            elif action in ACTION_PAGEUP: 
                 if not self.showingContext:
                     self.GoPgUp()           
                 if self.showingInfo:
@@ -720,7 +722,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.log('ACTION_SYMBOLS')
                 self.showChannelLabel(self.MyOverlayWindow.Jump2Favorite())  
 
-            elif action == ACTION_CONTEXT_MENU:
+            elif action in ACTION_CONTEXT_MENU:
                 if not self.showingContext:
                     self.showContextMenu()
 
@@ -1021,7 +1023,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             pass
 
-    
+            
     def findButtonAtTime(self, row, selectedtime):
         self.log('findButtonAtTime ' + str(row))
         basex, basey = self.getControl(111 + row).getPosition()
@@ -1169,12 +1171,14 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 except:
                     pass
             else:
+                try:
+                    if self.MyOverlayWindow.getTMPSTR_Thread.isAlive():
+                        self.MyOverlayWindow.getTMPSTR_Thread.cancel()
+                except:
+                    pass
                 self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.1, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
                 self.MyOverlayWindow.getTMPSTR_Thread.name = "getTMPSTR_Thread"  
-                if self.MyOverlayWindow.getTMPSTR_Thread.isAlive():
-                    self.MyOverlayWindow.getTMPSTR_Thread.cancel()
-                self.MyOverlayWindow.getTMPSTR_Thread.start()  
-                return
+                self.MyOverlayWindow.getTMPSTR_Thread.start()
         else:
             title = (self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))   
             SEtitle = self.MyOverlayWindow.channels[newchan - 1].getItemEpisodeTitle(plpos) 
@@ -1185,26 +1189,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             LiveID = self.chanlist.unpackLiveID(myLiveID)    
             Chlogo = self.MyOverlayWindow.getChlogo(newchan)
             self.getControl(503).setImage(Chlogo)
-        
-        try:
-            SEinfo = SEtitle.split(' -')[0]
-            season = int(SEinfo.split('x')[0])
-            episode = int(SEinfo.split('x')[1])
-        except:
-            season = 0
-            episode = 0             
-        try:
-            if self.showSeasonEpisode:
-                eptitles = SEtitle.split('- ')
-                eptitle = (eptitles[1] + (' - ' + eptitles[2] if len(eptitles) > 2 else ''))
-                swtitle = ('S' + ('0' if season < 10 else '') + str(season) + 'E' + ('0' if episode < 10 else '') + str(episode) + ' - ' + (eptitle)).replace('  ',' ')
-            else:
-                swtitle = SEtitle      
-        except:
-            swtitle = SEtitle
-            pass
-
-        self.getControl(500).setLabel((title).replace("*NEW*",""))
+            
+        season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode)
+        self.getControl(500).setLabel(title)
         self.getControl(501).setLabel(swtitle)
         self.getControl(502).setLabel(Description)
 
@@ -1214,12 +1201,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         dbid, epid = splitDBID(LiveID[2])
         playcount = int(LiveID[4])
         rating = LiveID[5]
+        hd = LiveID[6]
+        cc = LiveID[7]
+        stars = LiveID[8]
         year, title, showtitle = getTitleYear(title)
         
         # SetProperties
         setProperty("EPG.TimeStamp",timestamp)
         setProperty("EPG.LOGOART",Chlogo)
-        self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
+        self.MyOverlayWindow.setProp(showtitle, 0, chtype, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, playcount, season, episode, 'EPG')
 
    
     # using the currently selected button, play the proper shows
@@ -1396,7 +1386,66 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         except:
             pass
         
+        
+    def addButtonTags(self, row, xpos, basey, width, baseh, mylabel, EPGtags):      
+        self.log('addButtonTags')
+        cc = EPGtags['CC']
+        hd = EPGtags['HD']
+        rec = EPGtags['REC']
+        sch = EPGtags['SCH']
+        rating = EPGtags['RATING']
+        stars = EPGtags['STARS']
+        
+        button_width = xpos + width
+        label_width = xpos + len(mylabel) * 15
+        
+        xtag_left = button_width - 30
+        ytag_pos_upper = basey + baseh/4  
+        
+        xtag_right = label_width + 30
+        ytag_pos_lower = basey + baseh/2
+        hd_xtag = xtag_left - 30
+        cc_xtag = xtag_right + 30
+        rat_xtag = cc_xtag + 45
+        
+        # upper tags (rec or reminder)         
+        wtag = 30
+        htag = 15
+        if button_width > xtag_left and label_width < xtag_left and xtag_left < button_width:
+            if rec == True:
+                self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'REC.png'),2,''))
+            elif sch == True:
+                self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'SCH.png'),2,''))
+                    
+        # lower tags (cc,ratings,hd)
+        if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":     
+            wtag = 30
+            htag = 30
+            # pos end of button
+            if hd == True:       
+                if button_width > hd_xtag and label_width + 30 < hd_xtag and hd_xtag < button_width:
+                    self.channelTags[row].append(xbmcgui.ControlImage(hd_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'HD.png'),2,''))   
+            
+            # pos end of mylabel
+            if cc == True:
+                wtag = 60
+                htag = 15
+                if button_width > cc_xtag and label_width +30 < cc_xtag and cc_xtag < button_width and cc_xtag + wtag < hd_xtag and cc_xtag < rat_xtag:
+                    self.channelTags[row].append(xbmcgui.ControlImage(cc_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'CC.png'),2,''))
+                    
+            if not rating in ['NR','NA','']:
+                wtag = 60       
+                htag = 15
+                if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
+                    self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(TAG_LOC,'%s.png') % rating),2,''))
+            
+            elif not stars in ['0.0','']:# or stars == '0':
+                wtag = 90       
+                htag = 15
+                if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
+                    self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(STAR_LOC,'%s.png') % stars),2,''))
 
+            
     def showContextMenu(self):
         self.log('showContextMenu')
         self.showingContext = True

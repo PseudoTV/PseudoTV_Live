@@ -192,15 +192,15 @@
         <setting id="Gmail_Pass" subsetting="true"   label="30907" visible="eq(-3,true)" type="text" option="hidden" default="Password" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
         <setting                                              type="sep"                  visible="true" />
-        <setting                                              type="lsep"   label="30701"               visible="eq(-4,1)"default="true" />
-        <setting id="CN_TV"                               type="bool"   label="30702" subsetting="true" visible="eq(-5,1)"default="true" />
-        <setting id="CN_Movies"                           type="bool"   label="30703" subsetting="true" visible="eq(-6,1)"default="true" />
-        <setting id="CN_Episodes"                         type="bool"   label="30704" subsetting="true" visible="eq(-7,1)"default="true" />
-        <setting id="CN_Sports"                           type="bool"   label="30705" subsetting="true" visible="eq(-8,1)"default="true" />
-        <setting id="CN_Kids"                             type="bool"   label="30706" subsetting="true" visible="eq(-9,1)"default="false" />
-        <setting id="CN_News"                             type="bool"   label="30707" subsetting="true" visible="eq(-10,1)"default="true" />
-        <setting id="CN_Music"                            type="bool"   label="30712" subsetting="true" visible="eq(-11,1)"default="true" />
-        <setting id="CN_Other"                            type="bool"   label="30713" subsetting="true" visible="eq(-12,1)"default="true" />
+        <setting                                              type="lsep"   label="30701"               visible="eq(-5,1) + eq(-6,true)"default="true" />
+        <setting id="CN_TV"                               type="bool"   label="30702" subsetting="true" visible="eq(-6,1) + eq(-7,true)"default="true" />
+        <setting id="CN_Movies"                           type="bool"   label="30703" subsetting="true" visible="eq(-7,1) + eq(-8,true)"default="true" />
+        <setting id="CN_Episodes"                         type="bool"   label="30704" subsetting="true" visible="eq(=8,1) + eq(-9,true)"default="true" />
+        <setting id="CN_Sports"                           type="bool"   label="30705" subsetting="true" visible="eq(-9,1) + eq(-10,true)"default="true" />
+        <setting id="CN_Kids"                             type="bool"   label="30706" subsetting="true" visible="eq(-10,1) + eq(-11,true)"default="false" />
+        <setting id="CN_News"                             type="bool"   label="30707" subsetting="true" visible="eq(-11,1) + eq(-12,true)"default="true" />
+        <setting id="CN_Music"                            type="bool"   label="30712" subsetting="true" visible="eq(-12,1) + eq(-13,true)"default="true" />
+        <setting id="CN_Other"                            type="bool"   label="30713" subsetting="true" visible="eq(-13,1) + eq(-14,true)"default="true" />
         <setting label="39001" type="lsep"/>
         <setting label="39002" type="lsep"/>
     </category>

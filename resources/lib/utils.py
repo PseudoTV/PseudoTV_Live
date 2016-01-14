@@ -852,6 +852,9 @@ def handle_wait(time_to_wait,header,title,string=None): #*Thanks enen92
 
 def Comingsoon():
     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Coming Soon", 1000, THUMB) )
+    
+def Unavailable():
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Unavailable", 1000, THUMB) )
 
 def show_busy_dialog():
     xbmc.executebuiltin('ActivateWindow(busydialog)')
@@ -885,7 +888,9 @@ def showText(heading, text):
 
 # General
 def infoDialog(message, header=ADDON_NAME, show=True, sound=False, time=1000, icon=THUMB):
-    if show:
+    setProperty('PTVL.NOTIFY_LOG', message)
+    log('utils: infoDialog: ' + message)
+    if show == True:
         try: 
             xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
         except Exception,e:
@@ -1563,9 +1568,9 @@ def chkLowPower():
             setProperty("PTVL.LOWPOWER","true") 
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
             REAL_SETTINGS.setSetting('ThreadMode', "2")
-            REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('EPGTextEnable', "1")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
+            REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('EnableSettop', "false")
             REAL_SETTINGS.setSetting('UNAlter_ChanBug', "true")
             REAL_SETTINGS.setSetting('Enable_FindLogo', "false")
@@ -1603,7 +1608,7 @@ def ClearPlaylists():
     infoDialog("Channel Playlists Cleared")
        
                 
-def ClearCache(type):
+def ClearCache(type='Filelist'):
     log('utils: ClearCache ' + type)  
     if type == 'Filelist':
         try:    
@@ -1756,6 +1761,16 @@ def preStart():
 ##############
 # PTVL Tools #
 ##############
+    
+def TimeRemainder(val):
+    log("utils: TimeRemainder, val = " + str(val))
+    dt = datetime.datetime.now()
+    # how many secs have passed this hour
+    nsecs = dt.minute*60 + dt.second + dt.microsecond*1e-6
+    # number of seconds to next val hour mark
+    delta = (nsecs//val)*val + val - nsecs
+    log("utils: TimeRemainder, delta = " + str(delta))
+    return delta
 
 def PlaylistLimit():  
     if getPlatform() == 'Windows':
@@ -1834,7 +1849,6 @@ def SEinfo(SEtitle, showSE=True):
     else:
         return 0, 0, ''
     
-
 def splitDBID(dbid):
     try:
         epid = dbid.split(':')[1]
@@ -1954,5 +1968,57 @@ def joinListItem(list, opt='@#@'):
         return opt.join(list)
     except:
         return str(list)
+
+def listXMLTV():
+    log("utils: listXMLTV")
+    xmltvLst = []   
+    EXxmltvLst = ['pvr','Enter URL','scheduledirect (Coming Soon)']
+    if isPlugin('plugin.video.ustvnow'):
+        EXxmltvLst.append('ustvnow')
+    dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
+    dir,file = xbmcvfs.listdir(XMLTV_LOC)
+    xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
+    xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
+    select = selectDialog(xmltvLst, 'Select xmltv file')
+
+    if select != -1:
+        if xmltvLst[select] == 'Enter URL':
+            retval = dlg.input(xmltvLst[select], type=xbmcgui.INPUT_ALPHANUM)
+            if retval and len(retval) > 0:
+                return retval
+        else:
+            return xmltvLst[select]            
+            
+def xmltvflePath(setting3):
+    log("utils: xmltvflePath")            
+    if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
+        xmltvFle = setting3
+    elif setting3.lower() == 'ptvlguide':
+        xmltvFle = PTVLXML
+    elif setting3.lower() == 'ustvnow':
+        USTV_ID = 'plugin.video.ustvnow'
+        USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
+        xmltvFle = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
+    else:
+        xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+    return xmltvFle
+    
+def convert_to_float(frac_str):
+    log("utils: convert_to_float")   
+    try:
+        return float(frac_str)
+    except ValueError:
+        num, denom = frac_str.split('/')
+        try:
+            leading, num = num.split(' ')
+            whole = float(leading)
+        except ValueError:
+            whole = 0
+        frac = float(num) / float(denom)
+        return whole - frac if whole < 0 else whole + frac    
+
+def convert_to_stars(val):
+    log("utils: convert_to_stars")  
+    return (val * 100 ) / 10
 # def createListItem(list)
 # def addListItem(item)
