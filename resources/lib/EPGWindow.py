@@ -27,7 +27,6 @@ from Channel import Channel
 from ChannelList import ChannelList
 from FileAccess import FileAccess
 from xml.etree import ElementTree as ET
-from Artdownloader import *
 from utils import *
 
 try:
@@ -59,7 +58,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.showingContext = False
         self.chanlist = ChannelList()
         self.lastActionTime = time.time()
-        self.Artdownloader = Artdownloader()
         self.actionSemaphore = threading.BoundedSemaphore()
         self.channelbugcolor = CHANBUG_COLOR
         self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
@@ -1439,7 +1437,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
                     self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(TAG_LOC,'%s.png') % rating),2,''))
             
-            elif not stars in ['0.0','']:# or stars == '0':
+            elif not stars in ['0.0','']:
                 wtag = 90       
                 htag = 15
                 if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:

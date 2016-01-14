@@ -1,14 +1,12 @@
-[*] "Settop Mode" is now built into PTVL, While running it will check for updates every 30mins.
-    Depending on playlist size & advanced rules channels will be automatically updated.
+[*] Once "Settop Mode" is enabled PTVL will check for updates every 60mins. Depending on playlist size & advanced rules channels will be updated.
 [*] Added support for trakt scrobbling and media tagging via kodi trakt plugin.
-[*] Overhauled ExtendedInfo support.
-[*] Fixed idle screensaver and Recently added TV/Movies Playlist.
-[*] Added new EPG tag icons, ie. Rec, Ratings, Timer, HD, CC indicators
-[*] Background updating possible while EPG is opened
-[*] New! Subtitles toggle in sidebar w/subtitle search.
-[*] Global Enable/Disable Subtitles control under "Visual Settings".
-[*] Rewrote reminders to accommodate artwork for PseudoCompanion
-[*] Tweaked Plugin filecounts, added PseudoCompanion functions
+[*] Recently added TV/Movies Playlist (requires autotuning).
+[*] Fixed idle screensaver and Overhauled ExtendedInfo support.
+[*] Added new EPG tags (ie. Rec, Ratings, Timer, HD, CC indicators). If mpaa rating is not found PTVL defaults to star rating if available.
+[*] New! "Smart" subtitles toggle in sidebar w/subtitle search (ie. Enable/Disable/Find).
+[*] Global Enable/Disable subtitle control under "Visual Settings".
+[*] Rewrote reminders to accommodate artwork for PseudoCompanion.
+[*] Tweaked Plugin filecounts, added PseudoCompanion functions.
 [*] Fixed media seek issues caused by subtitle encoding.
 [*] Removed 'PowerPC' and "APU" from LowPower profile.
 [*] Native USTVnow xmltv support (requires Official USTVnow plugin). Listings are limited to six hr intervals.

@@ -257,7 +257,5 @@
         <setting label="30197" type="lsep"/>
         <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>
-        <setting label="30897" type="lsep"/>
-        <setting id="GetRepo" type="action"   label="30720" option="close" action="RunScript($CWD/utilities.py, -GetRepo)"/>
     </category>
 </settings>

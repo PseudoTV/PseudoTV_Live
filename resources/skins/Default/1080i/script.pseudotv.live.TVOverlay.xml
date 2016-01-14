@@ -1,31 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <window>
-    <allowoverlay>yes</allowoverlay>
+    <allowoverlay>no</allowoverlay>
+    <!-- Set artwork -->
     <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload>
     <onload>SetProperty(OVERLAY.type2,poster,10000)</onload>
     <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload>
     <onload>SetProperty(OVERLAY.type4,poster,10000)</onload>
-    <onload>SetProperty(OVERLAY.ONNOW_TYPE,landscape,10000)</onload>
     <onload>SetProperty(EPG.type1,landscape,10000)</onload>
     <onload>SetProperty(EPG.type2,poster,10000)</onload>
     <onload>SetProperty(EPG.type3,landscape,10000)</onload>
     <onload>SetProperty(EPG.type4,poster,10000)</onload>
+    <onload>SetProperty(OVERLAY.ONNOW_TYPE,landscape,10000)</onload>
+    <!-- Set EPG rowcount -->
     <onload>SetProperty(EPG.rowCount,6,10000)</onload>
-    <coordinates>
-        <system>1</system>
-        <posx>0</posx>
-        <posy>0</posy>
-    </coordinates>
-    <controls> 
-        <control type="image" id="103">
-            <description>Corner Channel Bug</description>
-            <posx>350r</posx>
-            <posy>188r</posy>
-            <width>150</width>
-            <height>150</height>
-            <aspectratio>keep</aspectratio>
-            <visible>!Control.IsVisible(101)</visible>
-            <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
-        </control> 
+    <!-- Overlay controls -->
+    <controls>
         <control type="group" id="101">    
             <visible></visible>
             <control type="image">
@@ -58,6 +47,16 @@
                 <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
             </control>  
         </control>  
+        <control type="image" id="103">
+            <description>Corner Channel Bug</description>
+            <posx>350r</posx>
+            <posy>188r</posy>
+            <width>150</width>
+            <height>150</height>
+            <aspectratio>keep</aspectratio>
+            <visible>!Control.IsVisible(101)</visible>
+            <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
+        </control> 
 <!--         <control type="group">
             <visible>Control.IsVisible(101)</visible>
             <posx>760</posx>

@@ -12,7 +12,7 @@
         <string id="30006">Time between channel resets</string>
         <string id="30007">Default channel times at startup</string>
         <string id="30008">Background Updating</string>  
-        <string id="30998">Enable Settop Box Mode [Experimental]</string>
+        <string id="30998">Enable Settop Box Mode</string>
         <string id="31000">Refresh Interval (Hours)</string>
         <string id="30289">Update channels after library scan</string>
         <string id="30046">Show Notifications</string>
@@ -240,6 +240,4 @@
     <string id="30197">binaries (Optional)</string>
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>
-    <string id="30897">Miscellaneous</string>
-    <string id="30720">Download Lunatixz Repository</string>
 </strings>

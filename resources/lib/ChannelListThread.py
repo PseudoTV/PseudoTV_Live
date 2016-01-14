@@ -135,7 +135,7 @@ class ChannelListThread(threading.Thread):
                             
                             try:
                                 self.chanlist.setupChannel(i + 1, True, False, True)
-                                DebugNotify("Channel " + str(i + 1) + " Append", icon=self.myOverlay.getChlogo(i + 1))      
+                                # DebugNotify("Channel " + str(i + 1) + " Append", icon=self.myOverlay.getChlogo(i + 1))      
                             except Exception,e:
                                 self.log("Unknown Channel Appending Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -150,7 +150,7 @@ class ChannelListThread(threading.Thread):
                         else:
                             try:
                                 self.chanlist.setupChannel(i + 1, True, True, False)
-                                DebugNotify("Channel " + str(i + 1) + " Updated", icon=self.myOverlay.getChlogo(i + 1))   
+                                # DebugNotify("Channel " + str(i + 1) + " Updated", icon=self.myOverlay.getChlogo(i + 1))   
                             except Exception,e:
                                 self.log("Unknown Channel Modification Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -159,7 +159,7 @@ class ChannelListThread(threading.Thread):
                         try:
                             # We're not master, so no modifications...just try and load the channel
                             self.chanlist.setupChannel(i + 1, True, False, False)
-                            DebugNotify("Channel " + str(i + 1) + " Reloaded", icon=self.myOverlay.getChlogo(i + 1))   
+                            # DebugNotify("Channel " + str(i + 1) + " Reloaded", icon=self.myOverlay.getChlogo(i + 1))   
                         except Exception,e:
                             self.log("Unknown Channel Loading Exception", xbmc.LOGERROR)
                             self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -188,8 +188,8 @@ class ChannelListThread(threading.Thread):
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 
-            # If we're master, wait 30 minutes in between checks.  If not, wait 15 minutes.
-            while (timeslept < TimeRemainder(1800) and self.myOverlay.isMaster == True) or (timeslept < TimeRemainder(900) and self.myOverlay.isMaster == False):
+            # If we're master, wait 60 minutes in between checks.  If not, wait 15 minutes.
+            while (timeslept < TimeRemainder(3600) and self.myOverlay.isMaster == True) or (timeslept < TimeRemainder(900) and self.myOverlay.isMaster == False):
                 if self.myOverlay.isExiting:
                     self.log("IsExiting")
                     return

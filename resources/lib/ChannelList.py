@@ -1096,7 +1096,7 @@ class ChannelList:
                 title = (os.path.split(LocalFLE)[1])
                 title = os.path.splitext(title)[0].replace('.', ' ')
                 description = LocalFLE.replace('//','/').replace('/','\\')
-                GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR', False, False, 0]
+                GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR', False, False, 0.0]
                 tmpstr = self.makeTMPSTR(duration, title, 'Directory Video', description, GenreLiveID, LocalFLE)
                 fileList.append(tmpstr)
                     
@@ -1787,9 +1787,8 @@ class ChannelList:
                     LiveID = 'tvshow|0|0|False|1|NR|'
                     thumburl = 0
                     rating = 'NR'
-                    HD = False
                     CC = False
-                    Stars = 0
+                    Stars = 0.0
                     
                     if event == "end":
                         if elem.tag == "programme":
@@ -1866,16 +1865,15 @@ class ChannelList:
                                 else:
                                     type = 'tvshow'
                                         
+                                HD = False
                                 for HDLst in elem.findall('video'):
                                     if HDLst.find('quality').text == 'HDTV':
                                         HD = True
-                                        break
-                                    print 'HD', HD
+                                    break
                                     
                                 for StarLst in elem.findall('star-rating'):
                                     Stars = convert_to_stars(convert_to_float((StarLst.find('value').text)))
                                     break
-                                    print 'stars', Stars
 
                                 #filter unwanted ids by title
                                 if showtitle == ('Paid Programming') or subtitle == ('Paid Programming') or description == ('Paid Programming'):
@@ -2041,6 +2039,9 @@ class ChannelList:
                     id = 0
                     seasonNumber = 0
                     episodeNumber = 0
+                    hd = False
+                    cc = False
+                    
                     if startDates and len(startDates.group(1)) > 0 and stopDates and len(stopDates.group(1)) > 0:
                         startDate = self.parsePVRDate(startDates.group(1))
                         stopDate = self.parsePVRDate(stopDates.group(1))
@@ -2070,11 +2071,17 @@ class ChannelList:
                         except:
                             year = 0
                         
-                        ratings = re.search('"rating" *: *"(.*?)"', f)   
+                        ratings = re.search('"parentalrating" *: *"(.*?)"', f)   
                         if ratings != None and len(ratings.group(1)) > 0:
                             rating = self.cleanRating(ratings.group(1))
                         else:
                             rating = 'NR'
+                            
+                        starss = re.search('"rating" *: *"(.*?)"', f)   
+                        if starss != None and len(starss.group(1)) > 0:
+                            stars = float(starss.group(1))
+                        else:
+                            stars = 0.0
 
                         movie = False
                         genres = re.search('"genre" *: *"(.*?)",', f)
@@ -2169,7 +2176,7 @@ class ChannelList:
                                 episodetitle = episodetitle.split("- ", 1)[-1]
                             subtitle = episodetitle
                          
-                        GenreLiveID = [genre,type,id,thumburl,False,playcount,rating, False, False, 0]
+                        GenreLiveID = [genre,type,id,thumburl,False,playcount,rating,hd,cc,stars]
                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, setting2, startDate)
                         showList.append(tmpstr)
                         showcount += dur
@@ -2207,7 +2214,7 @@ class ChannelList:
         else:
             dur = 5400  #90 minute default
                 
-        GenreLiveID = ['Unknown','other',0,0,False,1,'NR', False, False, 0]
+        GenreLiveID = ['Unknown','other',0,0,False,1,'NR',False, False, 0.0]
         tmpstr = self.makeTMPSTR(dur, title, "InternetTV", description, GenreLiveID, setting2)
         for i in range(limit):
             showList.append(tmpstr)
@@ -2503,7 +2510,7 @@ class ChannelList:
                             except:
                                 Genre = 'Unknown' 
                                 
-                            GenreLiveID = [Genre,'youtube',0,VidID,False,1,'NR', False, False, 0]
+                            GenreLiveID = [Genre,'youtube',0,VidID,False,1,'NR',False, False, 0.0]
                             tmpstr = self.makeTMPSTR(YT_Meta[2], YT_Meta[0], "Youtube - " + YT_Meta[4], YT_Meta[1], GenreLiveID, self.youtube_player_ok() + VidID)   
                             self.log("createYoutubeFilelist, CHANNEL: " + str(self.settingChannel) + ", " + YT_Meta[0] + "  DUR: " + str(YT_Meta[2]))
                             self.YT_showList.append(tmpstr)
@@ -2629,7 +2636,7 @@ class ChannelList:
                     runtime = 800
                 duration = int(runtime)
                 url = url.replace("&amp;amp;feature=youtube_gdata", "").replace("http://www.youtube.com/watch?hd=1&v=", self.youtube_player).replace("http://www.youtube.com/watch?v=", self.youtube_player)
-                GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR', False, False, 0]
+                GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR',False, False, 0.0]
                 tmpstr = self.makeTMPSTR(duration, eptitle, "RSS - " + showtitle, epdesc, GenreLiveID, url)
                 fileList.append(tmpstr)
                 filecount += 1
@@ -3018,7 +3025,7 @@ class ChannelList:
 
     def insertBCT(self, chtype, channel, fileList, type):
         self.log("insertBCT, channel = " + str(channel))
-        GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR', False, False, 0]
+        GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR',False, False, 0.0]
         newFileList = []
         title = ''
         description = ''
@@ -3217,7 +3224,7 @@ class ChannelList:
                         ID = rating[1]
                 URL = self.youtube_player + ID
                 dur = (self.getYoutubeMeta(ID))[2]   
-                GenreLiveID = ['Unknown', 'movie', 0, 0, False, 1, mpaa, False, False, 0]
+                GenreLiveID = ['Unknown', 'movie', 0, 0, False, 1, mpaa,False, False, 0.0]
                 tmpstr = self.makeTMPSTR(dur, chname, 'Rating', 'Rating', GenreLiveID, URL)
                 newFileList.append(tmpstr)
             # cleanup   
@@ -4701,7 +4708,7 @@ class ChannelList:
                                         if starss != None and len(starss.group(1)) > 0:
                                             stars = "%.1f" % round(float(starss.group(1)))
                                         else:
-                                            stars = 0
+                                            stars = 0.0
                                         self.log("getFileList, stars = " + str(stars))  
                                             
                                         hd = False

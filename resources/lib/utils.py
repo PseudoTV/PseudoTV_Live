@@ -1417,24 +1417,24 @@ def getContext():
     lib = os.path.join(path,name)
     getGithubZip(url, lib, addonpath, MSG)
     
-def isRepoInstalled():
-    repo = isPlugin('repository.lunatixz')
-    log('utils: isRepoInstalled = ' + str(repo))
-    return repo
+# def isRepoInstalled():
+    # repo = isPlugin('repository.lunatixz')
+    # log('utils: isRepoInstalled = ' + str(repo))
+    # return repo
       
-def getRepo():
-    log('utils: getRepo')
-    if isRepoInstalled() == False:
-        if dlg.yesno("PseudoTV Live", 'Install the Lunatixz Repository?'):   
-            url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
-            name = 'repository.lunatixz.zip' 
-            MSG = 'Lunatixz Repository Installed'    
-            path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
-            addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
-            lib = os.path.join(path,name)
-            getGithubZip(url, lib, addonpath, MSG)
-    else:
-        infoDialog('Lunatixz Repository Already Installed')
+# def getRepo():
+    # log('utils: getRepo')
+    # if isRepoInstalled() == False:
+        # if dlg.yesno("PseudoTV Live", 'Install the Lunatixz Repository?'):   
+            # url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
+            # name = 'repository.lunatixz.zip' 
+            # MSG = 'Lunatixz Repository Installed'    
+            # path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
+            # addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
+            # lib = os.path.join(path,name)
+            # getGithubZip(url, lib, addonpath, MSG)
+    # else:
+        # infoDialog('Lunatixz Repository Already Installed')
     
 # def chkVersion():
     # log('utils: chkVersion')
@@ -1616,6 +1616,7 @@ def ClearCache(type='Filelist'):
             weekly.delete("%")
             monthly.delete("%")
             shutil.rmtree(REQUESTS_LOC)
+            FileAccess.makedirs(REQUESTS_LOC)
         except:
             pass
         REAL_SETTINGS.setSetting('ClearCache', "false")
