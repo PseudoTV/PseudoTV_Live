@@ -22,7 +22,6 @@
             <texture>APPSbackground.png</texture>
             <colordiffuse>FFFFFFFF</colordiffuse>
         </control>  
-
         <control type="image">
             <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">APPSoverlay.png</texture>
             <width>1920</width>
@@ -32,93 +31,31 @@
 
 <!-- VideoWindow Box --> 
         <control type="grouplist">
-
-
             <posx>30</posx>
             <posy>15</posy>
-
             <itemgap>10</itemgap>
             <orientation>vertical</orientation>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             <control type="label" id="523"> 
-
                 <width>360</width>       
                 <height>24</height>
                 <font>font12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-
-
-
-
-
-
-
-
-
-
-
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
-
                 <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
                 <visible>Control.IsVisible(523)</visible>
-
-
-
-
-
-
-
-
-
-
-
-
-
                 <aligny>center</aligny>
             </control>   
             <!-- #### Skinners Include Everything for videowindow patch to work #### -->
             <!-- PATCH START -->
             <control type="videowindow">
                 <description>video</description> 
-
-
-
-
                 <width>360</width>      
                 <height>180</height>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                 <align>center</align>
-
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
                 <visible>Control.IsVisible(523)</visible>
@@ -130,9 +67,7 @@
         <control type="grouplist">
             <posx>30</posx>
             <posy>15</posy>
-
             <itemgap>10</itemgap> 
-
             <orientation>vertical</orientation>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             <control type="label">
@@ -144,37 +79,20 @@
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
-
                 <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
                 <visible>!Control.IsVisible(523)</visible>
-
                 <aligny>center</aligny>
-
-
-
-
-
             </control>
             <control type="image">
-
-
-
-
-
                 <width>360</width>      
                 <height>180</height>
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-
                 <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type1ART)]</texture>
                 <visible>!Control.IsVisible(523)</visible>
 
             </control>
-
-
-
-
         </control>
         <!-- todo -->
         <control type="grouplist">              
@@ -374,6 +292,5 @@
                 <font>font12</font>
             </control> 
         </control>
-
     </controls>
 </window>

@@ -188,8 +188,8 @@ class ChannelListThread(threading.Thread):
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 
-            # If we're master, wait 60 minutes in between checks.  If not, wait 15 minutes.
-            while (timeslept < TimeRemainder(3600) and self.myOverlay.isMaster == True) or (timeslept < TimeRemainder(900) and self.myOverlay.isMaster == False):
+            # If we're master, wait x minutes in between checks.  If not, wait 15 minutes.
+            while (timeslept < TimeRemainder(SETTOP_REFRESH) and self.myOverlay.isMaster == True) or (timeslept < TimeRemainder(900) and self.myOverlay.isMaster == False):
                 if self.myOverlay.isExiting:
                     self.log("IsExiting")
                     return

@@ -1,3 +1,4 @@
+[*] Gestures & touch screen support (untested).
 [*] Once "Settop Mode" is enabled PTVL will check for updates every 60mins. Depending on playlist size & advanced rules channels will be updated.
 [*] Added support for trakt scrobbling and media tagging via kodi trakt plugin.
 [*] Recently added TV/Movies Playlist (requires autotuning).

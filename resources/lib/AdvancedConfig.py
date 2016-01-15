@@ -83,7 +83,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                     self.saveRules()
 
                 self.close()
-        elif action == ACTION_MOVE_DOWN:
+        elif action in ACTION_MOVE_DOWN:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
                 if (focusid == (119 + RULES_PER_PAGE)) and (self.lineSelected == (RULES_PER_PAGE - 1)):
@@ -108,7 +108,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                             self.getControl(161).controlUp(self.getControl(161))
                     else:
                         self.optionRowSelected = 1
-        elif action == ACTION_MOVE_UP:
+        elif action in ACTION_MOVE_UP:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
                 if (focusid == 120) and (self.lineSelected == 0):
@@ -131,13 +131,13 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                             self.getControl(161).controlUp(self.getControl(131))
                     else:
                         self.optionRowSelected = 0
-        elif action == ACTION_MOVE_LEFT:
+        elif action in ACTION_MOVE_LEFT:
             try:
                 if self.getFocusId() == 131:
                     self.scrollRulesLeft()
             except Exception,e:
                 pass
-        elif action == ACTION_MOVE_RIGHT:
+        elif action in ACTION_MOVE_RIGHT:
             try:
                 if self.getFocusId() == 131:
                     self.scrollRulesRight()
@@ -167,6 +167,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
 
 
     def setupOptions(self):
+        self.log("setupOptions")
         self.getControl(102).setVisible(False)
         optcount = self.ruleList[self.selectedRuleIndex].getOptionCount()
 
@@ -278,6 +279,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
 
 
     def getRuleName(self, ruleindex):
+        self.log("getRuleName")
         if ruleindex < 0 or ruleindex >= len(self.ruleList):
             return ""
 

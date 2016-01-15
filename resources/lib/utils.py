@@ -2004,6 +2004,57 @@ def xmltvflePath(setting3):
         xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
     return xmltvFle
     
+def clearTraktScrob():
+    clearProperty("script.trakt.ids")
+
+def setTraktScrob():
+    log("utils: setTraktScrob")
+    # {u'tmdb': 264660}
+    # {u'tvdb': 121361}
+    # {u'imdb': u'tt0470752'}
+    # {u'slug': u'ex-machina-2014'}
+    # {u'trakt': 163375}
+    # {u'tmdb': 264660, u'imdb': u'tt0470752', u'slug': u'ex-machina-2014', u'trakt': 163375}
+    id    = getProperty("OVERLAY.ID")
+    dbid  = getProperty("OVERLAY.DBID")
+    type  = getProperty("OVERLAY.Type")
+    title = getProperty("OVERLAY.Title").replace('(',' ').replace(')','').replace(' ','-')
+            
+    # if content is not part of kodis db and has id scrob
+    if (dbid == '0' or len(dbid) > 6) and id != '0':
+        if type == 'movie':
+            ids = json.dumps(({u'imdb': u'%s', u'slug': u'%s'}) % (id, title))
+        elif type == 'tvshow':
+            ids = json.dumps(({u'tvdb': u'%s', u'slug': u'%s'}) % (id, title))
+        if ids:
+            setProperty('script.trakt.ids', ids)
+                      
+def setTraktTag(pType='OVERLAY'):
+    log("utils: setTraktTag")
+    type = getProperty(("%s.Title")%pType)    
+    if type == 'movie':
+        media_type = 'movie'
+    elif type == 'tvshow':
+        media_type = 'show'
+    else:
+        return 
+    dbid = getProperty(("%s.DBID")%pType)
+    if dbid != '0' and len(dbid) < 6:
+        xbmc.executebuiltin(("XBMC.RunScript(script.trakt,action=addtolist,list='PseudoTV_Live'[,media_type=%s,dbid=%s])") %(media_type,dbid))
+
+def removeTraktTag(pType='OVERLAY'):
+    log("utils: removeTraktTag")
+    type = getProperty(("%s.Title")%pType)    
+    if type == 'movie':
+        media_type = 'movie'
+    elif type == 'tvshow':
+        media_type = 'show'
+    else:
+        return
+    dbid = getProperty(("%s.DBID")%pType)
+    if dbid != '0' and len(dbid) < 6:
+        xbmc.executebuiltin(("XBMC.RunScript(script.trakt,action=removefromlist,list='PseudoTV_Live'[,media_type=%s,dbid=%s])") %(media_type,dbid))
+    
 def convert_to_float(frac_str):
     log("utils: convert_to_float")   
     try:
@@ -2021,5 +2072,3 @@ def convert_to_float(frac_str):
 def convert_to_stars(val):
     log("utils: convert_to_stars")  
     return (val * 100 ) / 10
-# def createListItem(list)
-# def addListItem(item)

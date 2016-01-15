@@ -644,7 +644,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 if self.showingInfo:
                     self.infoOffset += 1
             
-            elif action == ACTION_STOP:
+            elif action in ACTION_STOP:
                 self.closeEPG()           
                 if self.showingInfo:
                     self.infoOffset = 0

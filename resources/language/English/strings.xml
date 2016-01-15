@@ -84,7 +84,7 @@
         <string id="30229">Use Classic Coming Up Next box</string>
         <string id="30329">Enable Subtitles when Available</string>
 <string id="30400">DVR</string>  
-	<string id="30397">Enable XMLTV Service</string>
+	<string id="30397">Enable trakt scrobbler</string>
 	<string id="30404">XMLTV file location</string>
     <string id="30801">Enable DVR (Coming Soon)</string>
     <string id="30802">Record Folder</string>

@@ -1002,7 +1002,7 @@ class InterleaveChannel(BaseRule):
             if chan > channelList.maxChannels or chan < 1 or minint < 1 or maxint < 1 or startingep < 1 or numbereps < 1:
                 return filelist
 
-            if channelList.getChtype(chan) in [10,11]:
+            if channelList.myOverlay.getChtype(chan) in [10,11]:
                 return filelist
             
             if minint > maxint:

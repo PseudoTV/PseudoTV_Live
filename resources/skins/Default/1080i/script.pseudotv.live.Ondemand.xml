@@ -1070,5 +1070,405 @@
                 </control>
             </control>
         </control>
+                <!--PANEL proper-->
+        <control description="Content" type="group">
+            <visible>Control.IsVisible(655)</visible>
+            <animation delay="0" effect="fade" end="100" start="0" time="500">WindowOpen</animation>
+            <animation delay="0" effect="fade" end="0" start="100" time="200">WindowClose</animation>
+            <animation delay="0" effect="fade" end="100" start="0" time="500">Visible</animation>
+            <animation delay="0" effect="fade" end="0" start="100" time="200">Hidden</animation>
+            <control description="Big Panel" id="655" type="panel">
+                <viewtype label="Big Panel">Big Panel</viewtype>
+                <posx>500</posx>
+                <posy>35</posy>
+                <width>780</width>
+                <height>640</height>
+                <orientation>vertical</orientation>
+                <onleft>655</onleft>
+                <onright>655</onright>
+                <onup>655</onup>
+                <ondown>655</ondown>
+                <preloaditems>4</preloaditems>
+                <pagecontrol>60</pagecontrol>
+                <itemlayout height="280" width="188">
+                    <control type="image">
+                        <posx>23</posx>
+                        <posy>34</posy>
+                        <width>145</width>
+                        <height>230</height>
+                        <bordersize>-18</bordersize>
+                        <texture border="8">borderNF.png</texture>
+                        <visible>!ListItem.IsSelected</visible>
+                    </control>
+                    <control type="image">
+                        <posx>21</posx>
+                        <posy>32</posy>
+                        <width>149</width>
+                        <height>234</height>
+                        <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                        <aspectratio aligny="top">stretch</aspectratio>
+                    </control>
+                    <control type="image">
+                        <visible/>
+                        <posx>22</posx>
+                        <posy>34</posy>
+                        <width>145</width>
+                        <height>230</height>
+                        <bordersize>-18</bordersize>
+                        <visible>ListItem.IsSelected</visible>
+                        <texture border="8">borderCK.png</texture>
+                    </control>
+                </itemlayout>
+                <focusedlayout height="280" width="188">
+                    <control type="image">
+                        <posx>12</posx>
+                        <posy>26</posy>
+                        <width>167</width>
+                        <height>246</height>
+                        <bordersize>-18</bordersize>
+                        <texture border="8">borderFO.png</texture>
+                    </control>
+                    <control type="image">
+                        <posx>12</posx>
+                        <posy>26</posy>
+                        <width>167</width>
+                        <height>246</height>
+                        <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                        <aspectratio aligny="top">stretch</aspectratio>
+                    </control>
+                    <control type="image">
+                        <posx>12</posx>
+                        <posy>26</posy>
+                        <width>167</width>
+                        <height>246</height>
+                        <bordersize>-18</bordersize>
+                        <texture border="8">borderCK.png</texture>
+                        <visible>ListItem.IsSelected</visible>
+                    </control>
+                </focusedlayout>
+            </control>
+            <control description="55 Info" type="group">
+                <control description="55 MediaInfo with Small Fanart" type="group">
+                    <posx>15</posx>
+                    <posy>55</posy>
+                    <control description="fanart" type="group">
+                        <control description="border" type="image">
+                            <posx>29</posx>
+                            <posy>14</posy>
+                            <width>400</width>
+                            <height>225</height>
+                            <texture border="-2">OneWhitePixel.png</texture>
+                            <aspectratio>stretch</aspectratio>
+                        </control>
+                        <control description="FanArt" type="multiimage">
+                            <posx>29</posx>
+                            <posy>14</posy>
+                            <width>400</width>
+                            <height>225</height>
+                            <fadetime>500</fadetime>
+                            <imagepath background="true">$INFO[Container(655).ListItem.Property(Fanart_Image)]</imagepath>
+                            <aspectratio aligny="top">scale</aspectratio>
+                        </control>
+                        <control description="Title Label" type="label">
+                            <posx>15</posx>
+                            <posy>270</posy>
+                            <width>420</width>
+                            <height>33</height>
+                            <aligny>bottom</aligny>
+                            <textcolor>FF50e0c7</textcolor>
+                            <wrapmultiline>False</wrapmultiline>
+                            <label>$INFO[Container(655).ListItem.Label]</label>
+                        </control>
+                        <control description="subtitle" type="label">
+                            <posx>15</posx>
+                            <posy>325</posy>
+                            <height>22</height>
+                            <width>420</width>
+                            <font>InfoDetails</font>
+                            <label>Season  [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(season)][/COLOR]  •  Episode  [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(episode)][/COLOR]  •  Watched  [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(percentplayed)][/COLOR]</label>
+                        </control>
+                        <control description="#onDeck" type="label">
+                            <posx>15</posx>
+                            <posy>362</posy>
+                            <height>22</height>
+                            <width>420</width>
+                            <font>InfoDetails</font>
+                            <label>Episodes  Available [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(numondeck)][/COLOR]  •  Watched [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(numwatched)][/COLOR]  •  Skipped [COLOR FF50e0c7]$INFO[Container(655).ListItem.Property(numskipped)][/COLOR]</label>
+                        </control>
+                        <control description="Plot" type="textbox">
+                            <posx>15</posx>
+                            <posy>400</posy>
+                            <width>420</width>
+                            <height>220</height>
+                            <align>left</align>
+                            <font>Font12</font>
+                            <label>[COLOR FF50e0c7]In this episode... [/COLOR]$INFO[Container(655).ListItem.Property(plot)]</label>
+                        </control>
+                    </control>
+                    <!--control description="Fallback Info" type="group">
+                        <visible>False</visible>
+                        <control description="Show title" type="label">
+                            <posy>12</posy>
+                            <width>420</width>
+                            <height>33</height>
+                            <aligny>bottom</aligny>
+                            <textcolor>Orange</textcolor>
+                            <font>InfoTitle</font>
+                            <wrapmultiline>true</wrapmultiline>
+                            <label>farts</label>
+                        </control>
+                        <control description="Plot" type="textbox">
+                            <posx>0</posx>
+                            <posy>207</posy>
+                            <width>630</width>
+                            <height>548</height>
+                            <align>left</align>
+                            <label>$INFO[ListItem.Plot]</label>
+                        </control>
+                        <control description="Rating" type="image">
+                            <visible>!Container.Content(Tvshows)</visible>
+                            <posx>-3</posx>
+                            <posy>840</posy>
+                            <visible>!IsEmpty(ListItem.StarRating)</visible>
+                            <height>24</height>
+                            <width>174</width>
+                            <aspectratio align="left">keep</aspectratio>
+                            <colordiffuse>Silver</colordiffuse>
+                            <texture>$INFO[ListItem.StarRating]</texture>
+                        </control>
+                    </control-->
+                </control>
+                <!--control description="Flags" type="group">
+                <posx>60</posx>
+                <posy>1032</posy>
+                <control description="Flags" type="grouplist">
+                    <visible>!ListItem.IsFolder</visible>
+                    <width max="650" min="90">auto</width>
+                    <height>120</height>
+                    <itemgap>30</itemgap>
+                    <orientation>horizontal</orientation>
+                    <align>left</align>
+                    <aligny>bottom</aligny>
+                    <control type="image">
+                        <visible>!IsEmpty(ListItem.AudioCodec)</visible>
+                        <height>45</height>
+                        <width>90</width>
+                        <bordersize>3</bordersize>
+                        <aspectratio>keep</aspectratio>
+                        <colordiffuse>Silver</colordiffuse>
+                        <texture>$INFO[ListItem.AudioCodec,badges/audio/,.png]</texture>
+                    </control>
+                    <control type="image">
+                        <visible>!IsEmpty(ListItem.AudioChannels)</visible>
+                        <height>45</height>
+                        <width>90</width>
+                        <bordersize>3</bordersize>
+                        <aspectratio>keep</aspectratio>
+                        <colordiffuse>Silver</colordiffuse>
+                        <texture>$INFO[ListItem.AudioChannels,badges/channels,.png]</texture>
+                    </control>
+                    <control type="image">
+                        <visible>!IsEmpty(ListItem.VideoCodec)</visible>
+                        <height>45</height>
+                        <width>90</width>
+                        <bordersize>3</bordersize>
+                        <aspectratio>keep</aspectratio>
+                        <colordiffuse>Silver</colordiffuse>
+                        <texture>$INFO[ListItem.VideoCodec,badges/video/,.png]</texture>
+                    </control>
+                    <control type="image">
+                        <visible>!IsEmpty(ListItem.VideoResolution) + IntegerGreaterThan(ListItem.VideoResolution,710)</visible>
+                        <height>45</height>
+                        <width>90</width>
+                        <posx>0</posx>
+                        <posy>0</posy>
+                        <bordersize>3</bordersize>
+                        <aspectratio>keep</aspectratio>
+                        <colordiffuse>Silver</colordiffuse>
+                        <texture>$INFO[ListItem.VideoResolution,badges/video/,.png]</texture>
+                    </control>
+                </control>
+            </control>
+            <control description="Rating" type="image">
+                <visible>Container.Content(Tvshows)</visible>
+                <posx>60</posx>
+                <posy>1032</posy>
+                <visible>!IsEmpty(ListItem.StarRating)</visible>
+                <height>24</height>
+                <width>174</width>
+                <aspectratio align="left">keep</aspectratio>
+                <colordiffuse>Silver</colordiffuse>
+                <texture>$INFO[ListItem.StarRating]</texture>
+            </control>
+        </control>
+        <control id="60" type="scrollbar">
+            <animation effect="slide" end="-8,0" start="0,0" time="150">Focus</animation>
+            <animation effect="slide" end="0,0" start="-8,0" time="300">UnFocus</animation>
+            <posx>20r</posx>
+            <posy>360</posy>
+            <width>36</width>
+            <height>700</height>
+            <texturesliderbackground>-</texturesliderbackground>
+            <texturesliderbar>-</texturesliderbar>
+            <texturesliderbarfocus>-</texturesliderbarfocus>
+            <textureslidernib border="18">OSD/ScrollbarNibNF.png</textureslidernib>
+            <textureslidernibfocus border="18">OSD/ScrollbarNibFO.png</textureslidernibfocus>
+            <showonepage>false</showonepage>
+            <orientation>vertical</orientation>
+            <onleft>55</onleft>
+            <onright>9000</onright-->
+        </control>
+    </control>
+    <!--PANEL proper ends-->
+    <!--SIDE MENU-->
+    <!--control description="Side menu 9000 group" type="group">
+    <visible allowhiddenfocus="true">ControlGroup(9000).HasFocus()</visible>
+    <animation type="Visible">
+        <effect end="100" start="0" time="250" type="fade"/>
+        <effect easing="out" end="500,0" start="0,0" time="350" tween="circle" type="slide"/>
+    </animation>
+    <animation type="Hidden">
+        <effect delay="0" end="0" start="100" time="250" type="fade"/>
+        <effect end="0,0" start="500,0" time="250" type="slide"/>
+    </animation>
+    <control type="image">
+        <posx>-500</posx>
+        <posy>0</posy>
+        <width>510</width>
+        <height>1080</height>
+        <texture border="0,0,30,0">common/ViewMenu.png</texture>
+    </control>
+    <control id="9000" type="grouplist">
+        <posx>-499</posx>
+        <posy>60</posy>
+        <width>500</width>
+        <height>1120</height>
+        <itemgap>0</itemgap>
+        <onleft>9001</onleft>
+        <onright>50</onright>
+        <onup>9000</onup>
+        <ondown>9000</ondown>
+        <onback>50</onback>
+        <scrolltime>200</scrolltime>
+        <orientation>vertical</orientation>
+        <control id="9140" type="label">
+            <textcolor>Orange</textcolor>
+            <textoffsetx>10</textoffsetx>
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <textureradiofocus>img/ArrowRightFO.png</textureradiofocus>
+            <textureradionofocus>-</textureradionofocus>
+            <radiowidth>15</radiowidth>
+            <radioheight>60</radioheight>
+            <radioposx>5</radioposx>
+            <label>$LOCALIZE[582]</label>
+        </control>
+        <control description="Spacer" id="9180" type="label">
+            <height>36</height>
+            <textcolor>Orange</textcolor>
+            <align>left</align>
+            <textoffsetx>10</textoffsetx>
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <textureradiofocus>img/ArrowRightFO.png</textureradiofocus>
+            <textureradionofocus>-</textureradionofocus>
+            <radiowidth>15</radiowidth>
+            <radioheight>60</radioheight>
+            <radioposx>5</radioposx>
+            <label/>
+        </control>
+        <control id="9181" type="label">
+            <textcolor>Orange</textcolor>
+            <align>left</align>
+            <textoffsetx>10</textoffsetx>
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <textureradiofocus>img/ArrowRightFO.png</textureradiofocus>
+            <textureradionofocus>-</textureradionofocus>
+            <radiowidth>15</radiowidth>
+            <radioheight>60</radioheight>
+            <radioposx>5</radioposx>
+            <label>$LOCALIZE[581]</label>
+        </control>
+        <control description="Toggle Watched" id="14" type="togglebutton">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>$LOCALIZE[535]: $LOCALIZE[16100]</label>
+            <altlabel>$LOCALIZE[535]: $LOCALIZE[16101]</altlabel>
+        </control>
+        <control description="Sort" id="3" type="button">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+        </control>
+        <control description="Sort direction" id="4" type="togglebutton">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>$LOCALIZE[21429]:  $LOCALIZE[21430]</label>
+            <altlabel>$LOCALIZE[21429]:  $LOCALIZE[21431]</altlabel>
+        </control>
+        <control description="Search" id="8" type="button">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>$LOCALIZE[137]</label>
+        </control>
+        <control description="Library update" id="20" type="togglebutton">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>653</label>
+            <altlabel>13353</altlabel>
+            <usealttexture>library.isscanningvideo</usealttexture>
+        </control>
+        <control description="Playlist" id="698" type="button">
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>$LOCALIZE[20012]</label>
+            <onclick>ActivateWindow(videoplaylist)</onclick>
+        </control>
+        <control description="Playing" id="699" type="button">
+            <enable>Player.HasMedia</enable>
+            <height>54</height>
+            <width>500</width>
+            <font>ViewMenu</font>
+            <radioposx>390</radioposx>
+            <textoffsetx>30</textoffsetx>
+            <disabledcolor>Grey</disabledcolor>
+            <label>$LOCALIZE[16003]</label>
+            <onclick>fullscreen</onclick>
+        </control>
+    </control>
+</control-->
     </controls>
 </window>

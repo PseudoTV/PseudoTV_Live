@@ -126,12 +126,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             else:
                 self.closeConfig()
                 
-        elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:      # Delete button
+        elif act.getButtonCode() == 61575 or action in ACTION_DELETE_ITEM:      # Delete button
             curchan = self.listcontrol.getSelectedPosition() + 1
             self.deleteChannel(curchan)
             self.clearLabel(self.getFocusId())
                     
-        elif action == ACTION_SHOW_INFO: # Change Channel Number 
+        elif action in ACTION_SHOW_INFO: # Change Channel Number 
             if xbmcgui.Window(10000).getProperty("PseudoTVRunning") != "True":
                 curchan = self.listcontrol.getSelectedPosition() + 1
                 self.changeChanNum(curchan)
@@ -1275,15 +1275,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
             
     def fillSources(self, type, source, path=None):
-        self.log("fillSources, type = " + type + ", source = " + source)
+        self.log("fillSources, type = " + type + ", source = " + source + ", path = " + str(path))
         if path:
             self.log("fillSources, path = " + path)
         dlg = xbmcgui.Dialog()
         # Parse Source, return title, path
         try:
             if source == 'PVR':
-                show_busy_dialog()
                 self.log("PVR")
+                show_busy_dialog()
                 NameLst, PathLst, IconLst = self.chnlst.PVRList
                 hide_busy_dialog() 
                 select = selectDialog(NameLst, 'Select Kodi PVR Channel')
@@ -1339,14 +1339,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 path = PathLst[select]      
                     return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                 else:
-                    if isDon() == True:
-                        select = selectDialog(self.pluginNameList[1:], 'Select Plugin')
-                        if select != -1:
-                            return self.chnlst.cleanLabels((self.pluginNameList[1:])[select]), 'plugin://' + (self.pluginPathList[1:])[select]
-                    else:
-                        select = selectDialog(self.pluginNameList, 'Select Plugin')
-                        if select != -1:
-                            return self.chnlst.cleanLabels((self.pluginNameList)[select]), 'plugin://' + (self.pluginPathList)[select]
+                    select = selectDialog(self.pluginNameList, 'Select Plugin')
+                    if select != -1:
+                        return self.chnlst.cleanLabels((self.pluginNameList)[select]), 'plugin://' + (self.pluginPathList)[select]
            
             elif source == 'Playon':
                 self.log("Playon")

@@ -20,7 +20,7 @@ import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 
 from Globals import * 
 from FileAccess import *  
-from Artdownloader import *
+from ChannelList import ChannelList
 from utils import *
 
 try:
@@ -33,7 +33,7 @@ except:
 class APPS(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
-
+        self.chanlist = ChannelList()
         
     def onFocus(self, controlid):
         pass
@@ -45,7 +45,8 @@ class APPS(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         self.log('onInit')
-        
+        self.chanlist.PanelItems = self.getControl(500)
+        self.chanlist.fillPlugins()
         
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
@@ -72,25 +73,25 @@ class APPS(xbmcgui.WindowXMLDialog):
         if action in ACTION_PREVIOUS_MENU:
             print 'ACTION_PREVIOUS_MENU'
         
-        elif action == ACTION_MOVE_DOWN: 
+        elif action in ACTION_MOVE_DOWN: 
             print 'ACTION_MOVE_DOWN'
                 
-        elif action == ACTION_MOVE_UP:
+        elif action in ACTION_MOVE_UP:
             print 'ACTION_MOVE_UP'
 
-        elif action == ACTION_MOVE_LEFT: 
+        elif action in ACTION_MOVE_LEFT: 
             print 'ACTION_MOVE_LEFT'
         
-        elif action == ACTION_MOVE_RIGHT:
+        elif action in ACTION_MOVE_RIGHT:
             print 'ACTION_MOVE_RIGHT'
             
-        elif action == ACTION_PAGEDOWN: 
+        elif action in ACTION_PAGEDOWN: 
             print 'ACTION_PAGEDOWN'
                  
-        elif action == ACTION_PAGEUP: 
+        elif action in ACTION_PAGEUP: 
             print 'ACTION_PAGEUP'
  
-        elif action == ACTION_SELECT_ITEM:
+        elif action in ACTION_SELECT_ITEM:
             print 'ACTION_SELECT_ITEM'
                 
     def closeAPPS(self):

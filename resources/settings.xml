@@ -31,6 +31,7 @@
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
         <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
+        <setting id="TraktScrob"                   type="bool"   label="30397" default="false"/>
         <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
         <setting id="EnhancedGuideData" type="bool"   label="30405" default="true" />
         <setting id="HideClips" type="bool"   label="30215" default="true"/>
@@ -69,7 +70,6 @@
    </category>
 <!--PVR-->
    <category label="30400">
-        <setting id="SyncXMLTV_Enabled"                   type="bool"   label="30397" default="true"/>
         <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv" />
         <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
         <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
