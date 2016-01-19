@@ -240,4 +240,6 @@
     <string id="30197">binaries (Optional)</string>
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>
+    <string id="30939">Miscellaneous</string>
+    <string id="30934">Enable accurate duration</string>
 </strings>

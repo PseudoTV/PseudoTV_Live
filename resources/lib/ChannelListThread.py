@@ -72,7 +72,7 @@ class ChannelListThread(threading.Thread):
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return
-                        time.sleep(1)
+                        time.sleep(2)
 
                         if self.paused == False:
                             break
@@ -85,12 +85,11 @@ class ChannelListThread(threading.Thread):
                                 if self.myOverlay.isExiting:
                                     self.log("IsExiting")
                                     return
-                                time.sleep(1)
+                                time.sleep(2)
                                 
                             self.myOverlay.channels[i] = self.chanlist.channels[i]
-
                             if self.myOverlay.channels[i].isValid == True:
-                                OptNotify("Channel " + str(i + 1) + " Added", icon=self.myOverlay.getChlogo(i + 1))      
+                                OptNotify("Channel " + str(i + 1) + " Added", icon=self.myOverlay.getChlogo(i + 1))  
                     except Exception,e:
                         self.log("Unknown Channel Creation Exception", xbmc.LOGERROR)
                         self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -178,12 +177,10 @@ class ChannelListThread(threading.Thread):
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return
-
                         time.sleep(2)
-
                         if self.paused == False:
                             break
-                timeslept = 0
+                timeslept = 0 
 
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
@@ -202,7 +199,7 @@ class ChannelListThread(threading.Thread):
         self.paused = True
         self.chanlist.threadPaused = True
 
-
+        
     def unpause(self):
         self.paused = False
         self.chanlist.threadPaused = False

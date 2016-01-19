@@ -41,15 +41,9 @@ def PseudoTV():
     try:
         setProperty("PseudoTVRunning", "True")
         import resources.lib.Overlay as Overlay
-        
         if hasVersionChanged(__version__) == True: 
-            HandleUpgrade()
-        # Disabled for Kodi Repo Compliance
-        # else:
-            # chkVersion()
-            
+            HandleUpgrade()            
         preStart()
-    
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
 
         for curthread in threading.enumerate():

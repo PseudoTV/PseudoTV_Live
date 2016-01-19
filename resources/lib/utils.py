@@ -18,7 +18,7 @@
 
 
 import os, re, sys, time, zipfile, threading, requests, random, traceback
-import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, json, urlparse, HTMLParser
+import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, urlparse, HTMLParser
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
 
@@ -47,7 +47,7 @@ if sys.version_info < (2, 7):
     import simplejson as json
 else:
     import json
-
+    
 # Videowindow filepaths
 Path = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', '1080i'))
 flePath = xbmc.translatePath(os.path.join(Path, 'custom_script.pseudotv.live_9506.xml'))
@@ -516,76 +516,80 @@ def UpdateRSS():
         UpdateRSSthread.cancel()  
         UpdateRSSthread.join()   
     UpdateRSSthread.start()
+    xbmc.sleep(10)
           
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
-    now  = datetime.datetime.today()
     try:
-        UpdateRSS_LastRun = getProperty("UpdateRSS_NextRun")
-        if not UpdateRSS_LastRun:
-            raise Exception()
-    except Exception,e:
-        UpdateRSS_LastRun = "1970-01-01 23:59:00.000000"
-        setProperty("UpdateRSS_NextRun",UpdateRSS_LastRun)
+        now  = datetime.datetime.today()
+        try:
+            UpdateRSS_LastRun = getProperty("UpdateRSS_NextRun")
+            if not UpdateRSS_LastRun:
+                raise Exception()
+        except Exception,e:
+            UpdateRSS_LastRun = "1970-01-01 23:59:00.000000"
+            setProperty("UpdateRSS_NextRun",UpdateRSS_LastRun)
 
-    try:
-        SyncUpdateRSS = datetime.datetime.strptime(UpdateRSS_LastRun, "%Y-%m-%d %H:%M:%S.%f")
+        try:
+            SyncUpdateRSS = datetime.datetime.strptime(UpdateRSS_LastRun, "%Y-%m-%d %H:%M:%S.%f")
+        except:
+            SyncUpdateRSS = datetime.datetime.strptime("1970-01-01 23:59:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+        
+        if now > SyncUpdateRSS:
+            ##Push MSG
+            try:
+                pushlist = ''
+                pushrss = 'http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/push_msg.xml'
+                file = open_url(pushrss)
+                pushlist = file.read().replace('\n','').replace('\r','').replace('\t','')
+                file.close()
+            except Exception,e:
+                log('utils: UpdateRSS_Thread, pushlist Failed! ' + str(e))
+            ##Github RSS
+            try:
+                gitlist = ''
+                gitrss = 'http://github.com/Lunatixz.atom'
+                d = feedparser.parse(gitrss)
+                header = (d['feed']['title']).replace(' ',' Github ')
+                post = d['entries'][0]['title']
+                for post in d.entries:
+                    try:
+                        if post.title.startswith('Lunatixz pushed to master at Lunatixz/XBMC_Addons'):
+                            date = time.strftime("%m.%d.%Y @ %I:%M %p", post.date_parsed)
+                            title = (post.title).replace('Lunatixz pushed to master at ','').replace('Lunatixz/XBMC_Addons','Updated repository plugins on')
+                            gitlist = (header + ' - ' + title + ": " + date + "   ").replace('&amp;','&')
+                            break
+                    except:
+                        pass
+            except Exception,e:
+                log('utils: UpdateRSS_Thread, gitlist Failed! ' + str(e))
+            gitlist += 'Follow @PseudoTV_Live on Twitter'
+            ##Twitter RSS
+            try:
+                twitlist = []
+                #twitrss ='http://feedtwit.com/f/pseudotv_live'
+                twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=pseudotv_live'
+                e = feedparser.parse(twitrss)
+                header = ((e['feed']['title']) + ' - ')
+                twitlist = header.replace('Twitter Search / pseudotv_live','@PseudoTV_Live Twitter Activity')
+                for tost in e.entries:
+                    try:
+                        if '#PTVLnews' in tost.title:
+                            date = time.strftime("%m.%d.%Y @ %I:%M %p", tost.published_parsed)
+                            twitlist += (date + ": " + tost.title + "   ").replace('&amp;','&')
+                    except:
+                        pass
+            except Exception,e:
+                log('utils: UpdateRSS_Thread, twitlist Failed! ' + str(e))
+            UpdateRSS_NextRun = ((now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S.%f"))
+            log('utils: UpdateRSS, Now = ' + str(now) + ', UpdateRSS_NextRun = ' + str(UpdateRSS_NextRun))
+            setProperty("UpdateRSS_NextRun",str(UpdateRSS_NextRun))
+            setProperty("twitter.1.label", uni(pushlist))
+            setProperty("twitter.2.label", uni(gitlist))
+            setProperty("twitter.3.label", uni(twitlist)) 
     except:
-        SyncUpdateRSS = datetime.datetime.strptime("1970-01-01 23:59:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-    
-    if now > SyncUpdateRSS:
-        ##Push MSG
-        try:
-            pushlist = ''
-            pushrss = 'http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/push_msg.xml'
-            file = open_url(pushrss)
-            pushlist = file.read().replace('\n','').replace('\r','').replace('\t','')
-            file.close()
-        except Exception,e:
-            log('utils: UpdateRSS_Thread, pushlist Failed! ' + str(e))
-        ##Github RSS
-        try:
-            gitlist = ''
-            gitrss = 'http://github.com/Lunatixz.atom'
-            d = feedparser.parse(gitrss)
-            header = (d['feed']['title']).replace(' ',' Github ')
-            post = d['entries'][0]['title']
-            for post in d.entries:
-                try:
-                    if post.title.startswith('Lunatixz pushed to master at Lunatixz/XBMC_Addons'):
-                        date = time.strftime("%m.%d.%Y @ %I:%M %p", post.date_parsed)
-                        title = (post.title).replace('Lunatixz pushed to master at ','').replace('Lunatixz/XBMC_Addons','Updated repository plugins on')
-                        gitlist = (header + ' - ' + title + ": " + date + "   ").replace('&amp;','&')
-                        break
-                except:
-                    pass
-        except Exception,e:
-            log('utils: UpdateRSS_Thread, gitlist Failed! ' + str(e))
-        gitlist += 'Follow @PseudoTV_Live on Twitter'
-        ##Twitter RSS
-        try:
-            twitlist = []
-            #twitrss ='http://feedtwit.com/f/pseudotv_live'
-            twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=pseudotv_live'
-            e = feedparser.parse(twitrss)
-            header = ((e['feed']['title']) + ' - ')
-            twitlist = header.replace('Twitter Search / pseudotv_live','@PseudoTV_Live Twitter Activity')
-            for tost in e.entries:
-                try:
-                    if '#PTVLnews' in tost.title:
-                        date = time.strftime("%m.%d.%Y @ %I:%M %p", tost.published_parsed)
-                        twitlist += (date + ": " + tost.title + "   ").replace('&amp;','&')
-                except:
-                    pass
-        except Exception,e:
-            log('utils: UpdateRSS_Thread, twitlist Failed! ' + str(e))
-        UpdateRSS_NextRun = ((now + datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S.%f"))
-        log('utils: UpdateRSS, Now = ' + str(now) + ', UpdateRSS_NextRun = ' + str(UpdateRSS_NextRun))
-        setProperty("UpdateRSS_NextRun",str(UpdateRSS_NextRun))
-        setProperty("twitter.1.label", pushlist)
-        setProperty("twitter.2.label", gitlist)
-        setProperty("twitter.3.label", twitlist) 
-
+        pass
+        
 # Adapted from KodeKarnage's lazytv
 def sendShout(txt):
     log('utils: sendShout')
@@ -705,7 +709,7 @@ def download_silent(url, dest):
         download_silentThread.cancel()
         download_silentThread.join()
     download_silentThread.start()
-    time.sleep(0.5)
+    xbmc.sleep(10)
         
 @cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):
@@ -855,6 +859,9 @@ def Comingsoon():
     
 def Unavailable():
     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Unavailable", 1000, THUMB) )
+    
+def TryAgain():
+    xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Try Again Later...", 1000, THUMB) )
 
 def show_busy_dialog():
     xbmc.executebuiltin('ActivateWindow(busydialog)')
@@ -933,8 +940,11 @@ def getProperty(str):
     return xbmcgui.Window(10000).getProperty(str)
 
 def setProperty(str1, str2):
-    xbmcgui.Window(10000).setProperty(str1, str2)
-
+    try:
+        xbmcgui.Window(10000).setProperty(str1, str2)
+    except:
+        pass
+        
 def clearProperty(str):
     xbmcgui.Window(10000).clearProperty(str)
      
@@ -1600,7 +1610,7 @@ def isLowPower():
             
 def ClearPlaylists():
     log('utils: ClearPlaylists')
-    for i in range(999):
+    for i in range(CHANNEL_LIMIT):
         try:
             FileAccess.delete(CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
         except:
@@ -1788,10 +1798,15 @@ def isCom():
         
 def ComCHK():
     log('utils: ComCHK')      
-    # Community users are required to supply gmail info in-order to use the community submission tool, SEE DISCLAIMER!!
-    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists
-    # Community lists includes: Youtube, Vimeo, RSS, Smartplaylists, LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and User installed and Kodi repository plugins (see isKodiRepo, isPlugin).
-    if REAL_SETTINGS.getSetting("Community_Enabled") == "true":
+    # Community users are required to supply their gmail info in-order to use the community submission tool, SEE DISCLAIMER!! 
+    # Community List is free, not a membership. Users do not have to signup for anything, they supply their own email information only required to participate in the exchange of channel configurations.
+    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists, https://github.com/PseudoTV/PseudoTV_Playlists
+    # Community lists includes: Youtube, Vimeo, RSS, Kodi Smartplaylists. Submissions take 24-48hrs to reflect on git list.
+    # Community list also includes: LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and user installed Kodi repository plugins (see isKodiRepo, isPlugin).
+    # LiveTV & InternetTV lists are maintained by me inorder to keep illegal links from making it to community list. List is available publicly at the above link.
+    # I do not tolerate pirated links, if there is a question of legitimacy I lean toward the cautious side and the link is left off the list.
+    # ex. legal link would be a plugin:// reference to ustvnow, or the cbsn plugins live feed.
+    if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != "email@gmail.com":
         if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
             REAL_SETTINGS.setSetting("Community_Verified", "1")
             REAL_SETTINGS.setSetting("AT_Community","true")
@@ -2015,20 +2030,20 @@ def setTraktScrob():
     # {u'slug': u'ex-machina-2014'}
     # {u'trakt': 163375}
     # {u'tmdb': 264660, u'imdb': u'tt0470752', u'slug': u'ex-machina-2014', u'trakt': 163375}
+    trakt = ''
     id    = getProperty("OVERLAY.ID")
     dbid  = getProperty("OVERLAY.DBID")
     type  = getProperty("OVERLAY.Type")
     title = getProperty("OVERLAY.Title").replace('(',' ').replace(')','').replace(' ','-')
-            
+
     # if content is not part of kodis db and has id scrob
     if (dbid == '0' or len(dbid) > 6) and id != '0':
         if type == 'movie':
-            ids = json.dumps(({u'imdb': u'%s', u'slug': u'%s'}) % (id, title))
+            trakt = ({'imdb': id, 'slug': title})
         elif type == 'tvshow':
-            ids = json.dumps(({u'tvdb': u'%s', u'slug': u'%s'}) % (id, title))
-        if ids:
-            setProperty('script.trakt.ids', ids)
-                      
+            trakt = ({'tvdb': id, 'slug': title})      
+        setProperty('script.trakt.ids', json.dumps(trakt))
+            
 def setTraktTag(pType='OVERLAY'):
     log("utils: setTraktTag")
     type = getProperty(("%s.Title")%pType)    
@@ -2072,3 +2087,10 @@ def convert_to_float(frac_str):
 def convert_to_stars(val):
     log("utils: convert_to_stars")  
     return (val * 100 ) / 10
+    
+def datetime_to_epoch(dt):
+    try:#sloppy fix, for threading issue with strptime.
+        t = time.strptime(dt, '%Y-%m-%d %H:%M:%S')
+    except:
+        t = time.strptime(dt, '%Y-%m-%d %H:%M:%S')
+    return time.mktime(t)

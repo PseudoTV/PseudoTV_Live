@@ -81,7 +81,7 @@ class Main:
         self.itemlst = []
         ADDON_SETTINGS.loadSettings()
         
-        for i in range(999):
+        for i in range(CHANNEL_LIMIT):
             self.theitem.append(str(i + 1))
         self.updateListing()
         hide_busy_dialog()
@@ -200,7 +200,7 @@ class Main:
     def updateListing(self, channel = -1):
         self.log("updateListing")
         start = 0
-        end = 999
+        end = CHANNEL_LIMIT
 
         if channel > -1:
             start = channel - 1
@@ -270,7 +270,6 @@ class Main:
         self.log("updateListing return")
              
              
-
     def saveSettings(self):
         self.log("saveSettings channel " + str(self.channel))
         chantype = 9999

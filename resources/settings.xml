@@ -188,7 +188,7 @@
     <category label="39000">
         <setting id="Community_Enabled"   label="30905" type="bool" default="false"/>
         <setting id="Community_Verified" subsetting="true" type="enum" enable="false" visible="eq(-1,true)"   label="30776" values="False|True" default="0"/>
-        <setting id="Gmail_User" subsetting="true"   label="30906" visible="eq(-2,true)" type="text" default="User@gmail.com" />
+        <setting id="Gmail_User" subsetting="true"   label="30906" visible="eq(-2,true)" type="text" default="email@gmail.com" />
         <setting id="Gmail_Pass" subsetting="true"   label="30907" visible="eq(-3,true)" type="text" option="hidden" default="Password" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
         <setting                                              type="sep"                  visible="true" />
@@ -233,13 +233,15 @@
     <category label="30900">  
         <setting label="30308" type="lsep"/>
         <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="30"/>
         <setting id="channelDelay" type="enum"   label="30302" default="0" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
         <setting label="30914" type="lsep"/>
         <setting id="Include3D" type="bool"   label="39958" default="true"/>
         <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
         <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
         <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
+        <setting label="30939" type="lsep"/>
+        <setting id="accurate_duration" type="bool"   label="30934" default="false"/>
         <setting label="30990" type="lsep"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>

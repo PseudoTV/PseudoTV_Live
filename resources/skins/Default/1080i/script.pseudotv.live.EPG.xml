@@ -1,6 +1,6 @@
 <window>
     <allowoverlay>no</allowoverlay>   
-    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(9506)</onload>
+    <!-- <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(9506)</onload> -->
     <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10004)</onload><!-- Activate random window, workaround for 9506 starting paused -->
     <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.EPG_Opened,false,10000)</onunload>    
@@ -15,49 +15,63 @@
     <animation effect="fade" time="5">WindowOpen</animation>
     <animation effect="fade" time="5">WindowClose</animation>
     <controls>
-        <control type="button" id="98">
-            <description>shadow color</description>
-            <visible>false</visible>
-            <label>0xFF000000</label>
-        </control>
-        <control type="button" id="99">
-            <description>focused text color</description>
-            <visible>false</visible>
-            <label>0xFF0297eb</label>
-        </control>
-        <control type="button" id="100">
-            <description>text color</description>
-            <visible>false</visible>
-            <label>0xFFFFFFFF</label>
-        </control>
-        <control type="button" id="105">
-            <description>text font</description>
-            <visible>false</visible>
-            <label>font14</label>
-        </control>   
-        <control type="image">
-            <description>EPG Background</description>
+        <control type="group">  
             <posx>0</posx>
             <posy>0</posy>
-            <width>1920</width>
-            <height>1080</height>
-            <texture>EPGbackground.png</texture>
-            <colordiffuse>FFFFFFFF</colordiffuse>
-        </control>         
-        <control type="image">
-            <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">EPGoverlay.png</texture>
-            <width>1920</width>
-            <height>1080</height>
-            <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation>
+            <control type="image">
+                <width>1920</width>
+                <height>1080</height>
+                <description>EPG Background</description>
+                <texture>EPGbackground.png</texture>
+                <colordiffuse>FFFFFFFF</colordiffuse>
+            </control>         
+            <control type="image">
+                <description>EPG Selection Overlay</description>
+                <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">EPGoverlay.png</texture>
+                <width>1920</width>
+                <height>1080</height>
+                <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation>
+            </control>
         </control>
-        <!-- VideoWindow Box --> 
+            <control type="grouplist">
+            <posx>30</posx>
+            <posy>15</posy>
+            <itemgap>10</itemgap>
+            <orientation>vertical</orientation>
+            <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+            <control type="label"> 
+                <description>Static VideoWindow Box Label</description>
+                <width>360</width>       
+                <height>24</height>
+                <font>font12</font>
+                <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <align>center</align>
+                <scroll>true</scroll>
+                <scrollspeed>40</scrollspeed>
+                <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
+                <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+                <aligny>center</aligny>
+            </control>
+            <control type="image">
+                <description>Static VideoWindow Box Art</description>
+                <width>360</width>      
+                <height>180</height>
+                <align>center</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
+                <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+            </control>
+        </control>   
         <control type="grouplist">
             <posx>30</posx>
             <posy>15</posy>
             <itemgap>10</itemgap>
             <orientation>vertical</orientation>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            <control type="label" id="523"> 
+            <control type="label"> 
+                <description>VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
                 <font>font12</font>
@@ -67,55 +81,21 @@
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
                 <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
-                <visible>Control.IsVisible(523)</visible>
+                <visible>StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
                 <aligny>center</aligny>
-            </control>   
-            <!-- #### Skinners Include Everything for videowindow patch to work #### -->
-            <!-- PATCH START --> 
+            </control>
             <control type="videowindow">
-                <description>video</description>
+                <description>VideoWindow Box Art</description>
                 <width>360</width>      
                 <height>180</height>
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <visible>Control.IsVisible(523)</visible>
+                <visible>StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
             </control>
-            <!-- PATCH END -->
-            <!-- ################################################################## -->
         </control>
-        <!-- Static VideoWindow Box --> 
         <control type="grouplist">
-            <posx>30</posx>
-            <posy>15</posy>
-            <itemgap>10</itemgap> 
-            <orientation>vertical</orientation>
-            <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            <control type="label">
-                <width>360</width>       
-                <height>24</height>
-                <font>font12</font>
-                <textcolor>C0C0C0C0</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <align>center</align>
-                <scroll>true</scroll>
-                <scrollspeed>40</scrollspeed>
-                <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
-                <visible>!Control.IsVisible(523)</visible>
-                <aligny>center</aligny>
-            </control>
-            <control type="image">
-                <width>360</width>      
-                <height>180</height>
-                <align>center</align>
-                <aligny>center</aligny>
-                <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.type1ART)]</texture>
-                <visible>!Control.IsVisible(523)</visible>
-            </control>
-        </control>   
-        <!-- Today Nextaired -->
-        <control type="grouplist">
+            <description>Today Nextaired</description>
             <posx>411</posx>
             <posy>15</posy>           
             <itemgap>381</itemgap>
@@ -275,13 +255,12 @@
                 </control>
             </control> 
         </control> 
-        <!-- todo -->
         <control type="grouplist">              
             <posx>411</posx>
             <posy>258</posy>
             <itemgap>1</itemgap>
             <orientation>horizontal</orientation>
-            <control type="label" id="215">
+            <control type="label">
                 <description>EPG Label</description>            
                 <width>373</width>
                 <height>38</height>
@@ -292,7 +271,7 @@
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>               
-            <control type="label" id="216">
+            <control type="label">
                 <description>DVR Label</description>              
                 <width>373</width>
                 <height>38</height>
@@ -303,7 +282,7 @@
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>               
-            <control type="label" id="217">
+            <control type="label">
                 <description>OnDemand Label</description>               
                 <width>373</width>
                 <height>38</height>
@@ -314,7 +293,7 @@
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>               
-            <control type="label" id="218">
+            <control type="label">
                 <description>Apps Label</description>        
                 <width>373</width>
                 <height>38</height>
@@ -326,27 +305,23 @@
                 <shadowcolor>ff000000</shadowcolor>
             </control>   
         </control>           
-        <!-- Twitter    -->
-        <control type="grouplist">
+        <control type="grouplist" id="105"> 
             <posx>5</posx>
             <posy>258</posy>
             <align>left</align>
             <orientation>horizontal</orientation>
             <itemgap>1</itemgap>  
-            <!-- Twitter ICON -->
             <control type="image">
+                <description>PTVL RSS Feed Art</description>  
                 <width>21</width>
                 <height>35</height>
                 <aspectratio>keep</aspectratio>
                 <aligny>center</aligny>
                 <align>left</align>
-                <visible>Control.IsVisible(138)</visible>
                 <texture colordiffuse="C0C0C0C0">rss.png</texture>
-                <!-- <texture>twitter.png</texture> -->
             </control>
-            <!-- Twitter RSS -->
-            <control type="fadelabel" id = "138">
-                <description>ticker text</description>
+            <control type="fadelabel">
+                <description>PTVL RSS Feed Label</description>  
                 <width>370</width>
                 <height>35</height>
                 <font>font10</font>
@@ -361,15 +336,13 @@
                 <shadowcolor>ff000000</shadowcolor>
                 <textoffsetx>20</textoffsetx>
                 <resetonlabelchange>true</resetonlabelchange>
-                <visible>!IsEmpty(Control.GetLabel(138))</visible>
-                <label></label>
                 <label>$INFO[Window(10000).Property(twitter.1.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.2.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.3.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.4.label)]</label>
             </control>           
             <control type="label">
-                <description>twit Sep</description>
+                <description>PTVL RSS Feed Art</description>  
                 <width>10</width>
                 <height>35</height>
                 <aspectratio>keep</aspectratio>
@@ -379,11 +352,10 @@
                 <font>font10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <visible>Control.IsVisible(138)</visible>
             </control>  
         </control>
         <!--Date-->
-        <control type="label" id="104">
+        <control type="label" id="5001">
             <description>Date Label</description>
             <posx>0</posx>
             <posy>300</posy>
@@ -394,9 +366,10 @@
             <label>Current Date</label>
             <font>font12</font>
             <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
+            <shadowcolor>ff000000</shadowcolor>
         </control>
-        <control type="image" id="109">
+        <control type="image" id="5002">
+            <description>Left Arrow</description>
             <posx>410</posx>
             <posy>300</posy>
             <width>10</width>
@@ -445,9 +418,10 @@
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
+            <shadowcolor>ff000000</shadowcolor>
         </control>
-        <control type="image" id="110">
+        <control type="image" id="5003">
+            <description>Right Arrow</description>
             <posx>1910</posx>
             <posy>300</posy>
             <width>10</width>
@@ -456,7 +430,6 @@
             <colordiffuse>C0C0C0C0</colordiffuse>
             <texture>right.png</texture>  
         </control> 
-        <!--CHANNEL Number-->
         <control type="grouplist">            
             <posx>0</posx>
             <posy>345</posy>
@@ -601,13 +574,11 @@
                 <shadowcolor>ff000000</shadowcolor>
             </control>
         </control>
-        <!--Channel List-->
         <control type="grouplist">            
             <posx>87</posx>
             <posy>345</posy>
             <itemgap>10</itemgap>
             <orientation>vertical</orientation>
-            <!--CHANNEL Name/Icon-->
             <control type="label" id="301">
                 <description>Channel 1 Name</description>
                 <width>278</width>
@@ -734,8 +705,7 @@
                 <aspectratio>keep</aspectratio>  
                 <visible>!StringCompare(Control.GetLabel(326),)</visible>
             </control>   
-        </control> 
-        <!--SHOW LISTINGS-->
+        </control>
         <control type="group" id="111">
             <posx>411</posx>
             <posy>340</posy>
@@ -771,9 +741,17 @@
             <posy>715</posy>
             <width>1515</width>
             <height>74</height>
-        </control>    
-        <!-- Timefade Future -->
-        <control type="image" id="118"> 
+        </control>
+        <control type="image" id="5004"> 
+            <description>Timebar Optional past fade</description>
+            <posx>411</posx>
+            <posy>340</posy>
+            <width>-1</width>
+            <height>448</height>
+            <aspectratio>scale</aspectratio>
+            <texture>pstvlTimeFadeP.png</texture>
+        </control>  
+        <control type="image" id="5005"> 
             <description>Timebar Optional future fade</description>
             <posx>411</posx>
             <posy>340</posy>
@@ -783,31 +761,20 @@
             <texture>pstvlTimeFadeF.png</texture>
             <visible>false</visible>
         </control>  
-        <!-- Timefade Past -->
-        <control type="image" id="119"> 
-            <description>Timebar Optional past fade</description>
-            <posx>411</posx>
-            <posy>340</posy>
-            <width>-1</width>
-            <height>448</height>
-            <aspectratio>scale</aspectratio>
-            <texture>pstvlTimeFadeP.png</texture>
-        </control>  
-        <!--Time Button-->
-        <control type="label" id="106">
+        <control type="label" id="5006">
+            <description>Timebar Current Time Button</description>
             <posx>420</posx>
             <posy>300</posy>
             <width min="128" max="400">auto</width>
             <height>38</height>
             <fadetime>250</fadetime>
             <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
+            <shadowcolor>ff000000</shadowcolor>
             <font>font12</font>
             <align>center</align>
             <aligny>center</aligny>
         </control>
-        <!-- Timebar -->
-        <control type="image" id="120">
+        <control type="image" id="5007">
             <description>Timebar line</description>
             <posx>411</posx>
             <posy>334</posy>
@@ -815,8 +782,8 @@
             <height>452</height>
             <aspectratio>keep</aspectratio>
         </control> 
-        <control type="image" id="508">
-            <description>Dynamic art1 - Info Overlay</description>
+        <control type="image">
+            <description>Dynamic art1</description>
             <animation effect="fade" time="500">VisibleChange</animation> 
             <posx>35</posx>
             <posy>270r</posy>  
@@ -824,12 +791,11 @@
             <height>180</height>
             <align>center</align>
             <aspectratio>keep</aspectratio>
-            <!-- <texture background="true">http://localhost:52307/getthumb&amp;title=$INFO[Window(10000).Property(EPG.Title)]&amp;dbid=$INFO[EPG.DBID]&amp;type=landscape,fanart</texture> -->
             <texture fallback="">$INFO[Window(10000).Property(EPG.landscape)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
         </control>        
-        <control type="image" id="510">
-            <description>Dynamic art2 - Info Overlay</description>
+        <control type="image">
+            <description>Dynamic art2</description>
             <animation effect="fade" time="500">VisibleChange</animation> 
             <posx>35</posx>
             <posy>270r</posy>  
@@ -841,8 +807,8 @@
             <texture fallback="">$INFO[Window(10000).Property(EPG.poster)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
         </control>          
-        <control type="image" id="511">
-            <description>Sickbeard/Couchpotato image</description>   
+        <control type="image">
+            <description>isManaged Art</description>   
             <posx>345</posx>
             <posy>120r</posy>         
             <width>32</width>
@@ -851,8 +817,8 @@
             <visible>true</visible>
             <texture>$INFO[Window(10000).Property(EPG.Managed)]</texture>
         </control> 
-        <control type="image" id="512">
-            <description>Unaired "NEW" image</description>         
+        <control type="image">
+            <description>isNew Art</description>         
             <posx>35</posx>
             <posy>280r</posy>  
             <width>50</width>
@@ -861,25 +827,12 @@
             <visible>true</visible>
             <texture>$INFO[Window(10000).Property(EPG.isNew)]</texture>
         </control>
-        <!--line 1 -->
         <control type="grouplist">
             <posx>430</posx>
             <posy>280r</posy>
             <width>1400</width>
             <orientation>horizontal</orientation>
             <itemgap>5</itemgap>
-            <control type="label" id="516">
-                <description>Now Watching/ComingUp Label</description>
-                <width min="5" max="300">auto</width>
-                <height>30</height>
-                <label>Now Playing</label>
-                <font>font14</font>
-                <align>left</align>
-                <aligny>center</aligny>
-                <textcolor>C0C0C0C0</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <visible>!IsEmpty(Control.GetLabel(500))</visible>
-            </control>  
             <control type="label">
                 <description>Show Title Label</description>
                 <width min="5" max="1100">auto</width>
@@ -893,67 +846,9 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>$INFO[Control.GetLabel(500)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Control.GetLabel(501)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(EPG.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(EPG.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(EPG.SEtitle)][/COLOR]</label>
             </control>
-            <control type="label" id="500">
-                <description>Show Title Label</description>
-                <width min="5" max="800">auto</width>
-                <height>30</height>
-                <font>font14</font>
-                <textcolor>FF0297eb</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <scroll>true</scroll>
-                <align>left</align>
-                <aligny>center</aligny>
-                <wrapmultiline>false</wrapmultiline>
-                <scrollspeed>40</scrollspeed>
-                <scrollsuffix> - </scrollsuffix>
-                <visible>false</visible>
-            </control>
-            <control type="label">
-                <description>Showtitle Sep Label</description>
-                <width>10</width>
-                <height>30</height>
-                <label>-</label>
-                <align>left</align>
-                <aligny>center</aligny>
-                <font>font14</font>
-                <visible>!IsEmpty(Control.GetLabel(501))</visible>
-                <textcolor>FF0297eb</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <visible>false</visible>
-            </control>
-            <control type="label" id="501">
-                <description>Show Episode/Tagline</description>
-                <width min="5" max="150">auto</width>
-                <height>30</height>
-                <font>font14</font>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <scroll>true</scroll>
-                <align>left</align>
-                <aligny>center</aligny>
-                <scrollspeed>40</scrollspeed>
-                <scrollsuffix> - </scrollsuffix>
-                <visible>false</visible>
-            </control>
-            <control type="label" id="300">
-                <description>Channel Name</description>
-                <width min="5" max="150">auto</width>
-                <height>30</height>
-                <font>font14</font>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <scroll>true</scroll>
-                <align>left</align>
-                <aligny>center</aligny>
-                <scrollspeed>40</scrollspeed>
-                <scrollsuffix> - </scrollsuffix>
-                <visible>IsEmpty(Control.GetLabel(501))</visible>
-                <visible>false</visible>
-            </control> 
         </control>
-        <!--line 2 -->
         <control type="grouplist">
             <posx>430</posx>
             <posy>240r</posy>
@@ -962,14 +857,16 @@
             <itemgap>4</itemgap>
            <control type="image">
                 <description>Seekbar Line</description>
+                <posx>0</posx>
+                <posy>0</posy> 
                 <width>1400</width>
                 <height>4</height>
-                <texture>seek/progress_mid.png</texture>
+                <texture border="0">seek/progress_mid.png</texture>
                 <align>center</align>
                 <aligny>center</aligny>
-                <visible>!Control.IsVisible(515)</visible>
+                <visible>!Control.IsVisible(5008)</visible>
             </control>
-            <control type="group" id="515">  
+            <control type="group" id="5008">  
                 <control type="progress">
                     <posx>0</posx>
                     <posy>0</posy>
@@ -997,7 +894,7 @@
                     <info>Player.Progress</info>
                 </control> 
             </control>  
-            <control type="label" id="502">
+            <control type="label">
                 <description>Show Description</description>
                 <width>1400</width>
                 <height>90</height>
@@ -1007,21 +904,9 @@
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <font>font12</font>
+                <label>$INFO[Window(10000).Property(EPG.Description)]</label>
             </control> 
         </control> 
-        <!--Selected Channel Logo-->
-       <control type="image" id="503">
-            <description>Show Channel Icon</description>
-            <posx>-40</posx>
-            <posy>680</posy>
-            <width>180</width>
-            <height>40</height>
-            <aspectratio>keep</aspectratio>
-            <align>left</align>
-            <aligny>center</aligny>
-            <visible>False</visible>
-        </control>    
-        <!--RSS-->   
         <control type="grouplist">
             <posx>10</posx>
             <posy>60r</posy>
@@ -1041,7 +926,6 @@
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(Home).Property(NextAired.1.Label))</visible>
             </control>  
-            <!--Next Aired RSS-->
             <control type="label">
                 <width>1880</width>
                 <height>55</height>
@@ -1071,5 +955,5 @@
                 <visible>!IsEmpty(Window(Home).Property(NextAired.1.Label))</visible>
             </control>  
         </control>
-</controls>
+    </controls>
 </window>

@@ -90,7 +90,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     # set the time labels
     def setTimeLabels(self, thetime):
         now = datetime.datetime.fromtimestamp(thetime)
-        self.getControl(104).setLabel(now.strftime('%A, %B %d'))
+        self.getControl(5001).setLabel(now.strftime('%A, %B %d'))
         delta = datetime.timedelta(minutes=30)
 
         for i in range(3):
@@ -111,12 +111,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         else:
             timeex = now.strftime("%H:%M")
         
-        timetx, timety = self.getControl(106).getPosition()
-        timetw = self.getControl(106).getWidth()
-        timeth = self.getControl(106).getHeight()
-        timex, timey = self.getControl(120).getPosition()
-        timew = self.getControl(120).getWidth()
-        timeh = self.getControl(120).getHeight()
+        timetx, timety = self.getControl(5006).getPosition()
+        timetw = self.getControl(5006).getWidth()
+        timeth = self.getControl(5006).getHeight()
+        timex, timey = self.getControl(5007).getPosition()
+        timew = self.getControl(5007).getWidth()
+        timeh = self.getControl(5007).getHeight()
 
         self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
         self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
@@ -133,19 +133,20 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.addControl(self.currentTimeBar)
         self.curchannelIndex = []
 
-        textcolor = int(self.getControl(100).getLabel(), 16)            
+        setProperty("PTVL.VideoWindow","true")
+        textcolor = int(getProperty("EPG.textColor"), 16)            
         if textcolor > 0:
             self.textcolor = hex(textcolor)[2:]
         
-        focusedcolor = int(self.getControl(99).getLabel(), 16)
+        focusedcolor = int(getProperty("EPG.focused_textColor"), 16)
         if focusedcolor > 0:
             self.focusedcolor = hex(focusedcolor)[2:]
             
-        shadowcolor = int(self.getControl(98).getLabel(), 16)
+        shadowcolor = int(getProperty("EPG.shadowColor"), 16)
         if shadowcolor > 0:
             self.shadowColor = hex(shadowcolor)[2:]
         
-        self.textfont = self.getControl(105).getLabel()
+        self.textfont = getProperty("EPG.textFont")
 
         try:
             if self.setChannelButtons(time.time(), self.MyOverlayWindow.currentChannel) == False:
@@ -193,28 +194,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.MyOverlayWindow.sleepTimeValue = 1
             self.MyOverlayWindow.startSleepTimer()
             return
-        
-        #Check if VideoWindow Patch found, Toggle Visible.
-        setProperty("PTVL.VideoWindow","true")
-        # try:
-            # if getProperty("PTVL.VideoWindow") == "true":
-                # self.log('VideoWindow = True')
-                # self.getControl(523).setVisible(True)
-            # else:
-                # raise Exception()
-        # except Exception,e:
-            # self.log('VideoWindow = False')
-            # self.getControl(523).setVisible(False)
-            
-        try:
-            for i in range(3):
+
+        for i in range(3):
+            try:
                 self.channelLabel.append(xbmcgui.ControlImage(50 + (50 * i), 50, 50, 50, IMAGES_LOC + 'solid.png', colorDiffuse = self.channelbugcolor))
                 self.addControl(self.channelLabel[i])
                 self.channelLabel[i].setVisible(False)
-            self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)
-        except:
-            pass
-            
+            except:
+                pass
+        self.channelLabelTimer = threading.Timer(5.0, self.hideChannelLabel)        
         self.FEEDtoggle()
         self.log('onInit return')
 
@@ -223,12 +211,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.log('FEEDtoggle')
         try:
             if getProperty("PTVL.FEEDtoggle") == "true":
-                self.getControl(138).setVisible(True)
+                self.getControl(105).setVisible(True)
             else:
-                self.getControl(138).setVisible(False)
+                self.getControl(105).setVisible(False)
         except:
-            self.getControl(138).setVisible(False)
-        
+            self.getControl(105).setVisible(False)
+
         
     # setup all channel buttons for a given time
     def setChannelButtons(self, starttime, curchannel, singlerow = -1):
@@ -249,12 +237,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         basew = self.getControl(111).getWidth()
         tmpx, tmpy =  self.getControl(110 + self.rowCount).getPosition()
         
-        timetx, timety = self.getControl(106).getPosition()
-        timetw = self.getControl(106).getWidth()
-        timeth = self.getControl(106).getHeight()
-        timex, timey = self.getControl(120).getPosition()
-        timew = self.getControl(120).getWidth()
-        timeh = self.getControl(120).getHeight()
+        timetx, timety = self.getControl(5006).getPosition()
+        timetw = self.getControl(5006).getWidth()
+        timeth = self.getControl(5006).getHeight()
+        timex, timey = self.getControl(5007).getPosition()
+        timew = self.getControl(5007).getWidth()
+        timeh = self.getControl(5007).getHeight()
         
         basecur = curchannel
         self.toRemove.append(self.currentTime)
@@ -313,10 +301,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
         # Set backtime focus width
         TimeBX, TimeBY = self.currentTimeBar.getPosition()
-        PFadeX, PFadeY = self.getControl(119).getPosition()
-        self.getControl(119).setWidth(TimeBX-PFadeX)
-        self.getControl(118).setPosition(TimeBX, PFadeY)
-        self.getControl(118).setWidth(1920-TimeBX)
+        PFadeX, PFadeY = self.getControl(5004).getPosition()
+        self.getControl(5004).setWidth(TimeBX-PFadeX)
+        self.getControl(5005).setPosition(TimeBX, PFadeY)
+        self.getControl(5005).setWidth(1920-TimeBX)
 
         Time1X, Time1Y = self.getControl(101).getPosition()
         Time2X, Time2Y = self.getControl(102).getPosition()
@@ -328,13 +316,13 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
         # Arrow color
         if TimeBX > Time3X:
-            self.getControl(109).setColorDiffuse('0x'+self.focusedcolor)
+            self.getControl(5002).setColorDiffuse('0x'+self.focusedcolor)
         else:
-            self.getControl(109).setColorDiffuse('0x'+self.textcolor)
+            self.getControl(5002).setColorDiffuse('0x'+self.textcolor)
         if TimeBX < Time1X:
-            self.getControl(110).setColorDiffuse('0x'+self.focusedcolor)
+            self.getControl(5003).setColorDiffuse('0x'+self.focusedcolor)
         else:
-            self.getControl(110).setColorDiffuse('0x'+self.textcolor)
+            self.getControl(5003).setColorDiffuse('0x'+self.textcolor)
          
         # Hide timebutton when near timebar
         self.getControl(101).setVisible(True)
@@ -450,13 +438,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 if curchannel == self.MyOverlayWindow.currentChannel:
                     if chtype == 8 and len(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)) > 0:
                         tmpDate = self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)
-                        
-                        try:#sloppy fix, for threading issue with strptime.
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        except:
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-
-                        epochBeginDate = time.mktime(t)
+                        epochBeginDate = datetime_to_epoch(tmpDate)
                         videotime = time.time() - epochBeginDate
                         reftime = time.time()
                     else:                        
@@ -466,13 +448,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     if chtype == 8 and len(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)) > 0:
                         playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
                         tmpDate = self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)
-
-                        try:#sloppy fix, for threading issue with strptime.
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        except:
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-
-                        epochBeginDate = time.mktime(t)
+                        epochBeginDate = datetime_to_epoch(tmpDate)
                         #loop to ensure we get the current show in the playlist
                         while epochBeginDate + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) <  time.time():
                             epochBeginDate += self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos)
@@ -644,7 +620,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 if self.showingInfo:
                     self.infoOffset += 1
             
-            elif action in ACTION_STOP:
+            elif action == ACTION_STOP:
                 self.closeEPG()           
                 if self.showingInfo:
                     self.infoOffset = 0
@@ -1102,7 +1078,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         newchan = self.centerChannel
         
         if self.MyOverlayWindow.OnDemand and chnoffset == 0:
-            print 'setShowInfo, OnDemand'
             plpos = -999
             mediapath = xbmc.Player().getPlayingFile()
         else:
@@ -1121,20 +1096,18 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 return
             mediapath = self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos)
         
-        #Change Label when Dynamic artwork enabled
         if self.infoOffset > 0:
-            self.getControl(515).setVisible(False)
-            self.getControl(516).setLabel('COMING UP:') 
+            self.getControl(5008).setVisible(False)
+            setProperty("EPG.DYNAMIC_LABEL",'COMING UP')             
         elif self.infoOffset < 0:
-            self.getControl(515).setVisible(False)
-            self.getControl(516).setLabel('ALREADY SEEN:')
+            self.getControl(5008).setVisible(False)
+            setProperty("EPG.DYNAMIC_LABEL",'ALREADY SEEN')
         elif self.infoOffset == 0 and self.infoOffsetV == 0:
-            self.getControl(515).setVisible(True) 
-            self.getControl(516).setLabel('NOW WATCHING:')
-        # elif self.infoOffsetV != 0 and self.infoOffset == 0: 
+            self.getControl(5008).setVisible(True)
+            setProperty("EPG.DYNAMIC_LABEL",'NOW WATCHING')
         else:
-            self.getControl(515).setVisible(False)
-            self.getControl(516).setLabel('ON NOW:')
+            self.getControl(5008).setVisible(False)
+            setProperty("EPG.DYNAMIC_LABEL",'ON NOW')
 
         chtype = self.MyOverlayWindow.getChtype(newchan)
         chname = self.MyOverlayWindow.getChname(newchan)
@@ -1162,48 +1135,22 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 genre = tmpstr[3]
                 timestamp = tmpstr[4]
                 LiveID = self.chanlist.unpackLiveID(tmpstr[5])
-                self.getControl(503).setImage(IMAGES_LOC + 'ondemand.png')
-                try:
-                    SetProperty('EPG.type1ART',(IMAGES_LOC + 'ondemand.png'))
-                    SetProperty('EPG.type2ART',(IMAGES_LOC + 'ondemand.png'))
-                except:
-                    pass
             else:
-                try:
-                    if self.MyOverlayWindow.getTMPSTR_Thread.isAlive():
-                        self.MyOverlayWindow.getTMPSTR_Thread.cancel()
-                except:
-                    pass
-                self.MyOverlayWindow.getTMPSTR_Thread = threading.Timer(0.1, self.MyOverlayWindow.getTMPSTR_Thread, [chtype, chname, newchan, mediapath, plpos])
-                self.MyOverlayWindow.getTMPSTR_Thread.name = "getTMPSTR_Thread"  
-                self.MyOverlayWindow.getTMPSTR_Thread.start()
+                self.MyOverlayWindow.getTMPSTR(chtype, chname, newchan, mediapath, plpos)
         else:
             title = (self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))   
             SEtitle = self.MyOverlayWindow.channels[newchan - 1].getItemEpisodeTitle(plpos) 
             Description = self.MyOverlayWindow.channels[newchan - 1].getItemDescription(plpos)
             genre = self.MyOverlayWindow.channels[newchan - 1].getItemgenre(plpos)
             timestamp = (self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(plpos))
-            myLiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))      
-            LiveID = self.chanlist.unpackLiveID(myLiveID)    
+            myLiveID = (self.MyOverlayWindow.channels[newchan - 1].getItemLiveID(plpos))        
             Chlogo = self.MyOverlayWindow.getChlogo(newchan)
-            self.getControl(503).setImage(Chlogo)
             
         season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode)
-        self.getControl(500).setLabel(title)
-        self.getControl(501).setLabel(swtitle)
-        self.getControl(502).setLabel(Description)
-
-        ##LIVEID##
-        type = LiveID[0]
-        id = LiveID[1]
-        dbid, epid = splitDBID(LiveID[2])
-        playcount = int(LiveID[4])
-        rating = LiveID[5]
-        hd = LiveID[6]
-        cc = LiveID[7]
-        stars = LiveID[8]
+        type, id, dbepid, managed, playcount, rating, hd, cc, stars = self.chanlist.unpackLiveID(myLiveID)
+        dbid, epid = splitDBID(dbepid)
         year, title, showtitle = getTitleYear(title)
-        
+                        
         # SetProperties
         setProperty("EPG.TimeStamp",timestamp)
         setProperty("EPG.LOGOART",Chlogo)
@@ -1249,16 +1196,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
             if chtype == 8 and len(self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(pos)) > 0:
                 tmpDate = self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(pos)
-                self.log("selectshow tmpdate " + str(tmpDate))
-                
-                try:#sloppy fix, for threading issue with strptime.
-                    t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                except:
-                    t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-
-                epochBeginDate = time.mktime(t)
-                #beginDate = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
-                #loop till we get to the current show  
+                epochBeginDate = datetime_to_epoch(tmpDate)
                 while epochBeginDate + self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) <  time.time():
                     epochBeginDate += self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos)
                     pos = self.MyOverlayWindow.channels[newchan - 1].fixPlaylistIndex(pos + 1)
@@ -1286,14 +1224,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 if chtype == 8 and len(self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(pos)) > 0:
                     self.log('selectShow return different LiveTV channel')
                     tmpDate = self.MyOverlayWindow.channels[newchan - 1].getItemtimestamp(pos)
-                    self.log("selectshow tmpdate " + str(tmpDate))
-                    
-                    try:#sloppy fix, for threading issue with strptime.
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                    except:
-                        t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                             
-                    epochBeginDate = time.mktime(t)
+                    epochBeginDate = datetime_to_epoch(tmpDate)
                     #beginDate = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
                     #loop till we get to the current show  
                     while epochBeginDate + self.MyOverlayWindow.channels[newchan - 1].getItemDuration(pos) <  time.time():
@@ -1332,14 +1263,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     #Live TV pull date from the playlist entry
                     if chtype == 8 and len(self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)) > 0:
                         tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
-                        self.log("setbuttonnowtime2 " + str(tmpDate))
-                       
-                        try:#sloppy fix, for threading issue with strptime.
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        except:
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-
-                        epochBeginDate = time.mktime(t)
+                        epochBeginDate = datetime_to_epoch(tmpDate)
                         videotime = time.time() - epochBeginDate
                         reftime = time.time()
                     else:
@@ -1350,14 +1274,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     #Live TV pull date from the playlist entry
                     if chtype == 8 and len(self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)) > 0:
                         tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)
-                        self.log("setbuttonnowtime2 " + str(tmpDate))
-                           
-                        try:#sloppy fix, for threading issue with strptime.
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                        except:
-                            t = time.strptime(tmpDate, '%Y-%m-%d %H:%M:%S')
-                            
-                        epochBeginDate = time.mktime(t)
+                        epochBeginDate = datetime_to_epoch(tmpDate)
                         while epochBeginDate + self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos) <  time.time():
                             epochBeginDate += self.MyOverlayWindow.channels[channel - 1].getItemDuration(playlistpos)
                             playlistpos = self.MyOverlayWindow.channels[channel - 1].fixPlaylistIndex(playlistpos + 1)

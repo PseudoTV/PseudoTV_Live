@@ -17,11 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
+import subprocess, os, sys, re, random
 import datetime, time, threading
-import datetime
-import sys, re
-import random
 
 from urllib import unquote
 from xml.dom.minidom import parse, parseString
@@ -126,7 +123,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             else:
                 self.closeConfig()
                 
-        elif act.getButtonCode() == 61575 or action in ACTION_DELETE_ITEM:      # Delete button
+        elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:      # Delete button
             curchan = self.listcontrol.getSelectedPosition() + 1
             self.deleteChannel(curchan)
             self.clearLabel(self.getFocusId())
@@ -1096,7 +1093,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.listcontrol = self.getControl(102)
 
         self.dlg.update(80)
-        for i in range(999):
+        for i in range(CHANNEL_LIMIT):
             theitem = xbmcgui.ListItem()
             theitem.setLabel(str(i + 1))
             self.listcontrol.addItem(theitem)
@@ -1716,7 +1713,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def updateListing(self, channel = -1):
         self.log("updateListing")
         start = 0
-        end = 999
+        end = CHANNEL_LIMIT
 
         if channel > -1:
             start = channel - 1

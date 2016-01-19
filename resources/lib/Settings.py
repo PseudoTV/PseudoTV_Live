@@ -171,7 +171,7 @@ class Settings:
             MSG = "Channel Repair Failed!"
             MSG1 = ""
             
-            for i in range(999):
+            for i in range(Globals.CHANNEL_LIMIT):
                 list(set(self.amendedErrors))
                 self.setSetting('Channel_' + str(i + 1) + '_time', '0')
                 self.setSetting('Channel_' + str(i + 1) + '_changed', "True")

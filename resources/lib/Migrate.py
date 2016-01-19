@@ -80,7 +80,7 @@ class Migrate:
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding Custom Channels"," ")
             CChan = 0
             
-            for CChan in range(999):
+            for CChan in range(Globals.CHANNEL_LIMIT):
                 if xbmcvfs.exists(xbmc.translatePath('special://profile/playlists/music') + '/Channel_' + str(CChan + 1) + '.xsp'):
                     self.log("autoTune, adding Custom Music Playlist Channel")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "12")
@@ -509,7 +509,7 @@ class Migrate:
             MusicTV = chanlist.plugin_ok('plugin.video.my_music_tv')
             
             if MusicTV == True:
-                for i in range(999):
+                for i in range(Globals.CHANNEL_LIMIT):
                     path = xbmc.translatePath("special://profile/addon_data/plugin.video.my_music_tv/cache/plist")
                     fle = os.path.join(path,"Channel_" + str(i) + ".xml.plist")
                     
