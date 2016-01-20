@@ -118,6 +118,7 @@ class ChannelList:
         self.log('Channel Reset Setting is ' + str(self.channelResetSetting))
             
         if self.forceReset:
+            ClearCache()
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
             REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
             REAL_SETTINGS.setSetting('ResetLST', '') # Reset ResetLST

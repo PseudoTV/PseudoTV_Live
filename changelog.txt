@@ -1,20 +1,23 @@
-[*] Gestures & touch screen support (untested).
-[*] Once "Settop Mode" is enabled PTVL will check for updates every 60mins. Depending on playlist size & advanced rules channels will be updated.
+[*] Removed LiveTV/InternetTV Community List
+[*] Default skin cleaned, unnecessary groups removed, new properites added and wiki updated for skinners.
+[*] Gestures & touch screen support (untested); zoom gesture to open epg?.
+[*] "Settop Mode" when enabled; PTVL will check for updates every 60mins. Depending on playlist size & advanced rules... channels will be updated.
 [*] Added support for trakt scrobbling and media tagging via kodi trakt plugin.
-[*] Recently added TV/Movies Playlist (requires autotuning).
+[*] Improved Recently added TV/Movies Playlist (requires autotuning).
 [*] Fixed idle screensaver and Overhauled ExtendedInfo support.
 [*] Added new EPG tags (ie. Rec, Ratings, Timer, HD, CC indicators). If mpaa rating is not found PTVL defaults to star rating if available.
 [*] New! "Smart" subtitles toggle in sidebar w/subtitle search (ie. Enable/Disable/Find).
 [*] Global Enable/Disable subtitle control under "Visual Settings".
-[*] Rewrote reminders to accommodate artwork for PseudoCompanion.
+[*] Rewrote reminders to accommodate artwork for PseudoCompanion plugin.
 [*] Tweaked Plugin filecounts, added PseudoCompanion functions.
 [*] Fixed media seek issues caused by subtitle encoding.
 [*] Removed 'PowerPC' and "APU" from LowPower profile.
-[*] Native USTVnow xmltv support (requires Official USTVnow plugin). Listings are limited to six hr intervals.
+[*] Native USTVnow xmltv support (requires Official USTVnow plugin). Listings are limited to -6hr intervals.
 [*] Cleaned and tweaked old functions for performance, Overhauled Artwork code.
 [*] Removed classic notification artwork from settings.
 [*] PseudoCompanion support added.
 [*] Expended info properites, increased skinning support.
+[*] Kodi PVR backend support improved; no longer requires 'pvr://' as a video source.
 [*] [COLOR=blue][B]^ v.0.7.2 ^[/B][/COLOR]
 [*] Tweaked Stream validation, users can install ffmpeg and rtmpdump for added functionality.
 [*] Fixed Seasonal Youtube Channel can be added thru in-app channel manager or via Autotuning.

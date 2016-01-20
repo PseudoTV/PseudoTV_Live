@@ -45,13 +45,13 @@ if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
     
 monitor = xbmc.Monitor()
 #settings monitor class causes severe performance issues, resorted to while loop
+hasSomethingChanged = False
 while not monitor.abortRequested():
     # Sleep/wait for abort for 10 seconds
     if monitor.waitForAbort(10):
         # Abort was requested while waiting. We should exit
         break
         
-    hasSomethingChanged = False
     if getProperty("PseudoTVRunning") != "True":
         if xbmc.getCondVisibility('Window.IsActive(addonsettings)') == True:
             hasSomethingChanged = True

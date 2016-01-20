@@ -4,9 +4,8 @@
   <version>2.0</version>
   <!-- amount to zoom skin to remove overscan compensation -->
   <zoom>0</zoom>
-  
   <credits>
-    <skinname>PTVL</skinname>
+    <skinname>Default</skinname>
     <name>Lunatixz</name>
   </credits>
 </skin>

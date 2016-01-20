@@ -711,7 +711,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.getControl(controlid).setLabel(thelist[index])
         
         # Disable Submit button
-        if isCom() and thelist[index] not in ['PVR','HDhomerun','UPNP','Local Music','Local Video','User Subscription','User Favorites','Search Query','Raw gdata','Seasonal']:
+        if isCom() and thelist[index] not in ['PVR','HDhomerun','UPNP','Local Music','Local Video','User Subscription','User Favorites','Search Query','Raw gdata','Seasonal','Plugin','LiveTV','InternetTV']:
             self.getControl(115).setVisible(True)
         else:
             self.getControl(115).setVisible(False)
@@ -806,7 +806,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.fillInDetails(channel)        
         
         # Disable Submit button
-        if isCom() and chantype in [0,8,9,10,11,15]:
+        if isCom() and chantype in [0,10,11]:
             self.getControl(115).setVisible(True)
         else:
             self.getControl(115).setVisible(False)
@@ -1077,13 +1077,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.chnlst.pluginPathList = ['plugin.video.playonbrowser'] + self.chnlst.pluginPathList
             self.chnlst.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.chnlst.pluginNameList
 
-        if isCom() == True:
-            self.pluginPathList = [''] + self.chnlst.pluginPathList
-            self.pluginNameList = ['[COLOR=blue][B]Community List[/B][/COLOR]'] + self.chnlst.pluginNameList
-            self.SourceList = self.SourceList + ['Community List']
-        else:
-            self.pluginPathList = self.chnlst.pluginPathList
-            self.pluginNameList = self.chnlst.pluginNameList
+        # Removed LiveTV/InternetTV and Plugin Community list for Kodi repo compliance.
+        # if isCom() == True:
+            # self.pluginPathList = [''] + self.chnlst.pluginPathList
+            # self.pluginNameList = ['[COLOR=blue][B]Community List[/B][/COLOR]'] + self.chnlst.pluginNameList
+            # self.SourceList = self.SourceList + ['Community List']
+        # else:
+        self.pluginPathList = self.chnlst.pluginPathList
+        self.pluginNameList = self.chnlst.pluginNameList
             
         for i in range(len(self.chnlst.showList)):
             self.showList.append(self.chnlst.showList[i][0])

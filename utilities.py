@@ -93,6 +93,8 @@ def showChtype():
                    
 if sys.argv[1] == '-SimpleDownloader':
     xbmcaddon.Addon(id='script.module.simple.downloader').openSettings()  
+elif sys.argv[1] == '-YTDownloader':
+    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()  
 elif sys.argv[1] == '-showChangelog':
     showInfo(ADDON_ID, 'changelog') 
 elif sys.argv[1] == '-showReadme':

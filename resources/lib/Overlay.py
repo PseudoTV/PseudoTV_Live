@@ -742,11 +742,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                  
     def setOnNow(self):
         self.log('setOnNow')
+        self.startOnNowTimer()
         self.OnNowLst, self.OnNowArtLst, OnNowDict = self.getOnNow()
         setProperty("OVERLAY.OnNowLst", str(OnNowDict))
-        # OnNext
-        self.setOnNext()
-        self.startOnNowTimer()
+        if isLowPower() == False: 
+            self.setOnNext()
         
         
     def setOnNext(self):
@@ -764,14 +764,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
     def startOnNowTimer(self, timer=ONNOW_REFRESH):
         self.log("startOnNowTimer")
+        if isLowPower() == True and timer == ONNOW_REFRESH: 
+            timer = ONNOW_REFRESH_LOW
         if len(self.OnNowLst) < self.maxChannels:
-            timer = timer/2
+            timer = int(round(timer / 2))
         self.startOnNowThread_Timer = threading.Timer(float(TimeRemainder(timer)), self.setOnNow)
         self.startOnNowThread_Timer.name = "startOnNowThread_Timer"
         if self.startOnNowThread_Timer.isAlive():
             self.startOnNowThread_Timer.cancel()
             self.startOnNowThread_Timer.join()
-        if isLowPower() == False and self.Player.stopped == False and self.isExiting == False:
+        if self.Player.stopped == False and self.isExiting == False:
             self.startOnNowThread_Timer.start()
             
             
@@ -3208,10 +3210,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.myEPG.doModal()
         elif window.upper() == 'DVR':
             self.myDVR.doModal()
+            Comingsoon()
         elif window.upper() == 'ONDEMAND':
             self.myOndemand.doModal()
+            Comingsoon()
         elif window.upper() == 'APPS':
             self.myApps.doModal()
+            Comingsoon()
 
           
     def getChtype(self, channel):

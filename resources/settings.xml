@@ -81,6 +81,7 @@
         <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
         <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
         <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
+        <setting id="YTDownloader" type="action"   label="30720" option="close"  visible="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
     </category>  
 <!--Autotune-->
     <category label="30070">

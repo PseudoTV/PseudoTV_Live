@@ -89,6 +89,7 @@ def isKodiRepo(plugin=''):
     helix = 'https://github.com/xbmc/repo-plugins/tree/helix'
     isengard = 'https://github.com/xbmc/repo-plugins/tree/isengard'
     jarvis = 'https://github.com/xbmc/repo-plugins/tree/jarvis'
+    krypton = 'https://github.com/xbmc/repo-plugins/tree/krypton'
     
     repoItems = []
     repoItems = fillGithubItems(dharma)
@@ -98,6 +99,7 @@ def isKodiRepo(plugin=''):
     repoItems += fillGithubItems(helix)
     repoItems += fillGithubItems(isengard)
     repoItems += fillGithubItems(jarvis)
+    repoItems += fillGithubItems(krypton)
     
     RepoPlugins = []
     for i in range(len(repoItems)):
@@ -105,6 +107,8 @@ def isKodiRepo(plugin=''):
             RepoPlugins.append((repoItems[i]).split(' ')[0])
         elif (repoItems[i]).lower().startswith('plugin.music.'):
             RepoPlugins.append((repoItems[i]).split(' ')[0])
+            
+    del repoItems[:]
     if addon in RepoPlugins:
         return True
     else:
@@ -1803,9 +1807,7 @@ def ComCHK():
     # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists, https://github.com/PseudoTV/PseudoTV_Playlists
     # Community lists includes: Youtube, Vimeo, RSS, Kodi Smartplaylists. Submissions take 24-48hrs to reflect on git list.
     # Community list also includes: LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and user installed Kodi repository plugins (see isKodiRepo, isPlugin).
-    # LiveTV & InternetTV lists are maintained by me inorder to keep illegal links from making it to community list. List is available publicly at the above link.
-    # I do not tolerate pirated links, if there is a question of legitimacy I lean toward the cautious side and the link is left off the list.
-    # ex. legal link would be a plugin:// reference to ustvnow, or the cbsn plugins live feed.
+    # Lists can not contain illegal pirated links since they consist of Youtube/Vimeo and RSS xml links.
     if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != "email@gmail.com":
         if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
             REAL_SETTINGS.setSetting("Community_Verified", "1")

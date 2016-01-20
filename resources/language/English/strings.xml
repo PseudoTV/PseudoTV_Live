@@ -12,9 +12,7 @@
         <string id="30006">Time between channel resets</string>
         <string id="30007">Default channel times at startup</string>
         <string id="30008">Background Updating</string>  
-        <string id="30998">Enable Settop Box Mode</string>
-        <string id="31000">Refresh Interval (Hours)</string>
-        <string id="30289">Update channels after library scan</string>
+        <string id="30998">Enable Settop Box Mode [24/7 Operation]</string>
         <string id="30046">Show Notifications</string>
         <string id="30056">Use Navigation Sound Effects</string>
 
@@ -31,7 +29,7 @@
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos (seconds)</string>  
-    <string id="30310">Media Limit Per Channel</string>
+    <string id="30310">Media Limit [Global]</string>
     <string id="30373">Mute between channel change</string>
     <string id="30379">Enable Direct Channel Input</string>
     <string id="30050">Enable global menu [Experimental]</string>
@@ -93,6 +91,7 @@
     <string id="30710">Enter API KEY</string>
     <string id="30711">Enable CouchPotato</string>
     <string id="30719">Configure Simple Downloader</string>
+    <string id="30720">Configure Youtube Downloader</string>
 <string id="30070">AutoTune</string>
         <string id="30071">Enable Autotuning</string>
         <string id="30072">Warning!! this will delete your current channel configuration</string>
@@ -187,7 +186,7 @@
                 <string id="30530">Number of Trailers Between Shows</string>
                 
 <string id="39000">Community</string>
-    <string id="39001">Community Lists require a vaild email in-order to submit updates.</string>
+    <string id="39001">Community Lists requires a vaild email in-order to submit channels.</string>
     <string id="39002">Users cannot access the list until they are willing to submit entries.</string>
     <string id="30776">Community Verified:</string>
     <string id="30905">Enable Community List</string>
@@ -221,9 +220,9 @@
     <string id="30319">Force Playback timeout (seconds)</string> 
     <string id="30302">Channel Change Delay (seconds)</string>
     <string id="30914">Controls: (Use with Caution!)</string>
-    <string id="39958">Include 3D Content (Global)</string>
-    <string id="30997">Include Strm Content (Global)</string>
-    <string id="39997">Include BCT Content (Global)</string>
+    <string id="39958">Include 3D Content [Global]</string>
+    <string id="30997">Include Strm Content [Global]</string>
+    <string id="39997">Include BCT Content [Global]</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30993">Enable Log Debugging</string>
     <string id="39999">Enable File Cache</string>
