@@ -745,8 +745,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.startOnNowTimer()
         self.OnNowLst, self.OnNowArtLst, OnNowDict = self.getOnNow()
         setProperty("OVERLAY.OnNowLst", str(OnNowDict))
-        if isLowPower() == False: 
-            self.setOnNext()
+        self.setOnNext()
         
         
     def setOnNext(self):
@@ -764,8 +763,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
     def startOnNowTimer(self, timer=ONNOW_REFRESH):
         self.log("startOnNowTimer")
-        if isLowPower() == True and timer == ONNOW_REFRESH: 
-            timer = ONNOW_REFRESH_LOW
         if len(self.OnNowLst) < self.maxChannels:
             timer = int(round(timer / 2))
         self.startOnNowThread_Timer = threading.Timer(float(TimeRemainder(timer)), self.setOnNow)
@@ -773,8 +770,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.startOnNowThread_Timer.isAlive():
             self.startOnNowThread_Timer.cancel()
             self.startOnNowThread_Timer.join()
-        if self.Player.stopped == False and self.isExiting == False:
-            self.startOnNowThread_Timer.start()
+        if isLowPower() == False and self.Player.stopped == False and self.isExiting == False:
+            self.startOnNowThread_Timer.start()        
             
             
     def showOnNow(self):

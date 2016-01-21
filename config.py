@@ -177,7 +177,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif chantype == 7:
             ADDON_SETTINGS.setSetting(setting1, self.getControl(200).getLabel())
             ADDON_SETTINGS.setSetting(setting3, self.getControl(201).getLabel())
-            ADDON_SETTINGS.setSetting(setting4, self.getControl(202).getLabel())
+            ADDON_SETTINGS.setSetting(setting4, (self.getControl(202).getLabel()).replace('Default','0').replace('Random','1').replace('Reverse','2'))
         elif chantype == 8: #LiveTV
             ADDON_SETTINGS.setSetting(setting1, self.getControl(216).getLabel())
             ADDON_SETTINGS.setSetting(setting2, self.getControl(217).getLabel())
@@ -829,13 +829,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")
             chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
             chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3")
-            chansetting4 = (ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4"))
+            chansetting4 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4")
             channame = self.getChname(channel)
-
         except:
             self.log("Unable to get some setting")
-
-        chansetting4 = chansetting4.replace('0','Default').replace('1','Random').replace('2','Reverse')
+        
+        if chantype in [7,10,11,12,13,14,15,16]:
+            chansetting4 = chansetting4.replace('0','Default').replace('1','Random').replace('2','Reverse')
         self.getControl(109).setLabel(self.getChanTypeLabel(chantype))
    
         if chantype == 0:

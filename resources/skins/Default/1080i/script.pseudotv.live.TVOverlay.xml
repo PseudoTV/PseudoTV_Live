@@ -239,18 +239,8 @@
                 <width>1400</width>
                 <orientation>vertical</orientation>
                 <itemgap>4</itemgap>
-                <control type="image">
-                    <description>Seekbar Line</description>
-                    <posx>0</posx>
-                    <posy>0</posy> 
-                    <width>1400</width>
-                    <height>4</height>
-                    <texture border="0">seek/progress_mid.png</texture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <visible>!Control.IsVisible(5007)</visible>
-                </control>
-                <control type="group" id="5007"> 
+                <control type="group"> 
+                    <visible></visible>
                     <control type="progress">
                         <posx>0</posx>
                         <posy>0</posy> 
@@ -263,8 +253,9 @@
                         <align>center</align>
                         <aligny>center</aligny>
                         <info>Player.ProgressCache</info>
+                        <visible>Control.IsVisible(5007)</visible>
                     </control>
-                    <control type="progress">
+                    <control type="progress" id="5007">
                         <posx>0</posx>
                         <posy>0</posy> 
                         <width>1400</width>

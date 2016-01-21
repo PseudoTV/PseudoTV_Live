@@ -48,24 +48,6 @@ if sys.version_info < (2, 7):
 else:
     import json
     
-# Videowindow filepaths
-Path = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', '1080i'))
-flePath = xbmc.translatePath(os.path.join(Path, 'custom_script.pseudotv.live_9506.xml'))
-PTVL_SKIN_WINDOW_FLE = ['script.pseudotv.live.EPG.xml','script.pseudotv.live.Ondemand.xml','script.pseudotv.live.DVR.xml','script.pseudotv.live.Apps.xml']     
-VWPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'custom_script.pseudotv.live_9506.xml'))  
-DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
-
-# Videowindow Patch
-a = '<!-- PATCH START -->'
-b = '<!-- PATCH START --><!--'
-c = '<!-- PATCH END -->'
-d = '--><!-- PATCH END -->'
-
-# Seekbar Patch
-v = ' '
-w = '<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>'
-y = '</defaultcontrol>'
-z = '</defaultcontrol>\n    <visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>'
 
 ################
 # Github Tools #
@@ -75,6 +57,7 @@ def isKodiRepo(plugin=''):
     log("utils: isKodiRepo")
     # parse kodi repo, collect video, music plugins
     # if necessary limit plugins to kodi approved.
+    # currently not being used
     if plugin[0:9] == 'plugin://':
         plugin = plugin.replace("plugin://","")
         addon = splitall(plugin)[0]
@@ -138,121 +121,6 @@ def fillGithubItems(url, ext=None, removeEXT=False):
         log(traceback.format_exc(), xbmc.LOGERROR)
     # hide_busy_dialog()
     return Sortlist
-
-#############
-# Art Tools #
-#############
-
-# def ArtServiceQueue(self):
-    # ADDON_SETTINGS.loadSettings()
-    # ArtLST = []
-    # for i in range(1000):
-        # lineLST = []
-        # try:
-            # chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(i+1) + '_type'))
-            # chname = (self.channels[i+1 - 1].name)
-            # fle = xbmc.translatePath(os.path.join(LOCK_LOC, ("channel_" + str(i+1) + '.m3u')))  
-            # if chtype != 9999:
-                # if FileAccess.exists(fle):
-                    # f = FileAccess.open(fle, 'r')
-                    # lineLST = f.readlines()
-                    # lineLST.pop(0) #Remove unwanted first line '#EXTM3U'
-                    # for n in range(len(lineLST)):
-                        # line = lineLST[n]
-                        # if line[0:7] == '#EXTINF':
-                            # liveid = line.rsplit('//',1)[1]
-                            # type = liveid.split('|')[0]
-                            # id = liveid.split('|')[1]
-                            # dbid, epid = splitDBID(liveid.split('|')[2])
-                        # elif line[0:7] not in ['#EXTM3U', '#EXTINF']:
-                            # mpath = getMpath(line)
-                        # if type and mpath:
-                            # ArtLST.append([type, chtype, chname, id, dbid, mpath])
-        # except Exception,e:
-            # log("utils: ArtServiceQueue, Failed! " + str(e))
-            # pass
-            
-    # # shuffle list to evenly distribute queue
-    # random.shuffle(ArtLST)
-    # log('utils: ArtServiceQueue, ArtLST Count = ' + str(len(ArtLST)))
-    # return ArtLST
-
-        
-    # def ArtService(self):
-        # if getProperty("PseudoTVRunning") != "True" and getProperty("ArtService_Running") == "false":
-            # setProperty("PseudoTVRunning","True")
-            # setProperty("ArtService_Running","true")
-            # start = datetime.datetime.today()
-            # ArtLst = self.ArtServiceQueue() 
-            # Types = []
-            # cnt = 0
-            # subcnt = 0
-            # totcnt = 0
-            # lstcnt = len(ArtLst)
-            # stdNotify("Artwork Spooler Started")
-
-            # # Clear Artwork Cache Folders
-            # if REAL_SETTINGS.getSetting("ClearLiveArtCache") == "true":
-                # artwork.delete("%") 
-                # artwork1.delete("%")
-                # artwork2.delete("%")
-                # artwork3.delete("%")
-                # artwork4.delete("%")
-                # artwork5.delete("%")
-                # artwork6.delete("%")
-                # log('utils: ArtService, ArtCache Purged!')
-                # REAL_SETTINGS.setSetting('ClearLiveArtCache', "false")  
-                # stdNotify("Artwork Cache Cleared")
-
-            # artEXT_Types = ['type1','type2','type3','type4']
-            # for a in range(len(artExT_Types)):
-                # try:
-                    # Types.append(getProperty(("OVERLAY.%s")%artEXT_Types[a]))
-                # except:
-                    # pass
-                # try:
-                    # Types.append(getProperty(("EPG.%s")%artEXT_Types[a]))
-                # except:
-                    # pass
-            
-            # Types = remove_duplicates(Types)
-            # log('utils: ArtService, Types = ' + str(Types))  
-            
-            # for i in range(lstcnt): 
-                # setDefault = ''
-                # setImage = ''
-                # setBug = ''
-                # lineLST = ArtLst[i]
-                # type = lineLST[0]
-                # chtype = lineLST[1]
-                # chname = lineLST[2]
-                # id = lineLST[3]
-                # dbid = lineLST[4]
-                # mpath = lineLST[5]
-                # cnt += 1
-                
-                # self.Artdownloader.FindLogo(chtype, chname, mpath)
-                # for n in range(len(Types)):
-                    # self.Artdownloader.FindArtwork(type, chtype, chname, id, dbid, mpath, EXTtype(Types[n]))
-
-                # if lstcnt > 5000:
-                    # quartercnt = int(round(lstcnt / 4))
-                # else:
-                    # quartercnt = int(round(lstcnt / 2))
-                # if cnt > quartercnt:
-                    # totcnt = cnt + totcnt
-                    # subcnt = lstcnt - totcnt
-                    # percnt = int(round((float(subcnt) / float(lstcnt)) * 100))
-                    # cnt = 0
-                    # stdNotify(("Artwork Spooler"+' % '+"%d complete" %percnt) )
-
-            # stop = datetime.datetime.today()
-            # finished = stop - start
-            # setProperty("ArtService_Running","false")
-            # setProperty("PseudoTVRunning","False")
-            # REAL_SETTINGS.setSetting("ArtService_LastRun",str(stop))
-            # stdNotify(("Artwork Spooled in %d seconds" %finished.seconds))
-            # log('utils: ArtService, ' + ("Artwork Spooled in %d seconds" %finished.seconds))
 
 ##############
 # LOGO Tools #
@@ -426,8 +294,7 @@ def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
         # cleanup
         del MatchLst[:]
         del mixRegionMatch[:]
-        del mixTypeMatch[:]
-        
+        del mixTypeMatch[:]      
         return image 
     except Exception,e:
         log("utils: findLogodb, Failed! " + str(e))
@@ -484,7 +351,7 @@ def GA_Request():
         OPTIONS = OPTIONS + ['OS:'+getProperty("PTVL.Platform")+'']
         
         if getProperty("Verified_Community") == "true":
-            OPTIONS = OPTIONS + ['COM:'+REAL_SETTINGS.getSetting('Gmail_User')]
+            OPTIONS = OPTIONS + ['COM:True']
                     
         if isContextInstalled():
             OPTIONS = OPTIONS + ['CM:True']
@@ -571,7 +438,6 @@ def UpdateRSS_Thread():
             ##Twitter RSS
             try:
                 twitlist = []
-                #twitrss ='http://feedtwit.com/f/pseudotv_live'
                 twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=pseudotv_live'
                 e = feedparser.parse(twitrss)
                 header = ((e['feed']['title']) + ' - ')
@@ -1306,91 +1172,7 @@ def Restore(bak, org):
                 pass
         xbmcvfs.rename(bak, org)
         infoDialog("Restore Complete, Restarting...")
-         
-####################
-# VideoWindow Hack #
-####################
-            
-# def VideoWindow():
-    # log("utils: VideoWindow, VWPath = " + str(VWPath))
-    # #Copy VideoWindow Patch file
-    # try:
-        # # if isLowPower() == True:
-            # # raise Exception()
-        # # else:
-        # if not FileAccess.exists(VWPath):
-            # log("utils: VideoWindow, VWPath not found")
-            # FileAccess.copy(flePath, VWPath)
-            # if FileAccess.exists(VWPath):
-                # log('utils: custom_script.pseudotv.live_9506.xml Copied')
-                # xbmc.executebuiltin("ReloadSkin()")
-                # VideoWindowPatch()   
-            # else:
-                # raise Exception()
-        # else:
-            # log("utils: VideoWindow, VWPath found")
-            # VideoWindowPatch()  
-            
-        # if FileAccess.exists(VWPath):
-            # setProperty("PTVL.VideoWindow","true")
-    # except Exception:
-        # VideoWindowPatch() 
-        # VideoWindowUninstall()  
-        # Error = True
-        # pass
-    
-# def VideoWindowPatch():
-    # log("utils: VideoWindowPatch")
-    # try:
-        # #Patch dialogseekbar to ignore OSD for PTVL.
-        # log('utils: VideoWindowPatch Patching ' + ascii(DSPath))
-        # f = FileAccess.open(DSPath, "r")
-        # lineLST = f.readlines()            
-        # f.close()
-        
-        # Ypatch = True
-        # for i in range(len(lineLST)):
-            # line = lineLST[i]
-            # if z in line:
-                # Ypatch = False
-                # break
-            
-        # if Ypatch:
-            # for i in range(len(lineLST)):
-                # line = lineLST[i]
-                # if y in line:
-                    # replaceAll(DSPath,y,z)
-                # log('utils: dialogseekbar.xml Patched y,z')
-    # except Exception:
-        # VideoWindowUninstall()
-        # pass
-   
-# def VideoWindowUnpatch():
-    # log("utils: VideoWindowUnpatch")
-    # try:
-        # #unpatch seekbar
-        # f = FileAccess.open(DSPath, "r")
-        # lineLST = f.readlines()            
-        # f.close()
-        # for i in range(len(lineLST)):
-            # line = lineLST[i]
-            # if w in line:
-                # replaceAll(DSPath,w,v)
-                # log('utils: dialogseekbar.xml UnPatched w,v')
-    # except Exception:
-        # Error = True
-        # pass
-
-# def VideoWindowUninstall():
-    # log('utils: VideoWindowUninstall')
-    # try:
-        # FileAccess.delete(VWPath)
-        # if not FileAccess.exists(VWPath):
-            # log('utils: custom_script.pseudotv.live_9506.xml Removed')
-    # except Exception:
-        # Error = True
-        # pass
-    
+ 
 ######################
 # PreStart Functions #
 ######################
@@ -1421,15 +1203,15 @@ def isContextInstalled():
     log('utils: isContextInstalled = ' + str(context))
     return context
       
-def getContext():  
-    log('utils: getContext')
-    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.4.zip'
-    name = 'context.pseudotv.live.export.zip' 
-    MSG = 'PseudoTV Live Context Export'    
-    path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
-    addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
-    lib = os.path.join(path,name)
-    getGithubZip(url, lib, addonpath, MSG)
+# def getContext():  
+    # log('utils: getContext')
+    # url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.4.zip'
+    # name = 'context.pseudotv.live.export.zip' 
+    # MSG = 'PseudoTV Live Context Export'    
+    # path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
+    # addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
+    # lib = os.path.join(path,name)
+    # getGithubZip(url, lib, addonpath, MSG)
     
 # def isRepoInstalled():
     # repo = isPlugin('repository.lunatixz')
@@ -1495,26 +1277,26 @@ def chkAutoplay(silent=False):
         setProperty("PTVL.Autoplay","false") 
         pass
         
-def chkSources():
-    log("utils: chkSources") 
-    hasPVR = False
-    hasUPNP = False
-    try:
-        fle = xbmc.translatePath('special://userdata/sources.xml')
-        xml = FileAccess.open(fle, "r")
-        dom = parse(xml)
-        path = dom.getElementsByTagName('path')
-        xml.close()
-        for i in range(len(path)):
-            line = path[i].childNodes[0].nodeValue.lower()
-            if line == 'pvr://':
-                hasPVR = True
-            elif line == 'upnp://':
-                hasUPNP = True
-        if hasPVR + hasUPNP == 2:
-            return True
-    except:
-        pass
+# def chkSources():
+    # log("utils: chkSources") 
+    # hasPVR = False
+    # hasUPNP = False
+    # try:
+        # fle = xbmc.translatePath('special://userdata/sources.xml')
+        # xml = FileAccess.open(fle, "r")
+        # dom = parse(xml)
+        # path = dom.getElementsByTagName('path')
+        # xml.close()
+        # for i in range(len(path)):
+            # line = path[i].childNodes[0].nodeValue.lower()
+            # if line == 'pvr://':
+                # hasPVR = True
+            # elif line == 'upnp://':
+                # hasUPNP = True
+        # if hasPVR + hasUPNP == 2:
+            # return True
+    # except:
+        # pass
       
 def chkChanges():
     log("utils: chkChanges")
@@ -1594,7 +1376,7 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('sickbeard.enabled', "false")
             REAL_SETTINGS.setSetting('couchpotato.enabled', "false")
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
-            infoDialog("Settings Optimized For Performance")
+            infoDialog("Settings Optimized for Performance")
     else:
         log("utils: chkLowPower Override = True")
     log("utils: chkLowPower = " + getProperty("PTVL.LOWPOWER"))
@@ -1620,8 +1402,7 @@ def ClearPlaylists():
         except:
             pass
     infoDialog("Channel Playlists Cleared")
-       
-                
+          
 def ClearCache(type='Filelist'):
     log('utils: ClearCache ' + type)  
     if type == 'Filelist':
@@ -1734,8 +1515,8 @@ def HandleUpgrade():
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
              
     # Install PTVL Isengard Context Export
-    if getXBMCVersion() > 14 and isContextInstalled() == False:
-        getContext()
+    # if getXBMCVersion() > 14 and isContextInstalled() == False:
+        # getContext()
         
     # Check if autoplay playlist is enabled
     chkAutoplay()
@@ -1843,8 +1624,7 @@ def getTitleYear(showtitle, showyear=0):
         showtitle = title + ' ('+str(year)+')' 
     log("utils: getTitleYear, return " + str(year) +', '+ title +', '+ showtitle) 
     return year, title, showtitle
-
-       
+   
 def SEinfo(SEtitle, showSE=True):
     if SEtitle:
         try:
