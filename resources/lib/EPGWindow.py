@@ -1096,7 +1096,10 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 return
             mediapath = self.MyOverlayWindow.channels[newchan - 1].getItemFilename(plpos)
         
-        if self.infoOffset > 0:
+        if self.MyOverlayWindow.OnDemand == True:
+            self.getControl(5008).setVisible(False)
+            setProperty("EPG.DYNAMIC_LABEL",'OnDemand')    
+        elif self.infoOffset > 0:
             self.getControl(5008).setVisible(False)
             setProperty("EPG.DYNAMIC_LABEL",'COMING UP')             
         elif self.infoOffset < 0:

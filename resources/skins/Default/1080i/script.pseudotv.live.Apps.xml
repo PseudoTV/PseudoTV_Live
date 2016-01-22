@@ -272,5 +272,115 @@
                 <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
             </control> 
         </control> 
+        <!-- Panel -->
+        <control type="group">
+            <posy>0</posy>
+            <animation type="WindowOpen" reversible="false">
+                <effect type="zoom" start="80" end="100" center="960,540" delay="500" tween="back" time="240" />
+                <effect type="fade" delay="500" end="100" time="240" />
+            </animation>
+            <animation type="WindowClose" reversible="false">
+                <effect type="zoom" start="100" end="80" center="960,540" easing="in" tween="back" time="240" />
+                <effect type="fade" start="100" end="0" time="240" />
+            </animation>
+            <control description="Panel" id="500" type="panel">
+                <viewtype label="Panel">Panel</viewtype>   
+                <posx>425</posx>
+                <posy>340</posy> 
+                <width>1492</width>
+                <height>700</height>
+                <orientation>vertical</orientation>
+                <onleft>655</onleft>
+                <onright>655</onright>
+                <onup>655</onup>
+                <ondown>655</ondown>
+                <preloaditems>4</preloaditems>
+                <pagecontrol>60</pagecontrol>
+                <itemlayout height="360" width="373">
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy>
+                        <width>370</width>
+                        <height min="5" max="370">auto</height>
+                        <bordersize>-18</bordersize>
+                        <texture border="8">folder-focus.png</texture>
+                        <visible>ListItem.IsSelected</visible>
+                    </control>
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy>
+                        <width>360</width>
+                        <height min="5" max="347">auto</height>
+                        <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                        <aspectratio aligny="top">keep</aspectratio>
+                    </control>
+                </itemlayout>
+                <focusedlayout height="360" width="373">
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy>
+                        <width>370</width>
+                        <height min="5" max="370">auto</height>
+                        <bordersize>-18</bordersize>
+                        <texture border="8">folder-focus.png</texture>
+                        <visible>ListItem.IsSelected</visible>
+                    </control>
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy>
+                        <width>360</width>
+                        <height min="5" max="347">auto</height>
+                        <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                        <aspectratio aligny="top">keep</aspectratio>
+                    </control>
+                </focusedlayout>
+            </control>   
+            <control description="SideInfo" type="grouplist">
+                <posx>30</posx>
+                <posy>340</posy>
+                <itemgap>10</itemgap>
+                <orientation>vertical</orientation>
+                <control description="FanArt" type="multiimage">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>360</width>      
+                    <height>180</height>
+                    <fadetime>500</fadetime>
+                    <imagepath background="true">$INFO[Container(500).ListItem.Property(Fanart_Image)]</imagepath>
+                    <aspectratio aligny="top">keep</aspectratio>
+                </control>
+                <control description="Title Label" type="label">
+                    <posx>30</posx>
+                    <posy>0</posy>
+                    <width>360</width>      
+                    <height>30</height>
+                    <fadetime>500</fadetime>
+                    <aligny>center</aligny>
+                    <align>center</align>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <wrapmultiline>False</wrapmultiline>
+                    <label>$INFO[Container(500).ListItem.Label]</label>
+                </control>
+            </control>
+            <control type="image">
+                <texture flipy="true">fade.png</texture>
+                <posx>0</posx>
+                <posy>298</posy>
+                <width>1920</width>
+                <height>100</height>
+                <animation effect="fade" end="100" time="360">WindowOpen</animation>
+                <animation effect="fade" start="100" end="0" time="250">WindowClose</animation>
+            </control>
+            <control type="image">
+                <texture>fade.png</texture>
+                <posx>0</posx>
+                <posy>980</posy>
+                <width>1920</width>
+                <height>100</height>
+                <animation effect="fade" end="100" time="360">WindowOpen</animation>
+                <animation effect="fade" start="100" end="0" time="250">WindowClose</animation>
+            </control>
+        </control>
     </controls>
 </window>

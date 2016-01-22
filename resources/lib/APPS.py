@@ -47,7 +47,18 @@ class APPS(xbmcgui.WindowXMLDialog):
         self.log('onInit')
         self.chanlist.PanelItems = self.getControl(500)
         self.chanlist.fillPlugins()
+        self.setFocus(self.chanlist.PanelItems)
+       
         
+    def onClick(self, controlId):
+        self.log('onClick ' + str(controlId))
+        if controlId == 500:
+            pos = self.chanlist.PanelItems.getSelectedPosition()
+            playitem = self.chanlist.PanelItems.getListItem(pos)
+            url = playitem.getProperty('mediapath')
+            self.chanlist.fillListItems('plugin://'+url)
+            # xbmc.executebuiltin('Container.Refresh') 
+            
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
         action = act.getId()

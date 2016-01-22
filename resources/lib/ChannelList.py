@@ -73,7 +73,6 @@ class ChannelList:
         self.HDHRList = []
         self.showList = []
         self.channels = []
-        self.PanelItems = []
         self.file_detail_CHK = []
         self.cached_readXMLTV = []
         self.sleepTime = 0
@@ -4564,14 +4563,14 @@ class ChannelList:
 
     def requestItem(self, file, fletype='video'):
         self.log("requestItem") 
-        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating","streamdetails"]}, "id": 1}')
+        json_query = ('{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":1,"properties":["thumbnail","fanart","title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating"]}, "id": 1}')
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
            
            
     def requestList(self, path, fletype='video'):
         self.log("requestList") 
-        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating","streamdetails"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
+        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "%s", "media": "%s", "properties":["thumbnail","fanart","title","year","mpaa","imdbnumber","description","season","episode","playcount","genre","duration","runtime","showtitle","album","artist","plot","plotoutline","tagline","tvshowid","rating"]}, "id": 1}' % (self.escapeDirJSON(path), fletype))
         json_folder_detail = self.sendJSON(json_query)
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)      
  
@@ -4581,7 +4580,6 @@ class ChannelList:
         json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.%s","properties":["name","path","thumbnail","description","fanart","summary"]}, "id": 1 }'%type)
         json_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
-        self.PanelItems = xbmcgui.ListItem('fillPlugins')
         for f in detail:
             names = re.search('"name" *: *"(.*?)",', f)
             paths = re.search('"addonid" *: *"(.*?)",', f)
@@ -4600,8 +4598,10 @@ class ChannelList:
                 if type == 'video' and path.startswith('plugin.video') and not path.startswith('plugin.video.pseudo.companion'):
                     thumbnail = removeNonAscii(thumbnails.group(1))
                     fanart = removeNonAscii(fanarts.group(1))
-                    self.PanelItems.setIconImage(thumbnail)
-                    self.PanelItems.setProperty("Fanart_Image", fanart)
+                    self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
+                    self.Items.setIconImage(thumbnail)
+                    self.Items.setProperty("mediapath", path)
+                    self.Items.setProperty("Fanart_Image", fanart)
                     
                     infoList = {}
                     infoList['mediatype']     = type
@@ -4628,7 +4628,7 @@ class ChannelList:
                     infoList['season']        = 3
                     infoList['episode']       = 4
                     infoList['playcount']     = 5
-                    self.PanelItems.setInfo('Video', infoList)    
+                    self.Items.setInfo('Video', infoList)    
 
                     infoArt = {}
                     infoArt['thumb']        = thumbnail
@@ -4639,15 +4639,17 @@ class ChannelList:
                     infoArt['clearlogo']    = ''
                     infoArt['landscape']    = fanart
                     infoList['icon']        = thumbnail
-                    self.PanelItems.setArt(infoArt)  
+                    self.Items.setArt(infoArt) 
+                    self.PanelItems.addItem(self.Items) 
     
     
-    def fillListItems(self, url, media_type='video', file_type=False):
+    def fillListItems(self, url, type='video', file_type=False):
         self.log('fillListItems')
         if not file_type:
-            detail = uni(self.requestList(url, media_type))
+            detail = uni(self.requestList(url, type))
         else:
-            detail = uni(self.requestItem(url, media_type))
+            detail = uni(self.requestItem(url, type))
+        print detail
         for f in detail:
             files = re.search('"file" *: *"(.*?)",', f)
             filetypes = re.search('"filetype" *: *"(.*?)",', f)
@@ -4658,21 +4660,73 @@ class ChannelList:
             
             if filetypes and labels and files:
                 filetype = filetypes.group(1)
-                label = self.cleanLabels(labels.group(1))
+                name = self.cleanLabels(labels.group(1))
                 file = (files.group(1).replace("\\\\", "\\"))
                 
                 if not descriptions:
                     description = ''
                 else:
                     description = self.cleanLabels(descriptions.group(1))
+                
+                if thumbnails != None and len(thumbnails.group(1)) > 0:
+                    thumbnail = thumbnails.group(1)
+                else:
+                    thumbnail = THUMB
                     
-                thumbnail = removeNonAscii(thumbnails.group(1))
-                fan = removeNonAscii(fanarts.group(1))
+                if fanarts != None and len(fanarts.group(1)) > 0:
+                    fanart = fanarts.group(1)
+                else:
+                    fanart = FANART
+                    
+                self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
                 
                 if filetype == 'file':
-                    addLink(label,description,file,'',5001,thumb=thumbnail,fanart=fan,total=len(detail))
+                    self.Items.setProperty('IsPlayable', 'true')
                 else:
-                    addDir(label,description,file,'',6002,thumb=thumbnail,fanart=fan)
+                    self.Items.setProperty('IsPlayable', 'false')
+                    
+                self.Items.setIconImage(thumbnail)
+                self.Items.setProperty("mediapath", file)
+                self.Items.setProperty("Fanart_Image", fanart)
+                
+                infoList = {}
+                infoList['mediatype']     = type
+                infoList['mpaa']          = 'Unknown'
+                infoList['tvshowtitle']   =  name
+                infoList['title']         =  name
+                infoList['originaltitle'] = 'originaltitle'
+                infoList['sorttitle']     = 'sorttitle'
+                infoList['studio']        = 'Studio'
+                infoList['genre']         = 'Genre'
+                infoList['plot']          = 'Plot'
+                infoList['plotoutline']   = 'plotoutline'
+                infoList['tagline']       = 'tagline'
+                infoList['dateadded']     = 'dateadded'
+                infoList['premiered']     = 'premiered'
+                infoList['aired']         = 'aired'
+                infoList['code']          = 'code'
+                infoList['lastplayed']    = 'lastplayed'
+                # infoList['album']         = 'album'
+                # infoList['artist']        = ['artist']
+                # infoList['votes']         = 'votes'
+                infoList['duration']      = 1
+                infoList['year']          = 1977
+                infoList['season']        = 3
+                infoList['episode']       = 4
+                infoList['playcount']     = 5
+                self.Items.setInfo('Video', infoList)    
+
+                infoArt = {}
+                infoArt['thumb']        = thumbnail
+                infoArt['poster']       = thumbnail
+                infoArt['banner']       = ''
+                infoArt['fanart']       = fanart
+                infoArt['clearart']     = ''
+                infoArt['clearlogo']    = ''
+                infoArt['landscape']    = fanart
+                infoList['icon']        = thumbnail
+                self.Items.setArt(infoArt) 
+                self.PanelItems.addItem(self.Items) 
             
             
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
@@ -5026,6 +5080,14 @@ class ChannelList:
         del seasoneplist[:]                 
         return fileList
 
+        
+    def getItem(self, mediapath):
+        self.log('getItem') 
+    
+    
+    def getStreamDetails(self, mediapath):
+        self.log('getStreamDetails') 
+        
         
     def setResetLST(self, channel=None):
         if not channel:

@@ -33,7 +33,6 @@ from email import Encoders
 from xml.dom.minidom import parse, parseString
 from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
-from pyfscache import *
 
 socket.setdefaulttimeout(30)
 

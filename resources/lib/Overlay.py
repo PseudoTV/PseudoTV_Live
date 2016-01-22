@@ -152,12 +152,15 @@ class MyPlayer(xbmc.Player):
     
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        # close/reopen window after playback change to correct videowindow bug.
-        if getProperty("PTVL.%s_Opened" % self.overlay.isWindowOpen()) == "true" and getProperty("PTVL.VideoWindow") == "true":
-            self.log('onPlayBackStarted, Force Window Reload')
-            self.overlay.windowSwap(self.overlay.isWindowOpen())
-        
         if self.isPlaybackValid() == True:
+            # devise a way to detect ondemand playback todo
+            # if len(getProperty("OVERLAY.Title")) > 0:
+                # if (getProperty("OVERLAY.Title")).lower() != (self.getPlayerTitle()).lower():
+                    # print 'ondemand'
+                    # self.overlay.OnDemand = True  
+                    # self.overlay.setShowInfo()
+                    # self.overlay.showInfo(self.overlay.InfTimer)
+                
             self.overlay.setMediaProp()
             if self.overlay.TraktScrob == True:
                 setTraktScrob()
@@ -167,33 +170,11 @@ class MyPlayer(xbmc.Player):
         
             # if playback starts paused, resume automatically.
             self.resumePlayback()
-        
-            # devise a way to detect ondemand playback todo
-            # file = xbmc.Player().getPlayingFile()
-            # file = file.replace("\\\\","\\")
-            
-            # if self.overlay.OnDemand == False:
-                # if int(getProperty("OVERLAY.Chtype")) <= 7 and file[0:4] != 'http':    
-                    # if len(getProperty("OVERLAY.Mediapath")) > 0 and (((getProperty("OVERLAY.Mediapath"))[-4:].lower() != 'strm') or ((getProperty("OVERLAY.Mediapath"))[0:6] != 'plugin')):
-                        # print file.lower()
-                        # print (getProperty("OVERLAY.Mediapath")).lower()
-                        # if file.lower() != (getProperty("OVERLAY.Mediapath")).lower():
-                            # self.overlay.OnDemand = True  
-                # else:
-                # if len(getProperty("OVERLAY.Mediapath")) > 0 and len(getProperty("OVERLAY.LastMediapath")) > 0:
-                    # if (getProperty("OVERLAY.Mediapath")).lower() != (getProperty("OVERLAY.LastMediapath")).lower():
-                        # self.overlay.OnDemand = True    
-            # setProperty("OVERLAY.LastMediapath",(getProperty("OVERLAY.Mediapath")))                       
-            # self.log('onPlayBackStarted, OnDemand = '+ str(self.overlay.OnDemand))           
-            # Close epg after starting ondemand
-            # if getProperty("PTVL.EPG_Opened") == "true" and  getProperty("PTVL.VideoWindow") == "true" and self.overlay.OnDemand == True:
-                # self.log('onPlayBackStarted, Force Close EPG')
-                # self.overlay.myEPG.closeEPG()
-            # # Force showinfo ondemand
-            # if self.overlay.OnDemand == True:
-                # self.overlay.showInfo(self.overlay.InfTimer)
-            # self.overlay.setShowInfo()
-            
+
+            # Close epg after start
+            if getProperty("PTVL.VideoWindow") == "true" and self.overlay.isWindowOpen() != False:
+                self.overlay.windowSwap(self.overlay.isWindowOpen())
+                                
             
     def onDemandEnded(self):
         self.log('onDemandEnded') 
@@ -251,7 +232,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.timeStarted = 0   
         self.infoOnChange = True  
         self.infoOnStart = False
-        self.infoOnChangeUnlocked = True  
         self.settingReminder = False
         self.showingPop = False
         self.showingInfo = False
@@ -1140,7 +1120,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
         self.log("setChannel,self.seektime = " + str(self.seektime))
         self.lastActionTime = time.time()
-        self.infoOnChangeUnlocked = True
         self.egTrigger('PseudoTV_Live - Loading: %s' % chname)
         self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL_END, channel, self.channels[channel - 1])
         setProperty("PTVL.INIT_CHANNELSET","true")
@@ -1303,7 +1282,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
         chtype = self.getChtype(self.currentChannel)
         
-        if self.infoOffset > 0:
+        if self.OnDemand == True:
+            self.toggleShowStartover(False)  
+            self.getControl(5007).setVisible(False)   
+            setProperty("OVERLAY.DYNAMIC_LABEL",'OnDemand')
+        elif self.infoOffset > 0:
             self.toggleShowStartover(False)  
             self.getControl(5007).setVisible(False)   
             setProperty("OVERLAY.DYNAMIC_LABEL",'COMING UP')
@@ -1314,17 +1297,20 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         elif self.infoOffset == 0:  
             self.getControl(5007).setVisible(True)
             setProperty("OVERLAY.DYNAMIC_LABEL",'NOW WATCHING')
-        position = self.getPlaylistPOS(chtype, self.currentChannel)
+        
         if self.OnDemand == True:
+            position == -999
             mediapath = self.Player.getPlayingFile()
         else:
+            position = self.getPlaylistPOS(chtype, self.currentChannel)
             mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))
+        
         chname = self.getChname(self.currentChannel)
         self.SetMediaInfo(chtype, chname, self.currentChannel, mediapath, position)
         
         
     def SetMediaInfo(self, chtype, chname, chnum, mediapath, position, tmpstr=None):
-        self.log('SetMediaInfo')
+        self.log('SetMediaInfo, pos = ' + str(position))
         self.clearProp()
         mpath = getMpath(mediapath)
                 
@@ -1337,6 +1323,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         #OnDemand Set Player info, else Playlist
         if position == -999:
+            print tmpstr
             if tmpstr != None:
                 tmpstr = tmpstr.split('//')
                 title = tmpstr[0]
@@ -1344,11 +1331,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 Description = tmpstr[2]
                 genre = tmpstr[3]
                 timestamp = tmpstr[4]
-                LiveID = self.channelList.unpackLiveID(tmpstr[5])
+                myLiveID = tmpstr[5]
                 if self.showChannelBug == True:
                     self.getControl(203).setImage(self.Artdownloader.FindBug('0','OnDemand'))
             else:
-                self.getTMPSTR(chtype, chname, chnum, mediapath, position)
+                return self.getTMPSTR(chtype, chname, chnum, mediapath, position)
         else:
             title = (self.channels[self.currentChannel - 1].getItemTitle(position))
             SEtitle = self.channels[self.currentChannel - 1].getItemEpisodeTitle(position)
@@ -1371,8 +1358,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         chnum = self.currentChannel
         chtype = self.getChtype(chnum)
         chname = self.getChname(chnum)
-        position = self.getPlaylistPOS(chtype, chnum)
-        mediapath = (self.channels[chnum - 1].getItemFilename(position))   
+        if self.OnDemand == True:
+            position = -999
+            mediapath = self.Player.getPlayingFile()
+        else:
+            position = self.getPlaylistPOS(chtype, chnum)
+            mediapath = (self.channels[chnum - 1].getItemFilename(position))   
         self.SetMediaInfo(chtype, chname, chnum, mediapath, position)
              
                          
@@ -1463,11 +1454,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.log("onClick, Browse = " + self.Browse)
                 self.OnDemand = True
                 self.Player.play(self.Browse)
-                self.infoOnChangeUnlocked = True
         elif type == 'Search':
             self.showingBrowse = True
             self.MenuControl('Menu',self.InfTimer,True)
-            xbmc.sleep(10)
             xbmc.executebuiltin("XBMC.RunScript(script.skin.helper.service,action=videosearch)")
             # xbmc.executebuiltin("VideoLibrary.Search")
             # xbmc.executebuiltin("XBMC.RunScript(script.globalsearch)")
@@ -1475,6 +1464,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         else:
             self.showingBrowse = True
             xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo)")
+        xbmc.sleep(10)
         self.showingBrowse = False
         
         
@@ -2457,9 +2447,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
     def getTMPSTR_Thread(self, chtype, chname, chnum, mediapath, position):
         self.log('getTMPSTR_Thread') 
-        tmpstr = self.channelList.getFileList(self.channelList.requestItem(mediapath), self.currentChannel, '1')
+        tmpstr = self.channelList.getItem(self.channelList.requestItem(mediapath))
         setProperty("OVERLAY.OnDemand_tmpstr",str(tmpstr))
-        return self.SetMediaInfo(chtype, chname, chnum, mediapath, position, tmpstr)
+        self.SetMediaInfo(chtype, chname, chnum, mediapath, position, tmpstr)
 
         
     def EPGtypeToggle(self):
@@ -3206,14 +3196,14 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if window.upper() == 'EPG':
             self.myEPG.doModal()
         elif window.upper() == 'DVR':
+            Comingsoon()
             self.myDVR.doModal()
-            Comingsoon()
         elif window.upper() == 'ONDEMAND':
+            Comingsoon()
             self.myOndemand.doModal()
-            Comingsoon()
         elif window.upper() == 'APPS':
-            self.myApps.doModal()
             Comingsoon()
+            self.myApps.doModal()
 
           
     def getChtype(self, channel):
