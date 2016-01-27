@@ -117,7 +117,6 @@ class ChannelList:
         self.log('Channel Reset Setting is ' + str(self.channelResetSetting))
             
         if self.forceReset:
-            ClearCache()
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
             REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
             REAL_SETTINGS.setSetting('ResetLST', '') # Reset ResetLST
@@ -1741,7 +1740,13 @@ class ChannelList:
             # Add channel to ResetLST, on next update force channel rebuild
             self.setResetLST(self.settingChannel)
             chname = (self.getChannelName(9, self.settingChannel))
-            showList = self.buildInternetTVFileList('5400', setting2, chname, 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.', 24)
+            if setting3.lower() == 'ptvlguide':
+                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
+            elif setting3.lower() == 'ustvnow':
+                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please enable "File Generator" in ustvnow plugin.'
+            else:
+                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
+            showList = self.buildInternetTVFileList('5400', setting2, chname, desc, 24)
 
         return showList     
         
@@ -3850,7 +3855,7 @@ class ChannelList:
                         pass
                         
                 if XMLTVMatchlst:
-                    select = selectDialog(XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname, 30000)
+                    select = selectDialog(XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname, 5000)
                     if select != -1:
                         dnameID = self.cleanString(XMLTVMatchlst[select])
                         CHid = dnameID.split(' : ')[1]
@@ -4255,6 +4260,7 @@ class ChannelList:
         
     def getHDHRChannels(self, favorite=False):
         self.log("getHDHRChannels")
+        DupChk = []
         Channels = []
         FavChannels = []
         list = ''
@@ -4290,11 +4296,13 @@ class ChannelList:
                         if drms != None and len(drms.group(1)) > 0:
                             drm = bool(drms.group(1))
                                         
-                        if fav == True:
+                        if fav == True and chname not in DupChk:
+                            DupChk.append(chname)
                             FavChannels.append([chnum,chname,fav,drm,link])
                         Channels.append([chnum,chname,fav,drm,link])
                 except:
                     pass
+        del DupChk[:]
         if favorite == True:
             return FavChannels
         else:

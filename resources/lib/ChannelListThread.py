@@ -120,7 +120,7 @@ class ChannelListThread(threading.Thread):
                     chtype = self.myOverlay.getChtype(i + 1)
 
                     if self.myOverlay.isMaster:
-                        if chtype != 8 and curtotal > 0:
+                        if chtype not in IGNORE_SEEKTIME and curtotal > 0:
                             # When appending, many of the channel variables aren't set, so copy them over.
                             # This needs to be done before setup since a rule may use one of the values.
                             # It also needs to be done after since one of them may have changed while being setup.

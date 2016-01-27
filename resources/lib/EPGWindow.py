@@ -215,7 +215,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             else:
                 self.getControl(105).setVisible(False)
         except:
-            self.getControl(105).setVisible(False)
+            pass
 
         
     # setup all channel buttons for a given time

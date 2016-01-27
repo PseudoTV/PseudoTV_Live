@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
+DOX_API_KEY = 'script.pseudotv'
+RSS_API_KEY = 'hb7MR}WK/Mp9VmJ_'
 
 import os, re, sys, time, zipfile, threading, requests, random, traceback
 import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, urlparse, HTMLParser
@@ -124,7 +126,7 @@ def fillGithubItems(url, ext=None, removeEXT=False):
 ##############
 # LOGO Tools #
 ##############
-
+        
 def CleanCHname(text):
     text = text.replace("AE", "A&E")
     text = text.replace(" (uk)", "")
@@ -145,11 +147,8 @@ def CleanCHname(text):
     return text
   
 def CleanCHnameSeq(text):
-    # try removing number from channel ie NBC2 = NBC
-    try:
-        return (re.compile('(.+?)(\d{1})$').findall(text))[0][0]
-    except:
-        return text
+    # try removing number from channel ie NBC2 = NBC, or 5 FOX = FOX
+    return (''.join(i for i in text if not i.isdigit())).lstrip()
         
 def FindLogo(chtype, chname, mediapath=None):
     if FIND_LOGOS == True and isLowPower() != True:
@@ -178,12 +177,15 @@ def FindLogo_Thread(chtype, chname, mediapath):
         url = FindLogo_URL(chtype, CleanCHnameSeq(Cchname), mediapath)
     if url:
         GrabLogo(url, chname)
-        
-        
+           
 def FindLogo_URL(chtype, chname, mediapath):
+    if not chname:
+        return
+    log("utils: FindLogo_URL, chname = " + chname)
+    
     # thelogodb search
     if chtype in [0,1,8,9]:
-        log("utils: FindLogo_Thread, findLogodb")
+        log("utils: FindLogo_URL, findLogodb")
         user_region = REAL_SETTINGS.getSetting('limit_preferred_region')
         user_type = REAL_SETTINGS.getSetting('LogoDB_Type')
         useMix = REAL_SETTINGS.getSetting('LogoDB_Fallback') == "true"
@@ -194,14 +196,14 @@ def FindLogo_URL(chtype, chname, mediapath):
             
     # github search
     if chtype in [0,1,2,3,4,5,8,9,12,13,14]:
-        log("utils: FindLogo_Thread, findGithubLogo")
+        log("utils: FindLogo_URL, findGithubLogo")
         url = findGithubLogo(chname)
         if url:
             return url
             
     # local tvshow logo search
     if mediapath and chtype == 6:
-        log("utils: FindLogo_Thread, local TVlogo")
+        log("utils: FindLogo_URL, local TVlogo")
         mpath = getMpath(mediapath)
         smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
         artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
@@ -321,10 +323,9 @@ def findGithubLogo(chname):
                 break
     return url
            
-# def hasAPI(key):
-    # if isPlugin(key) == True:
-        # params = decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9')
-        # set_Kodi_JSON(params %key)
+def hasAPI(key):
+    if isPlugin(key) == True:
+        set_Kodi_JSON(decodeString(DOX_API_KEY) %key)
         
 #######################
 # Communication Tools #
@@ -355,6 +356,9 @@ def GA_Request():
         if isContextInstalled():
             OPTIONS = OPTIONS + ['CM:True']
             
+        if isCompanionInstalled():
+            OPTIONS = OPTIONS + ['CP:True']
+            
         if isLowPower():
             OPTIONS = OPTIONS + ['LP:True']
 
@@ -378,6 +382,18 @@ def GA_Request():
     except Exception,e:  
         log("GA_Request Failed" + str(e), xbmc.LOGERROR)
 
+def POP_MSG():
+    log('utils: POP_MSG')
+    poplist = ''
+    try:
+        popmsg = 'http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/pop_msg.xml'
+        file = open_url(popmsg)
+        poplist = file.read().replace('\n','').replace('\r','').replace('\t','')
+        file.close()
+    except:
+        pass
+    return poplist
+            
 def UpdateRSS():
     log('utils: UpdateRSS')
     UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
@@ -399,7 +415,7 @@ def UpdateRSS_Thread():
         except Exception,e:
             UpdateRSS_LastRun = "1970-01-01 23:59:00.000000"
             setProperty("UpdateRSS_NextRun",UpdateRSS_LastRun)
-
+        
         try:
             SyncUpdateRSS = datetime.datetime.strptime(UpdateRSS_LastRun, "%Y-%m-%d %H:%M:%S.%f")
         except:
@@ -1197,61 +1213,25 @@ def getGithubZip(url, lib, addonpath, MSG):
     xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
     infoDialog(MSG)
     
+def isCompanionInstalled():
+    companion = isPlugin('plugin.video.pseudo.companion')
+    log('utils: isCompanionInstalled = ' + str(companion))
+    return companion
+    
 def isContextInstalled():
     context = isPlugin('context.pseudotv.live.export')
     log('utils: isContextInstalled = ' + str(context))
     return context
       
-# def getContext():  
-    # log('utils: getContext')
-    # url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.4.zip'
-    # name = 'context.pseudotv.live.export.zip' 
-    # MSG = 'PseudoTV Live Context Export'    
-    # path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
-    # addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
-    # lib = os.path.join(path,name)
-    # getGithubZip(url, lib, addonpath, MSG)
-    
-# def isRepoInstalled():
-    # repo = isPlugin('repository.lunatixz')
-    # log('utils: isRepoInstalled = ' + str(repo))
-    # return repo
-      
-# def getRepo():
-    # log('utils: getRepo')
-    # if isRepoInstalled() == False:
-        # if dlg.yesno("PseudoTV Live", 'Install the Lunatixz Repository?'):   
-            # url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip'
-            # name = 'repository.lunatixz.zip' 
-            # MSG = 'Lunatixz Repository Installed'    
-            # path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
-            # addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
-            # lib = os.path.join(path,name)
-            # getGithubZip(url, lib, addonpath, MSG)
-    # else:
-        # infoDialog('Lunatixz Repository Already Installed')
-    
-# def chkVersion():
-    # log('utils: chkVersion')
-    # curver = xbmc.translatePath(os.path.join(ADDON_PATH,'addon.xml'))    
-    # source = open(curver, mode='r')
-    # link = source.read()
-    # source.close()
-    # match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-    
-    # for vernum in match:
-        # log("utils: Current Version = " + str(vernum))
-    # try:
-        # link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
-        # link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-        # match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-    # except:
-        # pass   
-        
-    # if len(match) > 0:
-        # if vernum != str(match[0]):
-            # if isRepoInstalled() == False:
-                # getRepo()
+def getContext():  
+    log('utils: getContext')
+    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.6.zip'
+    name = 'context.pseudotv.live.export.zip' 
+    MSG = 'PseudoTV Live Context Export'    
+    path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
+    addonpath = xbmc.translatePath(os.path.join('special://','home/addons'))
+    lib = os.path.join(path,name)
+    getGithubZip(url, lib, addonpath, MSG)
 
 def chkAutoplay(silent=False):
     log('utils: chkAutoplay')
@@ -1384,15 +1364,15 @@ def isLowPower():
     # log("utils: isLowPower = " + str(getProperty("PTVL.LOWPOWER") == "true"))
     return getProperty("PTVL.LOWPOWER") == "true"
        
-# def chkAPIS(list):
-    # try:
-        # list = list.split('|')
-        # for i in range(len(list)):
-            # key = decodeString(list[i])
-            # hasAPI(key)
-    # except:
-        # pass
-            
+def chkAPIS(list):
+    try:
+        list = list.split('|')
+        for i in range(len(list)):
+            key = decodeString(list[i])
+            hasAPI(key)
+    except:
+        pass
+
 def ClearPlaylists():
     log('utils: ClearPlaylists')
     for i in range(CHANNEL_LIMIT):
@@ -1506,25 +1486,30 @@ def hasVersionChanged(__version__):
         return False
         
 def HandleUpgrade():
-    log('utils: HandleUpgrade') 
-    # Remove m3u playlists
-    # ClearPlaylists()
+    log('utils: HandleUpgrade')
+    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
     
-    # Force Channel rebuild
-    # REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
-             
-    # Install PTVL Isengard Context Export
-    # if getXBMCVersion() > 14 and isContextInstalled() == False:
-        # getContext()
-        
     # Check if autoplay playlist is enabled
     chkAutoplay()
     
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
+          
+    # Remove m3u playlists
+    ClearPlaylists()
     
+    # Force Channel rebuild
+    REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
+
+    # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
+    # set 'optional' as true so users can remove if unwanted.
+    if getXBMCVersion() > 14 and isContextInstalled() == False:
+        getContext()
+        
 def preStart(): 
     log('utils: preStart')
+    chkAPIS(RSS_API_KEY)
+    
     # Optimize settings based on sys.platform
     chkLowPower()
     
@@ -1533,12 +1518,12 @@ def preStart():
         if yesnoDialog('Its recommended you disable debug logging for standard use','Disable Debugging?') == True:
             REAL_SETTINGS.setSetting('enable_Debug', "false")
 
-    # Disabled for Kodi Repo Compliance
-    # VideoWindow Patch.
-    # VideoWindow()
-    
     # Check if autoplay playlist is enabled
     chkAutoplay(True)
+    
+    # Chk forcereset, clearcache if true
+    if REAL_SETTINGS.getSetting("ForceChannelReset") == "true":
+        REAL_SETTINGS.setSetting("ClearCache","true")
     
     # Clear filelist Caches    
     if REAL_SETTINGS.getSetting("ClearCache") == "true":

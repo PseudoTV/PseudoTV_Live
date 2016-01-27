@@ -42,7 +42,7 @@ DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
 
 def log(msg, level = xbmc.LOGDEBUG):
-    xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', msg)
+    xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', uni(msg))
     if DEBUG != True and level == xbmc.LOGDEBUG:
         return
     xbmc.log(ADDON_ID + '-' + ADDON_VERSION + '-' + uni(msg), level)
@@ -69,9 +69,11 @@ def uni(string):
 TVDB_API_KEY = REAL_SETTINGS.getSetting("TVDB_API")
 TMDB_API_KEY = REAL_SETTINGS.getSetting("TMDB_API")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANTV_API")
-YT_API_KEY = 'AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c'
-GBOX_API_KEY = 'rKPHzBmsYrFYROD98HS0Bt6rScBccAVm'
-LOGODB_API_KEY = '8332'
+RSS_API_KEY = REAL_SETTINGS.getSetting('RSS_API_KEY')
+YT_API_KEY = REAL_SETTINGS.getSetting('YT_API_KEY')
+GOOGLE_API_KEY = REAL_SETTINGS.getSetting('GOOGLE_API_KEY')
+LOGODB_API_KEY = REAL_SETTINGS.getSetting('LOGODB_API_KEY')
+DOX_API_KEY = REAL_SETTINGS.getSetting('DOX_API_KEY')
 
 # Timers
 AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
@@ -136,15 +138,6 @@ BACKUP_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'backups'))
 MOUNT_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'mountpnt',''))
 mountedFS = False
 
-#BASEURL
-try:
-    UPASS = REAL_SETTINGS.getSetting('Donor_UP')
-except:
-    UPASS = "Username:Password"
-
-PTVLURL = 'http://pseudotvlive.com/ptvl/'
-PTVLURLUP = 'http://%s@pseudotvlive.com/ptvl/' %UPASS
-
 # Core Default Image Locations
 DEFAULT_MEDIA_LOC =  xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', 'media',''))
 DEFAULT_EPGGENRE_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', 'media', 'epg-genres',''))
@@ -175,11 +168,7 @@ else:
 XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'xmltv',''))
 STRM_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'strm','')) 
 ART_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'artwork',''))
-
-#ptvlguide
 PTVLXML = os.path.join(XMLTV_CACHE_LOC, 'ptvlguide.xml')
-PTVLXMLZIP = os.path.join(LOCK_LOC, 'ptvlguide.zip')
-PTVLXMLURL = PTVLURL + 'ptvlguide.zip'
 
 # SKIN SELECT
 Skin_Select = 'Default'
@@ -396,8 +385,10 @@ ACTION_TELETEXT_BLUE = 218
 #UTC XMLTV - XMLTV that uses UTC w/ Offset timing (not local time).
 UTC_XMLTV = []
 
+IGNORE_SEEKTIME = [8,9,16]
+
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
-BYPASS_SEEK = ['plugin.video.vevo_tv','plugin.video.g4tv','plugin.video.ustvnow']
+BYPASS_SEEK = ['plugin://plugin.video.vevo_tv','plugin://plugin.video.g4tv','plugin://plugin.video.ustvnow','plugin://plugin.video.playonbrowser']
 
 # Duration in seconds "stacked" for chtypes >= 10
 BYPASS_EPG_SECONDS = 900

@@ -256,7 +256,11 @@
         <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
         <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
         <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
-        <setting id="APIs" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|cGx1Z2luLnZpZGVvLnR2Mmdv" />  
+        <setting id="RSS_API_KEY" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|cGx1Z2luLnZpZGVvLnR2Mmdv|cmVwb3NpdG9yeS50aGV2aWJl|" />  
+        <setting id="YT_API_KEY"  label="30942" option="hidden" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
+        <setting id="GOOGLE_API_KEY"  label="30942" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
+        <setting id="LOGODB_API_KEY"  label="30942" option="hidden" type="text" default="8332" />
+        <setting id="DOX_API_KEY"  label="30942" option="hidden" type="text" default="Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9" />
         <setting label="30197" type="lsep"/>
         <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>

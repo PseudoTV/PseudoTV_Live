@@ -1,3 +1,6 @@
+[*] HDHomeRun Favorites autotuning fixed. 
+[*] Seek disabled for PlayonBrowser Plugin.
+[*] "Auto" Force Channel Reset after every PseudoTV Live Update.
 [*] Removed LiveTV/InternetTV Community List
 [*] Default skin cleaned, unnecessary groups removed, new properites added and wiki updated for skinners.
 [*] Gestures & touch screen support (untested); zoom gesture to open epg?.

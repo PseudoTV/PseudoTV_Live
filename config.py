@@ -82,22 +82,26 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         self.log("onInit")
-        REAL_SETTINGS.setSetting('Autotune', "false")
-        REAL_SETTINGS.setSetting('Warning1', "false") 
-        # self.KodiVideoSources()    
-        
-        for i in range(NUMBER_CHANNEL_TYPES):
-            try:
-                self.getControl(120 + i).setVisible(False)
-            except:
-                pass
+        #Disable Autotune Task if enabled but not performed  
+        if REAL_SETTINGS.getSetting("Autotune") == "true" and REAL_SETTINGS.getSetting("Warning1") == "true":
+            REAL_SETTINGS.setSetting('Autotune', "false")
+            REAL_SETTINGS.setSetting('Warning1', "false")
+            self.closeConfig()
+            # todo close settings window and open config
+            # xbmc.executebuiltin("Dialog.Close(all, true)")
+        else:  
+            for i in range(NUMBER_CHANNEL_TYPES):
+                try:
+                    self.getControl(120 + i).setVisible(False)
+                except:
+                    pass
 
-        migratemaster = Migrate()
-        migratemaster.migrate()
-        self.prepareConfig()
-        self.myRules = AdvancedConfig("script.pseudotv.live.AdvancedConfig.xml", ADDON_PATH, "Default")
-        self.log("onInit return")
-        
+            migratemaster = Migrate()
+            migratemaster.migrate()
+            self.prepareConfig()
+            self.myRules = AdvancedConfig("script.pseudotv.live.AdvancedConfig.xml", ADDON_PATH, "Default")
+            self.log("onInit return")
+            
 
     def onFocus(self, controlId):
         pass
@@ -109,7 +113,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             if dlg.yesno("PseudoTV Live", "Changes Detected, Do you want to save all changes?"):
                 self.writeChanges()
         if channel > 0:
-            xbmc.executebuiltin('XBMC.AlarmClock( Restarting Configuration Manager, XBMC.RunScript(' + ADDON_PATH + '/config.py, %s),0.1,true)'%str(channel))
+            xbmc.executebuiltin('XBMC.AlarmClock( Restarting Configuration Manager, XBMC.RunScript(' + ADDON_PATH + '/config.py, %s),0.5,true)'%str(channel))
         self.close()
         
         

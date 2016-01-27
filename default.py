@@ -39,13 +39,13 @@ __language__   = __settings__.getLocalizedString
        
 def PseudoTV():
     try:
-        setProperty("PseudoTVRunning", "True")
-        import resources.lib.Overlay as Overlay
+        import resources.lib.Overlay as Overlay         
         if hasVersionChanged(__version__) == True: 
-            HandleUpgrade()            
+            return HandleUpgrade()
+
+        setProperty("PseudoTVRunning", "True")
         preStart()
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
-
         for curthread in threading.enumerate():
             log("Active Thread: " + str(curthread.name), xbmc.LOGERROR)
             if curthread.name != "MainThread":

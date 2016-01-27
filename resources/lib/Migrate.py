@@ -259,19 +259,19 @@ class Migrate:
             elif Globals.REAL_SETTINGS.getSetting("autoFindLiveHD") == "2":
                 self.log("autoTune, adding Live HDHomeRun UPNP Channels")
                 self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding HDHomeRun UPNP Channels"," ")
-                HDHRChannels = chanlist.getHDHRChannels()
+                HDHRChannels = chanlist.getHDHRChannels(True)
                 for i in range(len(HDHRChannels)):
                     try:
                         CHid = HDHRChannels[i][0]
                         CHname = chanlist.cleanLabels(HDHRChannels[i][1])
                         link = HDHRChannels[i][4]
-
+                        
                         if xbmcvfs.exists(xmlTvFile): 
                             CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
                         else:
                             okDialog('Unable to locate your xmltv.xml file','Please check your settings')
                             return
-                              
+                            
                         if not CHSetName:
                             CHSetName = CHname
                         if not CHzapit:

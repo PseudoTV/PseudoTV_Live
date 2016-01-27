@@ -58,12 +58,12 @@ def showInfo(addonID=None, type='changelog'):
         elif type == 'settings':
             title = "PseudoTV Live - User Settings"
             f = open(os.path.join(ADDON_PATH,'settings'))
-        text  = f.read()
+        text = f.read()
         f.close()
         showText(title, text)
     except:
         pass      
-
+        
 def DeleteSettings2():
     log('utilities: DeleteSettings2')
     if xbmcvfs.exists(SETTINGS_FLE):
@@ -76,6 +76,9 @@ def DeleteSettings2():
                 pass
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
+    
+def ClearTempKey():
+    log('utilities: ClearTempKey')
     
 def ClearChanFavorites():
     log('utilities: ClearChanFavorites')
@@ -93,8 +96,6 @@ def showChtype():
                    
 if sys.argv[1] == '-SimpleDownloader':
     xbmcaddon.Addon(id='script.module.simple.downloader').openSettings()  
-elif sys.argv[1] == '-YTDownloader':
-    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()  
 elif sys.argv[1] == '-showChangelog':
     showInfo(ADDON_ID, 'changelog') 
 elif sys.argv[1] == '-showReadme':
@@ -117,6 +118,9 @@ elif sys.argv[1] == '-repairSettings2':
     from resources.lib.Settings import *
     Setfun = Settings()
     Setfun.repairSettings()
+elif sys.argv[1] == '-ClearTempKey':
+    ClearTempKey()
 elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
-        
+elif sys.argv[1] == '-YTDownloader':
+    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()  
