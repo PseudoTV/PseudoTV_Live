@@ -1386,6 +1386,8 @@ def ClearCache(type='Filelist'):
     log('utils: ClearCache ' + type)  
     if type == 'Filelist':
         try:    
+            token.delete("%") 
+            guide.delete("%")
             daily.delete("%") 
             weekly.delete("%")
             monthly.delete("%")

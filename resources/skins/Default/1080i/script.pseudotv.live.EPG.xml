@@ -13,7 +13,7 @@
         <posy>0</posy>
     </coordinates>
     <animation effect="fade" time="5">WindowOpen</animation>
-    <animation effect="fade" time="5">WindowClose</animation>
+    <!-- <animation effect="fade" time="5">WindowClose</animation> -->
     <controls>
         <control type="group">  
             <posx>0</posx>
@@ -305,7 +305,7 @@
                 <shadowcolor>ff000000</shadowcolor>
             </control>   
         </control>           
-        <control type="grouplist" id="105"> 
+        <control type="grouplist" id="105">
             <posx>5</posx>
             <posy>258</posy>
             <align>left</align>

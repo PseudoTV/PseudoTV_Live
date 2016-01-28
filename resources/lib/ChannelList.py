@@ -43,6 +43,7 @@ from apis import tmdb
 from datetime import date
 from datetime import timedelta
 from BeautifulSoup import BeautifulSoup
+from ustvnow import ustvnow
 
 socket.setdefaulttimeout(30)
 
@@ -60,6 +61,7 @@ except Exception,e:
 
 class ChannelList:
     def __init__(self):
+        self.xmlTvFile = ''
         self.networkList = []
         self.studioList = []
         self.mixedGenreList = []
@@ -84,6 +86,7 @@ class ChannelList:
         self.startTime = 0
         self.background = True    
         self.videoParser = VideoParser()
+        self.ustv = ustvnow()
         random.seed() 
     
     
@@ -1740,14 +1743,8 @@ class ChannelList:
             # Add channel to ResetLST, on next update force channel rebuild
             self.setResetLST(self.settingChannel)
             chname = (self.getChannelName(9, self.settingChannel))
-            if setting3.lower() == 'ptvlguide':
-                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
-            elif setting3.lower() == 'ustvnow':
-                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please enable "File Generator" in ustvnow plugin.'
-            else:
-                desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
+            desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, chname, desc, 24)
-
         return showList     
         
         
@@ -2806,29 +2803,21 @@ class ChannelList:
         xmltvValid = False
         if path[0:4] == 'http':
             self.xmlTvFile = path
-            xmltvValid = self.url_ok(path)
+            return self.url_ok(path)
         elif path.lower() in ['pvr','zap2it','scheduledirect']:
-            xmltvValid = True
+            return True
         elif path.lower() == 'ustvnow':
-            USTV_ID = 'plugin.video.ustvnow'
-            USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
-            if USTV_SETTINGS.getSetting('write_type') == 0:
-                okDialog('Please configure USTVnow plugin to genreate necessary files')                
+            if self.ustv.getXMLTV() == True:
+                self.xmlTvFile = USTVXML                
             else:
-                self.xmlTvFile = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
-                if FileAccess.exists(self.xmlTvFile):
-                    xmltvValid = True
+                return False
         elif path.lower() == 'ptvlguide':
             self.xmlTvFile = PTVLXML
-            if FileAccess.exists(self.xmlTvFile):
-                xmltvValid = True
         elif path != '':
             self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(path) +'.xml'))
-            if FileAccess.exists(self.xmlTvFile):
-                xmltvValid = True
-        # if xmltvValid == True and self.isXMLTVCurrent(self.xmlTvFile) != True:
-            # xmltvValid == False
-        self.log("xmltvValid = " + str(xmltvValid))
+        
+        if FileAccess.exists(self.xmlTvFile):
+            xmltvValid = True            
         return xmltvValid
            
 

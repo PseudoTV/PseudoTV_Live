@@ -109,11 +109,14 @@ MODE_RANDOM = 8
 MODE_REALTIME = 16
 MODE_SERIAL = MODE_RESUME | MODE_ALWAYSPAUSE | MODE_ORDERAIRDATE
 MODE_STARTMODES = MODE_RANDOM | MODE_REALTIME | MODE_RESUME
+
 # Maximum is 10
 RULES_PER_PAGE = 7
+
 # Chtype Limit
 NUMBER_CHANNEL_TYPES = 17
-# Channel Limit
+
+# Channel Limit, Current available max is 999
 CHANNEL_LIMIT = 999
 
 #UPNP Clients
@@ -169,6 +172,7 @@ XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'xmltv',''))
 STRM_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'strm','')) 
 ART_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'artwork',''))
 PTVLXML = os.path.join(XMLTV_CACHE_LOC, 'ptvlguide.xml')
+USTVXML = os.path.join(XMLTV_CACHE_LOC, 'ustvnow.xml')
 
 # SKIN SELECT
 Skin_Select = 'Default'
@@ -223,6 +227,8 @@ SETTINGS_FLE_LASTRUN = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.
 SETTINGS_FLE_PRETUNE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pretune.xml'))
 
 # commoncache globals
+token = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "token",.5)
+guide = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "guide",4)
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
 monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))
@@ -382,9 +388,13 @@ ACTION_TELETEXT_BLUE = 218
 #define ACTION_INPUT_TEXT             244
 #define ACTION_STEREOMODE_TOGGLE      237 // turns 3d mode on/off
 
-#UTC XMLTV - XMLTV that uses UTC w/ Offset timing (not local time).
+# UTC XMLTV - XMLTV that uses UTC w/ Offset timing (not local time).
 UTC_XMLTV = []
 
+# Force settop update to rebuild playlists not append content.
+FORCE_MAKENEW = [8,16]
+
+# Ignore seeking for live feeds and other chtypes that don't support it.
 IGNORE_SEEKTIME = [8,9,16]
 
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek

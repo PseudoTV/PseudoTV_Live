@@ -82,6 +82,12 @@
         <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
         <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
         <setting id="YTDownloader" type="action"   label="30720" option="close"  visible="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
+        <setting label="31110" type="lsep"/>
+        <setting id="ustv_quality_type" type="enum" label="31111" values="400kbps|750kbps|1024kbps|HD" default="0" />
+        <setting id="ustv_stream_type" type="enum" label="31112" values="rtmp|rtsp" default="0" />
+        <setting id="ustv_subscription" type="bool" label="31113" default="false" />
+        <setting id="ustv_email" type="text" label="31114" default="" />
+        <setting id="ustv_password" type="text" option="hidden" label="31115" default="" />
     </category>  
 <!--Autotune-->
     <category label="30070">

@@ -18,7 +18,7 @@
 
 import subprocess, os, re, sys, time, datetime
 import xbmcaddon, xbmc, xbmcgui, xbmcvfs
-import Settings, Globals, ChannelList
+import Settings, Globals, ChannelList, ustvnow
 import urllib, urllib2, httplib, random
 
 from Globals import *
@@ -44,7 +44,7 @@ class Migrate:
         chanlist.background = True
         chanlist.forceReset = True
         chanlist.createlist = True
-
+        
         # If Autotune is enabled direct to autotuning
         if Globals.REAL_SETTINGS.getSetting("Autotune") == "true" and Globals.REAL_SETTINGS.getSetting("Warning1") == "true":
             self.log("autoTune, migrate")
@@ -55,6 +55,7 @@ class Migrate:
     def autoTune(self):
         self.log('autoTune, Init')
         chanlist = ChannelList.ChannelList()
+        ustv = ustvnow.ustvnow()
         chanlist.background = True
         chanlist.makenewlists = True
         chanlist.forceReset = True
@@ -296,46 +297,24 @@ class Migrate:
         if Globals.REAL_SETTINGS.getSetting("autoFindUSTVNOW") == "true":
             self.log("autoTune, adding USTVnow Channels")
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels"," ")
-            USTVnum = 0
-            chanlist.cached_readXMLTV = []
-            USTVnow = chanlist.plugin_ok('plugin.video.ustvnow')
             
-            if USTVnow == True:   
-                try:
-                    file_detail = chanlist.requestList("plugin://plugin.video.ustvnow/live?mode=live")
-                    if not file_detail:         
-                        file_detail = chanlist.requestList("plugin://plugin.video.ustvnow/live?mode=live")
-                    for USTVnum in file_detail:      
-                        files = re.search('"file" *: *"(.*?)"', USTVnum)
-                        labels = re.search('"label" *: *"(.*?)"', USTVnum)
-                        thumbnails = re.search('"thumbnail" *: *"(.*?)"', USTVnum)
-                      
-                        if files and labels:
-                            file = files.group(1)
-                            label = labels.group(1)
-                            CHname = label.split(' - ')[0]
-                            inSet = False
-                                    
-                            if thumbnails != None and len(thumbnails.group(1)) > 0:
-                                thumbnail = thumbnails.group(1)
-                                GrabLogo(thumbnail, CHname + ' USTV')
-                                 
-                            # CHSetName, CHzapit = chanlist.findZap2itID('USTVnow - ' + CHname, PTVLXML)
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHname)
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", file)
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ustvnow")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' USTV') 
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "13")
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", "2")   
-                            Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                           
-                            self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels",CHname)
-                            channelNum += 1
-                except:
-                    pass
+            channels = ustv.getChannelNames()
+            if len(channels) > 0:
+                for n in range(len(channels)):
+                    CHname = channels[n]
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHname)
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", 'ustvnow://'+CHname)
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ustvnow")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' USTV') 
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "13")
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", "2")   
+                    Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                           
+                    self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels",CHname)
+                    channelNum += 1
 
                     
         #TV - Networks/Genres

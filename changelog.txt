@@ -1,3 +1,4 @@
+[*] Built-in USTVnow Support, No external plugin required.
 [*] HDHomeRun Favorites autotuning fixed. 
 [*] Seek disabled for PlayonBrowser Plugin.
 [*] "Auto" Force Channel Reset after every PseudoTV Live Update.
