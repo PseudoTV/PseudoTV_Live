@@ -671,9 +671,8 @@ def get_data(url, data_type ='json'):
         else:
             data = req.read()
         req.close()
-    except Exception,e:
+    except urllib2.URLError, e:
         log("utils: get_data, Failed! " + str(e))
-        log(traceback.format_exc(), xbmc.LOGERROR)
         data = 'Empty'
     return data
         
@@ -809,6 +808,17 @@ def selectDialog(list, header=ADDON_NAME, autoclose=0):
         select = xbmcgui.Dialog().select(header, list, autoclose)
         return select
 
+def mselectDialog(list, header=ADDON_NAME, autoclose=0):
+    if len(list) > 0:
+        select = xbmcgui.Dialog().multiselect(header, list, autoclose)
+        return select
+
+def matchMselect(list, select):
+    slist = []
+    for i in range(len(select)):
+        slist.append(list[select[i]]) 
+    return slist
+        
 def yesnoDialog(str1, str2='', header=ADDON_NAME, yes='', no=''):
     answer = xbmcgui.Dialog().yesno(header, str1, str2, '', yes, no)
     return answer
@@ -836,6 +846,12 @@ def clearProperty(str):
 ##############
 # XBMC Tools #
 ##############
+ 
+def appendPlugin(list):
+    nlist = []
+    for i in range(len(list)):
+        nlist.append('plugin://'+list[i])
+    return nlist
  
 def verifyPlayMedia(cmd):
     return True
@@ -1208,7 +1224,6 @@ def getGithubZip(url, lib, addonpath, MSG):
         MSG = MSG + ' Installed'
     except: 
         MSG = MSG + ' Failed to install, Try Again Later'
-        pass
         
     xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
     infoDialog(MSG)
@@ -1385,9 +1400,7 @@ def ClearPlaylists():
 def ClearCache(type='Filelist'):
     log('utils: ClearCache ' + type)  
     if type == 'Filelist':
-        try:    
-            token.delete("%") 
-            guide.delete("%")
+        try:
             daily.delete("%") 
             weekly.delete("%")
             monthly.delete("%")
@@ -1753,11 +1766,17 @@ def joinListItem(list, opt='@#@'):
     except:
         return str(list)
 
+def isUSTVnow():
+    if len(REAL_SETTINGS.getSetting('ustv_email')) > 1 and len(REAL_SETTINGS.getSetting('ustv_password')) > 1:
+        return True
+    else:
+        return False
+        
 def listXMLTV():
     log("utils: listXMLTV")
     xmltvLst = []   
     EXxmltvLst = ['pvr','Enter URL','scheduledirect (Coming Soon)']
-    if isPlugin('plugin.video.ustvnow'):
+    if isUSTVnow() == True:
         EXxmltvLst.append('ustvnow')
     dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
     dir,file = xbmcvfs.listdir(XMLTV_LOC)

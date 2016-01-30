@@ -227,7 +227,6 @@ SETTINGS_FLE_LASTRUN = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.
 SETTINGS_FLE_PRETUNE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pretune.xml'))
 
 # commoncache globals
-token = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "token",.5)
 guide = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "guide",4)
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
@@ -398,7 +397,7 @@ FORCE_MAKENEW = [8,16]
 IGNORE_SEEKTIME = [8,9,16]
 
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
-BYPASS_SEEK = ['plugin://plugin.video.vevo_tv','plugin://plugin.video.g4tv','plugin://plugin.video.ustvnow','plugin://plugin.video.playonbrowser']
+PLUGIN_SEEK = ['']
 
 # Duration in seconds "stacked" for chtypes >= 10
 BYPASS_EPG_SECONDS = 900

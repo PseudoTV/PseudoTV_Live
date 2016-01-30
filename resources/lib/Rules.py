@@ -131,7 +131,7 @@ class BaseRule:
     def onActionTextBox(self, act, optionindex):
         action = act.getId()
 
-        if act.getId() == ACTION_SELECT_ITEM:
+        if act.getId() in ACTION_SELECT_ITEM:
             keyb = xbmc.Keyboard(self.optionValues[optionindex], self.name, False)
             keyb.doModal()
 
@@ -173,7 +173,7 @@ class BaseRule:
     def onActionDateBox(self, act, optionindex):
         self.log("onActionDateBox")
 
-        if act.getId() == ACTION_SELECT_ITEM:
+        if act.getId() in ACTION_SELECT_ITEM:
             dlg = xbmcgui.Dialog()
             info = dlg.numeric(1, self.optionLabels[optionindex], self.optionValues[optionindex])
 
@@ -185,7 +185,7 @@ class BaseRule:
         self.log("onActionTimeBox")
         action = act.getId()
 
-        if action == ACTION_SELECT_ITEM:
+        if action in ACTION_SELECT_ITEM:
             dlg = xbmcgui.Dialog()
             info = dlg.numeric(2, self.optionLabels[optionindex], self.optionValues[optionindex])
 
@@ -258,7 +258,7 @@ class BaseRule:
 
 
     def onActionSelectBox(self, act, optionindex):
-        if act.getId() == ACTION_SELECT_ITEM:
+        if act.getId() in ACTION_SELECT_ITEM:
             optioncount = len(self.selectBoxOptions[optionindex])
             cursel = -1
 
@@ -278,7 +278,7 @@ class BaseRule:
     def onActionDaysofWeekBox(self, act, optionindex):
         self.log("onActionDaysofWeekBox")
 
-        if act.getId() == ACTION_SELECT_ITEM:
+        if act.getId() in ACTION_SELECT_ITEM:
             keyb = xbmc.Keyboard(self.optionValues[optionindex], self.name, False)
             keyb.doModal()
 
@@ -349,7 +349,7 @@ class BaseRule:
     def onActionDigitBox(self, act, optionindex):
         action = act.getId()
 
-        if action == ACTION_SELECT_ITEM:
+        if action in ACTION_SELECT_ITEM:
             dlg = xbmcgui.Dialog()
             value = dlg.numeric(0, self.optionLabels[optionindex], self.optionValues[optionindex])
 

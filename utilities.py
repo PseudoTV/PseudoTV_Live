@@ -21,6 +21,7 @@ import os, sys, time, urllib
 
 from resources.lib.Globals import *
 from resources.lib.utils import *
+from resources.lib.ChannelList import ChannelList
 
 def showText(heading, text):
     log('utilities: showText')
@@ -77,6 +78,12 @@ def DeleteSettings2():
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
     
+def addBypass():
+    chnlst = ChannelList()
+    chnlst.fillPluginList()
+    BYPASS_LST = matchMselect(chnlst.pluginPathList, mselectDialog(chnlst.pluginPathList, header='Disable Seeking for specified Plugins'))
+    REAL_SETTINGS.setSetting("BYPASS_LST",str(BYPASS_LST))
+    
 def ClearTempKey():
     log('utilities: ClearTempKey')
     
@@ -124,3 +131,5 @@ elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
 elif sys.argv[1] == '-YTDownloader':
     xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()  
+elif sys.argv[1] == '-BYPASS_SEEK':
+    addBypass()

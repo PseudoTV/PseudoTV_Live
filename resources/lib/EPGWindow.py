@@ -357,9 +357,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.log('setChannelButtons return')
         except:
             xbmc.log('self.addControls(myadds) in use')
-            pass
+
             
-        
     # round the given time down to the nearest half hour
     def roundToHalfHour(self, thetime):
         n = datetime.datetime.fromtimestamp(thetime)
@@ -517,6 +516,11 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     if width + xpos > basex + basew:
                         width = basex + basew - xpos
 
+                    # Check LiveTV for outdated timestamp:
+                    if chtype == 8 and epochBeginDate + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < time.time():
+                        self.chanlist.setResetLST(curchannel)
+                        shouldskip = True
+                        
                     if shouldskip == False and width >= 30:
                         mylabel = self.MyOverlayWindow.channels[curchannel - 1].getItemTitle(playlistpos)
                         timestamp = self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)
@@ -551,7 +555,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         #Create Control array
                         self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
                         self.addButtonTags(row, xpos, basey, width, baseh, mylabel, EPGtags)
-                        
+             
                     totaltime += tmpdur
                     reftime += tmpdur
                     playlistpos += 1

@@ -279,7 +279,6 @@ class GUI( xbmcgui.WindowXMLDialog ):
             
     def __init__( self, *args, **kwargs ):
         self.terminate = False
-        pass
 
 
     def onInit( self ):

@@ -27,7 +27,7 @@ from xml.etree import ElementTree as ET
 from Globals import *
 from utils import *
 
-socket.setdefaulttimeout(30)
+socket.setdefaulttimeout(int(REAL_SETTINGS.getSetting("PlayTimeoutInt")))
 
 class ustvnow:
     def __init__(self):
@@ -40,9 +40,11 @@ class ustvnow:
         self.quality_type = int(REAL_SETTINGS.getSetting('ustv_quality_type'))
         self.stream_type = ['rtmp', 'rtsp'][int(REAL_SETTINGS.getSetting('ustv_stream_type'))]
         self.xmltvPath = USTVXML
+        self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
+        self.PlayTimeoutInt = int(REAL_SETTINGS.getSetting("PlayTimeoutInt"))
         self.token = self._login()
 
-
+        
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('USTVnow: ' + msg, level)
         
@@ -50,37 +52,30 @@ class ustvnow:
     def getToken(self):
         self.log('getToken')
         cnt = 0
-        self.token = self._login()
         while self.token == 'False':
-            self.log('getToken, cnt ' + str(cnt))
-            if cnt > 6:
-                return False
-            # xbmc.sleep(10)
-            self.token = self._login()
+            self.log('getToken, Working...')
             cnt += 1
-        if self.token != 'False':
-            return True
+            if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
+                return False
+            self.token = self._login()
+            xbmc.sleep(self.ActionTimeInt)
+            self.log('getToken, Retry Count ' + str(cnt)) 
+        self.log('getToken, self.token = ' + self.token)    
+        return True
 
-
+        
     def getXMLTV(self):
         self.log('getXMLTV')
-        if self.getToken():
-            while self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath) == False:
-                xbmc.sleep(10)
-            return True
-
-            
-    def getChannellist(self):
-        self.log('getChannellist')
-        if self.getToken():
-            return self.get_link(self.quality_type, self.stream_type)
+        if self.token == 'False':
+            self.token = self.getToken()
+        return self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath)
 
 
     def getChannellink(self, chname):
         self.log('getChannellink, chname = ' + chname)
-        if self.getToken():
-            link = self.get_link(self.quality_type, self.stream_type, chname)
-            return link
+        if self.token == 'False':
+            self.token = self.getToken
+        return self.get_link(self.quality_type, self.stream_type, chname)
 
 
     def getChannelNames(self):
@@ -161,28 +156,11 @@ class ustvnow:
             return '%s/%s' % (self.mBASE_URL, path)
 
 
-    def _login(self, force=False):
-        self.log('_login')
-        result = 'False'
-        if force == True:
-           try:
-               token.delete("%")
-           except:
-               pass
-        try:
-           result = token.cacheFunction(self._login_NEW)
-           if result == 'False':
-               raise Exception()
-        except Exception,e:
-           result = self._login_NEW()
-        return result
-
-
-    def _login_NEW(self):
+    def _login(self):
         self.log('_login_NEW')
-        token = self._login_ORG()
+        token = self._login_ALT()
         if token == 'False':
-            token = self._login_ALT()
+            token = self._login_ORG()
         return token
 
 
@@ -217,18 +195,7 @@ class ustvnow:
 
 
     def get_link(self, quality, stream_type, chname=False):
-        self.log('get_link')
-        try:
-            result = token.cacheFunction(self.get_link_NEW, quality, stream_type, chname)
-            if not result:
-                raise Exception()
-        except:
-            result = self.get_link_NEW(quality, stream_type, chname)
-        return result
-
-
-    def get_link_NEW(self, quality, stream_type, chname=False):
-        self.log('get_link_NEW')
+        self.log('get_link')            
         html = self._get_html('iphone_ajax', {'tab': 'iphone_playingnow',
                                               'token': self.token})
         channels = []
@@ -237,21 +204,30 @@ class ustvnow:
                                    '<\/td>.+?class="nowplaying_itemdesc".+?' +
                                    '<\/a>(.+?)<\/td>.+?href="(.+?)"',
                                    html, re.DOTALL):
+            show_busy_dialog()
             name, icon, title, plot, url = channel.groups()
             name = name.replace('\n','').replace('\t','').replace('\r','').replace('<fieldset> ','').replace('<div class=','').replace('>','').replace('"','').replace(' ','')
             if not name:
                 name = ((icon.rsplit('/',1)[1]).replace('.png','')).upper()
                 name = self.cleanChanName(name)
+                self.log('get_link, parsing '+ name)
             try:
                 if not url.startswith('http'):
                     link = '%s%s%d' % (stream_type, url[4:-1], quality + 1)
-
                     if chname != False and chname.lower() == name.lower():
+                        hide_busy_dialog()
+                        if link == '%s%d' % (stream_type, quality + 1):
+                            self.token = 'False'
+                            return self.getChannellink(chname)
+                        elif not link.startswith(stream_type):
+                            return self.getChannellink(chname)
+                        self.log('get_link, link = '+link)
                         return link
                     else:
                         channels.append([name, link])
             except:
                 pass
+        hide_busy_dialog()
         return channels
 
 
@@ -440,4 +416,7 @@ class ustvnow:
         xmllst = self.cleanChanName(xmllst)
         fle.write("%s" % xmllst)
         fle.close()
+        if finished == False:
+            self.token = 'False'
+            self.getXMLTV()
         return finished

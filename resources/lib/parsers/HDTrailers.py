@@ -114,12 +114,12 @@ def get_videos(movie_id):
                 if td.a:
                     resolutions[td.a.string] = td.a['href']
             if not resolutions:
-##                log('No resolutions found: %s' % movie_id)
+##                 xbmc.log('No resolutions found: %s' % movie_id)
                 continue
             try:
                 source = __detect_source(resolutions.values()[0])
             except NotImplementedError, video_url:
-##                log('Skipping: %s - %s' % (movie_id, video_url))
+##                 xbmc.log('Skipping: %s - %s' % (movie_id, video_url))
                 continue
             section.append({
                 'title': tr.contents[3].span.string,
@@ -179,24 +179,20 @@ def __get_tree(url):
         html = read_url_cached(url)
     except urllib2.HTTPError, error:
         raise NetworkError('HTTPError: %s' % error)
-##    log('__get_tree got %d bytes' % len(html))
+##     xbmc.log('__get_tree got %d bytes' % len(html))
     tree = BeautifulSoup(html, convertEntities=BeautifulSoup.HTML_ENTITIES)
     return tree
 
 
 def __get_json(url):
-##    log('__get_json opening url: %s' % url)
+##     xbmc.log('__get_json opening url: %s' % url)
     try:
         response = read_url_cached(url)
     except urllib2.HTTPError, error:
         raise NetworkError('HTTPError: %s' % error)
     return json.loads(response)
 
-
-def log(msg):
-    print(u'%s scraper: %s' % (USER_AGENT, msg))
-
-
+    
 def get_playable_url(source, raw_url):
     xbmc.log("script.pseudotv.live-HDTrailers: get_playable_url")
     print source, raw_url

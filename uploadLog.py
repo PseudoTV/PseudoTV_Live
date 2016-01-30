@@ -51,7 +51,6 @@ class LogUploader(object):
                     self.report_msg(paste_id)
         if uploaded_logs and self.email_address:
             self.report_mail(self.email_address, uploaded_logs)
-            pass
 
             
     def get_settings(self):

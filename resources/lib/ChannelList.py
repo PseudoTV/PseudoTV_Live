@@ -88,12 +88,16 @@ class ChannelList:
         self.videoParser = VideoParser()
         self.ustv = ustvnow()
         random.seed() 
+        
+        try:
+            self.ResetLST = (REAL_SETTINGS.getSetting("ResetLST")).split(',')
+        except:
+            self.ResetLST = []
+        self.log('Channel Reset List is ' + str(self.ResetLST))
     
     
     def readConfig(self):
         self.startTime = time.time()
-        self.ResetLST = (REAL_SETTINGS.getSetting("ResetLST")).split(',')
-        self.log('Channel Reset List is ' + str(self.ResetLST))
         self.forceReset = REAL_SETTINGS.getSetting('ForceChannelReset') == "true"
         self.log('Force Reset is ' + str(self.forceReset))
         self.startMode = int(REAL_SETTINGS.getSetting("StartMode"))
@@ -938,7 +942,7 @@ class ChannelList:
             self.mixedGenreList = self.makeMixedList(self.showGenreList, self.movieGenreList)
             self.mixedGenreList.sort(key=lambda x: x.lower())
 
-    
+
     def makeMixedList(self, list1, list2):
         self.log("makeMixedList")
         newlist = []
@@ -950,10 +954,11 @@ class ChannelList:
                 if curitem == a.lower():
                     newlist.append(item)
                     break
-                    
+
+        self.log("makeMixedList return " + str(newlist))
         return newlist
-    
-    
+
+        
     def createGenreMixedPlaylist(self, genre):
         flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '.xsp')
         
@@ -1549,22 +1554,6 @@ class ChannelList:
         self.log("found genres " + str(self.movieGenreList))
         self.log("fillMovieInfo return " + str(self.studioList))
 
-
-    def makeMixedList(self, list1, list2):
-        self.log("makeMixedList")
-        newlist = []
-
-        for item in list1:
-            curitem = item.lower()
-
-            for a in list2:
-                if curitem == a.lower():
-                    newlist.append(item)
-                    break
-
-        self.log("makeMixedList return " + str(newlist))
-        return newlist
-
         
     # replace with json request info todo
     def isMedia3D(self, path):
@@ -1642,7 +1631,6 @@ class ChannelList:
             excludeLST = setting2.split(',')
         except:
             excludeLST = []
-            pass
   
         excludeLST += EX_FILTER
         excludeLST = ([x.lower() for x in excludeLST if x != ''])
@@ -3483,7 +3471,7 @@ class ChannelList:
         return TrailerLST
         
       
-    def InternetTrailer(self, Cinema):
+    def InternetTrailer(self, Cinema=False):
         self.log("InternetTrailer, Cinema = " + str(Cinema))
         TrailerLST = []
         duration = 0

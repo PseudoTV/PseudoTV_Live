@@ -57,7 +57,7 @@ class TMDB(object):
 
         
     def _getPosterBaseUrl(self):
-        response = json.loads(urllib2.urlopen(urllib2.Request(self._buildUrl('configuration'), headers={"Accept": "application/json"})).read())
+        response = json.loads(urllib2.urlopen(urllib2.Request(self._buildUrl('configuration'), {"Accept": "application/json"})).read())
         #self.xbmc.log('Response: \r\n%s' % response)
         return response['images']['base_url']
 
@@ -68,9 +68,9 @@ class TMDB(object):
         
     def getMovie(self, movieName, year):
         try:
-            response = json.loads(read_url_cached_monthly(self._buildUrl('search/movie', {'query' : movieName, 'year' : year}, headers={"Accept": "application/json"})))
+            response = json.loads(read_url_cached_monthly(self._buildUrl('search/movie', {'query' : movieName, 'year' : year}, {"Accept": "application/json"})))
             if response['total_results'] > 0:
-                response = json.loads(read_url_cached_monthly(self._buildUrl('movie/%s' % (response['results'][0]['id']), headers={"Accept": "application/json"})))
+                response = json.loads(read_url_cached_monthly(self._buildUrl('movie/%s' % (response['results'][0]['id']), {"Accept": "application/json"})))
             else:
                 response = json.loads('{"imdb_id":"", "poster_path":""}')
         except:
@@ -79,7 +79,7 @@ class TMDB(object):
 
         
     def getMPAA(self, imdbid):
-        response = json.loads(read_url_cached_monthly(self._buildUrl('https://api.themoviedb.org/3/movie/'+imdbid+'/releases?api_key='+self.apikey+'&language=en', headers={"Accept": "application/json"})))
+        response = json.loads(read_url_cached_monthly(self._buildUrl('https://api.themoviedb.org/3/movie/'+imdbid+'/releases?api_key='+self.apikey+'&language=en', {"Accept": "application/json"})))
         response = response.split("certification': u'")[1]
         response = response.split("'}")[0]
         return response

@@ -83,6 +83,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                     self.saveRules()
 
                 self.close()
+                
         elif action in ACTION_MOVE_DOWN:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
@@ -108,6 +109,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                             self.getControl(161).controlUp(self.getControl(161))
                     else:
                         self.optionRowSelected = 1
+                        
         elif action in ACTION_MOVE_UP:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
                 # If we highlighted the last rule previously and are now pressing arrow down
@@ -131,12 +133,14 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                             self.getControl(161).controlUp(self.getControl(131))
                     else:
                         self.optionRowSelected = 0
+                        
         elif action in ACTION_MOVE_LEFT:
             try:
                 if self.getFocusId() == 131:
                     self.scrollRulesLeft()
             except Exception,e:
                 pass
+                
         elif action in ACTION_MOVE_RIGHT:
             try:
                 if self.getFocusId() == 131:

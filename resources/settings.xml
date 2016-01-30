@@ -103,7 +103,7 @@
             <setting id="autoFindLivePVR"                     type="bool"   label="30075" subsetting="true" visible="eq(-5,true)" enable="Pvr.HasTVChannels" default="false"/>
             <setting id="autoFindLiveHD"                      type="enum"   label="30097" subsetting="true" visible="eq(-6,true)" values=" |Dual - Strms|Prime/Extend - Favourites" default="0" />
             <setting id="autoFindLiveHDPath"                  type="folder" label="30098" subsetting="true" visible="!eq(-1,0) + !eq(-1,2)" source="auto" default=""/>
-            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="true" visible="eq(-8,true)" enable="System.HasAddon(plugin.video.ustvnow)" default="false"/>
+            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="true" visible="eq(-8,true)" default="false"/>
             <!-- Autotune Local -->
         <setting                                              type="lsep"   label="30076"                   visible="eq(-9,true)"/>
             <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="true" visible="eq(-10,true)" enable="Library.HasContent(TVShows)"default="false"/>
@@ -237,7 +237,8 @@
     </category>
     
 <!--Debugging-->
-    <category label="30900">  
+    <category label="30900"> 
+        <setting id="BYPASS_SEEK" type="action"   label="30935" action="RunScript($CWD/utilities.py, -BYPASS_SEEK)"/> 
         <setting label="30308" type="lsep"/>
         <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
         <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="30"/>
@@ -263,10 +264,10 @@
         <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
         <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
         <setting id="RSS_API_KEY" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|cGx1Z2luLnZpZGVvLnR2Mmdv|cmVwb3NpdG9yeS50aGV2aWJl|" />  
-        <setting id="YT_API_KEY"  label="30942" option="hidden" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
-        <setting id="GOOGLE_API_KEY"  label="30942" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
-        <setting id="LOGODB_API_KEY"  label="30942" option="hidden" type="text" default="8332" />
-        <setting id="DOX_API_KEY"  label="30942" option="hidden" type="text" default="Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9" />
+        <setting id="YT_API_KEY"  option="hidden" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
+        <setting id="GOOGLE_API_KEY"  option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
+        <setting id="LOGODB_API_KEY" option="hidden" type="text" default="8332" />
+        <setting id="DOX_API_KEY"  option="hidden" type="text" default="Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9" />
         <setting label="30197" type="lsep"/>
         <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>

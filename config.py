@@ -565,7 +565,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.setChname(title)           
                 except:
                     infoDialog("Select Youtube Type")
-                    pass
+                    
         elif controlId == 234:    # Youtube Channel, input
             retval = dlg.input(self.getControl(234).getLabel(), type=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:

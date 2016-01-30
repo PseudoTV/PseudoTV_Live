@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
 import os, sys, re
 import datetime, time, threading, _strptime
+import xbmc, xbmcgui, xbmcaddon
 
 
 from Playlist import Playlist
@@ -101,8 +101,6 @@ class MyPlayer(xbmc.Player):
             if start_title == sample_title:
                 if sample_time > start_time:
                     ActuallyPlaying = True
-            else:
-                self.isActuallyPlaying(time)
             self.log('isActuallyPlaying = ' + str(ActuallyPlaying))
         return ActuallyPlaying
             
@@ -110,7 +108,6 @@ class MyPlayer(xbmc.Player):
     def isPlaybackValid(self):
         if self.overlay.isExiting == True:
             return True
-            
         PlaybackStatus = False
         xbmc.sleep(10)
         if self.isPlaying():
@@ -277,6 +274,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.SubState = REAL_SETTINGS.getSetting("EnableSubtitles") == "true"
         setProperty("PTVL.BackgroundLoading","true") 
         
+        try:
+            self.BYPASSLST = appendPlugin(eval(REAL_SETTINGS.getSetting("BYPASS_LST")) + PLUGIN_SEEK)
+        except:
+            self.BYPASSLST = appendPlugin(PLUGIN_SEEK)
+
         if REAL_SETTINGS.getSetting("UPNP1") == "true" or REAL_SETTINGS.getSetting("UPNP2") == "true" or REAL_SETTINGS.getSetting("UPNP3") == "true":
             self.UPNP = True
         else:
@@ -423,10 +425,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 REAL_SETTINGS.setSetting('AT_LIMIT', "0")
                 REAL_SETTINGS.setSetting('MEDIA_LIMIT', "0")
                 REAL_SETTINGS.setSetting("autoFindLivePVR","true")
-                REAL_SETTINGS.setSetting("autoFindUSTVNOW","true")
                 REAL_SETTINGS.setSetting("autoFindNetworks","true")
                 REAL_SETTINGS.setSetting("autoFindMovieGenres","true")
                 REAL_SETTINGS.setSetting("autoFindRecent","true")
+                
+                if isUSTVnow() == True:
+                    REAL_SETTINGS.setSetting("autoFindUSTVNOW","true")
                 
                 #TEMP isCom pass
                 setProperty("Verified_Community", 'true')
@@ -635,8 +639,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             setProperty("OVERLAY.ONNOW_ART",self.OnNowArtLst[pos])
         except Exception,e:
             self.log('setOnNowArt, Failed!, ' + str(e))
-            pass  
-        
+
         
     def getOnNow(self, offdif=0):
         self.log('getOnNow')
@@ -838,7 +841,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         else:
             self.setBackgroundLabel("Changing Channel Up")
             self.setChannel(self.fixChannel(self.currentChannel + 1, True))
-        
+        return
+      
       
     def setInvalidateChannel(self, channel=None):
         if not channel:
@@ -1134,8 +1138,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def SmartSeek(self, mediapath, seektime1, seektime2, overtime):
         self.log("SmartSeek")
         seektime = 0
-        if mediapath.startswith((BYPASS_SEEK)):
+        if not mediapath.startswith((self.BYPASSLST)):
             return seektime
+        
         if seektime1 < overtime:
             try:
                 self.Player.seekTime(seektime1)
@@ -1547,6 +1552,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
               
     def showInfo(self, timer):
         self.log("showInfo")
+        #Kill thread so infoOffset can increment 
         try:
             if self.infoTimer.isAlive():
                 self.infoTimer.cancel()
@@ -2204,21 +2210,19 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
             # disable dialog checks while system is taxed or on low end hardware
             if isLowPower() == False:
-                if self.CloseDialog(['Dialogue OK']) == True and self.Player.isActuallyPlaying() == False:
+                if self.CloseDialog(['Dialogue OK']) == True:
                     self.lastActionTrigger()
-                    self.startPlayerTimer(self.ActionTimeInt)
-                    return 
             
-            # after user configured interval. If not playing, force close dialogs and kill failed playback. 
-            if self.notPlayingCount == int(round((self.PlayTimeoutInt/int(self.ActionTimeInt)))): 
-                if self.Player.isActuallyPlaying() == False:
-                    # self.channels[self.curchannel - 1].isValid = False
-                    self.CloseDialog()
-                    self.ForceStop()
-                    self.lastActionTrigger()        
-                    
+            # # after user configured interval. If not playing, force close dialogs and kill failed playback. 
+            # if self.notPlayingCount == int(round((self.PlayTimeoutInt/int(self.ActionTimeInt)))): 
+                # if self.Player.isActuallyPlaying() == False:
+                    # # self.channels[self.curchannel - 1].isValid = False
+                    # if self.CloseDialog() == False:
+                        # self.ForceStop()
+                    # self.lastActionTrigger()        
+              
             self.startPlayerTimer(self.ActionTimeInt)
-        
+            
                 
     def SkipNext(self):
         self.log('SkipNext')
@@ -3364,7 +3368,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
                 self.Player.play(url, listitem);
             elif url.startswith('ustvnow'):
-                self.Player.play(self.ustv.getChannellink(url.split('://')[1]))
+                self.setPlayselected(self.ustv.getChannellink(url.split('://')[1]))
             elif url.startswith(('plugin','PlayMedia')):
                 if not url.startswith('PlayMedia'):
                     url = ('PlayMedia('+url+')')

@@ -939,8 +939,6 @@ class Migrate:
                 filecount += 1
             except Exception,e:
                 self.log('tuneList Failed ' + str(e))
-                pass
-
         return channelNum
         
 
