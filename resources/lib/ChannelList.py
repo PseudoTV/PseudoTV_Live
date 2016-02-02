@@ -88,14 +88,7 @@ class ChannelList:
         self.videoParser = VideoParser()
         self.ustv = ustvnow()
         random.seed() 
-        
-        try:
-            self.ResetLST = (REAL_SETTINGS.getSetting("ResetLST")).split(',')
-        except:
-            self.ResetLST = []
-        self.log('Channel Reset List is ' + str(self.ResetLST))
-    
-    
+
     def readConfig(self):
         self.startTime = time.time()
         self.forceReset = REAL_SETTINGS.getSetting('ForceChannelReset') == "true"
@@ -116,7 +109,7 @@ class ChannelList:
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
         self.Playlist_Limit = PlaylistLimit()
         self.findMaxChannels()
-                
+
         if SETTOP:
             self.backgroundUpdating = 0
             self.channelResetSetting = 0
@@ -320,7 +313,7 @@ class ChannelList:
         if chtype == 8:  
             # Force livetv rebuild
             forcerebuild = REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true"
-            if str(channel) in self.ResetLST or forcerebuild == True:
+            if channel in self.myOverlay.ResetLST or forcerebuild == True:
                 self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
                 needsreset = True
                 self.delResetLST(channel)
@@ -2812,11 +2805,11 @@ class ChannelList:
     def Valid_ok(self, url):
         self.log("Valid_ok")
         #plugin check  
-        if url[0:6] == 'plugin':  
-            return self.plugin_ok(url)  
         #Override Check# 
-        elif REAL_SETTINGS.getSetting('Override_ok') == "true":
+        if REAL_SETTINGS.getSetting('Override_ok') == "true":
             return True
+        elif url[0:6] == 'plugin':  
+            return self.plugin_ok(url)  
         #rtmp check
         elif url[0:4] == 'rtmp':
             return self.rtmpDump(url)  
@@ -2884,8 +2877,8 @@ class ChannelList:
         self.log("getDuration")
         duration = 0
         duration = self.videoParser.getVideoLength(filename)
-        if duration == 0:
-            duration = self.getffprobeLength(filename)
+        # if duration == 0:
+            # duration = self.getffprobeLength(filename)
         return duration
         
         
@@ -3269,8 +3262,7 @@ class ChannelList:
                     for i in range(len(LocalLST)):    
                         if self.background == False:
                             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Local Commercials")
-                        
-                        filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
+                        filename = xbmc.translatePath(os.path.join(PATH,LocalLST[i][0]))
                         duration = self.getDuration(filename)
                         
                         if duration == 0:
@@ -3984,7 +3976,7 @@ class ChannelList:
                 if names and paths:
                     name = self.cleanLabels(names.group(1))
                     path = paths.group(1)
-                    if name.lower() != 'super favourites' and name.lower() != '.playon browser' and name.lower() != 'playon browser':
+                    if name.lower() not in ['super favourites','hdhomerun','pseudolibrary','pseudocompanion']:
                         TMPpluginList.append(name+','+path)  
                     
             SortedpluginList = sorted_nicely(TMPpluginList)
@@ -4027,6 +4019,25 @@ class ChannelList:
         PVRPath = xbmcvfs.listdir(PVRverPath)
         return os.path.join(PVRverPath,PVRPath[1][channel])
 
+        
+    def fillUSTVnow(self):
+        self.log('fillUSTVnow')
+        NameLst = []
+        IconLst = []
+        PathLst = []
+        
+        user = REAL_SETTINGS.getSetting('ustv_email')
+        if user == "":
+            return NameLst,PathLst,IconLst 
+            
+        channels = self.ustv.getChannelNames()
+        for i in range(len(channels)):
+            CHname = channels[i][0]
+            NameLst.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
+            PathLst.append('ustvnow://'+ CHname)
+            IconLst.append(channels[i][0])
+        return NameLst,PathLst,IconLst
+        
         
     def fillPVR(self):
         self.log('fillPVR')
@@ -4580,7 +4591,7 @@ class ChannelList:
             if names and paths:
                 name = self.cleanLabels(names.group(1))
                 path = paths.group(1)
-                if type == 'video' and path.startswith('plugin.video') and not path.startswith('plugin.video.pseudo.companion'):
+                if type == 'video' and path.startswith('plugin.video'):
                     thumbnail = removeNonAscii(thumbnails.group(1))
                     fanart = removeNonAscii(fanarts.group(1))
                     self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
@@ -4789,7 +4800,7 @@ class ChannelList:
                                             if dur == 0:
                                                 dur = ladur
                                                                                                                                
-                                    if file.startswith(("plugin", "upnp")) and dur == 0:
+                                    if  dur == 0 and file.startswith(("plugin", "upnp")):
                                         dur = 3600    
                                              
                                     # Remove any file types that we don't want (ex. IceLibrary, ie. Strms)
@@ -5077,20 +5088,16 @@ class ChannelList:
     def setResetLST(self, channel=None):
         if not channel:
             channel = self.settingChannel
-        self.ResetLST.append(str(channel))
-        self.ResetLST = removeStringElem(self.ResetLST)
-        self.ResetLST = sorted_nicely(self.ResetLST)
-        newResetLST = (','.join(self.ResetLST))
-        REAL_SETTINGS.setSetting('ResetLST', newResetLST)
+        self.myOverlay.ResetLST.append(channel)
+        self.myOverlay.ResetLST = sorted(set(self.myOverlay.ResetLST))
+        REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))
         self.log('setResetLST added channel ' + str(channel))
         
         
     def delResetLST(self, channel=None):
         if not channel:
             channel = self.settingChannel
-        if str(channel) in self.ResetLST:
-            self.ResetLST = removeStringElem(self.ResetLST, str(channel))
-            self.ResetLST = sorted_nicely(self.ResetLST)
-            newResetLST = (','.join(self.ResetLST))
-            REAL_SETTINGS.setSetting('ResetLST', newResetLST)
+        if channel in self.myOverlay.ResetLST:
+            self.myOverlay.ResetLST =  [x for x in self.myOverlay.ResetLST if x!=channel]
+            REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))
             self.log('delResetLST removed channel ' + str(channel))

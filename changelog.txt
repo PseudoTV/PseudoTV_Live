@@ -1,6 +1,7 @@
-[*] Built-in USTVnow Support, No external plugin required.
-[*] HDHomerun Favorites autotuning fixed. 
-[*] Seeking disabled for all Plugins, Users can enable individual plugins under "Debugging".
+[*] Built-in USTVnow Support w/EPG Guidedata, No external plugin required! Setup account information under "DVR", Autotune or Manually configure channels.
+[*] HDHomerun "Favorites" autotuning fixed. 
+[*] Seeking disabled globally for all Plugins, Users can enable seeking for individual plugins under "Tweaks".
+[*] Fixed advanced channel configuration window. 
 [*] "Auto" Force Channel Reset after every PseudoTV Live Update.
 [*] Removed LiveTV/InternetTV Community List
 [*] Default skin cleaned, unnecessary groups removed, new properites added and wiki updated for skinners.

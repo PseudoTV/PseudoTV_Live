@@ -81,7 +81,7 @@ def DeleteSettings2():
 def addBypass():
     chnlst = ChannelList()
     chnlst.fillPluginList()
-    BYPASS_LST = matchMselect(chnlst.pluginPathList, mselectDialog(chnlst.pluginPathList, header='Disable Seeking for specified Plugins'))
+    BYPASS_LST = matchMselect(chnlst.pluginPathList, mselectDialog(chnlst.pluginNameList, header='Enable Seeking for specified Plugins'))
     REAL_SETTINGS.setSetting("BYPASS_LST",str(BYPASS_LST))
     
 def ClearTempKey():
@@ -100,7 +100,7 @@ def showChtype():
     select = selectDialog(ChtypeLst, 'Select Channel Type')
     if select != -1:
         help(ChtypeLst[select])
-                   
+
 if sys.argv[1] == '-SimpleDownloader':
     xbmcaddon.Addon(id='script.module.simple.downloader').openSettings()  
 elif sys.argv[1] == '-showChangelog':

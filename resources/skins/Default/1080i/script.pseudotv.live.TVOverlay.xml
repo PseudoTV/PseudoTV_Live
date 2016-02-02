@@ -94,38 +94,6 @@
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
             </control>  
         </control>
-        <control type="group" id="101">    
-            <visible></visible>
-            <control type="image">
-                <description>Loading Background Image</description>
-                <width>1920</width>
-                <height>1080</height>
-                <texture>pstvlBackground.png</texture>
-                <align>center</align>
-                <aligny>center</aligny>
-            </control>
-            <control type="image">
-                <description>Loading Background Logo</description>
-                <posx>725</posx>
-                <posy>225</posy>
-                <width>480</width>
-                <height>270</height>
-                <aspectratio>keep</aspectratio>
-                <align>center</align>
-                <aligny>center</aligny>
-                <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
-                <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            </control>
-            <control type="label">
-                <description>Loading Background Text</description>
-                <width>1920</width>
-                <height>1080</height>
-                <font>font30</font>
-                <align>center</align>
-                <aligny>center</aligny>
-                <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
-            </control>  
-        </control>
         <control type="group" id="102">            
             <posx>0</posx>
             <posy>0</posy>             
@@ -801,7 +769,7 @@
                 <height>180</height>
                 <aspectratio>keep</aspectratio>
                 <visible>Control.IsVisible(130)</visible>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.ONNOW_ART)]</texture>
+                <texture fallback="landscape.jpg">$INFO[Window(10000).Property(OVERLAY.ONNOW_ART)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>
             <control type="label" id="132">
@@ -1000,6 +968,38 @@
                     <visible>!IsEmpty(Control.GetLabel(1010))</visible>
                 </control>
             </control>
+        </control>
+        <control type="group" id="101">    
+            <visible></visible>
+            <control type="image">
+                <description>Loading Background Image</description>
+                <width>1920</width>
+                <height>1080</height>
+                <texture>pstvlBackground.png</texture>
+                <align>center</align>
+                <aligny>center</aligny>
+            </control>
+            <control type="image">
+                <description>Loading Background Logo</description>
+                <posx>725</posx>
+                <posy>225</posy>
+                <width>480</width>
+                <height>270</height>
+                <aspectratio>keep</aspectratio>
+                <align>center</align>
+                <aligny>center</aligny>
+                <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
+                <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+            </control>
+            <control type="label">
+                <description>Loading Background Text</description>
+                <width>1920</width>
+                <height>1080</height>
+                <font>font30</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
+            </control>  
         </control>
     </controls>     
 </window>

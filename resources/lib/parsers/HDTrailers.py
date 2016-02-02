@@ -40,11 +40,6 @@ SOURCES = (
     'aol.com'
 )
 
-
-class NetworkError(Exception):
-    pass
-
-
 def get_latest(page=1):
     xbmc.log("script.pseudotv.live-HDTrailers: get_latest")
     url = MAIN_URL + 'page/%d/' % int(page)
@@ -177,20 +172,18 @@ def __format_date(date_str):
 def __get_tree(url):
     try:
         html = read_url_cached(url)
-    except urllib2.HTTPError, error:
-        raise NetworkError('HTTPError: %s' % error)
-##     xbmc.log('__get_tree got %d bytes' % len(html))
-    tree = BeautifulSoup(html, convertEntities=BeautifulSoup.HTML_ENTITIES)
-    return tree
+        tree = BeautifulSoup(html, convertEntities=BeautifulSoup.HTML_ENTITIES)
+        return tree
+    except:
+        pass
 
 
 def __get_json(url):
-##     xbmc.log('__get_json opening url: %s' % url)
     try:
         response = read_url_cached(url)
-    except urllib2.HTTPError, error:
-        raise NetworkError('HTTPError: %s' % error)
-    return json.loads(response)
+        return json.loads(response)
+    except:
+        pass
 
     
 def get_playable_url(source, raw_url):

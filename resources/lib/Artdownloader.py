@@ -204,17 +204,17 @@ class Artdownloader:
             ChannelLogo = os.path.join(LOGO_LOC,chname[0:18] + '.png')
             
             # Channel Logo
-            if FileAccess.exists(ChannelLogo):
+            if FileAccess.exists(ChannelLogo) == True:
                 return ChannelLogo
             # Plugin Icon
             elif mpath[0:6] == 'plugin':
                 icon = 'special://home/addons/'+(mpath.replace('plugin://',''))+ '/icon.png'
                 return icon
             # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            elif FileAccess.exists(MediaImage):
+            elif FileAccess.exists(MediaImage) == True:
                 return MediaImage
             # Default Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            elif FileAccess.exists(StockImage):
+            elif FileAccess.exists(StockImage) == True:
                 return StockImage
             # PTVL Icon
             else:

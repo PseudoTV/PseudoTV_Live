@@ -49,14 +49,18 @@ class VideoParser:
         if len(filename) == 0:
             self.log("getVideoLength, No file name specified")
             return 0
-
-        if FileAccess.exists(filename) == False:
-            if filename[0:6].lower() == 'smb://':
-                self.log("getVideoLength, Unknown SMB file found, Trying to mount drive")
-                filename = FileAccess._openSMB(filename)
-            else:
-                self.log("getVideoLength, Unable to find the file")
-                return 0
+            
+        # todo improve network files
+        # if FileAccess.exists(filename) == False:
+            # try:
+                # if filename[0:6].lower() == 'smb://':
+                    # self.log("getVideoLength, Unknown SMB file found, Trying to mount drive")
+                    # filename = FileAccess._openSMB(filename, 'r')
+                # else:
+                    # self.log("getVideoLength, Unable to find the file")
+                    # return 0
+            # except:
+                # return 0
 
         base, ext = os.path.splitext(filename)
         ext = ext.lower()

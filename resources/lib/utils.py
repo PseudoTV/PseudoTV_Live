@@ -814,11 +814,12 @@ def mselectDialog(list, header=ADDON_NAME, autoclose=0):
         return select
 
 def matchMselect(list, select):
-    slist = []
-    for i in range(len(select)):
-        slist.append(list[select[i]]) 
-    return slist
-        
+    if select:
+        slist = []
+        for i in range(len(select)):
+            slist.append(list[select[i]]) 
+        return slist
+
 def yesnoDialog(str1, str2='', header=ADDON_NAME, yes='', no=''):
     answer = xbmcgui.Dialog().yesno(header, str1, str2, '', yes, no)
     return answer
@@ -1511,15 +1512,35 @@ def HandleUpgrade():
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
           
     # Remove m3u playlists
-    ClearPlaylists()
+    # ClearPlaylists()
     
     # Force Channel rebuild
-    REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
+    # REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
 
     # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
     # set 'optional' as true so users can remove if unwanted.
     if getXBMCVersion() > 14 and isContextInstalled() == False:
         getContext()
+        
+def isPTVLOutdated():
+    log('utils: isPTVLOutdated')
+    f = open(xbmc.translatePath(os.path.join(ADDON_PATH,'addon.xml'))  , mode='r')
+    link = f.read()
+    f.close()
+    match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+    
+    for vernum in match:
+        log("utils: isPTVLOutdated, Current Version = " + str(vernum))
+    try:
+        link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
+        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+    except:
+        pass   
+    if len(match) > 0:
+        if vernum != str(match[0]):
+            return True
+    return False
         
 def preStart(): 
     log('utils: preStart')

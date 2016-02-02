@@ -301,7 +301,7 @@ class Migrate:
             channels = ustv.getChannelNames()
             if len(channels) > 0:
                 for n in range(len(channels)):
-                    CHname = channels[n]
+                    CHname = channels[n][0]
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "8")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHname)
@@ -315,7 +315,6 @@ class Migrate:
                     Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                           
                     self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels",CHname)
                     channelNum += 1
-
                     
         #TV - Networks/Genres
         self.updateDialogProgress = 20

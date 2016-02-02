@@ -397,7 +397,7 @@ FORCE_MAKENEW = [8,16]
 IGNORE_SEEKTIME = [8,9,16]
 
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
-PLUGIN_SEEK = ['']
+PLUGIN_SEEK = []
 
 # Duration in seconds "stacked" for chtypes >= 10
 BYPASS_EPG_SECONDS = 900
