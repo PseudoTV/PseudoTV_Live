@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.pseudotv.live" version="0.7.2g" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="script.pseudotv.live" version="0.7.3" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
         <import addon="script.module.buggalo" version="1.1.6" optional="false"/>
+        <import addon="script.module.actionhandler" version="1.0.0" optional="false"/>
         <import addon="script.module.requests" version="2.7.0" optional="false"/>
         <import addon="script.module.pyfscache" version="0.9.12" optional="false"/>
         <import addon="script.module.feedparser" version="5.1.3" optional="false"/>

@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-DOX_API_KEY = 'script.pseudotv'
-RSS_API_KEY = 'hb7MR}WK/Mp9VmJ_'
-
 import os, re, sys, time, zipfile, threading, requests, random, traceback
 import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, urlparse, HTMLParser
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
@@ -118,8 +115,7 @@ def fillGithubItems(url, ext=None, removeEXT=False):
         Sortlist = sorted_nicely(list) 
         log("utils: fillGithubItems, found %s items" % str(len(Sortlist)))
     except Exception,e:
-        log("utils: fillGithubItems, Failed! " + str(e))
-        log(traceback.format_exc(), xbmc.LOGERROR)
+        pass
     # hide_busy_dialog()
     return Sortlist
 
@@ -654,24 +650,18 @@ def retrieve_url(url, userpass, dest):
         log("utils: retrieve_url, Failed! " + str(e))  
         return False 
        
-@cache_monthly
 def get_data(url, data_type ='json'):
     log('utils: get_data, url = ' + url)
     data = []
     try:
-        request = urllib2.Request(url)
-        # TMDB needs a header to be able to read the data
-        if url.startswith("http://api.themoviedb.org"):
-            request.add_header("Accept", "application/json")
-        req = urllib2.urlopen(request)
+        request = read_url_cached_monthly(url)
         if data_type == 'json':
-            data = json.loads(req.read())
+            data = json.loads(request)
             if not data:
                 data = 'Empty'
         else:
-            data = req.read()
-        req.close()
-    except urllib2.URLError, e:
+            data = request
+    except Exception, e:
         log("utils: get_data, Failed! " + str(e))
         data = 'Empty'
     return data
@@ -1292,85 +1282,23 @@ def chkAutoplay(silent=False):
             # return True
     # except:
         # pass
-      
-def chkChanges():
-    log("utils: chkChanges")
-    ComCHK()
-    
-    CURR_BUMPER = REAL_SETTINGS.getSetting('bumpers')
-    try:
-        CURR_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
-    except:
-        REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
-    LAST_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
-    
-    if CURR_BUMPER != LAST_BUMPER:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
-        REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
-        
-    CURR_COMMERCIALS = REAL_SETTINGS.getSetting('commercials')
-    try:
-        CURR_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
-    except:
-        REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
-    LAST_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
-    
-    if CURR_COMMERCIALS != LAST_COMMERCIALS:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
-        REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
-        
-    CURR_TRAILERS = REAL_SETTINGS.getSetting('trailers')
-    try:
-        CURR_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
-    except:
-        REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
-    LAST_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
-    
-    if CURR_TRAILERS != LAST_TRAILERS:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
-        REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
-    
-    CURR_ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData')
-    try:
-        LAST_ENHANCED_DATA = REAL_SETTINGS.getSetting('Last_EnhancedGuideData')
-    except:
-        REAL_SETTINGS.setSetting('Last_EnhancedGuideData', CURR_ENHANCED_DATA)
-    LAST_ENHANCED_DATA = REAL_SETTINGS.getSetting('Last_EnhancedGuideData')
-    
-    if CURR_ENHANCED_DATA != LAST_ENHANCED_DATA:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
-        REAL_SETTINGS.setSetting('Last_EnhancedGuideData', CURR_ENHANCED_DATA)
-        
-    CURR_MEDIA_LIMIT = REAL_SETTINGS.getSetting('MEDIA_LIMIT')
-    try:
-        LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
-    except:
-        REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
-    LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
-    
-    if CURR_MEDIA_LIMIT != LAST_MEDIA_LIMIT:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
-        REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
-              
+         
 def chkLowPower(): 
     setProperty("PTVL.LOWPOWER","false") 
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
         if getPlatform() in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true") 
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
-            REAL_SETTINGS.setSetting('ThreadMode', "2")
-            REAL_SETTINGS.setSetting('EPGTextEnable', "1")
+            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
-            REAL_SETTINGS.setSetting('EnableSettop', "false")
             REAL_SETTINGS.setSetting('UNAlter_ChanBug', "true")
-            REAL_SETTINGS.setSetting('Enable_FindLogo', "false")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
             REAL_SETTINGS.setSetting('EnhancedGuideData', "false")
+            REAL_SETTINGS.setSetting('accurate_duration', "false")
             REAL_SETTINGS.setSetting('sickbeard.enabled', "false")
             REAL_SETTINGS.setSetting('couchpotato.enabled', "false")
-            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
             infoDialog("Settings Optimized for Performance")
     else:
         log("utils: chkLowPower Override = True")
@@ -1589,38 +1517,18 @@ def TimeRemainder(val):
     return delta
 
 def PlaylistLimit():  
-    if getPlatform() == 'Windows':
-        Playlist_Limit = FILELIST_LIMIT[2]
-    elif isLowPower() != True:
+    if isLowPower() == True or getPlatform() == 'Unknown':
+        Playlist_Limit = FILELIST_LIMIT[0]
+    elif getPlatform() in ['APU','PowerPC']:
         Playlist_Limit = FILELIST_LIMIT[1]
     else:
-        Playlist_Limit = FILELIST_LIMIT[0]
+        Playlist_Limit = FILELIST_LIMIT[2]
     log('utils: PlaylistLimit = ' + str(Playlist_Limit))
     return Playlist_Limit
 
 def isCom():
     return getProperty("Verified_Community") == "true"
         
-def ComCHK():
-    log('utils: ComCHK')      
-    # Community users are required to supply their gmail info in-order to use the community submission tool, SEE DISCLAIMER!! 
-    # Community List is free, not a membership. Users do not have to signup for anything, they supply their own email information only required to participate in the exchange of channel configurations.
-    # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists, https://github.com/PseudoTV/PseudoTV_Playlists
-    # Community lists includes: Youtube, Vimeo, RSS, Kodi Smartplaylists. Submissions take 24-48hrs to reflect on git list.
-    # Community list also includes: LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and user installed Kodi repository plugins (see isKodiRepo, isPlugin).
-    # Lists can not contain illegal pirated links since they consist of Youtube/Vimeo and RSS xml links.
-    if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != "email@gmail.com":
-        if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
-            REAL_SETTINGS.setSetting("Community_Verified", "1")
-            REAL_SETTINGS.setSetting("AT_Community","true")
-            infoDialog("Community List Activated")
-        setProperty("Verified_Community", 'true')
-    else:
-        if REAL_SETTINGS.getSetting("Community_Verified") != "0": 
-            REAL_SETTINGS.setSetting("Community_Verified", "0")
-            REAL_SETTINGS.setSetting("AT_Community","false")
-        setProperty("Verified_Community", 'false')
-   
 def getTitleYear(showtitle, showyear=0):  
     # extract year from showtitle, merge then return
     try:
@@ -1831,7 +1739,6 @@ def clearTraktScrob():
     clearProperty("script.trakt.ids")
 
 def setTraktScrob():
-    log("utils: setTraktScrob")
     # {u'tmdb': 264660}
     # {u'tvdb': 121361}
     # {u'imdb': u'tt0470752'}
@@ -1847,10 +1754,13 @@ def setTraktScrob():
     # if content is not part of kodis db and has id scrob
     if (dbid == '0' or len(dbid) > 6) and id != '0':
         if type == 'movie':
-            trakt = ({'imdb': id, 'slug': title})
+            trakt = {'imdb': id, 'slug': title}
         elif type == 'tvshow':
-            trakt = ({'tvdb': id, 'slug': title})      
-        setProperty('script.trakt.ids', json.dumps(trakt))
+            trakt = {'tvdb': id, 'slug': title}
+            
+        ids = json.dumps(trakt)
+        log("utils: setTraktScrob, trakt = " + str(trakt))     
+        setProperty('script.trakt.ids', ids)
             
 def setTraktTag(pType='OVERLAY'):
     log("utils: setTraktTag")
@@ -1897,8 +1807,23 @@ def convert_to_stars(val):
     return (val * 100 ) / 10
     
 def datetime_to_epoch(dt):
+    log("utils: datetime_to_epoch") 
     try:#sloppy fix, for threading issue with strptime.
         t = time.strptime(dt, '%Y-%m-%d %H:%M:%S')
     except:
         t = time.strptime(dt, '%Y-%m-%d %H:%M:%S')
     return time.mktime(t)
+   
+@cache_weekly   
+def getJson(url):
+    log("utils: getJson") 
+    print url
+    response = urllib2.urlopen(url)
+    return json.load(response)
+    
+def makeTMPSTRdict(duration, title, subtitle, description, genre, type, id, thumburl, rating, hd, cc, stars, path):
+    log("utils: makeTMPSTRdict") 
+    # convert to dict for future channel building using ChannelList.dict2tmpstr()
+    return {'duration':duration, 'title':title, 'subtitle':subtitle,'description':description,
+            'genre':genre, 'type':type, 'id':id, 'thumburl':thumburl,
+            'rating':rating, 'hd':hd, 'cc':cc, 'stars':stars, 'path':path}

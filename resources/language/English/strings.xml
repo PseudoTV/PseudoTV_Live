@@ -242,6 +242,7 @@
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
+    <string id="30924">GUIDEBOX APIKEY</string>
     <string id="30197">binaries (Optional)</string>
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>

@@ -24,8 +24,8 @@ import xbmc, xbmcaddon, xbmcgui, xbmcplugin, xbmcvfs
 from xml.dom import minidom
 from time import time
 from xml.etree import ElementTree as ET
-from Globals import *
-from utils import *
+from resources.lib.Globals import *
+from resources.lib.utils import *
 
 socket.setdefaulttimeout(int(REAL_SETTINGS.getSetting("PlayTimeoutInt")))
 
@@ -233,7 +233,6 @@ class ustvnow:
                                 return self.getChannellink(chname)
                             elif not link.startswith(stream_type):
                                 return self.getChannellink(chname)
-                            self.log('get_link, link = '+link)
                             return link
                         else:
                             channels.append([name, link])

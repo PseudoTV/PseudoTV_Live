@@ -18,7 +18,7 @@
 
 import subprocess, os, re, sys, time, datetime
 import xbmcaddon, xbmc, xbmcgui, xbmcvfs
-import Settings, Globals, ChannelList, ustvnow
+import Settings, Globals, ChannelList
 import urllib, urllib2, httplib, random
 
 from Globals import *
@@ -26,6 +26,7 @@ from xml.etree import ElementTree as ET
 from FileAccess import FileAccess
 from urllib import unquote
 from utils import *
+from parsers import  ustvnow
 
 class Migrate:
 

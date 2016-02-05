@@ -51,7 +51,7 @@ You may also press the Previous Menu ``Escape`` button to do this (don't worry, 
 
 Scroll through channels using the arrow up and down keys, or alternatively by pressing Page up or down. 
 
-You can also jump through the EPG using ``page up`` and ``down``.
+You can also jump through the EPG using ``page up`` and ``page down``.
 
 Switch directly to a channel by inputting the ``channel number``, or navigate to it in the EPG.
 
@@ -80,6 +80,19 @@ Pressing the ``Context Menu`` will show the "MoreInfo" bar.
 - Sleep Timer ``ACTION_ASPECT_RATIO``
 - Record ``ACTION_RECORD`` -- To be used with future PVR features.
     
+    
+### Touch Gestures
+
+- MOVE_LEFT ``ACTION_GESTURE_SWIPE_LEFT_TEN``
+- MOVE_RIGHT ``ACTION_GESTURE_SWIPE_RIGHT_TEN``
+- MOVE_UP ``ACTION_GESTURE_SWIPE_UP``
+- MOVE_DOWN ``ACTION_GESTURE_SWIPE_DOWN``
+- PAGEUP ``ACTION_GESTURE_SWIPE_UP_TEN``
+- PAGEDOWN ``ACTION_GESTURE_SWIPE_DOWN_TEN``
+- SELECT_ITEM ``ACTION_TOUCH_TAP,ACTION_GESTURE_SWIPE_RIGHT``
+- SHOW_INFO ``ACTION_TOUCH_LONGPRESS,ACTION_GESTURE_SWIPE_LEFT``
+- CONTEXT_MENU ``ACTION_TOUCH_LONGPRESS_TEN``
+
 
 ## Settings
 

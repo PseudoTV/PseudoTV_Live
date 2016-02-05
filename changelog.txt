@@ -1,3 +1,7 @@
+[*] Removed unneeded LowPower profile limitations. 
+[*] Reworked Touch Gestures, see readme.
+[*] Improved Channel surfing speed, Failed Playback improved (failed channels now temporarily disabled, option to remove upon exit).
+[*] [COLOR=blue][B]^ v.0.7.3 ^[/B][/COLOR]
 [*] Built-in USTVnow Support w/EPG Guidedata, No external plugin required! Setup account information under "DVR", Autotune or Manually configure channels.
 [*] HDHomerun "Favorites" autotuning fixed. 
 [*] Seeking disabled globally for all Plugins, Users can enable seeking for individual plugins under "Tweaks".
