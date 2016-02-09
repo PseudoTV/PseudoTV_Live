@@ -199,14 +199,13 @@ class MyPlayer(xbmc.Player):
             self.onDemandEnded()
             clearTraktScrob()
 
-            if self.ignoreNextStop == False:
-                # start sleeptimer to shutdown pseudotv live on stop
+            # if self.ignoreNextStop == False:
                 # if self.overlay.sleepTimeValue == 0:
                     # self.overlay.sleepTimeValue = 1
                     # self.overlay.startSleepTimer()
-                self.stopped = True
-            else:
-                self.ignoreNextStop = False
+                # self.stopped = True
+            # else:
+                # self.ignoreNextStop = False
             self.overlay.setWatchedStatus()
     
     
@@ -2452,7 +2451,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         auto = True
             if auto == True:
                 now = time.time()
-                reminder_time = round(((epochBeginDate - now) / 60) - REMINDER_COUNTDOWN)#In minutes
+                reminder_time = round(((epochBeginDate - now) - REMINDER_COUNTDOWN) / 60)#In minutes
                 reminder_Threadtime = float(int(reminder_time)*60)#In seconds
                 if reminder_Threadtime > 0:
                     self.log('setReminder, setting =' + str(reminder_dict))
@@ -3341,12 +3340,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
                 
     def setPlayselected(self, url):
-        self.log('setPlayselected')
         try:
             if url.startswith(('http','pvr','rtmp','rtsp','hdhomerun','upnp')):
                 if url.startswith(('rtmp','rtsp')):
                     url += ' live=true timeout=%s' % str((int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/4)*3)
 
+                self.log('setPlayselected, url = ' + url)
                 listitem = xbmcgui.ListItem(getProperty("OVERLAY.Title"))
                 listitem.setIconImage(getProperty("OVERLAY.LOGOART"))
                 content_type = getProperty("OVERLAY.Type").replace("tvshow","episode").replace("other","video").replace("music","musicvideo")           
@@ -3426,6 +3425,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             else:
                 raise Exception()
         except Exception,e:
+            self.log('setPlayselected, Failed! ' + str(e))
             self.Player.play(url)
         return
         

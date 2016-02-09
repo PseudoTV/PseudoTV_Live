@@ -32,6 +32,7 @@ from email import Encoders
 from xml.dom.minidom import parse, parseString
 from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
+from pyfscache import *
 
 socket.setdefaulttimeout(30)
 
@@ -177,10 +178,10 @@ def FindLogo_Thread(chtype, chname, mediapath):
 def FindLogo_URL(chtype, chname, mediapath):
     if not chname:
         return
-    log("utils: FindLogo_URL, chname = " + chname)
+    log("utils: FindLogo_URL, chtype = " + str(chtype) + ", chname = " + chname)
     
     # thelogodb search
-    if chtype in [0,1,8,9]:
+    if chtype in [0,1,8,9,15]:
         log("utils: FindLogo_URL, findLogodb")
         user_region = REAL_SETTINGS.getSetting('limit_preferred_region')
         user_type = REAL_SETTINGS.getSetting('LogoDB_Type')
@@ -191,7 +192,7 @@ def FindLogo_URL(chtype, chname, mediapath):
             return url
             
     # github search
-    if chtype in [0,1,2,3,4,5,8,9,12,13,14]:
+    if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
         log("utils: FindLogo_URL, findGithubLogo")
         url = findGithubLogo(chname)
         if url:
@@ -1728,9 +1729,7 @@ def xmltvflePath(setting3):
     elif setting3.lower() == 'ptvlguide':
         xmltvFle = PTVLXML
     elif setting3.lower() == 'ustvnow':
-        USTV_ID = 'plugin.video.ustvnow'
-        USTV_SETTINGS = xbmcaddon.Addon(id=USTV_ID)
-        xmltvFle = os.path.join(USTV_SETTINGS.getSetting('write_folder'),'xmltv.xml')
+        xmltvFle = USTVXML                
     else:
         xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
     return xmltvFle
@@ -1827,3 +1826,64 @@ def makeTMPSTRdict(duration, title, subtitle, description, genre, type, id, thum
     return {'duration':duration, 'title':title, 'subtitle':subtitle,'description':description,
             'genre':genre, 'type':type, 'id':id, 'thumburl':thumburl,
             'rating':rating, 'hd':hd, 'cc':cc, 'stars':stars, 'path':path}
+
+def getSmartPlaylistName(fle):
+    log("utils: getSmartPlaylistName") 
+    fle = xbmc.translatePath(fle)
+
+    try:
+        xml = FileAccess.open(fle, "r")
+    except:
+        return ''
+
+    try:
+        dom = parse(xml)
+    except:
+        xml.close()
+        return ''
+
+    xml.close()
+
+    try:
+        plname = dom.getElementsByTagName('name')
+        return plname[0].childNodes[0].nodeValue
+    except:
+        return ''  
+        
+def getChanPrefix(chantype, channame):
+    log("utils: getChanPrefix") 
+    if chantype == 0:
+        newlabel = getSmartPlaylistName(channame) + " - Playlist"
+    elif chantype == 5:
+        newlabel = channame + " - Mixed"
+    elif chantype in [1,3,6]:
+        newlabel = channame + " - TV"
+    elif chantype in [2,4]:
+        newlabel = channame + " - Movies"
+    elif chantype == 7:
+        if channame[-1] == '/' or channame[-1] == '\\':
+            newlabel = os.path.split(channame[:-1])[1]
+        else:
+            newlabel = os.path.split(channame)[1]
+        newlabel = newlabel + " - Directory" 
+    elif chantype == 8:
+        newlabel = channame + " - LiveTV"
+    elif chantype == 9:
+        newlabel = channame + " - InternetTV"
+    elif chantype == 10:
+        newlabel = channame + " - Youtube"            
+    elif chantype == 11:
+        newlabel = channame + " - RSS"            
+    elif chantype == 12:
+        newlabel = channame + " - Music"
+    elif chantype == 13:
+        newlabel = channame + " - Music Videos"
+    elif chantype == 14:
+        newlabel = channame + " - Exclusive"
+    elif chantype == 15:
+        newlabel = channame + " - Plugin"
+    elif chantype == 16:
+        newlabel = channame + " - UPNP"
+    else:
+        newlabel = channame
+    return newlabel

@@ -31,7 +31,7 @@ THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '
 
 def autostart():
     xbmc.log('script.pseudotv.live-Service: autostart')
-    infoDialog("AutoStart Enabled")
+    xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "AutoStart Enabled", 1000, THUMB))
     AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
     xbmc.sleep(AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] * 1000)
     xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
@@ -42,13 +42,12 @@ def ComCHK():
     # Community List is free, not a membership. Users do not have to signup for anything, they supply their own email information only required to participate in the exchange of channel configurations.
     # Submission tool uses emails to submit channel configurations, which are then added to a public (github) list: https://github.com/PseudoTV/PseudoTV_Lists, https://github.com/PseudoTV/PseudoTV_Playlists
     # Community lists includes: Youtube, Vimeo, RSS, Kodi Smartplaylists. Submissions take 24-48hrs to reflect on git list.
-    # Community list also includes: LiveTV (legal feeds ONLY!), InternetTV (legal feeds ONLY!) and user installed Kodi repository plugins (see isKodiRepo, isPlugin).
     # Lists can not contain illegal pirated links since they consist of Youtube/Vimeo and RSS xml links.
     if REAL_SETTINGS.getSetting("Community_Enabled") == "true" and REAL_SETTINGS.getSetting("Gmail_User") != "email@gmail.com":
         if REAL_SETTINGS.getSetting("Community_Verified") != "1": 
             REAL_SETTINGS.setSetting("Community_Verified", "1")
             REAL_SETTINGS.setSetting("AT_Community","true")
-            infoDialog("Community List Activated")
+            xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "Community List Activated", 1000, THUMB))
         xbmcgui.Window(10000).setProperty("Verified_Community", 'true')
     else:
         if REAL_SETTINGS.getSetting("Community_Verified") != "0": 
@@ -115,9 +114,10 @@ def chkChanges():
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
         REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
            
-#Service           
+#Service
 if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
-    chkChanges()
+    if xbmc.getCondVisibility('Window.IsActive(addonsettings)') == False:
+        chkChanges()
     if REAL_SETTINGS.getSetting("Auto_Start") == "true":
         autostart()
     

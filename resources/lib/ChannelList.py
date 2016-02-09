@@ -44,6 +44,7 @@ from datetime import date
 from datetime import timedelta
 from BeautifulSoup import BeautifulSoup
 from parsers import ustvnow
+from pyfscache import *
 
 socket.setdefaulttimeout(30)
 
@@ -2805,11 +2806,11 @@ class ChannelList:
     def Valid_ok(self, url):
         self.log("Valid_ok")
         #plugin check  
+        if url[0:6] == 'plugin':  
+            return self.plugin_ok(url) 
         #Override Check# 
-        if REAL_SETTINGS.getSetting('Override_ok') == "true":
-            return True
-        elif url[0:6] == 'plugin':  
-            return self.plugin_ok(url)  
+        elif REAL_SETTINGS.getSetting('Override_ok') == "true":
+            return True 
         #rtmp check
         elif url[0:4] == 'rtmp':
             return self.rtmpDump(url)  
@@ -4107,10 +4108,7 @@ class ChannelList:
         YoutubePlaylistURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_playlists.ini'
         YoutubeChannelNetworkURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_channels_networks.ini'
         YoutubePlaylistNetworkURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/youtube_playlists_networks.ini'
-        PluginURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/addons.ini'
-        InternetURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/internettv.ini'
-        LiveURL = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/livetv.ini'
-           
+        
         if type == 'LiveTV':
             url = LiveURL
         elif type == 'InternetTV':
@@ -4645,7 +4643,6 @@ class ChannelList:
             detail = uni(self.requestList(url, type))
         else:
             detail = uni(self.requestItem(url, type))
-        print detail
         for f in detail:
             files = re.search('"file" *: *"(.*?)",', f)
             filetypes = re.search('"filetype" *: *"(.*?)",', f)

@@ -38,7 +38,7 @@
         <setting id="SeekForward" type="enum" label="30446" values="10 sec|30 sec|60 sec|3 min|5 min|10 min|30 min" default="1"/>
         <setting id="SeekBackward" type="enum" label="30447" values="-10 sec|-30 sec|-60 sec|-3 min|-5 min|-10 min|-30 min" default="1"/>
         <setting type="sep"/>
-        <setting id="enable_mute" type="bool"   label="30373" default="true"/>
+        <setting id="enable_mute" type="bool"   label="30373" default="false"/>
         <setting id="HideClips" type="bool"   label="30215" default="true"/>
         <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="5"/>
         <setting type="sep"/>
@@ -246,7 +246,7 @@
     <category label="30900"> 
         <setting label="30308" type="lsep"/>
         <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,10" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="30"/>
+        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
         <setting id="channelDelay" type="enum"   label="30302" default="0" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
         <setting label="30914" type="lsep"/>
         <setting id="Include3D" type="bool"   label="39958" default="true"/>
@@ -265,10 +265,10 @@
         <setting label="36996" type="lsep"  visible="eq(-1,true)"/>
         <setting label="36997" type="lsep"  visible="eq(-2,true)"/>
         <setting label="30912" type="lsep"/>
-        <setting id="TMDB_API"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
-        <setting id="TVDB_API"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
-        <setting id="FANTV_API"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
-        <setting id="GBOX_API"  label="30924" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
+        <setting id="TMDB_API_KEY"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
+        <setting id="TVDB_API_KEY"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
+        <setting id="FANARTTV_API_KEY"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
+        <setting id="GBOX_API_KEY"  label="30924" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="RSS_API_KEY" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|cGx1Z2luLnZpZGVvLnR2Mmdv|cmVwb3NpdG9yeS50aGV2aWJl|" />  
         <setting id="YT_API_KEY"  option="hidden" visible="false" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
         <setting id="GOOGLE_API_KEY"  option="hidden" visible="false" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />

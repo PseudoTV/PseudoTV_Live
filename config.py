@@ -1747,41 +1747,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     chansetting4 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_4")
                 except:
                     pass
-
-                if chantype == 0:
-                    newlabel = self.getSmartPlaylistName(chansetting1) + " - Playlist"
-                elif chantype == 5:
-                    newlabel = chansetting1 + " - Mixed"
-                elif chantype in [1,3,6]:
-                    newlabel = chansetting1 + " - TV"
-                elif chantype in [2,4]:
-                    newlabel = chansetting1 + " - Movies"
-                elif chantype == 7:
-                    if chansetting1[-1] == '/' or chansetting1[-1] == '\\':
-                        newlabel = os.path.split(chansetting1[:-1])[1]
-                    else:
-                        newlabel = os.path.split(chansetting1)[1]
-                    newlabel = newlabel + " - Directory" 
-                elif chantype == 8:
-                    newlabel = channame + " - LiveTV"
-                elif chantype == 9:
-                    newlabel = channame + " - InternetTV"
-                elif chantype == 10:
-                    newlabel = channame + " - Youtube"            
-                elif chantype == 11:
-                    newlabel = channame + " - RSS"            
-                elif chantype == 12:
-                    newlabel = channame + " - Music"
-                elif chantype == 13:
-                    newlabel = channame + " - Music Videos"
-                elif chantype == 14:
-                    newlabel = channame + " - Exclusive"
-                elif chantype == 15:
-                    newlabel = channame + " - Plugin"
-                elif chantype == 16:
-                    newlabel = channame + " - UPNP"
                 
-                theitem.setLabel2(newlabel)
+                if chantype <= 7:
+                    option = chansetting1
+                else:
+                    option = channame
+                theitem.setLabel2(getChanPrefix(chantype, option))
             except:
                 pass
         self.log("updateListing return")
