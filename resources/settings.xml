@@ -274,7 +274,7 @@
         <setting id="GOOGLE_API_KEY"  option="hidden" visible="false" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="LOGODB_API_KEY" option="hidden" visible="false" type="text" default="8332" />
         <setting id="DOX_API_KEY"  option="hidden" visible="false" type="text" default="Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9" />
-        
+        <setting id="USTV_Token" option="hidden" visible="false" type="text" default="False" />
         <setting label="30197" type="lsep"/>
         <setting id="ffmpegPath" type="folder" label="30198" source="auto" default="C:\ffmpeg\bin\"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\"/>

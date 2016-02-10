@@ -66,15 +66,17 @@ class MyPlayer(xbmc.Player):
 
         
     def getPlayerFile(self):
-        return (self.getPlayingFile()).replace("\\\\","\\")
+        try:
+            return (self.getPlayingFile()).replace("\\\\","\\")
+        except:
+            return ''
     
     
     def getPlayerTime(self):
         try:
-            time = int(self.getTime())
+            return int(self.getTime())
         except:
-            time = 0
-        return time
+            return 0
     
     
     def getPlayerTitle(self):
@@ -90,6 +92,8 @@ class MyPlayer(xbmc.Player):
     def isActuallyPlaying(self, time=500):
         ActuallyPlaying = False
         if self.overlay.isExiting == True or self.isPlaybackPaused() == True:
+            return True
+        if self.getPlayerFile().startswith('upnp'):
             return True
 
         if self.isPlaybackValid() == True:
@@ -108,6 +112,9 @@ class MyPlayer(xbmc.Player):
     def isPlaybackValid(self):
         if self.overlay.isExiting == True:
             return True
+        if self.getPlayerFile().startswith('upnp'):
+            return True
+
         PlaybackStatus = False
         xbmc.sleep(10)
         if self.isPlaying():
@@ -913,14 +920,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.channels[channel - 1].addShowPosition(1)
                 position = self.channels[channel - 1].playlistPosition
                 position += self.infoOffset + offdif
-            else: #original code
-                position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset + offdif
+            else: #original code   
+                position = self.channels[channel - 1].playlistPosition + self.infoOffset + offdif
+                # position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset + offdif
         self.log('getPlaylistPOS, position = ' + str(position)) 
         return position
         
-
-
-
 
     # return a valid channel in the proper range
     def fixChannel(self, channel, increasing = True):
@@ -1035,7 +1040,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.channels[self.currentChannel - 1].setShowTime(0)
                            
         # First, check to see if the video stop should be ignored
-        if chtype in [8,9,15,16] or mediapath[-4:].lower() == 'strm':
+        if chtype > 7 or mediapath[-4:].lower() == 'strm':
             self.Player.ignoreNextStop = True
             self.log("setChannel, ignoreNextStop")
 
@@ -2240,8 +2245,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 
                     self.FailedPlayingCount += 1
                     self.channels[self.currentChannel - 1].isValid = False
-                    if self.CloseDialog() == False:
-                        self.ForceStop()
+                    self.CloseDialog()
+                    # if self.CloseDialog() == False:
+                        # self.ForceStop()
                         
                     # if self.startPlayerTimer.isAlive():
                         # self.startPlayerTimer.unpause() 
@@ -2629,8 +2635,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         UpdateRSS() 
         self.FEEDtoggleTimer = threading.Timer(float(RSS_REFRESH), self.FEEDtoggle)
         self.FEEDtoggleTimer.name = "FEEDtoggleTimer"      
-        if self.FEEDtoggleTimer.isAlive():
-            self.FEEDtoggleTimer.cancel()
+
         if getProperty("PTVL.FEEDtoggle") == "true":
             setProperty("PTVL.FEEDtoggle","false")
         else:
@@ -3299,7 +3304,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log('postBackgroundLoading')
         setProperty("PTVL.BackgroundLoading","false")
 
-            
+
     def playStartOver(self):
         self.log('playStartOver')
         playPOS = self.channels[self.currentChannel - 1].playlistPosition
@@ -3343,7 +3348,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         try:
             if url.startswith(('http','pvr','rtmp','rtsp','hdhomerun','upnp')):
                 if url.startswith(('rtmp','rtsp')):
-                    url += ' live=true timeout=%s' % str((int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/4)*3)
+                    toTime = str((int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/4)*3)
+                    if 'live=true' not in url:
+                        url += ' live=true'
+                    if 'timeout=' in url:
+                        url = re.sub(r'timeout=\d',"timeout=%s" % toTime,url) 
+                    else:
+                        url += ' timeout=%s' % toTime
 
                 self.log('setPlayselected, url = ' + url)
                 listitem = xbmcgui.ListItem(getProperty("OVERLAY.Title"))

@@ -16,23 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, re, datetime
+import sys, os, re, datetime, time, random
 import urllib, urllib2, socket, cookielib
-import simplejson as json
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin, xbmcvfs
 
+if sys.version_info < (2, 7):
+    import simplejson as json
+else:
+    import json
+
 from xml.dom import minidom
-from time import time
+
 from xml.etree import ElementTree as ET
 from resources.lib.Globals import *
 from resources.lib.utils import *
 
-socket.setdefaulttimeout(int(REAL_SETTINGS.getSetting("PlayTimeoutInt")))
+##socket.setdefaulttimeout(int(REAL_SETTINGS.getSetting("PlayTimeoutInt")))
 
 class ustvnow:
     def __init__(self):
         self.log('__init__')
-        self.mBASE_URL = 'http://m.ustvnow.com'
+        self.mBASE_URL = 'http://m-api.ustvnow.com'
         self.uBASE_URL = 'http://lv2.ustvnow.com'
         self.user = REAL_SETTINGS.getSetting('ustv_email')
         self.password = REAL_SETTINGS.getSetting('ustv_password')
@@ -42,40 +46,39 @@ class ustvnow:
         self.xmltvPath = USTVXML
         self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
         self.PlayTimeoutInt = int(REAL_SETTINGS.getSetting("PlayTimeoutInt"))
-        self.token = self._login()
+        self.token = USTV_Token
 
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('USTVnow: ' + msg, level)
-        
-        
+
+       
     def getToken(self):
         self.log('getToken')
         cnt = 0
-        while self.token == 'False':
+        self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
+        while self.userChk != self.user:
             self.log('getToken, Working...')
             cnt += 1
             if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
                 return False
             self.token = self._login()
-            xbmc.sleep(self.ActionTimeInt)
-            self.log('getToken, Retry Count ' + str(cnt)) 
-        self.log('getToken, self.token = ' + self.token)    
+            time.sleep(5)
+            self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
+            self.log('getToken, Retry Count ' + str(cnt))
         return True
 
-        
+
     def getXMLTV(self):
         self.log('getXMLTV')
-        if self.token == 'False':
-            self.token = self.getToken()
-        return self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath)
+        if self.getToken() == True:
+            return self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath)
 
 
     def getChannellink(self, chname):
         self.log('getChannellink, chname = ' + chname)
-        if self.token == 'False':
-            self.token = self.getToken()
-        return self.get_link(self.quality_type, self.stream_type, chname)
+        if self.getToken() == True:
+            return self.get_link(self.quality_type, self.stream_type, chname)
 
 
     def getChannelNames(self):
@@ -103,6 +106,8 @@ class ustvnow:
 
     def _fetch(self, url, form_data=False):
         self.log('_fetch')
+        opener = urllib2.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
         if form_data:
             req = urllib2.Request(url, form_data)
         else:
@@ -174,6 +179,7 @@ class ustvnow:
         try:
             self.cj = cookielib.CookieJar()
             opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             urllib2.install_opener(opener)
             url = self._build_json('gtv/1/live/login', {'username': self.user,
                                                    'password': self.password,
@@ -193,6 +199,7 @@ class ustvnow:
         try:
             self.cj = cookielib.CookieJar()
             opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             urllib2.install_opener(opener)
             url = self._build_url('iphone_login', {'username': self.user,
                                                    'password': self.password})
@@ -205,45 +212,30 @@ class ustvnow:
         return 'False'
 
 
-    def get_link(self, quality, stream_type, chname=False):
-        self.log('get_link')
+    def get_link(self, quality, stream_type, chname):
+        self.log('get_link,' + str(quality) + ',' + stream_type)
+        src = random.choice(['lv5', 'lv7', 'lv9'])
         channels = []
-        try:
-            html = self._get_html('iphone_ajax', {'tab': 'iphone_playingnow',
-                                                  'token': self.token})
-            for channel in re.finditer('class="panel".+?title="(.+?)".+?src="' +
-                                       '(.+?)".+?class="nowplaying_item">(.+?)' +
-                                       '<\/td>.+?class="nowplaying_itemdesc".+?' +
-                                       '<\/a>(.+?)<\/td>.+?href="(.+?)"',
-                                       html, re.DOTALL):
-                show_busy_dialog()
-                name, icon, title, plot, url = channel.groups()
-                name = name.replace('\n','').replace('\t','').replace('\r','').replace('<fieldset> ','').replace('<div class=','').replace('>','').replace('"','').replace(' ','')
-                if not name:
-                    name = ((icon.rsplit('/',1)[1]).replace('.png','')).upper()
-                    name = self.cleanChanName(name)
-                    self.log('get_link, parsing '+ name)
-                try:
-                    if not url.startswith('http'):
-                        link = '%s%s%d' % (stream_type, url[4:-1], quality + 1)
-                        if chname != False and chname.lower() == name.lower():
-                            hide_busy_dialog()
-                            if link == '%s%d' % (stream_type, quality + 1):
-                                self.token = 'False'
-                                return self.getChannellink(chname)
-                            elif not link.startswith(stream_type):
-                                return self.getChannellink(chname)
-                            return link
-                        else:
-                            channels.append([name, link])
-                except:
-                    pass
-        except:
-            pass
+        show_busy_dialog()
+        content = self._get_json('gtv/1/live/channelguide', {'token': self.token})
+        passkey = self._get_json('gtv/1/live/viewdvrlist', {'token': self.token})['globalparams']['passkey']
+        results = content['results'];
+        for i in results:
+            try:
+                if i['order'] == 1:
+                    name = (i['stream_code'])
+                    link = stream_type + '://' + str(src) + '.ustvnow.com:1935/dvrtest?key=' + passkey + '/mp4:' + i['streamname'] + str(quality + 1)
+                    if name.lower() == chname.lower():
+                        hide_busy_dialog()
+                        return link
+                    else:
+                        channels.append([name, link])
+            except:
+                pass
         hide_busy_dialog()
         return channels
 
-
+        
     def get_channels(self, quality, stream_type):
         self.log('get_channels')
         try:
@@ -295,7 +287,7 @@ class ustvnow:
                 pass
         return channels
 
-        
+
     def get_guidedata(self, quality, stream_type):
         self.log('get_guidedata')
         try:

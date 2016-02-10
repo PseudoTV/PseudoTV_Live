@@ -66,6 +66,7 @@ def uni(string):
     return string
 
 # API Keys
+USTV_Token = REAL_SETTINGS.getSetting("USTV_Token")
 TVDB_API_KEY = REAL_SETTINGS.getSetting("TVDB_API_KEY")
 TMDB_API_KEY = REAL_SETTINGS.getSetting("TMDB_API_KEY")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANARTTV_API_KEY")

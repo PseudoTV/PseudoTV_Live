@@ -230,6 +230,13 @@ class Main:
             self.setting4 = '0'
             self.channame = self.Label +' - '+ self.AddonName
             
+        elif self.chantype == 16:
+            self.setting1 = self.Path
+            self.setting2 = ''
+            self.setting3 = str(MEDIA_LIMIT)
+            self.setting4 = '0'
+            self.channame = self.Label
+            
         self.saveSettings()
         self.openManager()
         

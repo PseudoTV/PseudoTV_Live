@@ -1,23 +1,23 @@
-[B]Youtube Channels[/B]
+[COLOR=blue][B]Channel Type:[/B][/COLOR] - Youtube
+
+[todo Short description about chtype]
 
 [COLOR=blue][B]Youtube Type:[/B][/COLOR] - Available Youtube types.
 
-Channel/User - Single Youtube Channel or User, ex. 'VEVO', taken from [youtube.com/user/VEVO] or 'UC6nSFpj9HTCZ5t-N3Rm3-HA', taken from [youtube.com/channel/UC6nSFpj9HTCZ5t-N3Rm3-HA]
+Channel - Single Youtube Channel or User, ex. 'VEVO' or 'UCcKfSNBlSTsfT-WgPmCVyXQ', taken from [youtube.com/user/VEVO] or taken from [youtube.com/channel/UCcKfSNBlSTsfT-WgPmCVyXQ]
 Playlist - Single Youtube Playlist, ex. 'PLrEnWoR732-CV75Y0BCvbVyGDtjoghNEg', taken from [youtube.com/playlist?list=PLrEnWoR732-CV75Y0BCvbVyGDtjoghNEg]
-User Subscription - User subscriptions enter Youtube Username
-User Favorites - User Favourites enter Youtube Username
-Search Query w/SafeSearch - Search for patterns or terms, ex. (Football+Soccer) & (Football Soccer) or SafeSearch using one of the two options (moderate or strict) ex. (strict|Dick+Cheney).
 Multi Playlist - Group Multiple Playlists to create a "Network" Channel. ex. 'PLrEnWoR732-CV75Y0BCvbVyGDtjoghNEg,PLrEnWoR732-CV75Y0BCvbVyGDtjoghNEg'
 Multi Channel - Group Multiple Channels to create a "Network" Channel. ex. 'VEVO,UC6nSFpj9HTCZ5t-N3Rm3-HA'
-Raw gdata - Currently Unavailable
-Seasonal - Automatically Configured Channel that uses monthly community playlists to create a "Seasonal" Channel. ex. December = Christmas/Hanukkah playlists. Please submit more playlists to the community list.
+Seasonal - Automatically Configured Channel that uses monthly playlists to create a "Seasonal" Channel. ex. December = Christmas/Hanukkah playlists. Please submit more playlists to the community list.
+Search Query w/SafeSearch - Search for patterns or terms, ex. (Football+Soccer) & (Football Soccer) or SafeSearch using one of the two options (moderate or strict) ex. (strict|Dick+Cheney).
 
 [COLOR=blue][B]Browse Community List:[/B][/COLOR] - Browse a collection of user submitted configurations, List dependent on "Youtube Type" selected.
 
 [COLOR=blue][B]Youtube ID:[/B][/COLOR] - Enter the Channel, User, Playlist, etc for the selected "Youtube Type".
 
-[COLOR=blue][B]Media Limit:[/B][/COLOR] - Set Media Limit
+[COLOR=blue][B]Media Limit:[/B][/COLOR] - Set Media Limit.
 
-[COLOR=blue][B]Sort Order:[/B][/COLOR] - Preferred Sort Order
+[COLOR=blue][B]Sort Order:[/B][/COLOR] - Preferred Sort Order.
 
-Optional additional information about chtype and settings.
+
+[todo Optional additional information about chtype and settings.]

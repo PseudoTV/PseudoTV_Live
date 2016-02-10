@@ -1,3 +1,4 @@
+[*] Tweaked UPNP channel building, Added UPNP functions to export tool.
 [*] Removed unneeded LowPower profile limitations. 
 [*] Reworked Touch Gestures, see readme.
 [*] Improved Channel surfing speed, Failed Playback improved (failed channels now temporarily disabled).

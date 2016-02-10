@@ -19,7 +19,7 @@
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import os, sys, re, unicodedata, traceback
 import time, datetime, threading, _strptime, calendar
-import httplib, urllib, urllib2, feedparser, socket, json
+import httplib, urllib, urllib2, feedparser, socket
 import base64, shutil, random, errno
 
 
@@ -48,6 +48,11 @@ from pyfscache import *
 
 socket.setdefaulttimeout(30)
 
+if sys.version_info < (2, 7):
+    import simplejson as json
+else:
+    import json
+    
 # Commoncache plugin import
 try:
     import StorageServer
@@ -318,6 +323,8 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
                 needsreset = True
                 self.delResetLST(channel)
+        elif chtype == 16:
+            needsreset = True
 
         if needsreset:
             self.channels[channel - 1].isSetup = False
@@ -676,8 +683,9 @@ class ChannelList:
 
         # Direct UPNP
         elif chtype == 16:
-            self.log("Building UPNP Channel, " + setting1 + "...")
-            fileList = self.buildUPNPFileList(setting1, setting2, setting3, setting4, limit)  
+            if self.Valid_ok(setting1) == True:
+                self.log("Building UPNP Channel, " + setting1 + "...")
+                fileList = self.buildUPNPFileList(setting1, setting2, setting3, setting4, limit)  
                 
         # LocalTV
         else:
@@ -1601,7 +1609,7 @@ class ChannelList:
             pass
   
         excludeLST += EX_FILTER
-        excludeLST = ([x.lower() for x in excludeLST if x != ''])
+        excludeLST = removeStringElem(excludeLST)
         self.log('buildPluginFileList, excludeLST = ' + str(excludeLST))
         fileList = self.getFileList(self.requestList(setting1), self.settingChannel, limit, excludeLST)
         self.log("buildPluginFileList return")
@@ -1610,6 +1618,7 @@ class ChannelList:
         
     def buildUPNPFileList(self, setting1, setting2, setting3, setting4, limit):
         self.log('buildUPNPFileList')
+        Directs = ''
         self.dircount = 0
         self.filecount = 0
         fileList = []  
@@ -1627,13 +1636,76 @@ class ChannelList:
             excludeLST = []
   
         excludeLST += EX_FILTER
-        excludeLST = ([x.lower() for x in excludeLST if x != ''])
+        excludeLST = removeStringElem(excludeLST)
         self.log('buildUPNPFileList, excludeLST = ' + str(excludeLST))
+        upnpID = 'upnp://' + (setting1.split('/')[2:-1])[0]
+    
+        # todo convert upnp:// to file/path names, store in setting1
+        # ADDON_SETTINGS.setSetting("Channel_" + str(self.settingChannel) + "_1", setting1)
+        
+        # try:
+            # Directs = (setting1.split('/')) # split folders
+            # Directs = ([x.replace('%2F','/') for x in Directs if x != '']) # remove empty elements
+            # PluginName = Directs[0]
+            # Directs = Directs[2:]
+        # except:
+            # Directs = []
+            # PluginName = setting1
+            # pass
+            # self.log('BuildUPNPFileList_NEW, Directs = ' + str(Directs))
+
+            # if self.background == False:
+                # self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "Building Playon", 'parsing ' + str(PluginName))
+
+            # Match = True
+            # while Match:
+
+                # DetailLST = self.PluginInfo(upnpID)
+
+                # #Plugin listitems return parent list during error, catch repeat list and end loops.
+                # if DetailLST_CHK == DetailLST:
+                    # break
+                # else:
+                    # DetailLST_CHK = DetailLST
+
+                # #end while when no more directories to walk
+                # if len(Directs) <= 1:
+                    # Match = False
+                
+                # try:
+                    # for i in range(len(DetailLST)):
+                        # Detail = (DetailLST[i]).split(',')
+                        # filetype = Detail[0]
+                        # title = Detail[1]
+                        # genre = Detail[2]
+                        # dur = Detail[3]
+                        # description = Detail[4]
+                        # file = Detail[5]
+                                     
+                        # if filetype == 'directory':
+                            # if Directs[0].lower() == title.lower():
+                                # self.log('BuildUPNPFileList_NEW, Directory Match: ' + Directs[0].lower() + ' = ' + title.lower())
+                                # Directs.pop(0) #remove old directory, search next element
+                                # upnpID = file
+                                # break
+                # except Exception,e:
+                    # pass    
+                
+        # #all directories found, walk final folder
+        # if len(Directs) == 0:
+            # showList = self.PluginWalk(upnpID, excludeLST, limit, 'UPNP', 'video')
+        # return showList
+
         fileList = self.getFileList(self.requestList(setting1), self.settingChannel, limit, excludeLST)
         self.log("buildUPNPFileList return")
         return fileList
           
-               
+ 
+    def getJsonLabels(self, url):
+        self.log('getJsonLabels')
+        Directs = []
+        return Directs
+            
     def buildMixedFileList(self, dom1, channel, limit):
         self.log('buildMixedFileList')
         fileList = []
@@ -2808,6 +2880,9 @@ class ChannelList:
         #plugin check  
         if url[0:6] == 'plugin':  
             return self.plugin_ok(url) 
+        #upnp check
+        elif url[0:4] == 'upnp':
+            return self.upnp_ok(url) 
         #Override Check# 
         elif REAL_SETTINGS.getSetting('Override_ok') == "true":
             return True 
@@ -2823,9 +2898,6 @@ class ChannelList:
         #pvr check
         elif url[0:3] == 'pvr':
             return True  
-        #upnp check
-        elif url[0:4] == 'upnp':
-            return True 
         #udp check
         elif url[0:3] == 'udp':
             return True  
@@ -2835,6 +2907,16 @@ class ChannelList:
         #HDHomeRun check
         elif url[0:9] == 'hdhomerun':
             return True  
+  
+  
+    def upnp_ok(self, url):
+        self.log("upnp_ok, " + str(url))
+        upnpID = (url.split('/')[2:-1])[0]
+        dirs, files = xbmcvfs.listdir(os.path.join('upnp://',''))
+        if upnpID in dirs:
+            return True
+        else:
+            return False
   
   
     def strm_ok(self, url):
@@ -4421,7 +4503,6 @@ class ChannelList:
                 rating = 'NR'
         except Exception,e:
             rating = 'NR'
-            self.log("getRating, Failed! " + str(e))
         return self.cleanRating(rating)
         
 
@@ -4720,8 +4801,8 @@ class ChannelList:
                 infoList['icon']        = thumbnail
                 self.Items.setArt(infoArt) 
                 self.PanelItems.addItem(self.Items) 
-            
-            
+        
+        
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
         self.log("getFileList")
         fileList = []
