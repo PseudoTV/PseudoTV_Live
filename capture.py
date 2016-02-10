@@ -87,14 +87,16 @@ class Main:
         self.updateListing()
         hide_busy_dialog()
         available = False
-        
+
+        if len(self.itemlst) == 0:
+            setProperty("PTVL.CM.LASTCHAN","0")
         try:
             Lastchan = int(getProperty("PTVL.CM.LASTCHAN"))
             self.log("ImportChannel, Lastchan = " + str(Lastchan))
             self.nitemlst = self.itemlst
             self.itemlst = self.nitemlst[Lastchan:] + self.nitemlst[:Lastchan]
         except:
-            self.itemlst = self.theitem
+            pass
             
         while not available:
             select = selectDialog(self.itemlst, 'Select Channel Number')
@@ -143,28 +145,34 @@ class Main:
     def buildNetworks(self, url):
         self.log("buildNetworks, url = " + url)
         detail = uni(self.chnlst.requestList(url))
-        show_busy_dialog()
-        for f in detail:
-            files = re.search('"file" *: *"(.*?)",', f)
-            filetypes = re.search('"filetype" *: *"(.*?)",', f)
-            labels = re.search('"label" *: *"(.*?)",', f)
-            if filetypes and labels and files:
-                filetype = filetypes.group(1)
-                name = self.chnlst.cleanLabels(labels.group(1))
-                file = (files.group(1).replace("\\\\", "\\"))
-                
-                if filetype == 'directory':
-                    self.chantype = 15
-                    self.setting1 = file
-                    self.setting2 = ''
-                    self.setting3 = str(MEDIA_LIMIT)
-                    self.setting4 = '0'
-                    self.channame = name
-                    self.saveSettings()
-                    self.channel +=1
-        hide_busy_dialog()
-        self.openManager()
+        if dlg.yesno("PseudoTV Live", 'Add %d Network Channels?' % len(detail)):
+            show_busy_dialog()
+            for f in detail:
+                files = re.search('"file" *: *"(.*?)",', f)
+                filetypes = re.search('"filetype" *: *"(.*?)",', f)
+                labels = re.search('"label" *: *"(.*?)",', f)
+                if filetypes and labels and files:
+                    filetype = filetypes.group(1)
+                    name = self.chnlst.cleanLabels(labels.group(1))
+                    file = (files.group(1).replace("\\\\", "\\"))
+                    
+                    if filetype == 'directory':
+                        self.chantype = 15
+                        self.setting1 = file
+                        self.setting2 = ''
+                        self.setting3 = str(MEDIA_LIMIT)
+                        self.setting4 = '0'
+                        self.channame = name
+                        self.saveSettings()
+                        self.fixChannel(self.channel)
+            hide_busy_dialog()
+            self.openManager()
             
+            
+    def fixChannel(self, channel):
+        while self.getChtype(self.channel+1) != 9999:
+            self.channel +=1
+        
             
     def buildChannel(self):
         self.log("buildChannel, chantype = " + str(self.chantype))
@@ -231,6 +239,15 @@ class Main:
             xbmc.executebuiltin("RunScript("+ADDON_PATH+"/config.py, %s)" %str(self.channel))
         
         
+    def getChtype(self, channel):
+        self.log("getChtype")
+        try:
+            chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel - 1) + "_type"))
+        except:
+            chantype = 9999
+        return chantype
+        
+        
     def updateListing(self, channel = -1):
         self.log("updateListing")
         start = 0
@@ -241,39 +258,39 @@ class Main:
             end = channel
 
         for i in range(start, end):
-            # try:
-            theitem = self.theitem[i]
-            chantype = 9999
-            chansetting1 = ''
-            chansetting2 = ''
-            chansetting3 = ''
-            chansetting4 = ''
-            channame = ''
-            newlabel = ''
-
             try:
-                chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
-                chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_1")
-                chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_2")
-                chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_3")
-                chansetting4 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_4")
-                channame = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_rule_1_opt_1")
+                theitem = self.theitem[i]
+                chantype = 9999
+                chansetting1 = ''
+                chansetting2 = ''
+                chansetting3 = ''
+                chansetting4 = ''
+                channame = ''
+                newlabel = ''
+
+                try:
+                    chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
+                    chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_1")
+                    chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_2")
+                    chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_3")
+                    chansetting4 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_4")
+                    channame = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_rule_1_opt_1")
+                except:
+                    pass
+
+                if chantype <= 7:
+                    option = chansetting1
+                else:
+                    option = channame
+                newlabel = getChanPrefix(chantype, option)
+                
+                if newlabel:
+                    newlabel = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ newlabel+'[/COLOR]'
+                else:
+                    newlabel = '[COLOR=blue][B]'+theitem+'[/B][/COLOR]'
+                self.itemlst.append(newlabel)
             except:
                 pass
-
-            if chantype <= 7:
-                option = chansetting1
-            else:
-                option = channame
-            newlabel = getChanPrefix(chantype, option)
-
-            if newlabel:
-                newlabel = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ newlabel+'[/COLOR]'
-            else:
-                newlabel = '[COLOR=blue][B]'+theitem+'[/B][/COLOR]'
-            self.itemlst.append(newlabel)
-            # except:
-                # pass
         self.log("updateListing return")
              
              
