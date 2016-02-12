@@ -177,7 +177,7 @@ class Artdownloader:
                     return self.DownloadMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
             else:
                 if id == '0':
-                    if chtype == 8 and dbid != '0':
+                    if chtype in [8,15,16] and dbid != '0':
                         self.log('FindArtwork, XMLTV')
                         return decodeString(dbid)
                     elif type == 'youtube':

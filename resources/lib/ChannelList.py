@@ -181,10 +181,9 @@ class ChannelList:
                 pass
                 
             self.setupChannel(i + 1, self.background, makenewlists, False)
-            
             if self.channels[i].isValid:
                 foundvalid = True
-
+                
         if makenewlists == True:
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
 
@@ -216,7 +215,8 @@ class ChannelList:
     def findMaxChannels(self):
         self.log('findMaxChannels')
         self.maxChannels = 0
-        self.enteredChannelCount = 0
+        self.enteredChannelCount = 0      
+        self.freshBuild = False
         if self.background == False:
             self.myOverlay.setBackgroundLabel('Initializing: PseudoTV Live')
 
@@ -247,9 +247,11 @@ class ChannelList:
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
    
-            if self.forceReset and (chtype != 9999):
+            if self.forceReset and chtype in [1,2,3,4,5,6,12]:
                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-                
+            elif self.forceReset:
+                self.freshBuild = True
+            
             # find missing channel logos
             if FIND_LOGOS == True:
                 if self.background == False:
@@ -323,9 +325,10 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
                 needsreset = True
                 self.delResetLST(channel)
-        elif chtype == 16:
+                
+        if self.freshBuild and chtype not in [1,2,3,4,5,6,12]:
             needsreset = True
-
+            
         if needsreset:
             self.channels[channel - 1].isSetup = False
             
@@ -354,10 +357,13 @@ class ChannelList:
                         # Reset livetv after 24hrs
                         if chtype == 8 and self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
                             createlist = False
-                        
                         # If this channel has been watched for longer than it lasts, reset the channel
                         if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                             createlist = False
+                        # elif chtype <= 7 and self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                            # createlist = False
+                        # elif chtype >= 10 and time.time() - self.lastResetTime < (60 * 60 * 24):
+                            # createlist = False
 
                     if self.channelResetSetting > 0 and self.channelResetSetting < 4:
                         timedif = time.time() - self.lastResetTime
@@ -381,7 +387,6 @@ class ChannelList:
                 
         if createlist or needsreset:
             self.channels[channel - 1].isValid = False
-
             if makenewlist:
                 try:
                     xbmcvfs.delete(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u')
@@ -3848,76 +3853,83 @@ class ChannelList:
                 
     def findZap2itID(self, CHname, filename):
         self.log("findZap2itID, CHname = " + CHname)
-        show_busy_dialog()
         orgCHname = CHname
         CHname = CHname.upper()
         XMLTVMatchlst = []
         sorted_XMLTVMatchlst = []
         found = False
-        try:
-            XMLTVMatchlst = self.readXMLTV(filename)
+        if filename == 'pvr':
+            NameLst, PathLst, IconLst = self.PVRList
+            for i in range(len(NameLst)):
+                CHid, dnameID = (self.cleanLabels(NameLst[i])).split(' - ')
+                if CHname.lower() == dnameID.lower():
+                    return dnameID, CHid
+        else:
             try:
-                CHnum = int(CHname.split(' ')[0])
-                CHname = (CHname.split(' ')[1]).upper()
-            except:
-                CHnum = 0
-                pass
-            
-            CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
-            matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHnum)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHnum)+' '+orgCHname.upper(), orgCHname]
-            self.log("findZap2itID, Cleaned CHname = " + CHname)
-            
-            sorted_XMLTVMatchlst = sorted_nicely(XMLTVMatchlst)
-            for n in range(len(sorted_XMLTVMatchlst)):
+                show_busy_dialog()
+                XMLTVMatchlst = self.readXMLTV(filename)
                 try:
-                    CHid = '0'
-                    found = False
-                    dnameID = sorted_XMLTVMatchlst[n]
-                    dname = dnameID.split(' : ')[0]
-                    CHid = dnameID.split(' : ')[1]
-
-                    if dname.upper() in matchLST: 
-                        found = True
-                        hide_busy_dialog()
-                        return orgCHname, CHid
+                    CHnum = int(CHname.split(' ')[0])
+                    CHname = (CHname.split(' ')[1]).upper()
                 except:
-                    hide_busy_dialog()
+                    CHnum = 0
                     pass
-                    
-            if not found:
-                hide_busy_dialog()
-                XMLTVMatchlst = []
-
-                for s in range(len(sorted_XMLTVMatchlst)):
+                
+                CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
+                matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHnum)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHnum)+' '+orgCHname.upper(), orgCHname]
+                self.log("findZap2itID, Cleaned CHname = " + CHname)
+                
+                sorted_XMLTVMatchlst = sorted_nicely(XMLTVMatchlst)
+                for n in range(len(sorted_XMLTVMatchlst)):
                     try:
-                        dnameID = sorted_XMLTVMatchlst[s]
+                        CHid = '0'
+                        found = False
+                        dnameID = sorted_XMLTVMatchlst[n]
                         dname = dnameID.split(' : ')[0]
                         CHid = dnameID.split(' : ')[1]
-                                        
-                        try:
-                            CHid = CHid.split(', icon')[0]
-                        except:
-                            pass
-                            
-                        line = '[COLOR=blue][B]'+dname+'[/B][/COLOR] : ' + CHid
-                        if dname[0:3] != 'en':
-                            XMLTVMatchlst.append(line)
+
+                        if dname.upper() in matchLST: 
+                            found = True
+                            hide_busy_dialog()
+                            return orgCHname, CHid
                     except:
                         hide_busy_dialog()
                         pass
                         
-                if XMLTVMatchlst:
-                    select = selectDialog(XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname, 5000)
-                    if select != -1:
-                        dnameID = self.cleanString(XMLTVMatchlst[select])
-                        CHid = dnameID.split(' : ')[1]
-                        dnameID = dnameID.split(' : ')[0]
-                        return dnameID, CHid
-                    else:
-                        return CHname, '0'
-        except Exception,e:
-            hide_busy_dialog()
-            self.log("findZap2itID, Failed! " + str(e))
+                if not found:
+                    hide_busy_dialog()
+                    XMLTVMatchlst = []
+
+                    for s in range(len(sorted_XMLTVMatchlst)):
+                        try:
+                            dnameID = sorted_XMLTVMatchlst[s]
+                            dname = dnameID.split(' : ')[0]
+                            CHid = dnameID.split(' : ')[1]
+                                            
+                            try:
+                                CHid = CHid.split(', icon')[0]
+                            except:
+                                pass
+                                
+                            line = '[COLOR=blue][B]'+dname+'[/B][/COLOR] : ' + CHid
+                            if dname[0:3] != 'en':
+                                XMLTVMatchlst.append(line)
+                        except:
+                            hide_busy_dialog()
+                            pass
+                            
+                    if XMLTVMatchlst:
+                        select = selectDialog(XMLTVMatchlst, 'Select matching id to [B]%s[/B]' % orgCHname)
+                        if select != -1:
+                            dnameID = self.cleanString(XMLTVMatchlst[select])
+                            CHid = dnameID.split(' : ')[1]
+                            dnameID = dnameID.split(' : ')[0]
+                            return dnameID, CHid
+                        else:
+                            return CHname, '0'
+            except Exception,e:
+                hide_busy_dialog()
+                self.log("findZap2itID, Failed! " + str(e))
             
             
     def ListTuning(self, type, url, Random=False):
@@ -4115,10 +4127,13 @@ class ChannelList:
             
         channels = self.ustv.getChannelNames()
         for i in range(len(channels)):
-            CHname = channels[i][0]
-            NameLst.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
-            PathLst.append('ustvnow://'+ CHname)
-            IconLst.append(channels[i][0])
+            try:
+                CHname = channels[i][0]
+                NameLst.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
+                PathLst.append('ustvnow://'+ CHname)
+                IconLst.append(channels[i][0])
+            except:
+                pass
         return NameLst,PathLst,IconLst
         
         
@@ -5095,6 +5110,14 @@ class ChannelList:
                                         # accurate real-time scheduling does not apply to chtypes <= 7, only chtype = 8. Doesn't hurt to keep track of it anyway, future feature?
                                         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
                                         self.startDate += dur
+                                        
+                                        if dbid == 0 or dbid == '0':
+                                            thumbs = re.search('"thumbnail" *: *\[(.*?)\]', f)
+                                            fanarts = re.search('"fanart" *: *\[(.*?)\]', f)
+                                            if thumbs != None and len(thumbs.group(1)) > 0:
+                                                okDialog(thumb)
+                                                thumb = thumbs.group(1)
+                                                dbid = encodeString(thumb)
                                         
                                         GenreLiveID = [genre, type, imdbnumber, dbid, False, playcount, rating, hd, False, stars]
                                         tmpstr = self.makeTMPSTR(dur, showtitle, subtitle, description, GenreLiveID, file, timestamp)      

@@ -263,6 +263,6 @@ COLOR_ltGRAY_TYPE = ['0', '7', 'NR', 'Consumer', 'Game Show', 'Other', 'Unknown'
 - RagnaroktA - CE Intro Video, Visit http://www.cinemavision.org/
 - Special Thanks to:
   ARYEZ,thedarkonaut, tman12, peppy6582, earlieb, Steveb1968, kurumushi, twinther, LordIndy, ronie, mcorcoran, 
-  sphere, giftie, spoyser, Eldorados, lambda, kickin, bradvido88, Phil65, RagnaroktA, -bry
+  sphere, giftie, spoyser, Eldorados, lambda, kinkin, bradvido88, Phil65, RagnaroktA, -bry
 
 ``All work is either original, or modified code from the properly credited creators.``

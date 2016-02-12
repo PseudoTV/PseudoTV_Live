@@ -34,6 +34,7 @@ class Main:
     def __init__(self):
         self.log("__init__")
         self.chnlst = ChannelList()
+        self.chnlst.fillPVR()
         
         # InfoLabel Parameters  
         self.Label       = xbmc.getInfoLabel('ListItem.Label')
@@ -123,7 +124,7 @@ class Main:
                         else:
                             if self.Path.lower().startswith(('pvr')):
                                 self.chantype = 8
-                            elif self.isFolder == True and self.Label == 'Networks' and self.Path.lower().startswith(('plugin')):
+                            elif self.isFolder == True and self.Label in ['Networks','Leanback Channels'] and self.Path.lower().startswith(('plugin')):
                                 return self.buildNetworks(self.Path)
                             elif self.isFolder == True and self.Path.lower().startswith(('plugin')):
                                 self.chantype = 15
@@ -193,17 +194,21 @@ class Main:
             self.setting4 = '0'
             self.channame = self.Label
             
-        elif self.chantype == 8: 
-            xmltvFle = xmltvflePath(listXMLTV())
+        elif self.chantype == 8:
+            XMLTV = listXMLTV()
+            xmltvFle = xmltvflePath(XMLTV)
+            
             if self.Path.startswith('plugin://plugin.video.ustvnow'):
                 self.Label = self.Label.split(' - ')[0]
                 dname = "USTVnow - "+self.Label
             else:
                 dname = self.Label
                 
-            self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xmltvFle)
-            self.channame = self.Label+" USTV"
-            self.setting2 = self.Path
+            if xmltvFle:
+                self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xmltvFle)
+                self.channame = self.Label+" USTV"
+                self.setting2 = self.Path
+                self.setting3 = XMLTV
                 
         elif self.chantype == 9:
             self.setting1 = '5400'

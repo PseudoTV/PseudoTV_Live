@@ -1146,9 +1146,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def SmartSeek(self, mediapath, seektime1, seektime2, overtime):
         self.log("SmartSeek")
         seektime = 0
-        if not mediapath.startswith((self.BYPASSLST)):
-            return seektime
-        
+        # if mediapath.startswith((self.BYPASSLST)):
+            # return seektime
         if seektime1 < overtime:
             try:
                 self.Player.seekTime(seektime1)

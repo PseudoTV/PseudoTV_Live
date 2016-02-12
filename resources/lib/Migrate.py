@@ -213,8 +213,7 @@ class Migrate:
         self.updateDialogProgress = 11
         if Globals.REAL_SETTINGS.getSetting("autoFindLiveHD") != "0":
             chanlist.cached_readXMLTV = []
-            xmltvLOC = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("xmltvLOC"))
-            xmlTvFile = os.path.join(xmltvLOC, 'xmltv.xml')
+            xmlTvFile = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("autoFindLiveXMLPath"))
             
             # LiveTV - HDHomeRun - STRM
             if Globals.REAL_SETTINGS.getSetting("autoFindLiveHD") == "1" and Globals.REAL_SETTINGS.getSetting('autoFindLiveHDPath'):

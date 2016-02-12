@@ -393,11 +393,11 @@ ACTION_TELETEXT_BLUE = 218
 # UTC XMLTV - XMLTV that uses UTC w/ Offset timing (not local time).
 UTC_XMLTV = []
 
-# Force settop update to rebuild playlists not append content.
+# Force settop update to rebuild playlists and not to append content.
 FORCE_MAKENEW = [8,16]
 
 # Ignore seeking for live feeds and other chtypes that don't support it.
-IGNORE_SEEKTIME = [8,9,16]
+IGNORE_SEEKTIME = [8,9]
 
 # Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
 PLUGIN_SEEK = []

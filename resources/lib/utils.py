@@ -1722,8 +1722,7 @@ def listXMLTV():
         else:
             return xmltvLst[select]            
             
-def xmltvflePath(setting3):
-    log("utils: xmltvflePath")            
+def xmltvflePath(setting3):          
     if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
         xmltvFle = setting3
     elif setting3.lower() == 'ptvlguide':
@@ -1732,6 +1731,7 @@ def xmltvflePath(setting3):
         xmltvFle = USTVXML                
     else:
         xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+    log("utils: xmltvflePath, xmltvFle = " + xmltvFle)  
     return xmltvFle
     
 def clearTraktScrob():

@@ -278,15 +278,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
    
         if time.time() >= starttime and time.time() < starttime + 5400:
             dif = int((starttime + 5400 - time.time())) 
-            self.currentTime.setPosition(int((basex + basew - 2) - (dif * (basew / 5400.0))), timety)
-            self.currentTimeBar.setPosition(int((basex + basew - 2) - (dif * (basew / 5400.0))), timey)
+            self.currentTime.setPosition(int((basex + basew - (timew / 2)) - (dif * (basew / 5400.0))), timety)
+            self.currentTimeBar.setPosition(int((basex + basew - (timew / 2)) - (dif * (basew / 5400.0))), timey)
         else:
             if time.time() < starttime:
                 self.currentTime.setPosition(-1800, timety)
-                self.currentTimeBar.setPosition(basex + 2, timey)
+                self.currentTimeBar.setPosition(basex, timey)
             else:
                 self.currentTime.setPosition(-1800, timety)
-                self.currentTimeBar.setPosition(basex + basew - 2 - timew, timey)
+                self.currentTimeBar.setPosition(basex + basew - timew, timey)
 
         myadds.append(self.currentTime)
         myadds.append(self.currentTimeBar)
@@ -421,7 +421,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             del self.channelTags[row][:]
 
             # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
-            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+            # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+            playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
             
             # if the channel is paused, then only 1 button needed
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
