@@ -83,24 +83,24 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def onInit(self):
         self.log("onInit")
         #Disable Autotune Task if enabled but not performed  
-        if REAL_SETTINGS.getSetting("Autotune") == "true" and REAL_SETTINGS.getSetting("Warning1") == "true":
-            REAL_SETTINGS.setSetting('Autotune', "false")
-            REAL_SETTINGS.setSetting('Warning1', "false")
-            self.closeConfig()
-            # todo close settings window and open config
+        # if REAL_SETTINGS.getSetting("Autotune") == "true" and REAL_SETTINGS.getSetting("Warning1") == "true":
+            # REAL_SETTINGS.setSetting('Autotune', "false")
+            # REAL_SETTINGS.setSetting('Warning1', "false")
+            # self.closeConfig()
+            # # todo close settings window and open config
             # xbmc.executebuiltin("Dialog.Close(all, true)")
-        else:  
-            for i in range(NUMBER_CHANNEL_TYPES):
-                try:
-                    self.getControl(120 + i).setVisible(False)
-                except:
-                    pass
-                    
-            migratemaster = Migrate()
-            migratemaster.migrate()
-            self.prepareConfig()
-            self.myRules = AdvancedConfig("script.pseudotv.live.AdvancedConfig.xml", ADDON_PATH, "Default")
-            self.log("onInit return")
+        # else:  
+        for i in range(NUMBER_CHANNEL_TYPES):
+            try:
+                self.getControl(120 + i).setVisible(False)
+            except:
+                pass
+                
+        migratemaster = Migrate()
+        migratemaster.migrate()
+        self.prepareConfig()
+        self.myRules = AdvancedConfig("script.pseudotv.live.AdvancedConfig.xml", ADDON_PATH, "Default")
+        self.log("onInit return")
             
 
     def onFocus(self, controlId):
@@ -433,7 +433,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             else:                              
                 dname = self.getControl(213).getLabel()
                 xmltvFle = xmltvflePath(setting3)
-                dnameID, CHid = self.chnlst.findZap2itID(dname, xmltvFle)
+                dnameID, CHid = self.chnlst.findZap2itID(dname, xbmc.translatePath(xmltvFle))
                 if dnameID != 'XMLTV ERROR':
                     self.getControl(216).setLabel(CHid)
                     self.getControl(213).setLabel(dnameID)

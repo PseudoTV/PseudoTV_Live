@@ -47,7 +47,7 @@ class ustvnow:
         self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
         self.PlayTimeoutInt = int(REAL_SETTINGS.getSetting("PlayTimeoutInt"))
         self.token = USTV_Token
-
+        self.monitor = xbmc.Monitor()
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('USTVnow: ' + msg, level)
@@ -57,13 +57,13 @@ class ustvnow:
         self.log('getToken')
         cnt = 0
         self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
-        while self.userChk != self.user:
+        while self.userChk != self.user and not self.monitor.abortRequested():
             self.log('getToken, Working...')
             cnt += 1
             if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
                 return False
             self.token = self._login()
-            time.sleep(5)
+            xbmc.sleep(100)
             self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
             self.log('getToken, Retry Count ' + str(cnt))
         return True
@@ -304,6 +304,8 @@ class ustvnow:
 
     def get_guidedata_NEW(self, quality, stream_type):
         self.log('get_guidedata_NEW')
+        setBackgroundLabel('USTVnow: Downloading Guidedata')
+        cnt = 0
         content = self._get_json('gtv/1/live/channelguide', {'token': self.token, 'l': '1440'})
         results = content['results'];
         now = time.time();
@@ -315,8 +317,9 @@ class ustvnow:
         base.setAttribute("generator-info-url", "http://www.xmltv.org/");
         doc.appendChild(base)
         channels = self.get_channels(quality, stream_type);
-
+        
         for channel in channels:
+            cnt +=1
             name = channel['name'];
             id = channel['sname'];
             c_entry = doc.createElement('channel');

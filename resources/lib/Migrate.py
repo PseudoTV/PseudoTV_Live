@@ -189,7 +189,7 @@ class Migrate:
                         xmltvLOC = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("xmltvLOC"))
                         xmlTvFile = xbmc.translatePath(Globals.REAL_SETTINGS.getSetting("PVR_XMLTVpath"))
                         if xbmcvfs.exists(xmlTvFile): 
-                            CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
+                            CHSetName, CHzapit = chanlist.findZap2itID(CHname, xbmc.translatePath(xmlTvFile))
                     else:
                         listing = 'pvr'
                         CHzapit = CHid
@@ -235,7 +235,7 @@ class Migrate:
                             CHzapit = ''
                                     
                             if xbmcvfs.exists(xmlTvFile): 
-                                CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
+                                CHSetName, CHzapit = chanlist.findZap2itID(CHname, xbmc.translatePath(xmlTvFile))
                                 
                             if not CHSetName:
                                 CHSetName = CHname
@@ -268,7 +268,7 @@ class Migrate:
                         link = HDHRChannels[i][4]
                         
                         if xbmcvfs.exists(xmlTvFile): 
-                            CHSetName, CHzapit = chanlist.findZap2itID(CHname, xmlTvFile)
+                            CHSetName, CHzapit = chanlist.findZap2itID(CHname, xbmc.translatePath(xmlTvFile))
                         else:
                             okDialog('Unable to locate your xmltv.xml file','Please check your settings')
                             return
@@ -739,70 +739,6 @@ class Migrate:
             NameLst, Option1LST, Option2LST, Option3LST, Option4LST = chanlist.fillExternalList('UPNP','','Community',True)
             channelNum = self.tuneList(channelNum, '16', NameLst, Option1LST, Option2LST, Option3LST, Option4LST)
 
-        # Exclusive - Popcorn Movies
-        self.updateDialogProgress = 80
-        if Globals.REAL_SETTINGS.getSetting("autoFindPopcorn") == "true":
-            self.log("autoTune, adding Popcorn Movies")
-            popcornCHK = getProperty("PTVL.POPCORN")
-            if popcornCHK and Youtube != False:
-                self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Popcorn Movies"," ")
-
-                # AT_PopCat = ['action','adventure','animation','british','comedy','crime','disaster','documentary','drama','eastern','erotic','family','fan+film','fantasy','film+noir','foreign','history','holiday','horror','indie','kids','music','musical','mystery','neo-noir','road+movie','romance','science+fiction','short','sport','sports+film','suspense','thriller','tv+movie','war','western']
-                # ATPopCat = AT_PopCat[int(Globals.REAL_SETTINGS.getSetting('autoFindPopcornGenre'))]
-                   
-                # AT_PopYear = ['2010-Now','2000-2010','1990-2000','1980-1990','1970-1980','1960-1970','1950-1960','1940-1950','1930-1940','1920-1930','1910-1920']
-                # ATPopYear = AT_PopYear[int(Globals.REAL_SETTINGS.getSetting('autoFindPopcornYear'))]
-                
-                # AT_PopRes = ['480','720','1080']
-                # ATPopRes = AT_PopRes[int(Globals.REAL_SETTINGS.getSetting('autoFindPopcornResoultion'))]    
-                  
-                # if Globals.REAL_SETTINGS.getSetting('autoFindPopcornPop') == "true":
-                    # ATPopCat = 'pop|' + ATPopCat
-                
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "14")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", "popcorn")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", 'autotune')
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", '')
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", '')
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", "Popcorn Movies")  
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")
-                channelNum += 1
-                
-        # Exclusive - Cinema Experience 
-        self.updateDialogProgress = 81
-        if Globals.REAL_SETTINGS.getSetting("autoFindCinema") != "0":
-            self.log("autoTune, adding Cinema Experience ")
-            cinemaCHK = getProperty("PTVL.CINEMA")
-            if cinemaCHK:
-                self.updateDialog.update(self.updateDialogProgress,"Auto Tune","adding Cinema Experience"," ")
-                flename = chanlist.createCinemaExperiencePlaylist() #create playlist
-                try:
-                    THEME_NAMES = ['Disabled','Default','IMAX']
-                    THEME = THEME_NAMES[int(Globals.REAL_SETTINGS.getSetting('autoFindCinema'))]
-                except:
-                    THEME = 'IMAX'
-                
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "14")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", "cinema")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", flename)
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", THEME)
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", '')            
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "5")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", "PseudoCinema")  
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "8")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "14")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", "No")  
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_id", "17")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_opt_1", "No")  
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_id", "15")
-                Globals.ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No")    
-                channelNum += 1
-                  
         # Exclusive - IPTV
         self.updateDialogProgress = 82
         if Globals.REAL_SETTINGS.getSetting("autoFindIPTV_Source") != "0":

@@ -25,7 +25,6 @@ import xbmcgui
 import xbmcaddon
 import datetime
 import random
-import Globals
 from Globals import *
 
 rootDir = ADDON_PATH

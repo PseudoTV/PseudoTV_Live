@@ -64,6 +64,8 @@ def PseudoTV():
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
 if getProperty("PseudoTVRunning") != "True":
+    if xbmc.Player().isPlaying():
+        xbmc.Player().stop()
     PseudoTV()
 else:
     log('default: Already running, exiting', xbmc.LOGERROR)

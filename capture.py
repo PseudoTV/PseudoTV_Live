@@ -107,7 +107,9 @@ class Main:
                 if not (self.itemlst[select]).startswith('[COLOR=dimgrey]'):
                     available = True
                     
-                    if self.Path[-3:].lower() == 'xsp':
+                    if self.AddonName == 'PseudoCompanion' and self.Label.startswith('Cinema Theme'):
+                        self.chantype = 14
+                    elif self.Path[-3:].lower() == 'xsp':
                         self.chantype = 0
                     elif self.Path.lower().startswith('plugin://plugin.video.youtube/channel/'):
                         self.chantype = 10
@@ -124,7 +126,7 @@ class Main:
                         else:
                             if self.Path.lower().startswith(('pvr')):
                                 self.chantype = 8
-                            elif self.isFolder == True and self.Label in ['Networks','Leanback Channels'] and self.Path.lower().startswith(('plugin')):
+                            elif self.isFolder == True and self.Label.lower() in ['networks','channels'] and self.Path.lower().startswith(('plugin')):
                                 return self.buildNetworks(self.Path)
                             elif self.isFolder == True and self.Path.lower().startswith(('plugin')):
                                 self.chantype = 15
@@ -134,7 +136,9 @@ class Main:
                         if self.DBIDType == 'tvshow':
                             self.chantype = 6
                         elif self.DBIDType == '':
-                            self.chantype = 7                        
+                            self.chantype = 7    
+                    else:
+                        infoDialog("Not a valid source")                    
                     self.buildChannel()
                 else:
                     infoDialog("Channel "+str(self.channel)+" already in use")
@@ -205,7 +209,7 @@ class Main:
                 dname = self.Label
                 
             if xmltvFle:
-                self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xmltvFle)
+                self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xbmc.translatePath(xmltvFle))
                 self.channame = self.Label+" USTV"
                 self.setting2 = self.Path
                 self.setting3 = XMLTV
@@ -227,6 +231,14 @@ class Main:
             self.setting3 = str(MEDIA_LIMIT)
             self.setting4 = '0'
             self.channame = self.Label
+            
+        elif self.chantype == 14:
+            if self.Label.startswith('Cinema Theme'):
+                self.setting1 = 'cinema'
+                self.setting2 = self.Path
+                self.setting3 = self.Label
+                self.setting4 = ''
+                self.channame = 'PseudoCinema'   
             
         elif self.chantype == 15:
             self.setting1 = self.Path
@@ -329,6 +341,17 @@ class Main:
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_id", "1")
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)      
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
+        if chantype == 14 and self.channame == 'PseudoCinema':
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "5")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", "PseudoCinema")  
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "8")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "14")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", "No")  
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_id", "17")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_opt_1", "No")  
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_id", "15")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No") 
         self.log("saveSettings return")
                 
 if (__name__ == "__main__"):

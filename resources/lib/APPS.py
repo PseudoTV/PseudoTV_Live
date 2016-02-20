@@ -35,14 +35,15 @@ class APPS(xbmcgui.WindowXMLDialog):
         self.log('__init__')
         self.chanlist = ChannelList()
         
-    def onFocus(self, controlid):
-        pass
-        
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('APPS: ' + msg, level)
 
 
+    def onFocus(self, controlid):
+        self.log('onFocus')
+        
+        
     def onInit(self):
         self.log('onInit')
         self.chanlist.PanelItems = self.getControl(500)
@@ -55,9 +56,11 @@ class APPS(xbmcgui.WindowXMLDialog):
         if controlId == 500:
             pos = self.chanlist.PanelItems.getSelectedPosition()
             playitem = self.chanlist.PanelItems.getListItem(pos)
-            url = playitem.getProperty('mediapath')
-            self.chanlist.fillListItems('plugin://'+url)
+            url = 'plugin://'+ playitem.getProperty('mediapath')
+            self.chanlist.fillListItems(url)
+            self.setFocus(self.chanlist.PanelItems)
             # xbmc.executebuiltin('Container.Refresh') 
+            
             
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
@@ -104,6 +107,7 @@ class APPS(xbmcgui.WindowXMLDialog):
  
         elif action in ACTION_SELECT_ITEM:
             print 'ACTION_SELECT_ITEM'
+                
                 
     def closeAPPS(self):
         self.log('closeAPPS')

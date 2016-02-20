@@ -1,3 +1,5 @@
+[*] Added bulk channel exporting thru the export tool. Plugin folder labeled 'Networks' or 'Channels' will export all subfolders as channels.
+[*] Improved artwork & metadata parsing, added metahandler fallbacks for LowPower profiles.
 [*] Removed global plugin seeking requirement. 
 [*] Tweaked UPNP channel building, Added UPNP functions to export tool.
 [*] Removed unneeded LowPower profile limitations. 
@@ -47,6 +49,7 @@
 [*] In-app configuration and "Browse Community List" tweaks.
 [*] New "search" plugin *Thanks marcelveldt **Requires "script.skin.helper.service"
 [*] Plugin/UPNP duration fixed, log debugging tweaked and log submission fixed.
+[*] Donor Extras removed.
 [*] [COLOR=blue][B]^ v.0.7.0 ^[/B][/COLOR]
 [*] Tweaked not playing detection, and Force Stop trigger.
 [*] Tweaked LowPower profiles, users need to set "Device Type".

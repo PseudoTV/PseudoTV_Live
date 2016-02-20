@@ -303,7 +303,7 @@
                         <width>370</width>
                         <height min="5" max="370">auto</height>
                         <bordersize>-18</bordersize>
-                        <texture border="8">folder-focus.png</texture>
+                        <texture border="8">borderNF.png</texture>
                         <visible>ListItem.IsSelected</visible>
                     </control>
                     <control type="image">
@@ -321,8 +321,8 @@
                         <posy>0</posy>
                         <width>370</width>
                         <height min="5" max="370">auto</height>
-                        <bordersize>-18</bordersize>
-                        <texture border="8">folder-focus.png</texture>
+                        <bordersize>0</bordersize>
+                        <texture border="8">borderFO.png</texture>
                         <visible>ListItem.IsSelected</visible>
                     </control>
                     <control type="image">

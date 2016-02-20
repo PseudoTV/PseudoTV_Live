@@ -603,7 +603,7 @@ def read_url_cached(url, userpass=False, return_type='read'):
             response = open_url(url, userpass).read()
         return response
     except Exception,e:
-        log('utils: read_url_cached, Failed!,' + str(e))
+        pass
         
 @cache_monthly
 def read_url_cached_monthly(url, userpass=False, return_type='read'):
@@ -615,7 +615,7 @@ def read_url_cached_monthly(url, userpass=False, return_type='read'):
             response = open_url(url, userpass).read()
         return response
     except Exception,e:
-        log('utils: read_url_cached_monthly, Failed!,' + str(e))
+        pass
   
 def open_url(url, userpass=None):
     log("utils: open_url")
@@ -636,7 +636,6 @@ def open_url(url, userpass=None):
         page.close
         return page
     except urllib2.HTTPError, e:
-        log("utils: open_url, Failed! " + str(e) + ',' + str(e.fp.read()))
         return page
          
 def retrieve_url(url, userpass, dest):
@@ -648,7 +647,6 @@ def retrieve_url(url, userpass, dest):
         output.close()
         return True
     except Exception, e:
-        log("utils: retrieve_url, Failed! " + str(e))  
         return False 
        
 def get_data(url, data_type ='json'):
@@ -663,7 +661,6 @@ def get_data(url, data_type ='json'):
         else:
             data = request
     except Exception, e:
-        log("utils: get_data, Failed! " + str(e))
         data = 'Empty'
     return data
         
@@ -747,6 +744,7 @@ def hide_busy_dialog():
         xbmc.sleep(100)
         
 def Error(header, line1= '', line2= '', line3= ''):
+    setProperty('PTVL.ERROR_LOG', message)
     dlg = xbmcgui.Dialog()
     dlg.ok(header, line1, line2, line3)
     del dlg
@@ -1440,14 +1438,12 @@ def HandleUpgrade():
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
           
-    # Remove m3u playlists
-    # ClearPlaylists()
-    
     # Force Channel rebuild
-    # REAL_SETTINGS.setSetting('ForceChannelReset', 'true') 
+    REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
+    okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
 
     # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
-    # set 'optional' as true so users can remove if unwanted.
+    # set 'optional' as true so users can disable if unwanted.
     if getXBMCVersion() > 14 and isContextInstalled() == False:
         getContext()
         
@@ -1488,6 +1484,7 @@ def preStart():
     
     # Chk forcereset, clearcache if true
     if REAL_SETTINGS.getSetting("ForceChannelReset") == "true":
+        ClearPlaylists()
         REAL_SETTINGS.setSetting("ClearCache","true")
     
     # Clear filelist Caches    
@@ -1532,6 +1529,10 @@ def isCom():
         
 def getTitleYear(showtitle, showyear=0):  
     # extract year from showtitle, merge then return
+    try:
+        showyear = int(showyear)
+    except:
+        showyear = showyear
     try:
         labelshowtitle = re.compile('(.+?) [(](\d{4})[)]$').findall(showtitle)
         title = labelshowtitle[0][0]
@@ -1695,7 +1696,14 @@ def joinListItem(list, opt='@#@'):
         return opt.join(list)
     except:
         return str(list)
-
+        
+def isBackgroundVisible():
+    return getProperty("OVERLAY.BackgroundVisible") == 'True'
+      
+def setBackgroundLabel(string):
+    setProperty("PTVL.STATUS_LOG",string) 
+    setProperty("OVERLAY.BACKGROUND_TEXT",string) 
+           
 def isUSTVnow():
     if len(REAL_SETTINGS.getSetting('ustv_email')) > 1 and len(REAL_SETTINGS.getSetting('ustv_password')) > 1:
         return True
@@ -1712,7 +1720,7 @@ def listXMLTV():
     dir,file = xbmcvfs.listdir(XMLTV_LOC)
     xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
     xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
-    select = selectDialog(xmltvLst, 'Select xmltv file')
+    select = selectDialog(xmltvLst, 'Select xmltv file', 30000)
 
     if select != -1:
         if xmltvLst[select] == 'Enter URL':
@@ -1820,10 +1828,10 @@ def getJson(url):
     response = urllib2.urlopen(url)
     return json.load(response)
     
-def makeTMPSTRdict(duration, title, subtitle, description, genre, type, id, thumburl, rating, hd, cc, stars, path):
+def makeTMPSTRdict(duration, title, year, subtitle, description, genre, type, id, thumburl, rating, hd, cc, stars, path):
     log("utils: makeTMPSTRdict") 
     # convert to dict for future channel building using ChannelList.dict2tmpstr()
-    return {'duration':duration, 'title':title, 'subtitle':subtitle,'description':description,
+    return {'duration':duration, 'title':title, 'year':year, 'subtitle':subtitle,'description':description,
             'genre':genre, 'type':type, 'id':id, 'thumburl':thumburl,
             'rating':rating, 'hd':hd, 'cc':cc, 'stars':stars, 'path':path}
 
@@ -1884,6 +1892,8 @@ def getChanPrefix(chantype, channame):
         newlabel = channame + " - Plugin"
     elif chantype == 16:
         newlabel = channame + " - UPNP"
+    elif chantype == 9999:
+        newlabel = ""
     else:
         newlabel = channame
     return newlabel

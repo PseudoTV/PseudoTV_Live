@@ -38,6 +38,14 @@ from utils import *
 from HTMLParser import HTMLParser
 
 try:
+    from metahandler import metahandlers
+    metaget = metahandlers.MetaData(preparezip=False)
+except Exception,e:  
+    ENHANCED_DATA = False
+    xbmc.log("script.pseudotv.live-Artdownloader: metahandler Import Failed" + str(e))   
+
+
+try:
     import buggalo
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
@@ -123,7 +131,7 @@ class Artdownloader:
                 self.log("searchDetails, Failed" + str(e), xbmc.LOGERROR)
                 
     
-    def FindArtwork(self, type, chtype, chname, id, dbid, mpath, arttypeEXT):
+    def FindArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, arttypeEXT):
         self.log("FindArtwork")
         try:
             setImage = ''
@@ -173,22 +181,20 @@ class Artdownloader:
                     SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
                     if FileAccess.exists(SetImage):
                         return SetImage
-                if ENHANCED_DATA == True and id != '0':
-                    return self.DownloadMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                return self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
             else:
                 if id == '0':
-                    if chtype in [8,15,16] and dbid != '0':
-                        self.log('FindArtwork, XMLTV')
-                        return decodeString(dbid)
-                    elif type == 'youtube':
+                    if dbid != '0' and (type == 'youtube' or mpath.startswith(self.chanlist.youtube_player_ok())):
                         self.log('FindArtwork, YOUTUBE')
                         return "http://i.ytimg.com/vi/"+dbid+"/mqdefault.jpg"
                     elif type == 'rss' and dbid != '0':
                         self.log('FindArtwork, RSS')
                         return decodeString(dbid)
+                    elif chtype in [8,15,16] and dbid != '0':
+                        self.log('FindArtwork, XMLTV')
+                        return decodeString(dbid)
                 else:
-                    if ENHANCED_DATA == True and id != '0':
-                        return self.DownloadMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                    return self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed" + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR) 
@@ -202,7 +208,7 @@ class Artdownloader:
             MediaImage = os.path.join(MEDIA_LOC, (arttype + '.png'))
             StockImage = os.path.join(IMAGES_LOC, (arttype + '.png'))
             ChannelLogo = os.path.join(LOGO_LOC,chname[0:18] + '.png')
-            
+
             # Channel Logo
             if FileAccess.exists(ChannelLogo) == True:
                 return ChannelLogo
@@ -224,17 +230,39 @@ class Artdownloader:
             return THUMB
 
 
-    def DownloadMissingArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
+    def DownloadMissingArt(self, type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT):
         self.log('DownloadMissingArt')
-        url = self.findMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
-        if not url:
-            # search fallback artwork
-            url = self.findMissingArt(type, id, self.getFallback_Arttype(arttype), cachefile, chname, mpath, self.getFallback_Arttype(arttype))
+        url = False
+        if ENHANCED_DATA == True and id != '0':  
+            url = self.findMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+            if not url:
+                # search fallback artwork
+                url = self.findMissingArt(type, id, self.getFallback_Arttype(arttype), cachefile, chname, mpath, self.getFallback_Arttype(arttype))
+                if not url:
+                    # search metahanlder artwork
+                    url = self.findMissingArtMeta(type, title, year, arttype)
+        else:
+            url = self.findMissingArtMeta(type, title, year, arttype)
         if url:
             download_silent(url,cachefile)
-            return cachefile
+        return cachefile
            
-          
+           
+    def findMissingArtMeta(self, type, title, year, arttype):
+        self.log('findMissingArtMeta')
+        try:
+            meta = metaget.get_meta(type, title, str(year)) 
+            if arttype in ['thumb','poster']:
+                return meta['cover_url']
+            elif arttype in ['fanart','landscape']:
+               return meta['backdrop_url']  
+            elif arttype in ['banner']:
+               return meta['banner_url']  
+        except:
+            pass
+        return False
+           
+           
     def findMissingArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
         url = ''
         drive, Dpath = os.path.splitdrive(cachefile)
@@ -255,9 +283,8 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('graphical', 'banner').replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
-            if url:
                 return url
-
+                
         elif type == 'movie':
             self.log('findMissingArt, movie')
             tmdb_Types = ['banner', 'fanart', 'folder', 'poster']
@@ -270,7 +297,6 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
-            if url:
                 return url
         # todo music artwork support
         # todo google image search, obdb, metahandler search
