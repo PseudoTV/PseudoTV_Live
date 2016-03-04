@@ -1992,6 +1992,7 @@
                     <height>40</height>
                     <textcolor>white</textcolor>
                     <wrapmultiline>true</wrapmultiline>
+                    <visible>Control.HasFocus(283)</visible>
                     <label>Separate Exclusions with [COLOR=blue][B],[/B][/COLOR] eg. Season 01[COLOR=blue][B],[/B][/COLOR]Season 02</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -2048,7 +2049,7 @@
                     <width>640</width>
                     <height>40</height>
                     <textcolor>white</textcolor>
-                    <label>Path:</label>
+                    <label>Name:</label>
                     <aligny>center</aligny>                   
                 </control>
                 <!-- Hidden: UPNP Setting1 -->
@@ -2145,8 +2146,7 @@
                     <label></label>
                     <wrapmultiline>true</wrapmultiline>
                     <aligny>center</aligny>    
-                    <visible>false</visible>
-                </control>
+                </control>                
                 <control type="label">
                     <left>47</left>
                     <top>380</top>
@@ -2154,6 +2154,7 @@
                     <height>40</height>
                     <textcolor>white</textcolor>
                     <wrapmultiline>true</wrapmultiline>
+                    <visible>Control.HasFocus(293)</visible>
                     <label>Separate Exclusions with [COLOR=blue][B],[/B][/COLOR] eg. Season 01[COLOR=blue][B],[/B][/COLOR]Season 02</label>
                     <aligny>center</aligny>                   
                 </control>

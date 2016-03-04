@@ -890,10 +890,8 @@ def getXBMCVersion():
     return int((xbmc.getInfoLabel('System.BuildVersion').split('.'))[0])
  
 def getPlatform():
-    platform = getProperty("PTVL.Platform")
-    if not platform:
-        platform = chkPlatform()
-        setProperty("PTVL.Platform",platform)
+    platform = chkPlatform()
+    setProperty("PTVL.Platform",platform)
     log("utils: getPlatform = " + platform)
     return platform
     
@@ -1230,7 +1228,7 @@ def isContextInstalled():
       
 def getContext():  
     log('utils: getContext')
-    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.6.zip'
+    url='https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/context.pseudotv.live.export/context.pseudotv.live.export-1.0.8.zip'
     name = 'context.pseudotv.live.export.zip' 
     MSG = 'PseudoTV Live Context Export'    
     path = xbmc.translatePath(os.path.join('special://home/addons','packages'))
@@ -1260,32 +1258,12 @@ def chkAutoplay(silent=False):
     except:
         setProperty("PTVL.Autoplay","false") 
         pass
-        
-# def chkSources():
-    # log("utils: chkSources") 
-    # hasPVR = False
-    # hasUPNP = False
-    # try:
-        # fle = xbmc.translatePath('special://userdata/sources.xml')
-        # xml = FileAccess.open(fle, "r")
-        # dom = parse(xml)
-        # path = dom.getElementsByTagName('path')
-        # xml.close()
-        # for i in range(len(path)):
-            # line = path[i].childNodes[0].nodeValue.lower()
-            # if line == 'pvr://':
-                # hasPVR = True
-            # elif line == 'upnp://':
-                # hasUPNP = True
-        # if hasPVR + hasUPNP == 2:
-            # return True
-    # except:
-        # pass
-         
+       
 def chkLowPower(): 
     setProperty("PTVL.LOWPOWER","false") 
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
-        if getPlatform() in ['ATV','iOS','XBOX','rPi','Android']:
+        platform = getPlatform()
+        if platform in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true") 
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
@@ -1304,7 +1282,6 @@ def chkLowPower():
     log("utils: chkLowPower = " + getProperty("PTVL.LOWPOWER"))
 
 def isLowPower():
-    # log("utils: isLowPower = " + str(getProperty("PTVL.LOWPOWER") == "true"))
     return getProperty("PTVL.LOWPOWER") == "true"
        
 def chkAPIS(list):
@@ -1325,9 +1302,9 @@ def ClearPlaylists():
             pass
     infoDialog("Channel Playlists Cleared")
           
-def ClearCache(type='Filelist'):
+def ClearCache(type='Files'):
     log('utils: ClearCache ' + type)  
-    if type == 'Filelist':
+    if type == 'Cache':
         try:
             daily.delete("%") 
             weekly.delete("%")
@@ -1346,6 +1323,15 @@ def ClearCache(type='Filelist'):
         except:
             pass
         REAL_SETTINGS.setSetting('ClearLiveArt', "false")
+    elif type == 'Files':
+        try:
+            shutil.rmtree(GEN_CHAN_LOC)
+        except:
+            pass
+        try:
+            shutil.rmtree(MADE_CHAN_LOC)
+        except:
+            pass
     infoDialog(type + " Cache Cleared")
     
 def chkSettings2():   
@@ -1439,8 +1425,8 @@ def HandleUpgrade():
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
           
     # Force Channel rebuild
-    REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
-    okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
+    # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
+    # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
 
     # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
     # set 'optional' as true so users can disable if unwanted.
@@ -1469,7 +1455,7 @@ def isPTVLOutdated():
         
 def preStart(): 
     log('utils: preStart')
-    chkAPIS(RSS_API_KEY)
+    # chkAPIS(RSS_API_KEY)
     
     # Optimize settings based on sys.platform
     chkLowPower()
@@ -1482,14 +1468,14 @@ def preStart():
     # Check if autoplay playlist is enabled
     chkAutoplay(True)
     
-    # Chk forcereset, clearcache if true
+    # Chk forcereset, clearcache & playlists
     if REAL_SETTINGS.getSetting("ForceChannelReset") == "true":
+        ClearCache()
         ClearPlaylists()
-        REAL_SETTINGS.setSetting("ClearCache","true")
     
     # Clear filelist Caches    
     if REAL_SETTINGS.getSetting("ClearCache") == "true":
-        ClearCache('Filelist')
+        ClearCache('Cache')
         
     # Clear Artwork Folders
     if REAL_SETTINGS.getSetting("ClearLiveArt") == "true":

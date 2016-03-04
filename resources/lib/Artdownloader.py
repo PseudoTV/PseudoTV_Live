@@ -93,6 +93,8 @@ class Artdownloader:
                 json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetTVShowDetails","params":{"tvshowid":%s,"properties":["art","thumbnail","fanart"]},"id":1}' % dbid)
             elif type == 'movie':
                 json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetMovieDetails","params":{"movieid":%s,"properties":["art","thumbnail","fanart"]},"id":1}' % dbid)
+            else:
+                return 'NA.png'
             arttype = (arttypeEXT.split(".")[0])
             json_folder_detail = self.chanlist.sendJSON(json_query)
             file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
@@ -129,12 +131,13 @@ class Artdownloader:
                         return (unquote(xbmc.translatePath((arttypes_fallback.group(1).split(','))[0]))).replace('image://','').replace('.jpg/','.jpg').replace('.png/','.png')
             except Exception,e:  
                 self.log("searchDetails, Failed" + str(e), xbmc.LOGERROR)
+        return 'NA.png'
                 
     
     def FindArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, arttypeEXT):
         self.log("FindArtwork")
         try:
-            setImage = ''
+            setImage = 'NA.png'
             CacheArt = False
             DefaultArt = False
             arttypeEXT = EXTtype(arttypeEXT)
@@ -143,15 +146,21 @@ class Artdownloader:
             ext = arttypeEXT.split('.')[1]
             cachedthumb = xbmc.getCacheThumbName(os.path.join(removeNonAscii(mpath), fle))
             cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + "." + ext)).replace("\\", "/")
+            kodifile = xbmc.translatePath(os.path.join('special://masterprofile/Thumbnails', cachedthumb[0], cachedthumb[:-4] + "." + ext)).replace("\\", "/")
             
             if isLowPower() == True:
                 return setImage
             
-            elif FileAccess.exists(cachefile):
-                self.log('FindArtwork, Using Cache')
-                return cachefile   
+            elif id != '0':
+                if FileAccess.exists(cachefile):
+                    self.log('FindArtwork, Using Cache')
+                    return cachefile   
                 
-            elif chtype <= 7 or chtype == 12:
+                elif FileAccess.exists(kodifile):
+                    self.log('FindArtwork, Using Kodi Cache')
+                    return kodifile   
+                
+            if chtype <= 7 or chtype == 12:
                 self.log('FindArtwork, chtype <= 7 - Local Art')
                 smpath = mpath.rsplit('/',2)[0]
                 artSeries = xbmc.translatePath(os.path.join(smpath, arttypeEXT))
@@ -181,24 +190,42 @@ class Artdownloader:
                     SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
                     if FileAccess.exists(SetImage):
                         return SetImage
-                return self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                if FileAccess.exists(SetImage):
+                    return SetImage
             else:
                 if id == '0':
-                    if dbid != '0' and (type == 'youtube' or mpath.startswith(self.chanlist.youtube_player_ok())):
+                    if (type == 'youtube' or mpath.startswith(self.chanlist.youtube_player)) and dbid != '0':
                         self.log('FindArtwork, YOUTUBE')
                         return "http://i.ytimg.com/vi/"+dbid+"/mqdefault.jpg"
                     elif type == 'rss' and dbid != '0':
                         self.log('FindArtwork, RSS')
                         return decodeString(dbid)
-                    elif chtype in [8,15,16] and dbid != '0':
-                        self.log('FindArtwork, XMLTV')
+                    elif chtype in [8] and dbid != '0':
+                        self.log('FindArtwork, decode dbid')
                         return decodeString(dbid)
                 else:
-                    return self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                    SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                    if FileAccess.exists(SetImage):
+                        return SetImage
+                    elif dbid != '0':
+                        self.log('FindArtwork, decode dbid')
+                        return decodeString(dbid)
+            return 'NA.png'
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed" + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR) 
                 
+              
+    def dbidDecode(self, dbid, cachefile):
+        self.log('dbidDecode')
+        url = decodeString(dbid)
+        if url.startswith('http'):
+            download_silent(url,cachefile)
+            return cachefile
+        else:
+            return 'NA.png'
+              
               
     def SetDefaultArt(self, chname, mpath, arttypeEXT):
         self.log('SetDefaultArt')
@@ -232,35 +259,41 @@ class Artdownloader:
 
     def DownloadMissingArt(self, type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT):
         self.log('DownloadMissingArt')
-        url = False
+        url = ''
         if ENHANCED_DATA == True and id != '0':  
             url = self.findMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
-            if not url:
+            if not url.startswith('http'):
                 # search fallback artwork
                 url = self.findMissingArt(type, id, self.getFallback_Arttype(arttype), cachefile, chname, mpath, self.getFallback_Arttype(arttype))
-                if not url:
-                    # search metahanlder artwork
-                    url = self.findMissingArtMeta(type, title, year, arttype)
-        else:
+        
+        if not url.startswith('http'):
+            # search metahanlder artwork
             url = self.findMissingArtMeta(type, title, year, arttype)
-        if url:
+        
+        if url.startswith('http'):
             download_silent(url,cachefile)
-        return cachefile
+            return cachefile
+        else:
+            return 'NA.png'
            
            
     def findMissingArtMeta(self, type, title, year, arttype):
         self.log('findMissingArtMeta')
+        url = ''
         try:
             meta = metaget.get_meta(type, title, str(year)) 
             if arttype in ['thumb','poster']:
-                return meta['cover_url']
+                url = meta['cover_url']
             elif arttype in ['fanart','landscape']:
-               return meta['backdrop_url']  
+                url = meta['backdrop_url']  
             elif arttype in ['banner']:
-               return meta['banner_url']  
+                url = meta['banner_url']
         except:
             pass
-        return False
+        if url.startswith('http'):
+            return url
+        else:
+            return 'NA.png'
            
            
     def findMissingArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
@@ -279,12 +312,11 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('banner', 'graphical').replace('folder', 'poster')
                 url = self.findTVDBArt(type, id, arttype, arttypeEXT)
-            if not url:
+            if not url.startswith('http'):
                 # correct database naming schema
                 arttype = arttype.replace('graphical', 'banner').replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
-                return url
-                
+
         elif type == 'movie':
             self.log('findMissingArt, movie')
             tmdb_Types = ['banner', 'fanart', 'folder', 'poster']
@@ -293,26 +325,32 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('folder', 'poster')
                 url = self.findTMDBArt(type, id, arttype, arttypeEXT)
-            if not url:
+            if not url.startswith('http'):
                 # correct database naming schema
                 arttype = arttype.replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
-                return url
+
         # todo music artwork support
         # todo google image search, obdb, metahandler search
-        return False
+        if url.startswith('http'):
+            return url
+        else:
+            return 'NA.png'
  
  
     def findTVDBArt(self, type, id, arttype, arttypeEXT):
         self.log('findTVDBArt')
+        url = ''
         tvdb = str(self.tvdbAPI.getBannerByID(id, arttype))
         tvdbPath = tvdb.split(', ')[0].replace("[('", "").replace("'", "") 
         if tvdbPath.startswith('http'):
-            return tvdbPath
+            url = tvdbPath
+        return url
         
         
     def findTMDBArt(self, type, id, arttype, arttypeEXT):
         self.log('findTMDBArt')
+        url = ''
         tmdb = self.tmdbAPI.get_image_list(id)
         # todo replace lazy code with regex parsing
         data = str(tmdb).replace("[", "").replace("]", "").replace("'", "")
@@ -322,11 +360,13 @@ class Artdownloader:
         if match:
             tmdbPath = match.group().replace(",", "").replace("url: u", "").replace("url: ", "")
             if tmdbPath.startswith('http'):
-                return tmdbPath
+                url = tmdbPath
+        return url
 
                 
     def findFANTVArt(self, type, id, arttype, arttypeEXT):
         self.log('findFANTVArt')
+        url = ''
         fanPath = ''
         if type == 'tvshow':
             fan = str(self.fanarttv.get_image_list_TV(id))
@@ -350,10 +390,10 @@ class Artdownloader:
                                 if fanPaths and len(fanPaths.group(1)) > 0:
                                     fanPath = fanPaths.group(1).replace("u'",'').replace("'",'')
                                     if fanPath.startswith('http'):
-                                        break
+                                        url = fanPath
             except:
                 pass                                                                     
-        return fanPath
+        return url
 
 
     def AlphaLogo(self, org, mod):

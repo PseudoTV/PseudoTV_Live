@@ -1,3 +1,14 @@
+[*] [COLOR=red][B]Recommended Users click "Default" settings, to reset outdated values[/B][/COLOR]
+[*] Tweaked livetv rebuilding, fixed rss feed toggle for epg and improved artwork downloader.
+[*] Tweaked seeking, Users can increase "channel delay" under debugging to correct media not properly seeking.
+[*] Added bulk 'channels' export for Kodi PVR.
+[*] Removed Community List submission tool, and relocated Community List to the PseudoCompanion tool for Kodi repo compliance.
+[*] [COLOR=blue][B]^ v.0.7.4 ^[/B][/COLOR]
+[*] In-app channel manager now defaults to "Global" Media limit and "Default" Sort order for select channel types.
+[*] Tweaked Global Media Limits, Export channel limits and random rules.
+[*] Updated smart-playlist generating & Improved channel content aggregation. 
+[*] Added multi-selection dialog to tvshow selection.
+[*] Fixed playlist clear/load timings to correct resume points not being set.
 [*] Added bulk channel exporting thru the export tool. Plugin folder labeled 'Networks' or 'Channels' will export all subfolders as channels.
 [*] Improved artwork & metadata parsing, added metahandler fallbacks for LowPower profiles.
 [*] Removed global plugin seeking requirement. 

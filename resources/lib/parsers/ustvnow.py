@@ -47,7 +47,6 @@ class ustvnow:
         self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
         self.PlayTimeoutInt = int(REAL_SETTINGS.getSetting("PlayTimeoutInt"))
         self.token = USTV_Token
-        self.monitor = xbmc.Monitor()
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('USTVnow: ' + msg, level)
@@ -55,30 +54,45 @@ class ustvnow:
        
     def getToken(self):
         self.log('getToken')
-        cnt = 0
-        self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
-        while self.userChk != self.user and not self.monitor.abortRequested():
-            self.log('getToken, Working...')
-            cnt += 1
-            if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
-                return False
-            self.token = self._login()
-            xbmc.sleep(100)
-            self.userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
-            self.log('getToken, Retry Count ' + str(cnt))
-        return True
+        try:
+            cnt = 0
+            userChk = self.getUser()
+            while userChk != self.user:
+                self.log('getToken, Working...')
+                cnt += 1
+                if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
+                    return False
+                self.token = self._login()
+                xbmc.sleep(100)
+                userChk = self.getUser()
+                self.log('getToken, Retry Count ' + str(cnt))
+            return True
+        except:
+            return False
 
 
+    def getUser(self):           
+        try:
+            userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
+        except:
+            userChk = ''
+        return userChk
+       
+       
     def getXMLTV(self):
         self.log('getXMLTV')
         if self.getToken() == True:
             return self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath)
-
-
+        else:
+            return
+            
+            
     def getChannellink(self, chname):
         self.log('getChannellink, chname = ' + chname)
         if self.getToken() == True:
             return self.get_link(self.quality_type, self.stream_type, chname)
+        else:
+            return
 
 
     def getChannelNames(self):

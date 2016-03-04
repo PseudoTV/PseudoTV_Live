@@ -25,17 +25,18 @@
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
-	<string id="30405">Find Missing GuideData</string>
+	<string id="30405">Find Missing GuideData [Art & Meta]</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos (seconds)</string>  
     <string id="30310">Media Limit [Global]</string>
     <string id="30373">Mute between channel change</string>
-    <string id="30379">Enable Direct Channel Input</string>
+    <string id="30379">Enable Direct Channel Input [Disable 'OK']</string>
     <string id="30050">Enable global menu [Experimental]</string>
     <string id="30158">Menu style</string>
     <string id="30159">Enable Automatic Channel Backup</string>
     <string id="31311">Start Over Option after % Played</string>
+    <string id="30935">Disable Seeking for specified Plugins</string>
     <string id="31315">Smart Seek plugins/strms Over % Seeked</string>
     <string id="30447">Seek step backward [I](Isengard)[/I]</string>
     <string id="30446">Seek step forward [I](Isengard)[/I]</string>
@@ -222,11 +223,11 @@
     <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
 <string id="30900">Debugging</string>
-    <string id="30308">Playback Timers: (Use with Caution!)</string>
+    <string id="30308">Internal Timers: (Use with Caution!)</string>
     <string id="30309">Wait for Playback (seconds)</string> 
     <string id="30319">Force Playback timeout (seconds)</string> 
     <string id="30302">Channel Change Delay (seconds)</string>
-    <string id="30914">Controls: (Use with Caution!)</string>
+    <string id="30914">Global Controls:</string>
     <string id="39958">Include 3D Content [Global]</string>
     <string id="30997">Include Strm Content [Global]</string>
     <string id="39997">Include BCT Content [Global]</string>
@@ -248,6 +249,5 @@
     <string id="30198">ffmepg path</string>
     <string id="30199">rtmpdump path</string>
     <string id="30939">Miscellaneous</string>
-    <string id="30934">Enable accurate duration</string>
-    <string id="30935">Enable Seeking for specified Plugins</string>
+    <string id="30934">Enable Accurate Durations [Slower Channel Building]</string>
 </strings>

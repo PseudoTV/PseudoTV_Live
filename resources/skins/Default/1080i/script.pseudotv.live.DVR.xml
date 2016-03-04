@@ -141,7 +141,7 @@
                 <shadowcolor>ff000000</shadowcolor>
             </control>   
         </control>           
-        <control type="grouplist"> 
+        <control type="grouplist">
             <posx>5</posx>
             <posy>258</posy>
             <align>left</align>
@@ -154,10 +154,10 @@
                 <aspectratio>keep</aspectratio>
                 <aligny>center</aligny>
                 <align>left</align>
-                <visible>StringCompare((Window(10000).Property(PTVL.FEEDtoggle)),true)</visible>
                 <texture colordiffuse="C0C0C0C0">rss.png</texture>
+                <visible>Control.IsVisible(505)</visible>
             </control>
-            <control type="fadelabel">
+            <control type="fadelabel" id="505">
                 <description>PTVL RSS Feed Label</description>  
                 <width>370</width>
                 <height>35</height>
@@ -173,7 +173,6 @@
                 <shadowcolor>ff000000</shadowcolor>
                 <textoffsetx>20</textoffsetx>
                 <resetonlabelchange>true</resetonlabelchange>
-                <visible>StringCompare((Window(10000).Property(PTVL.FEEDtoggle)),true)</visible>
                 <label>$INFO[Window(10000).Property(twitter.1.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.2.label)]</label>
                 <label>$INFO[Window(10000).Property(twitter.3.label)]</label>
@@ -190,7 +189,7 @@
                 <font>font10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <visible>StringCompare((Window(10000).Property(PTVL.FEEDtoggle)),true)</visible>
+                <visible>Control.IsVisible(505)</visible>
             </control>  
         </control>
         <control type="grouplist">

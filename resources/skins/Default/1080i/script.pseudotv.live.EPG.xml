@@ -33,7 +33,7 @@
                 <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation>
             </control>
         </control>
-            <control type="grouplist">
+        <control type="grouplist">
             <posx>30</posx>
             <posy>15</posy>
             <itemgap>10</itemgap>
@@ -305,7 +305,7 @@
                 <shadowcolor>ff000000</shadowcolor>
             </control>   
         </control>           
-        <control type="grouplist" id="505">
+        <control type="grouplist">
             <posx>5</posx>
             <posy>258</posy>
             <align>left</align>
@@ -319,8 +319,9 @@
                 <aligny>center</aligny>
                 <align>left</align>
                 <texture colordiffuse="C0C0C0C0">rss.png</texture>
+                <visible>Control.IsVisible(505)</visible>
             </control>
-            <control type="fadelabel">
+            <control type="fadelabel" id="505">
                 <description>PTVL RSS Feed Label</description>  
                 <width>370</width>
                 <height>35</height>
@@ -352,6 +353,7 @@
                 <font>font10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <visible>Control.IsVisible(505)</visible>
             </control>  
         </control>
         <!--Date-->
@@ -791,8 +793,8 @@
             <height>180</height>
             <align>center</align>
             <aspectratio>keep</aspectratio>
-            <texture fallback="">$INFO[Window(10000).Property(EPG.landscape)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+            <texture fallback="">$INFO[Window(10000).Property(EPG.landscape)]</texture>
         </control>        
         <control type="image">
             <description>Dynamic art2</description>

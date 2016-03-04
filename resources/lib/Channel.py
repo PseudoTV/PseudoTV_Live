@@ -108,6 +108,7 @@ class Channel:
     def getItemLiveID(self, index):
         return self.Playlist.getLiveID(self.fixPlaylistIndex(index))
 
+        
     def getCurrenttimestamp(self):
         return self.getItemtimestamp(self.playlistPosition)
 
@@ -164,7 +165,6 @@ class Channel:
 
         while index < 0:
             index += self.Playlist.size()
-
         return index
 
 

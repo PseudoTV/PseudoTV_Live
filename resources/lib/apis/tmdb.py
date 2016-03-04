@@ -68,7 +68,7 @@ class TMDB(object):
         
     def getMovie(self, movieName, year):
         try:
-            response = json.loads(read_url_cached_monthly(self._buildUrl('search/movie', {'query' : movieName, 'year' : year}, {"Accept": "application/json"})))
+            response = json.loads(read_url_cached_monthly(self._buildUrl('search/movie', {'query' : movieName, 'year' : year})))
             if response['total_results'] > 0:
                 response = json.loads(read_url_cached_monthly(self._buildUrl('movie/%s' % (response['results'][0]['id']), {"Accept": "application/json"})))
             else:

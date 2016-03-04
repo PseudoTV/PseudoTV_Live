@@ -79,9 +79,9 @@ Pressing the ``Context Menu`` will show the "MoreInfo" bar.
 - Show Codec ``ACTION_SHOW_CODEC``
 - Sleep Timer ``ACTION_ASPECT_RATIO``
 - Record ``ACTION_RECORD`` -- To be used with future PVR features.
+- GREEN,BLUE,RED,YELLOW -- Future access to the 'EPG/ONDEMAND/DVR/APPS' menus  
     
-    
-### Touch Gestures
+### Touch Gestures ''WIP''
 
 - MOVE_LEFT ``ACTION_GESTURE_SWIPE_LEFT_TEN``
 - MOVE_RIGHT ``ACTION_GESTURE_SWIPE_RIGHT_TEN``

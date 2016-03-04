@@ -52,7 +52,7 @@ class Main:
         if not self.plot:
             if self.plotOutline:
                 self.Description = self.plotOutline
-            elif not self.Description:   
+            elif not self.Description:
                 self.Description = self.Label
         else:  
             self.Description = self.plot
@@ -124,9 +124,13 @@ class Main:
                             else:
                                 self.chantype = 9
                         else:
-                            if self.Path.lower().startswith(('pvr')):
+                            if self.Path.lower().startswith(('pvr')) and self.Label.startswith('Channels'):
                                 self.chantype = 8
-                            elif self.isFolder == True and self.Label.lower() in ['networks','channels'] and self.Path.lower().startswith(('plugin')):
+                                return self.buildNetworks(self.Path+'tv/All channels/')
+                            elif self.Path.lower().startswith(('pvr')):
+                                self.chantype = 8
+                            elif self.isFolder == True and self.Label.lower() in ['pseudonetworks','networks','channels'] and self.Path.lower().startswith(('plugin')):
+                                self.chantype = 15
                                 return self.buildNetworks(self.Path)
                             elif self.isFolder == True and self.Path.lower().startswith(('plugin')):
                                 self.chantype = 15
@@ -147,10 +151,11 @@ class Main:
         self.log("chantype = "+str(self.chantype))
             
             
+    # export bulk channels, add subfolders as channels.
     def buildNetworks(self, url):
         self.log("buildNetworks, url = " + url)
         detail = uni(self.chnlst.requestList(url))
-        if dlg.yesno("PseudoTV Live", 'Add %d Network Channels?' % len(detail)):
+        if dlg.yesno("PseudoTV Live", 'Add %d Channels?' % len(detail)):
             show_busy_dialog()
             for f in detail:
                 files = re.search('"file" *: *"(.*?)",', f)
@@ -162,18 +167,28 @@ class Main:
                     file = (files.group(1).replace("\\\\", "\\"))
                     
                     if filetype == 'directory':
-                        self.chantype = 15
-                        self.setting1 = file
-                        self.setting2 = ''
-                        self.setting3 = str(MEDIA_LIMIT)
-                        self.setting4 = '0'
-                        self.channame = name
-                        self.saveSettings()
-                        self.fixChannel(self.channel)
+                        if self.chantype == 15:
+                            self.setting1 = file
+                            self.setting2 = ''
+                            self.setting3 = ''
+                            self.setting4 = '1'
+                            self.channame = name
+                            self.saveSettings()
+                            self.fixChannel(self.channel)
+                    elif filetype == 'file':
+                        if self.chantype == 8:
+                            self.setting1 = file
+                            self.setting2 = name
+                            self.setting3 = 'pvr'
+                            self.setting4 = ''
+                            self.channame = name
+                            self.saveSettings()
+                            self.fixChannel(self.channel)
             hide_busy_dialog()
             self.openManager()
             
-            
+    
+    # find next available channel when exporting bulk channels.
     def fixChannel(self, channel):
         while self.getChtype(self.channel+1) != 9999:
             self.channel +=1
@@ -194,7 +209,7 @@ class Main:
             
         elif self.chantype == 7:
             self.setting1 = xbmc.translatePath(self.Path)
-            self.setting3 = str(MEDIA_LIMIT)
+            self.setting3 = ''
             self.setting4 = '0'
             self.channame = self.Label
             
@@ -228,7 +243,7 @@ class Main:
                 self.setting1 = ((self.Path).replace('plugin://plugin.video.','').replace('youtube/playlist/','').replace('spotitube/?limit&mode=listyoutubeplaylist&type=browse&url=','')).replace('/','')
 
             self.setting2 = str(self.YTtype)
-            self.setting3 = str(MEDIA_LIMIT)
+            self.setting3 = ''
             self.setting4 = '0'
             self.channame = self.Label
             
@@ -243,14 +258,14 @@ class Main:
         elif self.chantype == 15:
             self.setting1 = self.Path
             self.setting2 = ''
-            self.setting3 = str(MEDIA_LIMIT)
+            self.setting3 = ''
             self.setting4 = '0'
             self.channame = self.Label +' - '+ self.AddonName
             
         elif self.chantype == 16:
             self.setting1 = self.Path
             self.setting2 = ''
-            self.setting3 = str(MEDIA_LIMIT)
+            self.setting3 = ''
             self.setting4 = '0'
             self.channame = self.Label
             

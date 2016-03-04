@@ -42,9 +42,12 @@ DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
 
 def log(msg, level = xbmc.LOGDEBUG):
-    xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', uni(msg))
     if DEBUG != True and level == xbmc.LOGDEBUG:
         return
+    if level == xbmc.LOGDEBUG:
+        xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', uni(msg))
+    else:
+        xbmcgui.Window(10000).setProperty('PTVL.ERROR_LOG', uni(msg))
     xbmc.log(ADDON_ID + '-' + ADDON_VERSION + '-' + uni(msg), level)
 
 def utf(string, encoding = 'utf-8'):
@@ -206,7 +209,6 @@ else:
 
 # Globals
 dlg = xbmcgui.Dialog()
-monitor = xbmc.Monitor()
 ADDON_SETTINGS = Settings.Settings()
 GlobalFileLock = FileLock()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
@@ -250,6 +252,8 @@ cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
 cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 
+MUSIC_TYPES = ['.mp3','.flac','.mp4']
+MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
 try:
     MEDIA_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]
 except:
@@ -329,8 +333,8 @@ ACTION_GESTURE_SWIPE_DOWN = 541
 ACTION_GESTURE_SWIPE_DOWN_TEN = 550
 
 # actions
-ACTION_SHOW_EPG = [ACTION_GESTURE_ZOOM]
-ACTION_SHOW_INFO = [11,ACTION_TOUCH_TAP]
+ACTION_SHOW_EPG = [ACTION_GESTURE_SWIPE_RIGHT]
+ACTION_SHOW_INFO = [11,ACTION_GESTURE_SWIPE_LEFT]
 ACTION_MOVE_LEFT = [1,ACTION_GESTURE_SWIPE_LEFT]
 ACTION_MOVE_RIGHT = [2,ACTION_GESTURE_SWIPE_RIGHT]
 ACTION_MOVE_UP = [3,ACTION_GESTURE_SWIPE_UP]
@@ -357,7 +361,7 @@ ACTION_NUMBER_9 = 67
 ACTION_INVALID = 999
 ACTION_SHOW_SUBTITLES = 25 #turn subtitles on/off. 
 ACTION_AUDIO_NEXT_LANGUAGE = 56 #Select next language in movie
-ACTION_CONTEXT_MENU = [117]
+ACTION_CONTEXT_MENU = [117,ACTION_TOUCH_LONGPRESS]
 ACTION_RECORD = 170 #PVR Backend Record
 ACTION_SHOW_CODEC = 27
 ACTION_ASPECT_RATIO = 19 
