@@ -1,3 +1,4 @@
+[*] Custom Skin Manager
 [*] [COLOR=red][B]Recommended Users click "Default" settings, to reset outdated values[/B][/COLOR]
 [*] Tweaked livetv rebuilding, fixed rss feed toggle for epg and improved artwork downloader.
 [*] Tweaked seeking, Users can increase "channel delay" under debugging to correct media not properly seeking.

@@ -493,12 +493,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.artOVERLAY_Types = list(set([getProperty("OVERLAY.type1"),getProperty("OVERLAY.type2"),getProperty("OVERLAY.type3"),getProperty("OVERLAY.type4")]))
         self.artEPG_Types = list(set([getProperty("EPG.type1"),getProperty("EPG.type2"),getProperty("EPG.type3"),getProperty("EPG.type4")]))
 
-
         if self.forceReset == False:
             self.currentChannel = self.fixChannel(int(REAL_SETTINGS.getSetting("CurrentChannel")))
         else:
             self.currentChannel = self.fixChannel(1)
-        
+
         self.lastPlayingChannel = self.currentChannel
         self.egTrigger('PseudoTV_Live - Starting')  
         
@@ -2631,7 +2630,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
           
     def FEEDtoggle(self):
         self.log("FEEDtoggle")
-        UpdateRSS() 
+        self.UpdateRSS() 
         self.FEEDtoggleTimer = threading.Timer(float(RSS_REFRESH), self.FEEDtoggle)
         self.FEEDtoggleTimer.name = "FEEDtoggleTimer"      
 
@@ -2640,7 +2639,18 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         else:
             setProperty("PTVL.FEEDtoggle","true")
         self.FEEDtoggleTimer.start()
-     
+         
+         
+    def UpdateRSS(self):
+        self.log('UpdateRSS')
+        UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+        UpdateRSSthread.name = "UpdateRSSthread"
+        if UpdateRSSthread.isAlive():
+            UpdateRSSthread.cancel()  
+            UpdateRSSthread.join()   
+        UpdateRSSthread.start()
+        xbmc.sleep(10)
+          
 
     def egTrigger_Thread(self, message, sender):
         self.log("egTrigger_Thread")
@@ -3431,22 +3441,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.Player.play(url)
         return
 
-
-
-
-
         
-
     def setBackgroundVisible(self, val):
         self.background.setVisible(val)
         setProperty("OVERLAY.BackgroundVisible",str(val)) 
 
-
         
-
-
-
-
     def setRecord(self, channel=None):
         self.log("setRecord")#todo
         if not channel:
@@ -3577,7 +3577,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log("showWeather")
         json_query = '{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"weather"},"id":1}'
         self.channelList.sendJSON(json_query)
-        
         
 # xbmc.executebuiltin('StartAndroidActivity("com.netflix.mediaclient"),return')
 # http://localhost:9000/jsonrpc?request={"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"videoosd"},"id":5}

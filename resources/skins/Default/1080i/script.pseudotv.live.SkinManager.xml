@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+    <allowoverlay>no</allowoverlay>
+    <zorder>1</zorder>
+    <controls>
+        <control type="image">
+            <left>320</left>
+            <top>180</top>
+            <width>1280</width>
+            <height>720</height>
+            <texture border="40">config/ptv_DialogBack.png</texture>
+        </control>
+        <control type="image">
+            <description>Dialog Header image</description>
+            <left>345</left>
+            <top>180</top>
+            <width>1280</width>
+            <height>75</height>
+            <texture>config/ptv_dialogheader.png</texture>
+        </control>
+        <control type="label">
+            <left>315</left>
+            <top>205</top>
+            <width>1280</width>
+            <height>40</height>
+            <font>font13_title</font>
+            <label>$INFO[System.AddonTitle(script.pseudotv.live),, - ]Skin Manager</label>
+            <align>center</align>
+            <aligny>center</aligny>
+            <textcolor>orange</textcolor>
+            <shadowcolor>black</shadowcolor>
+        </control>
+        <control type="image">
+            <posx>345</posx>
+            <posy>525</posy>
+            <width>28</width>
+            <height>28</height>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]" flipx="true">config/arrowright.png</texture>
+        </control>
+        <control type="image">
+            <fadetime>200</fadetime>
+            <orientation>horizontal</orientation>
+            <scrolltime tween="sine" easing="out">200</scrolltime>
+            <autoscroll>true</autoscroll>
+            <description>Screenshots</description>
+            <left>385</left>
+            <top>265</top>
+            <width>1145</width>
+            <height>545</height>
+            <animation effect="fade" start="0" end="100" time="3000">VisibleChange</animation>
+            <texture fallback="$INFO[Window(10000).Property(PTVL.SKINSHOT_FALLBACK)]">$INFO[Window(10000).Property(PTVL.SKINSHOT)]</texture>
+        </control>  
+        <control type="image">
+            <posx>1545</posx>
+            <posy>525</posy>
+            <width>28</width>
+            <height>28</height>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]">config/arrowright.png</texture>
+        </control>
+        <control type="image">
+            <description>Skin Name image</description>
+            <left>385</left>
+            <top>815</top>
+            <width>1145</width>
+            <height>65</height>
+            <font>font30</font>
+            <align>center</align>
+            <aligny>center</aligny>
+            <colordiffuse>FF0297eb</colordiffuse>
+            <texture>config/ptv_dialogheader.png</texture>
+        </control> 
+        <control type="image">
+            <left>1502</left>
+            <top>265</top>
+            <width>28</width>
+            <height>28</height>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSUPD)]">config/ptv_scroll-up-2.png</texture>
+        </control>
+        <control type="image">
+            <left>1502</left>
+            <top>782</top>
+            <width>28</width>
+            <height>28</height>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSDOWND)]">config/ptv_scroll-down-2.png</texture>
+        </control>
+        <control type="label">
+            <description>Skin Name</description>
+            <left>315</left>
+            <top>817</top>
+            <width>1280</width>
+            <height>40</height>
+            <font>font14</font>
+            <align>center</align>
+            <aligny>top</aligny>
+            <label>$INFO[Window(10000).Property(PTVL.SKINNAME)]</label>
+        </control>  
+        <control type="label">
+            <description>Skin Author</description>
+            <left>315</left>
+            <top>850</top>
+            <width>1280</width>
+            <height>40</height>
+            <font>font10</font>
+            <align>center</align>
+            <aligny>bottom</aligny>
+            <label>$INFO[Window(10000).Property(PTVL.SKINAUTHOR)]</label>
+        </control> 
+    </controls>
+</window>

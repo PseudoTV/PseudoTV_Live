@@ -39,7 +39,7 @@ from HTMLParser import HTMLParser
 
 try:
     from metahandler import metahandlers
-    metaget = metahandlers.MetaData(preparezip=False)
+    metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
 except Exception,e:  
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-Artdownloader: metahandler Import Failed" + str(e))   

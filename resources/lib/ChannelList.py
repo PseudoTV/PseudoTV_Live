@@ -263,7 +263,7 @@ class ChannelList:
                         chname = self.getChannelName(chtype, chsetting1)
                     else:
                         chname = self.getChannelName(chtype, (i + 1))
-                    FindLogo(chtype, chname)
+                    self.FindLogo(chtype, chname)
         setBackgroundLabel('Initializing: Channels') 
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
@@ -5075,3 +5075,15 @@ class ChannelList:
             GenreLiveID = [dict['genre'], dict['type'], dict['id'], dict['thumburl'], False, 1, dict['rating'], dict['hd'], dict['cc'], dict['stars'], dict['year']]
             filelist.append(self.makeTMPSTR(dict['duration'], dict['title'], dict['year'], dict['subtitle'], dict['description'], GenreLiveID, dict['link'], timestamp))
         return filelist
+        
+                
+    def FindLogo(self, chtype, chname, mediapath=None):
+        self.log('FindLogo')
+        if FIND_LOGOS == True and isLowPower() != True:
+            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+            FindLogoThread.name = "FindLogoThread"
+            if FindLogoThread.isAlive():
+                FindLogoThread.cancel()
+                FindLogoThread.join()
+            FindLogoThread.start()
+            xbmc.sleep(10)

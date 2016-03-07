@@ -146,15 +146,6 @@ def CleanCHname(text):
 def CleanCHnameSeq(text):
     # try removing number from channel ie NBC2 = NBC, or 5 FOX = FOX
     return (''.join(i for i in text if not i.isdigit())).lstrip()
-        
-def FindLogo(chtype, chname, mediapath=None):
-    if FIND_LOGOS == True and isLowPower() != True:
-        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-        FindLogoThread.name = "FindLogoThread"
-        if FindLogoThread.isAlive():
-            FindLogoThread.cancel()
-            FindLogoThread.join()
-        FindLogoThread.start()
 
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
@@ -390,17 +381,7 @@ def POP_MSG():
     except:
         pass
     return poplist
-            
-def UpdateRSS():
-    log('utils: UpdateRSS')
-    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    UpdateRSSthread.name = "UpdateRSSthread"
-    if UpdateRSSthread.isAlive():
-        UpdateRSSthread.cancel()  
-        UpdateRSSthread.join()   
-    UpdateRSSthread.start()
-    xbmc.sleep(10)
-          
+
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
     try:
@@ -570,6 +551,7 @@ def download(url, dest, dp = None):
         dp = xbmcgui.DialogProgress()
         dp.create("PseudoTV Live","Downloading & Installing Files", ' ', ' ')
     dp.update(0)
+    
     start_time=time.time()
     try:
         urllib.urlretrieve(url, dest, lambda nb, bs, fs: _pbhook(nb, bs, fs, dp, start_time))
@@ -582,7 +564,7 @@ def download_silent_thread(url, dest):
         urllib.urlretrieve(url, dest)
     except Exception,e:
         log('utils: download_silent_thread, Failed!,' + str(e))
-         
+
 def download_silent(url, dest):
     log('download_silent')
     download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
@@ -670,6 +652,8 @@ def get_data(url, data_type ='json'):
 
 def all(_in, _out, dp=None):
     if dp:
+        dp = xbmcgui.DialogProgress()
+        dp.create("PseudoTV Live","Extracting Files", ' ', ' ')
         return allWithProgress(_in, _out, dp)
     return allNoProgress(_in, _out)
 
@@ -1452,7 +1436,7 @@ def isPTVLOutdated():
         if vernum != str(match[0]):
             return True
     return False
-        
+
 def preStart(): 
     log('utils: preStart')
     # chkAPIS(RSS_API_KEY)

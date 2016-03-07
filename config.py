@@ -18,7 +18,7 @@
 
 import xbmc, xbmcgui, xbmcaddon
 import subprocess, os, sys, re, random
-import datetime, time, threading
+import datetime, time
 
 from urllib import unquote
 from xml.dom.minidom import parse, parseString

@@ -40,6 +40,7 @@ ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
+PTVL_SKINVER = '0.7.4'
 
 def log(msg, level = xbmc.LOGDEBUG):
     if DEBUG != True and level == xbmc.LOGDEBUG:
@@ -179,10 +180,14 @@ ART_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'artwork',''))
 PTVLXML = os.path.join(XMLTV_CACHE_LOC, 'ptvlguide.xml')
 USTVXML = os.path.join(XMLTV_CACHE_LOC, 'ustvnow.xml')
 
+# Chk for custom skin        
+if xbmcvfs.exists(os.path.join(PTVL_SKIN_LOC,REAL_SETTINGS.getSetting("SkinSelector"),'skin.xml')) == False:
+    REAL_SETTINGS.setSetting("SkinSelector",'Default')
+
 # SKIN SELECT
-Skin_Select = 'Default'
-MEDIA_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', Skin_Select, 'media',''))   
-EPGGENRE_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', Skin_Select, 'media', 'epg-genres','')) 
+Skin_Select = REAL_SETTINGS.getSetting("SkinSelector")
+MEDIA_LOC = xbmc.translatePath(os.path.join(PTVL_SKIN_LOC, Skin_Select, 'media',''))   
+EPGGENRE_LOC = xbmc.translatePath(os.path.join(PTVL_SKIN_LOC, Skin_Select, 'media', 'epg-genres','')) 
 
 #Double check core image folders
 if not xbmcvfs.exists(MEDIA_LOC):

@@ -53,12 +53,13 @@
     <string id="30106">Playback Offset (milliseconds)</string>  
     
 <string id="30200">Visuals</string>
+    <string id="30201">Change Skin:</string> 
+    <string id="30202">Open Skin Manager</string> 
     <string id="30301">Use (S01E01), Instead of (01x01)</string>
     <string id="30201">Enable Dynamic Artwork (Incl. Service)</string>
     <string id="34046">Show Notification</string>
     <string id="34045">Run Service Every (hours)</string>
     <string id="34446">Run During Playback?</string>
-    <string id="30202">Select Skin</string> 
     <string id="30225">Channel Logo Folder</string>  
     <string id="34547">Find Missing Logos</string> 
     <string id="34548">Allow Multi-Region Fallbacks</string> 
