@@ -31,32 +31,18 @@
             <shadowcolor>black</shadowcolor>
         </control>
         <control type="image">
-            <posx>345</posx>
-            <posy>525</posy>
-            <width>28</width>
-            <height>28</height>
-            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]" flipx="true">config/arrowright.png</texture>
-        </control>
-        <control type="image">
             <fadetime>200</fadetime>
             <orientation>horizontal</orientation>
             <scrolltime tween="sine" easing="out">200</scrolltime>
             <autoscroll>true</autoscroll>
             <description>Screenshots</description>
-            <left>385</left>
-            <top>265</top>
-            <width>1145</width>
-            <height>545</height>
+            <left>525</left>
+            <top>295</top>
+            <width>848</width>
+            <height>480</height>
             <animation effect="fade" start="0" end="100" time="3000">VisibleChange</animation>
             <texture fallback="$INFO[Window(10000).Property(PTVL.SKINSHOT_FALLBACK)]">$INFO[Window(10000).Property(PTVL.SKINSHOT)]</texture>
         </control>  
-        <control type="image">
-            <posx>1545</posx>
-            <posy>525</posy>
-            <width>28</width>
-            <height>28</height>
-            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]">config/arrowright.png</texture>
-        </control>
         <control type="image">
             <description>Skin Name image</description>
             <left>385</left>
@@ -70,40 +56,62 @@
             <texture>config/ptv_dialogheader.png</texture>
         </control> 
         <control type="image">
-            <left>1502</left>
-            <top>265</top>
-            <width>28</width>
-            <height>28</height>
-            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSUPD)]">config/ptv_scroll-up-2.png</texture>
+            <left>495</left>
+            <top>100</top>
+            <width>30</width>
+            <height>848</height>
+            <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]">config/wall_arrow.png</texture>
         </control>
         <control type="image">
-            <left>1502</left>
-            <top>782</top>
-            <width>28</width>
-            <height>28</height>
-            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSDOWND)]">config/ptv_scroll-down-2.png</texture>
+            <left>1383</left>
+            <top>100</top>
+            <width>30</width>
+            <height>848</height>
+            <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]" flipx="true">config/wall_arrow.png</texture>
         </control>
-        <control type="label">
-            <description>Skin Name</description>
-            <left>315</left>
-            <top>817</top>
-            <width>1280</width>
-            <height>40</height>
-            <font>font14</font>
-            <align>center</align>
-            <aligny>top</aligny>
-            <label>$INFO[Window(10000).Property(PTVL.SKINNAME)]</label>
-        </control>  
-        <control type="label">
-            <description>Skin Author</description>
-            <left>315</left>
-            <top>850</top>
-            <width>1280</width>
-            <height>40</height>
-            <font>font10</font>
-            <align>center</align>
-            <aligny>bottom</aligny>
-            <label>$INFO[Window(10000).Property(PTVL.SKINAUTHOR)]</label>
+        <control type="image">
+            <left>525</left>
+            <top>265</top>
+            <width>848</width>
+            <height>30</height>
+            <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSUPD)]" flipy="true" >config/wall_arrow_vertical.png</texture>
+        </control>
+        <control type="image">
+            <left>525</left>
+            <top>780</top>
+            <width>848</width>
+            <height>30</height>
+            <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
+            <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSDOWND)]">config/wall_arrow_vertical.png</texture>
+        </control>
+        <control type="grouplist">
+            <left>525</left>
+            <top>825</top>    
+            <width>848</width>
+            <height>40</height>      
+            <itemgap>40</itemgap>
+            <orientation>horizontal</orientation>
+            <control type="label">
+                <description>Skin Name</description>    
+                <width min="40" max="640">auto</width>
+                <height>40</height>
+                <font>font14</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <label>$INFO[Window(10000).Property(PTVL.SKINNAME)]</label>
+            </control>  
+            <control type="label">
+                <description>Skin Author</description>
+                <width min="40" max="640">auto</width>
+                <height>40</height>
+                <font>font10</font>
+                <align>right</align>
+                <aligny>center</aligny>
+                <label>$INFO[Window(10000).Property(PTVL.SKINAUTHOR)]</label>
+            </control> 
         </control> 
     </controls>
 </window>

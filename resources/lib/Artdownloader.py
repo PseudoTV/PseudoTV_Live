@@ -235,17 +235,17 @@ class Artdownloader:
             MediaImage = os.path.join(MEDIA_LOC, (arttype + '.png'))
             StockImage = os.path.join(IMAGES_LOC, (arttype + '.png'))
             ChannelLogo = os.path.join(LOGO_LOC,chname[0:18] + '.png')
-
+            
+            # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
+            if FileAccess.exists(MediaImage) == True:
+                return MediaImage
             # Channel Logo
-            if FileAccess.exists(ChannelLogo) == True:
+            elif FileAccess.exists(ChannelLogo) == True:
                 return ChannelLogo
             # Plugin Icon
             elif mpath[0:6] == 'plugin':
                 icon = 'special://home/addons/'+(mpath.replace('plugin://',''))+ '/icon.png'
                 return icon
-            # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            elif FileAccess.exists(MediaImage) == True:
-                return MediaImage
             # Default Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
             elif FileAccess.exists(StockImage) == True:
                 return StockImage
@@ -451,8 +451,7 @@ class Artdownloader:
         self.log("FindBug, chname = " + chname)
         try:
             setImage = ''
-            BugName = (chname[0:18] + '.png')
-            BugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,BugName))
+            BugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname[0:18] + '.png')))
             cachedthumb = xbmc.getCacheThumbName(BugFLE)
             cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + ".png")).replace("\\", "/")
             DefaultBug = self.getDefaultBug(chname)

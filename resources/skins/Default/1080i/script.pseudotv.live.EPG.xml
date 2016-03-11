@@ -116,7 +116,7 @@
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.4.Label)]</label>
                     <textcolor>C0C0C0C0</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
+                    <shadowcolor>ff000000</shadowcolor>
                     <fadetime>2000</fadetime>
                 </control> 
                 <control type="image">

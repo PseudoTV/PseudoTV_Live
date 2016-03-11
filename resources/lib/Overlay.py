@@ -21,7 +21,6 @@ import datetime, time, threading, _strptime
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
 
-
 from Playlist import Playlist
 from Globals import *
 from Channel import Channel
@@ -521,7 +520,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.actionSemaphore.release()
         self.loadReminder()
         self.FEEDtoggle()
-        self.startOnNowTimer()
+        self.startOnNowTimer(TimeRemainder(ONNOW_REFRESH))
         REAL_SETTINGS.setSetting('Normal_Shutdown', "false")
         setProperty("PTVL.VideoWindow","true")
                 
@@ -664,9 +663,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         OnNowLst = []
         OnNowArtLst = []
         
-        if self.channelThread.isAlive():
-            self.channelThread.pause()
-            
         if getProperty("PTVL.ONNOW_RUNNING") != "true":
             setProperty("PTVL.ONNOW_RUNNING","true")
             try:
@@ -676,74 +672,64 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         chtype = self.getChtype(chnum)
                         chname = self.getChname(chnum)
                         chlogo = self.getChlogo(chnum)
-
-                        if self.channels[Channel].isValid:
-                            # prepare channel guide
-                            channel_dict = {'Chtype': chtype, 'Chnum': chnum, 'Chname': chname, 'LOGOART': chlogo}
-                            ChannelGuideLst.append(channel_dict)
-                            
-                            # prepare info
-                            position = self.getPlaylistPOS(chtype, chnum, offdif)
-                            label = self.channels[Channel].getItemTitle(position)
-                            SEtitle = self.channels[Channel].getItemEpisodeTitle(position)
-                            Description = self.channels[Channel].getItemDescription(position)
-                            genre = self.channels[Channel].getItemgenre(position)
-                            LiveID = self.channels[Channel].getItemLiveID(position)
-                            Duration = self.channels[Channel].getItemDuration(position) 
-                            timestamp = self.channels[Channel].getItemtimestamp(position) 
-                            mediapath = self.channels[Channel].getItemFilename(position)  
                         
-                            ChanColor = (self.channelbugcolor).replace('0x','')
-                            if self.isChanFavorite(chnum):
-                                ChanColor = 'gold'
+                        # prepare channel guide
+                        channel_dict = {'Chtype': chtype, 'Chnum': chnum, 'Chname': chname, 'LOGOART': chlogo}
+                        ChannelGuideLst.append(channel_dict)
+                        
+                        # prepare info
+                        position = self.getPlaylistPOS(chtype, chnum, offdif)
+                        label = self.channels[Channel].getItemTitle(position)
+                        SEtitle = self.channels[Channel].getItemEpisodeTitle(position)
+                        Description = self.channels[Channel].getItemDescription(position)
+                        genre = self.channels[Channel].getItemgenre(position)
+                        LiveID = self.channels[Channel].getItemLiveID(position)
+                        Duration = self.channels[Channel].getItemDuration(position) 
+                        timestamp = self.channels[Channel].getItemtimestamp(position) 
+                        mediapath = self.channels[Channel].getItemFilename(position)  
+                    
+                        ChanColor = (self.channelbugcolor).replace('0x','')
+                        if self.isChanFavorite(chnum):
+                            ChanColor = 'gold'
 
-                            # SepColor = (self.channelbugcolor).replace('0x','')
-                            # if genre not in [COLOR_GRAY_TYPE + COLOR_ltGRAY_TYPE]:
-                                # SepColor = self.getGenreColor(genre).replace('#','')+'00'
-                                
-                            # prepare artwork
-                            type, id, dbepid, managed, playcount, rating, hd, cc, stars, year = self.channelList.unpackLiveID(LiveID)
-                            year, title, showtitle = getTitleYear(label, year)
-                            label = ("[COLOR=%s][B]%d|[/B][/COLOR] %s" % (ChanColor, chnum, title))
-                            season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode)
-                            dbid, epid = splitDBID(dbepid)
-                            mpath = getMpath(mediapath)
-                            content_type = type.replace("tvshow","episode").replace("other","video").replace("music","musicvideo")   
-                            tagline = SEtitle                      
-                            art = self.findArtwork(type, title, year, chtype, chname, id, dbid, mpath, getProperty("OVERLAY.ONNOW_TYPE"))
-                            poster, fanart = self.getArtwork(type, title, year, chtype, chname, id, dbid, mpath)
-                            OnNowLst.append(label)
-                            OnNowArtLst.append(art)
-                            onnow_dict = {'Chtype': chtype, 'Label': label, 'Chnum': chnum, 'Chname': chname, 'Type': type, 'Showtitle': showtitle, 'Cleantitle': title, 'Year': year, 'Title': title, 'SEtitle': SEtitle, 'SWtitle': swtitle,
-                            'Season': season, 'Episode': episode, 'Description': Description, 'Rating': rating, 'Managed': managed, 'Playcount': playcount, 'Genre': genre, 'content_type': content_type, 'ID': id, 'DBID': dbid, 'EPID': epid,
-                            'Mpath': mpath, 'Duration': Duration, 'Timestamp': timestamp, 'Mediapath': mediapath, 'Tagline': tagline, 'poster': poster, 'fanart': fanart, 'LOGOART': chlogo, 'ONNOW_ART': art}
-                            OnNowDict.append(onnow_dict)
+                        # SepColor = (self.channelbugcolor).replace('0x','')
+                        # if genre not in [COLOR_GRAY_TYPE + COLOR_ltGRAY_TYPE]:
+                            # SepColor = self.getGenreColor(genre).replace('#','')+'00'
+                            
+                        # prepare artwork
+                        type, id, dbepid, managed, playcount, rating, hd, cc, stars, year = self.channelList.unpackLiveID(LiveID)
+                        year, title, showtitle = getTitleYear(label, year)
+                        label = ("[COLOR=%s][B]%d|[/B][/COLOR] %s" % (ChanColor, chnum, title))
+                        season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode)
+                        dbid, epid = splitDBID(dbepid)
+                        mpath = getMpath(mediapath)
+                        content_type = type.replace("tvshow","episode").replace("other","video").replace("music","musicvideo")   
+                        tagline = SEtitle                      
+                        art = self.findArtwork(type, title, year, chtype, chname, id, dbid, mpath, getProperty("OVERLAY.ONNOW_TYPE"))
+                        poster, fanart = self.getArtwork(type, title, year, chtype, chname, id, dbid, mpath)
+                        OnNowLst.append(label)
+                        OnNowArtLst.append(art)
+                        onnow_dict = {'Chtype': chtype, 'Label': label, 'Chnum': chnum, 'Chname': chname, 'Type': type, 'Showtitle': showtitle, 'Cleantitle': title, 'Year': year, 'Title': title, 'SEtitle': SEtitle, 'SWtitle': swtitle,
+                        'Season': season, 'Episode': episode, 'Description': Description, 'Rating': rating, 'Managed': managed, 'Playcount': playcount, 'Genre': genre, 'content_type': content_type, 'ID': id, 'DBID': dbid, 'EPID': epid,
+                        'Mpath': mpath, 'Duration': Duration, 'Timestamp': timestamp, 'Mediapath': mediapath, 'Tagline': tagline, 'poster': poster, 'fanart': fanart, 'LOGOART': chlogo, 'ONNOW_ART': art}
+                        OnNowDict.append(onnow_dict)
 
                 setProperty("OVERLAY.ChannelGuide", str(ChannelGuideLst))
                 del ChannelGuideLst[:]
             except Exception,e:
                 self.log('getOnNow, Failed!, ' + str(e))
-                
-        if self.channelThread.isAlive():
-            self.channelThread.unpause()
-            
         setProperty("PTVL.ONNOW_RUNNING","false") 
         return OnNowLst, OnNowArtLst, OnNowDict
     
                  
     def setOnNow(self):
         self.log('setOnNow')
-        self.startOnNowTimer()
         self.OnNowLst, self.OnNowArtLst, OnNowDict = self.getOnNow()
         setProperty("OVERLAY.OnNowLst", str(OnNowDict))
-        self.setOnNext()
-        
-        
-    def setOnNext(self):
-        self.log('setOnNext')
         self.OnNextLst, self.OnNextArtLst, OnNextDict = self.getOnNow(1)
         setProperty("OVERLAY.OnNextLst", str(OnNextDict))
-
+        self.startOnNowTimer(TimeRemainder(ONNOW_REFRESH))
+        
         
     def clearOnNow(self):
         self.log('clearOnNow')
@@ -1000,7 +986,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.currentChannel = channel      
         setBackgroundLabel(('Loading: %s') % chname)
         setProperty("OVERLAY.LOGOART",self.getChlogo(channel))
-        self.clearProp()             
+        self.clearProp()       
         # now load the proper channel playlist
         xbmc.PlayList(xbmc.PLAYLIST_MUSIC).clear()
         self.log("about to load")  
@@ -1139,6 +1125,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.egTrigger('PseudoTV_Live - Loading: %s' % chname)
         self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL_END, channel, self.channels[channel - 1])
         setProperty("PTVL.INIT_CHANNELSET","true")
+        self.startOnNowTimer(30)
         self.log('setChannel, setChannel return')
         
         
@@ -1271,7 +1258,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def waitForVideoPlayback(self, time=250, act=True):
         self.log("waitForVideoPlayback")
         if act == False:
-            while not (self.Player.isPlaying()):
+            while self.Player.isPlaying() == False:
                 xbmc.sleep(10)
         else:
             while self.Player.isActuallyPlaying(time) == False:
@@ -2230,7 +2217,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         self.startPlayerTimer(self.ActionTimeInt)
                         self.lastActionTrigger('LastValid')
                 
-                elif self.notPlayingCount > playActionTime/2:
+                elif self.notPlayingCount > int(round((playActionTime/4)*3)):
                     OptNotify("notPlayingCount = " + str(self.notPlayingCount) + "/" + str(playActionTime))
                     # retry same channel
                     if self.notPlayingCount == playActionTime/2:
@@ -2630,7 +2617,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
           
     def FEEDtoggle(self):
         self.log("FEEDtoggle")
-        self.UpdateRSS() 
+        UpdateRSS() 
         self.FEEDtoggleTimer = threading.Timer(float(RSS_REFRESH), self.FEEDtoggle)
         self.FEEDtoggleTimer.name = "FEEDtoggleTimer"      
 
@@ -2641,17 +2628,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.FEEDtoggleTimer.start()
          
          
-    def UpdateRSS(self):
-        self.log('UpdateRSS')
-        UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-        UpdateRSSthread.name = "UpdateRSSthread"
-        if UpdateRSSthread.isAlive():
-            UpdateRSSthread.cancel()  
-            UpdateRSSthread.join()   
-        UpdateRSSthread.start()
-        xbmc.sleep(10)
-          
-
     def egTrigger_Thread(self, message, sender):
         self.log("egTrigger_Thread")
         json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
@@ -2689,8 +2665,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.setPropTimer.join()
         if self.Player.stopped == False and self.isExiting == False:
             self.setPropTimer.start()
-
-        
+            
     def setProp_thread(self, title, year, chtype, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, pType):
         self.log("setProp_thread, title = " + title + ', pType = ' + pType)      
         setProperty("%s.Chtype"%pType,str(chtype))
@@ -2790,20 +2765,24 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def isNew(self, pType='OVERLAY'):
         self.log('isNew') 
         try:
+            self.isNewTimer = threading.Timer(1.0, self.isNew_Thread, [pType])
+            self.isNewTimer.name = "isNewTimer"  
             if self.isNewTimer.isAlive():
-                self.isNewTimer.cancel()
+                self.isNewTimer.cancel() 
+            if isLowPower() == False:
+                self.isNewTimer.start()
         except:
             pass
-        if isLowPower() == False:
-            self.isNewTimer = threading.Timer(0.5, self.isNew_Thread, [pType])
-            self.isNewTimer.name = "isNewTimer"   
-            self.isNewTimer.start()
      
      
     def isNew_Thread(self, pType):
         self.log("isNew_Thread")
         try:
-            chtype = int(getProperty("%s.Chtype"%pType))
+            try:
+                chtype = int(getProperty("%s.Chtype"%pType))
+            except:
+                chtype = 8
+                
             mediapath = getProperty("%s.Mediapath"%pType)
             
             try:
@@ -2841,14 +2820,14 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def isManaged(self, pType='OVERLAY'):
         self.log('isManaged') 
         try:
+            self.isManagedTimer = threading.Timer(1.0, self.isManaged_Thread, [pType])
+            self.isManagedTimer.name = "isManagedTimer" 
             if self.isManagedTimer.isAlive():
                 self.isManagedTimer.cancel()
+            if isLowPower() == False:
+                self.isManagedTimer.start()
         except:
-            pass
-        if isLowPower() == False:
-            self.isManagedTimer = threading.Timer(0.5, self.isManaged_Thread, [pType])
-            self.isManagedTimer.name = "isManagedTimer"       
-            self.isManagedTimer.start()
+            pass      
             
             
     def isManaged_Thread(self, pType):
@@ -2950,7 +2929,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         clearProperty("%s.clearart"%pType)
         clearProperty("%s.clearlogo"%pType)
         clearProperty("%s.landscape"%pType)
-
         clearProperty("%s.Year"%pType)
         clearProperty("%s.ID"%pType)
         clearProperty("%s.Genre"%pType)
@@ -3294,7 +3272,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             chlogo = ''
         if FileAccess.exists(chlogo):
             return chlogo
-        elif fallback:
+        elif fallback == True:
             return THUMB
         else:
             return 'NA.png'
@@ -3431,6 +3409,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 else:
                     self.lastActionTrigger()
             elif url.startswith(('plugin','PlayMedia')):
+                # if getProperty('PTVL.DIRECT_PLAY') == 'true':
+                    # url = getProperty('PTVL.DIRECT_URL')
+                    # self.setPlayselected(url)
+                # else:
                 if not url.startswith('PlayMedia'):
                     url = ('PlayMedia('+url+')')
                 xbmc.executebuiltin(tidy(url).replace(',', ''))

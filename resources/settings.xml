@@ -50,7 +50,7 @@
     <category label="30200">
         <setting label="30201" type="lsep"/>
         <setting id="SkinSelector" type="action" default="Default"  label="30202" action="RunScript($CWD/skin.py)"/>
-        <setting type="sep"/>
+        <setting label="30003" type="lsep"/>
         <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/addon_data/script.pseudotv.live/logos/"/>
         <setting id="ShowSeEp" type="bool"   label="30301" default="false"/>
         <setting id="EnhancedGuideData" type="bool"   label="30405" default="true" />

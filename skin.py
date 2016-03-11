@@ -72,7 +72,8 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         for i in range(len(github_skinList)):
             ssList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins/tree/master/%s' % github_skinList[i])
             for n in range(len(ssList)):
-                if ssList[n].startswith('screenshot'):
+                print ssList[n]
+                if (ssList[n].lower()).startswith('screenshot'):
                     self.skinNames.append(github_skinList[i])
                     break 
         self.skinPOSMAX = len(self.skinNames) - 1

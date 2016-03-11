@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import subprocess, os, sys, re, random
 import datetime, time
 
@@ -26,7 +26,6 @@ from resources.lib.utils import *
 from resources.lib.Globals import *
 from resources.lib.ChannelList import ChannelList
 from resources.lib.AdvancedConfig import AdvancedConfig
-from resources.lib.FileAccess import FileAccess
 from resources.lib.Migrate import Migrate
 
 try:
@@ -66,7 +65,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             
             if CHANNEL_SHARING:
                 realloc = REAL_SETTINGS.getSetting('SettingsFolder')
-                FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
+                xbmcvfs.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
 
             ADDON_SETTINGS.loadSettings()
             ADDON_SETTINGS.disableWriteOnSave()
@@ -121,7 +120,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:
             curchan = self.listcontrol.getSelectedPosition() + 1
             self.deleteChannel(curchan)
-            self.clearLabel(self.getFocusId())
+            self.clearLabel([self.getFocusId()])
             
         # Change Channel Number 
         elif action in ACTION_SHOW_INFO:
@@ -366,8 +365,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 190:      # TV Show channel, left
             select = mselectDialog(self.showList, 'Select one or multiple TV Shows')
             if select != -1:
-                self.getControl(190).setLabel('|'.join(matchMselect(self.showList,select)))
-        
+                shows = '|'.join(matchMselect(self.showList,select))
+                self.getControl(190).setLabel(shows)
+                
         #Directory
         elif controlId == 200:    # Directory channel, select
             retval = browse(0, "Channel " + str(self.channel) + " Directory", "files")
@@ -729,7 +729,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         fle = xbmc.translatePath(fle)
 
         try:
-            xml = FileAccess.open(fle, "r")
+            xml = open(fle, "r")
         except:
             self.log('Unable to open smart playlist')
             return ''
@@ -1164,9 +1164,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         # self.clearLabel([291]) # Browse upnp name
             
             
-    def clearLabel(self, id=-1):
+    def clearLabel(self, id=None):
         self.log("clearLabel, id = " + str(id))
-        if id != -1:
+        if id:
             for i in range(len(id)):
                 lid = id[i]
                 try:
@@ -1630,7 +1630,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         if CHANNEL_SHARING:
             realloc = REAL_SETTINGS.getSetting('SettingsFolder')
-            FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
+            xbmcvfs.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
 
             
     def updateListing(self, channel = -1):

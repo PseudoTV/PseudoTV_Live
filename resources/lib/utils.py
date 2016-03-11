@@ -23,7 +23,6 @@ import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, 
 
 from functools import wraps
 from Globals import * 
-from FileAccess import FileAccess
 from Queue import Queue
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
@@ -146,6 +145,17 @@ def CleanCHname(text):
 def CleanCHnameSeq(text):
     # try removing number from channel ie NBC2 = NBC, or 5 FOX = FOX
     return (''.join(i for i in text if not i.isdigit())).lstrip()
+                
+def FindLogo(chtype, chname, mediapath=None):
+    log('utils: FindLogo')
+    if FIND_LOGOS == True and isLowPower() != True:
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        FindLogoThread.name = "FindLogoThread"
+        if FindLogoThread.isAlive():
+            FindLogoThread.cancel()
+            FindLogoThread.join()
+        FindLogoThread.start()
+        xbmc.sleep(10)
 
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
@@ -153,10 +163,10 @@ def FindLogo_Thread(chtype, chname, mediapath):
     LogoPath = os.path.join(LOGO_LOC,LogoName)
     
     # if logo exists & logo override is disabled return
-    if FileAccess.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+    if xbmcvfs.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
         return
-    elif FileAccess.exists(LOGO_LOC) == False:
-        FileAccess.makedirs(LOGO_LOC)
+    elif xbmcvfs.exists(LOGO_LOC) == False:
+        xbmcvfs.mkdirs(LOGO_LOC)
     log("utils: FindLogo_Thread, LogoFile = " + LogoPath)
     Cchname = CleanCHname(chname)
     
@@ -196,13 +206,12 @@ def FindLogo_URL(chtype, chname, mediapath):
         smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
         artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
         artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
-        if FileAccess.exists(artSeries): 
+        if xbmcvfs.exists(artSeries): 
             url = artSeries
-        elif FileAccess.exists(artSeason): 
+        elif xbmcvfs.exists(artSeason): 
             url = artSeason
         if url:
             return url
-            
     # todo google image logo search
 
 def GrabLogo(url, chname):
@@ -213,12 +222,12 @@ def GrabLogo(url, chname):
    
     if REAL_SETTINGS.getSetting('LogoDB_Override') == "true":
         try:
-            FileAccess.delete(LogoFile)
+            xbmcvfs.delete(LogoFile)
             log("utils: GrabLogo, removed old logo")   
         except:
             pass
     
-    if FileAccess.exists(LogoFile) == False:
+    if xbmcvfs.exists(LogoFile) == False:
         log("utils: GrabLogo, downloading new logo")   
         if url.startswith('image'):
             url = (unquote(url)).replace("image://",'')
@@ -226,7 +235,7 @@ def GrabLogo(url, chname):
         elif url.startswith('http'):
             return download_silent(url, LogoFile)
         else:
-            return FileAccess.copy(xbmc.translatePath(url), LogoFile) 
+            return xbmcvfs.copy(xbmc.translatePath(url), LogoFile) 
      
 def FindLogo_Default(chname, chpath):
     log('utils: FindLogo_Default')
@@ -381,7 +390,17 @@ def POP_MSG():
     except:
         pass
     return poplist
-
+                 
+def UpdateRSS():
+    log('utils: UpdateRSS')
+    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+    UpdateRSSthread.name = "UpdateRSSthread"
+    if UpdateRSSthread.isAlive():
+        UpdateRSSthread.cancel()  
+        UpdateRSSthread.join()   
+    UpdateRSSthread.start()
+    xbmc.sleep(10)
+          
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
     try:
@@ -624,7 +643,7 @@ def retrieve_url(url, userpass, dest):
     log("utils: retrieve_url")
     try:
         resource = open_url(url, userpass)
-        output = FileAccess.open(dest, 'w')
+        output = open(dest, 'w')
         output.write(resource.read())  
         output.close()
         return True
@@ -1023,7 +1042,7 @@ def modification_date(filename):
     
 def getSize(file):
     log("getSize")
-    if FileAccess.exists(file):
+    if xbmcvfs.exists(file):
         file = xbmc.translatePath(file)
         try:
             size = os.path.getsize(file)
@@ -1083,12 +1102,12 @@ def writeCache(theitem, thepath, thefile):
     log("writeCache")  
     now = datetime.datetime.today()
 
-    if not FileAccess.exists(os.path.join(thepath)):
-        FileAccess.makedirs(os.path.join(thepath))
+    if not xbmcvfs.exists(os.path.join(thepath)):
+        xbmcvfs.mkdirs(os.path.join(thepath))
     
     thefile = os.path.join(thepath,thefile)
     try:
-        fle = FileAccess.open(thefile, "w")
+        fle = open(thefile, "w")
         fle.write("%s\n" % now)
         for item in thelist:
             fle.write("%s\n" % item)
@@ -1100,9 +1119,9 @@ def readCache(thepath, thefile):
     log("readCache") 
     thefile = os.path.join(thepath,thefile)
     
-    if FileAccess.exists(thefile):
+    if xbmcvfs.exists(thefile):
         try:
-            fle = FileAccess.open(thefile, "r")
+            fle = open(thefile, "r")
             theitems = fle.readlines()
             theitems.pop(len(theitems) - 1)#remove last line (empty line)
             theitems.pop(0)#remove first line (datetime)
@@ -1118,9 +1137,9 @@ def Cache_Expired(thepath, thefile, life=31):
     now = datetime.datetime.today()
     log("Cache_Expired, now = " + str(now))
     
-    if FileAccess.exists(thefile):
+    if xbmcvfs.exists(thefile):
         try:
-            fle = FileAccess.open(thefile, "r")
+            fle = open(thefile, "r")
             cacheline = fle.readlines()
             cacheDate = str(cacheline[0])
             cacheDate = cacheDate.split('.')[0]
@@ -1142,35 +1161,35 @@ def Cache_Expired(thepath, thefile, life=31):
  
 def makeSTRM(mediapath):
     log('utils: makeSTRM')            
-    if not FileAccess.exists(STRM_CACHE_LOC):
-        FileAccess.makedirs(STRM_CACHE_LOC)
+    if not xbmcvfs.exists(STRM_CACHE_LOC):
+        xbmcvfs.mkdirs(STRM_CACHE_LOC)
     path = (mediapath.encode('base64'))[:16] + '.strm'
     filepath = os.path.join(STRM_CACHE_LOC,path)
-    if FileAccess.exists(filepath):
+    if xbmcvfs.exists(filepath):
         return filepath
     else:
-        fle = FileAccess.open(filepath, "w")
+        fle = open(filepath, "w")
         fle.write("%s" % mediapath)
         fle.close()
         return filepath
          
 def Backup(org, bak):
     log('utils: Backup ' + str(org) + ' - ' + str(bak))
-    if FileAccess.exists(org):
-        if FileAccess.exists(bak):
+    if xbmcvfs.exists(org):
+        if xbmcvfs.exists(bak):
             try:
-                FileAccess.delete(bak)
+                xbmcvfs.delete(bak)
             except:
                 pass
-        FileAccess.copy(org, bak)
+        xbmcvfs.copy(org, bak)
         infoDialog("Backup Complete")
        
 def Restore(bak, org):
     log('utils: Restore ' + str(bak) + ' - ' + str(org))
-    if FileAccess.exists(bak):
-        if FileAccess.exists(org):
+    if xbmcvfs.exists(bak):
+        if xbmcvfs.exists(org):
             try:
-                FileAccess.delete(org)
+                xbmcvfs.delete(org)
             except:
                 pass
         xbmcvfs.rename(bak, org)
@@ -1184,7 +1203,7 @@ def getGithubZip(url, lib, addonpath, MSG):
     log('utils: getGithubZip, url = ' + url)
     # Delete old install package
     try: 
-        FileAccess.delete(lib)
+        xbmcvfs.delete(lib)
         log('utils: deleted old package')
     except: 
         pass  
@@ -1224,7 +1243,7 @@ def chkAutoplay(silent=False):
     log('utils: chkAutoplay')
     fle = xbmc.translatePath("special://profile/guisettings.xml")
     try:
-        xml = FileAccess.open(fle, "r")
+        xml = open(fle, "r")
         dom = parse(xml)
         autoplaynextitem = dom.getElementsByTagName('autoplaynextitem')
         Videoautoplaynextitem  = (autoplaynextitem[0].childNodes[0].nodeValue.lower() == 'true')
@@ -1281,7 +1300,7 @@ def ClearPlaylists():
     log('utils: ClearPlaylists')
     for i in range(CHANNEL_LIMIT):
         try:
-            FileAccess.delete(CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
+            xbmcvfs.delete(CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
         except:
             pass
     infoDialog("Channel Playlists Cleared")
@@ -1294,7 +1313,7 @@ def ClearCache(type='Files'):
             weekly.delete("%")
             monthly.delete("%")
             shutil.rmtree(REQUESTS_LOC)
-            FileAccess.makedirs(REQUESTS_LOC)
+            xbmcvfs.mkdirs(REQUESTS_LOC)
         except:
             pass
         REAL_SETTINGS.setSetting('ClearCache', "false")
@@ -1327,9 +1346,9 @@ def chkSettings2():
         REAL_SETTINGS.setSetting('Normal_Shutdown', "true")
         Normal_Shutdown = REAL_SETTINGS.getSetting('Normal_Shutdown') == "true"
                  
-    if FileAccess.exists(BACKUP_LOC) == False:
+    if xbmcvfs.exists(BACKUP_LOC) == False:
         try:
-            FileAccess.makedirs(BACKUP_LOC)
+            xbmcvfs.mkdirs(BACKUP_LOC)
         except Exception,e:
             pass
             
@@ -1377,7 +1396,7 @@ def purgeSettings2():
         dirs,files = xbmcvfs.listdir(BACKUP_LOC)
         for i in range(len(files)):
             try:
-                FileAccess.delete(os.path.join(BACKUP_LOC,files[i]))
+                xbmcvfs.delete(os.path.join(BACKUP_LOC,files[i]))
             except:
                 pass
         infoDialog("Backup Purge Complete")
@@ -1810,7 +1829,7 @@ def getSmartPlaylistName(fle):
     fle = xbmc.translatePath(fle)
 
     try:
-        xml = FileAccess.open(fle, "r")
+        xml = open(fle, "r")
     except:
         return ''
 
