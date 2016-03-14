@@ -58,6 +58,7 @@ try:
     import StorageServer
 except Exception,e:
     import storageserverdummy as StorageServer
+    CACHE_ENABLED = False
     
 try:
     from metahandler import metahandlers
@@ -98,6 +99,7 @@ class ChannelList:
         self.stars = ''
         self.genre = ''
         self.rating = ''
+        self.FileListCache = ''
         random.seed() 
 
         
@@ -241,29 +243,36 @@ class ChannelList:
             except Exception,e:
                 pass
 
-            # todo move channel validation check here
-            
-            if chtype == 0:
-                if FileAccess.exists(xbmc.translatePath(chsetting1)):
-                    self.maxChannels = i + 1
-                    self.enteredChannelCount += 1
-            elif chtype <= 20:
-                if len(chsetting1) > 0:
-                    self.maxChannels = i + 1
-                    self.enteredChannelCount += 1
-   
-            if self.forceReset:
-                ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-            
-            # find missing channel logos
-            if FIND_LOGOS == True:
-                setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
-                if chtype not in [6,7,9999]:
-                    if chtype <= 7 or chtype == 12:
-                        chname = self.getChannelName(chtype, chsetting1)
-                    else:
-                        chname = self.getChannelName(chtype, (i + 1))
-                    FindLogo(chtype, chname)
+            if chtype in [8,9]:
+                chk = chsetting2
+            elif chtype in [11,15,16]:
+                chk = chsetting1
+            else:
+                chk = ''
+                
+            if self.Valid_ok(chk) == True:
+
+                if chtype == 0:
+                    if FileAccess.exists(xbmc.translatePath(chsetting1)):
+                        self.maxChannels = i + 1
+                        self.enteredChannelCount += 1
+                elif chtype <= 20:
+                    if len(chsetting1) > 0:
+                        self.maxChannels = i + 1
+                        self.enteredChannelCount += 1
+       
+                if self.forceReset:
+                    ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
+                
+                # find missing channel logos
+                if FIND_LOGOS == True:
+                    setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
+                    if chtype not in [6,7,9999]:
+                        if chtype <= 7 or chtype == 12:
+                            chname = self.getChannelName(chtype, chsetting1)
+                        else:
+                            chname = self.getChannelName(chtype, (i + 1))
+                        FindLogo(chtype, chname)
         setBackgroundLabel('Initializing: Channels') 
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
@@ -323,13 +332,10 @@ class ChannelList:
             needsreset = True
             self.delResetLST(channel)
                 
-        # Handle LiveTV
+        # LiveTV Force Reset
         if chtype == 8 and REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true":
             needsreset = True
-                
-        # if self.freshBuild and chtype not in [1,2,3,4,5,6,7,8,9,12]:
-            # needsreset = True
-            
+
         if needsreset:
             self.channels[channel - 1].isSetup = False
             
@@ -354,39 +360,40 @@ class ChannelList:
                     self.channels[channel - 1].fileName = CHANNELS_LOC + 'channel_' + str(channel) + '.m3u'
                     timedif = time.time() - self.lastResetTime
                     returnval = True
-
-                    # Reset livetv after 24hrs
-                    if chtype == 8 and timedif < (60 * 60 * 24):
-                        createlist = False
-                        
-                    if chtype == 8 and self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
-                        createlist = False
-                            
-                    if self.channelResetSetting == 0:
-                        # If this channel has been watched for longer than it lasts, reset the channel
-                        if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
-                            createlist = False
-
-                    if self.channelResetSetting > 0 and self.channelResetSetting < 4:
                     
-                        if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
+                    if chtype == 8:
+                        # Reset livetv after 24hrs
+                        if timedif < (60 * 60 * 24):
+                            createlist = False   
+                        elif self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
                             createlist = False
+                    else:      
+                        if self.channelResetSetting == 0:
+                            # If this channel has been watched for longer than it lasts, reset the channel
+                            if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                                createlist = False
 
-                        if self.channelResetSetting == 2 and timedif < (60 * 60 * 24 * 7):
+                        if self.channelResetSetting > 0 and self.channelResetSetting < 4:
+                        
+                            if self.channelResetSetting == 1 and timedif < (60 * 60 * 24):
+                                createlist = False
+
+                            if self.channelResetSetting == 2 and timedif < (60 * 60 * 24 * 7):
+                                createlist = False
+
+                            if self.channelResetSetting == 3 and timedif < (60 * 60 * 24 * 30):
+                                createlist = False
+
+                            if timedif < 0:
+                                createlist = False
+
+                        if self.channelResetSetting == 4:
                             createlist = False
-
-                        if self.channelResetSetting == 3 and timedif < (60 * 60 * 24 * 30):
-                            createlist = False
-
-                        if timedif < 0:
-                            createlist = False
-
-                    if self.channelResetSetting == 4:
-                        createlist = False
             except Exception,e:
                 self.log('setupChannel ' + str(channel) + ', _time Failed! ' + str(e))
                 
         if createlist or needsreset:
+            self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
                 try:
@@ -606,6 +613,7 @@ class ChannelList:
         isreverse = False
         bctType = None
         fileList = []
+        self.getFileListCache(chtype, channel)
         
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
@@ -624,12 +632,17 @@ class ChannelList:
             except Exception,e:
                 limit = MEDIA_LIMIT
 
-        elif chtype == 8:
-            limit = 259200 #72hrs (seconds)
+        if chtype == 8:
+            limit = 259200 #72hrs in seconds
         elif chtype == 9:
             limit = int(86400 / int(setting1))
         elif MEDIA_LIMIT == 0:
-            limit = 10000
+            if chtype in [15,16]:
+                limit = 500
+            elif chtype == 10:
+                limit = 200
+            else:
+                limit = 10000
         else:
             limit = MEDIA_LIMIT
         self.log("makeChannelList, Using Parse-limit " + str(limit))
@@ -640,43 +653,39 @@ class ChannelList:
             
         # LiveTV
         elif chtype == 8:
-            if self.Valid_ok(setting2) == True:
-                self.log("Building LiveTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
-                # HDHomeRun #
-                if setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "true":
-                    #If you're using a HDHomeRun Dual and want Tuner 1 assign false. *Thanks Blazin912*
-                    self.log("Building LiveTV using tuner0")
-                    setting2 = re.sub(r'\d/tuner\d',"0/tuner0",setting2)
-                elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
-                    self.log("Building LiveTV using tuner1")
-                    setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
-                fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit)
+            self.log("Building LiveTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
+            # HDHomeRun #
+            if setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "true":
+                #If you're using a HDHomeRun Dual and want Tuner 1 assign false. *Thanks Blazin912*
+                self.log("Building LiveTV using tuner0")
+                setting2 = re.sub(r'\d/tuner\d',"0/tuner0",setting2)
+            elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
+                self.log("Building LiveTV using tuner1")
+                setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
+            fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit)
                 
         # InternetTV  
         elif chtype == 9:
-            if self.Valid_ok(setting2) == True:
-                self.log("Building InternetTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
-                fileList = self.buildInternetTVFileList(setting1, setting2, setting3, setting4, limit)
+            self.log("Building InternetTV Channel, " + setting1 + " , " + setting2 + " , " + setting3)
+            fileList = self.buildInternetTVFileList(setting1, setting2, setting3, setting4, limit)
 
         # Youtube                          
         elif chtype == 10:
-            if self.youtube_player != 'False':
-                setting2 = correctYoutubeSetting2(setting2)
-                self.log("Building Youtube Channel " + setting1 + " using type " + setting2 + "...")
-                
-                if setting2 == '31':
-                    today = datetime.datetime.now()
-                    month = today.strftime('%B')
-                    if setting1.lower() != month.lower():
-                        setting1 = month
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_1", month)
-                fileList = self.createYoutubeFilelist(setting1, setting2, setting3, setting4, limit)
+            setting2 = correctYoutubeSetting2(setting2)
+            self.log("Building Youtube Channel " + setting1 + " using type " + setting2 + "...")
+            
+            if setting2 == '31':
+                today = datetime.datetime.now()
+                month = today.strftime('%B')
+                if setting1.lower() != month.lower():
+                    setting1 = month
+                    ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_1", month)
+            fileList = self.createYoutubeFilelist(setting1, setting2, setting3, setting4, limit)
 
         # RSS/iTunes/feedburner/Podcast   
         elif chtype == 11:
-            if self.Valid_ok(setting1) == True:
-                self.log("Building RSS Feed " + setting1 + " using type " + setting2 + "...")
-                fileList = self.createRSSFileList(setting1, setting2, setting3, setting4, limit)      
+            self.log("Building RSS Feed " + setting1 + " using type " + setting2 + "...")
+            fileList = self.createRSSFileList(setting1, setting2, setting3, setting4, limit)      
                 
         # MusicVideos
         elif chtype == 13:
@@ -690,15 +699,13 @@ class ChannelList:
             
         # Direct Plugin
         elif chtype == 15:
-            if self.Valid_ok(setting1) == True:
-                self.log("Building Plugin Channel, " + setting1 + "...")
-                fileList = self.buildPluginFileList(setting1, setting2, setting3, setting4, limit)    
+            self.log("Building Plugin Channel, " + setting1 + "...")
+            fileList = self.buildPluginFileList(setting1, setting2, setting3, setting4, limit)    
 
         # Direct UPNP
         elif chtype == 16:
-            if self.Valid_ok(setting1) == True:
-                self.log("Building UPNP Channel, " + setting1 + "...")
-                fileList = self.buildUPNPFileList(setting1, setting2, setting3, setting4, limit)  
+            self.log("Building UPNP Channel, " + setting1 + "...")
+            fileList = self.buildUPNPFileList(setting1, setting2, setting3, setting4, limit)  
                 
         # LocalTV
         else:
@@ -3018,12 +3025,12 @@ class ChannelList:
             return self.plugin_ok(url) 
         #upnp check
         elif url[0:4] == 'upnp':
-            return self.upnp_ok(url) 
+            return self.upnp_ok(url)
         #Override Check# 
         elif REAL_SETTINGS.getSetting('Override_ok') == "true":
             return True 
-        #rtmp check
-        elif url[0:4] == 'rtmp':
+        #rtmp/rtsp check
+        elif url[0:4] in ['rtmp','rtsp']:
             return self.rtmpDump(url)  
         #http check     
         elif url[0:4] == 'http':
@@ -3031,18 +3038,11 @@ class ChannelList:
         #strm check  
         elif url[-4:] == 'strm':         
             return self.strm_ok(url)
-        #pvr check
-        elif url[0:3] == 'pvr':
-            return True  
-        #udp check
-        elif url[0:3] == 'udp':
-            return True  
-        #rtsp check
-        elif url[0:4] == 'rtsp':
-            return True  
-        #HDHomeRun check
-        elif url[0:9] == 'hdhomerun':
-            return True  
+        #pvr/udp check
+        elif url[0:3] in ['pvr','udp']:
+            return True
+        else:
+            return True
   
   
     def upnp_ok(self, url):
@@ -3090,10 +3090,24 @@ class ChannelList:
             f.close()         
         except Exception,e:
             pass
-        
 
+            
     def getDuration(self, filename):
-        self.log("getDuration")
+        self.log('getDuration')
+        if CACHE_ENABLED == True:
+            try:
+                result = monthly.cacheFunction(self.getDuration_NEW, filename)
+            except:
+                result = self.getDuration_NEW(filename)
+        else:
+            result = self.getDuration_NEW(filename)
+        if not result:
+            result = []
+        return result  
+        
+        
+    def getDuration_NEW(self, filename):
+        self.log("getDuration_NEW")
         duration = 0
         duration = self.videoParser.getVideoLength(filename)
         # if duration == 0:
@@ -4187,7 +4201,7 @@ class ChannelList:
                 if names and paths:
                     name = self.cleanLabels(names.group(1))
                     path = paths.group(1)
-                    if name.lower() not in ['super favourites','hdhomerun','pseudolibrary','pseudocompanion']:
+                    if name.lower() not in GETADDONS_FILTER:
                         TMPpluginList.append(name+','+path)  
                     
             SortedpluginList = sorted_nicely(TMPpluginList)
@@ -4481,38 +4495,6 @@ class ChannelList:
         return stars, year, duration, plot, title, tagline, tvdb_id, genre, rating, playcount
 
         
-    # filelist cache is redundant to m3u, possible future use?
-    def getFileListCache(self, chtype, channel, purge=False):
-        self.log("getFileListCache")
-        #Cache name
-        cachetype = str(chtype) + ':' + str(channel)
-        
-        #Set Life of cache, value needs to be lower than reset time.
-        if chtype <= 7 or chtype >= 10:
-            life = (SETTOP_REFRESH - 900) / 60
-        else:
-            life = 18
-            
-        self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
-        if purge == True:
-            self.FileListCache.delete("%")
-
-         
-    def clearFileListCache(self, chtype=9999, channel=9999):
-        self.log("clearFileListCache")
-        if chtype == 9999 and channel == 9999:
-            for n in range(CHANNEL_LIMIT):
-                for i in range(NUMBER_CHANNEL_TYPES):
-                    try:
-                        self.getFileListCache(i+1, n+1, True)
-                    except:
-                        pass
-            return True
-        else:
-            self.getFileListCache(chtype, channel, True)
-            return True
-            
-            
     def durationAdjust(self, dur):
         self.log("durationAdjust")
         if dur in [1500,1800]:
@@ -4702,9 +4684,58 @@ class ChannelList:
                 self.Items.setArt(infoArt) 
                 self.PanelItems.addItem(self.Items) 
         
-        
+
+    # filelist cache may be redundant to m3u
+    def getFileListCache(self, chtype, channel, purge=False):
+        cachetype = str(chtype) + ':' + str(channel)
+        self.log("getFileListCache, cachetype = " + cachetype)
+        try:
+            #Set Life of cache in hours, value needs to be lower than reset time.
+            if chtype <= 7 or chtype == 12:
+                life = ((SETTOP_REFRESH - 900 / 60) / 60)
+            elif chtype == 8:
+                life = 23
+            else:
+                life = 23
+                
+            self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
+            if purge == True:
+                self.FileListCache.delete("%")
+        except:
+            self.FileListCache = ''
+
+         
+    def clearFileListCache(self, chtype=9999, channel=9999):
+        self.log("clearFileListCache")
+        if chtype == 9999 and channel == 9999:
+            for n in range(CHANNEL_LIMIT):
+                for i in range(NUMBER_CHANNEL_TYPES):
+                    try:
+                        self.getFileListCache(i+1, n+1, True)
+                    except:
+                        pass
+            return True
+        else:
+            self.getFileListCache(chtype, channel, True)
+            return True
+            
+            
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
-        self.log("getFileList")
+        self.log('getFileList')
+        if CACHE_ENABLED == True:
+            try:
+                result = self.FileListCache.cacheFunction(self.getFileList_NEW, file_detail, channel, limit, excludeLST)
+            except:
+                result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
+        else:
+            result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
+        if not result:
+            result = []
+        return result  
+        
+        
+    def getFileList_NEW(self, file_detail, channel, limit, excludeLST=[]):
+        self.log("getFileList_NEW")
         fileList = []
         seasoneplist = []
         dirlimit = limit
@@ -4740,10 +4771,9 @@ class ChannelList:
                             label = self.cleanLabels(labels.group(1))
 
                             if label and label.lower() not in excludeLST:
-                                # if file[0:4] != 'upnp':
-                                if file.startswith('plugin%3A%2F%2F'):
-                                    file = urllib.unquote(file).replace('",return)','')
-                                
+                                if file.startswith('plugin://plugin.program.super.favourites'):
+                                    file = urllib.unquote('plugin://plugin'+file.split('plugin')[4]).replace('",return)','')
+                                            
                                 if filetype == 'file' and self.filecount < limit:
                                     duration = re.search('"duration" *: *([0-9]*?),', f)
                                     

@@ -122,53 +122,46 @@ class Migrate:
         if Globals.REAL_SETTINGS.getSetting("autoFindSuperFav") == "true" :
             self.log("autoTune, adding Super Favourites")
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding Super Favourites"," ")
-            SuperFav = chanlist.plugin_ok('plugin.program.super.favourites')
-            SF = 0
-            if SuperFav == True:
-                plugin_details = chanlist.requestList('plugin://plugin.program.super.favourites')
-                
-                for SF in plugin_details:
-                    include = False
-                    try:
-                        filetypes = re.search('"filetype" *: *"(.*?)"', SF)
-                        labels = re.search('"label" *: *"(.*?)"', SF)
-                        files = re.search('"file" *: *"(.*?)"', SF)
+            plugin_details = chanlist.requestList('plugin://plugin.program.super.favourites')
+            
+            for SF in plugin_details:
+                include = False
+                try:
+                    filetypes = re.search('"filetype" *: *"(.*?)"', SF)
+                    labels = re.search('"label" *: *"(.*?)"', SF)
+                    files = re.search('"file" *: *"(.*?)"', SF)
 
-                        #if core variables have info proceed
-                        if filetypes and files and labels:
-                            filetype = filetypes.group(1)
-                            file = (files.group(1))
-                            label = (labels.group(1))
-                            
-                            if label.lower() not in SF_FILTER:
-                                if filetype == 'directory':
-                                    SFmatch = unquote(file)
-                                    SFmatch = SFmatch.split('Super+Favourites')[1].replace('\\','/')
-                                    self.log("SFAutotune, SFmatch = " + SFmatch)
-                                    print SFmatch.lower()
-                                    if (SFmatch.lower()).startswith('/pseudotv_live'):
-                                        plugin_details = chanlist.requestList(file)
-                                        include = True
-                                    elif (SFmatch[0:9]).lower() == '/channel_':
-                                        plugin_details = chanlist.requestList(file)
-                                        include = True
-                                    if include == True:
-                                        SFmatch = SFmatch.split('&')[0]
-                                        SFname = SFmatch.replace('/PseudoTV_Live/','').replace('/','')
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "15")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", unquote(file))
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Globals.MEDIA_LIMIT))
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", SFname)
-                                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")
-                                        self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding Super Favourites",SFname)   
-                                        channelNum += 1       
-                    except:
-                        pass
+                    #if core variables have info proceed
+                    if filetypes and files and labels:
+                        filetype = filetypes.group(1)
+                        file = (files.group(1))
+                        label = (labels.group(1))
+                        
+                        if label.lower() not in SF_FILTER:
+                            if filetype == 'directory':
+                                if label.lower() in ['pseudotv']:
+                                    plugin_details = chanlist.requestList(file)
+                                    include = True
+                                
+                                elif label.lower().startswith('channel'):
+                                    plugin_details = chanlist.requestList(file)
+                                    include = True
+
+                                if include == True:
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_type", "15")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_time", "0")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", file)
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", "")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", str(Globals.MEDIA_LIMIT))
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_4", "0")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", label)
+                                    ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")
+                                    self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding Super Favourites",label)   
+                                    channelNum += 1       
+                except:
+                    pass
                 
         # LiveTV - PVR
         self.updateDialogProgress = 10

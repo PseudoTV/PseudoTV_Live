@@ -20,7 +20,6 @@ import os, sys, re
 import xbmcaddon, xbmc, xbmcgui, xbmcvfs
 import Settings
 
-from FileAccess import FileLock
 from pyfscache import *
 
 # Commoncache plugin import
@@ -39,7 +38,6 @@ ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
-PTVL_RUNNING = xbmcgui.Window(10000).getProperty('PseudoTVRunning') == "True"
 PTVL_SKINVER = '0.7.4'
 
 def log(msg, level = xbmc.LOGDEBUG):
@@ -215,12 +213,12 @@ else:
 # Globals
 dlg = xbmcgui.Dialog()
 ADDON_SETTINGS = Settings.Settings()
-GlobalFileLock = FileLock()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true'
 FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" 
 ACU_DUR = REAL_SETTINGS.getSetting('accurate_duration') == 'true'
+CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
 FILELIST_LIMIT = [4096,8192,16384]
 MAXFILE_DURATION = 16000
 RSS_REFRESH = 900 #secs
@@ -429,6 +427,8 @@ BYPASS_COMINGUP = ['PseudoCinema']
 # Plugin exclusion strings
 SF_FILTER = ['isearch', 'iplay - kodi playlist manager','create new super folder','explore kodi favourites']
 EX_FILTER = SF_FILTER + ['video resolver settings','<<','back','previous','home','search','find','clips','seasons','trailers']
+
+GETADDONS_FILTER = ['playon browser','super favourites','hdhomerun','pseudolibrary','pseudocompanion']
 
 # SFX
 ALERT_SFX = os.path.join(SFX_LOC, 'alert.wav')

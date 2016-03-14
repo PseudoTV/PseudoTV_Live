@@ -1,4 +1,8 @@
-[*] Custom Skin Manager
+[*] 'Unlimited' Media limit ceilings set for Plugins/UPNP (500) and Youtube (200).
+[*] Tweaked filelist caching to offset slow plugin parsing, added accurate file duration caching.
+[*] Fixed Super Favorites plugin support, SF folders beginning with the name 'PseudoTV' or 'Channel' can be autotuned.
+    All other folders can be added using the in-app manager or the export tool.
+[*] Added Custom Skin Manager.
 [*] [COLOR=red][B]Recommended Users click "Default" settings, to reset outdated values[/B][/COLOR]
 [*] Tweaked livetv rebuilding, fixed rss feed toggle for epg and improved artwork downloader.
 [*] Tweaked seeking, Users can increase "channel delay" under debugging to correct media not properly seeking.

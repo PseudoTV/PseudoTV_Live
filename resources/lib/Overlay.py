@@ -49,6 +49,9 @@ try:
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
     pass
+    
+from FileAccess import FileLock
+GlobalFileLock = FileLock()
 
 sys.setrecursionlimit(10000)
 
@@ -2600,19 +2603,19 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         newFavChanLst = (','.join(self.FavChanLst))
         REAL_SETTINGS.setSetting("FavChanLst",newFavChanLst)
                 
-                
+       
+    # TODO add timebar and button update here         
     # def setSeekBarTime(self):
         # self.log("setSeekBarTime")
         # self.getControl(517).setLabel(str(self.Player.getPlayerTime()))
-        # seekbar_width = self.getControl(5007).getWidth()
-        # seekbar_xpos, seekbar_ypos = self.getControl(5007).getPosition()
+        # seekbar_width = self.getControl(5006).getWidth()
+        # seekbar_xpos, seekbar_ypos = self.getControl(5006).getPosition()
         # remaining = int(xbmc.getInfoLabel("Player.TimeRemaining(ss)"))
         # duration = self.channels[self.currentChannel - 1].getItemDuration(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
         # print seekbar_width, seekbar_xpos, seekbar_ypos, remaining, duration
         # seekTime_ypos = ((duration/remaining) / seekbar_width) + seekbar_ypos
         # self.getControl(516).setPosition(seekbar_xpos, seekTime_ypos)
         # print seekTime_ypos
-        # TODO add timebar and button update here
           
           
     def FEEDtoggle(self):

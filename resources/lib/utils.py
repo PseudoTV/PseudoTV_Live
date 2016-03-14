@@ -1267,7 +1267,7 @@ def chkLowPower():
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
         platform = getPlatform()
         if platform in ['ATV','iOS','XBOX','rPi','Android']:
-            setProperty("PTVL.LOWPOWER","true") 
+            setProperty("PTVL.LOWPOWER","true")
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
@@ -1433,8 +1433,8 @@ def HandleUpgrade():
 
     # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
     # set 'optional' as true so users can disable if unwanted.
-    if getXBMCVersion() > 14 and isContextInstalled() == False:
-        getContext()
+    # if getXBMCVersion() > 14 and isContextInstalled() == False:
+        # getContext()
         
 def isPTVLOutdated():
     log('utils: isPTVLOutdated')

@@ -111,15 +111,13 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             if version == PTVL_SKINVER:
                 if self.selSkin.lower() == sknname.lower():
                     sknname = ' [ ' + sknname + ' ]'
-                # elif local == True:
-                    # sknname = sknname + ' [COLOR=green][Downloaded][/COLOR]'
-                # elif local == False:
-                    # sknname = sknname + ' [COLOR=red][Download][/COLOR]'
-                setProperty('PTVL.SKINNAME',sknname)
-                setProperty('PTVL.SKINVERSION',version)
-                setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
-                setProperty('PTVL.SKINSHOT',self.BasePath + '/screenshot0%s.png' %str(self.screenshotPOS))
-                setProperty('PTVL.SKINSHOT_FALLBACK',self.BasePath + '/screenshot01.png')
+            else:
+                sknname = sknname + ' [COLOR=red][OUTDATED][/COLOR]'
+            setProperty('PTVL.SKINNAME',sknname)
+            setProperty('PTVL.SKINVERSION',version)
+            setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
+            setProperty('PTVL.SKINSHOT',self.BasePath + '/screenshot0%s.png' %str(self.screenshotPOS))
+            setProperty('PTVL.SKINSHOT_FALLBACK',self.BasePath + '/screenshot01.png')
         except:
             pass
         
@@ -173,10 +171,13 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         except:
             return False
             
-               
+      
     def SelectAction(self):
         self.log("SelectAction")
         if self.skinNames[self.skinPOS].lower() != self.selSkin.lower():
+            if self.skinNames[self.skinPOS] in ['[COLOR=red][OUTDATED][/COLOR]']:
+                return
+                
             if self.local == True:
                 msg = 'Apply'
             else:
@@ -188,6 +189,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                 self.selSkin = self.skinNames[self.skinPOS]
                 REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
                 self.setSkin(self.skinPOS)
+                self.closeManager()
         
         
     def onLeft(self):

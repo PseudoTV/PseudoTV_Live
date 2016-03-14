@@ -26,7 +26,6 @@ from resources.lib.utils import *
 from resources.lib.Globals import *
 from resources.lib.ChannelList import ChannelList
 from resources.lib.AdvancedConfig import AdvancedConfig
-from resources.lib.Migrate import Migrate
 
 try:
     import buggalo
@@ -1081,6 +1080,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.SourceList = ['PVR','HDhomerun','USTVnow','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
+        
+        if self.chnlst.plugin_ok('plugin.program.super.favourites'):
+            self.chnlst.pluginPathList = ['plugin.program.super.favourites'] + self.chnlst.pluginPathList
+            self.chnlst.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]'] + self.chnlst.pluginNameList
+        
+        if self.chnlst.plugin_ok('plugin.video.playonbrowser'):
+            self.chnlst.pluginPathList = ['plugin.video.playonbrowser'] + self.chnlst.pluginPathList
+            self.chnlst.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.chnlst.pluginNameList
         
         # Removed LiveTV/InternetTV and Plugin Community list for Kodi repo compliance.
         # if isCom() == True:

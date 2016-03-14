@@ -106,7 +106,7 @@
         <setting                                              type="lsep"   label="30099"                    visible="eq(-1,true)"                />
             <!-- Autotune Playlists -->
             <setting id="autoFindCustom"                      type="bool"   label="30077" subsetting="false" visible="eq(-2,true)" default="false"/>
-            <setting id="autoFindSuperFav"                    type="bool"   label="30093" subsetting="false" visible="eq(-3,true)" enable="false" default="false"/>
+            <setting id="autoFindSuperFav"                    type="bool"   label="30093" subsetting="false" visible="eq(-3,true)" enable="System.HasAddon(plugin.program.super.favourites)" default="false"/>
         <setting                                              type="lsep"   label="30073"                    visible="eq(-4,true)"                />
             <!-- Autotune LiveTV -->
             <setting id="autoFindLivePVR"                     type="bool"   label="30075" subsetting="false" visible="eq(-5,true)" enable="Pvr.HasTVChannels" default="false"/>

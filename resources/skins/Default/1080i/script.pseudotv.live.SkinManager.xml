@@ -56,18 +56,18 @@
             <texture>config/ptv_dialogheader.png</texture>
         </control> 
         <control type="image">
-            <left>495</left>
-            <top>100</top>
+            <left>490</left>
+            <top>300</top>
             <width>30</width>
-            <height>848</height>
+            <height>480</height>
             <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
             <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]">config/wall_arrow.png</texture>
         </control>
         <control type="image">
             <left>1383</left>
-            <top>100</top>
+            <top>300</top>
             <width>30</width>
-            <height>848</height>
+            <height>480</height>
             <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
             <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]" flipx="true">config/wall_arrow.png</texture>
         </control>

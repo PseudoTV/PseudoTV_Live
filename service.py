@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import os
+import os, xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
@@ -82,6 +81,7 @@ def chkChanges():
     if CURR_TRAILERS != LAST_TRAILERS:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
         REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
+        
 #todo LogoDB_Type
 #Service Start ##################################################################
 if xbmc.getCondVisibility('Window.IsActive(addonsettings)') != True:
