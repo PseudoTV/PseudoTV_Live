@@ -51,17 +51,30 @@ class APPS(xbmcgui.WindowXMLDialog):
         self.setFocus(self.chanlist.PanelItems)
        
         
-    def onClick(self, controlId):
-        self.log('onClick ' + str(controlId))
-        if controlId == 500:
+    def onClick(self, controlid):
+        self.log('onClick ' + str(controlid))
+        if controlid == 500:
             pos = self.chanlist.PanelItems.getSelectedPosition()
             playitem = self.chanlist.PanelItems.getListItem(pos)
             url = 'plugin://'+ playitem.getProperty('mediapath')
             self.chanlist.fillListItems(url)
             self.setFocus(self.chanlist.PanelItems)
             # xbmc.executebuiltin('Container.Refresh') 
-            
-            
+        elif controlid in [6001,6002,6003,6004]:
+            if controlid == 6001:
+                self.log('ACTION_TELETEXT_RED')
+                self.MyOverlayWindow.windowSwap('EPG')
+            elif controlid == 6002:
+                self.log('ACTION_TELETEXT_GREEN')
+                self.MyOverlayWindow.windowSwap('DVR')
+            elif controlid == 6003:
+                self.log('ACTION_TELETEXT_YELLOW')
+                self.MyOverlayWindow.windowSwap('ONDEMAND')
+            elif controlid == 6004:
+                self.log('ACTION_TELETEXT_BLUE') 
+                self.MyOverlayWindow.windowSwap('APPS')
+
+                
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
         action = act.getId()

@@ -254,15 +254,24 @@
                     <fadetime>500</fadetime>
                 </control>
             </control> 
-        </control> 
+        </control>         
+        <control type="button" id="6000">
+            <description>Filter Button</description>     
+            <posx>0</posx>
+            <posy>258</posy>   
+            <width>410</width>
+            <height>38</height>
+            <texturenofocus>NA.png</texturenofocus>
+            <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+        </control>       
         <control type="grouplist">              
-            <posx>411</posx>
-            <posy>258</posy>
+            <posx>409</posx>
+            <posy>260</posy>
             <itemgap>1</itemgap>
             <orientation>horizontal</orientation>
-            <control type="label">
+            <control type="button" id="6001">
                 <description>EPG Label</description>            
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>EPG</label>
                 <font>font12</font>
@@ -270,10 +279,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6002">
                 <description>DVR Label</description>              
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>DVR</label>
                 <font>font12</font>
@@ -281,10 +292,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6003">
                 <description>OnDemand Label</description>               
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>OnDemand</label>
                 <font>font12</font>
@@ -292,10 +305,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6004">
                 <description>Apps Label</description>        
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>Apps</label>
                 <font>font12</font>
@@ -303,6 +318,8 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>   
         </control>           
         <control type="grouplist">
@@ -432,6 +449,20 @@
             <colordiffuse>C0C0C0C0</colordiffuse>
             <texture>right.png</texture>  
         </control> 
+        <control type="image" id="5009">     
+            <description>Optional Channel Focus Highlight</description>         
+            <posx>5</posx>  
+            <width>405</width>
+            <height>75</height>
+            <texture>pstvlButtonFocusAlt.png</texture>
+        </control> 
+<!--         <control type="image" id="5010">     
+            <description>Optional Channel Playing Highlight</description>         
+            <posx>5</posx>  
+            <width>405</width>
+            <height>75</height>
+            <texture>pstvlHighlightAlt2.png</texture>
+        </control> -->
         <control type="grouplist">            
             <posx>0</posx>
             <posy>345</posy>

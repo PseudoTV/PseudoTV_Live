@@ -92,13 +92,13 @@
             </control>
         </control>
         <control type="grouplist">              
-            <posx>411</posx>
-            <posy>258</posy>
+            <posx>409</posx>
+            <posy>260</posy>
             <itemgap>1</itemgap>
             <orientation>horizontal</orientation>
-            <control type="label">
+            <control type="button" id="6001">
                 <description>EPG Label</description>            
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>EPG</label>
                 <font>font12</font>
@@ -106,10 +106,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6002">
                 <description>DVR Label</description>              
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>DVR</label>
                 <font>font12</font>
@@ -117,10 +119,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6003">
                 <description>OnDemand Label</description>               
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>OnDemand</label>
                 <font>font12</font>
@@ -128,10 +132,12 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
-            <control type="label">
+            <control type="button" id="6004">
                 <description>Apps Label</description>        
-                <width>373</width>
+                <width>375</width>
                 <height>38</height>
                 <label>Apps</label>
                 <font>font12</font>
@@ -139,8 +145,10 @@
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
+                <texturenofocus>NA.png</texturenofocus>
+                <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>   
-        </control>           
+        </control>          
         <control type="grouplist">
             <posx>5</posx>
             <posy>258</posy>

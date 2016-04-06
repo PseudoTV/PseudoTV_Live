@@ -1,6 +1,6 @@
 <strings>
 <string id="30000">General</string>
-    <string id="30001">Configure Channels:</string>
+    <string id="30001">Channel Manager:</string>
     <string id="30002">Open Channel Configuration</string>    
     <string id="30003">General Options:</string>
         <string id="30044">Enable Autostart</string>
@@ -155,7 +155,7 @@
                    
     <string id="30700">AutoTune Options:</string>
     <string id="33310">AutoTune Channel Limit</string>
-    <string id="30372">Reserve Channels 501-999 for AutoTuning</string>
+    <string id="30372">Reserve Channels 500-999 for AutoTuning</string>
     <string id="30699">Kodi PVR GuideData from</string>
     <string id="30771">Select XMLTV.xml file</string>
     <string id="30701">AutoTune Genres:</string>
@@ -240,6 +240,7 @@
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
     <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
+    <string id="30994">Disable Video Playback on Startup [Experimental]</string>
     <string id="30944">Force LiveTV reset on every startup</string>
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>

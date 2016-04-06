@@ -87,6 +87,7 @@ class ChannelList:
         self.cached_readXMLTV = []
         self.sleepTime = 0
         self.threadPaused = False
+        self.quickflipEnabled = False
         self.runningActionChannel = 0
         self.runningActionId = 0
         self.enteredChannelCount = 0
@@ -166,7 +167,10 @@ class ChannelList:
             self.updateDialog.update(0, "Updating Channel List", "")
             self.updateDialogProgress = 0
         self.log("setupList, background = " + str(self.background))
-        
+          
+        if isUSTVnow() == True:
+            self.ustv.getXMLTV()
+
         if self.backgroundUpdating > 0 and self.myOverlay.isMaster == True:
             makenewlists = True
             
@@ -222,6 +226,8 @@ class ChannelList:
     # playlists until we don't find one
     def findMaxChannels(self):
         self.log('findMaxChannels')
+        localCount = 0
+        quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.maxChannels = 0
         self.enteredChannelCount = 0      
         self.freshBuild = False
@@ -243,6 +249,9 @@ class ChannelList:
             except Exception,e:
                 pass
 
+            if chtype <= 7 and quickFlip == True:
+                localCount += 1
+                
             if chtype in [8,9]:
                 chk = chsetting2
             elif chtype in [11,15,16]:
@@ -251,7 +260,6 @@ class ChannelList:
                 chk = ''
                 
             if self.Valid_ok(chk) == True:
-
                 if chtype == 0:
                     if FileAccess.exists(xbmc.translatePath(chsetting1)):
                         self.maxChannels = i + 1
@@ -273,6 +281,9 @@ class ChannelList:
                         else:
                             chname = self.getChannelName(chtype, (i + 1))
                         FindLogo(chtype, chname)
+                        
+        if quickFlip == True and localCount > (self.enteredChannelCount/4):
+            self.quickflipEnabled = True
         setBackgroundLabel('Initializing: Channels') 
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
@@ -329,8 +340,8 @@ class ChannelList:
         # Force rebuild
         if channel in self.myOverlay.ResetLST:
             self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
-            needsreset = True
             self.delResetLST(channel)
+            needsreset = True
                 
         # LiveTV Force Reset
         if chtype == 8 and REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true":
@@ -361,13 +372,20 @@ class ChannelList:
                     timedif = time.time() - self.lastResetTime
                     returnval = True
                     
-                    if chtype == 8:
-                        # Reset livetv after 24hrs
-                        if timedif < (60 * 60 * 24):
-                            createlist = False   
-                        elif self.channels[channel - 1].totalTimePlayed < (60 * 60 * 24):
-                            createlist = False
-                    else:      
+                    if chtype == 8: 
+                        # If this channel has been watched for longer than it lasts, reset the channel
+                        if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
+                            createlist = False 
+                            
+                        if ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3") in ['pvr','ustvnow']:
+                            # Reset livetv after 2hrs   
+                            if timedif >= (60 * 60 * 2) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 2):
+                                createlist = True    
+                        else:         
+                            # Reset livetv after 24hrs         
+                            if timedif >= (60 * 60 * 24) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
+                                createlist = True  
+                    else: 
                         if self.channelResetSetting == 0:
                             # If this channel has been watched for longer than it lasts, reset the channel
                             if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
@@ -393,7 +411,6 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', _time Failed! ' + str(e))
                 
         if createlist or needsreset:
-            self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
                 try:
@@ -403,6 +420,7 @@ class ChannelList:
                 append = False
 
                 if createlist:
+                    self.clearFileListCache(chtype, channel)
                     ADDON_SETTINGS.setSetting('LastResetTime', str(int(time.time())))
 
         if append == False:
@@ -608,12 +626,12 @@ class ChannelList:
     # Based on a smart playlist, create a normal playlist that can actually be used by us
     def makeChannelList(self, channel, chtype, setting1, setting2, setting3, setting4, append = False):
         self.log('makeChannelList, CHANNEL: ' + str(channel))
+        self.getFileListCache(chtype, channel)
         fileListCHK = False
         israndom = False  
         isreverse = False
         bctType = None
         fileList = []
-        self.getFileListCache(chtype, channel)
         
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
@@ -1082,11 +1100,7 @@ class ChannelList:
                 
             LocalFLE = (LocalLST[i])[0]
             duration = self.getDuration(LocalFLE)
-                                            
-            if duration == 0 and LocalFLE[-4:].lower() == 'strm':
-                duration = 3600
-                self.log("createDirectoryPlaylist, no strm duration found defaulting to 3600")
-                    
+                                                                
             if duration > 0:
                 filecount += 1
                 
@@ -1928,9 +1942,8 @@ class ChannelList:
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
         if not showList:
             self.setChannelChanged(self.settingChannel)
-            chname = (self.getChannelName(9, self.settingChannel))
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
-            showList = self.buildInternetTVFileList('5400', setting2, chname, desc, 24)
+            showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel), desc, 24)
         return showList     
         
         
@@ -2198,8 +2211,8 @@ class ChannelList:
                                 self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
                 root.clear()
             f.close()                   
-            if len(showList) == 0:
-                self.log('fillLiveTV, Unable to find xmltv data for ' + setting1)
+            # if showcount < 86400:
+                # self.setResetLST(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTV Failed!" + str(e), xbmc.LOGERROR)
         return showList
@@ -2387,10 +2400,9 @@ class ChannelList:
                             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
                             
                         if showcount >= limit:
-                            break
-        
-            if showcount == 0:
-                self.log('Unable to find pvr guidedata for ' + setting1)
+                            break     
+            # if showcount < 86400:
+                # self.setResetLST(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVPVR Failed!" + str(e), xbmc.LOGERROR) 
             pass
@@ -3002,12 +3014,7 @@ class ChannelList:
         elif path.lower() in ['pvr','zap2it','scheduledirect']:
             return True
         elif path.lower() == 'ustvnow':
-            # if FileAccess.exists(PTVLXML):
-                # self.xmlTvFile = PTVLXML      
-            if self.ustv.getXMLTV() == True:
-                self.xmlTvFile = USTVXML                
-            else:
-                return False
+            self.xmlTvFile = USTVXML
         elif path.lower() == 'ptvlguide':
             self.xmlTvFile = PTVLXML
         elif path != '':
@@ -3017,7 +3024,7 @@ class ChannelList:
             xmltvValid = True            
         return xmltvValid
            
-
+           
     def Valid_ok(self, url):
         self.log("Valid_ok")
         #plugin check  
@@ -3102,14 +3109,16 @@ class ChannelList:
         else:
             result = self.getDuration_NEW(filename)
         if not result:
-            result = []
+            result = 0
         return result  
         
         
     def getDuration_NEW(self, filename):
         self.log("getDuration_NEW")
-        duration = 0
-        duration = self.videoParser.getVideoLength(filename)
+        try:
+            duration = int(self.videoParser.getVideoLength(filename))
+        except:
+            duration = 0
         # if duration == 0:
             # duration = self.getffprobeLength(filename)
         return duration
@@ -3962,6 +3971,7 @@ class ChannelList:
                 else:
                     self.log("findZap2itID, filename local = " + filename)
                     f = FileAccess.open(filename, "r")
+                f.seek(0,0)
                 context = ET.iterparse(f, events=("start", "end"))
                 context = iter(context)
                 event, root = context.next()
@@ -3988,6 +3998,10 @@ class ChannelList:
         XMLTVMatchlst = []
         sorted_XMLTVMatchlst = []
         found = False
+        if filename == USTVXML:
+            if self.ustv.makeXMLTV(self.ustv.get_guidedata(),self.ustv.xmltvPath) == False:
+                return
+                
         if filename == 'pvr':
             NameLst, PathLst, IconLst = self.PVRList
             for i in range(len(NameLst)):
@@ -4003,7 +4017,6 @@ class ChannelList:
                     CHname = (CHname.split(' ')[1]).upper()
                 except:
                     CHnum = 0
-                    pass
                 
                 CHname = CHname.replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','')
                 matchLST = [CHname, 'W'+CHname, CHname+'HD', CHname+'DT', str(CHnum)+' '+CHname, orgCHname.upper(), 'W'+orgCHname.upper(), orgCHname.upper()+'HD', orgCHname.upper()+'DT', str(CHnum)+' '+orgCHname.upper(), orgCHname]
@@ -4024,7 +4037,6 @@ class ChannelList:
                             return orgCHname, CHid
                     except:
                         hide_busy_dialog()
-                        pass
                         
                 if not found:
                     hide_busy_dialog()
@@ -4246,30 +4258,8 @@ class ChannelList:
             return os.path.join(PVRverPath,PVRPath[1][channel])
         except:
             pass
-        
-        
-    def fillUSTVnow(self):
-        self.log('fillUSTVnow')
-        NameLst = []
-        IconLst = []
-        PathLst = []
-        
-        user = REAL_SETTINGS.getSetting('ustv_email')
-        if user == "":
-            return NameLst,PathLst,IconLst 
-            
-        channels = self.ustv.getChannelNames()
-        for i in range(len(channels)):
-            try:
-                CHname = channels[i][0]
-                NameLst.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
-                PathLst.append('ustvnow://'+ CHname)
-                IconLst.append(channels[i][0])
-            except:
-                pass
-        return NameLst,PathLst,IconLst
-        
-        
+  
+  
     def fillPVR(self):
         self.log('fillPVR')
         PVRNameList = []
@@ -4694,9 +4684,9 @@ class ChannelList:
             if chtype <= 7 or chtype == 12:
                 life = ((SETTOP_REFRESH - 900 / 60) / 60)
             elif chtype == 8:
-                life = 23
+                life = 24
             else:
-                life = 23
+                life = 72
                 
             self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
             if purge == True:
@@ -4750,7 +4740,10 @@ class ChannelList:
             if self.threadPause() == False:
                 del fileList[:]
                 break
-                    
+                                                                 
+            if self.filecount >= limit:
+                break
+                   
             try:
                 tmpstr = ''
                 dur_accurate = False
@@ -5000,10 +4993,10 @@ class ChannelList:
                                         try:
                                             # epg can't handle overlarge controlbuttons, ignore oversized and shortItemLength plugin/upnp "clips".
                                             if dur > MAXFILE_DURATION:
-                                                self.log("makeTMPSTR, Failed! dur exceeded MAXFILE_DURATION")
+                                                self.log("getFileList, Failed! dur exceeded MAXFILE_DURATION")
                                                 raise Exception()
                                             elif file.startswith(("plugin", "upnp")) and dur < self.myOverlay.shortItemLength:
-                                                self.log("makeTMPSTR, Failed! dur under shortItemLength")
+                                                self.log("getFileList, Failed! dur under shortItemLength")
                                                 raise Exception()
                                         except:
                                             pass
@@ -5040,15 +5033,12 @@ class ChannelList:
                                     fileList.extend(self.getFileList(self.requestList(file), channel, limit, excludeLST))
                                     self.dircount += 1
                                     self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
-                                    
-                                elif self.filecount >= limit:
-                                    break
                             else:
                                 self.log('getFileList, ' + label.lower() + ' in excludeLST')                                        
             except Exception,e:
                 self.log('getFileList, failed...' + str(e))
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
-                
+
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
@@ -5074,9 +5064,7 @@ class ChannelList:
         self.log('getStreamDetails') 
         
         
-    def setResetLST(self, channel=None):
-        if not channel:
-            channel = self.settingChannel
+    def setResetLST(self, channel):
         self.myOverlay.ResetLST.append(channel)
         self.myOverlay.ResetLST = sorted(set(self.myOverlay.ResetLST))
         REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))

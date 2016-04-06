@@ -22,20 +22,23 @@ UPLOAD_LINK = BASE_URL + '/%s'
 UPLOAD_URL = BASE_URL + '/api/json/create'
 EMAIL_URL = BASE_URL + '/xbmc-addons.php'
 
-try:
-    USER, PASS = UPASS.split(":")
-except:
-    USER = ""
-    PASS = ""
+# try:
+    # USER, PASS = UPASS.split(":")
+# except:
+    # USER = ""
+    # PASS = ""
+    # UPASS = ""
     
-REPLACES = (
-    ('//.+?:.+?@', '//USER:PASSWORD@'),
-    ('<user>.+?</user>', '<user>USER</user>'),
-    ('<pass>.+?</pass>', '<pass>PASSWORD</pass>'),
-    (UPASS, "user:password"),
-    (PASS, "user:password"),
-    (USER, "user:password"),
-    (REAL_SETTINGS.getSetting('Gmail_Pass'),'PASSWORD'))
+# REPLACES = (
+    # ('//.+?:.+?@', '//USER:PASSWORD@'),
+    # ('<user>.+?</user>', '<user>USER</user>'),
+    # ('<pass>.+?</pass>', '<pass>PASSWORD</pass>'),
+    # (UPASS, "user:password"),
+    # (PASS, "user:password"),
+    # (USER, "user:password"),
+    # (REAL_SETTINGS.getSetting('Gmail_Pass'),'PASSWORD'))
+    
+REPLACES = (('//.+?:.+?@', '//USER:PASSWORD@'))
 
 class LogUploader(object):
     def __init__(self):

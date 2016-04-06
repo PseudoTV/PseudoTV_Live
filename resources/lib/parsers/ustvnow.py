@@ -38,86 +38,19 @@ class ustvnow:
         self.log('__init__')
         self.mBASE_URL = 'http://m-api.ustvnow.com'
         self.uBASE_URL = 'http://lv2.ustvnow.com'
-        self.user = REAL_SETTINGS.getSetting('ustv_email')
-        self.password = REAL_SETTINGS.getSetting('ustv_password')
-        self.premium = REAL_SETTINGS.getSetting('ustv_subscription') == "true"
-        self.quality_type = int(REAL_SETTINGS.getSetting('ustv_quality_type'))
-        self.stream_type = ['rtmp', 'rtsp'][int(REAL_SETTINGS.getSetting('ustv_stream_type'))]
         self.xmltvPath = USTVXML
-        self.ActionTimeInt = int(REAL_SETTINGS.getSetting("ActionTimeInt"))
-        self.PlayTimeoutInt = int(REAL_SETTINGS.getSetting("PlayTimeoutInt"))
-        self.token = USTV_Token
+        self.channels = ['ABC','CBS','CW','FOX','NBC','PBS','My9','A&E','AMC','Animal Planet','Bravo','Cartoon Network','CNBC','CNN','Comedy Central','Discovery','ESPN','Fox News','FX','History','Lifetime','National Geographic','Nickelodeon','SPIKE TV','Syfy','TBS','TNT','USA']
+
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('USTVnow: ' + msg, level)
 
-       
-    def getToken(self):
-        self.log('getToken')
-        try:
-            cnt = 0
-            userChk = self.getUser()
-            while userChk != self.user:
-                self.log('getToken, Working...')
-                cnt += 1
-                if cnt > int(round((self.PlayTimeoutInt/int(self.ActionTimeInt))))/2:
-                    return False
-                self.token = self._login()
-                xbmc.sleep(100)
-                userChk = self.getUser()
-                self.log('getToken, Retry Count ' + str(cnt))
-            return True
-        except:
-            return False
-
-
-    def getUser(self):           
-        try:
-            userChk = self._get_json('gtv/1/live/getcustomerkey', {'token': self.token})['username']
-        except:
-            userChk = ''
-        return userChk
-       
-       
+        
     def getXMLTV(self):
         self.log('getXMLTV')
-        if self.getToken() == True:
-            return self.makeXMLTV(self.get_guidedata(self.quality_type, self.stream_type),self.xmltvPath)
-        else:
-            return
-            
-            
-    def getChannellink(self, chname):
-        self.log('getChannellink, chname = ' + chname)
-        if self.getToken() == True:
-            return self.get_link(self.quality_type, self.stream_type, chname)
-        else:
-            return
+        return self.makeXMLTV(self.get_guidedata(),self.xmltvPath)
 
-
-    def getChannelNames(self):
-        self.log('getChannelNames')
-        try:
-            content = self._get_json('gtv/1/live/listchannels', {'token': self.token, 'l': '1440'})
-            channels = []
-            results = content['results']['streamnames'];
-
-            for i in range(len(results)):
-                name = self.cleanChanName(results[i]['sname'])
-                id = results[i]['prgsvcid']
-                icon = self.uBASE_URL + '/' + results[i]['img']
-                free = results[i]['t'] == 1 # free sub switch 1=free, 0=pay
-
-                if self.premium == True:
-                    channels.append([name,icon])
-                else:
-                    if free:
-                        channels.append([name,icon])
-            return channels
-        except:
-            pass
-
-
+        
     def _fetch(self, url, form_data=False):
         self.log('_fetch')
         opener = urllib2.build_opener()
@@ -180,157 +113,61 @@ class ustvnow:
             return '%s/%s' % (self.mBASE_URL, path)
 
 
-    def _login(self):
-        self.log('_login_NEW')
-        token = self._login_ALT()
-        if token == 'False':
-            token = self._login_ORG()
-        return token
-
-
-    def _login_ALT(self):
-        self.log('_login_ALT')
-        try:
-            self.cj = cookielib.CookieJar()
-            opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            urllib2.install_opener(opener)
-            url = self._build_json('gtv/1/live/login', {'username': self.user,
-                                                   'password': self.password,
-                                                   'device':'gtv',
-                                                   'redir':'0'})
-            response = opener.open(url)
-            for cookie in self.cj:
-                if cookie.name == 'token':
-                    return cookie.value
-        except:
-            pass
-        return 'False'
-
-
-    def _login_ORG(self):
-        self.log('_login_ORG')
-        try:
-            self.cj = cookielib.CookieJar()
-            opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            urllib2.install_opener(opener)
-            url = self._build_url('iphone_login', {'username': self.user,
-                                                   'password': self.password})
-            response = opener.open(url)
-            for cookie in self.cj:
-                if cookie.name == 'token':
-                    return cookie.value
-        except:
-            pass
-        return 'False'
-
-
-    def get_link(self, quality, stream_type, chname):
-        self.log('get_link,' + str(quality) + ',' + stream_type)
-        src = random.choice(['lv5', 'lv7', 'lv9'])
-        channels = []
-        show_busy_dialog()
-        content = self._get_json('gtv/1/live/channelguide', {'token': self.token})
-        passkey = self._get_json('gtv/1/live/viewdvrlist', {'token': self.token})['globalparams']['passkey']
-        results = content['results'];
-        for i in results:
-            try:
-                if i['order'] == 1:
-                    name = (i['stream_code'])
-                    link = stream_type + '://' + str(src) + '.ustvnow.com:1935/dvrtest?key=' + passkey + '/mp4:' + i['streamname'] + str(quality + 1)
-                    if name.lower() == chname.lower():
-                        hide_busy_dialog()
-                        return link
-                    else:
-                        channels.append([name, link])
-            except:
-                pass
-        hide_busy_dialog()
-        return channels
-
-        
-    def get_channels(self, quality, stream_type):
-        self.log('get_channels')
-        try:
-            result = guide.cacheFunction(self.get_channels_NEW, quality, stream_type)
-            if not result:
-                raise Exception()
-        except:
-            result = self.get_channels_NEW(quality, stream_type)
-        if not result:
-            result = [({
-                'name': 'USTVnow is temporarily unavailable, Try again...',
-                'sname' : 'callsign',
-                'url': 'url',
-                'icon': 'img'
-                })]
-        return result
-
-
-    def get_channels_NEW(self, quality, stream_type):
-        self.log('get_channels_NEW,' + str(quality) + ',' + stream_type)
-        channels = []
-        content = self._get_json('gtv/1/live/channelguide', {'token': self.token,'format': stream_type, 'l': '1440'})
-        results = content['results'];
-        for i in results:
-            try:
-                if i['order'] == 1:
-                    name = self.cleanChanName(i['stream_code'])
-                    url = "plugin://plugin.video.ustvnow/?name="+name+"&mode=play"
-                    mediatype = i['mediatype']
-                    poster_url = 'http://mc.ustvnow.com/gtv/1/live/viewposter?srsid=' + str(i['srsid']) + '&cs=' + i['callsign'] + '&tid=' + mediatype
-                    mediatype = mediatype.replace('SH', 'tvshow').replace('EP', 'episode').replace('MV', 'movie')
-                    if self.premium == False:
-                        if name not in ['CW','ABC','FOX','PBS','CBS','NBC','MY9']:
-                            raise Exception()
-                    channels.append({
-                        'name': name,
-                        'sname' : i['callsign'],
-                        'url': url,
-                        'episode_title': i['episode_title'],
-                        'title': i['title'],
-                        'plot': i['description'],
-                        'plotoutline': i['synopsis'],
-                        'mediatype': mediatype,
-                        'playable': True,
-                        'icon': self.uBASE_URL + '/' + i['img'],
-                        'poster_url': poster_url
-                        })
-            except:
-                pass
-        return channels
-
-
-    def get_guidedata(self, quality, stream_type):
+    def get_guidedata(self):
         self.log('get_guidedata')
         try:
-            result = guide.cacheFunction(self.get_guidedata_NEW, quality, stream_type)
+            result = guide.cacheFunction(self.get_guidedata_NEW)
             if not result:
                 raise Exception()
         except:
             self.log('get_guidedata Failed')
-            result = self.get_guidedata_NEW(quality, stream_type)
+            result = self.get_guidedata_NEW()
         if not result:
             result = []
         return result
 
 
-    def get_guidedata_NEW(self, quality, stream_type):
+    def get_guidedata_NEW(self):
         self.log('get_guidedata_NEW')
-        setBackgroundLabel('USTVnow: Downloading Guidedata')
         cnt = 0
-        content = self._get_json('gtv/1/live/channelguide', {'token': self.token, 'l': '1440'})
+        content = self._get_json('gtv/1/live/channelguide',{})
         results = content['results'];
         now = time.time();
         doc = minidom.Document();
         base = doc.createElement('tv');
         base.setAttribute("cache-version", str(now));
         base.setAttribute("cache-time", str(now));
-        base.setAttribute("generator-info-name", "IPTV Plugin");
+        base.setAttribute("generator-info-name", "USTVnow Guidedata");
         base.setAttribute("generator-info-url", "http://www.xmltv.org/");
         doc.appendChild(base)
-        channels = self.get_channels(quality, stream_type);
+        channels = [{'sname': u'WHTM', 'name': u'ABC', 'icon': u'http://m.ustvnow.com/images/WHTM.png'}, 
+                    {'sname': u'WHP', 'name': u'CBS', 'icon': u'http://m.ustvnow.com/images/WHP.png'}, 
+                    {'sname': u'WLYH', 'name': u'CW', 'icon': u'http://m.ustvnow.com/images/WLYH.png'}, 
+                    {'sname': u'WPMT', 'name': u'FOX', 'icon': u'http://m.ustvnow.com/images/WPMT.png'}, 
+                    {'sname': u'WGAL', 'name': u'NBC', 'icon': u'http://m.ustvnow.com/images/WGAL.png'}, 
+                    {'sname': u'WPSU', 'name': u'PBS', 'icon': u'http://m.ustvnow.com/images/WPSU.png'}, 
+                    {'sname': u'WHVLLD', 'name': u'My9', 'icon': u'http://m.ustvnow.com/images/WHVLLD.png'}, 
+                    {'sname': u'AETV', 'name': u'AETV', 'icon': u'http://m.ustvnow.com/images/AETV.png'}, 
+                    {'sname': u'AMC', 'name': u'AMC', 'icon': u'http://m.ustvnow.com/images/AMC.png'}, 
+                    {'sname': u'APL', 'name': u'Animal Planet', 'icon': u'http://m.ustvnow.com/images/APL.png'}, 
+                    {'sname': u'BRAVO', 'name': u'Bravo', 'icon': u'http://m.ustvnow.com/images/BRAVO.png'}, 
+                    {'sname': u'TOON', 'name': u'Cartoon Network', 'icon': u'http://m.ustvnow.com/images/TOON.png'}, 
+                    {'sname': u'CNBC', 'name': u'CNBC', 'icon': u'http://m.ustvnow.com/images/CNBC.png'}, 
+                    {'sname': u'CNN', 'name': u'CNN', 'icon': u'http://m.ustvnow.com/images/CNN.png'}, 
+                    {'sname': u'COMEDY', 'name': u'Comedy Central', 'icon': u'http://m.ustvnow.com/images/COMEDY.png'}, 
+                    {'sname': u'DSC', 'name': u'Discovery Channel', 'icon': u'http://m.ustvnow.com/images/DSC.png'}, 
+                    {'sname': u'ESPN', 'name': u'ESPN', 'icon': u'http://m.ustvnow.com/images/ESPN.png'}, 
+                    {'sname': u'FNC', 'name': u'Fox News Channel', 'icon': u'http://m.ustvnow.com/images/FNC.png'}, 
+                    {'sname': u'FX', 'name': u'FX', 'icon': u'http://m.ustvnow.com/images/FX.png'}, 
+                    {'sname': u'HISTORY', 'name': u'History', 'icon': u'http://m.ustvnow.com/images/HISTORY.png'}, 
+                    {'sname': u'LIFE', 'name': u'Lifetime', 'icon': u'http://m.ustvnow.com/images/LIFE.png'}, 
+                    {'sname': u'NGC', 'name': u'National Geographic Channel', 'icon': u'http://m.ustvnow.com/images/NGC.png'}, 
+                    {'sname': u'NIK', 'name': u'Nickelodeon', 'icon': u'http://m.ustvnow.com/images/NIK.png'}, 
+                    {'sname': u'SPIKETV', 'name': u'SPIKE TV', 'icon': u'http://m.ustvnow.com/images/SPIKETV.png'}, 
+                    {'sname': u'SYFY', 'name': u'Syfy', 'icon': u'http://m.ustvnow.com/images/SYFY.png'}, 
+                    {'sname': u'TBS', 'name': u'TBS', 'icon': u'http://m.ustvnow.com/images/TBS.png'}, 
+                    {'sname': u'TNT', 'name': u'TNT', 'icon': u'http://m.ustvnow.com/images/TNT.png'}, 
+                    {'sname': u'USA', 'name': u'USA', 'icon': u'http://m.ustvnow.com/images/USA.png'}]
         
         for channel in channels:
             cnt +=1
@@ -402,7 +239,7 @@ class ustvnow:
             i_entry = doc.createElement('icon');
             i_entry.setAttribute("src", 'http://mc.ustvnow.com/gtv/1/live/viewposter?srsid=' + str(programme['srsid']) + '&cs=' + programme['callsign'] + '&tid=' + programme['mediatype']);
             pg_entry.appendChild(i_entry);
-        return doc
+        return uni(doc)
 
 
     def cleanChanName(self, string):
@@ -427,18 +264,17 @@ class ustvnow:
             xbmcvfs.delete(filepath)
         fle = open(filepath, "w")
         try:
-            xml = data.toxml(encoding='utf-8');
+            xml = data.toxml(encoding='UTF-8');
             log('writing item: %s' % (filepath))
             if xbmcvfs.exists(filepath):
                 finished = True
         except Exception as e:
-            xml  = '<?xml version="1.0" encoding="ISO-8859-1"?>'
+            xml  = '<?xml version="1.0" encoding="UTF-8"?>'
             xml += '<error>' + str(e) + '</error>';
         xmllst = xml.replace('><','>\n<')
         xmllst = self.cleanChanName(xmllst)
         fle.write("%s" % xmllst)
         fle.close()
         if finished == False:
-            self.token = 'False'
             self.getXMLTV()
         return finished

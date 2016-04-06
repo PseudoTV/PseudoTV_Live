@@ -234,7 +234,7 @@ class Artdownloader:
             arttype = arttypeEXT.split(".")[0]
             MediaImage = os.path.join(MEDIA_LOC, (arttype + '.png'))
             StockImage = os.path.join(IMAGES_LOC, (arttype + '.png'))
-            ChannelLogo = os.path.join(LOGO_LOC,chname[0:18] + '.png')
+            ChannelLogo = os.path.join(LOGO_LOC,chname + '.png')
             
             # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
             if FileAccess.exists(MediaImage) == True:
@@ -451,7 +451,7 @@ class Artdownloader:
         self.log("FindBug, chname = " + chname)
         try:
             setImage = ''
-            BugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname[0:18] + '.png')))
+            BugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png')))
             cachedthumb = xbmc.getCacheThumbName(BugFLE)
             cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + ".png")).replace("\\", "/")
             DefaultBug = self.getDefaultBug(chname)

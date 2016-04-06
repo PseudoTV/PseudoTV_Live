@@ -289,7 +289,7 @@
                     <font>font12</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <texturefocus>pstvlButtonFocus.png.png</texturefocus>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1015</onup>
                     <ondown>1013</ondown>
@@ -305,7 +305,7 @@
                     <font>font12</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <texturefocus>pstvlButtonFocus.png.png</texturefocus>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1012</onup>
                     <ondown>1014</ondown>
@@ -321,7 +321,7 @@
                     <font>font12</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <texturefocus>pstvlButtonFocus.png.png</texturefocus>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1013</onup>
                     <ondown>1015</ondown>
@@ -337,7 +337,7 @@
                     <font>font12</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <texturefocus>pstvlButtonFocus.png.png</texturefocus>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
                     <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
                     <onup>1014</onup>
                     <ondown>1012</ondown>

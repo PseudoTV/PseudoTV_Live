@@ -119,7 +119,7 @@ class Main:
                         self.YTtype = 2
                     elif self.Path.lower().startswith(('plugin', 'http', 'rtmp', 'pvr', 'hdhomerun', 'upnp')):
                         if self.isPlayable == True:
-                            if dlg.yesno("PseudoTV Live", 'Add source as', yeslabel="LiveTV", nolabel="InternetTV"):
+                            if yesnoDialog('Add source as', no="LiveTV", yes="InternetTV"):
                                 self.chantype = 8
                             else:
                                 self.chantype = 9
@@ -155,7 +155,7 @@ class Main:
     def buildNetworks(self, url):
         self.log("buildNetworks, url = " + url)
         detail = uni(self.chnlst.requestList(url))
-        if dlg.yesno("PseudoTV Live", 'Add %d Channels?' % len(detail)):
+        if yesnoDialog('Add %d Channels?' % len(detail)):
             show_busy_dialog()
             for f in detail:
                 files = re.search('"file" *: *"(.*?)",', f)
@@ -177,8 +177,8 @@ class Main:
                             self.fixChannel(self.channel)
                     elif filetype == 'file':
                         if self.chantype == 8:
-                            self.setting1 = file
-                            self.setting2 = name
+                            self.setting1 = name
+                            self.setting2 = file
                             self.setting3 = 'pvr'
                             self.setting4 = ''
                             self.channame = name
@@ -186,7 +186,6 @@ class Main:
                             self.fixChannel(self.channel)
             hide_busy_dialog()
             self.openManager()
-            
     
     # find next available channel when exporting bulk channels.
     def fixChannel(self, channel):
@@ -215,17 +214,15 @@ class Main:
             
         elif self.chantype == 8:
             XMLTV = listXMLTV()
-            xmltvFle = xmltvflePath(XMLTV)
-            
-            if self.Path.startswith('plugin://plugin.video.ustvnow'):
-                self.Label = self.Label.split(' - ')[0]
-                dname = "USTVnow - "+self.Label
+            if XMLTV:
+                xmltvFle = xmltvflePath(XMLTV)
             else:
-                dname = self.Label
-                
+                self.chantype = 9
+                self.buildChannel()
+            
             if xmltvFle:
-                self.channame, self.setting1 = self.chnlst.findZap2itID(dname, xbmc.translatePath(xmltvFle))
-                self.channame = self.Label+" USTV"
+                self.channame, self.setting1 = self.chnlst.findZap2itID(self.chnlst.cleanLabels(self.Label), xbmc.translatePath(xmltvFle))
+                self.channame = self.Label
                 self.setting2 = self.Path
                 self.setting3 = XMLTV
                 
@@ -274,10 +271,10 @@ class Main:
         
         
     def openManager(self):
-        if dlg.yesno("PseudoTV Live", 'Channel Successfully Added', 'Open Channel Manager?'):
+        if yesnoDialog('Channel Successfully Added', 'Open Channel Manager?'):
             xbmc.executebuiltin("RunScript("+ADDON_PATH+"/config.py, %s)" %str(self.channel))
-        
-        
+
+            
     def getChtype(self, channel):
         self.log("getChtype")
         try:
@@ -349,7 +346,6 @@ class Main:
         ADDON_SETTINGS.setSetting(setting1, self.setting1)
         ADDON_SETTINGS.setSetting(setting2, self.setting2)
         ADDON_SETTINGS.setSetting(setting3, self.setting3)
-        ADDON_SETTINGS.setSetting(setting4, self.setting4)
         ADDON_SETTINGS.setSetting(setting4, self.setting4)
         if chantype > 6:
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "1")

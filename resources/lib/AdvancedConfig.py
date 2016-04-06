@@ -27,8 +27,6 @@ from Globals import *
 from ChannelList import ChannelList
 from Rules import *
 
-
-
 class AdvancedConfig(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
@@ -77,11 +75,8 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                 self.lineSelected = 0
                 self.onClick(130)
             else:
-                dlg = xbmcgui.Dialog()
-
-                if dlg.yesno("Save", "Would you like to save your changes?"):
+                if xbmcgui.Dialog().yesno("Save", "Would you like to save your changes?"):
                     self.saveRules()
-
                 self.close()
                 
         elif action in ACTION_MOVE_DOWN:

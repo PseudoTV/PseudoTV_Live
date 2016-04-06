@@ -241,7 +241,6 @@ class Playlist:
                                     if index >= 0:
                                         tmpitem.LiveID = tmpitem.timestamp[index + 2:]
                                         tmpitem.timestamp = tmpitem.timestamp[:index]
-
                 realindex += 1
                 tmpitem.filename = uni(lines[realindex].rstrip())
                 self.itemlist.append(tmpitem)

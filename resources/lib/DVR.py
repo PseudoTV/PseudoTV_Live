@@ -48,6 +48,23 @@ class DVR(xbmcgui.WindowXMLDialog):
         self.log('onInit')
         
         
+    def onClick(self, controlid):
+        self.log('onClick ' + str(controlid))
+        if controlid in [6001,6002,6003,6004]:
+            if controlid == 6001:
+                self.log('ACTION_TELETEXT_RED')
+                self.MyOverlayWindow.windowSwap('EPG')
+            elif controlid == 6002:
+                self.log('ACTION_TELETEXT_GREEN')
+                self.MyOverlayWindow.windowSwap('DVR')
+            elif controlid == 6003:
+                self.log('ACTION_TELETEXT_YELLOW')
+                self.MyOverlayWindow.windowSwap('ONDEMAND')
+            elif controlid == 6004:
+                self.log('ACTION_TELETEXT_BLUE') 
+                self.MyOverlayWindow.windowSwap('APPS')
+
+                
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
         action = act.getId()

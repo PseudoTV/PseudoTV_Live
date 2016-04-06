@@ -29,8 +29,8 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), ScheduleChannelRule(), HandleChannelLogo(), NoShowRule(), DontAddChannel(), ForceRandom(), ForceRealTime(), ForceResume(), Handle3D(), HandleIceLibrary(), HandleBCT(), HandlePOP(), InterleaveChannel(), OnlyUnWatchedRule(), OnlyWatchedRule(), AlwaysPause(), PlayShowInOrder(), EvenShowsRule(), RenameRule(), SetResetTime()]
-
+        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D()]
+        
 
     def getRuleCount(self):
         return len(self.ruleList)
@@ -76,14 +76,12 @@ class BaseRule:
     def getOptionLabel(self, index):
         if index >= 0 and index < self.getOptionCount():
             return self.optionLabels[index]
-
         return ''
 
 
     def getOptionValue(self, index):
         if index >= 0 and index < len(self.optionValues):
             return self.optionValues[index]
-
         return ''
 
 
@@ -93,9 +91,7 @@ class BaseRule:
         for rule in channeldata.ruleList:
             if rule == self:
                 return index
-
             index += 1
-
         return -1
 
 

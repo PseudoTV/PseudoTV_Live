@@ -21,25 +21,7 @@ import os, sys, time, urllib
 
 from resources.lib.Globals import *
 from resources.lib.utils import *
-# from resources.lib.ChannelList import ChannelList
 
-def showText(heading, text):
-    log('utilities: showText')
-    id = 10147
-    xbmc.executebuiltin('ActivateWindow(%d)' % id)
-    xbmc.sleep(100)
-    win = xbmcgui.Window(id)
-    retry = 50
-    while (retry > 0):
-        try:
-            xbmc.sleep(10)
-            retry -= 1
-            win.getControl(1).setLabel(heading)
-            win.getControl(5).setText(text)
-            return
-        except:
-            pass
-      
 def showInfo(addonID=None, type='changelog'):
     log('utilities: showInfo')
     try:
@@ -61,20 +43,21 @@ def showInfo(addonID=None, type='changelog'):
             f = open(os.path.join(ADDON_PATH,'settings'))
         text = f.read()
         f.close()
-        showText(title, text)
+        textViewer(text, title)
     except:
         pass      
         
 def DeleteSettings2():
     log('utilities: DeleteSettings2')
     if xbmcvfs.exists(SETTINGS_FLE):
-        if dlg.yesno("PseudoTV Live", "Delete Current Channel Configurations?"):
+        if yesnoDialog("Delete Current Channel Configurations?"):
             try:
                 REAL_SETTINGS.setSetting("CurrentChannel","1")
                 xbmcvfs.delete(SETTINGS_FLE)
                 infoDialog("Channel Configurations Cleared")
             except:
                 pass
+                
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
     

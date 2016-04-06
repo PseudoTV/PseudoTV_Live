@@ -38,7 +38,7 @@ ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
-PTVL_SKINVER = '0.7.4'
+PTVL_SKINVER = '0.7.5'
 
 def log(msg, level = xbmc.LOGDEBUG):
     if DEBUG != True and level == xbmc.LOGDEBUG:
@@ -68,16 +68,16 @@ def uni(string):
     return string
 
 # API Keys
-USTV_Token = REAL_SETTINGS.getSetting("USTV_Token")
-TVDB_API_KEY = REAL_SETTINGS.getSetting("TVDB_API_KEY")
-TMDB_API_KEY = REAL_SETTINGS.getSetting("TMDB_API_KEY")
+USTV_Token       = REAL_SETTINGS.getSetting("USTV_Token")
+TVDB_API_KEY     = REAL_SETTINGS.getSetting("TVDB_API_KEY")
+TMDB_API_KEY     = REAL_SETTINGS.getSetting("TMDB_API_KEY")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANARTTV_API_KEY")
-RSS_API_KEY = REAL_SETTINGS.getSetting('RSS_API_KEY')
-YT_API_KEY = REAL_SETTINGS.getSetting('YT_API_KEY')
-GOOGLE_API_KEY = REAL_SETTINGS.getSetting('GOOGLE_API_KEY')
-LOGODB_API_KEY = REAL_SETTINGS.getSetting('LOGODB_API_KEY')
-DOX_API_KEY = REAL_SETTINGS.getSetting('DOX_API_KEY')
-GBOX_API_KEY = REAL_SETTINGS.getSetting('GBOX_API_KEY')
+YT_API_KEY       = REAL_SETTINGS.getSetting('YT_API_KEY')
+RSS_API_KEY      = REAL_SETTINGS.getSetting('RSS_API_KEY')
+GOOGLE_API_KEY   = REAL_SETTINGS.getSetting('GOOGLE_API_KEY')
+LOGODB_API_KEY   = REAL_SETTINGS.getSetting('LOGODB_API_KEY')
+DOX_API_KEY      = REAL_SETTINGS.getSetting('DOX_API_KEY')
+GBOX_API_KEY     = REAL_SETTINGS.getSetting('GBOX_API_KEY')
 
 # Timers
 AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
@@ -163,6 +163,7 @@ BUTTON_BACKGROUND_CONTEXT = 'pstvlContextBackground.png'
 BUTTON_GAUSS_CONTEXT = 'pstvlBackground_gauss.png'
 BUTTON_FOCUS_ALT = 'pstvlButtonFocusAlt.png'
 BUTTON_NO_FOCUS_ALT = 'pstvlButtonNoFocusAlt.png'
+EPG_BUTTON_IDS = [6000,6001,6002,6003,6004]
 
 #Channel Sharing location
 if REAL_SETTINGS.getSetting('ChannelSharing') == "true":
@@ -197,7 +198,13 @@ if not xbmcvfs.exists(EPGGENRE_LOC):
      
 TAG_LOC = os.path.join(MEDIA_LOC,'flags','tags','')
 STAR_LOC = os.path.join(MEDIA_LOC,'flags','rating','')
-     
+ 
+# Find XBMC Skin path
+if xbmcvfs.exists(xbmc.translatePath(os.path.join('special://','skin','720p',''))):
+    XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','720p',''))
+else:
+    XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','1080i',''))
+    
 # Find XBMC Skin path
 if xbmcvfs.exists(xbmc.translatePath(os.path.join('special://','skin','720p',''))):
     XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','720p',''))
@@ -211,7 +218,6 @@ else:
     PTVL_SKIN_SELECT = xbmc.translatePath(os.path.join(PTVL_SKIN_LOC, Skin_Select, '1080i', ''))
 
 # Globals
-dlg = xbmcgui.Dialog()
 ADDON_SETTINGS = Settings.Settings()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
@@ -236,7 +242,7 @@ SETTINGS_FLE_LASTRUN = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.
 SETTINGS_FLE_PRETUNE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.pretune.xml'))
 
 # commoncache globals
-guide = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "guide",4)
+guide = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "guide",2)
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
 monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))
@@ -255,8 +261,10 @@ cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
 cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 
+IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
+
 try:
     MEDIA_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]
 except:
@@ -313,7 +321,7 @@ COLOR_ltGRAY_TYPE = ['0', '7', 'NR', 'Consumer', 'Game Show', 'Other', 'Unknown'
 COLOR_CHANNUM = ['0xFF0297eb', '0xC0C0C0C0', '0xff00ff00', '0xff888888', '0xffcccccc', '0xffffffff']
 CHANBUG_COLOR = COLOR_CHANNUM[int(REAL_SETTINGS.getSetting('COLOR_CHANNUM'))]
 
-#https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
+# https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/ButtonTranslator.cpp
 
 # touch actions
