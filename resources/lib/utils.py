@@ -797,7 +797,7 @@ def textViewer(text, header=ADDON_NAME):
     xbmcgui.Dialog().textviewer(header, text)
     
 def browse(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, default='', enableMultiple=False, heading=ADDON_NAME):
-    xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, default, enableMultiple)
+    return xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, default, enableMultiple)
     # Types:
     # - 0 : ShowAndGetDirectory
     # - 1 : ShowAndGetFile
@@ -805,10 +805,10 @@ def browse(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, defau
     # - 3 : ShowAndGetWriteableDirectory
 
 def browseMultiple(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, default='', heading=ADDON_NAME):
-    xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+    return xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
 
 def browseSingle(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, default='', heading=ADDON_NAME):
-    xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+    return xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
 
 def selectDialog(list, header=ADDON_NAME, autoclose=0):
     if len(list) > 0:
@@ -820,6 +820,12 @@ def mselectDialog(list, header=ADDON_NAME, autoclose=0):
         select = xbmcgui.Dialog().multiselect(header, list, autoclose)
         return select
 
+def matchSelect(list, name):
+    if name:
+        for i in range(len(list)):
+            if name.lower() == list[i].lower():
+                return i
+        
 def matchMselect(list, select):
     if select:
         slist = []
@@ -1848,7 +1854,7 @@ def listXMLTV():
     dir,file = xbmcvfs.listdir(XMLTV_LOC)
     xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
     xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
-    select = selectDialog(xmltvLst, 'Select xmltv file', 30000)
+    select = selectDialog(xmltvLst, 'Select Guidedata Type', 30000)
 
     if select != -1:
         if xmltvLst[select] == 'Enter URL':

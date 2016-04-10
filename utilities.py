@@ -49,6 +49,7 @@ def showInfo(addonID=None, type='changelog'):
         
 def DeleteSettings2():
     log('utilities: DeleteSettings2')
+    ClearChanFavorites(False)
     if xbmcvfs.exists(SETTINGS_FLE):
         if yesnoDialog("Delete Current Channel Configurations?"):
             try:
@@ -56,8 +57,7 @@ def DeleteSettings2():
                 xbmcvfs.delete(SETTINGS_FLE)
                 infoDialog("Channel Configurations Cleared")
             except:
-                pass
-                
+                pass           
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
     
@@ -70,12 +70,13 @@ def addBypass():
 def ClearTempKey():
     log('utilities: ClearTempKey')
     
-def ClearChanFavorites():
+def ClearChanFavorites(close=True):
     log('utilities: ClearChanFavorites')
     REAL_SETTINGS.setSetting("FavChanLst","0")
     infoDialog("Channel Favourites Cleared")
-    # Return to PTVL Settings
-    REAL_SETTINGS.openSettings()
+    if close == True:
+        # Return to PTVL Settings
+        REAL_SETTINGS.openSettings()
                    
 def showChtype():
     log('utilities: showChtype')

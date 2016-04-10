@@ -23,6 +23,7 @@ import datetime
 import sys, re
 import random
 
+from utils import *
 from Globals import *
 from Playlist import PlaylistItem
 
@@ -130,40 +131,8 @@ class BaseRule:
         if act.getId() in ACTION_SELECT_ITEM:
             keyb = xbmc.Keyboard(self.optionValues[optionindex], self.name, False)
             keyb.doModal()
-
             if keyb.isConfirmed():
                 self.optionValues[optionindex] = keyb.getText()
-
-        button = act.getButtonCode()
-
-        # Upper-case values
-        if button >= 0x2f041 and button <= 0x2f05b:
-            self.optionValues[optionindex] += chr(button - 0x2F000)
-
-        # Lower-case values
-        if button >= 0xf041 and button <= 0xf05b:
-            self.optionValues[optionindex] += chr(button - 0xEFE0)
-
-        # Numbers
-        if action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
-            self.optionValues[optionindex] += chr(action - ACTION_NUMBER_0 + 48)
-
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
-        # Delete
-        if button == 0xF02E:
-            self.optionValues[optionindex] = ''
-
-        # Space
-        if button == 0xF020:
-            self.optionValues[optionindex] += ' '
-
-        if xbmc.getCondVisibility("Window.IsVisible(10111)"):
-            self.log("shutdown window is visible")
-            xbmc.executebuiltin("Dialog.close(10111)")
 
 
     def onActionDateBox(self, act, optionindex):
@@ -172,7 +141,6 @@ class BaseRule:
         if act.getId() in ACTION_SELECT_ITEM:
             dlg = xbmcgui.Dialog()
             info = dlg.numeric(1, self.optionLabels[optionindex], self.optionValues[optionindex])
-
             if info != None:
                 self.optionValues[optionindex] = info
 
@@ -184,46 +152,12 @@ class BaseRule:
         if action in ACTION_SELECT_ITEM:
             dlg = xbmcgui.Dialog()
             info = dlg.numeric(2, self.optionLabels[optionindex], self.optionValues[optionindex])
-
             if info != None:
                 if info[0] == ' ':
                     info = info[1:]
-
                 if len(info) == 4:
                     info = "0" + info
-
                 self.optionValues[optionindex] = info
-
-        button = act.getButtonCode()
-
-        # Numbers
-        if action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
-            value = action - ACTION_NUMBER_0
-            length = len(self.optionValues[optionindex])
-
-            if length == 0:
-                if value <= 2:
-                    self.optionValues[optionindex] = chr(value + 48)
-            elif length == 1:
-                if int(self.optionValues[optionindex][0]) == 2:
-                    if value < 4:
-                        self.optionValues[optionindex] += chr(value + 48)
-                else:
-                    self.optionValues[optionindex] += chr(value + 48)
-            elif length == 2:
-                if value < 6:
-                    self.optionValues[optionindex] += ":" + chr(value + 48)
-            elif length < 5:
-                self.optionValues[optionindex] += chr(value + 48)
-
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                if len(self.optionValues[optionindex]) == 4:
-                    self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
 
     def validateTimeBox(self, optionindex):
         values = []
@@ -468,8 +402,10 @@ class NoShowRule(BaseRule):
 class ScheduleChannelRule(BaseRule):
     def __init__(self):
         self.name = "Best-Effort Channel Scheduling"
+        now = datetime.datetime.now()
+        today = now.strftime("%d/%m/%Y")
         self.optionLabels = ['Channel Number', 'Days of the Week (UMTWHFS)', 'Time (HH:MM)', 'Episode Count', 'Starting Episode', 'Starting Date (DD/MM/YYYY)']
-        self.optionValues = ['0', '', '00:00', '1', '1', '']
+        self.optionValues = ['0', 'UMTWHFS', '00:00', '1', '1', today]
         self.myId = 3
         self.actions = RULES_ACTION_START | RULES_ACTION_BEFORE_CLEAR | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
         self.clearedcount = 0
@@ -888,7 +824,7 @@ class ScheduleChannelRule(BaseRule):
 
 class OnlyWatchedRule(BaseRule):
     def __init__(self):
-        self.name = "Only Played Watched Items"
+        self.name = "Only Play Watched Items"
         self.optionLabels = []
         self.optionValues = []
         self.myId = 4
@@ -1154,7 +1090,7 @@ class ForceRandom(BaseRule):
 
 class OnlyUnWatchedRule(BaseRule):
     def __init__(self):
-        self.name = "Only Played Unwatched Items"
+        self.name = "Only Play Unwatched Items"
         self.optionLabels = []
         self.optionValues = []
         self.myId = 11
@@ -1369,8 +1305,8 @@ class SetResetTime(BaseRule):
 
 class Handle3D(BaseRule):
     def __init__(self):
-        self.name = "Filter 3D Media"
-        self.optionLabels = ['Include 3D Media']
+        self.name = "Include 3D Videos"
+        self.optionLabels = ['Include 3D Videos']
         self.optionValues = ['Yes']
         self.myId = 19
         self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
@@ -1410,7 +1346,7 @@ class Handle3D(BaseRule):
         
 class HandleIceLibrary(BaseRule):
     def __init__(self):
-        self.name = "Filter STRM Files"
+        self.name = "Include STRM Files"
         self.optionLabels = ['Include STRM Files']
         self.optionValues = ['Yes']
         self.myId = 14
@@ -1493,7 +1429,7 @@ class HandleBCT(BaseRule):
 class HandlePOP(BaseRule):
     print 'HandlePOP temp disabled'
     def __init__(self):
-        self.name = 'Coming Up Popup'
+        self.name = 'Display Coming Up Next'
         self.optionLabels = ['Display Coming Up Next']
         self.optionValues = ['Yes']
         self.myId = 18

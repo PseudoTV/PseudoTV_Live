@@ -84,7 +84,6 @@ class ChannelList:
         self.showList = []
         self.channels = []
         self.file_detail_CHK = []
-        self.cached_readXMLTV = []
         self.sleepTime = 0
         self.threadPaused = False
         self.quickflipEnabled = False
@@ -424,7 +423,7 @@ class ChannelList:
                     ADDON_SETTINGS.setSetting('LastResetTime', str(int(time.time())))
 
         if append == False:
-            if chtype == 6 and chsetting2 == str(MODE_ORDERAIRDATE):
+            if chtype in [0,1,3,5,6] and chsetting2 == str(MODE_ORDERAIRDATE):
                 self.channels[channel - 1].mode = MODE_ORDERAIRDATE
 
             # if there is no start mode in the channel mode flags, set it to the default
@@ -851,7 +850,7 @@ class ChannelList:
         if chtype == 1:
             if len(self.networkList) == 0:
                 self.fillTVInfo()
-            return self.createNetworkPlaylist(setting1)
+            return self.createNetworkPlaylist(setting1, setting2)
             
         elif chtype == 2:
             if len(self.studioList) == 0:
@@ -861,7 +860,7 @@ class ChannelList:
         elif chtype == 3:
             if len(self.showGenreList) == 0:
                 self.fillTVInfo()
-            return self.createGenrePlaylist('episodes', chtype, setting1)
+            return self.createGenrePlaylist('episodes', chtype, setting1, setting2)
             
         elif chtype == 4:
             if len(self.movieGenreList) == 0:
@@ -878,7 +877,7 @@ class ChannelList:
 
                 self.mixedGenreList = self.makeMixedList(self.showGenreList, self.movieGenreList)
                 self.mixedGenreList.sort(key=lambda x: x.lower())
-            return self.createGenreMixedPlaylist(setting1)
+            return self.createGenreMixedPlaylist(setting1, setting2)
             
         elif chtype == 6:
             if len(self.showList) == 0:
@@ -906,8 +905,16 @@ class ChannelList:
         fle.write('</smartplaylist>\n')
             
         
-    def createNetworkPlaylist(self, network, sort='random'):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'network_' + network + '_' + '.xsp')
+    def createNetworkPlaylist(self, network, setting2):
+        sort = 'random'    
+        try:
+            setting = int(setting2)
+            if setting & MODE_ORDERAIRDATE > 0:
+                sort = 'episode'
+        except Exception,e:
+            pass
+        
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'network_' + '_' + network + '_' + sort + '.xsp')
         try:
             fle = FileAccess.open(flename, "w")
         except:
@@ -923,7 +930,7 @@ class ChannelList:
         return flename
 
 
-    def createShowPlaylist(self, show, setting2, sort='random'):
+    def createShowPlaylist(self, show, setting2):
         show = show.split('|')
         chname = ' & '.join(show)
         
@@ -977,27 +984,42 @@ class ChannelList:
         return newlist
 
         
-    def createGenreMixedPlaylist(self, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '.xsp')
+    def createGenreMixedPlaylist(self, genre, setting2):
+        sort = 'random'
+        try:
+            setting = int(setting2)
+            if setting & MODE_ORDERAIRDATE > 0:
+                sort = 'episode'
+        except Exception,e:
+            pass
+
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '_' + sort + '.xsp')
         
         try:
             fle = FileAccess.open(flename, "w")
         except Exception,e:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
             return ''
-
-        epname = os.path.basename(self.createGenrePlaylist('episodes', 3, genre))
+        epname = os.path.basename(self.createGenrePlaylist('episodes', 3, genre, setting2))
         moname = os.path.basename(self.createGenrePlaylist('movies', 4, genre))
         self.writeXSPHeader(fle, 'mixed', self.getChannelName(5, genre))
         fle.write('    <rule field="playlist" operator="is">' + epname + '</rule>\n')
         fle.write('    <rule field="playlist" operator="is">' + moname + '</rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "random")
+        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
         fle.close()
         return flename
 
 
-    def createGenrePlaylist(self, pltype, chtype, genre):
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
+    def createGenrePlaylist(self, pltype, chtype, genre, setting2=None):  
+        sort = 'random'    
+        try:
+            setting = int(setting2)
+            if setting & MODE_ORDERAIRDATE > 0:
+                sort = 'episode'
+        except Exception,e:
+            pass
+        
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '_' + sort + '.xsp')
         try:
             fle = FileAccess.open(flename, "w")
         except Exception,e:
@@ -1008,7 +1030,7 @@ class ChannelList:
         fle.write('    <rule field="genre" operator="is">\n')
         fle.write('        <value>' + self.cleanString(genre) + '</value>\n')
         fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "random")
+        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
         fle.close()
         return flename
 
@@ -3954,41 +3976,42 @@ class ChannelList:
 
      
     def readXMLTV(self, filename):
-        self.log('readXMLTV')
-        self.cached_readXMLTV = []
-        if len(self.cached_readXMLTV) == 0:         
-            try:
+        self.log('readXMLTV')  
+        readXMLTV = []
+        # try:
+        if filename[0:4] == 'http':
+            self.log("findZap2itID, filename http = " + filename)
+            f = open_url(filename)
+        else:              
+            self.log("findZap2itID, filename local = " + filename)
+            f = FileAccess.open(filename, "r")
+            f.seek(0,0)
+            
+        context = ET.iterparse(f, events=("start", "end"))
+        context = iter(context)
+        event, root = context.next()
+        for event, elem in context:
+            if event == "end":
+                if elem.tag == "channel":
+                    id = ascii(elem.get("id"))
+                    for title in elem.findall('display-name'):
+                        name = ascii(title.text.replace('<display-name>','').replace('</display-name>','').replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','').replace("'",'').replace(')',''))
+                        readXMLTV.append(name+' : '+id)
+        f.close()
+        return readXMLTV
+        # except Exception,e:
+            # f.close()
+            # try:
                 # for key in xmltv.read_channels(FileAccess.open(filename, 'r')):
                     # name = map(itemgetter(0), key['display-name'])
                     # id   = key['id']
                     # name = name[0]
-                # channel = name+' : '+id
-                # self.cached_readXMLTV.append(channel)
-                    
-                if filename[0:4] == 'http':
-                    self.log("findZap2itID, filename http = " + filename)
-                    f = open_url(filename)
-                else:
-                    self.log("findZap2itID, filename local = " + filename)
-                    f = FileAccess.open(filename, "r")
-                f.seek(0,0)
-                context = ET.iterparse(f, events=("start", "end"))
-                context = iter(context)
-                event, root = context.next()
-                for event, elem in context:
-                    if event == "end":
-                        if elem.tag == "channel":
-                            id = ascii(elem.get("id"))
-                            for title in elem.findall('display-name'):
-                                name = ascii(title.text.replace('<display-name>','').replace('</display-name>','').replace('-DT','DT').replace(' DT','DT').replace('DT','').replace('-HD','HD').replace(' HD','HD').replace('HD','').replace('-SD','SD').replace(' SD','SD').replace('SD','').replace("'",'').replace(')',''))
-                                channel = name+' : '+id
-                                self.cached_readXMLTV.append(channel)
-                f.close()
-                return self.cached_readXMLTV
-            except Exception,e:
-                f.close()
-                self.log("readXMLTV, Failed! " + str(e))
-                return ['XMLTV ERROR : IMPROPER FORMATING']
+                    # readXMLTV.append(name+' : '+id)
+                # return readXMLTV
+            # except Exception,e:
+                # pass
+        # self.log("readXMLTV, Failed! " + str(e))
+        # return ['XMLTV ERROR : IMPROPER FORMATING']
 
                 
     def findZap2itID(self, CHname, filename):

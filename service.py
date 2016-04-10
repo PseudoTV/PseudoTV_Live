@@ -27,13 +27,36 @@ ADDON_PATH = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile')
 THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/' + 'icon.png')
+AUTOSTART_TIMER = [0,5,10,15,20][int(REAL_SETTINGS.getSetting('Auto_Start'))]
 
-def autostart():
+def handle_wait(time_to_wait,header='AutoStart',title='AutoStart',string=None): #*Thanks enen92
+    dlg = xbmcgui.DialogProgress()
+    dlg.create("PseudoTV Live", header)
+    secs=0
+    percent=0
+    increment = int(100 / time_to_wait)
+    cancelled = False
+    while secs < time_to_wait:
+        secs += 1
+        percent = increment*secs
+        secs_left = str((time_to_wait - secs))
+        if not string:
+            remaining_display = "in " + str(secs_left) + " seconds, Cancel?" 
+        else:
+            remaining_display = string
+        dlg.update(percent,title,remaining_display)
+        xbmc.sleep(1000)
+        if (dlg.iscanceled()):
+            cancelled = True
+            break
+    if cancelled == True:
+        return False
+    else:
+        dlg.close()
+        return True
+
+if AUTOSTART_TIMER != 0:
     xbmc.log('script.pseudotv.live-Service: autostart')
-    xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "AutoStart Enabled", 1000, THUMB))
-    AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
-    xbmc.sleep(AUTOSTART_TIMER[int(REAL_SETTINGS.getSetting('timer_amount'))] * 1000)
-    xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
-
-if REAL_SETTINGS.getSetting("Auto_Start") == "true":
-    autostart()
+    xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "AutoStart Enabled", AUTOSTART_TIMER * 1000, THUMB))
+    if handle_wait(AUTOSTART_TIMER) == True:
+        xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')

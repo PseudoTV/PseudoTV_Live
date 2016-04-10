@@ -5,147 +5,155 @@
     <defaultcontrol>120</defaultcontrol>
     <controls>
         <control type="image">
-            <left>640</left>
-            <top>360</top>
-            <width>640</width>
-            <height>375</height>
-			<texture border="40">config/ptv_DialogBack.png</texture>
+            <description>Background</description>
+            <left>525</left>
+            <top>270</top>
+            <width>880</width>
+            <height>490</height>
+            <texture border="40">pstvlButtonNoFocusAlt.png</texture>
         </control>
         <control type="image">
-			<description>Dialog Header image</description>
-            <left>640</left>
-            <top>360</top>
-			<width>640</width>
-			<height>40</height>
-			<texture>config/ptv_dialogheader.png</texture>
-		</control>             
-        <control type="label">
-            <left>640</left>
-			<top>370</top>
-			<width>640</width>
-			<height>30</height>
-			<font>font13_title</font>
-            <label>Channel Rules</label>
-            <align>center</align>
-			<aligny>center</aligny>
-			<textcolor>orange</textcolor>
-			<shadowcolor>black</shadowcolor>
+            <description>Dialog Header image</description>
+            <left>500</left>
+            <top>270</top>
+            <width>880</width>
+            <height>75</height>
+            <texture>config/settings_dialogheader.png</texture>
         </control>
-
+        <control type="label">
+            <left>500</left>
+            <top>295</top>
+            <width>880</width>
+            <height>40</height>
+            <font>font13_title</font>
+            <label>Advanced Channel Rules - PseudoTV Live</label>
+            <align>center</align>
+            <aligny>center</aligny>
+            <textcolor>FF0297eb</textcolor>
+            <shadowcolor>black</shadowcolor>
+        </control>
+        
         <control type="group" id="105">
-            <left>620</left>
-            <top>405</top>
-			<width>600</width>
-			<height>380</height>
+            <left>565</left>
+            <top>380</top>
+            <width>720</width>
+            <height>450</height>
             <control type="group" id="104">
                 <control type="button" id="120">
                     <description>Rule Entry 1</description>
                     <left>40</left>
                     <top>0</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <ondown>121</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible allowhiddenfocus="true">Control.HasFocus(120) | ![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,120)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="121">
                     <description>Rule Entry 2</description>
                     <left>40</left>
                     <top>45</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>120</onup>
                     <ondown>122</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,121)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="122">
                     <description>Rule Entry 3</description>
                     <left>40</left>
                     <top>90</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>121</onup>
                     <ondown>123</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,122)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="123">
                     <description>Rule Entry 4</description>
                     <left>40</left>
                     <top>135</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>122</onup>
                     <ondown>124</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,123)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="124">
                     <description>Rule Entry 5</description>
                     <left>40</left>
                     <top>180</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>123</onup>
                     <ondown>125</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,124)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="125">
                     <description>Rule Entry 6</description>
                     <left>40</left>
                     <top>225</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>124</onup>
                     <ondown>126</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,125)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
                 <control type="button" id="126">
                     <description>Rule Entry 7</description>
                     <left>40</left>
                     <top>270</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <onup>125</onup>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,126)</onclick>
-                    <onclick>SetFocus(130)</onclick>
+                    <onclick>SetFocus(131)</onclick>
                     <colordiffuse></colordiffuse>
                 </control>
 
@@ -153,17 +161,17 @@
                     <description>Rule for editing</description>
                     <left>40</left>
                     <top>0</top>
-                    <textcolor>white</textcolor>
+                    <textcolor>gray</textcolor>
+                    <focusedcolor>white</focusedcolor>
                     <ondown>102</ondown>
-                    <width>600</width>
+                    <width>720</width>
                     <height>40</height>
-                    <texturefocus border="5">config/ptv_button-focus2.png</texturefocus>
-                    <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                    <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <onclick>SetProperty(itempress,100)</onclick>
                     <onclick>SetFocus(120)</onclick>
                     <colordiffuse></colordiffuse>
                     <visible allowhiddenfocus="true">Control.HasFocus(130) | StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)</visible>
-
                     <animation condition="StringCompare(Window.Property(itempress),121)" reversible="false">
                         <effect type="slide" start="0,35" time="500" />
                     </animation>
@@ -187,9 +195,9 @@
                 <control type="group" id="102">
                     <description>Controls for editing</description>
                     <left>40</left>
-                    <top>45</top>
-                    <width>600</width>
-                    <height>455</height>
+                    <top>40</top>
+                    <width>720</width>
+                    <height>240</height>
                     <visible>StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)</visible>
 
                     <animation condition="StringCompare(Window.Property(itempress),120)" reversible="false">
@@ -224,138 +232,162 @@
                     <control type="image">
                         <description>Border for editing controls</description>
                         <left>0</left>
-                        <top>5</top>
-                        <width>600</width>
-                        <height>255</height>
+                        <top>0</top>
+                        <width>720</width>
+                        <height>300</height>
                         <description>Background</description>
                         <texture border="40">config/ptv_button-nofocus.png</texture>
                     </control>
                     <control type="button" id="131">
                         <left>0</left>
                         <top>5</top>
-                        <width>600</width>
+                        <width>720</width>
                         <height>40</height>
                         <align>center</align>
                         <textcolor>white</textcolor>
-                        <texturefocus border="5">config/ptv_button-focus.png</texturefocus>
-                        <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                        <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                         <onup>130</onup>
                         <ondown>160</ondown>
                         <colordiffuse></colordiffuse>
                     </control>
                     <control type="label" id="150">
-                        <left>0</left>
-                        <top>50</top>
-                        <width>300</width>
-                        <height>35</height>
-                        <font>font13_title</font>
-                        <textcolor>blue</textcolor>
-                        <shadowcolor>black</shadowcolor>
-                        <align>center</align>
-                    </control>
-                    <control type="label" id="151">
-                        <left>320</left>
-                        <top>50</top>
-                        <width>300</width>
-                        <height>35</height>
-                        <font>font13_title</font>
-                        <textcolor>blue</textcolor>
-                        <shadowcolor>black</shadowcolor>
-                        <align>center</align>
-                    </control>
-                    <control type="label" id="152">
                         <left>30</left>
-                        <top>130</top>
-                        <width>250</width>
-                        <height>35</height>
-                        <font>font13_title</font>
-                        <textcolor>blue</textcolor>
+                        <top>55</top>
+                        <width>288</width>
+                        <height>40</height>
+                        <font>font12</font>
+                        <textcolor>FF0297eb</textcolor>
                         <shadowcolor>black</shadowcolor>
                         <align>center</align>
-                    </control>
-                    <control type="label" id="153">
-                        <left>260</left>
-                        <top>190</top>
-                        <width>250</width>
-                        <height>35</height>
-                        <font>font13_title</font>
-                        <textcolor>blue</textcolor>
-                        <shadowcolor>black</shadowcolor>
-                        <align>center</align>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
                     </control>
                     <control type="button" id="160">
                         <left>30</left>
                         <top>100</top>
-                        <width>250</width>
+                        <width>288</width>
                         <height>40</height>
                         <align>center</align>
                         <onup>131</onup>
                         <ondown>162</ondown>
                         <onright>161</onright>
-                        <textcolor>white</textcolor>
-                        <texturefocus border="5">config/ptv_button-focus.png</texturefocus>
-                        <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                        <font>font12</font>
+                        <textcolor>gray</textcolor>
+                        <focusedcolor>white</focusedcolor>
+                        <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                         <colordiffuse></colordiffuse>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
+                    </control>
+                    <control type="label" id="151">
+                        <right>30</right>
+                        <top>55</top>
+                        <width>288</width>
+                        <height>40</height>
+                        <font>font12</font>
+                        <textcolor>FF0297eb</textcolor>
+                        <shadowcolor>black</shadowcolor>
+                        <align>center</align>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
                     </control>
                     <control type="button" id="161">
-                        <left>390</left>
+                        <right>30</right>
                         <top>100</top>
-                        <width>250</width>
+                        <width>288</width>
                         <height>40</height>
                         <align>center</align>
                         <onup>131</onup>
                         <ondown>163</ondown>
                         <onleft>160</onleft>
                         <onright>162</onright>
-                        <textcolor>white</textcolor>
-                        <texturefocus border="5">config/ptv_button-focus.png</texturefocus>
-                        <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                        <font>font12</font>
+                        <textcolor>gray</textcolor>
+                        <focusedcolor>white</focusedcolor>
+                        <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                         <colordiffuse></colordiffuse>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
+                    </control>
+                    <control type="label" id="152">
+                        <left>30</left>
+                        <top>145</top>
+                        <width>288</width>
+                        <height>40</height>
+                        <font>font12</font>
+                        <textcolor>FF0297eb</textcolor>
+                        <shadowcolor>black</shadowcolor>
+                        <align>center</align>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
                     </control>
                     <control type="button" id="162">
                         <left>30</left>
                         <top>190</top>
-                        <width>250</width>
+                        <width>288</width>
                         <height>40</height>
                         <align>center</align>
                         <onup>160</onup>
                         <onright>163</onright>
                         <onleft>161</onleft>
-                        <textcolor>white</textcolor>
-                        <texturefocus border="5">config/ptv_button-focus.png</texturefocus>
-                        <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                        <font>font12</font>
+                        <textcolor>gray</textcolor>
+                        <focusedcolor>white</focusedcolor>
+                        <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                         <colordiffuse></colordiffuse>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
+                    </control>
+                    <control type="label" id="153">
+                        <right>30</right>
+                        <top>145</top>
+                        <width>288</width>
+                        <height>40</height>
+                        <font>font12</font>
+                        <textcolor>FF0297eb</textcolor>
+                        <shadowcolor>black</shadowcolor>
+                        <align>center</align>
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
                     </control>
                     <control type="button" id="163">
-                        <left>390</left>
+                        <right>30</right>
                         <top>190</top>
-                        <width>250</width>
+                        <width>288</width>
                         <height>40</height>
                         <align>center</align>
                         <onup>161</onup>
                         <onleft>162</onleft>
-                        <textcolor>white</textcolor>
-                        <texturefocus border="5">config/ptv_button-focus.png</texturefocus>
-                        <texturenofocus border="5">config/ptv_button-nofocus.png</texturenofocus>
+                        <font>font12</font>
+                        <textcolor>gray</textcolor>
+                        <focusedcolor>white</focusedcolor>
+                        <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
+                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                         <colordiffuse></colordiffuse>
-                    </control>                    
+                        <scroll>true</scroll>
+                        <scrollspeed>40</scrollspeed>
+                    </control>                      
                     <control type="image" id="170">
                         <description>Down arrow when there are more controls for a rule</description>
-                        <left>170</left>
-                        <top>220</top>
+                        <left>162</left>
+                        <top>240</top>
                         <width>20</width>
                         <height>20</height>
                         <texture>config/ptv_scroll-down.png</texture>
-                        <colordiffuse>blue</colordiffuse>
+                        <colordiffuse>FF0297eb</colordiffuse>
                     </control>                   
                     <control type="image" id="171">
                         <description>Up arrow when there are more controls for a rule</description>
-                        <left>170</left>
-                        <top>220</top>
+                        <left>162</left>
+                        <top>240</top>
                         <width>20</width>
                         <height>20</height>
                         <texture>config/ptv_scroll-up.png</texture>
-                        <colordiffuse>blue</colordiffuse>
+                        <colordiffuse>FF0297eb</colordiffuse>
                     </control>
                 </control>
             </control>

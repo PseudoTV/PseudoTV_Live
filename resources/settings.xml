@@ -2,10 +2,9 @@
 <!--General-->
     <category label="30000">
         <setting label="30001" type="lsep"/>
-            <setting id="Config" type="action"   label="30002" action="RunScript($CWD/config.py)"/>
+            <setting id="Config" type="action" option="close" label="30002" action="RunScript($CWD/config.py)"/>
             <setting label="30003" type="lsep"/>
-                <setting id="Auto_Start" type="bool"   label="30044" default="false"/>
-                <setting id="timer_amount" type="enum" values="0|5|10|15|20"   label="30045" subsetting="true" visible="eq(-1,true)" default="1"/>
+                <setting id="Auto_Start" type="enum" values="Disable|5 sec|10 sec|15 sec|20 sec"  label="30044" default="0"/>
                 <setting id="AutoOff" type="enum"   label="30004" values="Disable|30|60|90|120|150|180|210|240" default="0"/>
                 <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|Sleep PC|Shutdown PC|EG Trigger|CEC TVStandby" default="0"/>
                 <setting id="Idle_Screensaver" type="bool"   label="29999" default="false" />
@@ -197,8 +196,8 @@
         <setting id="Backup_Settings2" type="action"   label="31901" action="RunScript($CWD/utilities.py, -backupSettings2)"/>
         <setting id="Restore_Settings2" type="action"   label="31902" action="RunScript($CWD/utilities.py, -restoreSettings2)"/>
         <setting id="Purge_Settings2" type="action"   label="31905" action="RunScript($CWD/utilities.py, -purgeSettings2)"/>
-        <setting id="Remove_Settings2" type="action"   label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
-        <setting id="ClearChanFavs" type="action"   label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
+        <setting id="Remove_Settings2" type="action" option="close" label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
+        <setting id="ClearChanFavs" type="action" option="close" label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
         <setting label="31998" type="lsep"/>
         <setting id="ClearLiveArt" type="bool"   label="30996" default="false"/>
         <setting id="ClearCache" type="bool"   label="30988" default="false"/>
