@@ -12,7 +12,7 @@
             <left>320</left>
             <top>180</top>
             <width>1280</width>
-            <height>780</height>
+            <height>845</height>
             <texture border="40">pstvlButtonNoFocusAlt.png</texture>
         </control>
         <control type="image">
@@ -39,7 +39,7 @@
             <left>425</left>
             <top>280</top>   
             <width>1280</width>
-            <height>780</height>
+            <height>845</height>
             <itemgap>5</itemgap>
             <orientation>vertical</orientation>
             <control type="image">
@@ -89,10 +89,14 @@
                 <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSDOWND)]">config/wall_arrow_vertical.png</texture>
                 <aspectratio>keep</aspectratio>
             </control>
+        </control>
+        <control type="group">
+            <left>320</left>
+            <bottom>70</bottom>
+            <width>1280</width>
+            <height>75</height>
             <control type="image">
                 <description>Skin Name image</description>
-                <left>320</left>
-                <top>815</top>
                 <width>1280</width>
                 <height>75</height>
                 <font>font30</font>
@@ -102,9 +106,9 @@
                 <texture>config/settings_dialogheader.png</texture>
             </control> 
             <control type="grouplist">
-                <left>525</left>
-                <top>825</top>    
-                <width>755</width>
+                <left>320</left> 
+                <bottom>15</bottom>
+                <width>1280</width>
                 <height>40</height>      
                 <itemgap>40</itemgap>
                 <orientation>horizontal</orientation>

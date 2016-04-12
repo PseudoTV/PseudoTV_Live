@@ -119,6 +119,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
     def closeManager(self):
         self.log("closeManager") 
         REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
+        # REAL_SETTINGS.openSettings()
         self.close()
                    
  

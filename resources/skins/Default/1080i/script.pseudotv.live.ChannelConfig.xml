@@ -806,7 +806,6 @@
                     <align>left</align>
                     <onup>211</onup>
                     <ondown>213</ondown>
-                    <label>Display Name:</label>
                     <label2>Click to Browse</label2>
                 </control>
                 <control type="button" id="213">

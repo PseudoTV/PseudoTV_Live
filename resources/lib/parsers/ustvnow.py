@@ -26,12 +26,11 @@ else:
     import json
 
 from xml.dom import minidom
-
 from xml.etree import ElementTree as ET
 from resources.lib.Globals import *
 from resources.lib.utils import *
 
-##socket.setdefaulttimeout(int(REAL_SETTINGS.getSetting("PlayTimeoutInt")))
+socket.setdefaulttimeout(30)
 
 class ustvnow:
     def __init__(self):
@@ -275,6 +274,4 @@ class ustvnow:
         xmllst = self.cleanChanName(xmllst)
         fle.write("%s" % xmllst)
         fle.close()
-        if finished == False:
-            self.getXMLTV()
         return finished

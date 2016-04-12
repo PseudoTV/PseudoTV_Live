@@ -94,8 +94,9 @@ class ChannelList:
         self.startTime = 0
         self.background = True    
         self.videoParser = VideoParser()
-        self.ustv = ustvnow.ustvnow()
         self.youtube_player = self.youtube_player_ok()
+        self.ustv = ustvnow.ustvnow()
+        self.USTVnow_ok = isUSTVnow()
         self.stars = ''
         self.genre = ''
         self.rating = ''
@@ -166,9 +167,6 @@ class ChannelList:
             self.updateDialog.update(0, "Updating Channel List", "")
             self.updateDialogProgress = 0
         self.log("setupList, background = " + str(self.background))
-          
-        if isUSTVnow() == True:
-            self.ustv.getXMLTV()
 
         if self.backgroundUpdating > 0 and self.myOverlay.isMaster == True:
             makenewlists = True
@@ -546,12 +544,11 @@ class ChannelList:
 
 
     def getChannelName(self, chtype, opt):
+        self.log("getChannelName")
         chname = ''
         if chtype <= 7 or chtype == 12:
             # opt = setting1
-            if len(opt) == 0:
-                return ''
-            elif chtype == 0:
+            if chtype == 0:
                 return self.getSmartPlaylistName(opt)
             elif chtype == 1 or chtype == 2:
                 return opt
@@ -566,10 +563,17 @@ class ChannelList:
             elif chtype == 12:
                 return opt + " Music"
             elif chtype == 7:
-                if opt[-1] == '/' or opt[-1] == '\\':
-                    return os.path.split(opt[:-1])[1]
-                else:
-                    return os.path.split(opt)[1]
+                try:
+                    if opt[-1] == '/' or opt[-1] == '\\':
+                        return os.path.split(opt[:-1])[1]
+                    elif len(os.path.split(opt)[1]) > 0:
+                        return os.path.split(opt)[1]
+                    else:
+                        return opt
+                except:
+                    return opt
+        elif chtype == 9999:
+            return ' '
         else:
             #opt = channel number
             chname = self.getChname(opt)
@@ -578,6 +582,7 @@ class ChannelList:
         
         
     def getChtype(self, channel): 
+        self.log("getChtype")
         try:
             return int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
         except:
@@ -585,6 +590,7 @@ class ChannelList:
         
         
     def getChname(self, channel):
+        self.log("getChname")
         for i in range(RULES_PER_PAGE):         
             try:
                 if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
@@ -679,6 +685,11 @@ class ChannelList:
             elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
                 self.log("Building LiveTV using tuner1")
                 setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
+            
+            # USTVnow #
+            if self.USTVnow_ok == True and setting3 == 'ustvnow':
+                self.ustv.getXMLTV()
+
             fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit)
                 
         # InternetTV  
@@ -4294,7 +4305,7 @@ class ChannelList:
             CHid = PVRChannels[i][0]
             CHname = self.cleanLabels(PVRChannels[i][1])
             thumb = PVRChannels[i][2]
-            PVRNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(i+1), CHname))
+            PVRNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(CHid), CHname))
             PVRPathList.append(self.getPVRLink(i))
             PVRIconList.append(thumb)
         if len(PVRNameList) == 0:

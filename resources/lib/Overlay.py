@@ -2106,25 +2106,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         except:
             pass
         self.startNotificationTimer()
-        
 
-    def currentWindow(self):
-        currentWindow = ''
-        # return current window label via json, xbmcgui.getCurrentWindowId does not return accurate id.
-        json_query = ('{"jsonrpc": "2.0", "method":"GUI.GetProperties","params":{"properties":["currentwindow"]}, "id": 1}')
-        json_detail = self.channelList.sendJSON(json_query)
-        file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
         
-        for f in file_detail:
-            id = re.search('"label" *: *"(.*?)"', f)
-            if id and len(id.group(1)) > 0:
-                currentWindow = id.group(1)
-                break
-        return currentWindow
-        
-    
     def CloseDialog(self, type=['Progress dialogue','Dialogue OK']):
-        curwindow = self.currentWindow()
+        curwindow = currentWindow()
         self.log("CloseDialog, type = " + str(type) + ", currentwindow = " + curwindow)
         if curwindow in type:
             self.setBackgroundVisible(True)
@@ -2136,7 +2121,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         
     def ForceStop(self):
-        curwindow = self.currentWindow()
+        curwindow = currentWindow()
         self.log("ForceStop, currentwindow = " + curwindow)
         # "Working" Busy dialogue doesn't report a label.
         if curwindow == "":

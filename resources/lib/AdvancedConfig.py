@@ -17,15 +17,13 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
-import time, threading
-import datetime
-import sys, re
-import random
+import subprocess, os, sys, re, random
+import datetime, time, threading
 
 from Globals import *
-from ChannelList import ChannelList
+from utils import *
 from Rules import *
+from ChannelList import ChannelList
 
 class AdvancedConfig(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
@@ -72,7 +70,10 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
         if action in ACTION_PREVIOUS_MENU:
             if self.selectedRuleIndex > -1:
                 xbmc.executebuiltin("SetProperty(itempress,100)")
-                xbmc.executebuiltin("Control.SetFocus(120)")
+                if currentWindow() == 'System':
+                    xbmc.executebuiltin("Control.SetFocus(102)")
+                else:
+                    xbmc.executebuiltin("Control.SetFocus(120)")
                 self.lineSelected = 0
                 self.onClick(130)
             else:

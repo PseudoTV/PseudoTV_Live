@@ -766,7 +766,22 @@ def showText(heading, text):
             return
         except:
             pass
-
+        
+def currentWindow():
+    currentWindow = ''
+    # return current window label via json, xbmcgui.getCurrentWindowId does not return accurate id.
+    json_query = ('{"jsonrpc": "2.0", "method":"GUI.GetProperties","params":{"properties":["currentwindow"]}, "id": 1}')
+    json_detail = sendJSON(json_query)
+    file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
+    for f in file_detail:
+        id = re.search('"label" *: *"(.*?)"', f)
+        if id and len(id.group(1)) > 0:
+            currentWindow = id.group(1)
+            
+            break
+    log("utils: currentWindow = " + currentWindow)
+    return currentWindow
+         
 # General
 def infoDialog(message, header=ADDON_NAME, show=True, sound=False, time=1000, icon=THUMB):
     setProperty('PTVL.NOTIFY_LOG', message)
@@ -900,6 +915,14 @@ def verifyScript(cmd):
         pass
     return True
 
+def sendJSON(command):
+    data = ''
+    try:
+        data = xbmc.executeJSONRPC(uni(command))
+    except UnicodeEncodeError:
+        data = xbmc.executeJSONRPC(ascii(command))
+    return uni(data)
+     
 def set_Kodi_JSON(params):
     xbmc.executeJSONRPC('{"jsonrpc": "2.0", %s, "id": 1}' % params)
     
@@ -1314,7 +1337,7 @@ def chkVersion():
                 if yesnoDialog('The current available version is '+str(match[0]),'Would you like to install the PseudoTV Live repository and stay updated?','[B]PseudoTV Live Update Available![/B]',"Install","Cancel"):
                     getRepo()
             else:
-                get_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
+                set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
      
 def isCompanionInstalled():
     companion = isPlugin('plugin.video.pseudo.companion')
@@ -1994,7 +2017,7 @@ def getSmartPlaylistName(fle):
 def getChanPrefix(chantype, channame):
     log("utils: getChanPrefix") 
     if chantype == 0:
-        newlabel = getSmartPlaylistName(channame) + " - Playlist"
+        newlabel = channame + " - Playlist"
     elif chantype == 5:
         newlabel = channame + " - Mixed"
     elif chantype in [1,3,6]:
@@ -2002,11 +2025,7 @@ def getChanPrefix(chantype, channame):
     elif chantype in [2,4]:
         newlabel = channame + " - Movies"
     elif chantype == 7:
-        if channame[-1] == '/' or channame[-1] == '\\':
-            newlabel = os.path.split(channame[:-1])[1]
-        else:
-            newlabel = os.path.split(channame)[1]
-        newlabel = newlabel + " - Directory" 
+        newlabel = channame + " - Directory" 
     elif chantype == 8:
         newlabel = channame + " - LiveTV"
     elif chantype == 9:
