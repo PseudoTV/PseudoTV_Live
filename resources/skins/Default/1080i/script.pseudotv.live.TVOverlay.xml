@@ -1000,6 +1000,78 @@
                 <aligny>center</aligny>
                 <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
             </control>  
+        </control> 
+        <control type="group" id="7000"> 
+            <posx>0</posx>
+            <posy>0</posy>
+            <control type="image">
+                <description>Background Image</description>
+                <width>1920</width>
+                <height>1080</height>
+                <texture>pstvlBackground.png</texture>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <align>center</align>
+                <aligny>center</aligny>
+                <visible>Control.IsVisible(7000)</visible>
+            </control>
+            <control type="group">
+                <description>Sleep/Idle/Reminder Prompt</description>
+                <width>1920</width>
+                <height>1080</height>
+                <orientation>vertical</orientation>
+                <itemgap>40</itemgap> 
+                <visible>Control.IsVisible(7000)</visible>           
+                <control type="label"> 
+                    <posx>0</posx>
+                    <posy>700</posy>
+                    <width>1980</width>
+                    <height min="40" max="80">auto</height>
+                    <font>font30</font>
+                    <aligny>center</aligny>
+                    <align>center</align>
+                    <scroll>True</scroll>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <visible>Control.IsVisible(7000)</visible>
+                    <label>$INFO[Window(10000).Property(PTVL.IDLE_LABEL)]</label>
+                </control>
+                <control type="button" id="7001">
+                    <description>Cancel</description>
+                    <posx>720</posx>
+                    <posy>800</posy>
+                    <width>500</width>
+                    <height>72</height>
+                    <label></label>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <font>font12</font>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
+                    <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
+                    <onup>7002</onup>
+                    <ondown>7002</ondown>
+                    <visible>Control.IsVisible(7000)</visible>
+                </control>
+                <control type="button" id="7002">
+                    <description>Sleep/Switch</description>
+                    <posx>720</posx>
+                    <posy>912</posy>
+                    <width>500</width>
+                    <height>72</height>
+                    <label></label>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <font>font12</font>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <texturefocus>pstvlButtonFocus.png</texturefocus>
+                    <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
+                    <onup>7001</onup>
+                    <ondown>7001</ondown>
+                    <visible>Control.IsVisible(7000)</visible>
+                </control>
+            </control>
         </control>
     </controls>     
 </window>

@@ -222,7 +222,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def setChannelButtons(self, starttime, curchannel, singlerow = -1):
         self.log('setChannelButtons ' + str(starttime) + ', ' + str(curchannel))
         self.centerChannel = self.MyOverlayWindow.fixChannel(curchannel)
-
+  
+        # # todo filter epg, controlid 6000
+        # EPG_CHTYPE_FILTER = [8]
+        # while self.MyOverlayWindow.getChtype(curchannel) in EPG_CHTYPE_FILTER:
+            # curchannel = self.MyOverlayWindow.fixChannel(curchannel + 1, False)
+        
         # This is done twice to guarantee we go back 2 channels.  If the previous 2 channels
         # aren't valid, then doing a fix on curchannel - 2 may result in going back only
         # a single valid channel.
@@ -251,13 +256,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         myadds = []
         
         for i in range(self.rowCount):
-            if singlerow == -1 or singlerow == i:  
-                # todo filter epg
-                # chtype = self.MyOverlayWindow.getChtype(basecur)
-                # if self.MyOverlayWindow.getChtype(basecur) != 8:   
-                    # continue
-                # else:
-
+            if singlerow == -1 or singlerow == i:
                 self.setButtons(starttime, basecur, i)                  
                 myadds.extend(self.channelButtons[i])
                 myadds.extend(self.channelTags[i])
@@ -269,15 +268,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         for i in range(self.rowCount):
             self.getControl(301 + i).setLabel(self.MyOverlayWindow.getChname(basecur))
             basecur = self.MyOverlayWindow.fixChannel(basecur + 1)
-
-        for i in range(self.rowCount):                             
-            # self.getControl(5010).setVisible(False)
-            # if newrow == 2:
-                # self.getControl(5010).setVisible(True)                                
-                # # Update Channel Playing Highlight
-                # chpx, chpy = self.getControl(5010).getPosition()
-                # self.getControl(5010).setPosition(chpx, basey)
-      
+            
+        self.getControl(5010).setVisible(False)
+        for i in range(self.rowCount):
             self.getControl(311 + i).setLabel(str(curchannel))
             if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":   
                 chlogo = self.MyOverlayWindow.getChlogo(curchannel, False)
@@ -291,6 +284,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         FindLogo(chtype, self.MyOverlayWindow.getChname(curchannel), mediapath)
             else:
                 self.getControl(321 + i).setImage('NA.png')
+                
+            if int(self.getControl(311 + i).getLabel()) == self.MyOverlayWindow.currentChannel:
+                self.log('setChannelButtons, current playing channel row')  
+                self.getControl(5010).setVisible(True)                                
+                # Update Channel Playing Highlight
+                chpx, chpy = self.getControl(5010).getPosition()
+                chx, chy = self.getControl(111 + i).getPosition()
+                self.getControl(5010).setPosition(chpx, chy)
+      
             curchannel = self.MyOverlayWindow.fixChannel(curchannel + 1)
 
         if time.time() >= starttime and time.time() < starttime + 5400:
@@ -1337,62 +1339,67 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
     def addButtonTags(self, row, xpos, basey, width, baseh, mylabel, EPGtags):      
         self.log('addButtonTags')
-        cc     = (EPGtags['CC']      or False)
-        hd     = (EPGtags['HD']      or False)
-        rec    = (EPGtags['REC']     or False)
-        sch    = (EPGtags['SCH']     or False)
-        rating = (EPGtags['RATING']  or 'NR')
-        stars  = (EPGtags['STARS']   or '0.0')
-        
-        button_width = xpos + width
-        label_width = xpos + len(mylabel) * 15
-        
-        xtag_left = button_width - 30
-        ytag_pos_upper = basey + baseh/4  
-        
-        xtag_right = label_width + 30
-        ytag_pos_lower = basey + baseh/2
-        hd_xtag = xtag_left - 30
-        cc_xtag = xtag_right + 30
-        rat_xtag = cc_xtag + 45
-        
-        # upper tags (rec or reminder)         
-        wtag = 30
-        htag = 15
-        if button_width > xtag_left and label_width < xtag_left and xtag_left < button_width:
-            if rec == True:
-                self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'REC.png'),2,''))
-            elif sch == True:
-                self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'SCH.png'),2,''))
-                    
-        # lower tags (cc,ratings,hd)
-        if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":     
+        try:
+            cc     = (EPGtags['CC']      or False)
+            hd     = (EPGtags['HD']      or False)
+            rec    = (EPGtags['REC']     or False)
+            sch    = (EPGtags['SCH']     or False)
+            rating = (EPGtags['RATING']  or 'NR')
+            stars  = (EPGtags['STARS']   or '0.0')
+            
+            button_width = xpos + width
+            label_width = xpos + len(mylabel) * 15
+            
+            xtag_left = button_width - 30
+            ytag_pos_upper = basey + baseh/4  
+            
+            xtag_right = label_width + 30
+            ytag_pos_lower = basey + baseh/2
+            hd_xtag = xtag_left - 30
+            cc_xtag = xtag_right + 30
+            rat_xtag = cc_xtag + 45
+            
+            # upper tags (rec or reminder)         
             wtag = 30
-            htag = 30
-            # pos end of button
-            if hd == True:       
-                if button_width > hd_xtag and label_width + 30 < hd_xtag and hd_xtag < button_width:
-                    self.channelTags[row].append(xbmcgui.ControlImage(hd_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'HD.png'),2,''))   
+            htag = 15
+            if button_width > xtag_left and label_width < xtag_left and xtag_left < button_width:
+                if rec == True:
+                    self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'REC.png'),2,''))
+                elif sch == True:
+                    self.channelTags[row].append(xbmcgui.ControlImage(xtag_left, ytag_pos_upper, wtag, htag, os.path.join(TAG_LOC,'SCH.png'),2,''))
+                        
+            # lower tags (cc,ratings,hd)
+            if REAL_SETTINGS.getSetting("EPG.xInfo") == "true":     
+                wtag = 30
+                htag = 30
+                # pos end of button
+                if hd == True:       
+                    if button_width > hd_xtag and label_width + 30 < hd_xtag and hd_xtag < button_width:
+                        self.channelTags[row].append(xbmcgui.ControlImage(hd_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'HD.png'),2,''))   
+                
+                # pos end of mylabel
+                if cc == True:
+                    wtag = 60
+                    htag = 15
+                    if button_width > cc_xtag and label_width +30 < cc_xtag and cc_xtag < button_width and cc_xtag + wtag < hd_xtag and cc_xtag < rat_xtag:
+                        self.channelTags[row].append(xbmcgui.ControlImage(cc_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'CC.png'),2,''))
+                        
+                if not rating in ['NR','NA','']:
+                    wtag = 60       
+                    htag = 15
+                    if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
+                        self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(TAG_LOC,'%s.png') % rating),2,''))
+                
+                elif not stars in ['0.0','']:
+                    wtag = 90       
+                    htag = 15
+                    if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
+                        self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(STAR_LOC,'%s.png') % stars),2,''))
+        except:
+            self.log("exception in addButtonTags", xbmc.LOGERROR)
+            self.log(traceback.format_exc(), xbmc.LOGERROR)
+        self.log('addButtonTags return')
             
-            # pos end of mylabel
-            if cc == True:
-                wtag = 60
-                htag = 15
-                if button_width > cc_xtag and label_width +30 < cc_xtag and cc_xtag < button_width and cc_xtag + wtag < hd_xtag and cc_xtag < rat_xtag:
-                    self.channelTags[row].append(xbmcgui.ControlImage(cc_xtag, ytag_pos_lower, wtag, htag, os.path.join(TAG_LOC,'CC.png'),2,''))
-                    
-            if not rating in ['NR','NA','']:
-                wtag = 60       
-                htag = 15
-                if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
-                    self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(TAG_LOC,'%s.png') % rating),2,''))
-            
-            elif not stars in ['0.0','']:
-                wtag = 90       
-                htag = 15
-                if button_width > rat_xtag and label_width + 30 < rat_xtag and rat_xtag < button_width and rat_xtag + wtag < hd_xtag:
-                    self.channelTags[row].append(xbmcgui.ControlImage(rat_xtag, ytag_pos_lower, wtag, htag, (os.path.join(STAR_LOC,'%s.png') % stars),2,''))
-
                     
     def getFocus(self):
         win = xbmcgui.Window (xbmcgui.getCurrentWindowId())

@@ -450,7 +450,7 @@ def UpdateRSS_Thread():
             ##Twitter RSS
             try:
                 twitlist = []
-                twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=pseudotv_live'
+                twitrss = 'http://twitrss.me/twitter_user_to_rss/?user=PseudoTV_Live'
                 e = feedparser.parse(twitrss)
                 header = ((e['feed']['title']) + ' - ')
                 twitlist = header.replace('Twitter Search / pseudotv_live','@PseudoTV_Live Twitter Activity')
@@ -872,13 +872,17 @@ def browse(type, heading, shares, mask='', useThumbs=False, treatAsFolder=False,
 ##################
 
 def getProperty(str):
-    return xbmcgui.Window(10000).getProperty(str)
-
+    try:
+        return xbmcgui.Window(10000).getProperty(str)
+    except Exception,e:
+        log("utils: getProperty, Failed! " + str(e))
+        return ''
+          
 def setProperty(str1, str2):
     try:
         xbmcgui.Window(10000).setProperty(str1, str2)
-    except:
-        pass
+    except Exception,e:
+        log("utils: setProperty, Failed! " + str(e))
         
 def clearProperty(str):
     xbmcgui.Window(10000).clearProperty(str)

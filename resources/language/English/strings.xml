@@ -5,8 +5,8 @@
     <string id="30003">General Options:</string>
         <string id="30044">Enable Autostart</string>
         <string id="30045">Delay Startup (seconds)</string>
-        <string id="30004">Auto-off Timer (minutes)</string>
-        <string id="30009">Auto-off Mode</string>
+        <string id="30004">Auto-off on Idle Timer (minutes)</string>
+        <string id="30009">Auto-off Action</string>
         <string id="29999">Enable Idle ScreenSaver</string>
         <string id="30005">Force channel reset on next start</string>
         <string id="30006">Time between channel resets</string>

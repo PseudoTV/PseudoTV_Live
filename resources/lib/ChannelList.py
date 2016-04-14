@@ -273,10 +273,7 @@ class ChannelList:
                 if FIND_LOGOS == True:
                     setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
                     if chtype not in [6,7,9999]:
-                        if chtype <= 7 or chtype == 12:
-                            chname = self.getChannelName(chtype, chsetting1)
-                        else:
-                            chname = self.getChannelName(chtype, (i + 1))
+                        chname = self.getChannelName(chtype, i + 1, chsetting1)
                         FindLogo(chtype, chname)
                         
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
@@ -488,7 +485,7 @@ class ChannelList:
                 self.channels[channel - 1].showTimeOffset -= self.channels[channel - 1].getCurrentDuration()
                 self.channels[channel - 1].addShowPosition(1)
 
-        self.channels[channel - 1].name = self.getChannelName(chtype, chsetting1)
+        self.channels[channel - 1].name = self.getChannelName(chtype, channel, chsetting1)
 
         if ((createlist or needsreset) and makenewlist) and returnval:
             self.runActions(RULES_ACTION_FINAL_MADE, channel, self.channels[channel - 1])
@@ -543,11 +540,15 @@ class ChannelList:
                     ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_time', str(self.channels[channel - 1].totalTimePlayed))
 
 
-    def getChannelName(self, chtype, opt):
+    def getChannelName(self, chtype, channel, opt=None, suffix=True):
         self.log("getChannelName")
-        chname = ''
+        chname = self.getChname(channel)
+        if chname and len(chname) > 0:
+            return chname
+
         if chtype <= 7 or chtype == 12:
-            # opt = setting1
+            if not opt:
+                opt = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1')
             if chtype == 0:
                 return self.getSmartPlaylistName(opt)
             elif chtype == 1 or chtype == 2:
@@ -555,13 +556,25 @@ class ChannelList:
             elif chtype == 6:
                 return opt.split('|')[0]
             elif chtype == 3:
-                return opt + " TV"
+                if suffix == False:
+                    return opt
+                else:
+                    return opt + " TV"
             elif chtype == 4:
-                return opt + " Movies"
+                if suffix == False:
+                    return opt
+                else:
+                    return opt + " Movies"
             elif chtype == 5:
-                return opt + " Mixed"
+                if suffix == False:
+                    return opt
+                else:
+                    return opt + " Mixed"
             elif chtype == 12:
-                return opt + " Music"
+                if suffix == False:
+                    return opt
+                else:
+                    return opt + " Music"
             elif chtype == 7:
                 try:
                     if opt[-1] == '/' or opt[-1] == '\\':
@@ -571,13 +584,7 @@ class ChannelList:
                     else:
                         return opt
                 except:
-                    return opt
-        elif chtype == 9999:
-            return ' '
-        else:
-            #opt = channel number
-            chname = self.getChname(opt)
-            return chname
+                    return opt        
         return ''
         
         
@@ -591,13 +598,17 @@ class ChannelList:
         
     def getChname(self, channel):
         self.log("getChname")
-        for i in range(RULES_PER_PAGE):         
-            try:
-                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
-                    return ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1))
-            except:
-                return ''
-
+        try:
+            if int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount')) > 0:
+                for i in range(RULES_PER_PAGE):         
+                    try:
+                        if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
+                            return ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1))
+                    except:
+                        return ''
+        except:
+            return ''
+                
                 
     # Open the smart playlist and read the name out of it...this is the channel name
     def getSmartPlaylistName(self, fle):
@@ -656,9 +667,9 @@ class ChannelList:
                 limit = MEDIA_LIMIT
 
         if chtype == 8:
-            limit = 259200 #72hrs in seconds
+            limit = LIVETV_MAXPARSE #72hrs in seconds
         elif chtype == 9:
-            limit = int(86400 / int(setting1))
+            limit = int(INTERNETTV_MAXPARSE / int(setting1))
         elif MEDIA_LIMIT == 0:
             if chtype in [15,16]:
                 limit = 500
@@ -932,7 +943,7 @@ class ChannelList:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
             return ''
 
-        self.writeXSPHeader(fle, "episodes", self.getChannelName(1, network))
+        self.writeXSPHeader(fle, "episodes", self.getChannelName(1, self.settingChannel, network))
         fle.write('    <rule field="studio" operator="is">\n')        
         fle.write('        <value>' + self.cleanString(network) + '</value>\n')
         fle.write('    </rule>\n')
@@ -960,7 +971,7 @@ class ChannelList:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
             return ''
 
-        self.writeXSPHeader(fle, 'episodes', self.getChannelName(6, chname))
+        self.writeXSPHeader(fle, 'episodes', self.getChannelName(6, self.settingChannel, chname))
         fle.write('    <rule field="tvshow" operator="is">\n')
         for i in range(len(show)):
             fle.write('        <value>' + self.cleanString((show[i])) + '</value>\n')
@@ -1013,7 +1024,7 @@ class ChannelList:
             return ''
         epname = os.path.basename(self.createGenrePlaylist('episodes', 3, genre, setting2))
         moname = os.path.basename(self.createGenrePlaylist('movies', 4, genre))
-        self.writeXSPHeader(fle, 'mixed', self.getChannelName(5, genre))
+        self.writeXSPHeader(fle, 'mixed', self.getChannelName(5, self.settingChannel, genre))
         fle.write('    <rule field="playlist" operator="is">' + epname + '</rule>\n')
         fle.write('    <rule field="playlist" operator="is">' + moname + '</rule>\n')
         self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
@@ -1037,7 +1048,7 @@ class ChannelList:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
             return ''
 
-        self.writeXSPHeader(fle, pltype, self.getChannelName(chtype, genre))
+        self.writeXSPHeader(fle, pltype, self.getChannelName(chtype, self.settingChannel, genre))
         fle.write('    <rule field="genre" operator="is">\n')
         fle.write('        <value>' + self.cleanString(genre) + '</value>\n')
         fle.write('    </rule>\n')
@@ -1054,7 +1065,7 @@ class ChannelList:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
             return ''
 
-        self.writeXSPHeader(fle, "movies", self.getChannelName(2, studio))
+        self.writeXSPHeader(fle, "movies", self.getChannelName(2, self.settingChannel, studio))
         fle.write('    <rule field="studio" operator="is">\n')
         fle.write('        <value>' + self.cleanString(studio) + '</value>\n')
         fle.write('    </rule>\n')
@@ -1968,15 +1979,16 @@ class ChannelList:
         showList = []
         # Validate XMLTV Data #
         if self.xmltv_ok(setting3) == True:
-            chname = (self.getChannelName(8, self.settingChannel))
+            chname = (self.getChannelName(8, self.settingChannel, setting1))
             if setting3 == 'pvr':
                 showList = self.fillLiveTVPVR(setting1, setting2, setting3, setting4, chname, limit)
             else:   
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
         if not showList:
+            self.setResetLST(self.settingChannel)
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
-            showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel), desc, 24)
+            showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
         return showList     
         
         
@@ -2244,8 +2256,8 @@ class ChannelList:
                                 self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
                 root.clear()
             f.close()                   
-            # if showcount < 86400:
-                # self.setResetLST(self.settingChannel)
+            if showcount < INTERNETTV_MAXPARSE:
+                self.setResetLST(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTV Failed!" + str(e), xbmc.LOGERROR)
         return showList
@@ -2434,8 +2446,8 @@ class ChannelList:
                             
                         if showcount >= limit:
                             break     
-            # if showcount < 86400:
-                # self.setResetLST(self.settingChannel)
+            if showcount < INTERNETTV_MAXPARSE:
+                self.setResetLST(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVPVR Failed!" + str(e), xbmc.LOGERROR) 
             pass
@@ -3289,10 +3301,7 @@ class ChannelList:
         chsetting1 = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1')
 
         # Parse BCT functions
-        if chtype <= 7 or chtype == 12:
-            chname = self.getChannelName(chtype, chsetting1)
-        else:
-            chname = self.getChannelName(chtype, channel)
+        chname = self.getChannelName(chtype, channel, chsetting1)
         
         #Bumpers
         BumperLST = []
@@ -5100,7 +5109,7 @@ class ChannelList:
         
     def setResetLST(self, channel):
         self.myOverlay.ResetLST.append(channel)
-        self.myOverlay.ResetLST = sorted(set(self.myOverlay.ResetLST))
+        self.myOverlay.ResetLST = sorted_nicely(set(self.myOverlay.ResetLST))
         REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))
         self.log('setResetLST added channel ' + str(channel))
         

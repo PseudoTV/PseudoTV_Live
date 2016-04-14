@@ -451,18 +451,20 @@
         </control> 
         <control type="image" id="5009">     
             <description>Optional Channel Focus Highlight</description>         
-            <posx>5</posx>  
+            <posx>5</posx>       
+            <posy>-1000</posy>  
             <width>405</width>
             <height>75</height>
             <texture>pstvlButtonFocusAlt.png</texture>
         </control> 
-<!--         <control type="image" id="5010">     
+        <control type="image" id="5010">     
             <description>Optional Channel Playing Highlight</description>         
             <posx>5</posx>  
+            <posy>-1000</posy>  
             <width>405</width>
             <height>75</height>
             <texture>pstvlHighlightAlt2.png</texture>
-        </control> -->
+        </control>
         <control type="grouplist">            
             <posx>0</posx>
             <posy>345</posy>

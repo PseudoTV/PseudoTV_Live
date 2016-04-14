@@ -155,8 +155,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         if chantype == 0:#Custom XSP
             ADDON_SETTINGS.setSetting(setting1, self.getControl(333).getLabel())
             if self.getControl(334).isSelected():
+                self.setTVSort(chan)
                 ADDON_SETTINGS.setSetting(setting2, str(MODE_ORDERAIRDATE))
             else:
+                self.clearTVSort(chan)
                 ADDON_SETTINGS.setSetting(setting2, "0")
                 
         elif chantype == 1:#TV Network
@@ -291,7 +293,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_2", self.setting2)
         ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_3", self.setting3)
         ADDON_SETTINGS.setSetting("Channel_" + str(self.channel) + "_4", self.setting4)
-        self.setChname(self.channame)
 
 
     def hideChanDetails(self):
@@ -419,6 +420,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             help((self.getControl(110).getLabel2()).replace('None','General'))
         elif controlId == 114:      # Rules button
             self.openAdvRules()
+            self.saveSettings()
+            self.updateListing(self.listcontrol.getSelectedPosition() + 1)
+            self.listcontrol.selectItem(self.listcontrol.getSelectedPosition())
         elif controlId == 115:      # Submit button
             if yesnoDialog("Submit Current Channel Configuration?"):
                 self.saveSettings()
@@ -445,8 +449,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 332:      # Community Playlists button
             self.log("Community Playlists")
             try:
-                url='https://github.com/PseudoTV/PseudoTV_Playlists'
-                XSPlist = fillGithubItems(url,".xsp")
+                XSPlist = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Playlists',".xsp")
                 select = selectDialog(XSPlist, 'Select Community Playlist')
                 if select != -1:
                     XSPurl = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Playlists/master/' + ((XSPlist[select]).replace('&','&amp;').replace(' ','%20'))
@@ -501,7 +504,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 200:    # Directory channel, select
             retval = browse(0, "Channel " + str(self.channel) + " Directory", "files")
             if retval and len(retval) > 0:
-                chname = self.chnlst.getChannelName(7, retval)
+                chname = self.chnlst.getChannelName(7, self.channel, retval)
                 self.getControl(200).setLabel('Directory:',label2=chname)
                 self.getControl(203).setLabel(retval)       
                 self.setFocusId(201)
@@ -926,7 +929,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.getControl(120 + i).setVisible(False)
                 except:
                     pass
-   
+                    
         self.fillInDetails(channel)        
         self.log("changeChanType return")
 
@@ -1040,7 +1043,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif chantype == 7:
             self.setFocusId(200)
             if len(chansetting1) > 0:
-                chname = self.chnlst.getChannelName(7, chansetting1)
+                chname = self.chnlst.getChannelName(7, channel, chansetting1)
                 self.getControl(200).setLabel('Directory:',label2=chname)
                 self.getControl(201).setLabel('Media Limit:',label2=chansetting3)
                 # self.getControl(201).setLabel('Media Limit:',label2=self.findItemInList(self.MediaLimitList, chansetting3))
@@ -1124,6 +1127,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.getControl(294).setLabel(chansetting3)
             self.getControl(295).setLabel(self.findItemInList(self.SortOrderList, chansetting4))
             
+        elif chantype == 17:#NONE
+            self.log("fillInDetails return")
         else:
             xbmc.executebuiltin('SendClick(110)')
             
@@ -1470,26 +1475,61 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             channel = self.channel
         theitem = self.listcontrol.getListItem(channel-1)
         return theitem.getProperty('chname')
-        
 
-    def setChname(self, name, channel=None):
-        if not channel:
-            channel = self.channel
-        if not self.getChname(channel):
-            self.rulecount += 1
-            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(self.rulecount))
-            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" %str(self.rulecount), "1")
-            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(self.rulecount), name)
-            self.madeChanges = 1
-        else:
-            for i in range(RULES_PER_PAGE):         
-                try:
-                    if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1), name)
-                        self.madeChanges = 1
-                        break
-                except:
-                    pass
+
+    def clearTVSort(self, channel):
+        try:
+            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+        except:
+            rulecount = 0
+        for i in range(RULES_PER_PAGE):         
+            try:
+                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 12:
+                    ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1), "")
+                    ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(rulecount - 1))
+                    break
+            except:
+                pass
+
+    
+    def setTVSort(self, channel):
+        try:
+            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+        except:
+            rulecount = 0    
+        # check for exisiting rule
+        for i in range(RULES_PER_PAGE):         
+            try:
+                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 12:
+                    return
+            except:
+                pass
+        # set rule
+        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(rulecount + 1))
+        ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" %str(rulecount + 1), "12")
+
+        
+    def setChname(self, name, channel):
+        foundChname = False
+        # change existing rule
+        for i in range(RULES_PER_PAGE):         
+            try:
+                if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
+                    ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1), name)
+                    foundChname = True
+                    break
+            except:
+                pass
+        # no rule found create new one
+        if foundChname == False:
+            try:
+                rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
+            except:
+                rulecount = 0 
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rulecount", str(rulecount + 1))
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_id" % str(rulecount + 1), "1")
+            ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_rule_%s_opt_1" % str(rulecount + 1), name)         
+        self.madeChanges = 1
         
 
     # def swapRules(self, old, new):     
@@ -1783,7 +1823,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_3", setting3)
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_4", setting4)    
         self.saveRules(new)
-        self.updateListing()
+        self.updateListing(old)
         self.listcontrol.selectItem(int(new)-1)
         self.madeChanges = 1
         self.updateListing(new)
@@ -1889,6 +1929,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             end = channel
 
         for i in range(start, end):
+            show_busy_dialog()
             theitem = self.listcontrol.getListItem(i)
             chantype = 9999
             chansetting1 = ''
@@ -1899,7 +1940,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             newlabel = ''
 
             try:
-                channame = self.getChname(i + 1)
                 chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
                 chansetting1 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_1")
                 chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_2")
@@ -1909,13 +1949,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 pass
             
             if chantype != 9999:
-                if chantype <= 7 or chantype == 12:
-                    name = self.chnlst.getChannelName(chantype, chansetting1)
-                else:
-                    name = channame
+                name = self.chnlst.getChannelName(chantype, i+1, chansetting1, False)
+                channame = self.chnlst.getChannelName(chantype, i+1, chansetting1)
                 theitem.setLabel2(getChanPrefix(chantype, name))
-                theitem.setProperty('chlogo',(xbmc.translatePath(os.path.join(LOGO_LOC,name+'.png'))))
-                theitem.setProperty('chname',name)
+                theitem.setProperty('chlogo',(xbmc.translatePath(os.path.join(LOGO_LOC,channame+'.png'))))
+                theitem.setProperty('chname',channame)
             theitem.setProperty('chtype',str(chantype))
             theitem.setProperty('chnum',str(i + 1))
             try:
@@ -1923,6 +1961,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             except:
                 theitem.setProperty('chrules','')
             theitem.setProperty('isfav',self.chkChanFavorite(i + 1))
+            hide_busy_dialog()
         self.log("updateListing return")
    
 __cwd__ = REAL_SETTINGS.getAddonInfo('path')

@@ -80,7 +80,6 @@ DOX_API_KEY      = REAL_SETTINGS.getSetting('DOX_API_KEY')
 GBOX_API_KEY     = REAL_SETTINGS.getSetting('GBOX_API_KEY')
 
 # Timers
-AUTOSTART_TIMER = [0,5,10,15,20]#in seconds
 ART_TIMER = [6,12,24,48,72]
 SHORT_CLIP_ENUM = [15,30,60,90,120,240,360,480]#in seconds
 INFOBAR_TIMER = [3,5,10,15,20,25]#in seconds
@@ -163,6 +162,7 @@ BUTTON_BACKGROUND_CONTEXT = 'pstvlContextBackground.png'
 BUTTON_GAUSS_CONTEXT = 'pstvlBackground_gauss.png'
 BUTTON_FOCUS_ALT = 'pstvlButtonFocusAlt.png'
 BUTTON_NO_FOCUS_ALT = 'pstvlButtonNoFocusAlt.png'
+BACKGROUND_SKIN = 'pstvlBackground.png'
 EPG_BUTTON_IDS = [6000,6001,6002,6003,6004]
 
 #Channel Sharing location
@@ -231,7 +231,10 @@ RSS_REFRESH = 900 #secs
 ONNOW_REFRESH = 450 #secs
 ONNOW_REFRESH_LOW = 900 #secs
 SETTOP_REFRESH = 3600 #secs
-IDLE_TIMER = 180  #secs
+IDLE_TIMER = 180  #secs (3min)
+IDLE_DELAY = 30 #secs
+LIVETV_MAXPARSE = 259200 #secs (72hrs)
+INTERNETTV_MAXPARSE = 86400 #secs (24hrs)
 
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))

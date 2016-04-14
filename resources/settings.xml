@@ -4,9 +4,9 @@
         <setting label="30001" type="lsep"/>
             <setting id="Config" type="action" option="close" label="30002" action="RunScript($CWD/config.py)"/>
             <setting label="30003" type="lsep"/>
-                <setting id="Auto_Start" type="enum" values="Disable|5 sec|10 sec|15 sec|20 sec"  label="30044" default="0"/>
+                <setting id="Auto_Start" type="enum" values="Disable|5s delay|10s delay|15s delay|20s delay|25s delay|30s delay"  label="30044" default="0"/>
                 <setting id="AutoOff" type="enum"   label="30004" values="Disable|30|60|90|120|150|180|210|240" default="0"/>
-                <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|Sleep PC|Shutdown PC|EG Trigger|CEC TVStandby" default="0"/>
+                <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|System Sleep|System Shutdown|EventGhost Trigger|CEC TV Standby|Stop Playback|Switch to Preferred Channel" default="0"/>
                 <setting id="Idle_Screensaver" type="bool"   label="29999" default="false" />
                 <setting id="ForceChannelReset" type="bool"   label="30005" default="false" />
                 <setting id="StartMode" type="enum"   label="30007" values="Resume|Real Time|Random" default="1" />
@@ -35,8 +35,8 @@
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="BYPASS_SEEK" type="action" label="30935" action="RunScript($CWD/utilities.py, -BYPASS_SEEK)"/> 
-        <setting id="SeekForward" type="enum" label="30446" values="10 sec|30 sec|60 sec|3 min|5 min|10 min|30 min" default="1"/>
-        <setting id="SeekBackward" type="enum" label="30447" values="-10 sec|-30 sec|-60 sec|-3 min|-5 min|-10 min|-30 min" default="1"/>
+        <setting id="SeekForward" type="enum" label="30446" values="10s|30s|60s|3m|5m|10m|30m" default="1"/>
+        <setting id="SeekBackward" type="enum" label="30447" values="-10s|-30s|-60s|-3m|-5m|-10m|-30m" default="1"/>
         <setting type="sep"/>
         <setting id="enable_mute" type="bool"   label="30373" default="false"/>
         <setting id="HideClips" type="bool"   label="30215" default="true"/>

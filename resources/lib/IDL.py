@@ -34,7 +34,7 @@ skinsDir = os.path.join(resDir, 'skins')
 addon_image_path = os.path.join( resDir, "skins", "Default", "media")
 background = (os.path.join( addon_image_path, "idle", "Background"))
 digits = os.path.join( addon_image_path, "idle", "Digits")
-backMEDIA_LOC = xbmc.translatePath(os.path.join(MEDIA_LOC, "idle", 'pstvlidle.png'))
+backMEDIA_LOC = xbmc.translatePath(os.path.join(MEDIA_LOC, BACKGROUND_SKIN))
 
 cacheDir = xbmc.translatePath('special://profile/addon_data/script.twitXBMC/cache/')
 if not os.path.exists(cacheDir): os.makedirs(cacheDir)
@@ -81,6 +81,7 @@ class GUI( xbmcgui.WindowXMLDialog ):
             self.clockMode = REAL_SETTINGS.getSetting("ClockMode")
             self.ui.getControl(100).setImage(backMEDIA_LOC)
             
+            
         def run(self):
             print 'run'
             i=0
@@ -114,6 +115,7 @@ class GUI( xbmcgui.WindowXMLDialog ):
                 # print background+"|"+str(i)+".png"
                 self.ui.getControl( LABEL ).setLabel(dte)
             
+            
     class Fliper(threading.Thread):
         def __init__(self, ui,flip,old1,new1,old2,new2):
             threading.Thread.__init__(self)
@@ -130,6 +132,7 @@ class GUI( xbmcgui.WindowXMLDialog ):
                 self.flip1()
             else:
                 self.flip2()
+        
         
         def flip1(self):
             print 'flip1'
@@ -197,6 +200,7 @@ class GUI( xbmcgui.WindowXMLDialog ):
             self.ui.getControl( DIGIT220 ).setVisible(0)
             self.ui.getControl( FLIP1 ).setVisible(0)
         
+        
         def flip2(self):
             i=1
             self.ui.getControl( FLIP2 ).setImage(os.path.join(background,"0.png"))
@@ -260,10 +264,12 @@ class GUI( xbmcgui.WindowXMLDialog ):
             self.ui.getControl( DIGIT420 ).setVisible(0)
             self.ui.getControl( FLIP2 ).setVisible(0)
           
+          
     class MoveClock(threading.Thread):
         def __init__(self, ui):
             threading.Thread.__init__(self)
             self.ui = ui
+            
             
         def run(self):
             i =0
@@ -275,6 +281,7 @@ class GUI( xbmcgui.WindowXMLDialog ):
                     x = random.randint(0,990)
                     y = random.randint(0,570)
                     self.ui.getControl( CLOCK ).setPosition(x,y)
+            
             
     def __init__( self, *args, **kwargs ):
         self.terminate = False
@@ -291,10 +298,11 @@ class GUI( xbmcgui.WindowXMLDialog ):
     def onClick( self, controlId ):
         pass	
         
+        
     def onFocus( self, controlId ):
         pass
     
+    
     def onAction( self, action ):
-        # if ( action.getButtonCode() in CANCEL_DIALOG ):
         self.terminate = True
         self.close()

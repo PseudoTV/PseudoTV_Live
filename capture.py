@@ -310,16 +310,11 @@ class Main:
                     chansetting2 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_2")
                     chansetting3 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_3")
                     chansetting4 = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_4")
-                    channame = ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_rule_1_opt_1")
                 except:
                     pass
 
-                if chantype <= 7:
-                    option = chansetting1
-                else:
-                    option = channame
-                newlabel = getChanPrefix(chantype, option)
-                
+                name = self.chnlst.getChannelName(chantype, i+1, chansetting1, False)
+                newlabel = getChanPrefix(chantype, name)
                 if newlabel:
                     newlabel = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ newlabel+'[/COLOR]'
                 else:
