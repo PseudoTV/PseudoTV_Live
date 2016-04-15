@@ -5,7 +5,7 @@
             <setting id="Config" type="action" option="close" label="30002" action="RunScript($CWD/config.py)"/>
             <setting label="30003" type="lsep"/>
                 <setting id="Auto_Start" type="enum" values="Disable|5s delay|10s delay|15s delay|20s delay|25s delay|30s delay"  label="30044" default="0"/>
-                <setting id="AutoOff" type="enum"   label="30004" values="Disable|30|60|90|120|150|180|210|240" default="0"/>
+                <setting id="AutoOff" type="enum"   label="30004" values="Disable|30m|60m|90m|120m|150m|180m|210m|240m" default="0"/>
                 <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|System Sleep|System Shutdown|EventGhost Trigger|CEC TV Standby|Stop Playback|Switch to Preferred Channel" default="0"/>
                 <setting id="Idle_Screensaver" type="bool"   label="29999" default="false" />
                 <setting id="ForceChannelReset" type="bool"   label="30005" default="false" />
@@ -40,7 +40,7 @@
         <setting type="sep"/>
         <setting id="enable_mute" type="bool"   label="30373" default="false"/>
         <setting id="HideClips" type="bool"   label="30215" default="true"/>
-        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15|30|60|90|120|240|360|480" default="5"/>
+        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15s|30s|60s|90s|120s|240s|360s|480s" default="5"/>
         <setting type="sep"/>
         <setting id="TraktScrob" enabled="System.HasAddon(script.trakt)" type="bool"   label="30397" default="false"/>
         <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
@@ -68,8 +68,8 @@
         <!-- Overlay -->
         <setting label="30220" type="lsep"/>
             <setting id="COLOR_CHANNUM" type="enum"   label="30203" values="Holo|Cyan|Green|Gray|Light Gray|White" default="0"/>
-            <setting id="infoOnStart" type="bool" label="30227" default="false"/>       
-            <setting id="InfoOnChange" type="bool"   visible="eq(-1,false)" label="30221" default="true"/>  
+            <setting id="infoOnStart" type="bool" label="30227" default="true"/>       
+            <setting id="InfoOnChange" type="bool" label="30221" default="true"/>  
             <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)|eq(-2,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
             <setting id="ShowChannelBug" type="bool"   label="30224" default="true"/>
             <setting id="UNAlter_ChanBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
@@ -191,6 +191,8 @@
     
 <!--Utilities-->
     <category label="31900">  
+        <setting label="30722" type="lsep"/>
+        <setting id="KeyMapEditor" type="action"   label="30721" visible="System.HasAddon(script.keymap)" action="RunScript(script.keymap)"/>
         <setting label="31999" type="lsep"/>
         <setting id="Repair_Settings2" type="action"   label="31903" action="RunScript($CWD/utilities.py, -repairSettings2)"/>
         <setting id="Backup_Settings2" type="action"   label="31901" action="RunScript($CWD/utilities.py, -backupSettings2)"/>
@@ -209,6 +211,7 @@
         <setting id="Show_Readme" type="action"   label="32902" action="RunScript($CWD/utilities.py, -showReadme)"/>
         <setting id="Show_Readme" type="action"   label="32903" action="RunScript($CWD/utilities.py, -showChtype)"/>
         <setting id="UploadLog" type="action"   label="30989" action="RunScript($CWD/uploadLog.py)"/>
+        <setting id="EGIntro" type="action" label="31906" action="RunScript($CWD/utilities.py, -EGIntro)"/>
         <setting type="sep" visible="true" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>

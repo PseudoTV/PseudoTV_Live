@@ -4,9 +4,9 @@
     <string id="30002">Open Channel Configuration</string>    
     <string id="30003">General Options:</string>
         <string id="30044">Enable Autostart</string>
-        <string id="30045">Delay Startup (seconds)</string>
-        <string id="30004">Auto-off on Idle Timer (minutes)</string>
-        <string id="30009">Auto-off Action</string>
+        <string id="30045">Delay Startup</string>
+        <string id="30004">Auto-off on Idle</string>
+        <string id="30009">Auto-off/Sleep Action</string>
         <string id="29999">Enable Idle ScreenSaver</string>
         <string id="30005">Force channel reset on next start</string>
         <string id="30006">Time between channel resets</string>
@@ -28,7 +28,7 @@
 	<string id="30405">Find Missing GuideData [Art & Meta]</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
-    <string id="30216">Duration of "short" videos (seconds)</string>  
+    <string id="30216">Duration of "short" videos</string>  
     <string id="30310">Media Limit [Global]</string>
     <string id="30373">Mute between channel change</string>
     <string id="30379">Enable Direct Channel Input [Disable 'OK']</string>
@@ -75,7 +75,7 @@
         <string id="30229">Show extra epg Tags (ie. HD,CC,Ratings)</string>
     <string id="30220">Overlay Options:</string>
         <string id="30203">Select Overlay Number Color</string>
-        <string id="30221">Show info when changing channels</string>
+        <string id="30221">Show info on channel change</string>
         <string id="30227">Show info when show starts</string>
         <string id="30222">Info window duration (seconds)</string>   
         <string id="30224">Always show channel bug</string>
@@ -203,24 +203,27 @@
     <string id="30907">Enter your gmail password</string>
     
 <string id="31900">Utilities</string>
-    <string id="31999">Channel Configuration Tools</string>
+    <string id="31999">Channel Configuration Tools:</string>
     <string id="31997">Clear Channel Favourites</string>
     <string id="31901">Backup Configurations</string>
     <string id="31902">Restore Configurations</string>
     <string id="31903">Repair Configurations</string>                         
     <string id="31904">Delete Channel Configurations</string>                 
     <string id="31905">Purge all Backups</string>
-    <string id="31998">Cache Tools</string>
+    <string id="31998">Cache Tools:</string>
     <string id="30995">Clear BCT Cache</string>
     <string id="30996">Clear Artwork Cache</string>
     <string id="30988">Clear Filelist Cache</string>
+    <string id="30721">Open KeyMap Editor</string>
+    <string id="30722">Control Tools:</string>
     
 <string id="32900">Help</string>
     <string id="32901">Changelog</string>
     <string id="32902">ReadMe</string>
     <string id="32903">Channel Types</string>
     <string id="32904">User Settings</string>
-    <string id="30989">Upload Kodi Log</string>
+    <string id="30989">Upload Kodi Log</string>   
+    <string id="31906">Broadcast all Eventghost triggers</string>   
     <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
 <string id="30900">Debugging</string>

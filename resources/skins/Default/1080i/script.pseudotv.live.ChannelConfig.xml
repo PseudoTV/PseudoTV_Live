@@ -82,7 +82,7 @@
                         <height>40</height>
                         <aligny>center</aligny>
                         <align>right</align>
-                        <textcolor>gray</textcolor>
+                        <textcolor>C0C0C0C0</textcolor>
                         <info>ListItem.Label</info>
                     </control>
                     <control type="label">
@@ -92,7 +92,7 @@
                         <height>40</height>
                         <aligny>center</aligny>
                         <align>right</align>
-                        <textcolor>gray</textcolor>
+                        <textcolor>C0C0C0C0</textcolor>
                         <info>ListItem.Label2</info>
                     </control>
                 </itemlayout>
@@ -109,7 +109,7 @@
                         <top>0</top>
                         <width>75</width>
                         <height>40</height>
-                        <textcolor>white</textcolor>
+                        <textcolor>FFFFFFFF</textcolor>
                         <aligny>center</aligny>
                         <align>right</align>
                         <info>ListItem.Label</info>
@@ -121,7 +121,7 @@
                         <height>40</height>
                         <aligny>center</aligny>
                         <align>right</align>
-                        <textcolor>white</textcolor>
+                        <textcolor>FFFFFFFF</textcolor>
                         <info>ListItem.Label2</info>
                     </control>   
                 </focusedlayout>
@@ -177,8 +177,8 @@
                     <onright>102</onright>
                     <aspectratio>keep</aspectratio>
                     <font>font10</font>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <align>center</align>
                     <aligny>top</aligny>
                     <scroll>true</scroll>
@@ -195,8 +195,8 @@
                     <height>40</height>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <onup>10</onup>
                     <ondown>16</ondown>
                     <onleft>102</onleft>
@@ -212,8 +212,8 @@
                     <height>40</height>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <onup>11</onup>
                     <ondown>13</ondown>
                     <onleft>102</onleft>
@@ -229,8 +229,8 @@
                     <height>40</height>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <onup>16</onup>
                     <ondown>14</ondown>
                     <onleft>102</onleft>
@@ -246,8 +246,8 @@
                     <height>40</height>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <onup>13</onup>
                     <ondown>15</ondown>
                     <onleft>102</onleft>
@@ -263,8 +263,8 @@
                     <height>40</height>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <onup>14</onup>
                     <ondown>9</ondown>
                     <onleft>102</onleft>
@@ -313,8 +313,8 @@
                 <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                 <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                 <textoffsetx>7</textoffsetx>
-                <textcolor>gray</textcolor>
-                <focusedcolor>white</focusedcolor>                 
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>                 
                 <align>left</align>
             </control>
             <!-- ADV CHANNEL RULES -->
@@ -329,8 +329,8 @@
                 <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                 <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                 <textoffsetx>7</textoffsetx>
-                <textcolor>gray</textcolor>
-                <focusedcolor>white</focusedcolor>
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>110</onup>
                 <ondown>112</ondown>    
             </control>
@@ -344,8 +344,8 @@
                 <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                 <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                 <textoffsetx>7</textoffsetx>
-                <textcolor>gray</textcolor>
-                <focusedcolor>white</focusedcolor>
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
                 <onleft>113</onleft>
                 <onright>555</onright>
@@ -361,8 +361,8 @@
                 <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                 <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                 <textoffsetx>7</textoffsetx>
-                <textcolor>gray</textcolor>
-                <focusedcolor>white</focusedcolor>
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
                 <onleft>112</onleft>
                 <onright>113</onright>
@@ -378,8 +378,8 @@
                 <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                 <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                 <textoffsetx>7</textoffsetx>
-                <textcolor>gray</textcolor>
-                <focusedcolor>white</focusedcolor>
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
                 <onleft>555</onleft>
                 <onright>112</onright>
@@ -403,8 +403,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>                 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>                 
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -424,8 +424,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor> 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
                     <label>Show in Order:</label>
                     <textoffsetx>7</textoffsetx>
                     <align>left</align>
@@ -441,8 +441,8 @@
                     <height>35</height>               
                     <font>font13</font>
                     <label></label>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>
                     <aligny>center</aligny>
                     <align>left</align>
                 </control>
@@ -454,8 +454,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>        
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>        
                     <label>SmartPlaylist Editor</label>           
                     <align>center</align>
                     <onup>334</onup>
@@ -471,8 +471,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>   
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>   
                     <label>Browse Community Playlists</label>       
                     <align>center</align>
                     <onup>331</onup>
@@ -496,8 +496,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>                 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>                 
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -516,8 +516,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor> 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
                     <label>Show in Order:</label>
                     <textoffsetx>7</textoffsetx>
                     <align>left</align>
@@ -542,8 +542,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -568,8 +568,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -588,8 +588,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor> 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
                     <label>Show in Order:</label>
                     <textoffsetx>7</textoffsetx>
                     <align>left</align>
@@ -614,8 +614,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -640,8 +640,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -660,8 +660,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor> 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
                     <label>Show in Order:</label>
                     <textoffsetx>7</textoffsetx>
                     <align>left</align>
@@ -686,8 +686,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <onup>110</onup>
                     <onleft>112</onleft>
@@ -706,8 +706,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor> 
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
                     <label>Show in Order:</label>
                     <textoffsetx>7</textoffsetx>
                     <align>left</align>
@@ -732,8 +732,8 @@
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>               
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
                     <align>left</align>
                     <textoffsetx>7</textoffsetx>
                     <onup>110</onup>
@@ -749,8 +749,8 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -767,8 +767,8 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -784,7 +784,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
+                    <textcolor>C0C0C0C0</textcolor>
                     <aligny>center</aligny>                
                 </control>
             </control>
@@ -800,8 +800,8 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -818,8 +818,8 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -836,8 +836,8 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -854,8 +854,8 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -872,8 +872,8 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
-                    <focusedcolor>white</focusedcolor>  
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>  
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -890,7 +890,7 @@
                     <top>330</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>gray</textcolor>
+                    <textcolor>C0C0C0C0</textcolor>
                     <aligny>center</aligny>                
                 </control>
             </control>
@@ -909,7 +909,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <aligny>center</aligny>
                     <align>right</align>
                 </control> 
@@ -918,7 +918,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Source:</label>
                     <aligny>center</aligny>                   
                 </control>                     
@@ -968,7 +968,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -982,7 +982,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Click to browse:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -991,7 +991,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1005,7 +1005,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Duration:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1014,7 +1014,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1028,7 +1028,7 @@
                     <top>240</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Title:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1037,7 +1037,7 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1051,7 +1051,7 @@
                     <top>285</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Description:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1060,7 +1060,7 @@
                     <top>330</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <aligny>center</aligny>                   
                 </control>
             </control>
@@ -1076,7 +1076,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <aligny>center</aligny>
                     <align>right</align>
                 </control> 
@@ -1085,7 +1085,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Youtube Type:</label>
                     <aligny>center</aligny>                   
                 </control>                     
@@ -1136,7 +1136,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1151,7 +1151,7 @@
                     <top>150</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <visible>[SubString(Window(10000).Property(Verified_Community),True)] + Control.IsVisible(233)</visible>  
                     <label>Browse Community List:</label>
                     <aligny>center</aligny>                      
@@ -1162,7 +1162,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1176,7 +1176,7 @@
                     <top>195</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Youtube ID:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1186,7 +1186,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1200,7 +1200,7 @@
                     <top>240</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Media Limit:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1210,7 +1210,7 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1224,7 +1224,7 @@
                     <top>285</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Sort Order:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1233,7 +1233,7 @@
                     <top>330</top>
                     <width>1140</width>
                     <height>90</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <wrapmultiline>true</wrapmultiline>
                     <aligny>center</aligny>                 
                 </control>
@@ -1251,7 +1251,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1266,7 +1266,7 @@
                     <top>105</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Browse Community List:</label>
                     <visible>[SubString(Window(10000).Property(Verified_Community),True)]</visible>  
                     <aligny>center</aligny>                      
@@ -1276,7 +1276,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1290,7 +1290,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Feed URL:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1300,7 +1300,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1314,7 +1314,7 @@
                     <top>195</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Media Limit:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1324,7 +1324,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1338,7 +1338,7 @@
                     <top>240</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Sort Order:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1347,7 +1347,7 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>90</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <wrapmultiline>true</wrapmultiline>
                     <aligny>center</aligny>             
                 </control>
@@ -1364,7 +1364,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1378,7 +1378,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Duration:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1387,7 +1387,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1401,7 +1401,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Source Path:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1410,7 +1410,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1424,7 +1424,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Title:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1433,7 +1433,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1447,7 +1447,7 @@
                     <top>240</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Description:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1464,7 +1464,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1478,7 +1478,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Duration:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1487,7 +1487,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1501,7 +1501,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Source Path:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1510,7 +1510,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1524,7 +1524,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Title:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1533,7 +1533,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1547,7 +1547,7 @@
                     <top>240</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Description:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1564,7 +1564,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1578,7 +1578,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Duration:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1587,7 +1587,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1601,7 +1601,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Source Path:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1610,7 +1610,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1624,7 +1624,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Title:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1633,7 +1633,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1647,7 +1647,7 @@
                     <top>240</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Description:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1665,7 +1665,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1679,7 +1679,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Plugin:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1689,7 +1689,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1703,7 +1703,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Click to Browse:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1713,7 +1713,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1726,7 +1726,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1740,7 +1740,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Exclude:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1750,7 +1750,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1764,7 +1764,7 @@
                     <top>240</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Media Limit:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1774,7 +1774,7 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1788,7 +1788,7 @@
                     <top>285</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Sort Order:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1797,7 +1797,7 @@
                     <top>330</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label></label>
                     <wrapmultiline>true</wrapmultiline>
                     <aligny>center</aligny>                   
@@ -1807,7 +1807,7 @@
                     <top>380</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <wrapmultiline>true</wrapmultiline>
                     <visible>Control.HasFocus(283)</visible>
                     <label>Separate Exclusions with [COLOR=FF0297eb][B],[/B][/COLOR] eg. Season 01[COLOR=FF0297eb][B],[/B][/COLOR]Season 02</label>
@@ -1827,7 +1827,7 @@
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1841,7 +1841,7 @@
                     <top>105</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Source:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1851,7 +1851,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1865,7 +1865,7 @@
                     <top>150</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Name:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1875,7 +1875,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1888,7 +1888,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1902,7 +1902,7 @@
                     <top>195</top>
                     <width>640</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Exclude:</label>
                     <aligny>center</aligny>                   
                 </control>
@@ -1912,7 +1912,7 @@
                     <top>240</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1926,7 +1926,7 @@
                     <top>240</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Media Limit:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1936,7 +1936,7 @@
                     <top>285</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
@@ -1950,7 +1950,7 @@
                     <top>285</top>
                     <width>500</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label>Sort Order:</label>
                     <aligny>center</aligny>                      
                 </control>
@@ -1959,7 +1959,7 @@
                     <top>330</top>
                     <width>700</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <label></label>
                     <wrapmultiline>true</wrapmultiline>
                     <aligny>center</aligny>    
@@ -1969,7 +1969,7 @@
                     <top>380</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>white</textcolor>
+                    <textcolor>FFFFFFFF</textcolor>
                     <wrapmultiline>true</wrapmultiline>
                     <visible>Control.HasFocus(293)</visible>
                     <label>Separate Exclusions with [COLOR=FF0297eb][B],[/B][/COLOR] eg. Season 01[COLOR=FF0297eb][B],[/B][/COLOR]Season 02</label>

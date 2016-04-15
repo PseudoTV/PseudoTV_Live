@@ -258,21 +258,21 @@
         <control type="button" id="6000">
             <description>Filter Button</description>     
             <posx>0</posx>
-            <posy>258</posy>   
-            <width>410</width>
-            <height>38</height>
+            <posy>259</posy>   
+            <width>412</width>
+            <height>40</height>
             <texturenofocus>NA.png</texturenofocus>
             <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
         </control>       
         <control type="grouplist">              
-            <posx>409</posx>
-            <posy>260</posy>
-            <itemgap>1</itemgap>
+            <posx>412</posx>
+            <posy>259</posy>
+            <itemgap>0</itemgap>
             <orientation>horizontal</orientation>
             <control type="button" id="6001">
                 <description>EPG Label</description>            
-                <width>375</width>
-                <height>38</height>
+                <width>377</width>
+                <height>40</height>
                 <label>EPG</label>
                 <font>font12</font>
                 <align>center</align>
@@ -284,8 +284,8 @@
             </control>               
             <control type="button" id="6002">
                 <description>DVR Label</description>              
-                <width>375</width>
-                <height>38</height>
+                <width>377</width>
+                <height>40</height>
                 <label>DVR</label>
                 <font>font12</font>
                 <align>center</align>
@@ -297,8 +297,8 @@
             </control>               
             <control type="button" id="6003">
                 <description>OnDemand Label</description>               
-                <width>375</width>
-                <height>38</height>
+                <width>376</width>
+                <height>40</height>
                 <label>OnDemand</label>
                 <font>font12</font>
                 <align>center</align>
@@ -310,8 +310,8 @@
             </control>               
             <control type="button" id="6004">
                 <description>Apps Label</description>        
-                <width>375</width>
-                <height>38</height>
+                <width>378</width>
+                <height>40</height>
                 <label>Apps</label>
                 <font>font12</font>
                 <align>center</align>
@@ -451,29 +451,29 @@
         </control> 
         <control type="image" id="5009">     
             <description>Optional Channel Focus Highlight</description>         
-            <posx>5</posx>       
+            <posx>0</posx>       
             <posy>-1000</posy>  
-            <width>405</width>
-            <height>75</height>
-            <texture>pstvlButtonFocusAlt.png</texture>
+            <width>408</width>
+            <height>72</height>
+            <texture>pstvlHighlightAlt3.png</texture>
         </control> 
         <control type="image" id="5010">     
             <description>Optional Channel Playing Highlight</description>         
-            <posx>5</posx>  
+            <posx>0</posx>  
             <posy>-1000</posy>  
-            <width>405</width>
-            <height>75</height>
+            <width>408</width>
+            <height>72</height>
             <texture>pstvlHighlightAlt2.png</texture>
         </control>
         <control type="grouplist">            
             <posx>0</posx>
-            <posy>345</posy>
-            <itemgap>10</itemgap>
+            <posy>339</posy>
+            <itemgap>0</itemgap>
             <orientation>vertical</orientation>
             <control type="label" id="311">
                 <description>Channel 1 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -484,7 +484,7 @@
             <control type="label" id="312">
                 <description>Channel 2 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -495,7 +495,7 @@
             <control type="label" id="313">
                 <description>Channel 3 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -506,7 +506,7 @@
             <control type="label" id="314">
                 <description>Channel 4 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -517,7 +517,7 @@
             <control type="label" id="315">
                 <description>Channel 5 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -528,7 +528,7 @@
             <control type="label" id="316">
                 <description>Channel 6 Number</description>
                 <width>75</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>right</align>
@@ -539,13 +539,13 @@
         </control>
         <control type="grouplist">            
             <posx>77</posx>
-            <posy>345</posy>
-            <itemgap>10</itemgap>
+            <posy>339</posy>
+            <itemgap>0</itemgap>
             <orientation>vertical</orientation>
             <control type="label">
                 <description>Channel 1 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -556,7 +556,7 @@
             <control type="label">
                 <description>Channel 2 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -567,7 +567,7 @@
             <control type="label">
                 <description>Channel 3 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -578,7 +578,7 @@
             <control type="label">
                 <description>Channel 4 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -589,7 +589,7 @@
             <control type="label">
                 <description>Channel 5 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -600,7 +600,7 @@
             <control type="label">
                 <description>Channel 6 Sep Label</description>      
                 <width>10</width>
-                <height>64</height>
+                <height>75</height>
                 <label>|</label> 
                 <align>center</align>
                 <aligny>center</aligny>
@@ -611,13 +611,14 @@
         </control>
         <control type="grouplist">            
             <posx>87</posx>
-            <posy>345</posy>
-            <itemgap>10</itemgap>
+            <posy>339</posy>
+            <width>278</width>
+            <itemgap>0</itemgap>
             <orientation>vertical</orientation>
             <control type="label" id="301">
                 <description>Channel 1 Name</description>
                 <width>278</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -627,18 +628,18 @@
                 <visible>StringCompare(Control.GetLabel(321),)</visible>
             </control>
             <control type="image" id="321">
-                <description>Channel 1 Icon</description>              
-                <width>270</width>
-                <height>64</height>
+                <description>Channel 1 Icon</description>                           
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
-                <aspectratio>keep</aspectratio>      
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio> 
                 <visible>!StringCompare(Control.GetLabel(321),)</visible>
             </control>
             <control type="label" id="302">
                 <description>Channel 2 Name</description>
                 <width>278</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -649,17 +650,17 @@
             </control>
             <control type="image" id="322">
                 <description>Channel 2 Icon</description>
-                <width>270</width>
-                <height>64</height>
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
+                <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
                 <visible>!StringCompare(Control.GetLabel(322),)</visible>
             </control>
             <control type="label" id="303">
                 <description>Channel 3 Name</description>
                 <width>278</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -670,17 +671,17 @@
             </control>
             <control type="image" id="323">
                 <description>Channel 3 Icon</description>
-                <width>270</width>
-                <height>64</height>
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
+                <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
                 <visible>!StringCompare(Control.GetLabel(323),)</visible>
             </control>
             <control type="label" id="304">
                 <description>Channel 4 Name</description>
                 <width>411</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -691,17 +692,17 @@
             </control>
             <control type="image" id="324">
                 <description>Channel 4 Icon</description>
-                <width>270</width>
-                <height>64</height>
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
+                <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
                 <visible>!StringCompare(Control.GetLabel(324),)</visible>
             </control>
             <control type="label" id="305">
                 <description>Channel 5 Name</description>
                 <width>278</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -712,17 +713,17 @@
             </control>
             <control type="image" id="325">
                 <description>Channel 5 Icon</description>
-                <width>270</width>
-                <height>64</height>
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
+                <aligny>center</aligny>
                 <aspectratio>keep</aspectratio> 
                 <visible>!StringCompare(Control.GetLabel(325),)</visible>
             </control>  
             <control type="label" id="306">
                 <description>Channel 6 Name</description>
                 <width>278</width>
-                <height>64</height>
+                <height>75</height>
                 <label></label>
                 <font>font14</font>
                 <align>left</align>
@@ -733,10 +734,10 @@
             </control>
             <control type="image" id="326">
                 <description>Channel 6 Icon</description>
-                <width>270</width>
-                <height>64</height>
+                <width>278</width>
+                <height>75</height>
                 <align>center</align>
-                <aligny>bottom</aligny>
+                <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>  
                 <visible>!StringCompare(Control.GetLabel(326),)</visible>
             </control>   

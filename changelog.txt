@@ -1,3 +1,4 @@
+[*] Send 'All' available EventGhost broadcasts added to settings under "Help".
 [*] New LiveTV reminder prompt with auto channel jump.
 [*] New Auto-Off function, prompt and actions.
 [*] Autostart dialog w/ cancel option.

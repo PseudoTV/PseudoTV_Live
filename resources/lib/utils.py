@@ -2075,3 +2075,18 @@ def patchSeekbar():
             log('utils: patchSeekbar, Patched dialogseekbar.xml')
     except Exception,e:
         log('utils: patchSeekbar, Failed! ' + str(e))
+   
+def egTrigger_Thread(message, sender):
+    log("egTrigger_Thread")
+    json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
+    sendJSON(json_query)
+    
+    
+def egTrigger(message, sender='PTVL'):
+    log("egTrigger")
+    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
+    egTriggerTimer.name = "egTriggerTimer"       
+    if egTriggerTimer.isAlive():
+        egTriggerTimer.cancel()
+        egTriggerTimer.join()
+    egTriggerTimer.start()       

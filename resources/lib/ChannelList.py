@@ -134,7 +134,6 @@ class ChannelList:
         if self.forceReset:
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
             REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
-            REAL_SETTINGS.setSetting('ResetLST', '') # Reset ResetLST
             REAL_SETTINGS.setSetting('ReminderLst', '') # Reset Reminders
             REAL_SETTINGS.setSetting('FavChanLst', '') # Reset FavChannels
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
@@ -330,13 +329,7 @@ class ChannelList:
             needsreset = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_changed') == 'True'
         except:
             needsreset = False
-             
-        # Force rebuild
-        if channel in self.myOverlay.ResetLST:
-            self.log('setupChannel ' + str(channel) + ', forcerebuild = True')
-            self.delResetLST(channel)
-            needsreset = True
-                
+                 
         # LiveTV Force Reset
         if chtype == 8 and REAL_SETTINGS.getSetting('ForceLiveChannelReset') == "true":
             needsreset = True
@@ -1985,7 +1978,6 @@ class ChannelList:
             else:   
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
         if not showList:
-            self.setResetLST(self.settingChannel)
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
@@ -2257,7 +2249,7 @@ class ChannelList:
                 root.clear()
             f.close()                   
             if showcount < INTERNETTV_MAXPARSE:
-                self.setResetLST(self.settingChannel)
+                self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTV Failed!" + str(e), xbmc.LOGERROR)
         return showList
@@ -2447,7 +2439,7 @@ class ChannelList:
                         if showcount >= limit:
                             break     
             if showcount < INTERNETTV_MAXPARSE:
-                self.setResetLST(self.settingChannel)
+                self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVPVR Failed!" + str(e), xbmc.LOGERROR) 
             pass
@@ -5105,24 +5097,8 @@ class ChannelList:
     
     def getStreamDetails(self, mediapath):
         self.log('getStreamDetails') 
-        
-        
-    def setResetLST(self, channel):
-        self.myOverlay.ResetLST.append(channel)
-        self.myOverlay.ResetLST = sorted_nicely(set(self.myOverlay.ResetLST))
-        REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))
-        self.log('setResetLST added channel ' + str(channel))
-        
-        
-    def delResetLST(self, channel=None):
-        if not channel:
-            channel = self.settingChannel
-        if channel in self.myOverlay.ResetLST:
-            self.myOverlay.ResetLST =  [x for x in self.myOverlay.ResetLST if x!=channel]
-            REAL_SETTINGS.setSetting('ResetLST', str(self.myOverlay.ResetLST))
-            self.log('delResetLST removed channel ' + str(channel))
-            
 
+        
     def setChannelChanged(self, channel=None):
         if not channel:
             channel = self.settingChannel
