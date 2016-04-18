@@ -3,7 +3,7 @@
 [*] New Auto-Off function, prompt and actions.
 [*] Autostart dialog w/ cancel option.
 [*] Added New Skin controls; Sleep Prompt, EPG Buttons and Optional Channel Highlights, PTVL GUI upgraded to v0.7.5.
-[*] Improving In-App Channel Manager (WIP) including Advanced Channel Rules.
+[*] Improving In-App Channel Manager including Advanced Channel Rules. New intuitive controls and selection drop downs.
 [*] Quickflip adjustments, Youtube EPG tweaks, Miscellaneous corrects.
 [*] USTVnow service moved back to plugin.video.ustvnow via user request. USTVnow metadata still available by selecting 'ustvnow' from xmltv list. 
 [*] Rewriting core code to allow for "Stopped" Playback [Experimental], can be enabled in "debugging".

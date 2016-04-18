@@ -101,6 +101,7 @@ class ChannelListThread(threading.Thread):
         
         while True:
             DebugNotify("Background Updating...")
+
             for i in range(self.myOverlay.maxChannels):
                 modified = True
                 
@@ -120,6 +121,11 @@ class ChannelListThread(threading.Thread):
                     chtype = self.myOverlay.getChtype(i + 1)
 
                     if self.myOverlay.isMaster:
+                        #Set last Channel
+                        SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
+                        if SUPchannel == 0:
+                            REAL_SETTINGS.setSetting('CurrentChannel', str(self.myOverlay.currentChannel))    
+                    
                         if chtype not in FORCE_MAKENEW and curtotal > 0:
                             # When appending, many of the channel variables aren't set, so copy them over.
                             # This needs to be done before setup since a rule may use one of the values.

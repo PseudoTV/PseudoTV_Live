@@ -811,7 +811,7 @@ def okDialog(str1, str2='', str3='', header=ADDON_NAME):
 def textViewer(text, header=ADDON_NAME):
     xbmcgui.Dialog().textviewer(header, text)
     
-def browse(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, default='', enableMultiple=False, heading=ADDON_NAME):
+def browse(type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', enableMultiple=False, heading=ADDON_NAME):
     return xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, default, enableMultiple)
     # Types:
     # - 0 : ShowAndGetDirectory

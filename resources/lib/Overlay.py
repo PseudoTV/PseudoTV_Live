@@ -3186,12 +3186,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.log("Problem joining channel thread", xbmc.LOGERROR)
 
         if self.isMaster:
-            try:#Set Startup Channel
-                SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
-                if SUPchannel == 0:
-                    REAL_SETTINGS.setSetting('CurrentChannel', str(self.currentChannel))    
-            except:
-                pass
+            #Set Startup Channel
+            SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
+            if SUPchannel == 0:
+                REAL_SETTINGS.setSetting('CurrentChannel', str(self.currentChannel))    
             ADDON_SETTINGS.setSetting('LastExitTime', str(int(curtime)))
 
         if self.timeStarted > 0 and self.isMaster:

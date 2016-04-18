@@ -539,7 +539,7 @@ class ChannelList:
         if chname and len(chname) > 0:
             return chname
 
-        if chtype <= 7 or chtype == 12:
+        if chtype in [0,1,2,3,4,5,6,7,12,16]:
             if not opt:
                 opt = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1')
             if chtype == 0:
@@ -568,7 +568,7 @@ class ChannelList:
                     return opt
                 else:
                     return opt + " Music"
-            elif chtype == 7:
+            elif chtype in [7,16]:
                 try:
                     if opt[-1] == '/' or opt[-1] == '\\':
                         return os.path.split(opt[:-1])[1]
