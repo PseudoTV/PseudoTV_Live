@@ -1,9 +1,14 @@
 # PseudoTV Live
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/logo.png)
 
 - Channel surfing for your Video, LiveTV, InternetTV and Plugin sources
 - Find support @ kodi forums http://forum.kodi.tv/showthread.php?tid=244889
 
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/fanart.jpg)
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/skins/Default/screenshot01.png)
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/skins/Default/screenshot02.png)
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/skins/Default/screenshot03.png)
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/skins/Default/screenshot04.png)
 
 
 ## What is it?
