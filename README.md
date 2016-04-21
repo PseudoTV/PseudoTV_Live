@@ -1,5 +1,5 @@
 # PseudoTV Live
-![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/logo.png)
+![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/icon.png)
 
 - Channel surfing for your Video, LiveTV, InternetTV and Plugin sources
 - Find support @ kodi forums http://forum.kodi.tv/showthread.php?tid=244889
