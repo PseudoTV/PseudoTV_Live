@@ -5,7 +5,6 @@
     <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.EPG_Opened,false,10000)</onunload>    
     <onunload>ActivateWindow(12005)</onunload>
-    <!-- <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload> -->
     <zorder>1</zorder>
     <coordinates>
         <system>1</system>
@@ -49,7 +48,7 @@
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
-                <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
+                <label>$INFO[Window(Home).Property(TrendingShows.1.Title)]</label>    
                 <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
                 <aligny>center</aligny>
             </control>
@@ -60,7 +59,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
+                <texture fallback="$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]">$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]</texture>
                 <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
             </control>
         </control>   

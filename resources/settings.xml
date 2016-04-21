@@ -26,6 +26,7 @@
     </category>
 <!--Tweaks-->
     <category label="30300">
+        <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
         <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
         <setting id="DirectInput" type="bool"   label="30379" default="true"/>
         <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
@@ -121,8 +122,8 @@
             <setting id="autoFindMusicGenres"                 type="bool"   label="30084" subsetting="false" visible="eq(-20,true)" enable="Library.HasContent(Music)" default="false"/>
             <setting id="autoFindMusicVideosLocal"            type="folder" label="30089" subsetting="false" visible="eq(-21,true)"           source="auto"                               default=""/>  
         <setting                                              type="lsep"   label="30110"                    visible="eq(-22,true)"/>
-            <setting id="autoFindCommunity_Youtube_Networks"  type="bool"   label="30115" subsetting="false" visible="eq(-23,true)" enable="False + System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>
-            <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="false" visible="eq(-24,true)" enable="False + System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>
+            <setting id="autoFindCommunity_PseudoNetworks"    type="bool"   label="30115" subsetting="false" visible="eq(-23,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>
+            <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="false" visible="eq(-24,true)" enable="System.HasAddon(plugin.video.youtube)"   default="false"/>
             <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="false" visible="eq(-25,true)" enable="False + System.HasNetwork + System.HasAddon(plugin.video.pseudo.companion)"                       default="false"/>
         <setting     id=""                                    type="bool"                                    visible="false"                                                                                                                         default="false" />    
         <setting                                              type="lsep"   label="30782"                    visible="eq(-27,true)"                                                                                                                  default="" /> 
@@ -211,7 +212,6 @@
         <setting id="Show_Readme" type="action"   label="32902" action="RunScript($CWD/utilities.py, -showReadme)"/>
         <setting id="Show_Readme" type="action"   label="32903" action="RunScript($CWD/utilities.py, -showChtype)"/>
         <setting id="UploadLog" type="action"   label="30989" action="RunScript($CWD/uploadLog.py)"/>
-        <setting id="EGIntro" type="action" label="31906" action="RunScript($CWD/utilities.py, -EGIntro)"/>
         <setting type="sep" visible="true" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
     </category>
@@ -228,8 +228,8 @@
         <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
         <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
         <setting label="30939" type="lsep"/>
-        <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
         <setting id="ForceLiveChannelReset" type="bool"   label="30944" default="false"/>
+        <setting id="EGIntro" type="action" label="31906" action="RunScript($CWD/utilities.py, -EGIntro)"/>
         <setting label="30990" type="lsep"/>
         <setting id="enable_Debug" type="bool"   label="30993" default="false"/>
         <setting id="Override_ok" type="bool"   label="30991" default="true"/>

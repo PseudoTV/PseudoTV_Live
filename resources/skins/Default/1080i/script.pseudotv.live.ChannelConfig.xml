@@ -277,9 +277,9 @@
                 </control>    
             </control>  
             <control type="image">
-                <left>980</left>
+                <left>981</left>
                 <top>55</top>
-                <width>250</width>
+                <width>245</width>
                 <height>100</height>
                 <aspectratio>keep</aspectratio>
                 <texture fallback="logo.png">$INFO[Container(102).ListItem.Property(chlogo)]</texture>
@@ -1090,7 +1090,10 @@
                     <width>1140</width>
                     <height>40</height>
                     <textcolor>C0C0C0C0</textcolor>
-                    <aligny>center</aligny>                
+                    <aligny>center</aligny>     
+                    <scroll>true</scroll>
+                    <scrollspeed>40</scrollspeed>
+                    <wrapmultiline>true</wrapmultiline>           
                 </control>
             </control>
             <!-- Controls for type RSS -->
@@ -1155,107 +1158,50 @@
                 </control>
             </control>
             
-            
-            
-            
-            <!-- Controls for type Music -->
+            <!-- Controls for type Music Genre -->
             <control type="group" id="132">
                 <left>345</left>
                 <top>295</top>
                 <width>1140</width>
-                <height>495</height>
+                <height>495</height>            
                 <control type="button" id="250">
                     <left>40</left>
                     <top>105</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <align>right</align>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor>               
+                    <align>left</align>
                     <onup>110</onup>
-                    <ondown>251</ondown>
-                    
-                </control>
-                <control type="label">
-                    <left>47</left>
-                    <top>105</top>
-                    <width>640</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <label>Duration:</label>
-                    <aligny>center</aligny>                   
-                </control>
-                <control type="button" id="251">
+                    <onleft>112</onleft>
+                    <onright>113</onright>
+                    <ondown>251</ondown>  
+                    <label>Genre:</label>
+                    <label2>Click to Browse</label2>                     
+                </control>                      
+                <control type="radiobutton" id="251">
                     <left>40</left>
                     <top>150</top>
                     <width>1140</width>
                     <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
+                    <radiowidth>35</radiowidth>
+                    <radioheight>35</radioheight>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <align>right</align>
+                    <textcolor>C0C0C0C0</textcolor>
+                    <focusedcolor>FFFFFFFF</focusedcolor> 
+                    <label>Show in Order:</label>
+                    <textoffsetx>7</textoffsetx>
+                    <align>left</align>
                     <onup>250</onup>
-                    <ondown>252</ondown>
-                    
-                </control>       
-                <control type="label">
-                    <left>47</left>
-                    <top>150</top>
-                    <width>640</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <label>Source Path:</label>
-                    <aligny>center</aligny>                   
-                </control>
-                <control type="button" id="252">
-                    <left>40</left>
-                    <top>195</top>
-                    <width>1140</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
-                    <textoffsetx>7</textoffsetx>
-                    <align>right</align>
-                    <onup>251</onup>
-                    <ondown>253</ondown>
-                    
-                </control>
-                <control type="label">
-                    <left>47</left>
-                    <top>195</top>
-                    <width>640</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <label>Title:</label>
-                    <aligny>center</aligny>                   
-                </control>
-                <control type="button" id="253">
-                    <left>40</left>
-                    <top>240</top>
-                    <width>1140</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
-                    <textoffsetx>7</textoffsetx>
-                    <align>right</align>
-                    <onup>252</onup>
-                    <ondown>114</ondown>
-                    
-                </control>
-                <control type="label">
-                    <left>47</left>
-                    <top>240</top>
-                    <width>640</width>
-                    <height>40</height>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <label>Description:</label>
-                    <aligny>center</aligny>                   
-                </control>
+                    <onleft>112</onleft>
+                    <onright>113</onright>
+                    <ondown>114</ondown>              
+                </control> 
             </control>
             
             <!-- Controls for type Music Videos -->

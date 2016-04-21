@@ -46,6 +46,7 @@ class ChannelListThread(threading.Thread):
         self.chanlist.exitThread = False
         self.chanlist.readConfig()
         self.chanlist.sleepTime = 0.1
+        UPdialog = False
         
         if self.myOverlay == None:
             self.log("Overlay not defined. Exiting.")
@@ -98,10 +99,10 @@ class ChannelListThread(threading.Thread):
         self.chanlist.sleepTime = 0.3
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
         self.myOverlay.postBackgroundLoading()
-        
+            
         while True:
             DebugNotify("Background Updating...")
-
+            
             for i in range(self.myOverlay.maxChannels):
                 modified = True
                 
@@ -121,11 +122,6 @@ class ChannelListThread(threading.Thread):
                     chtype = self.myOverlay.getChtype(i + 1)
 
                     if self.myOverlay.isMaster:
-                        #Set last Channel
-                        SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
-                        if SUPchannel == 0:
-                            REAL_SETTINGS.setSetting('CurrentChannel', str(self.myOverlay.currentChannel))    
-                    
                         if chtype not in FORCE_MAKENEW and curtotal > 0:
                             # When appending, many of the channel variables aren't set, so copy them over.
                             # This needs to be done before setup since a rule may use one of the values.
@@ -169,12 +165,15 @@ class ChannelListThread(threading.Thread):
                             self.log("Unknown Channel Loading Exception", xbmc.LOGERROR)
                             self.log(traceback.format_exc(), xbmc.LOGERROR)
                             return
-
                     self.myOverlay.channels[i] = self.chanlist.channels[i]
-
+                    
                     if self.myOverlay.isMaster:
+                        #Set last Channel
+                        SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
+                        if SUPchannel == 0:
+                            REAL_SETTINGS.setSetting('CurrentChannel', str(self.myOverlay.currentChannel))
                         ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(self.myOverlay.channels[i].totalTimePlayed))
-
+                            
                     if self.myOverlay.channels[i].getTotalDuration() > curtotal and self.myOverlay.isMaster:
                         modified = True
 

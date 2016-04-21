@@ -36,7 +36,7 @@
             <shadowcolor>black</shadowcolor>
         </control>
         <control type="grouplist">
-            <left>425</left>
+            <left>415</left>
             <top>280</top>   
             <width>1280</width>
             <height>845</height>
@@ -90,47 +90,35 @@
                 <aspectratio>keep</aspectratio>
             </control>
         </control>
-        <control type="group">
+        <control type="image">
+            <description>Skin Name image</description>
             <left>320</left>
-            <bottom>70</bottom>
+            <top>940</top>
             <width>1280</width>
-            <height>75</height>
-            <control type="image">
-                <description>Skin Name image</description>
-                <width>1280</width>
-                <height>75</height>
-                <font>font30</font>
-                <align>center</align>
-                <aligny>center</aligny>
-                <colordiffuse>FF0297eb</colordiffuse>
-                <texture>config/settings_dialogheader.png</texture>
-            </control> 
-            <control type="grouplist">
-                <left>320</left> 
-                <bottom>15</bottom>
-                <width>1280</width>
-                <height>40</height>      
-                <itemgap>40</itemgap>
-                <orientation>horizontal</orientation>
-                <control type="label">
-                    <description>Skin Name</description>    
-                    <width min="1" max="377">auto</width>
-                    <height>40</height>
-                    <font>font14</font>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <label>$INFO[Window(10000).Property(PTVL.SKINNAME)]</label>
-                </control>  
-                <control type="label">
-                    <description>Skin Author</description>
-                    <width min="1" max="377">auto</width>
-                    <height>40</height>
-                    <font>font10</font>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <label>$INFO[Window(10000).Property(PTVL.SKINAUTHOR)]</label>
-                </control> 
-            </control> 
+            <height>80</height>
+            <texture>config/settings_dialogheader.png</texture>
         </control> 
+        <control type="label">
+            <description>Skin Name</description> 
+            <left>415</left>
+            <top>955</top>      
+            <width>1024</width>
+            <height>25</height>
+            <font>font13_title</font>
+            <align>center</align>
+            <aligny>center</aligny>
+            <label>[COLOR=FFFFFFFF]$INFO[Window(10000).Property(PTVL.SKINNAME)][/COLOR]</label>
+        </control>  
+        <control type="label">
+            <description>Skin Details</description> 
+            <left>415</left>
+            <top>990</top>      
+            <width>1024</width>
+            <height>25</height>
+            <font>font10</font>
+            <align>center</align>
+            <aligny>center</aligny>
+            <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(PTVL.SKINAUTHOR)] $INFO[Window(10000).Property(PTVL.SKINVERSION)] [/COLOR]</label>
+        </control>  
     </controls>
 </window>

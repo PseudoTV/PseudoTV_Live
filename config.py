@@ -124,12 +124,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.deleteChannel(self.listcontrol.getSelectedPosition() + 1)
             else:
                 self.clearLabel2([self.getFocusId()])
-            
-        # Change Channel Number 
-        elif action in ACTION_SHOW_INFO:
-            curchan = self.listcontrol.getSelectedPosition() + 1
-            self.changeChanNum(curchan)
-
+                
             
     def saveSettings(self):
         self.log("saveSettings channel " + str(self.channel))
@@ -220,11 +215,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             ADDON_SETTINGS.setSetting(setting3, self.getControl(241).getLabel2())
             ADDON_SETTINGS.setSetting(setting4, self.getControl(242).getLabel2())
 
-        elif chantype == 12: #Music
-            ADDON_SETTINGS.setSetting(setting1, self.getControl(250).getLabel())
-            ADDON_SETTINGS.setSetting(setting2, self.getControl(251).getLabel())
-            ADDON_SETTINGS.setSetting(setting3, self.getControl(252).getLabel())
-            ADDON_SETTINGS.setSetting(setting4, self.getControl(253).getLabel())
+        elif chantype == 12: #Music Genre
+            ADDON_SETTINGS.setSetting(setting1, self.getControl(250).getLabel2())
+            if self.getControl(251).isSelected():
+                ADDON_SETTINGS.setSetting(setting2, str(MODE_ORDERAIRDATE))
+            else:
+                ADDON_SETTINGS.setSetting(setting2, "0")
             
         elif chantype == 13: #Music Videos
             ADDON_SETTINGS.setSetting(setting1, self.getControl(260).getLabel())
@@ -435,7 +431,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 331:      # Playlist-type Editor button
             smartplaylist = "special://profile/playlists/video/" + os.path.split(self.getControl(333).getLabel())[1]
             if len(self.getControl(333).getLabel()) > 0:
-                xbmc.executebuiltin( "ActivateWindow(10136,%s,%s)" % ((smartplaylist),'video'))
+                if getXBMCVersion() > 15:
+                    xbmc.executebuiltin( "ActivateWindow(10136,%s,%s)" % ((smartplaylist),'video'))
+                else:
+                    infoDialog("Kodi Jarvis Required")
             else:
                 infoDialog("Select SmartPlaylist First")
                 
@@ -673,6 +672,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 242:    # RSS SortOrder, select 
             self.setSort(242)  
 
+        #Music
+        elif controlId == 250:      # Browse plugin list
+            select = selectDialog(self.musicGenreList, 'Select Music Genre')
+            if select != -1:
+                self.getControl(250).setLabel('Genre:', label2=self.musicGenreList[select])
+                self.setFocusId(251)
+            
         #Plugin
         elif controlId == 280:      # Browse plugin list
             select = selectDialog(self.pluginNameList, 'Select Plugin')
@@ -1043,11 +1049,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 xbmc.executebuiltin('SendClick(240)')
             
         elif chantype == 12:
-            self.getControl(250).setLabel(chansetting1)
-            self.getControl(251).setLabel(chansetting2)
-            self.getControl(252).setLabel(chansetting3)
-            self.getControl(253).setLabel(chansetting4)
-            
+            self.setFocusId(250)
+            mugenname = self.findItemInList(self.musicGenreList, chansetting1)
+            if len(chansetting1) != 0 and len(mugenname) != 0:
+                self.getControl(250).setLabel('Genre:', label2=mugenname)
+                self.getControl(250).setSelected(chansetting2 == str(MODE_ORDERAIRDATE))
+            else:
+                self.getControl(250).setLabel('Genre:', label2='Click to Browse')
+                xbmc.executebuiltin('SendClick(250)')
+                
         elif chantype == 13:
             self.getControl(260).setLabel(chansetting1)
             self.getControl(261).setLabel(chansetting2)
@@ -1064,9 +1074,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.setFocusId(280)
             if len(chansetting1) != 0:
                 # Find and fill Plugin name and path
-                try:
-                    PlugPath = (chansetting1.replace('plugin://','')).split('/')[0]
-                    PlugName = self.pluginNameList[self.findItemLens(self.pluginPathList, PlugPath)]
+                try: 
+                    PlugName = self.pluginNameList[self.findItemLens(self.pluginPathList, chansetting1.split('/')[2])]
                 except:
                     PlugName = 'Click to Browse'
                 self.getControl(280).setLabel('Plugin:', label2=PlugName)
@@ -1213,7 +1222,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif chantype == 11:
             return "RSS"
         elif chantype == 12:
-            return "Music (Coming Soon)"
+            return "Music"
         elif chantype == 13:
             return "Music Videos (Coming Soon)"
         elif chantype == 14:
@@ -1257,30 +1266,32 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
         self.SortOrderList = ['Default','Random','Reverse']
         self.ExternalPlaylistSources = ['Local File','URL']
-        self.SourceList = ['PVR','HDhomerun','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
+        self.SourceList = ['PVR','HDhomerun','Community List','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
         if isSFAV() == True:
-            self.chnlst.pluginPathList = ['plugin.program.super.favourites'] + self.chnlst.pluginPathList
-            self.chnlst.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]'] + self.chnlst.pluginNameList
+            self.pluginPathList = ['plugin.program.super.favourites']
+            self.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]']
+            self.pluginIconList = ['']
         
         if isPlayOn() == True:
-            self.chnlst.pluginPathList = ['plugin.video.playonbrowser'] + self.chnlst.pluginPathList
-            self.chnlst.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.chnlst.pluginNameList
+            self.pluginPathList = ['plugin.video.playonbrowser'] + self.pluginPathList
+            self.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.pluginNameList
+            self.pluginIconList = [''] + self.pluginIconList
                 
         if isUSTVnow() == True:
-            self.chnlst.pluginPathList = ['plugin.video.ustvnow/?mode=live'] + self.chnlst.pluginPathList
-            self.chnlst.pluginNameList = ['[COLOR=blue][B]USTVnow[/B][/COLOR]'] + self.chnlst.pluginNameList
+            self.pluginPathList = ['plugin.video.ustvnow/?mode=live'] + self.pluginPathList
+            self.pluginNameList = ['[COLOR=blue][B]USTVnow[/B][/COLOR]'] + self.pluginNameList
+            self.pluginIconList = [''] + self.pluginIconList
         
-        # Removed LiveTV/InternetTV and Plugin Community list for Kodi repo compliance.
-        # if isCom() == True:
-            # self.pluginPathList = [''] + self.chnlst.pluginPathList
-            # self.pluginNameList = ['[COLOR=blue][B]Community List[/B][/COLOR]'] + self.chnlst.pluginNameList
-            # self.SourceList = self.SourceList + ['Community List']
-        # else:
-        self.pluginPathList = self.chnlst.pluginPathList
-        self.pluginNameList = self.chnlst.pluginNameList
+        if isPlugin('plugin.video.meta') == True:
+            self.SourceList.append('Meta')
+            
+        self.SourceList = sorted_nicely(self.SourceList)
+        self.pluginNameList = self.chnlst.pluginList[0]
+        self.pluginPathList = self.chnlst.pluginList[1]
+        self.pluginIconList = self.chnlst.pluginList[2]
             
         for i in range(len(self.chnlst.showList)):
             self.showList.append(self.chnlst.showList[i][0])
@@ -1556,6 +1567,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     if len(path) > 0:
                         return name, path
 
+            if source == 'Meta':
+                retval = inputDialog('Enter Live network name','')
+                if retval and len(retval) > 0:
+                    return retval, 'plugin://plugin.video.meta/live/'+retval
+                     
             elif source == 'HDhomerun':
                 self.log("HDhomerun")
                 show_busy_dialog()
@@ -1917,6 +1933,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             
     def updateListing(self, channel = -1):
         self.log("updateListing")
+        show_busy_dialog()
         start = 0
         end = CHANNEL_LIMIT
 
@@ -1925,7 +1942,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             end = channel
 
         for i in range(start, end):
-            show_busy_dialog()
             theitem = self.listcontrol.getListItem(i)
             chantype = 9999
             chansetting1 = ''
@@ -1957,7 +1973,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             except:
                 theitem.setProperty('chrules','')
             theitem.setProperty('isfav',self.chkChanFavorite(i + 1))
-            hide_busy_dialog()
+        hide_busy_dialog()
         self.log("updateListing return")
    
 __cwd__ = REAL_SETTINGS.getAddonInfo('path')

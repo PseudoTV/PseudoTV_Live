@@ -460,7 +460,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             # if the channel is paused, then only 1 button needed
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
                 self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].getCurrentTitle() + " (paused)", focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
-            
+            elif chtype == 12:
+                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))   
             # if hideShortItems and chtype >=10 stack videos shorter than BYPASS_EPG_SECONDS. 
             # if the channel is stacked, then only 1 button needed
             # elif self.MyOverlayWindow.hideShortItems and (chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS and chname not in BYPASS_EPG_STACK) or chname in FORCE_EPG_STACK: #Under 15mins "Stacked"
@@ -734,7 +735,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             elif action in ACTION_CONTEXT_MENU:
                 if not self.showingContext:
                     self.showContextMenu()
-
         except:
             self.log("Unknown EPG exception", xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)

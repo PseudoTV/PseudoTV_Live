@@ -256,6 +256,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.showingBrowse = False
         self.OnInput = False
         self.DisableOverlay = False
+        self.currentChannel = 1
         self.infoOffset = 0
         self.invalidatedChannelCount = 0  
         self.sleepTimeValue = 0
@@ -443,7 +444,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 REAL_SETTINGS.setSetting("Autotune","true")
                 REAL_SETTINGS.setSetting("Warning1","true")
                 REAL_SETTINGS.setSetting('AT_LIMIT', "0")
-                REAL_SETTINGS.setSetting('MEDIA_LIMIT', "0")
                 REAL_SETTINGS.setSetting("autoFindLivePVR","true")
                 REAL_SETTINGS.setSetting("autoFindNetworks","true")
                 REAL_SETTINGS.setSetting("autoFindMovieGenres","true")
@@ -451,6 +451,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 
                 if isUSTVnow() == True:
                     REAL_SETTINGS.setSetting("autoFindUSTVNOW","true")
+                    
+                if isCompanionInstalled() == True:
+                    REAL_SETTINGS.setSetting("autoFindCommunity_PseudoNetworks","true")
                 
                 #TEMP isCom pass
                 setProperty("Verified_Community", 'true')
@@ -606,12 +609,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         
     # handle fatal errors: log it, show the dialog, and exit
-    def Error(self, line1, line2 = ''):
+    def Error(self, line1= '', line2= '', line3= ''):
         self.log('FATAL ERROR: ' + line1 + " " + line2, xbmc.LOGFATAL)
-        okDialog(line1, line2, header = 'PseudoTV Live - Error')
+        Error(line1, line2, line3)
         self.end()
 
-
+    
     def backupFiles(self, updatedlg=False):
         self.log('backupFiles')
 
@@ -1325,10 +1328,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         else:
             position = self.getPlaylistPOS(chtype, self.currentChannel)
             mediapath = (self.channels[self.currentChannel - 1].getItemFilename(position))
-        
-        chname = self.getChname(self.currentChannel)
+ 
         if position >= 0:
-            self.SetMediaInfo(chtype, chname, self.currentChannel, mediapath, position)
+            self.SetMediaInfo(chtype, self.getChname(self.currentChannel), self.currentChannel, mediapath, position)
         
         
     def SetMediaInfo(self, chtype, chname, chnum, mediapath, position, tmpstr=None):
@@ -1838,7 +1840,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.showInfo(self.InfTimer)
                 if self.infoOffset < 0:
                     self.infoOffset = 0
-                    self.setShowInfo()
+                    self.clearProp('OVERLAY')
                     self.MenuControl('Menu',self.InfTimer)
                 elif not self.showingMenu:
                     self.showInfo(self.InfTimer)
@@ -2267,22 +2269,23 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
                 self.lastPlayingChannel = self.currentChannel
             except Exception,e:
-                if self.DisablePlayback == True :
-                    self.openEPG()
+                self.notPlayingCount += 1
+                if self.DisablePlayback == True:
+                    if self.notPlayingCount == 3:
+                        self.openEPG()
                 else:
-                    self.notPlayingCount += 1
                     if self.notPlayingCount > int(round((playActionTime/8)*6)):
                         OptNotify("notPlayingCount = " + str(self.notPlayingCount) + "/" + str(playActionTime))
                         
-                    # 3peat lastActionTrigger known vaild channel
+                    # 3peat lastActionTrigger set known vaild channel
                     if self.FailedPlayingCount == 3:     
                         self.CloseDialog()
                         self.startPlayerTimer(self.ActionTimeInt)
                         self.lastActionTrigger('LastValid')
                         return
                         
-                    # retry failed channel at halfway mark
-                    if self.notPlayingCount == playActionTime-1:
+                    # retry failed channel near the end
+                    if self.notPlayingCount == playActionTime - 1:
                         self.CloseDialog()
                         self.startPlayerTimer(self.ActionTimeInt)
                         self.lastActionTrigger('Current')
@@ -3273,16 +3276,23 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         xbmc.sleep(10)
         # open new window
         if window.upper() == 'EPG':
-            self.myEPG.doModal()
+            xbmc.sleep(10)
+            self.myEPG.show()
         elif window.upper() == 'DVR':
+            xbmc.sleep(10)
+            self.myDVR.show()
+            xbmc.sleep(10)
             Comingsoon()
-            self.myDVR.doModal()
         elif window.upper() == 'ONDEMAND':
+            xbmc.sleep(10)
+            self.myOndemand.show()
+            xbmc.sleep(10)
             Comingsoon()
-            self.myOndemand.doModal()
         elif window.upper() == 'APPS':
+            xbmc.sleep(10)
+            self.myApps.show()
+            xbmc.sleep(10)
             Comingsoon()
-            self.myApps.doModal()
 
           
     def getChtype(self, channel):
@@ -3525,7 +3535,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log("openEPG")
         if getProperty("PTVL.EPG_Opened") != "true":
             # Pause Background channel building while EPG is opened
-            if self.DisablePlayback == False and self.channelThread.isAlive():
+            if self.channelThread.isAlive() and isLowPower() == True and self.DisablePlayback == False:
                 self.channelThread.pause()
 
             # Auto-off reset after EPG activity.
@@ -3538,7 +3548,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.windowSwap('EPG')
 
             # Resume Background channel building
-            if self.DisablePlayback == False and self.channelThread.isAlive():
+            if self.channelThread.isAlive() and isLowPower() == True and self.DisablePlayback == False:
                 self.channelThread.unpause()
 
             if self.newChannel != 0:

@@ -979,29 +979,48 @@
                 <align>center</align>
                 <aligny>center</aligny>
             </control>
-            <control type="image">
-                <description>Loading Background Logo</description>
-                <posx>725</posx>
-                <posy>225</posy>
-                <width>480</width>
-                <height>270</height>
-                <aspectratio>keep</aspectratio>
-                <align>center</align>
-                <aligny>center</aligny>
-                <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
-                <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            </control>
-            <control type="label">
-                <description>Loading Background Text</description>
-                <width>1920</width>
+            <control type="grouplist" id="101">   
+                <posx>300</posx>
+                <posy>300</posy>
+                <width>1280</width>
                 <height>1080</height>
-                <font>font30</font>
-                <align>center</align>
-                <aligny>center</aligny>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
-            </control>  
+                <orientation>vertical</orientation>
+                <itemgap>40</itemgap>
+                <control type="image">
+                    <description>Loading Background Logo</description>
+                    <width>1280</width>
+                    <height>270</height>
+                    <aspectratio>keep</aspectratio>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
+                    <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+                </control>
+                <control type="label">
+                    <description>Loading Background Text</description>
+                    <width>1280</width>
+                    <height>40</height>
+                    <font>font30</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
+                </control> 
+                <control type="progress">
+                    <width>1280</width>
+                    <height>20</height>
+                    <texturebg>seek/progresscache_back.png</texturebg>
+                    <lefttexture border="0">seek/progress_left.png</lefttexture>
+                    <midtexture border="0">seek/progress_mid.png</midtexture>
+                    <righttexture border="0">seek/progress_right.png</righttexture>
+                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>$INFO[Window(10000).Property(loading.progress)]</info>
+                    <visible>False</visible>
+                </control>
+            </control>            
         </control> 
         <control type="group" id="7000"> 
             <posx>0</posx>

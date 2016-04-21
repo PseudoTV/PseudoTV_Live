@@ -130,7 +130,7 @@
                         <string id="30089">Find Music Videos using Local Directory</string>
                         <string id="30110">Community List:</string>
                             <string id="30112">Find Recommended RSS Channels</string>
-                            <string id="30115">Find Youtube Network Channels</string>
+                            <string id="30115">Find PseudoNetwork Channels</string>
                             <string id="30113">Find Recommended Youtube Channels</string>
                             <string id="30114">Find Recommended Youtube Playlists</string>
                             <string id="30817">Find Seasonal Youtube Playlists</string>
@@ -243,7 +243,7 @@
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
     <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
-    <string id="30994">Disable Video Playback on Startup [Experimental]</string>
+    <string id="30994">Disable Video Playback [Stop & Play functionality ]</string>
     <string id="30944">Force LiveTV reset on every startup</string>
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>

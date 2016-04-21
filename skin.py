@@ -77,6 +77,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
     def setSkin(self, skinPOS):
         self.clearProps() 
         self.local = False
+        self.outdated = False
         self.screenshotPOS = 1
         self.log("setSkin, Skin = " + self.skinNames[skinPOS])
         BaseURL = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Skins/master/'+self.skinNames[skinPOS]
@@ -98,17 +99,20 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             name = dom.getElementsByTagName('name')
             version = dom.getElementsByTagName('version')
             skinname = dom.getElementsByTagName('skinname') 
-            version = version[0].childNodes[0].nodeValue   
-            sknname = skinname[0].childNodes[0].nodeValue    
+            version = (version[0].childNodes[0].nodeValue).rstrip()     
+            sknname = (skinname[0].childNodes[0].nodeValue).rstrip()
             xml.close()
             
             if version == PTVL_SKINVER:
+                setProperty('PTVL.SKINOUTDATED','')
                 if self.selSkin.lower() == sknname.lower():
                     sknname = ' [ ' + sknname + ' ]'
             else:
-                sknname = sknname + ' [COLOR=red][OUTDATED][/COLOR]'
+                setProperty('PTVL.SKINOUTDATED','[OUTDATED]')
+                self.outdated = True
+
             setProperty('PTVL.SKINNAME',sknname)
-            setProperty('PTVL.SKINVERSION',version)
+            setProperty('PTVL.SKINVERSION','v.'+version)
             setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
             setProperty('PTVL.SKINSHOT',self.BasePath + '/screenshot0%s.png' %str(self.screenshotPOS))
             setProperty('PTVL.SKINSHOT_FALLBACK',self.BasePath + '/screenshot01.png')
@@ -185,7 +189,8 @@ class SkinManager(xbmcgui.WindowXMLDialog):
     def SelectAction(self):
         self.log("SelectAction")
         if self.skinNames[self.skinPOS].lower() != self.selSkin.lower():
-            if ['[COLOR=red][OUTDATED][/COLOR]'] in getProperty('PTVL.SKINNAME'):
+            if self.outdated == True:
+                infoDialog('Skin version outdated!') 
                 return
                 
             if self.local == True:
@@ -228,6 +233,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         clearProperty("PTVL.SKINVERSION")
         clearProperty("PTVL.SKINSHOT")
         clearProperty("PTVL.SKINSHOT_FALLBACK")
+        clearProperty('PTVL.SKINOUTDATED')
     
 
     def rotateImage(self, dir):  

@@ -746,8 +746,8 @@ def hide_busy_dialog():
     while xbmc.getCondVisibility('Window.IsActive(busydialog)'):
         xbmc.sleep(100)
         
-def Error(header, line1= '', line2= '', line3= ''):
-    setProperty('PTVL.ERROR_LOG', message)
+def Error(line1= '', line2= '', line3= '',header=ADDON_NAME):
+    setProperty('PTVL.ERROR_LOG', ' '.join([line1,line2,line3]))
     okDialog( line1, line2, line3, header)
     
 def showText(heading, text):
