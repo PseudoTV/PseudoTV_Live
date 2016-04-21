@@ -3277,7 +3277,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # open new window
         if window.upper() == 'EPG':
             xbmc.sleep(10)
-            self.myEPG.show()
+            self.myEPG.doModal()
         elif window.upper() == 'DVR':
             xbmc.sleep(10)
             self.myDVR.show()

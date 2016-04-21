@@ -9,6 +9,7 @@
 [*] Improving In-App Channel Manager including Advanced Channel Rules. New intuitive controls and selection drop downs.
 [*] Quickflip adjustments, Youtube EPG tweaks, Miscellaneous corrects.
 [*] USTVnow service moved back to plugin.video.ustvnow via user request. USTVnow metadata still available by selecting 'ustvnow' from xmltv list. 
+[*] [COLOR=blue][B]^ v.0.7.5 ^[/B][/COLOR]
 [*] Rewriting core code to allow for "Stopped Playback" [Experimental], can be enabled in "debugging".
 [*] User can now delete skins from the manager using the 'Del' key.
 [*] Improved listitems to include properites for 'Yatse' Kodi android remote.
