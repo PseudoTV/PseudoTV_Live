@@ -3,7 +3,7 @@
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/icon.png)
 
 - Channel surfing for your Video, LiveTV, InternetTV and Plugin sources. Cut the cord with ease, familair controls and functions of a standard settop box.
-- [Offical support forum](http://pseudotvlive.com/index.php/forum)
+- [Official support forum](http://pseudotvlive.com/index.php/forum)
 - [Kodi support forum](http://forum.kodi.tv/showthread.php?tid=244889)
 
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/fanart.jpg)
@@ -177,9 +177,8 @@ commercials.
 - (16). - UPNP generated channel (not for single source).
 
 ------------------
-Skinning Info
+[Skinning Info](https://github.com/PseudoTV/PseudoTV_Live/wiki/Developing-a-PseudoTV-Live-Skin)
 ------------------
-https://github.com/PseudoTV/PseudoTV_Live/wiki/Developing-a-PseudoTV-Live-Skin
 
 # Dynamic artwork types:
 - ['banner', 'fanart', 'folder', 'landscape', 'poster', 'character', 'clearart', 'logo', 'disc']
