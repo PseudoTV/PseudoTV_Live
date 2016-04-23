@@ -57,7 +57,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
                 <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
             </control>
         </control>   

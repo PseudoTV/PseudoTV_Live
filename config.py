@@ -484,11 +484,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             try:
                 select = mselectDialog(self.showList, 'Select one or multiple TV Shows')
                 if select != -1:
-                    self.setChname('|'.join(matchMselect(self.showList,select)))
+                    self.setChname((matchMselect(self.showList,select))[0])
                     self.getControl(190).setLabel('Shows:',label2='|'.join(matchMselect(self.showList,select)))
             except:
-                select = selectDialog(self.showList, 'Select one TV Shows')
+                select = selectDialog(self.showList, 'Select one TV Show')
                 if select != -1:
+                    self.setChname(self.showList[select])
                     self.getControl(190).setLabel('Show:',label2=self.showList[select])
             self.setFocusId(191)
                                 
@@ -984,9 +985,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 
         elif chantype == 6:
             self.setFocusId(190)
-            showname = self.findItemInList(self.showList, chansetting1)
-            if len(chansetting1) != 0 and len(showname) != 0:
-                self.getControl(190).setLabel('Show:', label2=showname)
+            # tvshow = chansetting1.split('|')
+            # for n in range(len(tvshows)):
+                # # reverse tvshow select to get len vaules to fill preselect
+                # # https://github.com/phil65/xbmc/commit/c1a63ad618e3abc701810dd38b85653ad516bfc1
+                # select = self.findItemLens(self.showList, tvshows[n])
+            if len(chansetting1) != 0 and len(chansetting1) != 0:
+                self.getControl(190).setLabel('Show:', label2=chansetting1)
                 self.getControl(191).setSelected(chansetting2 == str(MODE_ORDERAIRDATE))
             else:
                 self.getControl(190).setLabel('Show:', label2='Click to Browse')  
@@ -1950,6 +1955,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             chansetting4 = ''
             channame = ''
             newlabel = ''
+            rules = ''
 
             try:
                 chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
@@ -1968,11 +1974,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 theitem.setProperty('chname',channame)
             theitem.setProperty('chtype',str(chantype))
             theitem.setProperty('chnum',str(i + 1))
-            try:
-                theitem.setProperty('chrules','[B]Channel Rules:[/B]\n'+'\n'.join(self.fillRules(i + 1)))
-            except:
-                theitem.setProperty('chrules','')
             theitem.setProperty('isfav',self.chkChanFavorite(i + 1))
+            
+            # fill rule names
+            rules = self.fillRules(i + 1)              
+            if chantype in [0,1,3,5,6] and chansetting2 == str(MODE_ORDERAIRDATE):
+                rules.append("Play TV Shows In Order")
+            rules = '\n'.join(list(set(rules)))
+            theitem.setProperty('chrules','[B]Channel Rules:[/B]\n'+rules)
         hide_busy_dialog()
         self.log("updateListing return")
    

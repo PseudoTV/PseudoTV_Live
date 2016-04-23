@@ -124,7 +124,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture fallback="">$INFO[Window(Home).Property(NextAired.4.Art(fanart)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.4.Art(fanart)]</texture>
                     <visible>IsEmpty(Window(Home).Property(NextAired.4.Art(landscape))</visible>
                     <fadetime>2000</fadetime>
                 </control>
@@ -163,7 +163,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture fallback="">$INFO[Window(Home).Property(NextAired.3.Art(fanart)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.3.Art(fanart)]</texture>
                     <visible>IsEmpty(Window(Home).Property(NextAired.3.Art(landscape))</visible>
                     <fadetime>1500</fadetime>
                 </control>
@@ -202,7 +202,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture fallback="">$INFO[Window(Home).Property(NextAired.2.Art(fanart)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.2.Art(fanart)]</texture>
                     <visible>IsEmpty(Window(Home).Property(NextAired.2.Art(landscape))</visible>
                     <fadetime>1000</fadetime>
                 </control>
@@ -239,7 +239,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture fallback="">$INFO[Window(Home).Property(NextAired.1.Art(fanart)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.1.Art(fanart)]</texture>
                     <visible>IsEmpty(Window(Home).Property(NextAired.1.Art(landscape))</visible>
                     <fadetime>500</fadetime>
                 </control>
@@ -827,7 +827,7 @@
             <align>center</align>
             <aspectratio>keep</aspectratio>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            <texture fallback="">$INFO[Window(10000).Property(EPG.landscape)]</texture>
+            <texture background="true">$INFO[Window(10000).Property(EPG.landscape)]</texture>
         </control>        
         <control type="image">
             <description>Dynamic art2</description>
@@ -839,7 +839,7 @@
             <align>center</align>
             <aspectratio>keep</aspectratio>
             <visible>false</visible>
-            <texture fallback="">$INFO[Window(10000).Property(EPG.poster)]</texture>
+            <texture background="true">$INFO[Window(10000).Property(EPG.poster)]</texture>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
         </control>          
         <control type="image">

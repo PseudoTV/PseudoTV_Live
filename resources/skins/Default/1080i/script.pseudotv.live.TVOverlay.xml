@@ -156,7 +156,7 @@
                 <height>180</height>
                 <align>center</align>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.landscape)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>        
             <control type="image">
@@ -353,7 +353,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="">$INFO[Window(10000).Property(OVERLAY.poster)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.poster)]</texture>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
             </control>  
             <control type="image">
@@ -686,7 +686,7 @@
                         <height>180</height>
                         <align>center</align>
                         <aspectratio>keep</aspectratio>
-                        <texture fallback="">$INFO[Window(10000).Property(OVERLAY.NEXT.landscape)]</texture>
+                        <texture background="true">$INFO[Window(10000).Property(OVERLAY.NEXT.landscape)]</texture>
                         <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
                     </control>
                     <control type="fadelabel">
