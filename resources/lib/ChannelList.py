@@ -661,21 +661,22 @@ class ChannelList:
                 if isLowPower() == True:
                     raise Exception()
             except Exception,e:
-                limit = MEDIA_LIMIT
-
-        if chtype == 8:
-            limit = LIVETV_MAXPARSE #72hrs in seconds
+                limit = MEDIA_LIMIT  
+        elif chtype == 8:
+            limit = LIVETV_MAXPARSE
         elif chtype == 9:
-            limit = int(INTERNETTV_MAXPARSE / int(setting1))
-        elif MEDIA_LIMIT == 0:
-            if chtype in [15,16]:
-                limit = 500
-            elif chtype in [10,11]:
-                limit = 200
-            else:
-                limit = MAX_MEDIA_LIMIT
+            limit = int(INTERNETTV_MAXPARSE / INTERNETTV_DURATION)
         else:
             limit = MEDIA_LIMIT
+        
+        # set real max limits for 'unlimited' by chtype
+        if limit == 0:
+            if chtype in [15,16]:
+                limit = PLUGINUPNP_MAXPARSE
+            elif chtype in [10,11]:
+                limit = YOUTUBERSS_MAXPARSE
+            else:
+                limit = MAX_MEDIA_LIMIT
         self.log("makeChannelList, Using Parse-limit " + str(limit))
 
         # Directory
@@ -780,7 +781,7 @@ class ChannelList:
             elif self.getSmartPlaylistType(dom) == 'movies':
                 bctType = 'movies'
                 if REAL_SETTINGS.getSetting('Movietrailers') != 'true':
-                    self.incBCTs == False
+                    self.incBCTs = False
                 fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT)
             
             elif self.getSmartPlaylistType(dom) == 'episodes':
@@ -930,8 +931,7 @@ class ChannelList:
     def createNetworkPlaylist(self, network, setting2):
         sort = 'random'    
         try:
-            setting = int(setting2)
-            if setting & MODE_ORDERAIRDATE > 0:
+            if int(setting2) & MODE_ORDERAIRDATE > 0:
                 sort = 'episode'
         except Exception,e:
             pass
@@ -955,10 +955,9 @@ class ChannelList:
     def createShowPlaylist(self, show, setting2):
         show = show.split('|')
         chname = ' & '.join(show)
-        
+        sort = 'random'   
         try:
-            setting = int(setting2)
-            if setting & MODE_ORDERAIRDATE > 0:
+            if int(setting2) & MODE_ORDERAIRDATE > 0:
                 sort = 'episode'
         except Exception,e:
             pass
@@ -973,9 +972,11 @@ class ChannelList:
 
         self.writeXSPHeader(fle, 'episodes', self.getChannelName(6, self.settingChannel, chname))
         fle.write('    <rule field="tvshow" operator="is">\n')
+        
         for i in range(len(show)):
             fle.write('        <value>' + self.cleanString((show[i])) + '</value>\n')
         fle.write('    </rule>\n')
+        
         self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
         fle.close()
         return flename
@@ -2371,7 +2372,6 @@ class ChannelList:
                             playcount = 0
                         except Exception,e:
                             playcount = 1
-                            pass
 
                         plots = re.search('"plot" *: *"(.*?)"', f)            
                         descriptions = re.search('"description" *: *"(.*?)",', f)

@@ -63,9 +63,10 @@ def DeleteSettings2():
     
 def addBypass():
     try:
+        from resources.lib.ChannelList import ChannelList
         chnlst = ChannelList()
         chnlst.fillPluginList()
-        BYPASS_LST = matchMselect(chnlst.pluginPathList, mselectDialog(chnlst.pluginNameList, header='Disable Seeking for specified Plugins'))
+        BYPASS_LST = matchMselect(chnlst.pluginList[1], mselectDialog(chnlst.pluginList[0], header='Disable Seeking for specified Plugins'))
         REAL_SETTINGS.setSetting("BYPASS_LST",str(BYPASS_LST))
     except:
         Unavailable()

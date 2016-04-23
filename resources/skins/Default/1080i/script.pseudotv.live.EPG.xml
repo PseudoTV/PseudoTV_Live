@@ -134,7 +134,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture>$INFO[Window(Home).Property(NextAired.4.Art(landscape)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.4.Art(landscape)]</texture>
                     <fadetime>2000</fadetime>
                 </control>
             </control>
@@ -173,7 +173,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture>$INFO[Window(Home).Property(NextAired.3.Art(landscape)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.3.Art(landscape)]</texture>
                     <fadetime>1500</fadetime>
                 </control>
             </control>
@@ -212,7 +212,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture>$INFO[Window(Home).Property(NextAired.2.Art(landscape)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.2.Art(landscape)]</texture>
                     <fadetime>1000</fadetime>
                 </control>
             </control>
@@ -249,7 +249,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture>$INFO[Window(Home).Property(NextAired.1.Art(landscape)]</texture>
+                    <texture background="true">$INFO[Window(Home).Property(NextAired.1.Art(landscape)]</texture>
                     <fadetime>500</fadetime>
                 </control>
             </control> 
@@ -850,7 +850,7 @@
             <height>32</height>
             <aspectratio>keep</aspectratio>
             <visible>true</visible>
-            <texture>$INFO[Window(10000).Property(EPG.Managed)]</texture>
+            <texture background="true">$INFO[Window(10000).Property(EPG.Managed)]</texture>
         </control> 
         <control type="image">
             <description>isNew Art</description>         
@@ -860,7 +860,7 @@
             <height>50</height>
             <aspectratio>keep</aspectratio>
             <visible>true</visible>
-            <texture>$INFO[Window(10000).Property(EPG.isNew)]</texture>
+            <texture background="true">$INFO[Window(10000).Property(EPG.isNew)]</texture>
         </control>
         <control type="grouplist">
             <posx>430</posx>

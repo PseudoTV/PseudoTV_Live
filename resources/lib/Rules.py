@@ -1068,7 +1068,7 @@ class ForceResume(BaseRule):
 
 class ForceRandom(BaseRule):
     def __init__(self):
-        self.name = "Force Random Mode"
+        self.name = "Force Random Starting Position"
         self.optionLabels = []
         self.optionValues = []
         self.myId = 10
@@ -1471,7 +1471,7 @@ class HandlePOP(BaseRule):
         
 class HandleChannelLogo(BaseRule):
     def __init__(self):
-        self.name = "Channel Logo"
+        self.name = "Display Channel Logo"
         self.optionLabels = ['Display the Logo']
         self.optionValues = ['Yes']
         self.myId = 15

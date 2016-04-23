@@ -158,8 +158,9 @@ class Artdownloader:
                 
                 elif FileAccess.exists(kodifile):
                     self.log('FindArtwork, Using Kodi Cache')
-                    return kodifile   
-                
+                    return kodifile  
+                    
+            # local media
             if chtype <= 7 or chtype == 12:
                 self.log('FindArtwork, chtype <= 7 - Local Art')
                 smpath = mpath.rsplit('/',2)[0]
@@ -168,6 +169,7 @@ class Artdownloader:
                 artSeries_fallback = xbmc.translatePath(os.path.join(smpath, self.getFallback_Arttype(arttypeEXT)))
                 artSeason_fallback = xbmc.translatePath(os.path.join(mpath, self.getFallback_Arttype(arttypeEXT)))
 
+                # lookup artwork via local folder
                 if type == 'tvshow': 
                     if FileAccess.exists(artSeries):
                         return artSeries
@@ -177,12 +179,13 @@ class Artdownloader:
                         return artSeries_fallback
                     elif FileAccess.exists(artSeason_fallback):
                         return artSeason_fallback    
-                elif type == 'movie':
+                elif type in ['movie','music']:
                     if FileAccess.exists(artSeason):
                         return artSeason
                     elif FileAccess.exists(artSeason_fallback):
-                        return artSeason_fallback    
-            
+                        return artSeason_fallback
+                        
+                # query json for artwork
                 SetImage = self.JsonArt(type, chname, mpath, arttypeEXT)
                 if FileAccess.exists(SetImage):
                     return SetImage
@@ -190,11 +193,17 @@ class Artdownloader:
                     SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
                     if FileAccess.exists(SetImage):
                         return SetImage
+                        
+                # lookup tvdb/tmdb artwork & download missing artwork
                 SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
                 if FileAccess.exists(SetImage):
                     return SetImage
+                    
+            # online media
             else:
+                # no tvdb/tmdb id
                 if id == '0':
+                    # return youtube artwork via dbid
                     if (type == 'youtube' or mpath.startswith(self.chanlist.youtube_player)) and dbid != '0':
                         self.log('FindArtwork, YOUTUBE')
                         return "http://i.ytimg.com/vi/"+dbid+"/mqdefault.jpg"
@@ -204,13 +213,12 @@ class Artdownloader:
                     elif chtype in [8] and dbid != '0':
                         self.log('FindArtwork, decode dbid')
                         return decodeString(dbid)
-                else:
-                    SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
-                    if FileAccess.exists(SetImage):
-                        return SetImage
-                    elif dbid != '0':
-                        self.log('FindArtwork, decode dbid')
-                        return decodeString(dbid)
+                
+                # lookup tvdb/tmdb artwork & download missing artwork
+                SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
+                if FileAccess.exists(SetImage):
+                    return SetImage
+                    
             return 'NA.png'
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed" + str(e), xbmc.LOGERROR)

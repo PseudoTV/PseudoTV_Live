@@ -67,5 +67,5 @@ class STRMParser:
                     duration = 0
                     
             file.close()
-        return duration
         self.log('script.pseudotv-STRMParser: duration = ' + str(duration))
+        return duration

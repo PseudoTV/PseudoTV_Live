@@ -41,12 +41,12 @@ DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 PTVL_SKINVER = '0.7.5'
 
 def log(msg, level = xbmc.LOGDEBUG):
-    if DEBUG != True and level == xbmc.LOGDEBUG:
-        return
     if level == xbmc.LOGDEBUG:
         xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', uni(msg))
     else:
         xbmcgui.Window(10000).setProperty('PTVL.ERROR_LOG', uni(msg))
+    if DEBUG != True and level == xbmc.LOGDEBUG:
+        return
     xbmc.log(ADDON_ID + '-' + ADDON_VERSION + '-' + uni(msg), level)
 
 def utf(string, encoding = 'utf-8'):
@@ -233,8 +233,7 @@ ONNOW_REFRESH_LOW = 900 #secs
 SETTOP_REFRESH = 3600 #secs
 IDLE_TIMER = 180  #secs (3min)
 IDLE_DELAY = 30 #secs
-LIVETV_MAXPARSE = 259200 #secs (72hrs)
-INTERNETTV_MAXPARSE = 86400 #secs (24hrs)
+REMINDER_DELAY = 60 #secs
 
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
@@ -268,8 +267,17 @@ IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp',
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
 
+# Eventghost broadcasts
 EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']
+
+# Media Limits
+LIVETV_MAXPARSE = 259200 #secs (72hrs)
+INTERNETTV_MAXPARSE = 86400 #secs (24hrs)
+INTERNETTV_DURATION = 5400
+PLUGINUPNP_MAXPARSE = 250
+YOUTUBERSS_MAXPARSE = 200 # max return from youtube api per call
 MAX_MEDIA_LIMIT = 10000
+
 try:
     MEDIA_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('MEDIA_LIMIT'))]
 except:

@@ -34,7 +34,7 @@ class Main:
     def __init__(self):
         self.log("__init__")
         self.chnlst = ChannelList()
-        self.chnlst.fillPVR()
+        self.chnlst.fillPVR() 
         
         # InfoLabel Parameters  
         self.Label       = xbmc.getInfoLabel('ListItem.Label')
@@ -48,7 +48,7 @@ class Main:
         self.plotOutline = xbmc.getInfoLabel('ListItem.PlotOutline')
         self.isPlayable  = xbmc.getInfoLabel('ListItem.Property(IsPlayable)').lower() == 'true'
         self.isFolder    = xbmc.getCondVisibility('ListItem.IsFolder') == 1
-        
+ 
         if not self.plot:
             if self.plotOutline:
                 self.Description = self.plotOutline
@@ -65,9 +65,9 @@ class Main:
         self.Label = self.chnlst.cleanLabels(self.Label)
         self.Description  = self.chnlst.cleanLabels(self.Description)
         self.AddonName = self.chnlst.cleanLabels(self.AddonName)
-        self.log("%s, %s, %s, %s, %s, %s, %s, %s, %s"%(self.Label,self.Path,self.FileName,self.DBIDType,self.AddonName,self.AddonType,self.Description,str(self.isPlayable),str(self.isFolder)))
+        self.log("%s, %s, %s, %s, %s, %s, %s, %s, %s"%(self.Label,self.Path,self.FileName,self.DBIDType,self.AddonName,self.AddonType,self.Description,str(self.isPlayable),str(self.isFolder)))       
         self.ImportChannel()
-   
+          
    
     def ImportChannel(self):
         self.log("ImportChannel")
@@ -91,6 +91,7 @@ class Main:
 
         if len(self.itemlst) == 0:
             setProperty("PTVL.CM.LASTCHAN","0")
+            
         try:
             Lastchan = int(getProperty("PTVL.CM.LASTCHAN"))
             self.log("ImportChannel, Lastchan = " + str(Lastchan))
@@ -107,6 +108,7 @@ class Main:
                 if not (self.itemlst[select]).startswith('[COLOR=dimgrey]'):
                     available = True
                     
+                    # determine chtype
                     if self.AddonName == 'PseudoCompanion' and self.Label.startswith('Cinema Theme'):
                         self.chantype = 14
                     elif self.Path[-3:].lower() == 'xsp':
@@ -157,6 +159,7 @@ class Main:
         detail = uni(self.chnlst.requestList(url))
         if yesnoDialog('Add %d Channels?' % len(detail)):
             show_busy_dialog()
+            
             for f in detail:
                 files = re.search('"file" *: *"(.*?)",', f)
                 filetypes = re.search('"filetype" *: *"(.*?)",', f)
@@ -175,6 +178,7 @@ class Main:
                             self.channame = name
                             self.saveSettings()
                             self.fixChannel(self.channel)
+                            
                     elif filetype == 'file':
                         if self.chantype == 8:
                             self.setting1 = name
@@ -186,6 +190,7 @@ class Main:
                             self.fixChannel(self.channel)
             hide_busy_dialog()
             self.openManager()
+    
     
     # find next available channel when exporting bulk channels.
     def fixChannel(self, channel):
@@ -199,6 +204,7 @@ class Main:
         
         if self.chantype == 0:
             self.setting1 = xbmc.translatePath(self.Path)
+            self.setting2 = '4'
             self.channame = self.chnlst.getSmartPlaylistName(self.Path)
         
         elif self.chantype == 6:
@@ -302,7 +308,6 @@ class Main:
                 chansetting3 = ''
                 chansetting4 = ''
                 channame = ''
-                newlabel = ''
 
                 try:
                     chantype = int(ADDON_SETTINGS.getSetting("Channel_" + str(i + 1) + "_type"))
@@ -313,13 +318,15 @@ class Main:
                 except:
                     pass
 
-                name = self.chnlst.getChannelName(chantype, i+1, chansetting1, False)
-                newlabel = getChanPrefix(chantype, name)
-                if newlabel:
-                    newlabel = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ newlabel+'[/COLOR]'
+                if chantype != 9999:
+                    name = self.chnlst.getChannelName(chantype, i+1, chansetting1, False)
+                    channame = getChanPrefix(chantype, name)
+                    
+                if channame:
+                    channame = '[COLOR=dimgrey][B]'+ theitem +'[/B] - '+ channame+'[/COLOR]'
                 else:
-                    newlabel = '[COLOR=blue][B]'+theitem+'[/B][/COLOR]'
-                self.itemlst.append(newlabel)
+                    channame = '[COLOR=blue][B]'+theitem+'[/B][/COLOR]'
+                self.itemlst.append(channame)
             except:
                 pass
         self.log("updateListing return")
@@ -341,12 +348,15 @@ class Main:
         ADDON_SETTINGS.setSetting(setting1, self.setting1)
         ADDON_SETTINGS.setSetting(setting2, self.setting2)
         ADDON_SETTINGS.setSetting(setting3, self.setting3)
-        ADDON_SETTINGS.setSetting(setting4, self.setting4)
-        if chantype > 6:
+        ADDON_SETTINGS.setSetting(setting4, self.setting4)    
+        ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
+        # set chname rule
+        if chantype > 7:
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "1")
             ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_id", "1")
-            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)      
-            ADDON_SETTINGS.setSetting("Channel_" + chan + "_changed", "True")
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_1_opt_1", self.channame)    
+            
+        # set PseudoCinema rules
         if chantype == 14 and self.channame == 'PseudoCinema':
             ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "5")
             ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")

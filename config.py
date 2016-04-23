@@ -1266,7 +1266,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
         self.SortOrderList = ['Default','Random','Reverse']
         self.ExternalPlaylistSources = ['Local File','URL']
-        self.SourceList = ['PVR','HDhomerun','Community List','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
+        self.SourceList = ['PVR','HDhomerun','Community List (Coming Soon)','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
@@ -1286,7 +1286,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.pluginIconList = [''] + self.pluginIconList
         
         if isPlugin('plugin.video.meta') == True:
-            self.SourceList.append('Meta')
+            self.SourceList.append('Meta Plugin')
             
         self.SourceList = sorted_nicely(self.SourceList)
         self.pluginNameList = self.chnlst.pluginList[0]
@@ -1567,7 +1567,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     if len(path) > 0:
                         return name, path
 
-            if source == 'Meta':
+            if source == 'Meta Plugin':
                 retval = inputDialog('Enter Live network name','')
                 if retval and len(retval) > 0:
                     return retval, 'plugin://plugin.video.meta/live/'+retval

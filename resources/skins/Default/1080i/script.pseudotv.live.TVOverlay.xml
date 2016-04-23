@@ -167,7 +167,7 @@
                 <height>32</height>
                 <aspectratio>keep</aspectratio>
                 <visible>true</visible>
-                <texture>$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
             </control> 
             <control type="image">
                 <description>isNew Art</description>         
@@ -177,7 +177,7 @@
                 <height>50</height>
                 <aspectratio>keep</aspectratio>
                 <visible>true</visible>
-                <texture>$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
             </control>
             <control type="grouplist">
                 <posx>430</posx>
@@ -363,7 +363,7 @@
                 <width>32</width>
                 <height>32</height>
                 <aspectratio>keep</aspectratio>
-                <texture>$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
             </control>             
             <control type="image">
                 <description>Unaired "NEW" image</description>         
@@ -372,7 +372,7 @@
                 <width>50</width>
                 <height>50</height>
                 <aspectratio>keep</aspectratio>
-                <texture>$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
+                <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
             </control>
             <control type="grouplist">
                 <posx>430</posx>
@@ -575,7 +575,7 @@
                         <aspectratio>keep</aspectratio>
                         <align>left</align>
                         <aligny>bottom</aligny>
-                        <texture>$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
+                        <texture background="true">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
                     </control>
                     <control type="image">
                         <width>100</width>
@@ -600,7 +600,7 @@
                         <align>left</align>
                         <aligny>bottom</aligny>
                         <aspectratio>keep</aspectratio>
-                        <texture>$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
+                        <texture background="true">$INFO[Window(10000).Property(OVERLAY.Managed)]</texture>
                     </control> 
                 </control>
                 <control type="grouplist">
@@ -979,7 +979,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
             </control>
-            <control type="grouplist" id="101">   
+            <control type="grouplist">   
                 <posx>300</posx>
                 <posy>300</posy>
                 <width>1280</width>

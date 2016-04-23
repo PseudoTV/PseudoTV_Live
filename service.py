@@ -27,7 +27,7 @@ ADDON_PATH = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile')
 THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/' + 'icon.png')
-AUTOSTART_TIMER = [0,5,10,15,20,25,30][int(REAL_SETTINGS.getSetting('Auto_Start'))]
+AUTOSTART_TIMER = [0,5,10,15,20,25,30][int(REAL_SETTINGS.getSetting('AutoStart'))]
 
 def handle_wait(time_to_wait): #*Thanks enen92
     dlg = xbmcgui.DialogProgress()

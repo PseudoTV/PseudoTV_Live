@@ -522,9 +522,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         # start playing video
         if self.DisablePlayback == False:
+            self.channelThreadpause = True
             self.setChannel(self.fixChannel(self.currentChannel))
             setProperty("PTVL.VideoWindow","true")
         else:
+            self.channelThreadpause = False
             setProperty("PTVL.VideoWindow","false")
             
         self.actionSemaphore.release()
@@ -2049,6 +2051,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.IdleTimerCountdown(IDLE_DELAY)
         self.getControl(7000).setVisible(True)    
         self.setFocusId(7001)
+        self.playSFX('ACTION_ALERT')
 
         
     def sleepAction(self):
@@ -2071,6 +2074,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             xbmc.executebuiltin("CECStandby()") 
         elif self.sleepTimeMode == 6:
             self.DisablePlayback = True
+            self.channelThreadpause = False
             json_query = '{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}'
             self.channelList.sendJSON(json_query)  
         elif self.sleepTimeMode == 7:
@@ -2093,6 +2097,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.IdleTimerCountdown(IDLE_DELAY)
         self.getControl(7000).setVisible(True)  
         self.setFocusId(7001)
+        self.playSFX('ACTION_ALERT')
         
         
     def ReminderAction(self):
@@ -2513,7 +2518,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             if auto == True:
                 now = time.time()
                 reminder_time = round(((epochBeginDate - now) - REMINDER_COUNTDOWN) / 60)#In minutes
-                reminder_Threadtime = float((int(reminder_time)*60) - IDLE_DELAY)#In seconds
+                reminder_Threadtime = float((int(reminder_time)*60) - REMINDER_DELAY)#In seconds
                 if reminder_Threadtime > 0:
                     self.log('setReminder, setting =' + str(reminder_dict))
                     self.ReminderTimer = threading.Timer(reminder_Threadtime, self.showReminder, [reminder_dict])
@@ -2721,6 +2726,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             xbmc.playSFX(CONTEXT_SFX)
         elif action in [ACTION_PREVIOUS_MENU]:
             xbmc.playSFX(BACK_SFX)
+        elif action in ['ACTION_ALERT']:
+            xbmc.playSFX(ALERT_SFX)
             
      
     def setProp(self, title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, pType='OVERLAY'):
@@ -3327,6 +3334,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def postBackgroundLoading(self):
         self.log('postBackgroundLoading')
         setProperty("PTVL.BackgroundLoading","false")
+        if isLowPower() == False:
+            self.channelThreadpause = False
 
 
     def playStartOver(self):
@@ -3535,7 +3544,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log("openEPG")
         if getProperty("PTVL.EPG_Opened") != "true":
             # Pause Background channel building while EPG is opened
-            if self.channelThread.isAlive() and isLowPower() == True and self.DisablePlayback == False:
+            if self.channelThread.isAlive() and self.channelThreadpause == True:
                 self.channelThread.pause()
 
             # Auto-off reset after EPG activity.
@@ -3548,7 +3557,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.windowSwap('EPG')
 
             # Resume Background channel building
-            if self.channelThread.isAlive() and isLowPower() == True and self.DisablePlayback == False:
+            if self.channelThread.isAlive():
                 self.channelThread.unpause()
 
             if self.newChannel != 0:
