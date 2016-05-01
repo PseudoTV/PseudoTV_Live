@@ -1,10 +1,9 @@
 <window>
     <allowoverlay>no</allowoverlay>   
-    <!-- <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(9506)</onload> -->
-    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10004)</onload><!-- Activate random window, workaround for 9506 starting paused -->
-    <onunload>ActivateWindow(12005)</onunload>
     <onload>SetProperty(PTVL.DVR_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.DVR_Opened,false,10000)</onunload>
+    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
+    <onunload>ActivateWindow(12005)</onunload>
     <zorder>1</zorder>
     <coordinates>
         <system>1</system>

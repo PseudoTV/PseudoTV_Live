@@ -46,19 +46,18 @@ class APPS(xbmcgui.WindowXMLDialog):
         
     def onInit(self):
         self.log('onInit')
-        self.chanlist.PanelItems = self.getControl(500)
-        self.chanlist.fillPlugins()
-        self.setFocus(self.chanlist.PanelItems)
+        self.PanelPlugins = self.getControl(500)
+        self.PanelItems = self.getControl(501)
+        self.fillPlugins()
+        self.setFocus(self.PanelPlugins)
        
         
     def onClick(self, controlid):
         self.log('onClick ' + str(controlid))
         if controlid == 500:
-            pos = self.chanlist.PanelItems.getSelectedPosition()
-            playitem = self.chanlist.PanelItems.getListItem(pos)
-            url = 'plugin://'+ playitem.getProperty('mediapath')
-            self.chanlist.fillListItems(url)
-            self.setFocus(self.chanlist.PanelItems)
+            playitem = self.PanelPlugins.getListItem(self.PanelPlugins.getSelectedPosition())
+            self.chanlist.fillListItems('plugin://'+ playitem.getProperty('mediapath'))
+            self.setFocus(self.PanelItems)
             # xbmc.executebuiltin('Container.Refresh') 
         elif controlid in [6001,6002,6003,6004]:
             if controlid == 6001:
@@ -125,3 +124,158 @@ class APPS(xbmcgui.WindowXMLDialog):
     def closeAPPS(self):
         self.log('closeAPPS')
         self.close()
+        
+        
+    def fillPlugins(self, type='video'):
+        self.log('fillPlugins, type = ' + type)
+        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.%s","properties":["name","path","thumbnail","description","fanart","summary"]}, "id": 1 }'%type)
+        json_detail = self.chanlist.sendJSON(json_query)
+        detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
+        for f in detail:
+            names = re.search('"name" *: *"(.*?)",', f)
+            paths = re.search('"addonid" *: *"(.*?)",', f)
+            thumbnails = re.search('"thumbnail" *: *"(.*?)",', f)
+            fanarts = re.search('"fanart" *: *"(.*?)",', f)
+            descriptions = re.search('"description" *: *"(.*?)",', f)
+            if not descriptions:
+                descriptions = re.search('"summary" *: *"(.*?)",', f)
+            if descriptions:
+                description = self.chanlist.cleanLabels(descriptions.group(1))
+            else:
+                description = ''
+            if names and paths:
+                name = self.chanlist.cleanLabels(names.group(1))
+                path = paths.group(1)
+                if type == 'video' and path.startswith('plugin.video'):
+                    thumbnail = removeNonAscii(thumbnails.group(1))
+                    fanart = removeNonAscii(fanarts.group(1))
+                    self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
+                    self.Items.setIconImage(thumbnail)
+                    self.Items.setProperty("mediapath", path)
+                    self.Items.setProperty("Fanart_Image", fanart)
+                    
+                    infoList = {}
+                    infoList['mediatype']     = type
+                    infoList['mpaa']          = 'Unknown'
+                    infoList['tvshowtitle']   =  name
+                    infoList['title']         =  name
+                    infoList['originaltitle'] = 'originaltitle'
+                    infoList['sorttitle']     = 'sorttitle'
+                    infoList['studio']        = 'Studio'
+                    infoList['genre']         = 'Genre'
+                    infoList['plot']          = 'Plot'
+                    infoList['plotoutline']   = 'plotoutline'
+                    infoList['tagline']       = 'tagline'
+                    infoList['dateadded']     = 'dateadded'
+                    infoList['premiered']     = 'premiered'
+                    infoList['aired']         = 'aired'
+                    infoList['code']          = 'code'
+                    infoList['lastplayed']    = 'lastplayed'
+                    # infoList['album']         = 'album'
+                    # infoList['artist']        = ['artist']
+                    # infoList['votes']         = 'votes'
+                    infoList['duration']      = 1
+                    infoList['year']          = 1977
+                    infoList['season']        = 3
+                    infoList['episode']       = 4
+                    infoList['playcount']     = 5
+                    self.Items.setInfo('Video', infoList)    
+
+                    infoArt = {}
+                    infoArt['thumb']        = thumbnail
+                    infoArt['poster']       = thumbnail
+                    infoArt['banner']       = ''
+                    infoArt['fanart']       = fanart
+                    infoArt['clearart']     = ''
+                    infoArt['clearlogo']    = ''
+                    infoArt['landscape']    = fanart
+                    infoList['icon']        = thumbnail
+                    self.Items.setArt(infoArt) 
+                    self.PanelPlugins.addItem(self.Items) 
+    
+
+    def fillListItems(self, url, type='video', file_type=False):
+        self.log('fillListItems')
+        self.Items = []
+        if not file_type:
+            detail = uni(self.chanlist.requestList(url, type))
+        else:
+            detail = uni(self.chanlist.requestItem(url, type))
+        for f in detail:
+            files = re.search('"file" *: *"(.*?)",', f)
+            filetypes = re.search('"filetype" *: *"(.*?)",', f)
+            labels = re.search('"label" *: *"(.*?)",', f)
+            thumbnails = re.search('"thumbnail" *: *"(.*?)",', f)
+            fanarts = re.search('"fanart" *: *"(.*?)",', f)
+            descriptions = re.search('"description" *: *"(.*?)",', f)
+            
+            if filetypes and labels and files:
+                filetype = filetypes.group(1)
+                name = self.chanlist.cleanLabels(labels.group(1))
+                file = (files.group(1).replace("\\\\", "\\"))
+                
+                if not descriptions:
+                    description = ''
+                else:
+                    description = self.chanlist.cleanLabels(descriptions.group(1))
+                
+                if thumbnails != None and len(thumbnails.group(1)) > 0:
+                    thumbnail = thumbnails.group(1)
+                else:
+                    thumbnail = THUMB
+                    
+                if fanarts != None and len(fanarts.group(1)) > 0:
+                    fanart = fanarts.group(1)
+                else:
+                    fanart = FANART
+                    
+                self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
+                
+                if filetype == 'file':
+                    self.Items.setProperty('IsPlayable', 'true')
+                else:
+                    self.Items.setProperty('IsPlayable', 'false')
+                    
+                self.Items.setIconImage(thumbnail)
+                self.Items.setProperty("mediapath", file)
+                self.Items.setProperty("Fanart_Image", fanart)
+                
+                infoList = {}
+                infoList['mediatype']     = type
+                infoList['mpaa']          = 'Unknown'
+                infoList['tvshowtitle']   =  name
+                infoList['title']         =  name
+                infoList['originaltitle'] = 'originaltitle'
+                infoList['sorttitle']     = 'sorttitle'
+                infoList['studio']        = 'Studio'
+                infoList['genre']         = 'Genre'
+                infoList['plot']          = 'Plot'
+                infoList['plotoutline']   = 'plotoutline'
+                infoList['tagline']       = 'tagline'
+                infoList['dateadded']     = 'dateadded'
+                infoList['premiered']     = 'premiered'
+                infoList['aired']         = 'aired'
+                infoList['code']          = 'code'
+                infoList['lastplayed']    = 'lastplayed'
+                # infoList['album']         = 'album'
+                # infoList['artist']        = ['artist']
+                # infoList['votes']         = 'votes'
+                infoList['duration']      = 1
+                infoList['year']          = 1977
+                infoList['season']        = 3
+                infoList['episode']       = 4
+                infoList['playcount']     = 5
+                self.Items.setInfo('Video', infoList)    
+
+                infoArt = {}
+                infoArt['thumb']        = thumbnail
+                infoArt['poster']       = thumbnail
+                infoArt['banner']       = ''
+                infoArt['fanart']       = fanart
+                infoArt['clearart']     = ''
+                infoArt['clearlogo']    = ''
+                infoArt['landscape']    = fanart
+                infoList['icon']        = thumbnail
+                self.Items.setArt(infoArt) 
+                self.PanelItems.addItem(self.Items) 
+        

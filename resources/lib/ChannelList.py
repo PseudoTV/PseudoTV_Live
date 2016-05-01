@@ -79,6 +79,7 @@ class ChannelList:
         self.musicGenreList = []
         self.pluginList = []
         self.PVRList = []
+        self.FavouritesList = []
         self.HDHRList = []
         self.showList = []
         self.channels = []
@@ -119,6 +120,7 @@ class ChannelList:
         self.log("IncludeBCTs is " + str(self.incBCTs))
         self.tvdbAPI = tvdb.TVDB()
         self.tmdbAPI = tmdb.TMDB()  
+        self.accurateDuration = REAL_SETTINGS.getSetting('accurate_duration') == 'true'
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
         self.Playlist_Limit = PlaylistLimit()
@@ -365,14 +367,9 @@ class ChannelList:
                         if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                             createlist = False 
                             
-                        if ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3") in ['pvr','ustvnow']:
-                            # Reset livetv after 2hrs   
-                            if timedif >= (60 * 60 * 2) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 2):
-                                createlist = True    
-                        else:         
-                            # Reset livetv after 24hrs         
-                            if timedif >= (60 * 60 * 24) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
-                                createlist = True  
+                        # Reset livetv after 24hrs         
+                        if timedif >= (60 * 60 * 24) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
+                            createlist = True  
                     else: 
                         if self.channelResetSetting == 0:
                             # If this channel has been watched for longer than it lasts, reset the channel
@@ -780,19 +777,17 @@ class ChannelList:
                 
             elif self.getSmartPlaylistType(dom) == 'movies':
                 bctType = 'movies'
-                if REAL_SETTINGS.getSetting('Movietrailers') != 'true':
-                    self.incBCTs = False
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT)
+                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
             
-            elif self.getSmartPlaylistType(dom) == 'episodes':
+            elif self.getSmartPlaylistType(dom) in ['episodes','tvshow']:
                 bctType = 'episodes'
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT)
+                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
                 
-            elif self.getSmartPlaylistType(dom) == 'songs':
+            elif self.getSmartPlaylistType(dom) in ['songs','albums','artists']:
                 fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'music')
                 
             else:
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT)
+                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
 
             try:
                 order = dom.getElementsByTagName('order')
@@ -1989,6 +1984,7 @@ class ChannelList:
                 showList = self.fillLiveTVPVR(setting1, setting2, setting3, setting4, chname, limit)
             else:   
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
+        
         if not showList:
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
@@ -3187,7 +3183,7 @@ class ChannelList:
             FFPROBE = os.path.join(xbmc.translatePath(REAL_SETTINGS.getSetting('ffmpegPath')),'ffprobe.exe')
             result = subprocess.Popen([FFPROBE, filename])
             stdout = subprocess.PIPE, stderr = subprocess.STDOUT
-            duration = [x for x in result.stdout.readlines() if "Duration" in x]
+            duration = int([x for x in result.stdout.readlines() if "Duration" in x])
         except:
             duration = 0
         return duration
@@ -3197,34 +3193,6 @@ class ChannelList:
         self.log("rtmpDump")
         rtmpValid = False
         try:
-            # OSplat = REAL_SETTINGS.getSetting('os')
-            # if OSplat == '0':
-                # OSpath = 'androidarm/rtmpdump'
-            # elif OSplat == '1':
-                # OSpath = 'android86/rtmpdump'
-            # elif OSplat == '2':
-                # OSpath = 'atv1linux/rtmpdump'
-            # elif OSplat == '3':
-                # OSpath = 'atv1stock/rtmpdump'
-            # elif OSplat == '4':
-                # OSpath = 'atv2/rtmpdump'
-            # elif OSplat == '5':
-                # OSpath = 'ios/rtmpdump'
-            # elif OSplat == '6':
-                # OSpath = 'linux32/rtmpdump'
-            # elif OSplat == '7':
-                # OSpath = 'linux64/rtmpdump'
-            # elif OSplat == '8':
-                # OSpath = 'mac32/rtmpdump'
-            # elif OSplat == '9':
-                # OSpath = 'mac64/rtmpdump'
-            # elif OSplat == '10':
-                # OSpath = 'pi/rtmpdump'
-            # elif OSplat == '11':
-                # OSpath = 'win/rtmpdump.exe'
-            # elif OSplat == '12':
-                # OSpath = '/usr/bin/rtmpdump'
-                
             url = urllib.unquote(stream)
             RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
             self.log("RTMPDUMP = " + RTMPDUMP)
@@ -3347,12 +3315,18 @@ class ChannelList:
         trailersgenre = REAL_SETTINGS.getSetting("trailersgenre")
         trailersHDnetType = REAL_SETTINGS.getSetting("trailersHDnetType")
         trailerschannel = REAL_SETTINGS.getSetting("trailerschannel")
-
-        if REAL_SETTINGS.getSetting('trailers') != '0':
-            TrailerLST = self.getTrailerList(chtype, chname, TrailersType, trailersgenre, trailersHDnetType, trailerschannel)
-            if TrailerLST and len(TrailerLST) > 0:
-                random.shuffle(TrailerLST)
-
+        
+        try:
+            if type == 'movies' and REAL_SETTINGS.getSetting('Movietrailers') == 'false':
+                raise Exception()
+                
+            if REAL_SETTINGS.getSetting('trailers') != '0':
+                TrailerLST = self.getTrailerList(chtype, chname, TrailersType, trailersgenre, trailersHDnetType, trailerschannel)
+                if TrailerLST and len(TrailerLST) > 0:
+                    random.shuffle(TrailerLST)
+        except:
+            pass
+            
         # Inject BCTs into filelist          
         for i in range(len(fileList)):
             bctDur = 0 #todo automatic time filler (round shows to the 30/60min intervals)
@@ -3412,84 +3386,78 @@ class ChannelList:
         #Local
         if BumpersType == "1":  
             self.log("getBumperList, Local - " + chname)
-            PATH = REAL_SETTINGS.getSetting('bumpersfolder')
-            PATH = xbmc.translatePath(os.path.join(PATH,chname,''))
+            PATH = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('bumpersfolder'),chname,''))
             self.log("getBumperList, Local - PATH = " + PATH)
             
             if FileAccess.exists(PATH):
-                try:
-                    LocalFLE = ''
-                    LocalBumper = ''
-                    LocalLST = self.walk(PATH)
+                LocalLST = self.walk(PATH)
 
-                    for i in range(len(LocalLST)):  
+                for i in range(len(LocalLST)):  
+                    try:
+                        duration = 0
                         filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
                         duration = self.getDuration(filename)
                         if duration > 0:
                             BumperCNT += 1
+                            LocalBumperLST.append((str(duration) + ',' + filename))    
+                            
                             if self.background == False:
                                 self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Local Bumpers"%str(BumperCNT))
-                                setProperty('loading.progress',str(self.updateDialogProgress))
-                            LocalBumper = (str(duration) + ',' + filename)
-                            LocalBumperLST.append(LocalBumper)
-                    BumperLST.extend(LocalBumperLST)                
-                except: 
-                    pass
+                                setProperty('loading.progress',str(self.updateDialogProgress))      
+                    except: 
+                        pass
+                BumperLST.extend(LocalBumperLST)      
         #Internet
         elif BumpersType == "2":
             self.log("getBumperList - Internet")
-            self.vimeo_ok = self.plugin_ok('plugin.video.vimeo')
-            duration = 15
-            if self.youtube_player != False:
-                try:
-                    Bumper_List = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/bumpers.ini'
-                    linesLST = read_url_cached(Bumper_List, return_type='readlines')
-                    for i in range(len(Bumper_List)):    
-                        include = False                    
-                        lines = str(linesLST[i]).replace('\n','')
-                        lines = lines.split('|')
-                        ChannelName = lines[0]
-                        BumperNumber = lines[1]
-                        BumperSource = lines[2].split('_')[0]
-                        BumperID = lines[2].split('_')[1]
+            Bumper_List = 'http://raw.github.com/PseudoTV/PseudoTV_Lists/master/bumpers.ini'
+            linesLST = read_url_cached(Bumper_List, return_type='readlines')
+            for i in range(len(Bumper_List)):   
+                try:  
+                    duration = 0                 
+                    lines = str(linesLST[i]).replace('\n','')
+                    lines = lines.split('|')
+                    ChannelName = lines[0]
+                    BumperNumber = lines[1]
+                    BumperSource = lines[2].split('_')[0]
+                    BumperID = lines[2].split('_')[1]
 
-                        if chname.lower() == ChannelName.lower():
-                            if BumperSource == 'vimeo':
-                                if self.vimeo_ok == True:
-                                    url = 'plugin://plugin.video.vimeo/?path=/root/video&action=play_video&videoid=' + BumperID
-                                    duration = (self.getVimeoMeta(BumperID))[2]
-                                    if duration > 0:
-                                        include = True
-                            elif BumperSource == 'youtube':
-                                if self.youtube_player != False:
-                                    url = self.youtube_player + BumperID
-                                    duration = (self.getYoutubeMeta(BumperID))[2]
-                                    if duration > 0:
-                                        include = True
-                            if include == True:
-                                BumperCNT += 1
-                                if self.background == False:
-                                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Internet Bumpers"%str(BumperCNT))
-                                    setProperty('loading.progress',str(self.updateDialogProgress))
-                                InternetBumper = (str(duration) + ',' + url)
-                                InternetBumperLST.append(InternetBumper)
-                    BumperLST.extend(InternetBumperLST)                
+                    include = False  
+                    if chname.lower() == ChannelName.lower():
+                        if BumperSource == 'vimeo':
+                            if self.plugin_ok('plugin.video.vimeo') == True:
+                                url = 'plugin://plugin.video.vimeo/?path=/root/video&action=play_video&videoid=' + BumperID
+                                duration = (self.getVimeoMeta(BumperID))[2]
+                        elif BumperSource == 'youtube':
+                            if self.youtube_player != False:
+                                url = self.youtube_player + BumperID
+                                duration = (self.getYoutubeMeta(BumperID))[2]
+                        
+                        if duration > 0:
+                            BumperCNT += 1
+                            InternetBumperLST.append((str(duration) + ',' + url))     
+                            
+                            if self.background == False:
+                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Internet Bumpers"%str(BumperCNT))
+                                setProperty('loading.progress',str(self.updateDialogProgress))     
                 except: 
                     pass
+            BumperLST.extend(InternetBumperLST)      
         # cleanup   
         del LocalBumperLST[:]
         del InternetBumperLST[:]
         return BumperLST   
         
         
-    def getRatingList(self, chtype, chname, channel, fileList):
+    def getRatingList(self, chtype, chname, channel, fileList, ddd=False):
         self.log("getRatingList")
         newFileList = []
         
         if self.youtube_player != False:
             URL = self.youtube_player + 'qlRaA8tAfc0'
             Ratings = (['NR','qlRaA8tAfc0'],['R','s0UuXOKjH-w'],['NC-17','Cp40pL0OaiY'],['PG-13','lSg2vT5qQAQ'],['PG','oKrzhhKowlY'],['G','QTKEIFyT4tk'],['18','g6GjgxMtaLA'],['16','zhB_xhL_BXk'],['12','o7_AGpPMHIs'],['6','XAlKSm8D76M'],['0','_YTMglW0yk'])
-    
+            Ratings_3D = [] # todo 3d ratings
+            
             for i in range(len(fileList)):
                 newFileList.append(fileList[i])
                 lineLST = (fileList[i]).split('movie|')[1]
@@ -4353,7 +4321,6 @@ class ChannelList:
         
     def fillFavourites(self):
         self.log('fillFavourites')
-        show_busy_dialog()
         json_query = ('{"jsonrpc":"2.0","method":"Favourites.GetFavourites","params":{"properties":["path","thumbnail"]},"id":1}')
         json_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
@@ -4382,8 +4349,7 @@ class ChannelList:
 
         if len(TMPfavouritesList) == 0:
             FavouritesNameList = ['Kodi Favorites is empty or unavailable!']
-        hide_busy_dialog() 
-        return FavouritesNameList, FavouritesPathList
+        self.FavouritesList = [FavouritesNameList, FavouritesPathList]
         
         
     def fillExternalList(self, type, source='', list='Community', Random=False):
@@ -4594,159 +4560,6 @@ class ChannelList:
         return re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)      
  
  
-    def fillPlugins(self, type='video'):
-        self.log('fillPlugins, type = ' + type)
-        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.%s","properties":["name","path","thumbnail","description","fanart","summary"]}, "id": 1 }'%type)
-        json_detail = self.sendJSON(json_query)
-        detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_detail)
-        for f in detail:
-            names = re.search('"name" *: *"(.*?)",', f)
-            paths = re.search('"addonid" *: *"(.*?)",', f)
-            thumbnails = re.search('"thumbnail" *: *"(.*?)",', f)
-            fanarts = re.search('"fanart" *: *"(.*?)",', f)
-            descriptions = re.search('"description" *: *"(.*?)",', f)
-            if not descriptions:
-                descriptions = re.search('"summary" *: *"(.*?)",', f)
-            if descriptions:
-                description = self.cleanLabels(descriptions.group(1))
-            else:
-                description = ''
-            if names and paths:
-                name = self.cleanLabels(names.group(1))
-                path = paths.group(1)
-                if type == 'video' and path.startswith('plugin.video'):
-                    thumbnail = removeNonAscii(thumbnails.group(1))
-                    fanart = removeNonAscii(fanarts.group(1))
-                    self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
-                    self.Items.setIconImage(thumbnail)
-                    self.Items.setProperty("mediapath", path)
-                    self.Items.setProperty("Fanart_Image", fanart)
-                    
-                    infoList = {}
-                    infoList['mediatype']     = type
-                    infoList['mpaa']          = 'Unknown'
-                    infoList['tvshowtitle']   =  name
-                    infoList['title']         =  name
-                    infoList['originaltitle'] = 'originaltitle'
-                    infoList['sorttitle']     = 'sorttitle'
-                    infoList['studio']        = 'Studio'
-                    infoList['genre']         = 'Genre'
-                    infoList['plot']          = 'Plot'
-                    infoList['plotoutline']   = 'plotoutline'
-                    infoList['tagline']       = 'tagline'
-                    infoList['dateadded']     = 'dateadded'
-                    infoList['premiered']     = 'premiered'
-                    infoList['aired']         = 'aired'
-                    infoList['code']          = 'code'
-                    infoList['lastplayed']    = 'lastplayed'
-                    # infoList['album']         = 'album'
-                    # infoList['artist']        = ['artist']
-                    # infoList['votes']         = 'votes'
-                    infoList['duration']      = 1
-                    infoList['year']          = 1977
-                    infoList['season']        = 3
-                    infoList['episode']       = 4
-                    infoList['playcount']     = 5
-                    self.Items.setInfo('Video', infoList)    
-
-                    infoArt = {}
-                    infoArt['thumb']        = thumbnail
-                    infoArt['poster']       = thumbnail
-                    infoArt['banner']       = ''
-                    infoArt['fanart']       = fanart
-                    infoArt['clearart']     = ''
-                    infoArt['clearlogo']    = ''
-                    infoArt['landscape']    = fanart
-                    infoList['icon']        = thumbnail
-                    self.Items.setArt(infoArt) 
-                    self.PanelItems.addItem(self.Items) 
-    
-    
-    def fillListItems(self, url, type='video', file_type=False):
-        self.log('fillListItems')
-        if not file_type:
-            detail = uni(self.requestList(url, type))
-        else:
-            detail = uni(self.requestItem(url, type))
-        for f in detail:
-            files = re.search('"file" *: *"(.*?)",', f)
-            filetypes = re.search('"filetype" *: *"(.*?)",', f)
-            labels = re.search('"label" *: *"(.*?)",', f)
-            thumbnails = re.search('"thumbnail" *: *"(.*?)",', f)
-            fanarts = re.search('"fanart" *: *"(.*?)",', f)
-            descriptions = re.search('"description" *: *"(.*?)",', f)
-            
-            if filetypes and labels and files:
-                filetype = filetypes.group(1)
-                name = self.cleanLabels(labels.group(1))
-                file = (files.group(1).replace("\\\\", "\\"))
-                
-                if not descriptions:
-                    description = ''
-                else:
-                    description = self.cleanLabels(descriptions.group(1))
-                
-                if thumbnails != None and len(thumbnails.group(1)) > 0:
-                    thumbnail = thumbnails.group(1)
-                else:
-                    thumbnail = THUMB
-                    
-                if fanarts != None and len(fanarts.group(1)) > 0:
-                    fanart = fanarts.group(1)
-                else:
-                    fanart = FANART
-                    
-                self.Items = xbmcgui.ListItem(label=name, thumbnailImage = thumbnail)
-                
-                if filetype == 'file':
-                    self.Items.setProperty('IsPlayable', 'true')
-                else:
-                    self.Items.setProperty('IsPlayable', 'false')
-                    
-                self.Items.setIconImage(thumbnail)
-                self.Items.setProperty("mediapath", file)
-                self.Items.setProperty("Fanart_Image", fanart)
-                
-                infoList = {}
-                infoList['mediatype']     = type
-                infoList['mpaa']          = 'Unknown'
-                infoList['tvshowtitle']   =  name
-                infoList['title']         =  name
-                infoList['originaltitle'] = 'originaltitle'
-                infoList['sorttitle']     = 'sorttitle'
-                infoList['studio']        = 'Studio'
-                infoList['genre']         = 'Genre'
-                infoList['plot']          = 'Plot'
-                infoList['plotoutline']   = 'plotoutline'
-                infoList['tagline']       = 'tagline'
-                infoList['dateadded']     = 'dateadded'
-                infoList['premiered']     = 'premiered'
-                infoList['aired']         = 'aired'
-                infoList['code']          = 'code'
-                infoList['lastplayed']    = 'lastplayed'
-                # infoList['album']         = 'album'
-                # infoList['artist']        = ['artist']
-                # infoList['votes']         = 'votes'
-                infoList['duration']      = 1
-                infoList['year']          = 1977
-                infoList['season']        = 3
-                infoList['episode']       = 4
-                infoList['playcount']     = 5
-                self.Items.setInfo('Video', infoList)    
-
-                infoArt = {}
-                infoArt['thumb']        = thumbnail
-                infoArt['poster']       = thumbnail
-                infoArt['banner']       = ''
-                infoArt['fanart']       = fanart
-                infoArt['clearart']     = ''
-                infoArt['clearlogo']    = ''
-                infoArt['landscape']    = fanart
-                infoList['icon']        = thumbnail
-                self.Items.setArt(infoArt) 
-                self.PanelItems.addItem(self.Items) 
-        
-
     # filelist cache may be redundant to m3u
     def getFileListCache(self, chtype, channel, purge=False):
         cachetype = str(chtype) + ':' + str(channel)
@@ -4818,7 +4631,6 @@ class ChannelList:
                    
             try:
                 tmpstr = ''
-                dur_accurate = False
                 files = re.search('"file" *: *"(.*?)",', f)
                 
                 if files:
@@ -4841,6 +4653,7 @@ class ChannelList:
                                             
                                 if filetype == 'file' and self.filecount < limit:
                                     duration = re.search('"duration" *: *([0-9]*?),', f)
+                                    runtime  = re.search('"runtime" *: *([0-9]*?),', f)
                                     
                                     # If duration returned, else 0
                                     try:
@@ -4849,22 +4662,19 @@ class ChannelList:
                                         dur = 0
                                        
                                     # Less accurate duration
+                                    try:
+                                        ladur = int(runtime.group(1))
+                                    except Exception,e:
+                                        ladur = 0
+                                        
                                     if dur == 0:
-                                        duration = re.search('"runtime" *: *([0-9]*?),', f)
-                                        try:
-                                            ladur = int(duration.group(1))
-                                        except Exception,e:
-                                            ladur = 0
-                                            
-                                    if dur == 0:
-                                        if ladur != 0 and REAL_SETTINGS.getSetting('accurate_duration') == 'false':
+                                        if self.accurateDuration == False:
                                             dur = ladur
                                         else:
                                             # Accurate duration
                                             if not file.startswith(("plugin", "upnp")) and isLowPower() == False:
                                                 try:
                                                     dur = self.getDuration(file)
-                                                    dur_accurate = True
                                                 except Exception,e:
                                                     dur = 0
                                                 
@@ -4879,7 +4689,7 @@ class ChannelList:
                                     if self.incIceLibrary == False:
                                         if file[-4:].lower() == 'strm':
                                             dur = 0
-
+                                    
                                     if dur > 0:
                                         self.filecount += 1
                                         seasonval = -1
@@ -5054,38 +4864,38 @@ class ChannelList:
                                             except:
                                                 pass      
 
-                                        # convert minutes to seconds when needed
-                                        if dur_accurate == False and file.startswith(("plugin", "upnp")):
+                                        # convert minutes to seconds when needed / correct local tvshow runtimes
+                                        if file.startswith(("plugin", "upnp")):
                                             if (len(str(dur)) < 3 or len(str(dur)) > 5):
                                                 dur = self.durationInSeconds(dur)
-                                        
+                                        else:
+                                            if self.accurateDuration == False and type == 'tvshow':
+                                                dur = self.durationAdjust(dur)
+                                             
+                                        try:
+                                            # epg can't handle overlarge controlbuttons, ignore oversized and MINFILE_DURATION plugin/upnp "clips".
+                                            if dur > MAXFILE_DURATION:
+                                                self.log("getFileList, Failed! dur exceeded MAXFILE_DURATION")
+                                                raise Exception()
+                                            if file.startswith(("plugin", "upnp")) and dur < MINFILE_DURATION:
+                                                self.log("getFileList, Failed! dur less than MINFILE_DURATION")
+                                                raise Exception()
+                                        except:
+                                            pass
+                                            
                                         # accurate real-time scheduling does not apply to chtypes <= 7, only chtype = 8. Doesn't hurt to keep track of it anyway, future feature?
                                         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
                                         self.startDate += dur
 
-                                        try:
-                                            # epg can't handle overlarge controlbuttons, ignore oversized and shortItemLength plugin/upnp "clips".
-                                            if dur > MAXFILE_DURATION:
-                                                self.log("getFileList, Failed! dur exceeded MAXFILE_DURATION")
-                                                raise Exception()
-                                            elif file.startswith(("plugin", "upnp")) and dur < self.myOverlay.shortItemLength:
-                                                self.log("getFileList, Failed! dur under shortItemLength")
-                                                raise Exception()
-                                        except:
-                                            pass
-
-                                        meta = False
+                                        includeMeta = False
                                         # disable enhanced metadata for "shortclips"
                                         if dur >= BYPASS_EPG_SECONDS:
-                                            meta = True
-                                            
-                                        if type == 'tvshow' and dur_accurate == False:
-                                            dur = self.durationAdjust(dur)
-                                            
+                                            includeMeta = True
+   
                                         managed =  False # todo check sickbeard/sonar/couchpotato
                                         cc = False # todo check subs or teltext?
                                         GenreLiveID = [genre, type, imdbnumber, dbid, managed, playcount, rating, hd, cc, stars, year]
-                                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, file, timestamp, meta)      
+                                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, file, timestamp, includeMeta)      
                                         
                                         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
                                             seasoneplist.append([seasonval, epval, tmpstr])
@@ -5155,4 +4965,3 @@ class ChannelList:
             GenreLiveID = [dict['genre'], dict['type'], dict['id'], dict['thumburl'], False, 1, dict['rating'], dict['hd'], dict['cc'], dict['stars'], dict['year']]
             filelist.append(self.makeTMPSTR(dict['duration'], dict['title'], dict['year'], dict['subtitle'], dict['description'], GenreLiveID, dict['link'], timestamp))
         return filelist
-        

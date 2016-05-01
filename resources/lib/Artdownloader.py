@@ -135,7 +135,7 @@ class Artdownloader:
                 
     
     def FindArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, arttypeEXT):
-        self.log("FindArtwork")
+        self.log('FindArtwork, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', arttypeEXT = ' + arttypeEXT)
         try:
             setImage = 'NA.png'
             CacheArt = False
@@ -152,17 +152,17 @@ class Artdownloader:
                 return setImage
             
             elif id != '0':
-                if FileAccess.exists(cachefile):
+                if FileAccess.exists(cachefile) == True:
                     self.log('FindArtwork, Using Cache')
                     return cachefile   
                 
-                elif FileAccess.exists(kodifile):
+                elif FileAccess.exists(kodifile) == True:
                     self.log('FindArtwork, Using Kodi Cache')
                     return kodifile  
                     
             # local media
             if chtype <= 7 or chtype == 12:
-                self.log('FindArtwork, chtype <= 7 - Local Art')
+                self.log('FindArtwork, chtype <= 7 - Local Artwork')
                 smpath = mpath.rsplit('/',2)[0]
                 artSeries = xbmc.translatePath(os.path.join(smpath, arttypeEXT))
                 artSeason = xbmc.translatePath(os.path.join(mpath, arttypeEXT))
@@ -246,19 +246,24 @@ class Artdownloader:
             
             # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
             if FileAccess.exists(MediaImage) == True:
+                self.log('SetDefaultArt, return MediaImage')
                 return MediaImage
             # Channel Logo
             elif FileAccess.exists(ChannelLogo) == True:
+                self.log('SetDefaultArt, return ChannelLogo')
                 return ChannelLogo
             # Plugin Icon
             elif mpath[0:6] == 'plugin':
                 icon = 'special://home/addons/'+(mpath.replace('plugin://',''))+ '/icon.png'
+                self.log('SetDefaultArt, return plugin icon')
                 return icon
             # Default Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
             elif FileAccess.exists(StockImage) == True:
+                self.log('SetDefaultArt, return StockImage')
                 return StockImage
             # PTVL Icon
             else:
+                self.log('SetDefaultArt, return THUMB')
                 return THUMB
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: SetDefaultArt Failed" + str(e), xbmc.LOGERROR)
@@ -281,8 +286,7 @@ class Artdownloader:
         if url.startswith('http'):
             download_silent(url,cachefile)
             return cachefile
-        else:
-            return 'NA.png'
+        return 'NA.png'
            
            
     def findMissingArtMeta(self, type, title, year, arttype):
@@ -300,8 +304,7 @@ class Artdownloader:
             pass
         if url.startswith('http'):
             return url
-        else:
-            return 'NA.png'
+        return ''
            
            
     def findMissingArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
@@ -342,8 +345,7 @@ class Artdownloader:
         # todo google image search, obdb, metahandler search
         if url.startswith('http'):
             return url
-        else:
-            return 'NA.png'
+        return ''
  
  
     def findTVDBArt(self, type, id, arttype, arttypeEXT):

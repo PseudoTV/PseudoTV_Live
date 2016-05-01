@@ -38,6 +38,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("__init__")
         if getProperty("PseudoTVRunning") != "True":
             xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
+            setProperty("PseudoTVRunning", "True")
             self.madeChanges = 0
             self.showingList = True
             self.channel = 0
@@ -97,6 +98,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
 
     def closeConfig(self, channel=0):
+        setProperty("PseudoTVRunning", "False")
         if self.madeChanges == 1:
             if yesnoDialog("Changes Detected, Do you want to save all changes?"):
                 self.writeChanges()
@@ -352,7 +354,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 if yesnoDialog("Replace Channel %s's Logo?"%(str(channel))):
                     GrabLogo(retval, chname, True)
                     theitem = self.listcontrol.getListItem(channel-1)
-                    theitem.setProperty('chlogo',(xbmc.translatePath(retval)))
+                    theitem.setProperty('chlogo',(xbmc.translatePath(retval)))     
+                    cachedthumb = xbmc.getCacheThumbName(xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png'))))
+                    cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + ".png")).replace("\\", "/")
+                    # delete old bug
+                    try:
+                        xbmcvfs.delete(cachefile)
+                    except:
+                        pass
             
             
     def openAdvRules(self):
@@ -1197,9 +1206,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         
     def fillChanTypeLabel(self):
+        show_busy_dialog()
         for i in range(NUMBER_CHANNEL_TYPES + 1):
             self.ChanTypeList.append(self.getChanTypeLabel(i))
-        
+        hide_busy_dialog()
+            
             
     def getChanTypeLabel(self, chantype):
         if chantype == 0:
@@ -1246,27 +1257,42 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.getControl(106).setVisible(False)
         self.dlg = xbmcgui.DialogProgress()
         self.dlg.create("PseudoTV Live", "Preparing Configuration")
-        self.dlg.update(10)    
+        
+        self.dlg.update(5)   
+        show_busy_dialog()        
         self.chnlst.fillMusicInfo()     
-        self.dlg.update(20)   
+        
+        self.dlg.update(10)   
         self.chnlst.fillTVInfo()   
-        self.dlg.update(30)
+        
+        self.dlg.update(15)
         self.chnlst.fillMovieInfo()
-        self.dlg.update(40)
+        
+        self.dlg.update(20)
         self.chnlst.fillPluginList()
-        self.dlg.update(50)
+        
+        self.dlg.update(25)
         self.chnlst.fillPVR()
-        self.dlg.update(60)
+        
+        self.dlg.update(30)
         self.chnlst.fillHDHR()
-        self.dlg.update(70)
+        
+        self.dlg.update(35)
+        self.chnlst.fillFavourites()
+        
+        self.dlg.update(40)
         self.fillChanTypeLabel()
-        self.dlg.update(80)
+        
+        self.dlg.update(45)
+        hide_busy_dialog()
         self.mixedGenreList = sorted_nicely(removeStringElem(self.chnlst.makeMixedList(self.chnlst.showGenreList, self.chnlst.movieGenreList)))
         self.networkList = sorted_nicely(removeStringElem(self.chnlst.networkList))
         self.studioList = sorted_nicely(removeStringElem(self.chnlst.studioList))
         self.showGenreList = sorted_nicely(removeStringElem(self.chnlst.showGenreList))
         self.movieGenreList = sorted_nicely(removeStringElem(self.chnlst.movieGenreList))
         self.musicGenreList = sorted_nicely(removeStringElem(self.chnlst.musicGenreList))
+        
+        self.dlg.update(50)
         self.GenreLst = ['TV','Movies','Episodes','Sports','Kids','News','Music','Seasonal','Other']
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
         self.SortOrderList = ['Default','Random','Reverse']
@@ -1275,37 +1301,37 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
+        self.dlg.update(55)
         if isSFAV() == True:
             self.pluginPathList = ['plugin.program.super.favourites']
             self.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]']
             self.pluginIconList = ['']
-        
         if isPlayOn() == True:
             self.pluginPathList = ['plugin.video.playonbrowser'] + self.pluginPathList
             self.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.pluginNameList
-            self.pluginIconList = [''] + self.pluginIconList
-                
+            self.pluginIconList = [''] + self.pluginIconList  
         if isUSTVnow() == True:
             self.pluginPathList = ['plugin.video.ustvnow/?mode=live'] + self.pluginPathList
             self.pluginNameList = ['[COLOR=blue][B]USTVnow[/B][/COLOR]'] + self.pluginNameList
             self.pluginIconList = [''] + self.pluginIconList
-        
         if isPlugin('plugin.video.meta') == True:
             self.SourceList.append('Meta Plugin')
-            
+        self.dlg.update(60)
         self.SourceList = sorted_nicely(self.SourceList)
         self.pluginNameList = self.chnlst.pluginList[0]
         self.pluginPathList = self.chnlst.pluginList[1]
         self.pluginIconList = self.chnlst.pluginList[2]
-            
+        
+        self.dlg.update(65)
         for i in range(len(self.chnlst.showList)):
             self.showList.append(self.chnlst.showList[i][0])
         self.showList =  sorted_nicely(removeStringElem(self.showList))
         
+        self.dlg.update(70)
         self.mixedGenreList.sort(key=lambda x: x.lower())
         self.listcontrol = self.getControl(102)
-
-        self.dlg.update(85)
+        
+        self.dlg.update(75)
         for i in range(CHANNEL_LIMIT):
             theitem = xbmcgui.ListItem()  
             ChanColor = ''      
@@ -1314,12 +1340,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             theitem.setLabel("[COLOR=%s][B]%d[/COLOR]|[/B]" % (ChanColor, i + 1))
             self.listcontrol.addItem(theitem)
 
+        self.dlg.update(85)
         self.dlg.update(90)
+        self.dlg.update(95)
         self.updateListing()
-        self.dlg.close()
+        self.dlg.update(100)
         self.getControl(105).setVisible(True)
         self.getControl(106).setVisible(False)
         self.setFocusId(102)
+        self.dlg.close()
         
         if self.focusChannel and self.focusChannel > 0:
             self.listcontrol.selectItem(self.focusChannel)  
@@ -1328,8 +1357,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         
     def parsePlugin(self, DetailLST, type='all'):
         self.log("parsePlugin")
+        show_busy_dialog()
+        PluginNameLst = []
+        PluginPathLst = []
         try:
-            show_busy_dialog()
             dirCount = 0
             fleCount = 0
             PluginNameLst = []
@@ -1357,15 +1388,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     fileInt = 'F'
                     
                 PluginNameLst.append(('[COLOR=%s][%s] [/COLOR]' + title) % (Color,fileInt))
-                PluginPathLst.append(file)
-            
-            PluginNameLst.append('[B]Return to settings[/B]')
-            PluginPathLst.append('Return')
-            hide_busy_dialog()
-            return PluginNameLst, PluginPathLst
+                PluginPathLst.append(file)   
         except:
-            hide_busy_dialog()
-            
+            pass
+        PluginNameLst.append('[B]Return to settings[/B]')
+        PluginPathLst.append('Return')
+        hide_busy_dialog()
+        return PluginNameLst, PluginPathLst
+         
          
     def resetLabels(self):
         self.log("resetLabels")
@@ -1562,9 +1592,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         try:
             if source == 'PVR':
                 self.log("PVR")
-                show_busy_dialog()
                 NameLst, PathLst, IconLst = self.chnlst.PVRList
-                hide_busy_dialog() 
                 select = selectDialog(NameLst, 'Select Kodi PVR Channel')
                 if select != -1:
                     name = self.chnlst.cleanLabels(NameLst[select])
@@ -1579,9 +1607,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                      
             elif source == 'HDhomerun':
                 self.log("HDhomerun")
-                show_busy_dialog()
                 NameLst, PathLst = self.chnlst.HDHRList
-                hide_busy_dialog()
                 select = selectDialog(NameLst, 'Select HDhomerun Channel')
                 if select != -1:
                     name = self.chnlst.cleanLabels(NameLst[select])
@@ -1605,9 +1631,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.log("Plugin")
                 if path:
                     while not self.LockBrowse:
-                        show_busy_dialog()
                         NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo(path))
-                        hide_busy_dialog() 
                         select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                         if select != -1:
                             if (NameLst[select]).startswith('[COLOR=green][F]'):
@@ -1630,9 +1654,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.log("Playon")
                 if path:
                     while not self.LockBrowse:
-                        show_busy_dialog()
                         NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo(path))
-                        hide_busy_dialog() 
                         select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                         if select != -1:
                             if (NameLst[select]).startswith('[COLOR=green][F]'):
@@ -1657,9 +1679,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.log("UPNP")
                 if path:
                     while not self.LockBrowse:
-                        show_busy_dialog()
                         NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo(path))
-                        hide_busy_dialog() 
                         select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                         if select != -1:
                             if (NameLst[select]).startswith('[COLOR=green][F]'):
@@ -1674,18 +1694,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 path = PathLst[select]      
                     return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                 else:
-                    show_busy_dialog()
                     NameLst, PathLst = self.parsePlugin(self.chnlst.PluginInfo('upnp://'))
-                    hide_busy_dialog() 
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
                         return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                     
             elif source == 'Kodi Favourites':
                 self.log("Kodi Favourites")
-                show_busy_dialog()
-                FavouritesNameList, FavouritesPathList = self.chnlst.fillFavourites()
-                hide_busy_dialog()
+                FavouritesNameList, FavouritesPathList = self.chnlst.FavouritesList
                 select = selectDialog(FavouritesNameList, 'Select Favourites')
                 if select != -1:
                     return FavouritesNameList[select], FavouritesPathList[select]  
@@ -1785,14 +1801,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             if yesnoDialog("Are you sure you want to clear channel %s?" %str(curchan)):
                 self.madeChanges = 1
                 ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_type", "9999")  
-                ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_1", "")  
-                ADDON_SETTINGS.setSetting("Channel_" + str(curchan) + "_2", "")
                 ADDON_SETTINGS.setSetting('Channel_' + str(curchan) + '_rulecount','0')
                 theitem = self.listcontrol.getListItem(curchan-1)
                 theitem.setLabel2('')
                 theitem.setProperty('chname','')
                 self.updateListing(curchan)
-
+                self.setFocusId(102)
+                
                 
     def changeChanNum(self, channel):
         if yesnoDialog("Move channel " + str(channel) + "?"):
@@ -1839,10 +1854,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_3", setting3)
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_4", setting4)    
         self.saveRules(new)
-        self.updateListing(old)
+        self.updateListing()
         self.listcontrol.selectItem(int(new)-1)
-        self.madeChanges = 1
-        self.updateListing(new)            
+        self.setFocusId(102)
+        self.madeChanges = 1           
         hide_busy_dialog()
 
         

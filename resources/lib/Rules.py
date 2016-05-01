@@ -1068,7 +1068,7 @@ class ForceResume(BaseRule):
 
 class ForceRandom(BaseRule):
     def __init__(self):
-        self.name = "Force Random Starting Position"
+        self.name = "Force Random Start"
         self.optionLabels = []
         self.optionValues = []
         self.myId = 10

@@ -35,6 +35,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
         if getProperty("PseudoTVRunning") != "True":
+            setProperty("PseudoTVRunning", "True")
             xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)      
             self.clearProps() 
             self.local = False
@@ -122,6 +123,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             
     def closeManager(self):
         self.log("closeManager") 
+        setProperty("PseudoTVRunning", "False")
         REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
         # REAL_SETTINGS.openSettings()
         self.close()

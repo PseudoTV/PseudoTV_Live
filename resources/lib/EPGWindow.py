@@ -1270,7 +1270,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                     self.MyOverlayWindow.channels[newchan - 1].setShowPosition(plpos)
                     self.MyOverlayWindow.channels[newchan - 1].setShowTime(0)
                     self.MyOverlayWindow.channels[newchan - 1].setAccessTime(time.time())
-
+ 
             self.MyOverlayWindow.newChannel = newchan
             self.log('selectShow return')
         except:

@@ -46,7 +46,6 @@ class ChannelListThread(threading.Thread):
         self.chanlist.exitThread = False
         self.chanlist.readConfig()
         self.chanlist.sleepTime = 0.1
-        UPdialog = False
         
         if self.myOverlay == None:
             self.log("Overlay not defined. Exiting.")
@@ -73,8 +72,8 @@ class ChannelListThread(threading.Thread):
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return
-                        time.sleep(2)
-
+                        
+                        time.sleep(1)
                         if self.paused == False:
                             break
 
@@ -86,8 +85,8 @@ class ChannelListThread(threading.Thread):
                                 if self.myOverlay.isExiting:
                                     self.log("IsExiting")
                                     return
-                                time.sleep(2)
                                 
+                                time.sleep(1)
                             self.myOverlay.channels[i] = self.chanlist.channels[i]
                             if self.myOverlay.channels[i].isValid == True:
                                 OptNotify("Channel " + str(i + 1) + " Added", icon=self.myOverlay.getChlogo(i + 1))  
@@ -101,7 +100,8 @@ class ChannelListThread(threading.Thread):
         self.myOverlay.postBackgroundLoading()
             
         while True:
-            DebugNotify("Background Updating...")
+            DebugNotify("Background Updating...")     
+            self.myOverlay.setCurrentChannel()
             
             for i in range(self.myOverlay.maxChannels):
                 modified = True
@@ -111,18 +111,17 @@ class ChannelListThread(threading.Thread):
                     # If minimum updating is on, don't attempt to load invalid channels
                     if self.fullUpdating == False and self.myOverlay.channels[i].isValid == False and self.myOverlay.isMaster:
                         break
+                        
                     modified = False
-
                     if self.myOverlay.isExiting:
                         self.log("Closing thread")
                         return
+                        
                     time.sleep(2)
-                    
                     curtotal = self.myOverlay.channels[i].getTotalDuration()
-                    chtype = self.myOverlay.getChtype(i + 1)
-
+                    
                     if self.myOverlay.isMaster:
-                        if chtype not in FORCE_MAKENEW and curtotal > 0:
+                        if curtotal > 0 and self.myOverlay.getChtype(i + 1) not in FORCE_MAKENEW:
                             # When appending, many of the channel variables aren't set, so copy them over.
                             # This needs to be done before setup since a rule may use one of the values.
                             # It also needs to be done after since one of them may have changed while being setup.
@@ -136,7 +135,7 @@ class ChannelListThread(threading.Thread):
                             
                             try:
                                 self.chanlist.setupChannel(i + 1, True, False, True)
-                                # DebugNotify("Channel " + str(i + 1) + " Append", icon=self.myOverlay.getChlogo(i + 1))      
+                                DebugNotify("Channel " + str(i + 1) + " Append", icon=self.myOverlay.getChlogo(i + 1))      
                             except Exception,e:
                                 self.log("Unknown Channel Appending Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -151,7 +150,7 @@ class ChannelListThread(threading.Thread):
                         else:
                             try:
                                 self.chanlist.setupChannel(i + 1, True, True, False)
-                                # DebugNotify("Channel " + str(i + 1) + " Updated", icon=self.myOverlay.getChlogo(i + 1))   
+                                DebugNotify("Channel " + str(i + 1) + " Updated", icon=self.myOverlay.getChlogo(i + 1))
                             except Exception,e:
                                 self.log("Unknown Channel Modification Exception", xbmc.LOGERROR)
                                 self.log(traceback.format_exc(), xbmc.LOGERROR)
@@ -160,18 +159,14 @@ class ChannelListThread(threading.Thread):
                         try:
                             # We're not master, so no modifications...just try and load the channel
                             self.chanlist.setupChannel(i + 1, True, False, False)
-                            # DebugNotify("Channel " + str(i + 1) + " Reloaded", icon=self.myOverlay.getChlogo(i + 1))   
+                            DebugNotify("Channel " + str(i + 1) + " Reloaded", icon=self.myOverlay.getChlogo(i + 1))   
                         except Exception,e:
                             self.log("Unknown Channel Loading Exception", xbmc.LOGERROR)
                             self.log(traceback.format_exc(), xbmc.LOGERROR)
                             return
+                            
                     self.myOverlay.channels[i] = self.chanlist.channels[i]
-                    
                     if self.myOverlay.isMaster:
-                        #Set last Channel
-                        SUPchannel = int(REAL_SETTINGS.getSetting('SUPchannel'))                
-                        if SUPchannel == 0:
-                            REAL_SETTINGS.setSetting('CurrentChannel', str(self.myOverlay.currentChannel))
                         ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(self.myOverlay.channels[i].totalTimePlayed))
                             
                     if self.myOverlay.channels[i].getTotalDuration() > curtotal and self.myOverlay.isMaster:
@@ -182,11 +177,12 @@ class ChannelListThread(threading.Thread):
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return
+                            
                         time.sleep(2)
                         if self.paused == False:
                             break
                 timeslept = 0 
-
+                
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 

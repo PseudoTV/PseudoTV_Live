@@ -90,8 +90,7 @@ class Main:
         available = False
 
         if len(self.itemlst) == 0:
-            setProperty("PTVL.CM.LASTCHAN","0")
-            
+            setProperty("PTVL.CM.LASTCHAN","0")      
         try:
             Lastchan = int(getProperty("PTVL.CM.LASTCHAN"))
             self.log("ImportChannel, Lastchan = " + str(Lastchan))
@@ -244,9 +243,8 @@ class Main:
                 self.setting1 = ((self.Path).replace('plugin://plugin.video.youtube/channel/','')).replace('/','')
             elif self.YTtype == 2:
                 self.setting1 = ((self.Path).replace('plugin://plugin.video.','').replace('youtube/playlist/','').replace('spotitube/?limit&mode=listyoutubeplaylist&type=browse&url=','')).replace('/','')
-
             self.setting2 = str(self.YTtype)
-            self.setting3 = ''
+            self.setting3 = '200'
             self.setting4 = '0'
             self.channame = self.Label
             
@@ -261,7 +259,7 @@ class Main:
         elif self.chantype == 15:
             self.setting1 = self.Path
             self.setting2 = ''
-            self.setting3 = ''
+            self.setting3 = '200'
             self.setting4 = '0'
             self.channame = self.Label +' - '+ self.AddonName
             

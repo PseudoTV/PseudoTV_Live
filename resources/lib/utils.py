@@ -1338,8 +1338,7 @@ def chkVersion():
     if len(match) > 0:
         if vernum != str(match[0]):
             if isRepoInstalled() == False:
-                if yesnoDialog('The current available version is '+str(match[0]),'Would you like to install the PseudoTV Live repository and stay updated?','[B]PseudoTV Live Update Available![/B]',"Install","Cancel"):
-                    getRepo()
+                getRepo()
             else:
                 set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
      
@@ -1578,45 +1577,50 @@ def isPTVLOutdated():
 
 def chkChanges():
     log('utils: chkChanges')
+    # Media Limit Change
     CURR_MEDIA_LIMIT = REAL_SETTINGS.getSetting('MEDIA_LIMIT')
     try:
         LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
     except:
+        LAST_MEDIA_LIMIT = CURR_MEDIA_LIMIT
         REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
-    LAST_MEDIA_LIMIT = REAL_SETTINGS.getSetting('Last_MEDIA_LIMIT')
     
     if CURR_MEDIA_LIMIT != LAST_MEDIA_LIMIT:
-        REAL_SETTINGS.setSetting('ForceChannelReset', "true")
         REAL_SETTINGS.setSetting('Last_MEDIA_LIMIT', CURR_MEDIA_LIMIT)
-           
+        if CURR_MEDIA_LIMIT > LAST_MEDIA_LIMIT:
+            REAL_SETTINGS.setSetting('ForceChannelReset', "true")
+    
+    # Bumper Type Change
     CURR_BUMPER = REAL_SETTINGS.getSetting('bumpers')
     try:
-        CURR_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
+        LAST_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
     except:
         REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
-    LAST_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
+        LAST_BUMPER = REAL_SETTINGS.getSetting('Last_bumpers')
     
     if CURR_BUMPER != LAST_BUMPER:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
         REAL_SETTINGS.setSetting('Last_bumpers', CURR_BUMPER)
         
+    # Commercials Type Change
     CURR_COMMERCIALS = REAL_SETTINGS.getSetting('commercials')
     try:
-        CURR_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
+        LAST_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
     except:
         REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
-    LAST_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
+        LAST_COMMERCIALS = REAL_SETTINGS.getSetting('Last_commercials')
     
     if CURR_COMMERCIALS != LAST_COMMERCIALS:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
         REAL_SETTINGS.setSetting('Last_commercials', CURR_COMMERCIALS)
-        
+                
+    # Trailer Type Change
     CURR_TRAILERS = REAL_SETTINGS.getSetting('trailers')
     try:
-        CURR_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
+        LAST_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
     except:
         REAL_SETTINGS.setSetting('Last_trailers', CURR_TRAILERS)
-    LAST_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
+        LAST_TRAILERS = REAL_SETTINGS.getSetting('Last_trailers')
     
     if CURR_TRAILERS != LAST_TRAILERS:
         REAL_SETTINGS.setSetting('ForceChannelReset', "true")
@@ -1625,13 +1629,9 @@ def chkChanges():
 def preStart(): 
     log('utils: preStart')
     chkVersion()
-    chkChanges()
-    # chkAPIS(RSS_API_KEY) 
-    
-    #patch kodi skin
+    # chkChanges()
+    chkAPIS(RSS_API_KEY) 
     patchSeekbar()
-    
-    # Optimize settings based on sys.platform
     chkLowPower()
     
     # Disable long term debugging

@@ -70,16 +70,16 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
         if action in ACTION_PREVIOUS_MENU:
             if self.selectedRuleIndex > -1:
                 xbmc.executebuiltin("SetProperty(itempress,100)")
-                if currentWindow() == 'System':
-                    xbmc.executebuiltin("Control.SetFocus(102)")
-                else:
-                    xbmc.executebuiltin("Control.SetFocus(120)")
                 self.lineSelected = 0
                 self.onClick(130)
             else:
                 if xbmcgui.Dialog().yesno("Save", "Would you like to save your changes?"):
                     self.saveRules()
                 self.close()
+            if currentWindow() == 'System':
+                xbmc.executebuiltin("Control.SetFocus(102)")
+            else:
+                xbmc.executebuiltin("Control.SetFocus(120)")
                 
         elif action in ACTION_MOVE_DOWN:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):
