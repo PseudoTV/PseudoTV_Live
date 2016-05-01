@@ -1302,6 +1302,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
         self.dlg.update(55)
+        self.pluginPathList = []
+        self.pluginNameList = []
+        self.pluginIconList = []
+        
         if isSFAV() == True:
             self.pluginPathList = ['plugin.program.super.favourites']
             self.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]']
