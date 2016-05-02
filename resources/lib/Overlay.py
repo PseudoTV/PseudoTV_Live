@@ -243,6 +243,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.channelThread = ChannelListThread()
         self.channelThread.myOverlay = self 
         self.timeStarted = 0   
+        self.hideShortInfo = False
         self.infoOnChange = True  
         self.infoOnStart = False
         self.settingReminder = False
@@ -1331,6 +1332,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def SetMediaInfo(self, chtype, chname, chnum, mediapath, position, tmpstr=None):
         self.log('SetMediaInfo, pos = ' + str(position))
         # self.clearProp()
+        self.hideShortInfo = False
         mpath = getMpath(mediapath)
         #OnDemand Set Player info, else Playlist
         if position == -999:
@@ -1365,6 +1367,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # SetProperties
         if self.infoOffset == 0:
             self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY.PLAYING")
+            if self.channels[self.currentChannel - 1].getItemDuration(position) < self.shortItemLength:
+                self.hideShortInfo = True
         self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY")
            
 
@@ -1549,6 +1553,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.infoTimer.cancel()
             except:
                 pass
+            
+            if self.hideShortInfo == True:
+                return
+
             self.infoTimer = threading.Timer(timer, self.hideInfo)
             self.infoTimer.name = "InfoTimer"
             self.setShowInfo()
@@ -3464,11 +3472,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         
     def cronJob(self):
-        self.cron_uptime += 1 # life                   
+        self.cron_uptime += 1 # life 
+        self.log("cronJob, uptime (minutes) = " + str(self.cron_uptime))                  
            
         # 1min job
         self.oneMin_Job += 1
-        if self.oneMin_Job == 60:
+        if self.oneMin_Job == 1:
             self.oneMin_Job = 0
             self.ScrSavTimer()
             # self.setShowInfo()
@@ -3476,16 +3485,17 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
         # 2min job
         self.twoMin_Job += 1
-        if self.twoMin_Job == 120:
+        if self.twoMin_Job == 2:
             self.twoMin_Job = 0
-            purgeGarbage() 
             GA_Request()  
             
         # 15min job
         self.fifteenMin_Job += 1
-        if self.fifteenMin_Job == 900:
+        if self.fifteenMin_Job == 15:
             self.fifteenMin_Job = 0
-                
+            purgeGarbage() 
+            
+        # start thread
         self.cronThread()
             
             

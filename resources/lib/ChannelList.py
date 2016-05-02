@@ -369,7 +369,7 @@ class ChannelList:
                             
                         # Reset livetv after 24hrs         
                         if timedif >= (60 * 60 * 24) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
-                            createlist = True  
+                            createlist = True
                     else: 
                         if self.channelResetSetting == 0:
                             # If this channel has been watched for longer than it lasts, reset the channel
@@ -636,6 +636,7 @@ class ChannelList:
     def makeChannelList(self, channel, chtype, setting1, setting2, setting3, setting4, append = False):
         self.log('makeChannelList, CHANNEL: ' + str(channel))
         self.getFileListCache(chtype, channel)
+        msg = 'default'   
         fileListCHK = False
         israndom = False  
         isreverse = False
@@ -645,6 +646,7 @@ class ChannelList:
         
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
+        
             if chtype == 10:
                 setting2 = setting2.replace('7','Multi Playlist').replace('8','Multi Channel').replace('3','User Subscription')
                 setting2 = setting2.replace('4','User Favorites').replace('5','Search Query').replace('9','Raw gdata')
@@ -652,6 +654,17 @@ class ChannelList:
             setting3 = setting3.replace('Unlimited','0').replace('Global','')
             setting4 = setting4.replace('Default','0').replace('Random','1').replace('Reverse','2') 
         
+            # Set Media Sort
+            if setting4 == '1':
+                #RANDOM
+                israndom = True
+                isreverse = False
+            elif setting4 == '2':
+                #REVERSE ORDER
+                israndom = False
+                isreverse = True
+              
+            # Set Media Limit
             try:
                 limit = int(setting3)
                 # Enforce Media limits for LowPower profiles
@@ -815,19 +828,7 @@ class ChannelList:
             self.log("Unable to get information about channel " + str(channel), xbmc.LOGERROR)
             channelplaylist.close()
             return False
-
-        # Set Media Sort
-        if chtype in [7, 10, 11, 12, 13, 15, 16]:
-            if setting4 == '1':
-                #RANDOM
-                israndom = True
-                isreverse = False
-            elif setting4 == '2':
-                #REVERSE ORDER
-                israndom = False
-                isreverse = True
-                
-        msg = 'default'     
+    
         if israndom:
             random.shuffle(fileList)
             msg = 'randomizing' 

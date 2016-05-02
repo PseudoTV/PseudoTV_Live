@@ -646,9 +646,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     self.getControl(233).setLabel('Sort Order:', label2="Default")
                     self.setChname('Seasonal') 
                 else:
-                    self.setYoutubeEX()
                     self.setFocusId(231)
                     xbmc.executebuiltin('SendClick(231)')
+                    self.setYoutubeEX(True)
                 
         elif controlId == 231:    # Youtube ID, input            
             retval = inputDialog('Enter Youtube ID',self.getControl(231).getLabel2())
@@ -1253,37 +1253,40 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def prepareConfig(self):
         self.log("prepareConfig")
         self.showList = []
+        self.pluginPathList = []
+        self.pluginNameList = []
+        self.pluginIconList = []
         self.getControl(105).setVisible(False)
         self.getControl(106).setVisible(False)
         self.dlg = xbmcgui.DialogProgress()
         self.dlg.create("PseudoTV Live", "Preparing Configuration")
         
-        self.dlg.update(5)   
-        show_busy_dialog()        
+        show_busy_dialog()  
+        self.dlg.update(5, "Preparing Configuration", "querying Music database")      
         self.chnlst.fillMusicInfo()     
         
-        self.dlg.update(10)   
+        self.dlg.update(10, "Preparing Configuration", "querying TV database")
         self.chnlst.fillTVInfo()   
         
-        self.dlg.update(15)
+        self.dlg.update(15, "Preparing Configuration", "querying Movie database")
         self.chnlst.fillMovieInfo()
         
-        self.dlg.update(20)
+        self.dlg.update(20, "Preparing Configuration", "querying Plugin database")
         self.chnlst.fillPluginList()
         
-        self.dlg.update(25)
+        self.dlg.update(25, "Preparing Configuration", "querying PVR database")
         self.chnlst.fillPVR()
         
-        self.dlg.update(30)
-        self.chnlst.fillHDHR()
-        
-        self.dlg.update(35)
+        self.dlg.update(30, "Preparing Configuration", "querying Favourites database")
         self.chnlst.fillFavourites()
         
-        self.dlg.update(40)
+        self.dlg.update(35, "Preparing Configuration", "querying HDhomerun devices")
+        self.chnlst.fillHDHR()
+        
+        self.dlg.update(40, "Preparing Configuration", "querying Channel information")
         self.fillChanTypeLabel()
         
-        self.dlg.update(45)
+        self.dlg.update(45, "Preparing Configuration", "gathering data")
         hide_busy_dialog()
         self.mixedGenreList = sorted_nicely(removeStringElem(self.chnlst.makeMixedList(self.chnlst.showGenreList, self.chnlst.movieGenreList)))
         self.networkList = sorted_nicely(removeStringElem(self.chnlst.networkList))
@@ -1292,7 +1295,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.movieGenreList = sorted_nicely(removeStringElem(self.chnlst.movieGenreList))
         self.musicGenreList = sorted_nicely(removeStringElem(self.chnlst.musicGenreList))
         
-        self.dlg.update(50)
+        self.dlg.update(50, "Preparing Configuration", "sorting data")
         self.GenreLst = ['TV','Movies','Episodes','Sports','Kids','News','Music','Seasonal','Other']
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
         self.SortOrderList = ['Default','Random','Reverse']
@@ -1301,11 +1304,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
-        self.dlg.update(55)
-        self.pluginPathList = []
-        self.pluginNameList = []
-        self.pluginIconList = []
-        
+        self.dlg.update(55, "Preparing Configuration", "finalizing data")
         if isSFAV() == True:
             self.pluginPathList = ['plugin.program.super.favourites']
             self.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]']
@@ -1320,6 +1319,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.pluginIconList = [''] + self.pluginIconList
         if isPlugin('plugin.video.meta') == True:
             self.SourceList.append('Meta Plugin')
+            
         self.dlg.update(60)
         self.SourceList = sorted_nicely(self.SourceList)
         self.pluginNameList = self.chnlst.pluginList[0]
@@ -1348,7 +1348,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.dlg.update(90)
         self.dlg.update(95)
         self.updateListing()
-        self.dlg.update(100)
+        self.dlg.update(100, "Preparing Configuration", "Finished")
         self.getControl(105).setVisible(True)
         self.getControl(106).setVisible(False)
         self.setFocusId(102)
@@ -1826,7 +1826,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         infoDialog("Channel "+str(retval)+" already in use")
                     except:
                         inuse = True
-                        if yesnoDialog("Do you want to save channel " + str(channel) + " to " + str(retval) + " ?"):
+                        if yesnoDialog("Do you want to save channel " + str(channel) + " as " + str(retval) + " ?"):
                             self.changeChannelNum(channel, retval)
     
                             
@@ -1850,18 +1850,27 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         setting4 = ADDON_SETTINGS.getSetting("Channel_" + str(old) + "_4")
         self.loadRules(old)
         
-        # new
-        ADDON_SETTINGS.setSetting("Channel_" + str(old) + "_type", "9999")
+        # delete old channel
+        ADDON_SETTINGS.setSetting("Channel_" + str(old) + "_type", "9999") 
+        ADDON_SETTINGS.setSetting('Channel_' + str(old) + '_rulecount','0')
+        theitem = self.listcontrol.getListItem(old-1)
+        theitem.setLabel2('')
+        theitem.setProperty('chname','')
+        self.updateListing(old)
+
+        # write new channel
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_type", chantype)
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_1", setting1)
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_2", setting2)
         ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_3", setting3)
-        ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_4", setting4)    
+        ADDON_SETTINGS.setSetting("Channel_" + str(new) + "_4", setting4)  
         self.saveRules(new)
-        self.updateListing()
-        self.listcontrol.selectItem(int(new)-1)
-        self.setFocusId(102)
-        self.madeChanges = 1           
+        
+        #refresh and focus
+        self.updateListing()    
+        self.setFocusId(102) 
+        self.listcontrol.selectItem(int(new)-1)  
+        self.madeChanges = 1  
         hide_busy_dialog()
 
         
@@ -1933,16 +1942,24 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             ErrorNotify("Submission Failed!") 
 
             
-    def setYoutubeEX(self):
+    def setYoutubeEX(self, note=False):
         self.getControl(234).setVisible(True)
         if (self.getControl(230).getLabel2()) in ['Channel']:
             self.getControl(234).setLabel('Youtube ID ex. "vevo" or "UCcKfSNBlSTsfT-WgPmCVyXQ"')
+            if note == True:
+                infoDialog('Youtube ID ex. "vevo" or "UCcKfSNBlSTsfT-WgPmCVyXQ"',time=15000)
         elif (self.getControl(230).getLabel2()) in ['Playlist']:
             self.getControl(234).setLabel('Youtube ID ex. "PL4mjwxcyyfPhWcInmVVg3OsHnmMsPsecJ"')
+            if note == True:
+                infoDialog('Youtube ID ex. "PL4mjwxcyyfPhWcInmVVg3OsHnmMsPsecJ"',time=15000)
         elif (self.getControl(230).getLabel2()) in ['Multi Channel','Multi Playlist']:
             self.getControl(234).setLabel('Separate MultiTube with [COLOR=blue][B]|[/B][/COLOR], ex. ESPN[COLOR=blue][B]|[/B][/COLOR]ESPN2')
+            if note == True:
+                infoDialog('Separate MultiTube with [COLOR=blue][B]|[/B][/COLOR], ex. ESPN[COLOR=blue][B]|[/B][/COLOR]ESPN2',time=15000)
         elif (self.getControl(230).getLabel2()) == 'Search Query':
             self.getControl(234).setLabel('Search w/[COLOR=red]Safesearch [moderate|strict][/COLOR], ex. (Football+Soccer) or (Football Soccer) or ([COLOR=red]strict|[/COLOR]Dick+Cheney)')
+            if note == True:
+                infoDialog('Search w/[COLOR=red]Safesearch [moderate|strict][/COLOR], ex. (Football+Soccer) or (Football Soccer) or ([COLOR=red]strict|[/COLOR]Dick+Cheney)',time=15000)
         else:
             self.getControl(234).setVisible(False)
             
