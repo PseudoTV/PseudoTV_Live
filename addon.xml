@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.pseudotv.live" version="0.7.5h" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="script.pseudotv.live" version="0.7.6b" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
-        <import addon="repository.lunatixz" version="0.0.1"/>
         <import addon="context.pseudotv.live.export" version="1.0.8"/>
-        <import addon="plugin.video.pseudo.companion" version="0.0.3"/>
+        <import addon="plugin.video.pseudo.companion" version="0.0.7"/>
         <import addon="script.module.pil" version="0.0.1"/>
         <import addon="script.module.buggalo" version="1.1.6"/>
         <import addon="script.module.requests" version="2.7.0"/>

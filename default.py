@@ -44,6 +44,7 @@ def PseudoTV():
             return HandleUpgrade()
 
         setProperty("PseudoTVRunning", "True")
+        # setProperty("SkinHelperShutdownRequested", "True")
         preStart()
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
         
@@ -55,8 +56,6 @@ def PseudoTV():
                 except: 
                     pass
                 log("Joined " + curthread.name)               
-                
-        setProperty("PseudoTVRunning", "False")
         del MyOverlayWindow
     except Exception,e:
         log('default: PseudoTV Overlay Failed! ' + str(e))

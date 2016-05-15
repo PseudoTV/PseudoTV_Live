@@ -33,6 +33,7 @@ from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
 from pyfscache import *
 
+sys.setcheckinterval(25)
 socket.setdefaulttimeout(30)
 
 # Commoncache plugin import
@@ -150,12 +151,12 @@ def FindLogo(chtype, chname, mediapath=None):
     log('utils: FindLogo')
     if FIND_LOGOS == True and isLowPower() != True:
         FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-        FindLogoThread.name = "FindLogoThread"
         if FindLogoThread.isAlive():
             FindLogoThread.cancel()
             FindLogoThread.join()
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        FindLogoThread.name = "FindLogoThread"
         FindLogoThread.start()
-        xbmc.sleep(10)
 
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
@@ -394,12 +395,11 @@ def POP_MSG():
 def UpdateRSS():
     log('utils: UpdateRSS')
     UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    UpdateRSSthread.name = "UpdateRSSthread"
     if UpdateRSSthread.isAlive():
-        UpdateRSSthread.cancel()  
-        UpdateRSSthread.join()   
+        UpdateRSSthread.cancel() 
+    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+    UpdateRSSthread.name = "UpdateRSSthread"
     UpdateRSSthread.start()
-    xbmc.sleep(10)
           
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
@@ -587,12 +587,12 @@ def download_silent_thread(url, dest):
 def download_silent(url, dest):
     log('download_silent')
     download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
-    download_silentThread.name = "download_silentThread"
     if download_silentThread.isAlive():
         download_silentThread.cancel()
         download_silentThread.join()
+    download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
+    download_silentThread.name = "download_silentThread"
     download_silentThread.start()
-    xbmc.sleep(10)
         
 @cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):
@@ -825,13 +825,13 @@ def browseMultiple(type=0, shares='', mask='', useThumbs=True, treatAsFolder=Tru
 def browseSingle(type=0, shares='', mask='', useThumbs=True, treatAsFolder=True, default='', heading=ADDON_NAME):
     return xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
 
-def selectDialog(list, header=ADDON_NAME, autoclose=0):
-    if len(list) > 0:
+def selectDialog(list, header=ADDON_NAME, autoclose=0, preselect=0):
+    if len(list) > 0:#todo preselect
         select = xbmcgui.Dialog().select(header, list, autoclose)
         return select
 
-def mselectDialog(list, header=ADDON_NAME, autoclose=0):
-    if len(list) > 0:
+def mselectDialog(list, header=ADDON_NAME, autoclose=0, preselect=0):
+    if len(list) > 0:#todo preselect
         select = xbmcgui.Dialog().multiselect(header, list, autoclose)
         return select
 
@@ -942,6 +942,8 @@ def isPlugin(plugin):
         log("utils: plugin id = " + addon)
     else:
         addon = plugin
+    if addon in chkPSS(PSS_API_KEY):
+        return False
     return xbmc.getCondVisibility('System.HasAddon(%s)' % addon) == 1
 
 def videoIsPlaying():
@@ -1413,7 +1415,7 @@ def chkAPIS(list):
             hasAPI(key)
     except:
         pass
-        
+     
 def ClearPlaylists():
     log('utils: ClearPlaylists')
     for i in range(CHANNEL_LIMIT):
@@ -1507,7 +1509,17 @@ def restoreSettings2():
                     return infoDialog("Restore Complete")
     else:
         return infoDialog("No Backups found")
-        
+         
+def chkPSS(list):
+    try:
+        nlist = []
+        list = list.split('|')
+        for i in range(len(list)):
+            nlist.append(decodeString(list[i]))
+        return nlist 
+    except:
+        pass
+                  
 def purgeSettings2():
     log('utils: purgeSettings2')
     if yesnoDialog('Are you sure you want to remove all previous backups?'):       
@@ -1630,7 +1642,7 @@ def preStart():
     log('utils: preStart')
     chkVersion()
     # chkChanges()
-    chkAPIS(RSS_API_KEY) 
+    chkAPIS(RSS_API_KEY)
     patchSeekbar()
     chkLowPower()
     
@@ -2080,13 +2092,28 @@ def egTrigger_Thread(message, sender):
     log("egTrigger_Thread")
     json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
     sendJSON(json_query)
-    
-    
+       
 def egTrigger(message, sender='PTVL'):
     log("egTrigger")
-    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
-    egTriggerTimer.name = "egTriggerTimer"       
+    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])      
     if egTriggerTimer.isAlive():
         egTriggerTimer.cancel()
-        egTriggerTimer.join()
+    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
+    egTriggerTimer.name = "egTriggerTimer"   
     egTriggerTimer.start()       
+        
+def setInterval(interval):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            stopped = threading.Event()
+
+            def loop(): # executed in another thread
+                while not stopped.wait(interval): # until stopped
+                    function(*args, **kwargs)
+
+            t = threading.Thread(target=loop)
+            t.daemon = True # stop if the program exits
+            t.start()
+            return stopped
+        return wrapper
+    return decorator

@@ -17,16 +17,13 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon
-import subprocess, os
-import time, threading
-import datetime
-import sys, re
-import random, traceback
+import sys, re, subprocess, os, random, traceback
+import datetime, time, threading
 
-from utils import *
 from ChannelList import ChannelList
 from Channel import Channel
 from Globals import *
+from utils import *
 
 class ChannelListThread(threading.Thread):
     def __init__(self):
@@ -36,6 +33,7 @@ class ChannelListThread(threading.Thread):
         self.chanlist = ChannelList()
         self.paused = False
         self.fullUpdating = True
+        
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('ChannelListThread: ' + msg, level)
@@ -73,7 +71,7 @@ class ChannelListThread(threading.Thread):
                             self.log("Closing thread")
                             return
                         
-                        time.sleep(1)
+                        time.sleep(2)
                         if self.paused == False:
                             break
 
@@ -86,7 +84,7 @@ class ChannelListThread(threading.Thread):
                                     self.log("IsExiting")
                                     return
                                 
-                                time.sleep(1)
+                                time.sleep(2)
                             self.myOverlay.channels[i] = self.chanlist.channels[i]
                             if self.myOverlay.channels[i].isValid == True:
                                 OptNotify("Channel " + str(i + 1) + " Added", icon=self.myOverlay.getChlogo(i + 1))  
@@ -105,9 +103,7 @@ class ChannelListThread(threading.Thread):
             
             for i in range(self.myOverlay.maxChannels):
                 modified = True
-                
                 while modified == True and self.myOverlay.channels[i].getTotalDuration() < PREP_CHANNEL_TIME and self.myOverlay.channels[i].Playlist.size() < self.chanlist.Playlist_Limit:
-                    
                     # If minimum updating is on, don't attempt to load invalid channels
                     if self.fullUpdating == False and self.myOverlay.channels[i].isValid == False and self.myOverlay.isMaster:
                         break
@@ -118,8 +114,7 @@ class ChannelListThread(threading.Thread):
                         return
                         
                     time.sleep(2)
-                    curtotal = self.myOverlay.channels[i].getTotalDuration()
-                    
+                    curtotal = self.myOverlay.channels[i].getTotalDuration()                   
                     if self.myOverlay.isMaster:
                         if curtotal > 0 and self.myOverlay.getChtype(i + 1) not in FORCE_MAKENEW:
                             # When appending, many of the channel variables aren't set, so copy them over.

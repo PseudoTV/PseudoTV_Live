@@ -244,9 +244,13 @@ class Main:
             elif self.YTtype == 2:
                 self.setting1 = ((self.Path).replace('plugin://plugin.video.','').replace('youtube/playlist/','').replace('spotitube/?limit&mode=listyoutubeplaylist&type=browse&url=','')).replace('/','')
             self.setting2 = str(self.YTtype)
-            self.setting3 = '200'
+            self.setting3 = '500'
             self.setting4 = '0'
-            self.channame = self.Label
+            
+            if self.Label.startswith('UC'):
+                self.channame = self.chnlst.getYoutubeChname(self.Label) 
+            else:
+                self.channame = self.Label
             
         elif self.chantype == 14:
             if self.Label.startswith('Cinema Theme'):

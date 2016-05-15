@@ -30,7 +30,7 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D()]
+        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D(), HandleDurFilter()]
         
 
     def getRuleCount(self):
@@ -1258,7 +1258,6 @@ class SetResetTime(BaseRule):
                 return "Reset Every Hour"
             else:
                 return "Reset Every " + self.optionValues[0] + " Hours"
-
         return self.name
 
 
@@ -1381,9 +1380,50 @@ class HandleIceLibrary(BaseRule):
                 channelList.incIceLibrary = False
         elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
             channelList.incIceLibrary = self.storedIceLibValue
-
+        
         return channeldata
+      
+class HandleDurFilter(BaseRule):
+    def __init__(self):
+        self.name = "Duration Filter"
+        self.optionLabels = ['Minimum Allowed Duration in seconds']
+        self.optionValues = ['900']
+        self.myId = 20
+        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
 
+        
+    def copy(self):
+        return HandleDurFilter()
+
+
+    def getTitle(self):
+        if len(self.optionValues[0]) > 0:
+            if int(self.optionValues[0]) > 0:        
+                return "Exclude Content under " + self.optionValues[0] + " seconds"
+            else:
+                return "No Minimum Duration"
+        return self.name
+        
+        
+    def onAction(self, act, optionindex):
+        self.onActionDigitBox(act, optionindex)
+        self.validate()
+        return self.optionValues[optionindex]
+
+
+    def validate(self):
+        self.validateDigitBox(0, 1, 50, '')
+
+
+    def runAction(self, actionid, channelList, channeldata):
+        if actionid == RULES_ACTION_START:
+            self.storeddurFilter = channelList.durFilter
+            self.log("Option for HandleDurFilter is " + str(self.optionValues[0]))
+            channelList.durFilter = self.optionValues[0]
+        
+        elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
+            channelList.durFilter = self.storeddurFilter
+        return channeldata
         
 class HandleBCT(BaseRule):
     def __init__(self):

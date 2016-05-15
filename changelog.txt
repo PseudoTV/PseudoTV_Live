@@ -1,3 +1,9 @@
+[*] Automatic Youtube channel names via channel manager.
+[*] New Advanced channel rule "Minimum Allowed Duration", filter out content that is less then set duration.
+[*] Optimized threading and tweaked performance.
+[*] Skin Manager tweaks, Fixed UPNP Video Mirroring.
+[*] Added Search plugin selection to settings.
+[*] [COLOR=blue][B]^ v.0.7.6 ^[/B][/COLOR]
 [*] New Mouse controls; OVERLAY CONTROLS 'Double Click' = open EPG, 'Left Click' = Show Info. Clickable buttons and scroll wheel support added to EPG.
 [*] Tweaked "Stopped Playback" mode, stable?; Moved to "Tweaks" setting tab.
 [*] Added Meta4Kodi live "networks" support to LiveTV/InternetTV Chtypes. *Requires Networks fork of Meta4Kodi Plugin http://tinyurl.com/zw3a5fa

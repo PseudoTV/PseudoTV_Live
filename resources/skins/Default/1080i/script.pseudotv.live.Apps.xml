@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <window>
     <allowoverlay>no</allowoverlay>  
-    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
-    <onunload>ActivateWindow(12005)</onunload>
     <onload>SetProperty(PTVL.APPS_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.APPS_Opened,false,10000)</onunload>
+    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
+    <onunload>ActivateWindow(12005)</onunload>
     <zorder>1</zorder>
     <coordinates>
         <system>1</system>
@@ -340,7 +340,8 @@
                         <aspectratio aligny="top">keep</aspectratio>
                     </control>
                 </focusedlayout>
-            </control> <control description="Panel" id="501" type="panel">
+            </control> 
+            <control description="Panel" id="501" type="panel">
                 <viewtype label="Panel">Panel</viewtype>   
                 <posx>425</posx>
                 <posy>340</posy> 

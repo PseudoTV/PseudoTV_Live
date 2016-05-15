@@ -74,6 +74,7 @@ TMDB_API_KEY     = REAL_SETTINGS.getSetting("TMDB_API_KEY")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANARTTV_API_KEY")
 YT_API_KEY       = REAL_SETTINGS.getSetting('YT_API_KEY')
 RSS_API_KEY      = REAL_SETTINGS.getSetting('RSS_API_KEY')
+PSS_API_KEY      = REAL_SETTINGS.getSetting('PSS_API_KEY')
 GOOGLE_API_KEY   = REAL_SETTINGS.getSetting('GOOGLE_API_KEY')
 LOGODB_API_KEY   = REAL_SETTINGS.getSetting('LOGODB_API_KEY')
 DOX_API_KEY      = REAL_SETTINGS.getSetting('DOX_API_KEY')
@@ -121,11 +122,6 @@ NUMBER_CHANNEL_TYPES = 17
 
 # Channel Limit, Current available max is 999
 CHANNEL_LIMIT = 999
-
-#UPNP Clients
-IPP1 = REAL_SETTINGS.getSetting("UPNP1_IPP")
-IPP2 = REAL_SETTINGS.getSetting("UPNP2_IPP")
-IPP3 = REAL_SETTINGS.getSetting("UPNP3_IPP")
 
 #LOCATIONS
 SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile') #LOCKED
@@ -252,15 +248,6 @@ daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",2
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
 monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))
 
-# commoncache artwork (Only needed for Artwork Spooler Service)
-artwork = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork",((24 * 7) * 4))         #Artwork Purge
-artwork1 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork1",((24 * 7) * 4))       #Artwork Purge
-artwork2 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork2",((24 * 7) * 4))       #Artwork Purge
-artwork3 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork3",((24 * 7) * 4))       #Artwork Purge
-artwork4 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork4",((24 * 7) * 4))       #Artwork Purge
-artwork5 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork5",((24 * 7) * 4))       #Artwork Purge
-artwork6 = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "artwork6",((24 * 7) * 4))       #Artwork Purge
-
 # pyfscache globals
 cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
@@ -277,8 +264,8 @@ EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']
 LIVETV_MAXPARSE = 259200 #secs (72hrs)
 INTERNETTV_MAXPARSE = 86400 #secs (24hrs)
 INTERNETTV_DURATION = 5400
-PLUGINUPNP_MAXPARSE = 250
-YOUTUBERSS_MAXPARSE = 200 # max return from youtube api per call
+PLUGINUPNP_MAXPARSE = 500 
+YOUTUBERSS_MAXPARSE = 500 # max return from youtube api per call
 MAX_MEDIA_LIMIT = 10000
 
 try:

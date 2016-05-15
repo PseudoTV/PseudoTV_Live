@@ -37,13 +37,12 @@ except:
       
 class EPGWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
+        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.log('__init__')
-        self.channelLabel = []    
-        self.channelLogos = ''
-        self.textcolor = "FFFFFFFF"
-        self.focusedcolor = "FF7d7d7d"
-        self.shadowcolor = "FF000000"
-        self.textfont  = "font14"
+        self.channelLabel = []  
+        self.toRemove = []
+        self.showingInfo = False
+        self.showingContext = False
         self.infoOffsetV = 0
         self.clockMode = 0
         self.inputChannel = -1
@@ -54,16 +53,16 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.shownTime = 0
         self.infoOffset = 0
         self.centerChannel = 0
-        self.showingInfo = False
-        self.showingContext = False
-        self.chanlist = ChannelList()
-        self.lastActionTime = time.time()
-        self.actionSemaphore = threading.BoundedSemaphore()
+        self.channelLogos = ''
+        self.textcolor = "FFFFFFFF"
+        self.focusedcolor = "FF7d7d7d"
+        self.shadowcolor = "FF000000"
+        self.textfont  = "font14"
         self.channelbugcolor = CHANBUG_COLOR
         self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
         self.timeButtonBar = MEDIA_LOC + TIME_BAR
-        self.clockMode = ADDON_SETTINGS.getSetting("ClockMode")
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
+        self.clockMode = ADDON_SETTINGS.getSetting("ClockMode")
         
         try:
             self.rowCount = int(getProperty("EPG.rowCount"))
@@ -76,34 +75,18 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         for i in range(self.rowCount):
             self.channelButtons[i] = []
             self.channelTags[i] = []
-        self.toRemove = []
-
-                    
-    def log(self, msg, level = xbmc.LOGDEBUG):
-        log('EPGWindow: ' + msg, level)
-
-
-    def onFocus(self, controlid):
-        pass
-
-
-    # set the time labels
-    def setTimeLabels(self, thetime):
-        now = datetime.datetime.fromtimestamp(thetime)
-        self.getControl(5001).setLabel(now.strftime('%A, %B %d'))
-        delta = datetime.timedelta(minutes=30)
-
-        for i in range(3):
-            if self.clockMode == "0":
-                self.getControl(101 + i).setLabel(now.strftime("%I:%M%p").lower())
-            else:
-                self.getControl(101 + i).setLabel(now.strftime("%H:%M"))
-            now = now + delta
-        self.log('setTimeLabels return')
-
         
+        self.chanlist = ChannelList()
+        self.lastActionTime = time.time()
+        self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
+        self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
+        self.actionSemaphore = threading.BoundedSemaphore()
+        
+          
     def onInit(self):
         self.log('onInit')          
+        self.curchannelIndex = []
+        
         now = datetime.datetime.now()  
         if self.clockMode == "0":
             timeex = now.strftime("%I:%M%p").lower()
@@ -130,7 +113,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
         self.addControl(self.currentTime)
         self.addControl(self.currentTimeBar)
-        self.curchannelIndex = []
 
         setProperty("PTVL.VideoWindow","true")
         textcolor = int(getProperty("EPG.textColor"), 16)            
@@ -194,8 +176,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.log("Unknown EPG Initialization exception " + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)          
             self.close()
-            self.MyOverlayWindow.sleepTimeValue = 1
-            self.MyOverlayWindow.startSleepTimer()
             return
 
         for i in range(3):
@@ -208,8 +188,31 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 
         self.FEEDtoggle()  
         self.log('onInit return')
+          
+
+    def log(self, msg, level = xbmc.LOGDEBUG):
+        log('EPGWindow: ' + msg, level)
 
 
+    def onFocus(self, controlid):
+        pass
+
+
+    # set the time labels
+    def setTimeLabels(self, thetime):
+        now = datetime.datetime.fromtimestamp(thetime)
+        self.getControl(5001).setLabel(now.strftime('%A, %B %d'))
+        delta = datetime.timedelta(minutes=30)
+
+        for i in range(3):
+            if self.clockMode == "0":
+                self.getControl(101 + i).setLabel(now.strftime("%I:%M%p").lower())
+            else:
+                self.getControl(101 + i).setLabel(now.strftime("%H:%M"))
+            now = now + delta
+        self.log('setTimeLabels return')
+
+        
     def FEEDtoggle(self):   
         self.log('FEEDtoggle')
         try:
@@ -528,9 +531,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         if chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength:
                             shouldskip = True
                             tmpdur = 0
-                        elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:
-                            shouldskip = True
-                            tmpdur = 0
+                        # elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:
+                            # shouldskip = True
+                            # tmpdur = 0
                         elif chtype not in [8,9]:
                             nextlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos + 1)
                             prevlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos - 1)
@@ -611,16 +614,16 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
 
     def onAction(self, act):
-        self.log('onAction ' + str(act.getId()))
+        action = act.getId()
+        self.log('onAction ' + str(action))
+        self.MyOverlayWindow.playSFX(action)
+        self.MyOverlayWindow.idleReset() 
         
         # temp disabled causes issues with overlay.windowswap
         # if self.actionSemaphore.acquire(False) == False:
             # self.log('Unable to get semaphore')
             # return
-            
-        action = act.getId()
-        self.MyOverlayWindow.playSFX(action)
-            
+
         try:
             if action in ACTION_PREVIOUS_MENU:
                 if self.showingContext:    
@@ -743,9 +746,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.close()
             except:
                 self.log("Error closing", xbmc.LOGERROR)
-
-            self.MyOverlayWindow.sleepTimeValue = 1
-            self.MyOverlayWindow.startSleepTimer()
             return
 
         # self.actionSemaphore.release()
@@ -766,22 +766,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def closeEPG(self):
         self.log('closeEPG')
         self.closeContext()        
-        try:
-            if self.channelLabelTimer.isAlive():
-                self.channelLabelTimer.cancel()
-        except:
-            pass
-        try:
-            if self.GotoChannelTimer.isAlive():
-                self.GotoChannelTimer.cancel()
-        except:
-            pass     
-        try:
-            self.removeControl(self.currentTime)
-            self.removeControl(self.currentTimeBar)
-            self.MyOverlayWindow.startSleepTimer()
-        except:
-            pass
+        if self.channelLabelTimer.isAlive():
+            self.channelLabelTimer.cancel()
+        if self.GotoChannelTimer.isAlive():
+            self.GotoChannelTimer.cancel()
+        self.removeControl(self.currentTime)
+        self.removeControl(self.currentTimeBar)
         self.close()
             
                    
@@ -792,6 +782,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     # Run when a show is selected, so close the epg and run the show
     def onClick(self, controlid):
         self.log('onClick')
+        self.MyOverlayWindow.idleReset()
         if not self.showingContext:
             try:
                 if self.actionSemaphore.acquire(False) == False:
@@ -843,21 +834,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             except:
                 pass
     
-    def startChannelLabelTimer(self, timer=2.0):
-        self.log('startChannelLabelTimer')
-        self.channelLabelTimer = threading.Timer(timer, self.hideChannelLabel)
-        self.channelLabelTimer.name = "ChannelLabel"
-        if self.channelLabelTimer.isAlive():
-            self.channelLabelTimer.cancel()
-        self.channelLabelTimer.start()
-    
     
     # Display the current channel based on self.currentChannel.
     # Start the timer to hide it.
     def showChannelLabel(self, channel):
-        self.log('showChannelLabel ' + str(channel))            
+        self.log('showChannelLabel ' + str(channel))   
+        if self.channelLabelTimer.isAlive():
+            self.channelLabelTimer.cancel()
+        
         tmp = self.inputChannel
-        self.hideChannelLabel()
         self.inputChannel = tmp
         curlabel = 0
 
@@ -875,19 +860,22 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
         self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel % 10) + '.png')
         self.channelLabel[curlabel].setVisible(True)
-        
-        self.startChannelLabelTimer()
-        self.log('showChannelLabel return')
+        self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
+        self.channelLabelTimer.name = "channelLabelTimer"
+        self.channelLabelTimer.start()
         
         
       # Called from the timer to hide the channel label.
     def hideChannelLabel(self):
         self.log('hideChannelLabel')
+        if self.channelLabelTimer.isAlive():
+            self.channelLabelTimer.cancel() 
+            
         for i in range(3):
             self.channelLabel[i].setVisible(False)
 
         inputChannel = self.inputChannel
-        self.GotoChannelTimer = threading.Timer(5.1, self.GotoChannel, [inputChannel])
+        self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel, [inputChannel])
         self.GotoChannelTimer.name = "GotoChannel"
         if self.GotoChannelTimer.isAlive():
             self.GotoChannelTimer.cancel() 
@@ -899,25 +887,20 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def GotoChannel(self, inchannel):
         self.log('GotoChannel, inchannel = ' + str(inchannel))
         self.log('GotoChannel, centerChannel = ' + str(self.centerChannel))
-        try:
-            if self.GotoChannelTimer.isAlive():
-                self.GotoChannelTimer.cancel()
-        except:
-            pass
-        try:
-            if inchannel > self.centerChannel:
-                increasing = False
-            else:
-                increasing = True
-                
-            newchannel = inchannel + 2
-            self.log('GotoChannel, newchannel = ' + str(newchannel))
-            self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel, increasing))
-            self.setProperButton(0)
-            self.inputChannel = -1
-            self.log('GotoChannel return')
-        except Exception,e:
-            self.log('GotoChannel Failed! ' + str(e))
+        if self.GotoChannelTimer.isAlive():
+            self.GotoChannelTimer.cancel()
+
+        if inchannel > self.centerChannel:
+            increasing = False
+        else:
+            increasing = True
+            
+        newchannel = inchannel + 2
+        self.log('GotoChannel, newchannel = ' + str(newchannel))
+        self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel, increasing))
+        self.setProperButton(0)
+        self.inputChannel = -1
+        self.log('GotoChannel return')
             
            
     def GoPgDown(self):

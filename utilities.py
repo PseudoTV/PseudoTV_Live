@@ -70,9 +70,7 @@ def addBypass():
         REAL_SETTINGS.setSetting("BYPASS_LST",str(BYPASS_LST))
     except:
         Unavailable()
-        
-def ClearTempKey():
-    log('utilities: ClearTempKey')
+
     
 def ClearChanFavorites(close=True):
     log('utilities: ClearChanFavorites')

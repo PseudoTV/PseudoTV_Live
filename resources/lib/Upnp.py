@@ -18,6 +18,7 @@
 
 import datetime, socket, json, copy
 
+from utils import *
 from Globals import *
 
 socket.setdefaulttimeout(30)
@@ -28,31 +29,26 @@ class Upnp:
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('Upnp: ' + msg, level)
 
-    
-    def logDebug(self, msg, level = xbmc.LOGDEBUG):
-        if DEBUG == 'true':
-            log('Upnp: ' + msg, level)
-            
             
     def SendExtJson(self, IPP, params):
-        self.log('SendExtJson')
-        try:
-            xbmc_host = str(IPP.split(":")[0])
-            xbmc_port = int(IPP.split(":")[1])
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((xbmc_host, xbmc_port))
-            params2 = copy.copy(params)
-            params2["jsonrpc"] = "2.0"
-            params2["id"] = 1
-            s.send(json.dumps(params2))
-            s.shutdown(socket.SHUT_RDWR)
-            s.close()
-        except:
-            ErrorNotify("Unable to connect with " + xbmc_host,"Video Mirroring Failed!")
+        self.log('SendExtJson, IPP = ' + IPP)
+        xbmc_host, xbmc_port = IPP.split(":")
+        # try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((xbmc_host, int(xbmc_port)))
+        params2 = copy.copy(params)
+        params2["jsonrpc"] = "2.0"
+        params2["id"] = 1
+        s.send(json.dumps(params2))
+        s.shutdown(socket.SHUT_RDWR)
+        s.close()
+        # except:
+            # ErrorNotify("Unable to connect with %s" %str(xbmc_host), "Video Mirroring Failed!")
             
         
     def SendUPNP(self, IPP, file, seektime):
         self.log('SendUPNP')
+        # while self.isPlayingUPNP(IPP, file) == False:
         if seektime > 0:
             seek = str(datetime.timedelta(seconds=seektime))
             seek = seek.split(":")
@@ -74,7 +70,7 @@ class Upnp:
             params = ({"jsonrpc": "2.0", "method": "Player.Open", "params": {"item": {"path": file}}})
         self.SendExtJson(IPP, params)
 
-        
+            
     def StopUPNP(self, IPP):
         self.log('StopUPNP')
         params = ({"jsonrpc":"2.0","id":1,"method":"Player.Stop","params":{"playerid":1}})
@@ -109,3 +105,18 @@ class Upnp:
         self.log('PlaylistUPNP')
         params = ({"jsonrpc":"2.0","id":1,"method":"Player.Open","params":{"item": {"file": file}}})
         self.SendExtJson(IPP,params)
+        
+        
+    def isPlayingUPNP(self, IPP, file):
+        self.log('isPlayingUPNP, IPP = ' + IPP)
+        params = ({"jsonrpc":"2.0","id":1,"method":"Player.GetItem","params":{"playerid":1,"properties":["file"]}})
+        json_folder_detail = self.SendExtJson(IPP,params)
+        detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
+
+        for f in detail:
+            playingFiles = re.search('"file" *: *\[(.*?)\]', f)
+            if playingFiles:
+                if file.lower() == (playingFiles.group(1)).lower():
+                    return True
+                else:
+                    return False

@@ -33,152 +33,154 @@ except:
     
 class SkinManager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
-        self.log("__init__")
-        if getProperty("PseudoTVRunning") != "True":
-            setProperty("PseudoTVRunning", "True")
-            xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)      
-            self.clearProps() 
-            self.local = False
-            self.skinPOSMAX = 0
-            self.screenshotPOS = 1
-            self.selSkin = Skin_Select
-            self.skinLOC = xbmc.translatePath(PTVL_SKIN_LOC)
-            self.skinNames = ['Default']
-            self.fillSkins()
-            self.skinPOS = self.findSkin()
-            self.setSkin(self.skinPOS)
+        if getProperty("PseudoTVSkinRunning") != "True":
+            setProperty("PseudoTVSkinRunning", "True")
+            xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
             self.doModal()
-            self.log("__init__ return")
+        
     
-    
+    def onInit(self):
+        self.CurrentSkin = Skin_Select
+        self.SkinPanel = self.getControl(500)
+        self.fillSkins()
+        
+        
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('SkinManager: ' + msg, level)
 
         
-    def findSkin(self):
-        self.log("findSkin")
-        for i in range(len(self.skinNames)):
-            if Skin_Select.lower() == self.skinNames[i].lower():
-                return i
+    def skinMeta(self, skinname):
+        skinBasePath = xbmc.translatePath(os.path.join(PTVL_SKIN_LOC,skinname))
+        skinBaseURL = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Skins/master/'+skinname
+        cleanSkin = skinname
         
-        
-    def fillSkins(self):
-        self.log("fillSkins")  
-        github_skinList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins')
-        for i in range(len(github_skinList)):
-            ssList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins/tree/master/%s' % github_skinList[i])
-            for n in range(len(ssList)):
-                if (ssList[n].lower()).startswith('screenshot'):
-                    self.skinNames.append(github_skinList[i])
-                    break 
-        self.skinPOSMAX = len(self.skinNames) - 1
-        self.log("fillSkins, self.skinNames = " + str(self.skinNames)) 
-
-        
-    def setSkin(self, skinPOS):
-        self.clearProps() 
-        self.local = False
-        self.outdated = False
-        self.screenshotPOS = 1
-        self.log("setSkin, Skin = " + self.skinNames[skinPOS])
-        BaseURL = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Skins/master/'+self.skinNames[skinPOS]
-        
-        if xbmcvfs.exists(os.path.join(self.skinLOC,self.skinNames[skinPOS],'skin.xml')):
-            self.BasePath = os.path.join(self.skinLOC,self.skinNames[skinPOS])
-            self.local = True
+        #Skin local (already downloaded)
+        if xbmcvfs.exists(os.path.join(skinBasePath,'skin.xml')):
+            SkinLocal = 'true' 
+            skinBase = skinBasePath
+            LocalLogo = 'local.png'
         else:
-            self.BasePath = BaseURL
-        self.log("self.BasePath = " + self.BasePath)
-        
+            SkinLocal = 'false'
+            LocalLogo = 'NA.png'
+            skinBase = skinBaseURL
+
         try:
-            fle = self.BasePath + '/skin.xml'
-            if self.BasePath.startswith('http'):
-                xml = open_url(fle)
+            #Fill Skin meta
+            if SkinLocal == 'false':
+                xml = open_url(os.path.join(skinBaseURL + '/skin.xml'))
             else:
-                xml = open(fle, "r")
+                xml = open(os.path.join(skinBasePath,'skin.xml'), "r")
+                
             dom = parse(xml)
             name = dom.getElementsByTagName('name')
             version = dom.getElementsByTagName('version')
             skinname = dom.getElementsByTagName('skinname') 
+            resolutions = dom.getElementsByTagName('defaultresolution') 
+            
             version = (version[0].childNodes[0].nodeValue).rstrip()     
-            sknname = (skinname[0].childNodes[0].nodeValue).rstrip()
-            xml.close()
-            
-            if version == PTVL_SKINVER:
-                setProperty('PTVL.SKINOUTDATED','')
-                if self.selSkin.lower() == sknname.lower():
-                    sknname = ' [ ' + sknname + ' ]'
-            else:
-                setProperty('PTVL.SKINOUTDATED','[OUTDATED]')
-                self.outdated = True
-
-            setProperty('PTVL.SKINNAME',sknname)
-            setProperty('PTVL.SKINVERSION','v.'+version)
-            setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
-            setProperty('PTVL.SKINSHOT',self.BasePath + '/screenshot0%s.png' %str(self.screenshotPOS))
-            setProperty('PTVL.SKINSHOT_FALLBACK',self.BasePath + '/screenshot01.png')
+            sknname = (skinname[0].childNodes[0].nodeValue).rstrip()  
+            resolution = (resolutions[0].childNodes[0].nodeValue).rstrip()
+            xml.close()         
         except:
-            pass
+            return
+                
+        #Skin currently inuse
+        CurSkin = 'false'
+        if self.CurrentSkin.lower() == sknname.lower():
+            CurSkin = 'true'
+            sknname = ' [ ' + sknname + ' ]'
         
+        #Check PTVL.GUI version
+        SkinOld = 'false'
+        OutLogo = 'NA.png'
+        if version != PTVL_SKINVER:
+            SkinOld = 'true'
+            OutLogo = os.path.join(IMAGES_LOC,'outdated.png')      
+            sknname += ' OUTDATED, please contact skin developer'
             
+        SKINSHOT = [skinBase + '/screenshot01.png',skinBase + '/screenshot02.png',skinBase + '/screenshot03.png',skinBase + '/screenshot04.png']
+        self.SkinItems = xbmcgui.ListItem(label=sknname) 
+        self.SkinItems.setProperty('PTVL.isSKINLOCAL',SkinLocal)                 
+        self.SkinItems.setProperty('PTVL.SKINLOCAL',LocalLogo)                     
+        self.SkinItems.setProperty('PTVL.isSKINSEL',CurSkin)              
+        self.SkinItems.setProperty('PTVL.isSKINOUTDATED',SkinOld)       
+        self.SkinItems.setProperty('PTVL.SKINOUTDATED',OutLogo)
+        self.SkinItems.setProperty('PTVL.SKINNAME',sknname)
+        self.SkinItems.setProperty('PTVL.SKIN',cleanSkin)
+        self.SkinItems.setProperty('PTVL.SKINRESOLUTION',str(resolution))
+        self.SkinItems.setProperty('PTVL.SKINLOGO',skinBase + '/logo.png')
+        self.SkinItems.setProperty('PTVL.SKINVERSION','v.'+version)
+        self.SkinItems.setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
+        self.SkinItems.setProperty('PTVL.SKINSHOT1',skinBase + '/screenshot01.png')  
+        self.SkinItems.setProperty('PTVL.SKINSHOT2',skinBase + '/screenshot02.png')  
+        self.SkinItems.setProperty('PTVL.SKINSHOT3',skinBase + '/screenshot03.png')  
+        self.SkinItems.setProperty('PTVL.SKINSHOT4',skinBase + '/screenshot04.png')
+        self.SkinItems.setProperty('PTVL.SKINSHOT',str(SKINSHOT))
+        self.SkinItems.setProperty("PTVL.SKINPATH", str(skinBasePath)) 
+        self.SkinItems.setProperty("PTVL.SKINURL", str(skinBaseURL))   
+        self.SkinItems.setProperty("PTVL.SKINZIP", str(skinBaseURL + '/' + sknname +'.zip'))       
+        self.SkinPanel.addItem(self.SkinItems)
+        return
+        
+        
+    def fillSkins(self):
+        self.log("fillSkins")
+        show_busy_dialog()
+        self.skinMeta('Default')
+        github_skinList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins')
+        for i in range(len(github_skinList)):
+            ssList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins/tree/master/%s' % github_skinList[i])
+            for n in range(len(ssList)):
+                if ((ssList[n].lower()).startswith('screenshot') and github_skinList[i] != '_Outdated'):
+                    self.skinMeta(github_skinList[i])
+                    break
+        hide_busy_dialog()
+        self.setFocusId(500)
+
+        
     def closeManager(self):
         self.log("closeManager") 
-        setProperty("PseudoTVRunning", "False")
-        REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
-        # REAL_SETTINGS.openSettings()
+        setProperty("PseudoTVSkinRunning", "False")
         self.close()
                    
  
     def onAction(self, act):
         action = act.getId()
         if action in ACTION_SELECT_ITEM:
-            self.SelectAction()
+            self.SelectAction(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKIN'))
         elif action in ACTION_MOVE_LEFT:   
             self.log("onAction, ACTION_MOVE_LEFT")
             setProperty('PTVL.SSLEFTD','FF0297eb')
-            setProperty('PTVL.SSRIGHTD','FFFFFFFF')
-            self.onLeft()    
+            setProperty('PTVL.SSRIGHTD','FFFFFFFF') 
         elif action in ACTION_MOVE_RIGHT:
             self.log("onAction, ACTION_MOVE_RIGHT")
             setProperty('PTVL.SSRIGHTD','FF0297eb')
-            setProperty('PTVL.SSLEFTD','FFFFFFFF')
-            self.onRight()
         elif action in ACTION_PREVIOUS_MENU:
             self.closeManager()
-        elif action in ACTION_MOVE_UP or action in ACTION_PAGEUP:
-            self.log("onAction, ACTION_MOVE_UP")
-            setProperty('PTVL.SSUPD','FF0297eb')
-            setProperty('PTVL.SSDOWND','FFFFFFFF')
-            self.rotateImage('UP') 
-        elif action in ACTION_MOVE_DOWN or action in ACTION_PAGEDOWN:
-            self.log("onAction, ACTION_MOVE_DOWN")
-            setProperty('PTVL.SSDOWND','FF0297eb')
-            setProperty('PTVL.SSUPD','FFFFFFFF')
-            self.rotateImage('DOWN') # Delete button
         elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:
-            self.deleteSkin(self.skinNames[self.skinPOS])
+            self.deleteSkin(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKIN'))
                  
 
     def deleteSkin(self, selSkin):
-        if selSkin == 'Default':
+        if selSkin == 'Default' or xbmcvfs.exists(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINPATH')) == 'false':
             return
         try:
             if yesnoDialog('%s "%s" Skin' %('Delete', selSkin)) == True:
-                shutil.rmtree(os.path.join(self.skinLOC,selSkin))
+                shutil.rmtree(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINPATH'))
         except:
             pass
-        self.selSkin = self.skinNames[0]
-        REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
+        REAL_SETTINGS.setSetting("SkinSelector",'Default')
         self.closeManager()
     
     
     def downloadSkin(self, selSkin):
         self.log("downloadSkin")
-        url = ('https://github.com/PseudoTV/PseudoTV_Skins/raw/master/%s/%s.zip' %(selSkin,selSkin))  
-        dl = os.path.join(self.skinLOC,'%s.zip'%selSkin)
+        url = self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINZIP')
+        dl = os.path.join(PTVL_SKIN_LOC,'%s.zip'%selSkin)
         try:
+            print url, dl
             download(url, dl, '')
-            all(dl, os.path.join(self.skinLOC,''),True)
+            all(dl, os.path.join(PTVL_SKIN_LOC,''),True)
             try:
                 xbmcvfs.delete(dl)
             except:
@@ -188,71 +190,27 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             return False
             
       
-    def SelectAction(self):
+    def SelectAction(self, selSkin):
         self.log("SelectAction")
-        if self.skinNames[self.skinPOS].lower() != self.selSkin.lower():
-            if self.outdated == True:
+        if selSkin.lower() != self.CurrentSkin.lower():
+            if self.SkinPanel.getSelectedItem().getProperty('PTVL.isSKINOUTDATED') == 'true':
                 infoDialog('Skin version outdated!') 
                 return
                 
-            if self.local == True:
+            if self.SkinPanel.getSelectedItem().getProperty('PTVL.isSKINLOCAL') == 'true':
                 msg = 'Apply'
             else:
                 msg = 'Download & Apply'
-            if yesnoDialog('%s "%s" Skin' %(msg, self.skinNames[self.skinPOS])) == True:
-                if self.local == False:
-                    if self.downloadSkin(self.skinNames[self.skinPOS]) == False:
+                
+            if yesnoDialog('%s "%s" Skin' %(msg, selSkin)) == True:
+                if self.SkinPanel.getSelectedItem().getProperty('PTVL.isSKINLOCAL') == 'false':
+                    if self.downloadSkin(selSkin) == False:
                         return
-                self.selSkin = self.skinNames[self.skinPOS]
-                REAL_SETTINGS.setSetting("SkinSelector",self.selSkin)
+                REAL_SETTINGS.setSetting("SkinSelector",selSkin)
                 self.closeManager()
         
         
-    def onLeft(self):
-        self.log("onLeft") 
-        if self.skinPOS == 0:
-            self.skinPOS = self.skinPOSMAX
-        else:
-            self.skinPOS -= 1
-        self.log("self.skinPOS = " + str(self.skinPOS)) 
-        self.setSkin(self.skinPOS)
-
-        
-    def onRight(self):
-        self.log("onRight")
-        if self.skinPOS == self.skinPOSMAX:
-            self.skinPOS = 0
-        else:
-            self.skinPOS += 1
-        self.log("self.skinPOS = " + str(self.skinPOS)) 
-        self.setSkin(self.skinPOS)
-            
-      
-    def clearProps(self):
-        self.log("clearProps")
-        clearProperty("PTVL.SKINNAME")
-        clearProperty("PTVL.SKINAUTHOR")
-        clearProperty("PTVL.SKINVERSION")
-        clearProperty("PTVL.SKINSHOT")
-        clearProperty("PTVL.SKINSHOT_FALLBACK")
-        clearProperty('PTVL.SKINOUTDATED')
-    
-
-    def rotateImage(self, dir):  
-        self.log('rotateImage')
-        if dir == 'UP' and self.screenshotPOS == 4:
-            self.screenshotPOS = 1
-        elif dir == 'DOWN' and self.screenshotPOS == 1:
-            self.screenshotPOS = 4
-        elif dir == 'UP':
-            self.screenshotPOS += 1
-        elif dir == 'DOWN':
-            self.screenshotPOS -= 1
-        setProperty('PTVL.SKINSHOT',self.BasePath + '/screenshot0%s.png' %str(self.screenshotPOS))
-            
-            
 # SkinSelector setsetting to skin name
 __cwd__ = REAL_SETTINGS.getAddonInfo('path')
-
 mydialog = SkinManager("script.pseudotv.live.SkinManager.xml", __cwd__, "Default")
 del mydialog

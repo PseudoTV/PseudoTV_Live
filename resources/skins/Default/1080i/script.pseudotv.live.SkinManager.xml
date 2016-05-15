@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-    <onload>SetProperty(PTVL.SSLEFTD,FFFFFFFF,10000)</onload>
-    <onload>SetProperty(PTVL.SSRIGHTD,FFFFFFFF,10000)</onload>
-    <onload>SetProperty(PTVL.SSUPD,FFFFFFFF,10000)</onload>
-    <onload>SetProperty(PTVL.SSDOWND,FFFFFFFF,10000)</onload>
     <allowoverlay>no</allowoverlay>
     <zorder>1</zorder>
     <controls>
@@ -34,62 +30,119 @@
             <aligny>center</aligny>
             <textcolor>FF0297eb</textcolor>
             <shadowcolor>black</shadowcolor>
-        </control>
+        </control>  
         <control type="grouplist">
             <left>415</left>
             <top>280</top>   
             <width>1280</width>
             <height>845</height>
-            <itemgap>5</itemgap>
-            <orientation>vertical</orientation>
+            <itemgap>1024</itemgap>
+            <orientation>horizontal</orientation>
             <control type="image">
-                <width>1024</width>
-                <height>30</height>
-                <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
-                <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSUPD)]" flipy="true" >config/wall_arrow_vertical.png</texture>
-                <aspectratio>keep</aspectratio>
-            </control> 
-            <control type="grouplist">
-                <left>0</left>
-                <top>0</top>  
-                <width>1280</width>
+                <width>30</width>
                 <height>576</height>
-                <itemgap>5</itemgap>
-                <orientation>horizontal</orientation>
-                <control type="image">
-                    <width>30</width>
-                    <height>576</height>
-                    <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
-                    <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]">config/wall_arrow.png</texture>
-                    <aspectratio>keep</aspectratio>
-                </control>
-                <control type="image">
-                    <fadetime>200</fadetime>
-                    <orientation>horizontal</orientation>
-                    <scrolltime tween="sine" easing="out">200</scrolltime>
-                    <autoscroll>true</autoscroll>
-                    <description>Screenshots</description>
-                    <width>1024</width>
-                    <height>576</height>
-                    <animation effect="fade" start="0" end="100" time="3000">VisibleChange</animation>
-                    <texture fallback="$INFO[Window(10000).Property(PTVL.SKINSHOT_FALLBACK)]">$INFO[Window(10000).Property(PTVL.SKINSHOT)]</texture>
-                </control>  
-                <control type="image">
-                    <width>30</width>
-                    <height>576</height>
-                    <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
-                    <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]" flipx="true">config/wall_arrow.png</texture>
-                    <aspectratio>keep</aspectratio>
-                </control>
+                <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
+                <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSLEFTD)]">config/wall_arrow.png</texture>
+                <aspectratio>keep</aspectratio>
             </control>
             <control type="image">
-                <width>1024</width>
-                <height>30</height>
+                <width>30</width>
+                <height>576</height>
                 <animation effect="fade" start="20" time="200" pulse="true">VisibleChange</animation>
-                <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSDOWND)]">config/wall_arrow_vertical.png</texture>
+                <texture colordiffuse="$INFO[Window(10000).Property(PTVL.SSRIGHTD)]" flipx="true">config/wall_arrow.png</texture>
                 <aspectratio>keep</aspectratio>
             </control>
         </control>
+        <control description="panel" id="500" type="panel">
+            <viewtype label="panel">Panel</viewtype>   
+            <left>445</left>
+            <top>280</top>   
+            <width>1024</width>
+            <height>845</height>
+            <orientation>horizontal</orientation>
+            <preloaditems>3</preloaditems>
+            <pagecontrol>3</pagecontrol>
+            <focusedlayout height="845" width="1024">
+                <control description="SKINSHOTS" type="multiimage"> 
+                    <description>Screenshots</description>
+                    <width>1024</width>
+                    <height>576</height>
+                    <timeperimage>200</timeperimage>
+                    <fadetime>200</fadetime>
+                    <randomize>true</randomize>
+                    <loop>yes</loop>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT1)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT2)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT3)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT4)</info>
+                    <aspectratio aligny="top">keep</aspectratio>
+                </control>
+            </focusedlayout>
+            <itemlayout height="845" width="1024">
+                <control description="SKINSHOTS" type="multiimage">  
+                    <description>Screenshots</description>
+                    <width>1024</width>
+                    <height>576</height>
+                    <timeperimage>200</timeperimage>
+                    <fadetime>200</fadetime>
+                    <randomize>true</randomize>
+                    <loop>yes</loop>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT1)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT2)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT3)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT4)</info>
+                    <aspectratio aligny="top">keep</aspectratio>
+                </control>
+            </itemlayout>
+        </control> 	
+        <control type="multiimage">
+			<randomize>true</randomize>
+			<timeperimage>200</timeperimage>
+			<fadetime>200</fadetime>
+			<pauseatend>0</pauseatend>
+			<loop>true</loop>
+            <left>445</left>
+            <top>280</top>   
+            <width>1024</width>
+            <height>845</height> 
+            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT1)</texture>
+            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT2)</texture>
+            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT3)</texture>
+            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT4)</texture>
+			<animation effect="fade" start="0" end="70" time="550" delay="0" tween="sine" easing="out">WindowOpen</animation>
+        	<animation effect="fade" start="70" end="0" time="550" delay="200" tween="sine" easing="out">WindowClose</animation>
+        	<animation effect="fade" start="0" end="70" time="550" delay="0" tween="sine" easing="out">Visible</animation>
+        	<animation effect="fade" start="70" end="0" time="550" delay="200" tween="sine" easing="out">Hidden</animation>
+		</control>   
+        <control type="grouplist">
+            <left>450</left>
+            <top>875</top>   
+            <width>1024</width>
+            <height>50</height>
+            <itemgap>10</itemgap>
+            <orientation>horizontal</orientation>
+            <control type="image">
+                <description>Skin resolution image</description>
+                <width>100</width>
+                <height>50</height>
+                <aspectratio aligny="top">keep</aspectratio>
+                <texture colordiffuse="FFFFFFFF">$INFO[Container(500).ListItem.Property(PTVL.SKINRESOLUTION),flags/resolution/,.png]</texture>
+            </control> 
+            <control type="image">
+                <description>Skin local image</description>
+                <width>100</width>
+                <height>50</height>
+                <aspectratio aligny="top">keep</aspectratio>
+                <texture colordiffuse="FFFFFFFF">$INFO[Container(500).ListItem.Property(PTVL.SKINLOCAL]</texture>
+            </control>   
+            <control type="image">
+                <description>Skin outdated image</description>
+                <width>100</width>
+                <height>50</height>
+                <aspectratio aligny="top">keep</aspectratio>
+                <texture colordiffuse="FFFFFFFF">$INFO[Container(500).ListItem.Property(PTVL.SKINOUTDATED]</texture>
+            </control> 
+        </control> 
         <control type="image">
             <description>Skin Name image</description>
             <left>320</left>
@@ -107,7 +160,7 @@
             <font>font13_title</font>
             <align>center</align>
             <aligny>center</aligny>
-            <label>[COLOR=FFFFFFFF]$INFO[Window(10000).Property(PTVL.SKINNAME)][/COLOR]</label>
+            <label>[COLOR=FFFFFFFF]$INFO[Container(500).ListItem.Label][/COLOR]</label>
         </control>  
         <control type="label">
             <description>Skin Details</description> 
@@ -118,7 +171,7 @@
             <font>font10</font>
             <align>center</align>
             <aligny>center</aligny>
-            <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(PTVL.SKINAUTHOR)] $INFO[Window(10000).Property(PTVL.SKINVERSION)] [/COLOR]</label>
-        </control>  
+            <label>[COLOR=C0C0C0C0]$INFO[Container(500).ListItem.Property(PTVL.SKINAUTHOR)] $INFO[Container(500).ListItem.Property(PTVL.SKINVERSION)] [/COLOR]</label>
+        </control> 
     </controls>
 </window>
