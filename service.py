@@ -21,11 +21,8 @@ import os, xbmc, xbmcgui, xbmcaddon, xbmcvfs
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_ID = REAL_SETTINGS.getAddonInfo('id')
 ADDON_NAME = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH = REAL_SETTINGS.getAddonInfo('path')
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile')
+ADDON_PATH = REAL_SETTINGS.getAddonInfo('path').decode('utf-8')
 THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/' + 'icon.png')
 AUTOSTART_TIMER = [0,5,10,15,20,25,30][int(REAL_SETTINGS.getSetting('AutoStart'))]
 
@@ -56,3 +53,11 @@ if AUTOSTART_TIMER != 0:
     xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "AutoStart Enabled", (AUTOSTART_TIMER * 1000)/2, THUMB))
     if handle_wait(AUTOSTART_TIMER) == True:
         xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
+        
+# while (not xbmc.abortRequested):
+    # xbmc.sleep(100)
+    # if xbmcgui.Window(10000).getProperty('PseudoTVRunning') == 'True':
+        # if xbmc.getCondVisibility('Window.IsActive(busydialog)') == 1:
+            # xbmc.executebuiltin('Dialog.Close(busydialog)')
+        # if xbmc.getCondVisibility('Window.IsActive(infodialog)') == 1:
+            # xbmc.executebuiltin('Dialog.Close(infodialog)')     

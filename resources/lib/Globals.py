@@ -33,7 +33,7 @@ ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_ID = REAL_SETTINGS.getAddonInfo('id')
 ADDON_NAME = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH = (REAL_SETTINGS.getAddonInfo('path').decode('utf-8'))
+ADDON_PATH = REAL_SETTINGS.getAddonInfo('path').decode('utf-8')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
@@ -425,9 +425,6 @@ FORCE_MAKENEW = [8,16]
 # Ignore seeking for live feeds and other chtypes that don't support it.
 IGNORE_SEEKTIME = [8,9]
 
-# Plugin seek blacklist - Plugins that are known to use rtmp source which lockup xbmc during seek
-PLUGIN_SEEK = []
-
 # Duration in seconds "stacked" for chtypes >= 10
 BYPASS_EPG_SECONDS = 900
 
@@ -442,7 +439,7 @@ BYPASS_COMINGUP = ['PseudoCinema']
 
 # Plugin exclusion strings
 SF_FILTER = ['isearch', 'iplay - kodi playlist manager','create new super folder','explore kodi favourites']
-EX_FILTER = SF_FILTER + ['video resolver settings','<<','back','previous','home','search','find','clips','seasons','trailers']
+EX_FILTER = SF_FILTER + ['This folder contains no content.','video resolver settings','<<','back','previous','home','search','find','clips','seasons','trailers']
 
 GETADDONS_FILTER = ['hdhomerun','pseudolibrary']
 

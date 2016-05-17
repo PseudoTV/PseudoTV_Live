@@ -1,5 +1,6 @@
 [*] Automatic Youtube channel names via channel manager.
-[*] New Advanced channel rule "Minimum Allowed Duration", filter out content that is less then set duration.
+[*] New Advanced channel rule "Minimum Allowed Duration", filter out content that is less than set duration.
+[*] New Advanced channel rule "Disable Seeking". Some sources and plugins do not support seeking when enabled channel ignores seek request. 
 [*] Optimized threading and tweaked performance.
 [*] Skin Manager tweaks, Fixed UPNP Video Mirroring.
 [*] Added Search plugin selection to settings.

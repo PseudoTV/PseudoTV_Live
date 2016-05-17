@@ -263,9 +263,9 @@ class Main:
         elif self.chantype == 15:
             self.setting1 = self.Path
             self.setting2 = ''
-            self.setting3 = '200'
+            self.setting3 = PLUGINUPNP_MAXPARSE
             self.setting4 = '0'
-            self.channame = self.Label +' - '+ self.AddonName
+            self.channame = self.Label
             
         elif self.chantype == 16:
             self.setting1 = self.Path
@@ -370,6 +370,11 @@ class Main:
             ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_4_opt_1", "No")  
             ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_id", "15")
             ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_5_opt_1", "No") 
+            
+        if chantype in [15,16]:
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rulecount", "2")
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_2_id", "20")
+            ADDON_SETTINGS.setSetting("Channel_" + chan + "_rule_2_opt_1", str(MINFILE_DURATION))   
         self.log("saveSettings return")
                 
 if (__name__ == "__main__"):

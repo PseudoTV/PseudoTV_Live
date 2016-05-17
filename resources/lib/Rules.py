@@ -30,7 +30,7 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D(), HandleDurFilter()]
+        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D(), HandleDurFilter(), HandleSeek()]
         
 
     def getRuleCount(self):
@@ -875,7 +875,7 @@ class DontAddChannel(BaseRule):
 
 class InterleaveChannel(BaseRule):
     def __init__(self):
-        self.name = "Interleave Another Channel"
+        self.name = "Interleave Channel"
         self.optionLabels = ['Channel Number', 'Min Interleave Count', 'Max Interleave Count', 'Starting Episode', 'Play # Episodes', 'Start Position']
         self.optionValues = ['0', '1', '1', '1', '1', '1']
         self.myId = 6
@@ -934,9 +934,6 @@ class InterleaveChannel(BaseRule):
             if chan > channelList.maxChannels or chan < 1 or minint < 1 or maxint < 1 or startingep < 1 or numbereps < 1:
                 return filelist
 
-            if channelList.myOverlay.getChtype(chan) in [10]:
-                return filelist
-            
             if minint > maxint:
                 v = minint
                 minint = maxint
@@ -1464,10 +1461,9 @@ class HandleBCT(BaseRule):
             channelList.incBCTs = self.storedBCTValue
 
         return channeldata
-
+        
            
 class HandlePOP(BaseRule):
-    print 'HandlePOP temp disabled'
     def __init__(self):
         self.name = 'Display Coming Up Next'
         self.optionLabels = ['Display Coming Up Next']
@@ -1581,16 +1577,16 @@ class EvenShowsRule(BaseRule):
         if actionid == RULES_ACTION_LIST:
             self.validate()
             
-            try:
-                opt = int(self.optionValues[0]) + 1
-                self.log("Allowed shows in a row: " + str(opt))
-                lastshow = ''
-                realindex = 0
-                inarow = 0
+            opt = int(self.optionValues[0]) + 1
+            self.log("Allowed shows in a row: " + str(opt))
+            lastshow = ''
+            realindex = 0
+            inarow = 0
 
-                for index in range(len(filelist)):
+            for index in range(len(filelist)):
+                try:
                     item = filelist[index]
-                    # self.log("index " + str(index) + " is " + item)
+                    self.log("index " + str(index) + " is " + item)
                     loc = item.find(',')
 
                     if loc > -1:
@@ -1618,8 +1614,8 @@ class EvenShowsRule(BaseRule):
                                 lastshow = showname
                                 self.log("new show: " + lastshow)
                                 inarow = 0
-            except:
-                pass
+                except:
+                    pass
         return filelist
         
         
@@ -1642,3 +1638,45 @@ class EvenShowsRule(BaseRule):
                         filelist.pop(index)
                         return item         
         return ''
+                   
+class HandleSeek(BaseRule):
+    def __init__(self):
+        self.name = 'Disable Seeking'
+        self.optionLabels = ['Disable Seeking']
+        self.optionValues = ['Yes']
+        self.myId = 21
+        self.actions = RULES_ACTION_OVERLAY_SET_CHANNEL | RULES_ACTION_OVERLAY_SET_CHANNEL_END
+        self.selectBoxOptions = [["Yes", "No"]]
+
+
+    def copy(self):
+        return HandleSeek()
+
+
+    def getTitle(self):
+        if self.optionValues[0] == 'Yes':
+            return 'Disable Seeking'
+        else:
+            return 'Allow Seeking'
+
+
+    def onAction(self, act, optionindex):
+        self.onActionSelectBox(act, optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, overlay, channeldata):
+        if actionid == RULES_ACTION_OVERLAY_SET_CHANNEL:
+            self.storedSeekValue = overlay.ignoreSeektime
+
+            if self.optionValues[0] == 'Yes':
+                overlay.ignoreSeektime = True
+                self.log("setting comingup next to true")
+            else:
+                overlay.ignoreSeektime = False
+        elif actionid == RULES_ACTION_OVERLAY_SET_CHANNEL_END:
+            overlay.ignoreSeektime = self.storedSeekValue
+            self.log("set Coming Up Next to " + str(overlay.ignoreSeektime))
+
+        return channeldata
+       

@@ -61,17 +61,6 @@ def DeleteSettings2():
     # Return to PTVL Settings
     REAL_SETTINGS.openSettings()
     
-def addBypass():
-    try:
-        from resources.lib.ChannelList import ChannelList
-        chnlst = ChannelList()
-        chnlst.fillPluginList()
-        BYPASS_LST = matchMselect(chnlst.pluginList[1], mselectDialog(chnlst.pluginList[0], header='Disable Seeking for specified Plugins'))
-        REAL_SETTINGS.setSetting("BYPASS_LST",str(BYPASS_LST))
-    except:
-        Unavailable()
-
-    
 def ClearChanFavorites(close=True):
     log('utilities: ClearChanFavorites')
     REAL_SETTINGS.setSetting("FavChanLst","0")
@@ -124,6 +113,4 @@ elif sys.argv[1] == '-EGIntro':
 elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
 elif sys.argv[1] == '-YTDownloader':
-    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()  
-elif sys.argv[1] == '-BYPASS_SEEK':
-    addBypass()
+    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()

@@ -36,7 +36,6 @@
         <setting type="sep"/>
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
-        <setting id="BYPASS_SEEK" type="action" label="30935" action="RunScript($CWD/utilities.py, -BYPASS_SEEK)"/> 
         <setting id="SeekForward" type="enum" label="30446" values="10s|30s|60s|3m|5m|10m|30m" default="1"/>
         <setting id="SeekBackward" type="enum" label="30447" values="-10s|-30s|-60s|-3m|-5m|-10m|-30m" default="1"/>
         <setting type="sep"/>

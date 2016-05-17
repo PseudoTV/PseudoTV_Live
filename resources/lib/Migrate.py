@@ -668,6 +668,7 @@ class Migrate:
         Globals.REAL_SETTINGS.setSetting("ForceChannelReset","true")
         Globals.ADDON_SETTINGS.setSetting('LastExitTime', str(int(time.time())))
         Globals.ADDON_SETTINGS.writeSettings()
+        self.log('autoTune, return')
         self.updateDialogProgress = 100
         self.updateDialog.close()
         

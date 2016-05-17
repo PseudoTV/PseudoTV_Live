@@ -683,7 +683,7 @@ class ChannelList:
             limit = MEDIA_LIMIT
         
         # set real max limits for 'unlimited' by chtype
-        if limit == 0:
+        if limit == 0 or limit > PLUGINUPNP_MAXPARSE or limit > YOUTUBERSS_MAXPARSE:
             if chtype in [15,16]:
                 limit = PLUGINUPNP_MAXPARSE
             elif chtype in [10,11]:
