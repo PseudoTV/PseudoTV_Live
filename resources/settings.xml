@@ -32,7 +32,7 @@
         <setting id="DirectInput" type="bool"   label="30379" default="true"/>
         <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
         <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
-        <setting id="accurate_duration" type="bool"   label="30934" default="false"/>
+        <setting id="accurate_duration" type="bool"   label="30934" default="true"/>
         <setting type="sep"/>
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>

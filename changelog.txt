@@ -1,16 +1,17 @@
+[*] New! runtime threads to improve performance.
 [*] Automatic Youtube channel names via channel manager.
-[*] New Advanced channel rule "Minimum Allowed Duration", filter out content that is less than set duration.
-[*] New Advanced channel rule "Disable Seeking". Some sources and plugins do not support seeking when enabled channel ignores seek request. 
+[*] New! Advanced channel rule "Minimum Allowed Duration", filter out content that is less than set duration.
+[*] New! Advanced channel rule "Disable Real-Time". Some sources and plugins do not support seeking/time offsets; when enabled channel ignores real-time offset request. 
 [*] Optimized threading and tweaked performance.
 [*] Skin Manager tweaks, Fixed UPNP Video Mirroring.
 [*] Added Search plugin selection to settings.
 [*] [COLOR=blue][B]^ v.0.7.6 ^[/B][/COLOR]
-[*] New Mouse controls; OVERLAY CONTROLS 'Double Click' = open EPG, 'Left Click' = Show Info. Clickable buttons and scroll wheel support added to EPG.
+[*] New! Mouse controls; OVERLAY CONTROLS 'Double Click' = open EPG, 'Left Click' = Show Info. Clickable buttons and scroll wheel support added to EPG.
 [*] Tweaked "Stopped Playback" mode, stable?; Moved to "Tweaks" setting tab.
 [*] Added Meta4Kodi live "networks" support to LiveTV/InternetTV Chtypes. *Requires Networks fork of Meta4Kodi Plugin http://tinyurl.com/zw3a5fa
 [*] Send 'All' available EventGhost broadcasts added to settings under "Debugging".
-[*] New LiveTV reminder prompt with auto channel jump.
-[*] New Auto-Off function, prompt and actions.
+[*] New! LiveTV reminder prompt with auto channel jump.
+[*] New! Auto-Off function, prompt and actions.
 [*] Autostart dialog w/ cancel option.
 [*] Added New Skin controls; Sleep Prompt, EPG Buttons and Optional Channel Highlights, PTVL GUI upgraded to v0.7.5.
 [*] Improving In-App Channel Manager including Advanced Channel Rules. New intuitive controls and selection drop downs.

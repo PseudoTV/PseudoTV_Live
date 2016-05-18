@@ -1641,7 +1641,7 @@ class EvenShowsRule(BaseRule):
                    
 class HandleSeek(BaseRule):
     def __init__(self):
-        self.name = 'Disable Seeking'
+        self.name = 'Disable Real-Time'
         self.optionLabels = ['Disable Seeking']
         self.optionValues = ['Yes']
         self.myId = 21
@@ -1655,9 +1655,9 @@ class HandleSeek(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Disable Seeking'
+            return 'Disable Real-Time'
         else:
-            return 'Allow Seeking'
+            return 'Allow Real-Time'
 
 
     def onAction(self, act, optionindex):

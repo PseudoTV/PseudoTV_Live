@@ -105,7 +105,8 @@ class ChannelList:
 
         
     def readConfig(self):
-        self.startTime = time.time()
+        self.durFilter = 0
+        self.Playlist_Limit = PlaylistLimit()
         self.forceReset = REAL_SETTINGS.getSetting('ForceChannelReset') == "true"
         self.log('Force Reset is ' + str(self.forceReset))
         self.startMode = int(REAL_SETTINGS.getSetting("StartMode"))
@@ -116,15 +117,15 @@ class ChannelList:
         self.log("Include 3D is " + str(self.inc3D))
         self.incIceLibrary = REAL_SETTINGS.getSetting('IncludeIceLib') == "true"
         self.log("IceLibrary is " + str(self.incIceLibrary))
-        self.durFilter = 0
         self.incBCTs = REAL_SETTINGS.getSetting('IncludeBCTs') == "true"
-        self.log("IncludeBCTs is " + str(self.incBCTs))
-        self.tvdbAPI = tvdb.TVDB()
-        self.tmdbAPI = tmdb.TMDB()  
+        self.log("IncludeBCTs is " + str(self.incBCTs)) 
         self.accurateDuration = REAL_SETTINGS.getSetting('accurate_duration') == 'true'
+        self.log("AccurateDuration is " + str(self.accurateDuration))
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
-        self.Playlist_Limit = PlaylistLimit()
+        self.startTime = time.time()
+        self.tvdbAPI = tvdb.TVDB()
+        self.tmdbAPI = tmdb.TMDB() 
         self.findMaxChannels()
 
         if SETTOP:
@@ -4714,6 +4715,8 @@ class ChannelList:
                             label = self.cleanLabels(labels.group(1))
 
                             if label and label.lower() not in excludeLST:
+                                self.log("getFileList_NEW, label = " + label)
+                                self.log("getFileList_NEW, file = " + ascii(file))
                                 if file.startswith('plugin://plugin.program.super.favourites'):
                                     file = urllib.unquote('plugin://plugin'+file.split('plugin')[4]).replace('",return)','')
                                             
@@ -4740,6 +4743,7 @@ class ChannelList:
                                                 try:
                                                     dur = self.getDuration(file)
                                                 except Exception,e:
+                                                    self.log('getFileList_NEW, getDuration Failed! ' + str(e))
                                                     dur = 0
                                             else:
                                                 dur = run
@@ -4759,6 +4763,7 @@ class ChannelList:
                                         self.log("getFileList_NEW, ignoring duration; "+str(dur)+" less than " + str(self.durFilter))
                                         dur = 0
                                         
+                                    self.log("getFileList_NEW, dur = " + str(dur))
                                     if dur > 0:
                                         self.filecount += 1
                                         seasonval = -1
@@ -4767,7 +4772,7 @@ class ChannelList:
                                         if self.background == False:
                                             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(self.filecount))  
                                             setProperty('loading.progress',str(self.updateDialogProgress))                                         
-                                        self.log('getFileList, filecount = ' + str(self.filecount) +'/'+ str(limit))
+                                        self.log('getFileList_NEW, filecount = ' + str(self.filecount) +'/'+ str(limit))
                                         
                                         titles = re.search('"label" *: *"(.*?)",', f)
                                         showtitles = re.search('"showtitle" *: *"(.*?)",', f)
@@ -4862,13 +4867,13 @@ class ChannelList:
                                                 seasonval = int(season.group(1))
                                                 epval = int(episode.group(1))
                                             except Exception,e:
-                                                self.log("Season/Episode DB failed" + str(e))
+                                                self.log("getFileList_NEW, Season/Episode DB failed" + str(e))
                                                 try:  
                                                     labelseasonepval = re.findall(r"(?:s|season)(\d{2})(?:e|x|episode|\n)(\d{2})", label.lower(), re.I)
                                                     seasonval = int(labelseasonepval[0][0])
                                                     epval = int(labelseasonepval[0][1])
                                                 except Exception,e:
-                                                    self.log("Season/Episode Label failed" + str(e))
+                                                    self.log("getFileList_NEW, Season/Episode Label failed" + str(e))
                                                     seasonval = -1
                                                     epval = -1
                                                     
@@ -4961,7 +4966,7 @@ class ChannelList:
                                                 fileList.append(tmpstr)     
                                 
                                 elif filetype == 'directory' and (self.filecount < limit and self.dircount < dirlimit):
-                                    self.log('getFileList, directory')
+                                    self.log('getFileList_NEW, directory')
 
                                     if self.background == False:
                                         self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "searching Directory - %s" % label)
@@ -4969,11 +4974,11 @@ class ChannelList:
 
                                     fileList.extend(self.getFileList(self.requestList(file), channel, limit, excludeLST))
                                     self.dircount += 1
-                                    self.log('getFileList, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
+                                    self.log('getFileList_NEW, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))
                             else:
-                                self.log('getFileList, ' + label.lower() + ' in excludeLST')                                        
+                                self.log('getFileList_NEW, ' + label.lower() + ' in excludeLST')                                        
             except Exception,e:
-                self.log('getFileList, failed...' + str(e))
+                self.log('getFileList_NEW, failed...' + str(e))
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
 
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
@@ -4986,8 +4991,11 @@ class ChannelList:
         if self.background == False and xbmc.Player().isPlaying():
             json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
-                                                                               
-        self.log("getFileList, fileList return = " + str(len(fileList)))      
+                                                                           
+        if len(fileList) == 0:             
+            self.log("getFileList_NEW, fileList = " + str(fileList))   
+        self.log("getFileList_NEW, fileList cnt = " + str(len(fileList)))
+        
         # cleanup  
         del seasoneplist[:]                 
         return fileList

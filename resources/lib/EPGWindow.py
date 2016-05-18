@@ -77,7 +77,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.channelTags[i] = []
         
         self.chanlist = ChannelList()
-        self.lastActionTime = time.time()
         self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
         self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
         self.actionSemaphore = threading.BoundedSemaphore()
@@ -187,6 +186,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 pass
                 
         self.FEEDtoggle()  
+        self.MyOverlayWindow.idleReset()
         self.log('onInit return')
           
 
@@ -617,7 +617,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         action = act.getId()
         self.log('onAction ' + str(action))
         self.MyOverlayWindow.playSFX(action)
-        self.MyOverlayWindow.idleReset() 
         
         # temp disabled causes issues with overlay.windowswap
         # if self.actionSemaphore.acquire(False) == False:
@@ -688,7 +687,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.closeEPG()
                         self.infoOffset = 0
                         self.infoOffsetV = 0
-                        self.lastActionTime = time.time()
+                        self.MyOverlayWindow.idleReset()
                 
             elif action in ACTION_PAGEDOWN: 
                 if not self.showingContext:
@@ -782,7 +781,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     # Run when a show is selected, so close the epg and run the show
     def onClick(self, controlid):
         self.log('onClick')
-        self.MyOverlayWindow.idleReset()
         if not self.showingContext:
             try:
                 if self.actionSemaphore.acquire(False) == False:
@@ -803,7 +801,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.MyOverlayWindow.windowSwap('APPS')
                 else:
                     lastaction = time.time() - self.lastActionTime
-                    if lastaction >= 2:
+                    if lastaction >= 1:
                         try:
                             selectedbutton = self.getControl(controlid)
                         except:
@@ -821,7 +819,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                                     self.focusIndex = x
                                     self.selectShow()
                                     self.closeEPG()
-                                    self.lastActionTime = time.time()
+                                    self.MyOverlayWindow.idleReset()
                                     self.actionSemaphore.release()
                                     self.log('onClick found button return')
                                     return

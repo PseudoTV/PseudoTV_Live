@@ -104,12 +104,13 @@
                 <itemgap>10</itemgap>
                 <orientation>vertical</orientation>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!IsEmpty($INFO[Window(Home).Property(NextAired.4.Label)])</visible>
+                <visible>!IsEmpty(Window(Home).Property(NextAired.4.Label))</visible>
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
                     <font>font12</font>
                     <textcolor>C0C0C0C0</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.4.Label)]</label>
@@ -123,7 +124,17 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture background="true" fallback="$INFO[Window(Home).Property(NextAired.4.Art(fanart)]">$INFO[Window(Home).Property(NextAired.4.Art(landscape)]</texture>
+                    <texture fallback="">$INFO[Window(Home).Property(NextAired.4.Art(fanart)]</texture>
+                    <visible>IsEmpty(Window(Home).Property(NextAired.4.Art(landscape))</visible>
+                    <fadetime>2000</fadetime>
+                </control>
+                <control type="image">
+                    <width>360</width>      
+                    <height>180</height>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <texture>$INFO[Window(Home).Property(NextAired.4.Art(landscape)]</texture>
                     <fadetime>2000</fadetime>
                 </control>
             </control>
@@ -132,17 +143,18 @@
                 <itemgap>10</itemgap>
                 <orientation>vertical</orientation>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!IsEmpty($INFO[Window(Home).Property(NextAired.3.Label]))</visible>
+                <visible>!IsEmpty(Window(Home).Property(NextAired.3.Label))</visible>
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
                     <font>font12</font>
                     <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.3.Label)]</label>
                     <textcolor>C0C0C0C0</textcolor>
-                    <shadowcolor>ff000000</shadowcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <fadetime>1500</fadetime>
                 </control> 
                 <control type="image">
@@ -151,7 +163,17 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture background="true" fallback="$INFO[Window(Home).Property(NextAired.3.Art(fanart)]">$INFO[Window(Home).Property(NextAired.3.Art(landscape)]</texture>
+                    <texture fallback="">$INFO[Window(Home).Property(NextAired.3.Art(fanart)]</texture>
+                    <visible>IsEmpty(Window(Home).Property(NextAired.3.Art(landscape))</visible>
+                    <fadetime>1500</fadetime>
+                </control>
+                <control type="image">
+                    <width>360</width>      
+                    <height>180</height>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <texture>$INFO[Window(Home).Property(NextAired.3.Art(landscape)]</texture>
                     <fadetime>1500</fadetime>
                 </control>
             </control>
@@ -160,17 +182,28 @@
                 <itemgap>10</itemgap>
                 <orientation>vertical</orientation>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!IsEmpty($INFO[Window(Home).Property(NextAired.2.Label]))</visible>
+                <visible>!IsEmpty(Window(Home).Property(NextAired.2.Label))</visible>
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
                     <font>font12</font>
                     <textcolor>C0C0C0C0</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.2.Label)]</label>
                     <textcolor>C0C0C0C0</textcolor>
-                    <shadowcolor>ff000000</shadowcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                    <fadetime>1000</fadetime>
+                </control> 
+                <control type="image">
+                    <width>360</width>      
+                    <height>180</height>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <texture fallback="">$INFO[Window(Home).Property(NextAired.2.Art(fanart)]</texture>
+                    <visible>IsEmpty(Window(Home).Property(NextAired.2.Art(landscape))</visible>
                     <fadetime>1000</fadetime>
                 </control>
                 <control type="image">
@@ -179,7 +212,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture background="true" fallback="$INFO[Window(Home).Property(NextAired.2.Art(fanart)]">$INFO[Window(Home).Property(NextAired.2.Art(landscape)]</texture>
+                    <texture>$INFO[Window(Home).Property(NextAired.2.Art(landscape)]</texture>
                     <fadetime>1000</fadetime>
                 </control>
             </control>
@@ -188,7 +221,7 @@
                 <itemgap>10</itemgap>
                 <orientation>vertical</orientation>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!IsEmpty($INFO[Window(Home).Property(NextAired.1.Label]))</visible>
+                <visible>!IsEmpty(Window(Home).Property(NextAired.1.Label))</visible>
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
@@ -197,7 +230,7 @@
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.1.Label)]</label>
                     <textcolor>C0C0C0C0</textcolor>
-                    <shadowcolor>ff000000</shadowcolor>
+                <shadowcolor>ff000000</shadowcolor>
                     <fadetime>500</fadetime>
                 </control> 
                 <control type="image">
@@ -206,11 +239,21 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <aspectratio>keep</aspectratio>
-                    <texture background="true" fallback="$INFO[Window(Home).Property(NextAired.1.Art(landscape)]">$INFO[Window(Home).Property(NextAired.1.Art(landscape)]</texture>
+                    <texture fallback="">$INFO[Window(Home).Property(NextAired.1.Art(fanart)]</texture>
+                    <visible>IsEmpty(Window(Home).Property(NextAired.1.Art(landscape))</visible>
+                    <fadetime>500</fadetime>
+                </control>
+                <control type="image">
+                    <width>360</width>      
+                    <height>180</height>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <aspectratio>keep</aspectratio>
+                    <texture>$INFO[Window(Home).Property(NextAired.1.Art(landscape)]</texture>
                     <fadetime>500</fadetime>
                 </control>
             </control> 
-        </control>         
+        </control>                  
         <control type="button" id="6000">
             <description>Filter Button</description>     
             <posx>0</posx>
