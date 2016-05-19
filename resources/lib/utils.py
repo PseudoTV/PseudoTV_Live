@@ -1340,10 +1340,13 @@ def chkVersion():
     if len(match) > 0:
         if vernum != str(match[0]):
             if isRepoInstalled() == False:
-                getRepo()
+                # getRepo()
+                okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
             else:
                 set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
-     
+                xbmc.executebuiltin('UpdateAddonRepos')
+                xbmc.executebuiltin('UpdateLocalAddons')
+            
 def isCompanionInstalled():
     companion = isPlugin('plugin.video.pseudo.companion')
     log('utils: isCompanionInstalled = ' + str(companion))

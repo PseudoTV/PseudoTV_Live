@@ -1,3 +1,5 @@
+[*] Added skin vignettes, gui version updated.
+[*] New! Info overlay progress bar time.
 [*] New! runtime threads to improve performance.
 [*] Automatic Youtube channel names via channel manager.
 [*] New! Advanced channel rule "Minimum Allowed Duration", filter out content that is less than set duration.

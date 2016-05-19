@@ -97,11 +97,12 @@ class ChannelListThread(threading.Thread):
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
         self.myOverlay.postBackgroundLoading()
             
-        while not self.myOverlay.monitor.abortRequested():
-            # Sleep/wait for abort for 5 seconds
-            if self.myOverlay.monitor.waitForAbort(5):
-                # Abort was requested while waiting. We should exit
-                break
+        # while not self.myOverlay.monitor.abortRequested():
+            # # Sleep/wait for abort for 5 seconds
+            # if self.myOverlay.monitor.waitForAbort(5):
+                # # Abort was requested while waiting. We should exit
+                # break
+        while True:
             DebugNotify("Background Updating...")     
             self.myOverlay.setCurrentChannel()
             

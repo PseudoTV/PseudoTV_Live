@@ -77,6 +77,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             self.channelTags[i] = []
         
         self.chanlist = ChannelList()
+        self.lastActionTime = time.time()
         self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
         self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
         self.actionSemaphore = threading.BoundedSemaphore()
@@ -185,8 +186,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             except:
                 pass
                 
-        self.FEEDtoggle()  
-        self.MyOverlayWindow.idleReset()
+        self.FEEDtoggle()
         self.log('onInit return')
           
 
@@ -687,7 +687,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.closeEPG()
                         self.infoOffset = 0
                         self.infoOffsetV = 0
-                        self.MyOverlayWindow.idleReset()
+                        self.lastActionTime = time.time()
                 
             elif action in ACTION_PAGEDOWN: 
                 if not self.showingContext:
@@ -801,7 +801,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         self.MyOverlayWindow.windowSwap('APPS')
                 else:
                     lastaction = time.time() - self.lastActionTime
-                    if lastaction >= 1:
+                    if lastaction >= 2:
                         try:
                             selectedbutton = self.getControl(controlid)
                         except:
@@ -819,7 +819,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                                     self.focusIndex = x
                                     self.selectShow()
                                     self.closeEPG()
-                                    self.MyOverlayWindow.idleReset()
+                                    self.lastActionTime = time.time()
                                     self.actionSemaphore.release()
                                     self.log('onClick found button return')
                                     return
