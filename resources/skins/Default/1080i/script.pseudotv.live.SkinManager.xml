@@ -72,9 +72,6 @@
                     <randomize>true</randomize>
                     <loop>yes</loop>
                     <info background="true">ListItem.Property(PTVL.SKINSHOT1)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT2)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT3)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT4)</info>
                     <aspectratio aligny="top">keep</aspectratio>
                 </control>
             </focusedlayout>
@@ -87,33 +84,11 @@
                     <fadetime>200</fadetime>
                     <randomize>true</randomize>
                     <loop>yes</loop>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT1)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT2)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT3)</info>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT4)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT)</info>
                     <aspectratio aligny="top">keep</aspectratio>
                 </control>
             </itemlayout>
         </control> 	
-        <control type="multiimage">
-			<randomize>true</randomize>
-			<timeperimage>200</timeperimage>
-			<fadetime>200</fadetime>
-			<pauseatend>0</pauseatend>
-			<loop>true</loop>
-            <left>445</left>
-            <top>280</top>   
-            <width>1024</width>
-            <height>845</height> 
-            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT1)</texture>
-            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT2)</texture>
-            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT3)</texture>
-            <texture background="true">$INFO[Container(500).ListItem.Property(PTVL.SKINSHOT4)</texture>
-			<animation effect="fade" start="0" end="70" time="550" delay="0" tween="sine" easing="out">WindowOpen</animation>
-        	<animation effect="fade" start="70" end="0" time="550" delay="200" tween="sine" easing="out">WindowClose</animation>
-        	<animation effect="fade" start="0" end="70" time="550" delay="0" tween="sine" easing="out">Visible</animation>
-        	<animation effect="fade" start="70" end="0" time="550" delay="200" tween="sine" easing="out">Hidden</animation>
-		</control>   
         <control type="grouplist">
             <left>450</left>
             <top>875</top>   

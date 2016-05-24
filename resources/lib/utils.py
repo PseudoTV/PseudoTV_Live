@@ -392,17 +392,9 @@ def POP_MSG():
         pass
     return poplist
                  
+
 def UpdateRSS():
     log('utils: UpdateRSS')
-    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    if UpdateRSSthread.isAlive():
-        UpdateRSSthread.cancel() 
-    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    UpdateRSSthread.name = "UpdateRSSthread"
-    UpdateRSSthread.start()
-          
-def UpdateRSS_Thread():
-    log('utils: UpdateRSS_Thread')
     try:
         now  = datetime.datetime.today()
         try:
@@ -1102,7 +1094,7 @@ def modification_date(filename):
     return datetime.datetime.fromtimestamp(t)
     
 def getSize(file):
-    log("getSize")
+    log('utils: getSize')
     if xbmcvfs.exists(file):
         file = xbmc.translatePath(file)
         try:
@@ -1340,12 +1332,12 @@ def chkVersion():
     if len(match) > 0:
         if vernum != str(match[0]):
             if isRepoInstalled() == False:
-                # getRepo()
+                getRepo()
                 okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
             else:
                 set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
-                xbmc.executebuiltin('UpdateAddonRepos')
-                xbmc.executebuiltin('UpdateLocalAddons')
+            xbmc.executebuiltin('UpdateAddonRepos')
+            xbmc.executebuiltin('UpdateLocalAddons')
             
 def isCompanionInstalled():
     companion = isPlugin('plugin.video.pseudo.companion')
@@ -2091,19 +2083,10 @@ def patchSeekbar():
     except Exception,e:
         log('utils: patchSeekbar, Failed! ' + str(e))
    
-def egTrigger_Thread(message, sender):
-    log("egTrigger_Thread")
-    json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
-    sendJSON(json_query)
-       
 def egTrigger(message, sender='PTVL'):
     log("egTrigger")
-    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])      
-    if egTriggerTimer.isAlive():
-        egTriggerTimer.cancel()
-    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
-    egTriggerTimer.name = "egTriggerTimer"   
-    egTriggerTimer.start()       
+    json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
+    sendJSON(json_query) 
         
 def setInterval(interval):
     def decorator(function):

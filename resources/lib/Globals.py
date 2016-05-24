@@ -38,7 +38,7 @@ ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
-PTVL_SKINVER = '0.7.6'
+PTVL_SKINVER = '0.7.7'
 
 def log(msg, level = xbmc.LOGDEBUG):
     if level == xbmc.LOGDEBUG:
@@ -95,7 +95,6 @@ NOTIFICATION_CHECK_TIME = 30 #in seconds
 NOTIFICATION_TIME_BEFORE_END = 240 #in seconds
 NOTIFICATION_DISPLAY_TIME = 6 #in seconds
 REMINDER_COUNTDOWN = 15 #secs
-RSS_REFRESH = 900 #secs
 ONNOW_REFRESH = 450 #secs
 ONNOW_REFRESH_LOW = 900 #secs
 SETTOP_REFRESH = 3600 #secs
@@ -257,6 +256,7 @@ cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
+BCT_TYPES = ['Bumper', 'Commercial', 'Trailer', 'Rating', 'PseudoCinema', 'Intro', 'Cellphone', 'Coming Soon', 'PreMovie', 'Feature Presentation', 'Intermission']
 
 # Eventghost broadcasts
 EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']

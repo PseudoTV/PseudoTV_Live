@@ -3,7 +3,8 @@
     <allowoverlay>no</allowoverlay>
     <zorder>1</zorder>
     <!-- Set artwork -->
-    <onload>SetProperty(OVERLAY.type1,landscape,10000)</onload>
+    <onload>SetProperty(OVERLAY.PROGBAR_TYPE,landscape,10000)</onload>
+    <onload>SetProperty(OVERLAY.type1,Player.Time ,10000)</onload>
     <onload>SetProperty(OVERLAY.type2,poster,10000)</onload>
     <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload>
     <onload>SetProperty(OVERLAY.type4,poster,10000)</onload>
@@ -202,11 +203,11 @@
                 <scrollsuffix> - </scrollsuffix>
                 <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
-            <control type="button" id="5006">
+            <control type="label" id="5006">
                 <description>Timebar Progressbar Time Button</description>
-                <posx>0</posx>
-                <posy>0</posy>
-                <width min="100" max="200">auto</width>
+                <posx>430</posx><!-- #should match 5007 -->
+                <posy>235r</posy>
+                <width>130</width>
                 <height>20</height>
                 <fadetime>250</fadetime>
                 <textcolor>FFFFFFFF</textcolor>
@@ -215,17 +216,18 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!Control.IsVisible(101) + [Control.IsVisible(102) | Control.IsVisible(222)]</visible>
+                <visible>!Control.IsVisible(101) + Control.IsVisible(102) + Control.IsVisible(5007)</visible>
             </control>
             <control type="group">             
                 <control type="image">
                     <description>Seekbar Line</description>
+                    <posx>430</posx>
+                    <posy>225r</posy>
                     <width>1400</width>
                     <height>4</height>
                     <texture>seek/progress_mid.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <visible>!Control.IsVisible(5007)</visible>
                 </control>
                 <control type="progress">
                     <posx>430</posx>
@@ -414,6 +416,21 @@
                 <scrollsuffix> - </scrollsuffix>
                 <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
+            <control type="label" id="5005">
+                <description>Timebar Progressbar Time Button</description>
+                <posx>430</posx><!-- #should match 5004 -->
+                <posy>435r</posy>
+                <width>130</width>
+                <height>20</height>
+                <fadetime>250</fadetime>
+                <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <font>font12</font>
+                <align>center</align>
+                <aligny>center</aligny>
+                <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+                <visible>!Control.IsVisible(101) + [Control.IsVisible(222)]</visible>
+            </control>
             <control type="group">            
                 <control type="image">
                     <description>Seekbar Line</description>
@@ -422,7 +439,7 @@
                     <texture>seek/progress_mid.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <visible>!Control.IsVisible(5007)</visible>
+                    <visible>!Control.IsVisible(5004)</visible>
                 </control>
                 <control type="progress">
                     <posx>430</posx>
@@ -436,9 +453,9 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <info>Player.ProgressCache</info>
-                    <visible>Control.IsVisible(5007)</visible>
+                    <visible>Control.IsVisible(5004)</visible>
                 </control>
-                <control type="progress" id="5007">
+                <control type="progress" id="5004">
                     <posx>430</posx>
                     <posy>425r</posy>
                     <width>1100</width>
@@ -1000,6 +1017,7 @@
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>
+                <visible>Control.IsVisible(7000)</visible>
                 <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 <texture colordiffuse="dd0c2134">overlays/base_color.png</texture>
             </control>

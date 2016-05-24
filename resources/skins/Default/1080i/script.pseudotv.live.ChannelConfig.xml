@@ -239,7 +239,7 @@
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
                     <texturenofocus>pstvlButtonFocus.png</texturenofocus>
                     <textoffsetx>7</textoffsetx>
-                    <label>Repair</label>
+                    <label>Utilities</label>
                 </control>  
                 <control type="button" id="14">
                     <width>250</width>

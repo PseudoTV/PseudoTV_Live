@@ -96,9 +96,8 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         if version != PTVL_SKINVER:
             SkinOld = 'true'
             OutLogo = os.path.join(IMAGES_LOC,'outdated.png')      
-            sknname += ' OUTDATED, please contact skin developer'
+            # sknname += ' OUTDATED, please contact skin developer'
             
-        SKINSHOT = [skinBase + '/screenshot01.png',skinBase + '/screenshot02.png',skinBase + '/screenshot03.png',skinBase + '/screenshot04.png']
         self.SkinItems = xbmcgui.ListItem(label=sknname) 
         self.SkinItems.setProperty('PTVL.isSKINLOCAL',SkinLocal)                 
         self.SkinItems.setProperty('PTVL.SKINLOCAL',LocalLogo)                     
@@ -115,7 +114,6 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         self.SkinItems.setProperty('PTVL.SKINSHOT2',skinBase + '/screenshot02.png')  
         self.SkinItems.setProperty('PTVL.SKINSHOT3',skinBase + '/screenshot03.png')  
         self.SkinItems.setProperty('PTVL.SKINSHOT4',skinBase + '/screenshot04.png')
-        self.SkinItems.setProperty('PTVL.SKINSHOT',str(SKINSHOT))
         self.SkinItems.setProperty("PTVL.SKINPATH", str(skinBasePath)) 
         self.SkinItems.setProperty("PTVL.SKINURL", str(skinBaseURL))   
         self.SkinItems.setProperty("PTVL.SKINZIP", str(skinBaseURL + '/' + sknname +'.zip'))       

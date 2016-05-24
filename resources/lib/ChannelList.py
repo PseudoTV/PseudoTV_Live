@@ -47,6 +47,7 @@ from parsers import ustvnow
 from pyfscache import *
 
 socket.setdefaulttimeout(30)
+sys.setrecursionlimit(10000)
 
 if sys.version_info < (2, 7):
     import simplejson as json
@@ -65,7 +66,7 @@ try:
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
 except Exception,e:  
     ENHANCED_DATA = False
-    xbmc.log("script.pseudotv.live-ChannelList: metahandler Import Failed" + str(e))    
+    xbmc.log("script.pseudotv.live-ChannelList: metahandler Import failed! " + str(e))    
 
 class ChannelList:
     def __init__(self):
@@ -250,34 +251,33 @@ class ChannelList:
                 chsetting4 = ADDON_SETTINGS.getSetting('Channel_' + str(i + 1) + '_4')
             except Exception,e:
                 pass
-            
-            if chtype != 9999:
-                if chtype <= 7 and quickFlip == True:
-                    localCount += 1
+
+            if chtype <= 7 and quickFlip == True:
+                localCount += 1
                     
-                if chtype in [8,9]:
-                    chkValid = chsetting2
-                elif chtype in [11,15,16]:
-                    chkValid = chsetting1
-                 
-                if self.Valid_ok(chkValid) == True:
-                    if chtype == 0:
-                        if FileAccess.exists(xbmc.translatePath(chsetting1)):
-                            self.maxChannels = i + 1
-                            self.enteredChannelCount += 1
-                    elif chtype <= 20:
-                        if len(chsetting1) > 0:
-                            self.maxChannels = i + 1
-                            self.enteredChannelCount += 1
-           
-                    if self.forceReset:
-                        ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-                        
-                    # find missing channel logos
-                    if FIND_LOGOS == True:
-                        if chtype not in [6,7]:
-                            chname = self.getChannelName(chtype, i + 1, chsetting1)
-                            FindLogo(chtype, chname)
+            if chtype in [8,9]:
+                chkValid = chsetting2
+            elif chtype in [11,15,16]:
+                chkValid = chsetting1
+             
+            if self.Valid_ok(chkValid) == True:
+                if chtype == 0:
+                    if FileAccess.exists(xbmc.translatePath(chsetting1)):
+                        self.maxChannels = i + 1
+                        self.enteredChannelCount += 1
+                elif chtype <= 20:
+                    if len(chsetting1) > 0:
+                        self.maxChannels = i + 1
+                        self.enteredChannelCount += 1
+       
+                if self.forceReset:
+                    ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
+                    
+                # find missing channel logos
+                if FIND_LOGOS == True:
+                    if chtype not in [6,7]:
+                        chname = self.getChannelName(chtype, i + 1, chsetting1)
+                        FindLogo(chtype, chname)
                             
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
@@ -396,7 +396,7 @@ class ChannelList:
                         if self.channelResetSetting == 4:
                             createlist = False
             except Exception,e:
-                self.log('setupChannel ' + str(channel) + ', _time Failed! ' + str(e))
+                self.log('setupChannel ' + str(channel) + ', _time failed! ' + str(e))
                 
         if createlist or needsreset:
             self.channels[channel - 1].isValid = False
@@ -411,7 +411,6 @@ class ChannelList:
                     self.clearFileListCache(chtype, channel)
                     ADDON_SETTINGS.setSetting('LastResetTime', str(int(time.time())))
                     
-
         if append == False:
             if chtype in [0,1,3,5,6] and chsetting2 == str(MODE_ORDERAIRDATE):
                 self.channels[channel - 1].mode = MODE_ORDERAIRDATE
@@ -1228,17 +1227,17 @@ class ChannelList:
             #Ratings
             fleList = self.getRatingList(14, 'PseudoCinema', channel, PrefileList)
             #Intro
-            IntroStr = self.makeTMPSTR(self.getYoutubeDuration(Intro), 'PseudoCinema', 0, 'Intro', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + Intro)
+            IntroStr = self.makeTMPSTR(self.getYoutubeDuration(Intro), 'PseudoCinema', 0, 'Intro', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + Intro, includeMeta=False)
             #Cellphone
-            CellphoneStr = self.makeTMPSTR(self.getYoutubeDuration(Cellphone), 'PseudoCinema', 0, 'Cellphone', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + Cellphone)
+            CellphoneStr = self.makeTMPSTR(self.getYoutubeDuration(Cellphone), 'PseudoCinema', 0, 'Cellphone', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + Cellphone, includeMeta=False)
             #Comingsoon
-            ComingSoonStr = self.makeTMPSTR(self.getYoutubeDuration(ComingSoon), 'PseudoCinema', 0, 'Coming Soon', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + ComingSoon)
+            ComingSoonStr = self.makeTMPSTR(self.getYoutubeDuration(ComingSoon), 'PseudoCinema', 0, 'Coming Soon', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + ComingSoon, includeMeta=False)
             #PreMovie
-            PreMovieStr = self.makeTMPSTR(self.getYoutubeDuration(PreMovie), 'PseudoCinema', 0, 'PreMovie', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + PreMovie)
+            PreMovieStr = self.makeTMPSTR(self.getYoutubeDuration(PreMovie), 'PseudoCinema', 0, 'PreMovie', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + PreMovie, includeMeta=False)
             #FeaturePresentation
-            FeaturePresStr = self.makeTMPSTR(self.getYoutubeDuration(FeaturePres), 'PseudoCinema', 0, 'Feature Presentation', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + FeaturePres)
+            FeaturePresStr = self.makeTMPSTR(self.getYoutubeDuration(FeaturePres), 'PseudoCinema', 0, 'Feature Presentation', 'Welcome to the PseudoCinema Experience', GenreLiveID, self.youtube_player + FeaturePres, includeMeta=False)
             #Intermission
-            IntermissionStr = self.makeTMPSTR(self.getYoutubeDuration(Intermission), 'PseudoCinema', 0, 'Intermission', 'Welcome to the PseudoCinema Experience: Next Movie will begin in 10 Minutes//Intermission', GenreLiveID, self.youtube_player + Intermission)
+            IntermissionStr = self.makeTMPSTR(self.getYoutubeDuration(Intermission), 'PseudoCinema', 0, 'Intermission', 'Welcome to the PseudoCinema Experience: Next Movie will begin in 10 Minutes//Intermission', GenreLiveID, self.youtube_player + Intermission, includeMeta=False)
 
             for n in range(len(fleList)):
                 line = fleList[n]
@@ -1255,7 +1254,7 @@ class ChannelList:
                 dur = aTrailer.split(',')[0]
                 file = aTrailer.split(',')[1]
                 file = file.replace('plugin://plugin.video.youtube/?action=play_video&videoid=', self.youtube_player)
-                TrailersStrLST.append(self.makeTMPSTR(str(dur), 'PseudoCinema', 0, 'Trailer', 'Welcome to the PseudoCinema Experience', GenreLiveID, file))
+                TrailersStrLST.append(self.makeTMPSTR(str(dur), 'PseudoCinema', 0, 'Trailer', 'Welcome to the PseudoCinema Experience', GenreLiveID, file, includeMeta=False))
                 TrailerCount += 1
                 
                 # Only add two trailers
@@ -1326,7 +1325,8 @@ class ChannelList:
             if includeMeta == True and ENHANCED_DATA == True:
                 stars, year, duration, description, Stitle, subtitle, id, genre, rating, playcount = self.getMovieMeta(stars, year, duration, description, title, SEtitle, id, genre, rating, playcount)
         elif type == 'youtube':
-            stars, year, duration, description, Stitle, SEtitle, dbepid, genre, rating, playcount, hd, cc = self.getYoutubeMeta(stars, year, duration, description, title, SEtitle, dbepid, genre, rating, playcount, hd, cc)
+            if includeMeta == True:
+                stars, year, duration, description, Stitle, SEtitle, dbepid, genre, rating, playcount, hd, cc = self.getYoutubeMeta(stars, year, duration, description, title, SEtitle, dbepid, genre, rating, playcount, hd, cc)
         
         Stitle = self.cleanLabels(Stitle)
         SEtitle = self.cleanLabels(SEtitle)
@@ -1352,17 +1352,17 @@ class ChannelList:
         try:
             Stitle = (trim(Stitle, 350, ''))
         except Exception,e:
-            self.log("Stitle Trim failed" + str(e))
+            self.log("Stitle Trim failed! " + str(e))
             Stitle = (Stitle[:350])
         try:
             SEtitle = (trim(SEtitle, 350, ''))
         except Exception,e:
-            self.log("SEtitle Trim failed" + str(e))
+            self.log("SEtitle Trim failed! " + str(e))
             SEtitle = (SEtitle[:350])
         try:
             description = (trim(description, 350, '...'))
         except Exception,e:
-            self.log("description Trim failed" + str(e))
+            self.log("description Trim failed! " + str(e))
             description = (description[:350])  
             
         tmpstr = str(duration) + ',' + Stitle + "//" + SEtitle + "//" + description + "//" + genre + "//" + timestamp + "//" + LiveID + '\n' + file
@@ -1999,7 +1999,7 @@ class ChannelList:
             else:   
                 showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
         
-        if not showList:
+        if len(showList) == 0:
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
@@ -2275,7 +2275,7 @@ class ChannelList:
             if showcount < INTERNETTV_MAXPARSE:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
-            self.log("fillLiveTV Failed!" + str(e), xbmc.LOGERROR)
+            self.log("fillLiveTV failed! " + str(e), xbmc.LOGERROR)
         return showList
         
             
@@ -2466,7 +2466,7 @@ class ChannelList:
             if showcount < INTERNETTV_MAXPARSE:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
-            self.log("fillLiveTVPVR Failed!" + str(e), xbmc.LOGERROR) 
+            self.log("fillLiveTVPVR failed! " + str(e), xbmc.LOGERROR) 
             pass
         return showList
 
@@ -3004,7 +3004,7 @@ class ChannelList:
                 except:
                     pass
         except Exception,e:
-            self.log("isXMLTVCurrent, Failed!" + str(e))
+            self.log("isXMLTVCurrent, failed! " + str(e))
         self.log("isXMLTVCurrent, isCurrent = " + str(isCurrent))
         return isCurrent
                 
@@ -3315,7 +3315,7 @@ class ChannelList:
                     BumperDur, BumperMedia = Bumper.split(',')
                     BumperDur = int(BumperDur)
                     bctDur += BumperDur
-                    tmpstr = self.makeTMPSTR(BumperDur, chname, 0, 'Bumper', 'Bumper', GenreLiveID, BumperMedia)
+                    tmpstr = self.makeTMPSTR(BumperDur, chname, 0, 'Bumper', 'Bumper', GenreLiveID, BumperMedia, includeMeta=False)
                     newFileList.append(tmpstr)
 
             if len(CommercialLST) > 0:
@@ -3328,7 +3328,7 @@ class ChannelList:
                     CommercialDur, CommercialMedia = Commercial.split(',')
                     CommercialDur = int(CommercialDur)
                     bctDur += CommercialDur
-                    tmpstr = self.makeTMPSTR(CommercialDur, chname, 0, 'Commercial', 'Commercial', GenreLiveID, CommercialMedia)
+                    tmpstr = self.makeTMPSTR(CommercialDur, chname, 0, 'Commercial', 'Commercial', GenreLiveID, CommercialMedia, includeMeta=False)
                     newFileList.append(tmpstr)
 
             if len(TrailerLST) > 0:
@@ -3341,7 +3341,7 @@ class ChannelList:
                     trailerDur, trailerMedia = trailer.split(',') #duration of trailer
                     trailerDur = int(trailerDur)
                     bctDur += trailerDur
-                    tmpstr = self.makeTMPSTR(trailerDur, chname, 0, 'Trailer', 'Trailer', GenreLiveID, trailerMedia)
+                    tmpstr = self.makeTMPSTR(trailerDur, chname, 0, 'Trailer', 'Trailer', GenreLiveID, trailerMedia, includeMeta=False)
                     newFileList.append(tmpstr)
         # cleanup   
         del fileList[:]
@@ -3449,7 +3449,7 @@ class ChannelList:
                 URL = self.youtube_player + ID
                 dur = self.getYoutubeDuration(ID)  
                 GenreLiveID = ['Unknown', 'movie', 0, 0, False, 1, mpaa,False, False, 0.0, 0]
-                tmpstr = self.makeTMPSTR(dur, chname, 0, 'Rating', 'Rating', GenreLiveID, URL)
+                tmpstr = self.makeTMPSTR(dur, chname, 0, 'Rating', 'Rating', GenreLiveID, URL, includeMeta=False)
                 newFileList.append(tmpstr)
             # cleanup   
             del fileList[:]
@@ -3487,7 +3487,7 @@ class ChannelList:
                         AsSeenOnCommercialLST.append(AsSeenOnCommercial)
                 CommercialLST.extend(AsSeenOnCommercialLST)
             except Exception,e:
-                self.log("getCommercialList Failed!" + str(e), xbmc.LOGERROR)
+                self.log("getCommercialList failed! " + str(e), xbmc.LOGERROR)
         
         #Local
         if CommercialsType == '1':
@@ -3518,7 +3518,7 @@ class ChannelList:
                     
                     CommercialLST.extend(LocalCommercialLST)      
                 except Exception,e:
-                    self.log("getCommercialList Failed!" + str(e), xbmc.LOGERROR)
+                    self.log("getCommercialList failed! " + str(e), xbmc.LOGERROR)
                     
         #Youtube
         elif CommercialsType == '2':
@@ -3541,7 +3541,7 @@ class ChannelList:
                 
                 CommercialLST.extend(YoutubeCommercialLST)
             except Exception,e:
-                self.log("getCommercialList Failed!" + str(e), xbmc.LOGERROR)
+                self.log("getCommercialList failed! " + str(e), xbmc.LOGERROR)
                 
         #Internet
         elif CommercialsType == '3':
@@ -3614,7 +3614,7 @@ class ChannelList:
                                 
                     TrailerLST.extend(LocalTrailerLST)                
                 except Exception,e:
-                    self.log("getTrailerList Failed!" + str(e), xbmc.LOGERROR)
+                    self.log("getTrailerList failed! " + str(e), xbmc.LOGERROR)
                     
         #XBMC Library - Local Json
         if TrailersType == '2':
@@ -3670,7 +3670,7 @@ class ChannelList:
                                     JsonTrailerLST.append(JsonTrailer)
                         TrailerLST.extend(JsonTrailerLST)     
                 except Exception,e:
-                    self.log("getTrailerList Failed!" + str(e), xbmc.LOGERROR)
+                    self.log("getTrailerList failed! " + str(e), xbmc.LOGERROR)
                     
         #Youtube
         if TrailersType == '3':
@@ -3693,7 +3693,7 @@ class ChannelList:
                         YoutubeTrailerLST.append(YoutubeTrailer)
                 TrailerLST.extend(YoutubeTrailerLST)
             except Exception,e:
-                self.log("getTrailerList Failed!" + str(e), xbmc.LOGERROR)
+                self.log("getTrailerList failed! " + str(e), xbmc.LOGERROR)
                 
         #Internet
         if TrailersType == '4':
@@ -3704,7 +3704,7 @@ class ChannelList:
                     setProperty('loading.progress',str(self.updateDialogProgress))
                 TrailerLST = self.InternetTrailer()
             except Exception,e:
-                self.log("getTrailerList Failed!" + str(e), xbmc.LOGERROR)
+                self.log("getTrailerList failed! " + str(e), xbmc.LOGERROR)
         # cleanup   
         del LocalTrailerLST[:]
         del JsonTrailerLST[:]
@@ -3808,7 +3808,7 @@ class ChannelList:
                                 self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Internet Trailers"%str(TrailersCount))
                                 setProperty('loading.progress',str(self.updateDialogProgress))
         except Exception,e:
-            self.log("InternetTrailer Failed! " + str(e))
+            self.log("InternetTrailer failed! " + str(e))
             pass
         TrailerLST = sorted_nicely(TrailerLST)
         if TrailerLST and len(TrailerLST) > 0:
@@ -4000,7 +4000,7 @@ class ChannelList:
                 # return readXMLTV
             # except Exception,e:
                 # pass
-        # self.log("readXMLTV, Failed! " + str(e))
+        # self.log("readXMLTV, failed! " + str(e))
         # return ['XMLTV ERROR : IMPROPER FORMATING']
 
                 
@@ -4084,7 +4084,7 @@ class ChannelList:
                             return CHname, '0'
             except Exception,e:
                 hide_busy_dialog()
-                self.log("findZap2itID, Failed! " + str(e))
+                self.log("findZap2itID, failed! " + str(e))
             
             
     def ListTuning(self, type, url, Random=False):
@@ -4236,7 +4236,7 @@ class ChannelList:
                         pluginIconList.append(thumb)  
             self.pluginList = [pluginNameList, pluginPathList, pluginIconList]
         except Exception,e:
-            self.log("fillPluginList, Failed! " + str(e))
+            self.log("fillPluginList, failed! " + str(e))
         if len(self.pluginList) == 0:
             self.pluginList = ['No Kodi plugins unavailable!']
     
@@ -4319,7 +4319,7 @@ class ChannelList:
                 FavouritesNameList.append((SortedFavouritesList[i]).split('@#@')[0])  
                 FavouritesPathList.append((SortedFavouritesList[i]).split('@#@')[1])          
         except Exception,e:
-            self.log("fillFavourites, Failed! " + str(e))
+            self.log("fillFavourites, failed! " + str(e))
 
         if len(TMPfavouritesList) == 0:
             FavouritesNameList = ['Kodi Favorites is empty or unavailable!']
@@ -4426,7 +4426,7 @@ class ChannelList:
             try:
                 sbManaged = self.sbAPI.isShowManaged(tvdbid)
             except Exception,e:
-                self.log("sbManaged, Failed! " + str(e))
+                self.log("sbManaged, failed! " + str(e))
         return sbManaged
 
 
@@ -4441,7 +4441,7 @@ class ChannelList:
                 if imdbid in match:
                     cpManaged = True
             except Exception,e:
-                self.log("cpManaged, Failed! " + str(e))
+                self.log("cpManaged, failed! " + str(e))
         return cpManaged
         
         
@@ -4453,7 +4453,7 @@ class ChannelList:
                 tvdbid = 0
         except Exception,e:
             tvdbid = 0
-            self.log("getTVDBIDbyZap2it, Failed! " + str(e))
+            self.log("getTVDBIDbyZap2it, failed! " + str(e))
         return tvdbid
         
 
@@ -4527,14 +4527,15 @@ class ChannelList:
                     cc = (captions.group(1) or '') == 'true'
 
                 categoryIds = re.search('"categoryId" *: *"(.*?)",', f)
-                if categoryIds:
+                if categoryIds and len(categoryIds.group(1)) > 0:
                     try:
                         genre = cats[int(categoryIds.group(1) or genre)]
                     except:
                         genre = 'Unknown'
-
+                        
+                chname = ''
                 channelTitles = re.search('"channelTitle" *: *"(.*?)",', f)
-                if channelTitles:
+                if channelTitles and len(channelTitles.group(1)) > 0:
                     chname = (channelTitles.group(1) or '')
 
                 items = re.search('"items" *:', f)
@@ -4867,13 +4868,11 @@ class ChannelList:
                                                 seasonval = int(season.group(1))
                                                 epval = int(episode.group(1))
                                             except Exception,e:
-                                                self.log("getFileList_NEW, Season/Episode DB failed" + str(e))
                                                 try:  
                                                     labelseasonepval = re.findall(r"(?:s|season)(\d{2})(?:e|x|episode|\n)(\d{2})", label.lower(), re.I)
                                                     seasonval = int(labelseasonepval[0][0])
                                                     epval = int(labelseasonepval[0][1])
                                                 except Exception,e:
-                                                    self.log("getFileList_NEW, Season/Episode Label failed" + str(e))
                                                     seasonval = -1
                                                     epval = -1
                                                     

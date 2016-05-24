@@ -1416,7 +1416,7 @@ class HandleDurFilter(BaseRule):
         if actionid == RULES_ACTION_START:
             self.storeddurFilter = channelList.durFilter
             self.log("Option for HandleDurFilter is " + str(self.optionValues[0]))
-            channelList.durFilter = self.optionValues[0]
+            channelList.durFilter = int(self.optionValues[0])
         
         elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
             channelList.durFilter = self.storeddurFilter
