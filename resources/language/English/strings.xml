@@ -26,7 +26,7 @@
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
-	<string id="30405">Find Missing GuideData [Art & Meta]</string>
+    <string id="30405">Find Missing GuideData [Art & Meta]</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos</string>  
@@ -252,8 +252,8 @@
     <string id="30942">FANART.TV APIKEY</string>
     <string id="30924">GUIDEBOX APIKEY</string>
     <string id="30197">binaries (Optional)</string>
-    <string id="30198">ffmepg path</string>
-    <string id="30199">rtmpdump path</string>
+    <string id="30198">ffprobe executable</string>
+    <string id="30199">rtmpdump executable</string>
     <string id="30939">Miscellaneous</string>
     <string id="30934">Enable Accurate Durations [Slower Channel Building]</string>
 </strings>

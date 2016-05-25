@@ -39,7 +39,7 @@ class TSParser:
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('TSParser: ' + ascii(msg), level)
+        log('TSParser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

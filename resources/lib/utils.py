@@ -392,9 +392,17 @@ def POP_MSG():
         pass
     return poplist
                  
-
 def UpdateRSS():
     log('utils: UpdateRSS')
+    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+    if UpdateRSSthread.isAlive():
+        UpdateRSSthread.cancel() 
+    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+    UpdateRSSthread.name = "UpdateRSSthread"
+    UpdateRSSthread.start()
+         
+def UpdateRSS_Thread():
+    log('utils: UpdateRSS_Thread')
     try:
         now  = datetime.datetime.today()
         try:
@@ -1096,9 +1104,10 @@ def modification_date(filename):
 def getSize(file):
     log('utils: getSize')
     if xbmcvfs.exists(file):
-        file = xbmc.translatePath(file)
         try:
-            size = os.path.getsize(file)
+            f = xbmcvfs.File(file)
+            size = f.size()
+            f.close()
         except:
             size = 0
         return size
@@ -2082,24 +2091,17 @@ def patchSeekbar():
             log('utils: patchSeekbar, Patched dialogseekbar.xml')
     except Exception,e:
         log('utils: patchSeekbar, Failed! ' + str(e))
-   
+
+def egTrigger_Thread(message, sender):
+    log("egTrigger_Thread")
+    json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
+    sendJSON(json_query)
+       
 def egTrigger(message, sender='PTVL'):
     log("egTrigger")
-    json_query = ('{"jsonrpc": "2.0", "method": "JSONRPC.NotifyAll", "params": {"sender":"%s","message":"%s"}, "id": 1}' % (sender, message))
-    sendJSON(json_query) 
-        
-def setInterval(interval):
-    def decorator(function):
-        def wrapper(*args, **kwargs):
-            stopped = threading.Event()
-
-            def loop(): # executed in another thread
-                while not stopped.wait(interval): # until stopped
-                    function(*args, **kwargs)
-
-            t = threading.Thread(target=loop)
-            t.daemon = True # stop if the program exits
-            t.start()
-            return stopped
-        return wrapper
-    return decorator
+    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])      
+    if egTriggerTimer.isAlive():
+        egTriggerTimer.cancel()
+    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
+    egTriggerTimer.name = "egTriggerTimer"   
+    egTriggerTimer.start()   

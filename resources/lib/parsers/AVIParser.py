@@ -125,7 +125,7 @@ class AVIParser:
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('AVIParser: ' + ascii(msg), level)
+        log('AVIParser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

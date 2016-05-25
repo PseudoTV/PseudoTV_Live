@@ -27,7 +27,7 @@ from resources.lib.FileAccess import FileAccess
 
 class MKVParser:
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('MKVParser: ' + ascii(msg), level)
+        log('MKVParser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

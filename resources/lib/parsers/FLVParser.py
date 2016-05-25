@@ -53,7 +53,7 @@ class FLVTagHeader:
 
 class FLVParser:
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('FLVParser: ' + ascii(msg), level)
+        log('FLVParser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

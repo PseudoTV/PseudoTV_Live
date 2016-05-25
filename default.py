@@ -44,7 +44,7 @@ def PseudoTV():
             return HandleUpgrade()
 
         setProperty("PseudoTVRunning", "True")
-        # setProperty("SkinHelperShutdownRequested", "True")
+        setProperty("SkinHelperShutdownRequested", "True")
         preStart()
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
         
@@ -61,7 +61,7 @@ def PseudoTV():
         log('default: PseudoTV Overlay Failed! ' + str(e))
         buggalo.onExceptionRaised()
     setProperty("PseudoTVRunning", "False")
-    # clearProperty('SkinHelperShutdownRequested')
+    clearProperty('SkinHelperShutdownRequested')
         
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)

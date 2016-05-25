@@ -213,10 +213,10 @@ class Artdownloader:
                     elif chtype in [8] and dbid != '0':
                         self.log('FindArtwork, decode dbid')
                         return decodeString(dbid)
-                    # elif chtype == 8 and dbid == '0':
-                        # self.log('FindArtwork, skin.helper getpvrthumb')
-                        # setProperty('SkinHelper.EnablePVRThumbs','true')
-                        # return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
+                    elif chtype == 8 and dbid == '0':
+                        self.log('FindArtwork, skin.helper getpvrthumb')
+                        setProperty('SkinHelper.EnablePVRThumbs','true')
+                        return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
                         
                 # lookup tvdb/tmdb artwork & download missing artwork
                 SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)

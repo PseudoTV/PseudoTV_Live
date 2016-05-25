@@ -46,7 +46,7 @@ class MP4Parser:
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('MP4Parser: ' + ascii(msg), level)
+        log('MP4Parser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

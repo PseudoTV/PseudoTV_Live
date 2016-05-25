@@ -27,7 +27,7 @@ from xml.dom.minidom import parse, parseString
 
 class STRMParser:
     def log(self, msg, level = xbmc.LOGDEBUG):
-        xbmc.log('STRMParser: ' + ascii(msg), level)
+        log('STRMParser: ' + ascii(msg), level)
 
 
     def determineLength(self, filename):

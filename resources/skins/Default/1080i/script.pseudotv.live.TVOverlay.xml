@@ -3,7 +3,7 @@
     <allowoverlay>no</allowoverlay>
     <zorder>1</zorder>
     <!-- Set artwork -->
-    <onload>SetProperty(OVERLAY.PROGBAR_TYPE,landscape,10000)</onload>
+    <onload>SetProperty(OVERLAY.PROGBAR_TYPE,Player.Time,10000)</onload>
     <onload>SetProperty(OVERLAY.type1,Player.Time ,10000)</onload>
     <onload>SetProperty(OVERLAY.type2,poster,10000)</onload>
     <onload>SetProperty(OVERLAY.type3,landscape,10000)</onload>
@@ -203,21 +203,6 @@
                 <scrollsuffix> - </scrollsuffix>
                 <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
-            <control type="label" id="5006">
-                <description>Timebar Progressbar Time Button</description>
-                <posx>430</posx><!-- #should match 5007 -->
-                <posy>235r</posy>
-                <width>130</width>
-                <height>20</height>
-                <fadetime>250</fadetime>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
-                <align>center</align>
-                <aligny>center</aligny>
-                <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-                <visible>!Control.IsVisible(101) + Control.IsVisible(102) + Control.IsVisible(5007)</visible>
-            </control>
             <control type="group">             
                 <control type="image">
                     <description>Seekbar Line</description>
@@ -257,6 +242,22 @@
                     <info>Player.Progress</info>
                 </control> 
             </control>  
+            <control type="button" id="5006">
+                <description>Timebar Progressbar Time Button</description>
+                <posx>430</posx><!-- #should match 5007 -->
+                <posy>235r</posy>
+                <width min="100" max="400">auto</width>
+                <height>20</height>
+                <font>font12</font>
+                <textcolor>FFFFFFFF</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <align>center</align>
+                <aligny>center</aligny>
+                <label>$INFO[Player.Time]</label>
+                <texturefocus>pstvlButtonFocus.png</texturefocus>
+                <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
+                <visible>!Control.IsVisible(101) + [Control.IsVisible(5007)]</visible>
+            </control>
             <control type="label">
                 <description>Show Description</description>
                 <posx>430</posx>

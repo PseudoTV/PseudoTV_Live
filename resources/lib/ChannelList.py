@@ -275,6 +275,8 @@ class ChannelList:
                     
                 # find missing channel logos
                 if FIND_LOGOS == True:
+                    if self.background == False:
+                        self.myOverlay.setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
                     if chtype not in [6,7]:
                         chname = self.getChannelName(chtype, i + 1, chsetting1)
                         FindLogo(chtype, chname)
@@ -675,21 +677,22 @@ class ChannelList:
                     raise Exception()
             except Exception,e:
                 limit = MEDIA_LIMIT  
+        
+            # set real max limits for 'unlimited' by chtype
+            if limit == 0 or limit > PLUGINUPNP_MAXPARSE or limit > YOUTUBERSS_MAXPARSE:
+                if chtype in [15,16]:
+                    limit = PLUGINUPNP_MAXPARSE
+                elif chtype in [10,11]:
+                    limit = YOUTUBERSS_MAXPARSE
+                else:
+                    limit = MAX_MEDIA_LIMIT
+                    
         elif chtype == 8:
             limit = LIVETV_MAXPARSE
         elif chtype == 9:
             limit = int(INTERNETTV_MAXPARSE / INTERNETTV_DURATION)
         else:
             limit = MEDIA_LIMIT
-        
-        # set real max limits for 'unlimited' by chtype
-        if limit == 0 or limit > PLUGINUPNP_MAXPARSE or limit > YOUTUBERSS_MAXPARSE:
-            if chtype in [15,16]:
-                limit = PLUGINUPNP_MAXPARSE
-            elif chtype in [10,11]:
-                limit = YOUTUBERSS_MAXPARSE
-            else:
-                limit = MAX_MEDIA_LIMIT
         self.log("makeChannelList, Using Parse-limit " + str(limit))
 
         # Directory
@@ -1315,7 +1318,7 @@ class ChannelList:
         if file.startswith(self.youtube_player):
             dbepid = file.split(self.youtube_player)[1]
             # if no id, default to youtube type.
-            if str(id) == '0':
+            if id == '0':
                 type = 'youtube'
 
         if type in ['tvshow','episode']:
@@ -2150,13 +2153,7 @@ class ChannelList:
                                     CC = True
                             except:
                                 CC = 'NR'
-                                
-                            #filter unwanted id querying by title
-                            if showtitle == ('Paid Programming') or subtitle == ('Paid Programming') or description == ('Paid Programming'):
-                                ignoreParse = True
-                            else:
-                                ignoreParse = False
-                               
+
                             now = datetime.datetime.now() 
                             if setting3 in ['ptvlguide']:
                                 stopDate = self.parseUTCXMLTVDate(elem.get('stop'))
@@ -2184,63 +2181,64 @@ class ChannelList:
                                     dur = 3600  #60 minute default
                                                         
                             #Enable Enhanced Parsing for current and future shows only
-                            meta = False
-                            if ignoreParse == False:   
-                                if (((now > startDate and now <= stopDate) or (now < startDate))): 
-                                    meta = True
-                                    if type == 'movie':
-                                        try:
-                                            year = elem.findtext('date')[0:4]
-                                        except:
-                                            year = 0      
-                                    else:
-                                        year = 0
-                                                         
-                                    # if type == 'tvshow' and ENHANCED_DATA == True and dur >= MINFILE_DURATION:
-                                        # #Decipher the TVDB ID by using the Zap2it ID in dd_progid
-                                        # episodeNumList = elem.findall("episode-num") 
-                                        # for epNum in episodeNumList:
-                                            # if epNum.attrib["system"] == 'dd_progid':
-                                                # dd_progid = epNum.text
-                                        
-                                        #The Zap2it ID is the first part of the string delimited by the dot
-                                        #  Ex: <episode-num system="dd_progid">MV00044257.0000</episode-num>
-                                        
-                                        # dd_progid = dd_progid.split('.',1)[0]
-                                        # id = self.getTVDBIDbyZap2it(dd_progid)
+                            includeMeta = False
+                            if (((now > startDate and now <= stopDate) or (now < startDate))):
+                                # if year != 0 or id != '0':
+                                includeMeta = True  
+                                    
+                                if type == 'movie':
+                                    try:
+                                        year = elem.findtext('date')[0:4]
+                                    except:
+                                        year = 0      
+                                else:
+                                    year = 0
+                                    
+                                # if type == 'tvshow' and ENHANCED_DATA == True and dur >= MINFILE_DURATION:
+                                    # #Decipher the TVDB ID by using the Zap2it ID in dd_progid
+                                    # episodeNumList = elem.findall("episode-num") 
+                                    # for epNum in episodeNumList:
+                                        # if epNum.attrib["system"] == 'dd_progid':
+                                            # dd_progid = epNum.text
+                                    
+                                    #The Zap2it ID is the first part of the string delimited by the dot
+                                    #  Ex: <episode-num system="dd_progid">MV00044257.0000</episode-num>
+                                    
+                                    # dd_progid = dd_progid.split('.',1)[0]
+                                    # id = self.getTVDBIDbyZap2it(dd_progid)
 
-                                        # #Find Episode info by air date.
-                                        # if id != 0:
-                                            # #Date element holds the original air date of the program
-                                            # airdateStr = elem.findtext('date')
-                                            # if airdateStr != None:
-                                                # self.log('buildLiveTVFileList, tvdbid by airdate')
+                                    # #Find Episode info by air date.
+                                    # if id != '0':
+                                        # #Date element holds the original air date of the program
+                                        # airdateStr = elem.findtext('date')
+                                        # if airdateStr != None:
+                                            # self.log('buildLiveTVFileList, tvdbid by airdate')
+                                            # try:
+                                                # #Change date format into the byAirDate lookup format (YYYY-MM-DD)
+                                                # t = time.strptime(airdateStr, '%Y%m%d')
+                                                # airDateTime = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
+                                                # airdate = airDateTime.strftime('%Y-%m-%d')
+                                                # #Only way to get a unique lookup is to use TVDB ID and the airdate of the episode
+                                                # episode = ET.fromstring(self.tvdbAPI.getEpisodeByAirdate(id, airdate))
+                                                # episode = episode.find("Episode")
+                                                # seasonNumber = episode.findtext("SeasonNumber")
+                                                # episodeNumber = episode.findtext("EpisodeNumber")
+                                                # episodeDesc = episode.findtext("Overview")
+                                                # episodeName = episode.findtext("EpisodeName")
                                                 # try:
-                                                    # #Change date format into the byAirDate lookup format (YYYY-MM-DD)
-                                                    # t = time.strptime(airdateStr, '%Y%m%d')
-                                                    # airDateTime = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
-                                                    # airdate = airDateTime.strftime('%Y-%m-%d')
-                                                    # #Only way to get a unique lookup is to use TVDB ID and the airdate of the episode
-                                                    # episode = ET.fromstring(self.tvdbAPI.getEpisodeByAirdate(id, airdate))
-                                                    # episode = episode.find("Episode")
-                                                    # seasonNumber = episode.findtext("SeasonNumber")
-                                                    # episodeNumber = episode.findtext("EpisodeNumber")
-                                                    # episodeDesc = episode.findtext("Overview")
-                                                    # episodeName = episode.findtext("EpisodeName")
-                                                    # try:
-                                                        # int(seasonNumber)
-                                                        # int(episodeNumber)
-                                                    # except:
-                                                        # seasonNumber = 0
-                                                        # episodeNumber = 0
-                                                        
-                                                    # if seasonNumber > 0:
-                                                        # seasonNumber = '%02d' % int(seasonNumber)
+                                                    # int(seasonNumber)
+                                                    # int(episodeNumber)
+                                                # except:
+                                                    # seasonNumber = 0
+                                                    # episodeNumber = 0
                                                     
-                                                    # if episodeNumber > 0:
-                                                        # episodeNumber = '%02d' % int(episodeNumber)
-                                                # except Exception,e:
-                                                    # pass       
+                                                # if seasonNumber > 0:
+                                                    # seasonNumber = '%02d' % int(seasonNumber)
+                                                
+                                                # if episodeNumber > 0:
+                                                    # episodeNumber = '%02d' % int(episodeNumber)
+                                            # except Exception,e:
+                                                # pass       
                                                     
                             #Read the "new" boolean for this program
                             if elem.find("new") != None:
@@ -2263,7 +2261,7 @@ class ChannelList:
 
                             managed =  False # todo check sickbeard/sonar/couchpotato
                             GenreLiveID = [genre,type,id,thumburl,managed,playcount,rating, HD, CC, stars, year]
-                            tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, meta)
+                            tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                             showList.append(tmpstr)
                             showcount += dur
 
@@ -2311,7 +2309,7 @@ class ChannelList:
                 if showtitle:
                     startDates = re.search('"starttime" *: *"(.*?)",', f)
                     stopDates = re.search('"endtime" *: *"(.*?)",', f)
-                    id = 0
+                    id = '0'
                     seasonNumber = 0
                     episodeNumber = 0
                     hd = False
@@ -2366,11 +2364,7 @@ class ChannelList:
                                 movie = True
                         else:
                             genre = 'Unknown'
-                            
-                        tvtypes = ['Episodic','Series','Sports','News','Paid Programming']
-                        if dur >= 7200 and genre not in tvtypes:
-                            movie = True
-                            
+
                         if movie == True:
                             type = 'movie'
                         else:
@@ -2402,6 +2396,14 @@ class ChannelList:
                         else:
                             thumburl = 0
                             
+                        episodetitle = 'LiveTV'
+                        subtitle = 'LiveTV'             
+                        #Enable Enhanced Parsing
+                        includeMeta = False
+                        if (((now > startDate and now <= stopDate) or (now < startDate))):
+                            # if year != 0 or id != '0':
+                            includeMeta = True 
+                                 
                         # if type == 'tvshow':
                             # episodenames = re.search('"episodename" *: *"(.*?)"', f)
                             # if episodenames and len(episodenames) > 0:
@@ -2422,23 +2424,7 @@ class ChannelList:
                                 # episodepart = 0 
                         # else:
                             # subtitle = 'LiveTV'
-
-                        episodetitle = 'LiveTV'
-                        subtitle = 'LiveTV'
-                        #filter unwanted ids by title
-                        if showtitle == ('Paid Programming') or description == ('Paid Programming'):
-                            ignoreParse = True
-                        else:
-                            ignoreParse = False
-                                                
-                        #Enable Enhanced Parsing
-                        meta = False
-                        if ignoreParse == False:
-                            if (((now > startDate and now <= stopDate) or (now < startDate))):
-                                meta = True
-                                if subtitle == 'LiveTV':
-                                    tagline = ''     
-                                     
+    
                         if seasonNumber > 0:
                             seasonNumber = '%02d' % int(seasonNumber)
                         
@@ -2451,9 +2437,9 @@ class ChannelList:
                                 episodetitle = episodetitle.split("- ", 1)[-1]
                             subtitle = episodetitle
                          
-                        managed =  False # todo check sickbeard/sonar/couchpotato      
+                        managed =  False     
                         GenreLiveID = [genre,type,id,thumburl,managed,playcount,rating,hd,cc,stars, year]
-                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, meta)
+                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                         showList.append(tmpstr)
                         showcount += dur
                         
@@ -2661,7 +2647,7 @@ class ChannelList:
                 YT_ID = YT_IDS.group(1)
             self.log("getYoutubeUserID, OUT = " + YT_ID)
         except Exception,e:
-            self.log('getYoutubeUserID, Failed! ' + str(e), xbmc.LOGERROR)
+            self.log('getYoutubeUserID, failed! ' + str(e), xbmc.LOGERROR)
         return YT_ID
             
             
@@ -3128,38 +3114,38 @@ class ChannelList:
      
     def getDuration(self, filename):
         self.log('getDuration')
+        filesize = getSize(filename)
         if CACHE_ENABLED == True:
             try:
-                result = monthly.cacheFunction(self.getDuration_NEW, filename)
+                result = monthly.cacheFunction(self.getDuration_NEW, filename, filesize)
             except:
-                result = self.getDuration_NEW(filename)
+                result = self.getDuration_NEW(filename, filesize)
         else:
-            result = self.getDuration_NEW(filename)
+            result = self.getDuration_NEW(filename, filesize)
         if not result:
             result = 0
         return result  
         
         
-    def getDuration_NEW(self, filename):
-        self.log("getDuration_NEW")
+    def getDuration_NEW(self, filename, filesize):
         try:
             duration = int(self.videoParser.getVideoLength(filename))
         except:
             duration = 0
         # if duration == 0:
             # duration = self.getffprobeLength(filename)
+        self.log("getDuration_NEW, " + filename + ':' + filesize + ":duration = " + str(duration))
         return duration
         
         
     def getffprobeLength(self, filename):
-        self.log("getffprobeLength")
         try:
-            FFPROBE = os.path.join(xbmc.translatePath(REAL_SETTINGS.getSetting('ffmpegPath')),'ffprobe.exe')
-            result = subprocess.Popen([FFPROBE, filename])
-            stdout = subprocess.PIPE, stderr = subprocess.STDOUT
-            duration = int([x for x in result.stdout.readlines() if "Duration" in x])
+            result = subprocess.Popen([xbmc.translatePath(REAL_SETTINGS.getSetting('ffprobePath')), xbmc.translatePath(filename)],stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            x = ([x[12:23].split(':') for x in result.stdout.readlines() if "Duration" in x])
+            duration = int(x[0][0])* 60 * 60 + int(x[0][1])* 60 + int(x[0][2].split('.')[0])
         except:
             duration = 0
+        self.log("getffprobeLength, duration = " + str(duration))
         return duration
       
       
@@ -4450,9 +4436,9 @@ class ChannelList:
         try:
             tvdbid = self.tvdbAPI.getIdByZap2it(dd_progid)
             if not tvdbid or tvdbid == 'Empty':
-                tvdbid = 0
+                tvdbid = '0'
         except Exception,e:
-            tvdbid = 0
+            tvdbid = '0'
             self.log("getTVDBIDbyZap2it, failed! " + str(e))
         return tvdbid
         
@@ -4523,20 +4509,21 @@ class ChannelList:
                     definitions = re.search('"definition" *: *"(.*?)",', f)
                     captions = re.search('"caption" *: *"(.*?)",', f)
                     duration = self.parseYoutubeDuration((durations.group(1) or duration))
-                    hd = (definitions.group(1) or '') == 'hd'
-                    cc = (captions.group(1) or '') == 'true'
+                    
+                    if definitions and len(definitions.group(1)) > 0:
+                        hd = (definitions.group(1)) == 'hd'
+                        
+                    if captions and len(captions.group(1)) > 0:
+                        cc = (captions.group(1)) == 'true'
 
                 categoryIds = re.search('"categoryId" *: *"(.*?)",', f)
                 if categoryIds and len(categoryIds.group(1)) > 0:
-                    try:
-                        genre = cats[int(categoryIds.group(1) or genre)]
-                    except:
-                        genre = 'Unknown'
+                    genre = cats[int(categoryIds.group(1))]
                         
                 chname = ''
                 channelTitles = re.search('"channelTitle" *: *"(.*?)",', f)
                 if channelTitles and len(channelTitles.group(1)) > 0:
-                    chname = (channelTitles.group(1) or '')
+                    chname = channelTitles.group(1)
 
                 items = re.search('"items" *:', f)
                 if items:
@@ -4544,12 +4531,15 @@ class ChannelList:
                     descriptions = re.search('"description" *: *"(.*?)",', f)
                     publisheds = re.search('"publishedAt" *: *"(.*?)",', f)
 
-                    title = (titles.group(1) or title)
-                    description = ((descriptions.group(1) or description).split('http')[0]).replace('\\n',' ')
-                    published = (publisheds.group(1) or '')
-
-                    if year == 0:
-                        year = int(published[0:4])
+                    if titles and len(titles.group(1)) > 0:
+                        title = (titles.group(1) or title)
+                    if descriptions and len(descriptions.group(1)) > 0:
+                        description = ((descriptions.group(1) or description).split('http')[0]).replace('\\n',' ')
+                    if publisheds and len(publisheds.group(1)) > 0:
+                        published = (publisheds.group(1) or '')
+                        
+                        if year == 0:
+                            year = int(published[0:4])
 
                     if not description:
                         description = title
@@ -4569,7 +4559,7 @@ class ChannelList:
                         except:
                             stars = 0.0
             except Exception,e:
-                self.log('getYoutubeMeta, Failed! ' + str(e))
+                self.log('getYoutubeMeta, failed! ' + str(e))
 
         self.log("getYoutubeMeta, return")
         return stars, year, duration, description, title, 'Youtube - ' + chname, id, genre, rating, playcount, hd, cc
@@ -4729,29 +4719,28 @@ class ChannelList:
                                     try:
                                         dur = int(duration.group(1))
                                     except Exception,e:
+                                        self.log('getFileList_NEW, duration using runtime! ' + str(e))
                                         dur = 0
                                        
-                                    # Less accurate duration
-                                    try:
-                                        run = int(runtime.group(1))
-                                    except Exception,e:
-                                        run = 0
-                                        
                                     if dur == 0:
-                                        # Accurate duration
-                                        if self.accurateDuration == True:
-                                            if not file.startswith(("plugin", "upnp")):
-                                                try:
-                                                    dur = self.getDuration(file)
-                                                except Exception,e:
-                                                    self.log('getFileList_NEW, getDuration Failed! ' + str(e))
-                                                    dur = 0
-                                            else:
-                                                dur = run
-                                        else:
-                                            dur = run
-                                    
-                                    if dur == 0 and file.startswith(("plugin", "upnp")):
+                                        # Less accurate duration
+                                        try:
+                                            dur = int(runtime.group(1))
+                                        except Exception,e:
+                                            self.log('getFileList_NEW, runtime not found! ' + str(e))
+                                            dur = 0
+                                        
+                                    if dur == 0 and self.accurateDuration == True:
+                                        self.log('getFileList_NEW, parsing for accurate duration')
+                                        if not file.startswith(("plugin", "upnp")):
+                                            try:
+                                                dur = self.getDuration(file)
+                                            except Exception,e:
+                                                self.log('getFileList_NEW, getDuration failed! ' + str(e))
+                                                dur = 0
+                                            
+                                    if dur == 0 and (file.startswith(("plugin", "upnp")) or file[-4:].lower() == 'strm'):
+                                        self.log('getFileList_NEW, plugin/upnp/strm setting default duration')
                                         dur = 3600
                                     
                                     # Remove any file types that we don't want (ex. IceLibrary, ie. Strms)
@@ -4937,13 +4926,18 @@ class ChannelList:
                                             except:
                                                 pass      
 
+                                        #Enable Enhanced Parsing
+                                        # includeMeta = False
+                                        # if year != 0 or id != '0':
+                                        includeMeta = True 
+                                                
                                         # convert minutes to seconds when needed / correct local tvshow runtimes
                                         if file.startswith(("plugin", "upnp")):
                                             if (len(str(dur)) < 3 or len(str(dur)) > 5):
                                                 dur = self.durationInSeconds(dur)
-                                                
-                                        if type in ['tvshow','episode']:
-                                            dur = self.durationAdjust(dur)
+                                        elif self.accurateDuration == False:
+                                            if type in ['tvshow','episode']:
+                                                dur = self.durationAdjust(dur)
                                             
                                         # accurate real-time scheduling does not apply to chtypes <= 7, only chtype = 8. Doesn't hurt to keep track of it anyway, future feature for realtime mode?
                                         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
@@ -4952,7 +4946,7 @@ class ChannelList:
                                         managed =  False # todo check sickbeard/sonar/couchpotato
                                         cc = False # todo check subs or teltext?
                                         GenreLiveID = [genre, type, imdbnumber, dbid, managed, playcount, rating, hd, cc, stars, year]
-                                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, file, timestamp)      
+                                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, file, timestamp, includeMeta)      
                                         
                                         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
                                             seasoneplist.append([seasonval, epval, tmpstr])
