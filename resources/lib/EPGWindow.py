@@ -1174,7 +1174,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         type, id, dbepid, managed, playcount, rating, hd, cc, stars, year = self.chanlist.unpackLiveID(myLiveID)
         dbid, epid = splitDBID(dbepid)
         year, title, showtitle = getTitleYear(label, year)
-        self.MyOverlayWindow.setProp_thread(label, year, chlogo, chtype, newchan, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, 'EPG')
+        self.MyOverlayWindow.setProp(label, year, chlogo, chtype, newchan, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, 'EPG')
 
    
     # using the currently selected button, play the proper shows

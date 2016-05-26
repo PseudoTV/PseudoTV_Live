@@ -181,7 +181,7 @@ def FindLogo_URL(chtype, chname, mediapath):
     if not chname:
         return
     log("utils: FindLogo_URL, chtype = " + str(chtype) + ", chname = " + chname)
-    
+    url = ''
     # thelogodb search
     if chtype in [0,1,8,9,15]:
         log("utils: FindLogo_URL, findLogodb")
@@ -190,15 +190,11 @@ def FindLogo_URL(chtype, chname, mediapath):
         useMix = REAL_SETTINGS.getSetting('LogoDB_Fallback') == "true"
         useAny = REAL_SETTINGS.getSetting('LogoDB_Anymatch') == "true"
         url = findLogodb(chname, user_region, user_type, useMix, useAny)
-        if url:
-            return url
-            
+
     # github search
     if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
         log("utils: FindLogo_URL, findGithubLogo")
         url = findGithubLogo(chname)
-        if url:
-            return url
             
     # local tvshow logo search
     if mediapath and chtype == 6:
@@ -211,8 +207,7 @@ def FindLogo_URL(chtype, chname, mediapath):
             url = artSeries
         elif xbmcvfs.exists(artSeason): 
             url = artSeason
-        if url:
-            return url
+    return url
     # todo google image logo search
 
 def GrabLogo(url, chname, clean=False):

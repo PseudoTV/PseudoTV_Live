@@ -1,3 +1,5 @@
+[*] Adjusting new runtimes for performance.
+[*] [COLOR=blue][B]^ v.0.7.7 ^[/B][/COLOR]
 [*] Added skin vignettes, gui version updated.
 [*] New! Info overlay progress bar time.
 [*] New! runtime threads to improve performance.

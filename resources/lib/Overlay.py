@@ -253,7 +253,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
         # single queue timers
         self.setPropTimer = threading.Timer(0.1, self.setProp_thread)
-        self.setArtworkTimer = threading.Timer(0.1, self.setArtwork_Thread)
+        self.fillArtworkTimer = threading.Timer(0.1, self.fillArtwork_thread)
         self.GotoChannelTimer = threading.Timer(0.1, self.setChannel)
         self.UPNPcontrolTimer = threading.Timer(2.0, self.UPNPcontrol_thread)
         self.getTMPSTRTimer = threading.Timer(0.1, self.getTMPSTR_Thread)
@@ -557,6 +557,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.setBackgroundVisible(True)
             REAL_SETTINGS.setSetting("INTRO_PLAYED","true")    
         self.resetChannelTimes()
+        self.actionSemaphore.release()
         
         # start playing video
         if self.DisablePlayback == False:
@@ -568,7 +569,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             setProperty("PTVL.VideoWindow","false")
             
         self.idleReset() 
-        self.actionSemaphore.release()
         self.loadReminder()
         self.FEEDtoggle()   
         REAL_SETTINGS.setSetting('Normal_Shutdown', "false")
@@ -987,7 +987,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.Cinema_Mode = True
         else:
             self.Cinema_Mode = False
-
+        
+        self.lastActionTime = 0
         self.infoOffset = 0
         self.setBackgroundVisible(True)
         self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL, channel, self.channels[channel - 1])
@@ -1167,6 +1168,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.log("setChannel, Finished, unmuting")
             self.setMute('false')
             
+        self.lastActionTime = time.time() 
         egTrigger('PseudoTV_Live - Loading: %s' % chname)
         self.runActions(RULES_ACTION_OVERLAY_SET_CHANNEL_END, channel, self.channels[channel - 1])
         setProperty("PTVL.INIT_CHANNELSET","true")
@@ -1239,6 +1241,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.Upnp.FFUPNP(self.IPPlst[i])
 
 
+
+
     def waitForVideoPaused(self):
         self.log('waitForVideoPaused')
         sleeptime = 0
@@ -1293,7 +1297,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         mpath = getMpath(mediapath)
         #OnDemand Set Player info, else Playlist
         if position == -999:
-            print tmpstr
             if tmpstr != None:
                 tmpstr = tmpstr.split('//')
                 title = tmpstr[0]
@@ -1323,12 +1326,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         # SetProperties
         if self.infoOffset == 0:
-            self.setProp_thread(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY.PLAYING")
+            self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY.PLAYING")
             if self.channels[self.currentChannel - 1].getItemDuration(position) < self.shortItemLength:
                 self.hideShortInfo = True
             elif SEtitle in BCT_TYPES:
                 self.hideShortInfo = True
-        self.setProp_thread(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY")
+        self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, "OVERLAY")
            
 
     def setMediaProp(self):
@@ -1511,9 +1514,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.ignoreInfoAction = True
             self.channelList.sendJSON(json_query)
             
+        self.hidePOP()
         self.setShowInfo()
         if not self.showingInfo:
-            self.hidePOP()
             self.showingInfo = True
             self.getControl(222).setVisible(False)
             self.getControl(102).setVisible(True)
@@ -1556,9 +1559,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
             
     def hidePOP(self):
-        self.log("hidePOP")  
-        if self.popTimer.isAlive():
-            self.popTimer.cancel()         
+        self.log("hidePOP")         
         self.getControl(120).setVisible(False)
         self.getControl(203).setVisible(True)
         xbmc.sleep(10)
@@ -1966,7 +1967,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # Auto-off reset after activity.
         if self.idleTimeValue > 0:
             self.startIdleTimer()
-        self.lastActionTime = time.time() 
             
             
     def sleepCancel(self):
@@ -2137,7 +2137,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode) 
                     
                     self.log("notificationAction, Setting Properties")
-                    self.setProp_thread(label, year, chlogo, chtype, self.currentChannel, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, 'OVERLAY.NEXT')
+                    self.setProp(label, year, chlogo, chtype, self.currentChannel, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, 'OVERLAY.NEXT')
 
                     if timedif < NOTIFICATION_TIME_BEFORE_END and timedif > NOTIFICATION_DISPLAY_TIME:
                         self.log("notificationAction, showComingUp")
@@ -2676,14 +2676,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if pType == 'EPG':
             if self.setPropTimer.isAlive():
                 self.setPropTimer.cancel()
+            self.setPropTimer = threading.Timer(0.1, self.setProp_thread, [title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, pType])
+            self.setPropTimer.name = "setPropTimer"   
+            if self.isExiting == False:    
+                self.setPropTimer.start()
         else:
-            if self.setPropTimer.isAlive():
-                self.setPropTimer.join()
-        self.setPropTimer = threading.Timer(0.1, self.setProp_thread, [title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, pType])
-        self.setPropTimer.name = "setPropTimer"   
-        if self.isExiting == False:    
-            self.setPropTimer.start()
-
+            self.setProp_thread(title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, pType)
+            
             
     def setProp_thread(self, title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, pType='OVERLAY'):
         self.log("setProp_thread, title = " + title + ', pType = ' + pType)      
@@ -2724,45 +2723,44 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # todo rss ticker that matches genre
         # if pType == 'OVERLAY':  
             # getRSSFeed(getProperty("OVERLAY.Genre")) 
-           
-        
+
+  
     def fillArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, pType):
+        time = 0.1
+        if pType == 'EPG':
+            time = 0.5
+        if self.fillArtworkTimer.isAlive():
+            self.fillArtworkTimer.cancel()
+        self.fillArtworkTimer = threading.Timer(time, self.fillArtwork_thread, [type, title, year, chtype, chname, id, dbid, mpath, pType])
+        self.fillArtworkTimer.name = "fillArtworkTimer"   
+        if self.isExiting == False:    
+            self.fillArtworkTimer.start()
+            
+            
+    def fillArtwork_thread(self, type, title, year, chtype, chname, id, dbid, mpath, pType):
         if pType == 'EPG':
             artTypes = self.artEPG_Types
         elif pType == 'OVERLAY.PLAYING':
             artTypes = list(set(self.artOVERLAY_Types + ['poster','fanart']))
         else:
             artTypes = self.artOVERLAY_Types
+        self.log('fillArtwork_thread, pType = ' + pType + ' artTypes = ' + str(artTypes))
         
-        self.log('fillArtwork, pType = ' + pType + ' artTypes = ' + str(artTypes))
         for n in range(len(artTypes)):
             try:
                 artType = (artTypes[n]).lower()
                 self.setArtwork(type, title, year, chtype, chname, id, dbid, mpath, EXTtype(artType), artType, pType)
             except:
                 pass
-                
-
+               
+               
     def setArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, typeEXT, artType, pType='OVERLAY'):
         self.log('setArtwork, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', artType = ' + artType + ', pType = ' + str(pType))  
-        if pType == 'EPG':
-            if self.setArtworkTimer.isAlive():
-                self.setArtworkTimer.cancel()
-            self.setArtworkTimer = threading.Timer(0.1, self.setArtwork_Thread, [type, title, year, chtype, chname, id, dbid, mpath, typeEXT, artType, pType])
-            self.setArtworkTimer.name = "setArtworkTimer"   
-            if self.isExiting == False:    
-                self.setArtworkTimer.start()
-        else:
-            self.setArtwork_Thread(type, title, year, chtype, chname, id, dbid, mpath, typeEXT, artType, pType)
-            
-          
-    def setArtwork_Thread(self, type, title, year, chtype, chname, id, dbid, mpath, typeEXT, artType, pType='OVERLAY'):
-        self.log('setArtwork_Thread, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', typeEXT = ' + typeEXT + ', artType = ' + artType + ', pType = ' + str(pType))  
         try:
             setImage = self.findArtwork(type, title, year, chtype, chname, id, dbid, mpath, typeEXT) 
             setProperty(("%s.%s" %(pType, artType)),setImage)
         except Exception,e:
-            self.log('setArtwork_Thread, failed! ' + str(e))
+            self.log('setArtwork, failed! ' + str(e))
             
             
     # must be called by threaded function.
@@ -3400,14 +3398,19 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.setPropTimer.cancel()
             self.setPropTimer.join()
             
-        if self.setArtworkTimer.isAlive():
-            self.setArtworkTimer.cancel()
-            self.setArtworkTimer.join()
+        if self.fillArtworkTimer.isAlive():
+            self.fillArtworkTimer.cancel()
+            self.fillArtworkTimer.join()
 
         try:
             if FindLogoThread.isAlive():
                 FindLogoThread.cancel()
-                FindLogoThread.join()
+                
+            if UpdateRSSthread.isAlive():
+                UpdateRSSthread.cancel()
+                
+            if egTriggerTimer.isAlive():
+                egTriggerTimer.cancel()
                 
             if download_silentThread.isAlive():
                 download_silentThread.cancel()
