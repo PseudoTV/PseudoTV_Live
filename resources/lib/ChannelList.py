@@ -372,8 +372,8 @@ class ChannelList:
                         if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                             createlist = False 
                             
-                        # Reset livetv after 24hrs         
-                        if timedif >= (60 * 60 * 24) or self.channels[channel - 1].totalTimePlayed >= (60 * 60 * 24):
+                        # Reset livetv after LIVETV_MAXPARSE         
+                        if timedif >= LIVETV_MAXPARSE or self.channels[channel - 1].totalTimePlayed >= LIVETV_MAXPARSE:
                             createlist = True
                     else: 
                         if self.channelResetSetting == 0:
