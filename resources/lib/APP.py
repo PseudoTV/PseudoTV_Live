@@ -30,7 +30,7 @@ except:
     pass
       
       
-class APPS(xbmcgui.WindowXMLDialog):
+class APP(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
         self.chanlist = ChannelList()

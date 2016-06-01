@@ -17,7 +17,7 @@
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, re, sys, time, zipfile, threading, requests, random, traceback
-import urllib, urllib2,cookielib, base64, fileinput, shutil, socket, httplib, urlparse, HTMLParser
+import urllib, urllib2, cookielib, base64, fileinput, shutil, socket, httplib, urlparse, HTMLParser, zlib
 import xbmc, xbmcgui, xbmcplugin, xbmcvfs, xbmcaddon
 import time, _strptime, string, datetime, ftplib, hashlib, smtplib, feedparser, imp
 
@@ -35,7 +35,13 @@ from pyfscache import *
 
 sys.setcheckinterval(25)
 socket.setdefaulttimeout(30)
-
+                    
+USERAGENT   = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.101 Safari/537.36'
+httpHeaders = {'User-Agent': USERAGENT,
+                        'Accept':"application/json, text/javascript, text/html,*/*",
+                        'Accept-Encoding':'gzip,deflate,sdch',
+                        'Accept-Language':'en-US,en;q=0.8'
+                       }
 # Commoncache plugin import
 try:
     import StorageServer
@@ -588,7 +594,25 @@ def download_silent(url, dest):
     download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
     download_silentThread.name = "download_silentThread"
     download_silentThread.start()
-        
+
+@cache_daily
+def getRequest(url, udata=None, headers=httpHeaders, dopost = False):
+    log("utils: getRequest")
+    req = urllib2.Request(url.encode('utf-8'), udata, headers)
+    if dopost == True:
+        method = "POST"
+        req.get_method = lambda: method
+    try:
+        response = urllib2.urlopen(req)
+        page = response.read()
+        if response.info().getheader('Content-Encoding') == 'gzip':
+            log("Content Encoding == gzip")
+            page = zlib.decompress(page, zlib.MAX_WBITS + 16)
+    except Exception,e:
+        log('utils: getRequest, Failed!,' + str(e))
+        page = ""
+    return page
+    
 @cache_daily
 def read_url_cached(url, userpass=False, return_type='read'):
     log("utils: read_url_cached")
@@ -1896,7 +1920,7 @@ def listXMLTV():
 
     if select != -1:
         if xmltvLst[select] == 'Enter URL':
-            retval = dlg.input(xmltvLst[select], type=xbmcgui.INPUT_ALPHANUM)
+            retval = inputDialog(xmltvLst[select], key=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:
                 return retval
         else:

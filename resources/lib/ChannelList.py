@@ -18,10 +18,9 @@
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import os, sys, re, unicodedata, traceback
-import time, datetime, threading, _strptime, calendar
-import httplib, urllib, urllib2, feedparser, socket
+import time, datetime, threading, _strptime, calendar, socket
+import httplib, urllib, urllib2, zlib, feedparser, HTMLParser
 import base64, shutil, random, errno
-
 
 from operator import itemgetter
 from parsers import HDTrailers
@@ -234,7 +233,6 @@ class ChannelList:
         self.maxChannels = 0
         self.enteredChannelCount = 0      
         self.freshBuild = False
-        setBackgroundLabel('Initializing: PseudoTV Live')
 
         for i in range(CHANNEL_LIMIT):
             chtype = 9999
@@ -373,7 +371,7 @@ class ChannelList:
                             createlist = False 
                             
                         # Reset livetv after LIVETV_MAXPARSE         
-                        if timedif >= LIVETV_MAXPARSE or self.channels[channel - 1].totalTimePlayed >= LIVETV_MAXPARSE:
+                        if timedif >= (LIVETV_MAXPARSE - 10800) or self.channels[channel - 1].totalTimePlayed >= (LIVETV_MAXPARSE - 10800):
                             createlist = True
                     else: 
                         if self.channelResetSetting == 0:
@@ -1947,7 +1945,7 @@ class ChannelList:
         except AttributeError:
             return int((delta.microseconds + (delta.seconds + delta.days * 24 * 3600) * 10 ** 6)) / 10 ** 6
 
-
+            
     def parsePVRDate(self, dateString):
         self.log("parsePVRDate") 
         if dateString is not None:
@@ -1964,9 +1962,12 @@ class ChannelList:
     def parseUTCXMLTVDate(self, dateString):
         self.log("parseUTCXMLTVDate") 
         if dateString is not None:
-            if dateString.find(' ') != -1:
-                # remove timezone information
-                dateString = dateString[:dateString.find(' ')]
+            try:
+                if dateString.find(' ') != -1:
+                    # remove timezone information
+                    dateString = dateString[:dateString.find(' ')]
+            except:
+                pass
             t = time.strptime(dateString, '%Y%m%d%H%M%S')
             tmpDate = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
             timestamp = calendar.timegm(tmpDate.timetuple())
@@ -1980,9 +1981,12 @@ class ChannelList:
     def parseXMLTVDate(self, dateString, offset=0):
         self.log("parseXMLTVDate") 
         if dateString is not None:
-            if dateString.find(' ') != -1:
-                # remove timezone information
-                dateString = dateString[:dateString.find(' ')]
+            try:
+                if dateString.find(' ') != -1:
+                    # remove timezone information
+                    dateString = dateString[:dateString.find(' ')]
+            except:
+                pass
             t = time.strptime(dateString, '%Y%m%d%H%M%S')
             d = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
             d += datetime.timedelta(hours = offset)
@@ -1997,10 +2001,12 @@ class ChannelList:
         # Validate XMLTV Data #
         if self.xmltv_ok(setting3) == True:
             chname = (self.getChannelName(8, self.settingChannel, setting1))
-            if setting3 == 'pvr':
+            if setting3.startswith('http://mobilelistings.tvguide.com'):
+                showList = self.fillLiveTVGuide(setting1, setting2, setting3, setting4, chname, limit)
+            elif setting3 == 'pvr':
                 showList = self.fillLiveTVPVR(setting1, setting2, setting3, setting4, chname, limit)
             else:   
-                showList = self.fillLiveTV(setting1, setting2, setting3, setting4, chname, limit)
+                showList = self.fillLiveTVXMLTV(setting1, setting2, setting3, setting4, chname, limit)
         
         if len(showList) == 0:
             self.setChannelChanged(self.settingChannel)
@@ -2009,8 +2015,92 @@ class ChannelList:
         return showList     
         
         
-    def fillLiveTV(self, setting1, setting2, setting3, setting4, chname, limit):
-        self.log("fillLiveTV")
+    def fillLiveTVGuide(self, setting1, setting2, setting3, setting4, chname, limit):
+        self.log("fillLiveTVGuide")    
+        showList = []
+        showcount = 0          
+        try:
+            # html = getRequest('http://comettv.com/watch-live/')
+            # url = re.compile('file: "(.+?)"', re.DOTALL).search(html).group(1)
+            
+            now = datetime.datetime.now()
+            d = datetime.datetime.utcnow()
+            dnow = calendar.timegm(d.utctimetuple())
+            #example setting3 = 'http://mobilelistings.tvguide.com/Listingsweb/ws/rest/airings/20405/start/1464292664/duration/20160?channelsourceids=74313%7C62.4&formattype=json'
+            listing = setting3.split('/start/')[0] + '/start/' + str(dnow) + '/duration/' + setting3.split('/duration/')[1]                   
+            offset = ((time.timezone / 3600) - 5 ) * -1     
+            
+            a = json.loads(getRequest(setting3))
+            for b in a[:((LIVETV_MAXPARSE/60)/60)]:
+                b = b['ProgramSchedule']     
+                stopDate = self.parseXMLTVDate((datetime.datetime.fromtimestamp(float(b['EndTime'])).strftime('%Y%m%d%H%M%S')),offset)
+                startDate = self.parseXMLTVDate((datetime.datetime.fromtimestamp(float(b['StartTime'])).strftime('%Y%m%d%H%M%S')),offset)
+                
+                #skip old shows that have already ended
+                if now > stopDate:
+                    continue
+                
+                #adjust the duration of the current show
+                if now > startDate and now <= stopDate:
+                    try:
+                        dur = int(float(b['EndTime']) - float(b['StartTime']))
+                    except Exception,e:
+                        dur = 3600  #60 minute default
+                        
+                #use the full duration for an upcoming show
+                if now < startDate:
+                    try:
+                        dur = int(float(b['EndTime']) - float(b['StartTime']))
+                    except Exception,e:
+                        dur = 3600  #60 minute default
+                                                         
+                #Enable Enhanced Parsing for current and future shows only
+                includeMeta = False
+                if (((now > startDate and now <= stopDate) or (now < startDate))):
+                    includeMeta = True  
+
+                if dur > 3600:
+                    type = 'movie'
+                else:
+                    type = 'tvshow'
+                    
+                Stitle = b['Title']
+                if b['EpisodeTitle'] != '':
+                    subtitle = (b['EpisodeTitle'] or 'LiveTV')
+                    seasonNumber = b['TVObject'].get('SeasonNumber')
+                    if seasonNumber is not None:
+                        seasonNumber = int(seasonNumber)
+                    episodeNumber = b['TVObject']['EpisodeNumber']
+                    if episodeNumber is not None:
+                        episodeNumber = int(episodeNumber)
+                    description = b['CopyText']
+                    rating = (b.get('Rating').split('@')[0] or 'NR')
+
+                    if type == 'tvshow':
+                        episodetitle = (('0' if seasonNumber < 10 else '') + str(seasonNumber) + 'x' + ('0' if episodeNumber < 10 else '') + str(episodeNumber) + ' - '+ (subtitle)).replace('  ',' ')
+                        if str(episodetitle[0:5]) == '00x00':
+                            episodetitle = episodetitle.split("- ", 1)[-1]
+                        subtitle = episodetitle
+
+                    year, title, showtitle = getTitleYear(Stitle, 0)
+                    GenreLiveID = ['Unknown',type,0,0,False,1,rating, False, False, 0.0, year]
+                    tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
+                    showList.append(tmpstr)
+                    showcount += dur
+
+                    if self.background == False:
+                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
+                        setProperty('loading.progress',str(self.updateDialogProgress))
+               
+            if showcount < INTERNETTV_MAXPARSE:
+                self.setChannelChanged(self.settingChannel)
+        except Exception,e:
+            self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
+        return showList
+        
+        
+    def fillLiveTVXMLTV(self, setting1, setting2, setting3, setting4, chname, limit):
+        self.log("fillLiveTVXMLTV")
         showList = []
         showcount = 0          
         try:
@@ -2058,7 +2148,7 @@ class ChannelList:
                     if elem.tag == "programme":
                         channel = elem.get("channel")
                         if setting1 == channel:
-                            self.log("fillLiveTV, setting1 = " + setting1 + ', channel id = ' + channel)
+                            self.log("fillLiveTVXMLTV, setting1 = " + setting1 + ', channel id = ' + channel)
                             showtitle = elem.findtext('title')
                             description = elem.findtext("desc")
                             
@@ -2273,7 +2363,7 @@ class ChannelList:
             if showcount < INTERNETTV_MAXPARSE:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
-            self.log("fillLiveTV failed! " + str(e), xbmc.LOGERROR)
+            self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
         return showList
         
             
@@ -3134,7 +3224,6 @@ class ChannelList:
             duration = 0
         # if duration == 0:
             # duration = self.getffprobeLength(filename)
-        self.log("getDuration_NEW, " + filename + ':' + filesize + ":duration = " + str(duration))
         return duration
         
         
@@ -3997,11 +4086,14 @@ class ChannelList:
         XMLTVMatchlst = []
         sorted_XMLTVMatchlst = []
         found = False
-        if filename == USTVXML:
+        if filename.startswith('http://mobilelistings.tvguide.com'):
+            return CHname, CHname
+            
+        elif filename == USTVXML:
             if self.ustv.makeXMLTV(self.ustv.get_guidedata(),self.ustv.xmltvPath) == False:
-                return
+                return CHname, CHname
                 
-        if filename == 'pvr':
+        elif filename == 'pvr':
             NameLst, PathLst, IconLst = self.PVRList
             for i in range(len(NameLst)):
                 CHid, dnameID = (self.cleanLabels(NameLst[i])).split(' - ')

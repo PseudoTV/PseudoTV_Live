@@ -301,10 +301,10 @@
                 <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
             <control type="button" id="6003">
-                <description>OnDemand Label</description>               
+                <description>VOD Label</description>               
                 <width>376</width>
                 <height>40</height>
-                <label>OnDemand</label>
+                <label>VOD</label>
                 <font>font12</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -317,7 +317,7 @@
                 <description>Apps Label</description>        
                 <width>378</width>
                 <height>40</height>
-                <label>Apps</label>
+                <label>APP</label>
                 <font>font12</font>
                 <align>center</align>
                 <aligny>center</aligny>

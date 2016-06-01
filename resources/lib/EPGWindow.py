@@ -44,7 +44,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.showingInfo = False
         self.showingContext = False
         self.infoOffsetV = 0
-        self.clockMode = 0
         self.inputChannel = -1
         self.focusRow = 0
         self.focusIndex = 0
@@ -62,7 +61,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
         self.timeButtonBar = MEDIA_LOC + TIME_BAR
         self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
-        self.clockMode = ADDON_SETTINGS.getSetting("ClockMode")
         
         try:
             self.rowCount = int(getProperty("EPG.rowCount"))
@@ -88,7 +86,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         self.curchannelIndex = []
         
         now = datetime.datetime.now()  
-        if self.clockMode == "0":
+        if self.MyOverlayWindow.clockMode == 0:
             timeex = now.strftime("%I:%M%p").lower()
         else:
             timeex = now.strftime("%H:%M")
@@ -205,7 +203,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         delta = datetime.timedelta(minutes=30)
 
         for i in range(3):
-            if self.clockMode == "0":
+            if self.MyOverlayWindow.clockMode == 0:
                 self.getControl(101 + i).setLabel(now.strftime("%I:%M%p").lower())
             else:
                 self.getControl(101 + i).setLabel(now.strftime("%H:%M"))
@@ -315,7 +313,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         
         # Update timebutton
         now = datetime.datetime.now()        
-        if self.clockMode == "0":
+        if self.MyOverlayWindow.clockMode == 0:
             timeex = now.strftime("%I:%M%p").lower()
         else:
             timeex = now.strftime("%H:%M")
@@ -1152,6 +1150,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         mpath = getMpath(mediapath)
         if plpos == -999:
             if len(getProperty("OVERLAY.OnDemand_tmpstr")) > 0:
+                duration = 0
                 tmpstr = (getProperty("OVERLAY.OnDemand_tmpstr")).split('//')
                 title = tmpstr[0]
                 SEtitle = ('[COLOR=%s][B]OnDemand[/B][/COLOR]' % ((self.channelbugcolor).replace('0x','')))
@@ -1162,6 +1161,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             else:
                 self.MyOverlayWindow.getTMPSTR(chtype, chname, newchan, mediapath, plpos)
         else:
+            duration = (self.MyOverlayWindow.channels[newchan - 1].getItemDuration(plpos))
             label = (self.MyOverlayWindow.channels[newchan - 1].getItemTitle(plpos))   
             SEtitle = self.MyOverlayWindow.channels[newchan - 1].getItemEpisodeTitle(plpos) 
             Description = self.MyOverlayWindow.channels[newchan - 1].getItemDescription(plpos)
@@ -1174,7 +1174,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         type, id, dbepid, managed, playcount, rating, hd, cc, stars, year = self.chanlist.unpackLiveID(myLiveID)
         dbid, epid = splitDBID(dbepid)
         year, title, showtitle = getTitleYear(label, year)
-        self.MyOverlayWindow.setProp(label, year, chlogo, chtype, newchan, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, 'EPG')
+        self.MyOverlayWindow.setProp(label, year, chlogo, chtype, newchan, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, duration, 'EPG')
 
    
     # using the currently selected button, play the proper shows

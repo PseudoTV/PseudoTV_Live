@@ -30,7 +30,7 @@ except:
     pass
       
       
-class Ondemand(xbmcgui.WindowXMLDialog):
+class VOD(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log('__init__')
         
