@@ -61,9 +61,9 @@ class TVDB(object):
             if match:
                 return match.group(1)
             else:
-                return 0
+                return '0'
         except Exception,e:
-            return 0
+            return '0'
 
             
     def getIdByIMDB(self, imdb_id):

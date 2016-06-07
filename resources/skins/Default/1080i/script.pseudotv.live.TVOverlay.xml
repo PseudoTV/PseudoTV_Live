@@ -259,6 +259,7 @@
                 <posx>430</posx>
                 <posy>205r</posy>
                 <width>1400</width>
+                <itemgap>1</itemgap>
                 <orientation>vertical</orientation>
                 <control type="label">
                     <description>Show Description</description>
@@ -490,6 +491,7 @@
                 <posx>430</posx>
                 <posy>400r</posy>
                 <width>1100</width>
+                <itemgap>1</itemgap> 
                 <orientation>vertical</orientation>
                 <control type="label">
                     <description>Show Description</description>
@@ -513,7 +515,7 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.Time)]</label>
+                    <label>$INFO[Window(10000).Property(OVERLAY.Playing.Time)]</label>
                 </control>
             </control>
             <control type="grouplist">  

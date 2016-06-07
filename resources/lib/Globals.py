@@ -97,7 +97,7 @@ NOTIFICATION_DISPLAY_TIME = 6 #in seconds
 REMINDER_COUNTDOWN = 15 #secs
 ONNOW_REFRESH = 450 #secs
 ONNOW_REFRESH_LOW = 900 #secs
-SETTOP_REFRESH = 3600 #secs
+SETTOP_REFRESH = 10800 #secs
 IDLE_TIMER = 180  #secs (3min)
 IDLE_DELAY = 30 #secs
 REMINDER_DELAY = 60 #secs
@@ -262,6 +262,8 @@ BCT_TYPES = ['Bumper', 'Commercial', 'Trailer', 'Rating', 'PseudoCinema', 'Intro
 EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']
 
 # Media Limits
+LIVETV_REFRESH  = 172800 #secs (48hrs)
+PLUGIN_REFRESH  = 172800 #secs (48hrs)
 LIVETV_MAXPARSE = 259200 #secs (72hrs)
 INTERNETTV_MAXPARSE = 86400 #secs (24hrs)
 INTERNETTV_DURATION = 5400

@@ -36,9 +36,9 @@ except:
 class ConfigWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
-        if getProperty("PseudoTVRunning") != "True":
+        if getProperty("PseudoTVRunning") != "True" and getProperty("PseudoTVConfigRunning") != "True":
             xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-            setProperty("PseudoTVRunning", "True")
+            setProperty("PseudoTVConfigRunning", "True")
             self.madeChanges = 0
             self.showingList = True
             self.channel = 0
@@ -98,7 +98,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
 
     def closeConfig(self, channel=0):
-        setProperty("PseudoTVRunning", "False")
+        setProperty("PseudoTVConfigRunning", "False")
         if self.madeChanges == 1:
             if yesnoDialog("Changes Detected, Do you want to save all changes?"):
                 self.writeChanges()
@@ -732,7 +732,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.getControl(285).setLabel(PluginDirPathLst[select])        
                 self.setChname(self.chnlst.cleanLabels(selectItem))
                 self.setFocusId(282)
-                xbmc.executebuiltin('SendClick(282)')
+                # xbmc.executebuiltin('SendClick(282)')
                 
         elif controlId == 282:       # Plugin Exclude, input
             self.setExclude(282)
@@ -1134,7 +1134,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("getRuleName")
         if ruleindex < 0 or ruleindex >= len(self.AdvRules.ruleList):
             return ""
-        return self.AdvRules.ruleList[ruleindex].getName()
+        return self.AdvRules.ruleList[ruleindex].getName()#getTitle
 
         
     def fillRules(self, channel):
@@ -1311,6 +1311,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
         self.dlg.update(55, "Preparing Configuration", "finalizing data")
+        if isCompanionInstalled() == True:
+            self.pluginPathList = ['plugin.video.pseudo.companion']
+            self.pluginNameList = ['[COLOR=blue][B]PseudoCompanion[/B][/COLOR]']
+            self.pluginIconList = ['']
         if isSFAV() == True:
             self.pluginPathList = ['plugin.program.super.favourites']
             self.pluginNameList = ['[COLOR=blue][B]Super Favourites[/B][/COLOR]']

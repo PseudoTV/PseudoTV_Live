@@ -747,6 +747,16 @@
                 <visible>!StringCompare(Control.GetLabel(326),)</visible>
             </control>   
         </control>
+        <control type="button">
+            <description>Cat Button</description>     
+            <posx>0</posx>
+            <posy>339</posy>   
+            <width>75</width>
+            <height>450</height>
+            <texturenofocus>pstvlCatNoFocusAlt.png</texturenofocus>
+            <texturefocus>pstvlCatFocusAlt.png</texturefocus>
+            <visible>false</visible>
+        </control>
         <control type="group" id="111">
             <posx>411</posx>
             <posy>340</posy>

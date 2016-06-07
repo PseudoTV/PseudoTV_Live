@@ -339,7 +339,6 @@ class ChannelList:
             needsreset = True
 
         if needsreset:
-            self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isSetup = False
             
         self.log('setupChannel ' + str(channel) + ', needsreset = ' + str(needsreset))
@@ -371,7 +370,7 @@ class ChannelList:
                             createlist = False 
                             
                         # Reset livetv after LIVETV_MAXPARSE         
-                        if timedif >= (LIVETV_MAXPARSE - 10800) or self.channels[channel - 1].totalTimePlayed >= (LIVETV_MAXPARSE - 10800):
+                        if timedif >= (LIVETV_REFRESH) or self.channels[channel - 1].totalTimePlayed >= (LIVETV_REFRESH):
                             createlist = True
                     else: 
                         if self.channelResetSetting == 0:
@@ -399,6 +398,7 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', _time failed! ' + str(e))
                 
         if createlist or needsreset:
+            self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
                 try:
@@ -408,7 +408,6 @@ class ChannelList:
                 append = False
 
                 if createlist:
-                    self.clearFileListCache(chtype, channel)
                     ADDON_SETTINGS.setSetting('LastResetTime', str(int(time.time())))
                     
         if append == False:
@@ -2092,7 +2091,7 @@ class ChannelList:
                         self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
                         setProperty('loading.progress',str(self.updateDialogProgress))
                
-            if showcount < INTERNETTV_MAXPARSE:
+            if showcount < LIVETV_REFRESH:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
@@ -2269,67 +2268,7 @@ class ChannelList:
                                     dur = (stopDate - startDate).seconds
                                 except Exception,e:
                                     dur = 3600  #60 minute default
-                                                        
-                            #Enable Enhanced Parsing for current and future shows only
-                            includeMeta = False
-                            if (((now > startDate and now <= stopDate) or (now < startDate))):
-                                # if year != 0 or id != '0':
-                                includeMeta = True  
-                                    
-                                if type == 'movie':
-                                    try:
-                                        year = elem.findtext('date')[0:4]
-                                    except:
-                                        year = 0      
-                                else:
-                                    year = 0
-                                    
-                                # if type == 'tvshow' and ENHANCED_DATA == True and dur >= MINFILE_DURATION:
-                                    # #Decipher the TVDB ID by using the Zap2it ID in dd_progid
-                                    # episodeNumList = elem.findall("episode-num") 
-                                    # for epNum in episodeNumList:
-                                        # if epNum.attrib["system"] == 'dd_progid':
-                                            # dd_progid = epNum.text
-                                    
-                                    #The Zap2it ID is the first part of the string delimited by the dot
-                                    #  Ex: <episode-num system="dd_progid">MV00044257.0000</episode-num>
-                                    
-                                    # dd_progid = dd_progid.split('.',1)[0]
-                                    # id = self.getTVDBIDbyZap2it(dd_progid)
-
-                                    # #Find Episode info by air date.
-                                    # if id != '0':
-                                        # #Date element holds the original air date of the program
-                                        # airdateStr = elem.findtext('date')
-                                        # if airdateStr != None:
-                                            # self.log('buildLiveTVFileList, tvdbid by airdate')
-                                            # try:
-                                                # #Change date format into the byAirDate lookup format (YYYY-MM-DD)
-                                                # t = time.strptime(airdateStr, '%Y%m%d')
-                                                # airDateTime = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
-                                                # airdate = airDateTime.strftime('%Y-%m-%d')
-                                                # #Only way to get a unique lookup is to use TVDB ID and the airdate of the episode
-                                                # episode = ET.fromstring(self.tvdbAPI.getEpisodeByAirdate(id, airdate))
-                                                # episode = episode.find("Episode")
-                                                # seasonNumber = episode.findtext("SeasonNumber")
-                                                # episodeNumber = episode.findtext("EpisodeNumber")
-                                                # episodeDesc = episode.findtext("Overview")
-                                                # episodeName = episode.findtext("EpisodeName")
-                                                # try:
-                                                    # int(seasonNumber)
-                                                    # int(episodeNumber)
-                                                # except:
-                                                    # seasonNumber = 0
-                                                    # episodeNumber = 0
-                                                    
-                                                # if seasonNumber > 0:
-                                                    # seasonNumber = '%02d' % int(seasonNumber)
-                                                
-                                                # if episodeNumber > 0:
-                                                    # episodeNumber = '%02d' % int(episodeNumber)
-                                            # except Exception,e:
-                                                # pass       
-                                                    
+                                                            
                             #Read the "new" boolean for this program
                             if elem.find("new") != None:
                                 playcount = 0
@@ -2343,6 +2282,75 @@ class ChannelList:
                             else:
                                 playcount = 1                        
 
+                            #Enable Enhanced Parsing for current and future shows only
+                            includeMeta = False
+                            if (((now > startDate and now <= stopDate) or (now < startDate))):
+                                if showtitle.lower() != 'paid programing' or description.lower() != 'paid programing':
+                                    includeMeta = True  
+                                    
+                                if type == 'movie':
+                                    try:
+                                        year = elem.findtext('date')[0:4]
+                                    except:
+                                        year = 0      
+                                else:
+                                    year = 0
+                                    
+                                if type == 'tvshow' and ENHANCED_DATA == True:
+                                    #Decipher the TVDB ID by using the Zap2it ID in dd_progid
+                                    episodeNumList = elem.findall("episode-num") 
+                                    for epNum in episodeNumList:
+                                        if epNum.attrib["system"] == 'dd_progid':
+                                            dd_progid = epNum.text
+                                    
+                                    #The Zap2it ID is the first part of the string delimited by the dot
+                                    #  Ex: <episode-num system="dd_progid">MV00044257.0000</episode-num>
+                                    dd_progid = dd_progid.split('.',1)[0]
+                                    self.log('fillLiveTVXMLTV, dd_progid = ' + dd_progid)
+                                    id = self.getTVDBIDbyZap2it(dd_progid)
+
+                                    #Find Episode info by air date.
+                                    if id != '0':
+                                        #Date element holds the original air date of the program
+                                        airdateStr = elem.findtext('date')
+                                        if airdateStr != None:
+                                            self.log('fillLiveTVXMLTV, tvdbid by airdate')
+                                            try:
+                                                #Change date format into the byAirDate lookup format (YYYY-MM-DD)
+                                                t = time.strptime(airdateStr, '%Y%m%d')
+                                                airDateTime = datetime.datetime(t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec)
+                                                airdate = airDateTime.strftime('%Y-%m-%d')
+                                                #Only way to get a unique lookup is to use TVDB ID and the airdate of the episode
+                                                episode = ET.fromstring(self.tvdbAPI.getEpisodeByAirdate(id, airdate))
+                                                episode = episode.find("Episode")
+                                                seasonNumber = episode.findtext("SeasonNumber")
+                                                episodeNumber = episode.findtext("EpisodeNumber")
+                                                episodeDesc = episode.findtext("Overview")
+                                                episodeName = episode.findtext("EpisodeName")
+                                                
+                                                if len(episodeName) > 0:
+                                                    subtitle = episodeName
+                                                
+                                                if len(episodeDesc) > 0:
+                                                    description = episodeDesc
+                                                
+                                                try:
+                                                    int(seasonNumber)
+                                                    int(episodeNumber)
+                                                except:
+                                                    seasonNumber = 0
+                                                    episodeNumber = 0
+                                                    
+                                                if seasonNumber > 0:
+                                                    seasonNumber = '%02d' % int(seasonNumber)
+                                                
+                                                if episodeNumber > 0:
+                                                    episodeNumber = '%02d' % int(episodeNumber)
+                                            except Exception,e:
+                                                self.log('fillLiveTVXMLTV, tvdbid by airdate Failed ' + str(e))
+                                                seasonNumber = 0
+                                                episodeNumber = 0
+                                                
                             if type == 'tvshow':
                                 episodetitle = (('0' if seasonNumber < 10 else '') + str(seasonNumber) + 'x' + ('0' if episodeNumber < 10 else '') + str(episodeNumber) + ' - '+ (subtitle)).replace('  ',' ')
                                 if str(episodetitle[0:5]) == '00x00':
@@ -2360,7 +2368,7 @@ class ChannelList:
                                 setProperty('loading.progress',str(self.updateDialogProgress))
                 root.clear()
             f.close()                   
-            if showcount < INTERNETTV_MAXPARSE:
+            if showcount < LIVETV_REFRESH:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
@@ -2539,7 +2547,7 @@ class ChannelList:
                             
                         if showcount >= limit:
                             break     
-            if showcount < INTERNETTV_MAXPARSE:
+            if showcount < LIVETV_REFRESH:
                 self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVPVR failed! " + str(e), xbmc.LOGERROR) 
@@ -2670,7 +2678,7 @@ class ChannelList:
 
         
     def getYoutubeChname(self, YTID):
-        # self.log('getYoutubeChname')
+        self.log('getYoutubeChname')
         if YTID.startswith('UC'):
             YT_URL_Video = ('https://www.googleapis.com/youtube/v3/channels?part=snippet%2CcontentDetails%2Cstatistics&id='+YTID+'&key='+YT_API_KEY)
         else:
@@ -4524,14 +4532,12 @@ class ChannelList:
         
         
     def getTVDBIDbyZap2it(self, dd_progid):
-        self.log("getTVDBIDbyZap2it")
         try:
             tvdbid = self.tvdbAPI.getIdByZap2it(dd_progid)
-            if not tvdbid or tvdbid == 'Empty':
-                tvdbid = '0'
         except Exception,e:
             tvdbid = '0'
             self.log("getTVDBIDbyZap2it, failed! " + str(e))
+        self.log("getTVDBIDbyZap2it, tvdbid = " + tvdbid)
         return tvdbid
         
 
@@ -4713,17 +4719,16 @@ class ChannelList:
     # filelist cache may be redundant to m3u
     def getFileListCache(self, chtype, channel, purge=False):
         cachetype = str(chtype) + ':' + str(channel)
-        self.log("getFileListCache, cachetype = " + cachetype)
         try:
             #Set Life of cache in hours, value needs to be lower than reset time.
             if chtype <= 7 or chtype == 12:
-                life = ((SETTOP_REFRESH - 900 / 60) / 60)
+                life = ((float(SETTOP_REFRESH - 900)/60)/60)
             elif chtype == 8:
-                life = 24
+                life = ((float(LIVETV_REFRESH - 900)/60)/60)
             else:
-                life = 72
-                
+                life = ((float(PLUGIN_REFRESH - 900)/60)/60)
             self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
+            self.log("getFileListCache, cachetype = " + cachetype + ', life = ' + str(life) + ', purge = ' + str(purge))
             if purge == True:
                 self.FileListCache.delete("%")
         except:
