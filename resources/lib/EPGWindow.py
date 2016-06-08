@@ -454,8 +454,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 # self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, '', focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
                 # return
             
-            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
-            #playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
+            # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+            playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
             self.log('setButtons, playlistpos = ' + str(playlistpos))
             
             # if the channel is paused, then only 1 button needed
@@ -524,9 +524,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                         if tmpdur < 60 * 3:
                             shouldskip = True
                     
-                    # Don't show very short videos
+                    # Don't show very short videos or bct types
                     if self.MyOverlayWindow.hideShortItems and shouldskip == False:
                         if chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength:
+                            shouldskip = True
+                            tmpdur = 0
+                        elif chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos) in BCT_TYPES:
                             shouldskip = True
                             tmpdur = 0
                         # elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:

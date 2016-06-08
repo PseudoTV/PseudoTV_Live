@@ -924,8 +924,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             position = -999
             
         # correct position to hideShortItems
-        elif chtype <= 7 and self.hideShortItems:# and self.infoOffset != 0:
-            position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset + offdif
+        elif chtype <= 7 and self.hideShortItems:# and self.infoOffset != 0: 
+            # hide BCT types
+            while self.channels[channel - 1].getItemgenre(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset + offdif) in BCT_TYPES:
+                offdif += 1
+            
+            position = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition() + self.infoOffset + offdif   
             curoffset = 0
             modifier = 1
             if self.infoOffset < 0:
@@ -935,7 +939,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 position = self.channels[channel - 1].fixPlaylistIndex(position + modifier)
                 if self.channels[channel - 1].getItemDuration(position) >= self.shortItemLength:
                     curoffset += 1
-                    
+            
         elif chtype == 8 and len(self.channels[channel - 1].getItemtimestamp(0)) > 0:
             self.channels[channel - 1].setShowPosition(0)
             tmpDate = self.channels[channel - 1].getItemtimestamp(0) 
@@ -1039,9 +1043,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.getControl(222).setVisible(False)
         setBackgroundLabel(('Loading: %s') % chname)
         setProperty("OVERLAY.LOGOART",self.getChlogo(channel))
-        self.clearProp()
         
         # now load the proper channel playlist
+        self.clearProp()
         xbmc.PlayList(xbmc.PLAYLIST_MUSIC).clear()
         self.log("about to load")  
         
@@ -1294,6 +1298,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if position >= 0:
             self.setMediaInfo(chtype, self.getChname(self.currentChannel), self.currentChannel, mediapath, position)
         
+        self.Player.waitForVideoPlayback()
         if self.infoOffset == 0:
             self.startTime = time.time() - self.Player.getTime()
             self.endTime = (time.time() - self.Player.getTime()) + self.Player.getTotalTime()
@@ -1306,7 +1311,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def setMediaInfo(self, chtype, chname, chnum, mediapath, position, tmpstr=None):
         self.log('setMediaInfo, pos = ' + str(position))
         # self.clearProp()
-        self.hideShortInfo = False
         mpath = getMpath(mediapath)
         #OnDemand Set Player info, else Playlist
         if position == -999:
@@ -1342,11 +1346,12 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         year, title, showtitle = getTitleYear(label, year)
         
         # SetProperties
+        self.hideShortInfo = False
         if self.infoOffset == 0:
             self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, duration, "OVERLAY.PLAYING")
             if self.channels[self.currentChannel - 1].getItemDuration(position) < self.shortItemLength:
                 self.hideShortInfo = True
-            elif SEtitle in BCT_TYPES:
+            elif genre in BCT_TYPES:
                 self.hideShortInfo = True
         self.setProp(label, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, duration, "OVERLAY")
            
@@ -1803,7 +1808,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.showInfo()
                 if self.infoOffset < 0:
                     self.infoOffset = 0
-                    self.clearProp('OVERLAY')
                     self.MenuControl('Menu',self.InfTimer)
                 elif not self.showingMenu:
                     self.showInfo()
@@ -2131,7 +2135,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     self.log("notificationAction, timedif = " + str(timedif))
                     
                     # Nextshow Info
-                    self.clearProp('OVERLAY.NEXT')
                     nextshow_offset = 1
                     nextshow = self.getPlaylistPOS(chtype, self.currentChannel, nextshow_offset)
                     ComingUpType = int(REAL_SETTINGS.getSetting("EnableComingUp"))
@@ -2156,6 +2159,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     year, title, showtitle = getTitleYear(label, year)
                     season, episode, swtitle = SEinfo(SEtitle, self.showSeasonEpisode) 
                     
+                    self.clearProp('OVERLAY.NEXT')
                     self.log("notificationAction, Setting Properties")
                     self.setProp(label, year, chlogo, chtype, self.currentChannel, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, swtitle, playcount, season, episode, timestamp, duration, 'OVERLAY.NEXT')
                     xbmc.sleep(10)
@@ -2637,39 +2641,42 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.Player.isPlaybackValid() and self.Player.getTime() > 0:
             # self.removeControls([self.currentPlayInfoTime])
             # hide bar for content that doesn't produce progress details. Can't use setVisible because notice focus issue.
-            # if self.Player.getTime() < self.Player.getTotalTime()/30 or self.Player.getTime() > (self.Player.getTotalTime()/30)*29:
-            try:
-                self.log("setSeekBarTime, MoreInfo")
-                temp_xpos = self.currentPlayMoreInfoTime_xpos
-                MoreInfoTimeseekButton_ypos = self.currentPlayMoreInfoTime_ypos
-                self.currentPlayMoreInfoTime.setWidth(self.getControl(5005).getWidth())
-                self.currentPlayMoreInfoTime.setHeight(self.getControl(5005).getHeight())
-                seekButton_width = int(round(self.getControl(5005).getWidth() / 2)) #find width of button and place in the middle.
-                seekBar_width = self.getControl(5004).getWidth()
-                seekBar_xpos, temp_ypos = self.getControl(5004).getPosition()
-                perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
-                MoreInfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
-            except Exception,e:
-                self.log("setSeekBarTime, currentPlayMoreInfoTime, failed! " + str(e))
-                perPlayed = 0
+            if self.Player.getTime() < self.Player.getTotalTime()/30 or self.Player.getTime() > (self.Player.getTotalTime()/30)*29:            
                 MoreInfoTimeseekButton_xpos = -5000
                 MoreInfoTimeseekButton_ypos = -5000
-            try:
-                self.log("setSeekBarTime, Info")
-                temp_xpos = self.currentPlayInfoTime_xpos
-                InfoTimeseekButton_ypos = self.currentPlayInfoTime_ypos
-                self.currentPlayInfoTime.setWidth(self.getControl(5006).getWidth())
-                self.currentPlayInfoTime.setHeight(self.getControl(5006).getHeight())
-                seekButton_width = int(round(self.getControl(5006).getWidth() / 2)) #find width of button and place in the middle.
-                seekBar_width = self.getControl(5007).getWidth()
-                seekBar_xpos, temp_ypos = self.getControl(5007).getPosition()
-                perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
-                InfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
-            except Exception,e:
-                self.log("setSeekBarTime, currentPlayInfoTime, failed! " + str(e))
-                perPlayed = 0
                 InfoTimeseekButton_xpos = -5000
                 InfoTimeseekButton_ypos = -5000
+            else:
+                try:
+                    self.log("setSeekBarTime, MoreInfo")
+                    temp_xpos = self.currentPlayMoreInfoTime_xpos
+                    MoreInfoTimeseekButton_ypos = self.currentPlayMoreInfoTime_ypos
+                    self.currentPlayMoreInfoTime.setWidth(self.getControl(5005).getWidth())
+                    self.currentPlayMoreInfoTime.setHeight(self.getControl(5005).getHeight())
+                    seekButton_width = int(round(self.getControl(5005).getWidth() / 2)) #find width of button and place in the middle.
+                    seekBar_width = self.getControl(5004).getWidth()
+                    seekBar_xpos, temp_ypos = self.getControl(5004).getPosition()
+                    perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
+                    MoreInfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
+                except Exception,e:
+                    self.log("setSeekBarTime, currentPlayMoreInfoTime, failed! " + str(e))
+                    MoreInfoTimeseekButton_xpos = -5000
+                    MoreInfoTimeseekButton_ypos = -5000
+                try:
+                    self.log("setSeekBarTime, Info")
+                    temp_xpos = self.currentPlayInfoTime_xpos
+                    InfoTimeseekButton_ypos = self.currentPlayInfoTime_ypos
+                    self.currentPlayInfoTime.setWidth(self.getControl(5006).getWidth())
+                    self.currentPlayInfoTime.setHeight(self.getControl(5006).getHeight())
+                    seekButton_width = int(round(self.getControl(5006).getWidth() / 2)) #find width of button and place in the middle.
+                    seekBar_width = self.getControl(5007).getWidth()
+                    seekBar_xpos, temp_ypos = self.getControl(5007).getPosition()
+                    perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
+                    InfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
+                except Exception,e:
+                    self.log("setSeekBarTime, currentPlayInfoTime, failed! " + str(e))
+                    InfoTimeseekButton_xpos = -5000
+                    InfoTimeseekButton_ypos = -5000
             self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)
             self.currentPlayMoreInfoTime.setPosition(MoreInfoTimeseekButton_xpos, MoreInfoTimeseekButton_ypos)
            

@@ -94,17 +94,18 @@
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
             </control>  
         </control>
-        <control type="group" id="102">            
+        <control type="group" id="102">        
             <posx>0</posx>
-            <posy>0</posy>             
+            <posy>0</posy>     
             <control type="image">
                 <description>Info Overlay </description>
                 <width>1920</width>
                 <height>1080</height>
                 <texture>pstvlInfoBackground.png</texture>
-                <visible>!Control.IsVisible(104)</visible>                
-                <animation effect="slide" end="0,0" time="500">WindowOpen</animation>
-                <animation effect="slide" end="0,0" time="50">WindowClose</animation>
+                <visible>!Control.IsVisible(104)</visible> 
+                <animation effect="slide" start="0,400" end="0,0" tween="cubic" easing="out" delay="0" time="250" reversible="true">true</animation>                 
+<!--                 <animation effect="fade" start="0" end="100" delay="0" time="300" reversible="false">WindowOpen</animation>
+                <animation effect="fade" start="100" end="0" delay="0" time="300" reversible="false">WindowClose</animation> -->
             </control>
             <control type="group" id="104">       
                 <posx>0</posx>
@@ -143,7 +144,14 @@
                         <texture>sel.png</texture>
                         <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
                     </control>
-                </control>   
+                </control>
+            </control>   
+            <control type="image">
+                <width>1920</width>
+                <height>1080</height>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
+                <visible>!Control.IsVisible(104)</visible>
             </control>                
             <control type="image">
                 <description>Dynamic artwork</description>
@@ -176,12 +184,6 @@
                 <aspectratio>keep</aspectratio>
                 <visible>true</visible>
                 <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
-            </control>
-            <control type="image">
-                <width>1920</width>
-                <height>1080</height>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/vignette_bottom.png</texture>
             </control>
             <control type="label">
                 <posx>430</posx>
@@ -306,6 +308,12 @@
                 <height>296</height>
                 <texture>pstvlContextBackground.png</texture>
             </control>
+            <control type="image">
+                <width>1920</width>
+                <height>1080</height>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
+            </control>
             <control type="grouplist">
                 <description>Context buttons</description>
                 <posx>295r</posx>
@@ -407,12 +415,6 @@
                 <height>50</height>
                 <aspectratio>keep</aspectratio>
                 <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
-            </control>
-            <control type="image">
-                <width>1920</width>
-                <height>1080</height>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
             </control>
             <control type="label">
                 <posx>430</posx>
@@ -963,8 +965,8 @@
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>
-                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/base_color.png</texture>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/Black.png</texture>
             </control> 
             <control type="grouplist">   
                 <posx>300</posx>
@@ -1026,8 +1028,8 @@
                 <width>1920</width>
                 <height>1080</height>
                 <visible>Control.IsVisible(7000)</visible>
-                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/base_color.png</texture>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/Black.png</texture>
             </control>
             <control type="group">
                 <description>Sleep/Idle/Reminder Prompt</description>
