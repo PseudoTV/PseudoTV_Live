@@ -1,7 +1,7 @@
 [*] Updated LiveTV XMLTV parsing for improved metadata.
 [*] Settop refresh changed from every 1hr to every 3hrs.
 [*] Fixed channel logo rule.
-[*] LiveTV guiddata auto refresh changed from 24 to 48hrs.
+[*] LiveTV guidedata auto refresh changed from 24 to 48hrs.
 [*] Fixed 12H/24H clock, added duration time to overlay.
 [*] Added TVGuide.com url support for direct LiveTV guidedata. To use enter channel manager, LiveTV, XMLTV data, "Enter URL". 
     Ex. "http://mobilelistings.tvguide.com/Listingsweb/ws/rest/airings/20405/start/1464292664/duration/20160?channelsourceids=74313%7C62.4&formattype=json"

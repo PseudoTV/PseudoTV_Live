@@ -127,8 +127,12 @@ class ChannelListThread(threading.Thread):
                                 self.chanlist.channels[i].totalTimePlayed = self.myOverlay.channels[i].totalTimePlayed
                                 self.chanlist.channels[i].isPaused = self.myOverlay.channels[i].isPaused
                                 self.chanlist.channels[i].mode = self.myOverlay.channels[i].mode
-                                # Only allow appending valid channels, don't allow erasing them
                                 
+                                # set resume points
+                                self.chanlist.channels[i].setShowPosition(self.chanlist.channels[i].playlistPosition)
+                                self.chanlist.channels[i].setAccessTime(time.time())
+                                                
+                                # Only allow appending valid channels, don't allow erasing them
                                 try:
                                     self.chanlist.setupChannel(i + 1, True, False, True)
                                     DebugNotify("Channel " + str(i + 1) + " Append", icon=self.myOverlay.getChlogo(i + 1))      

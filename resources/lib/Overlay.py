@@ -113,6 +113,7 @@ class MyPlayer(xbmc.Player):
         
     def isPlaybackValid(self):
         Playing = False
+        xbmc.sleep(10)
         if self.isPlaying():
             Playing = True
         self.log('isPlaybackValid = ' + str(Playing))
@@ -122,7 +123,6 @@ class MyPlayer(xbmc.Player):
     def isSomethingPlaying(self):
         if self.overlay.isExiting == True:
             return True
-            
         if isLowPower() == True:
             isKodiPlaying = self.isPlaybackValid()
         else:
@@ -133,10 +133,8 @@ class MyPlayer(xbmc.Player):
         
     def waitForVideoPlayback(self):
         self.log("waiting for VideoPlayback")
-        playing = self.isSomethingPlaying()
-        while playing == False:
+        while self.isSomethingPlaying() == False:
             xbmc.sleep(10)
-            playing = self.isSomethingPlaying()
         return
     
     
@@ -163,10 +161,12 @@ class MyPlayer(xbmc.Player):
     
     
     def onPlaybackAction(self):
-        self.waitForVideoPlayback()        
-        xbmc.sleep(10)
         # show pip videowindow
         setProperty("PTVL.VideoWindow","true")
+        xbmc.sleep(10)
+        
+        self.waitForVideoPlayback()
+        
         if self.overlay.infoOnChange == True:
             self.overlay.showInfo()
         else:
@@ -1010,18 +1010,16 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     # Automatically pause in serial mode
                     if self.channels[self.currentChannel - 1].mode & MODE_ALWAYSPAUSE > 0:
                         self.channels[self.currentChannel - 1].setPaused(True)
-                else:
-                    self.channels[self.currentChannel - 1].setPaused(False)
                 # set resume points
                 self.channels[self.currentChannel - 1].setShowTime(self.Player.getTime())
                 self.channels[self.currentChannel - 1].setShowPosition(self.channels[self.currentChannel - 1].playlistPosition)
                 self.channels[self.currentChannel - 1].setAccessTime(time.time())
 
         # about to switch new channel
-        self.idleReset()
         self.currentChannel = channel      
         mediapath = self.channels[self.currentChannel - 1].getItemFilename(self.channels[self.currentChannel - 1].playlistPosition)
         self.log("setChannel, playing file = " + ascii(mediapath))
+        self.idleReset()
 
         if surfing == True and self.channelList.quickflipEnabled == True:  
             if chtype in [15,16] or mediapath[-4:].lower() == 'strm':
@@ -1512,10 +1510,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 
     def hideInfo(self):
         self.log('hideInfo')
+        self.infoOffset = 0 
+        self.showingInfo = False
         self.toggleShowStartover(False)
         self.getControl(102).setVisible(False)
-        self.showingInfo = False 
-        self.infoOffset = 0 
                           
               
     def showInfo(self):
@@ -1533,10 +1531,10 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
         self.hidePOP()
         self.setShowInfo()
-        if not self.showingInfo:
-            self.showingInfo = True
-            self.getControl(222).setVisible(False)
-            self.getControl(102).setVisible(True)
+        # if self.showingInfo == False:
+        self.showingInfo = True
+        self.getControl(222).setVisible(False)
+        self.getControl(102).setVisible(True)
             
         self.infoTimer = threading.Timer(self.InfTimer, self.hideInfo)
         self.infoTimer.name = "InfoTimer"
@@ -1989,7 +1987,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # Auto-off reset after activity.
         if self.idleTimeValue > 0:
             self.startIdleTimer()
-            
+        
             
     def sleepCancel(self):
         self.log("sleepCancel")
@@ -2672,8 +2670,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 perPlayed = 0
                 InfoTimeseekButton_xpos = -5000
                 InfoTimeseekButton_ypos = -5000
-        self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)
-        self.currentPlayMoreInfoTime.setPosition(MoreInfoTimeseekButton_xpos, MoreInfoTimeseekButton_ypos)
+            self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)
+            self.currentPlayMoreInfoTime.setPosition(MoreInfoTimeseekButton_xpos, MoreInfoTimeseekButton_ypos)
            
            
     def FEEDtoggle(self):

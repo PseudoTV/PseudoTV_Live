@@ -917,26 +917,27 @@
                 <aligny>center</aligny>
                 <visible>!Control.IsVisible(5008)</visible>
             </control>
-            <control type="group" id="5008">  
-                <control type="progress">
-                    <posx>0</posx>
-                    <posy>0</posy>
-                    <width>1400</width>
-                    <height>4</height>
-                    <texturebg>seek/progress_back.png</texturebg>
-                    <lefttexture border="0">seek/progresscache_left.png</lefttexture>
-                    <midtexture border="0">seek/progresscache_mid.png</midtexture>
-                    <righttexture border="0">seek/progresscache_right.png</righttexture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <info>Player.ProgressCache</info>
-                </control>
+            <control type="group" id="5008">            
                 <control type="progress">
                     <posx>0</posx>
                     <posy>0</posy>
                     <width>1400</width>
                     <height>4</height>
                     <texturebg>seek/progresscache_back.png</texturebg>
+                    <lefttexture border="0">seek/progresscache_left.png</lefttexture>
+                    <midtexture border="0">seek/progresscache_mid.png</midtexture>
+                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>Player.ProgressCache</info>
+                    <visible>Control.IsVisible(5008)</visible>
+                </control>
+                <control type="progress">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>1400</width>
+                    <height>4</height>
+                    <texturebg>seek/progress_back.png</texturebg>
                     <lefttexture border="0">seek/progress_left.png</lefttexture>
                     <midtexture border="0">seek/progress_mid.png</midtexture>
                     <righttexture border="0">seek/progress_right.png</righttexture>
