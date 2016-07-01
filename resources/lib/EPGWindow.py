@@ -453,9 +453,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             # if chtype != 8:             
                 # self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, '', focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
                 # return
-            
-            # playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
-            playlistpos = self.MyOverlayWindow.channels[curchannel - 1].playlistPosition
+            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
             self.log('setButtons, playlistpos = ' + str(playlistpos))
             
             # if the channel is paused, then only 1 button needed
@@ -1278,7 +1276,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 # The only way this isn't true is if the current channel is curchannel since
                 # it could have been fast forwarded or rewinded (rewound)?
                 if channel == self.MyOverlayWindow.currentChannel: #currentchannel epg
-                    playlistpos = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()   
+                    playlistpos = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
                     #Live TV pull date from the playlist entry
                     if chtype == 8 and len(self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)) > 0:
                         tmpDate = self.MyOverlayWindow.channels[channel - 1].getItemtimestamp(playlistpos)

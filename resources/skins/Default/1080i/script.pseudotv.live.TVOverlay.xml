@@ -245,7 +245,7 @@
                 <description>Info Progressbar Time Button</description>
                 <posx>430</posx><!-- #should match 5007 -->
                 <posy>235r</posy>
-                <width>150</width>
+                <width>165</width>
                 <height>30</height>
                 <font>font12</font>
                 <textcolor>FFFFFFFF</textcolor>
@@ -273,21 +273,8 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
+                    <label>$INFO[Window(10000).Property(OVERLAY.Time)] $INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
-                <control type="label">
-                    <description>Duration Time</description>
-                    <width>1100</width>
-                    <height>35</height>
-                    <align>left</align>
-                    <aligny>center</aligny>
-                    <wrapmultiline>true</wrapmultiline>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <shadowcolor>ff000000</shadowcolor>
-                    <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Time)]</label>
-                </control>
-            </control>
         </control> 
         <!-- MOREINFO -->
         <control type="group" id="222">
@@ -477,7 +464,7 @@
                 <description>MoreInfo Progressbar Time Button</description>
                 <posx>430</posx><!-- #should match 5004 -->
                 <posy>435r</posy>
-                <width>150</width>
+                <width>165</width>
                 <height>30</height>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
@@ -505,21 +492,8 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
+                    <label>$INFO[Window(10000).Property(OVERLAY.Playing.Time)] $INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
-                <control type="label">
-                    <description>Duration Time</description>
-                    <width>1100</width>
-                    <height>35</height>
-                    <align>left</align>
-                    <aligny>center</aligny>
-                    <wrapmultiline>true</wrapmultiline>
-                    <textcolor>FFFFFFFF</textcolor>
-                    <shadowcolor>ff000000</shadowcolor>
-                    <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Playing.Time)]</label>
-                </control>
-            </control>
             <control type="grouplist">  
                 <posx>430</posx>
                 <posy>235r</posy>

@@ -19,7 +19,7 @@
 import xbmc
 import os, struct
 
-from resources.lib.Globals import ascii
+from resources.lib.Globals import *
 from resources.lib.FileAccess import FileAccess
 
 

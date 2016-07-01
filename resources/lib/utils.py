@@ -589,7 +589,6 @@ def download_silent(url, dest):
     log('download_silent')
     download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
     if download_silentThread.isAlive():
-        download_silentThread.cancel()
         download_silentThread.join()
     download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
     download_silentThread.name = "download_silentThread"
@@ -1121,7 +1120,6 @@ def modification_date(filename):
     return datetime.datetime.fromtimestamp(t)
     
 def getSize(file):
-    log('utils: getSize')
     if xbmcvfs.exists(file):
         try:
             f = xbmcvfs.File(file)
@@ -1129,6 +1127,7 @@ def getSize(file):
             f.close()
         except:
             size = 0
+        log('utils: getSize = ' + str(size))
         return size
         
 def replaceAll(file,searchExp,replaceExp):
@@ -1355,7 +1354,7 @@ def chkVersion():
         link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
         match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
     except:
-        pass   
+        pass
         
     if len(match) > 0:
         if vernum != str(match[0]):
@@ -1366,7 +1365,8 @@ def chkVersion():
                 set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
             xbmc.executebuiltin('UpdateAddonRepos')
             xbmc.executebuiltin('UpdateLocalAddons')
-            
+    return isRepoInstalled()
+    
 def isCompanionInstalled():
     companion = isPlugin('plugin.video.pseudo.companion')
     log('utils: isCompanionInstalled = ' + str(companion))
@@ -1412,14 +1412,12 @@ def chkLowPower():
         if platform in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true")
             REAL_SETTINGS.setSetting('AT_LIMIT', "0")
-            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "1")
+            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "2")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
-            REAL_SETTINGS.setSetting('UNAlter_ChanBug', "true")
+            REAL_SETTINGS.setSetting('ColorChannelBug', "true")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
-            REAL_SETTINGS.setSetting('EnhancedGuideData', "false")
-            REAL_SETTINGS.setSetting('accurate_duration', "false")
             REAL_SETTINGS.setSetting('sickbeard.enabled', "false")
             REAL_SETTINGS.setSetting('couchpotato.enabled', "false")
             infoDialog("Settings Optimized for Performance")
@@ -1464,7 +1462,6 @@ def ClearCache(type='Files'):
         try:    
             shutil.rmtree(ART_LOC)
             log('utils: Removed ART_LOC')  
-            REAL_SETTINGS.setSetting('ClearLiveArtCache', "true") 
             infoDialog("Artwork Folder Cleared")
         except:
             pass
@@ -1580,6 +1577,7 @@ def HandleUpgrade():
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
           
+    REAL_SETTINGS.setSetting('ClearLiveArt', "true")
     # Force Channel rebuild
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
     # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
@@ -1663,7 +1661,9 @@ def chkChanges():
 
 def preStart(): 
     log('utils: preStart')
-    chkVersion()
+    if chkVersion() == False:
+        return
+        
     # chkChanges()
     chkAPIS(RSS_API_KEY)
     patchSeekbar()
@@ -1904,13 +1904,18 @@ def isPlayOn():
     return isPlugin('plugin.video.playonbrowser')
     
 def isUSTVnow():
-    return isPlugin('plugin.video.ustvnow')
+    if isPlugin('plugin.video.ustvnow'):
+        return 'plugin.video.ustvnow'
+    elif isPlugin('plugin.video.ustvnow.tva'):
+        return 'plugin.video.ustvnow.tva'
+    else:
+        return False
 
 def listXMLTV():
     log("utils: listXMLTV")
     xmltvLst = []   
     EXxmltvLst = ['pvr','Enter URL','scheduledirect (Coming Soon)']
-    if isUSTVnow() == True:
+    if isUSTVnow() != False:
         EXxmltvLst.append('ustvnow')
     dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
     dir,file = xbmcvfs.listdir(XMLTV_LOC)

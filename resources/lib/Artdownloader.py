@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 import subprocess, os
 import time, datetime, random
 import threading
@@ -40,10 +40,9 @@ from HTMLParser import HTMLParser
 try:
     from metahandler import metahandlers
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
-except Exception,e:  
+except Exception,e:
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-Artdownloader: metahandler Import Failed" + str(e))   
-
 
 try:
     import buggalo
@@ -55,8 +54,8 @@ try:
     from PIL import Image
     from PIL import ImageEnhance
 except:
-    pass
-    
+    REAL_SETTINGS.setSetting("ColorChannelBug","true")
+        
 socket.setdefaulttimeout(30)
 
 class Artdownloader:
@@ -137,29 +136,17 @@ class Artdownloader:
     def FindArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, arttypeEXT):
         self.log('FindArtwork, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', arttypeEXT = ' + arttypeEXT)
         try:
-            setImage = 'NA.png'
             CacheArt = False
             DefaultArt = False
             arttypeEXT = EXTtype(arttypeEXT)
             arttype = arttypeEXT.split(".")[0]
             fle = id + '-' + arttypeEXT
             ext = arttypeEXT.split('.')[1]
-            cachedthumb = xbmc.getCacheThumbName(os.path.join(removeNonAscii(mpath), fle))
-            cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + "." + ext)).replace("\\", "/")
-            kodifile = xbmc.translatePath(os.path.join('special://masterprofile/Thumbnails', cachedthumb[0], cachedthumb[:-4] + "." + ext)).replace("\\", "/")
-            
-            if isLowPower() == True:
-                return setImage
-            
-            elif id != '0':
-                if FileAccess.exists(cachefile) == True:
-                    self.log('FindArtwork, Using Cache')
-                    return cachefile   
-                
-                elif FileAccess.exists(kodifile) == True:
-                    self.log('FindArtwork, Using Kodi Cache')
-                    return kodifile  
+            setImage = 'NA.png'
                     
+            if isLowPower() == True:
+                return self.SetDefaultArt(chname, mpath, arttypeEXT)
+            
             # local media
             if chtype <= 7 or chtype == 12:
                 self.log('FindArtwork, chtype <= 7 - Local Artwork')
@@ -171,33 +158,33 @@ class Artdownloader:
 
                 # lookup artwork via local folder
                 if type == 'tvshow': 
-                    if FileAccess.exists(artSeries):
+                    if xbmcvfs.exists(artSeries):
                         return artSeries
-                    elif FileAccess.exists(artSeason):
+                    elif xbmcvfs.exists(artSeason):
                         return artSeason
-                    elif FileAccess.exists(artSeries_fallback): 
+                    elif xbmcvfs.exists(artSeries_fallback): 
                         return artSeries_fallback
-                    elif FileAccess.exists(artSeason_fallback):
+                    elif xbmcvfs.exists(artSeason_fallback):
                         return artSeason_fallback    
                 elif type in ['movie','music']:
-                    if FileAccess.exists(artSeason):
+                    if xbmcvfs.exists(artSeason):
                         return artSeason
-                    elif FileAccess.exists(artSeason_fallback):
+                    elif xbmcvfs.exists(artSeason_fallback):
                         return artSeason_fallback
                         
                 # query json for artwork
-                SetImage = self.JsonArt(type, chname, mpath, arttypeEXT)
-                if FileAccess.exists(SetImage):
+                setImage = self.JsonArt(type, chname, mpath, arttypeEXT)
+                if xbmcvfs.exists(setImage):
                     return SetImage
                 elif dbid != '0':
-                    SetImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
-                    if FileAccess.exists(SetImage):
-                        return SetImage
+                    setImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
+                    if xbmcvfs.exists(setImage):
+                        return setImage
                         
                 # lookup tvdb/tmdb artwork & download missing artwork
-                SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
-                if FileAccess.exists(SetImage):
-                    return SetImage
+                setImage = self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
+                if xbmcvfs.exists(setImage):
+                    return setImage
                     
             # online media
             else:
@@ -213,15 +200,13 @@ class Artdownloader:
                     elif chtype in [8] and dbid != '0':
                         self.log('FindArtwork, decode dbid')
                         return decodeString(dbid)
-                    # elif chtype == 8 and dbid == '0':
-                        # self.log('FindArtwork, skin.helper getpvrthumb')
-                        # setProperty('SkinHelper.EnablePVRThumbs','true')
-                        # return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
+                    elif chtype == 8 and dbid == '0':
+                        self.log('FindArtwork, skin.helper getpvrthumb')
+                        setProperty('SkinHelper.EnablePVRThumbs','true')
+                        #return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
                         
                 # lookup tvdb/tmdb artwork & download missing artwork
-                SetImage = self.DownloadMissingArt(type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT)
-                if FileAccess.exists(SetImage):
-                    return SetImage
+                return self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
                     
             self.log('FindArtwork, SetDefaultArt')
             return self.SetDefaultArt(chname, mpath, arttypeEXT)
@@ -231,14 +216,9 @@ class Artdownloader:
             return THUMB
                 
               
-    def dbidDecode(self, dbid, cachefile):
+    def dbidDecode(self, dbid):
         self.log('dbidDecode')
-        url = decodeString(dbid)
-        if url.startswith('http'):
-            download_silent(url,cachefile)
-            return cachefile
-        else:
-            return 'NA.png'
+        return decodeString(dbid)
               
               
     def SetDefaultArt(self, chname, mpath, arttypeEXT):
@@ -251,11 +231,11 @@ class Artdownloader:
             ChannelLogo = os.path.join(LOGO_LOC,chname + '.png')
             
             # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            if FileAccess.exists(MediaImage) == True:
+            if xbmcvfs.exists(MediaImage) == True:
                 self.log('SetDefaultArt, return MediaImage')
                 return MediaImage
             # Channel Logo
-            elif FileAccess.exists(ChannelLogo) == True:
+            elif xbmcvfs.exists(ChannelLogo) == True:
                 self.log('SetDefaultArt, return ChannelLogo')
                 return ChannelLogo
             # Plugin Icon
@@ -264,7 +244,7 @@ class Artdownloader:
                 self.log('SetDefaultArt, return plugin icon')
                 return icon
             # Default Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            elif FileAccess.exists(StockImage) == True:
+            elif xbmcvfs.exists(StockImage) == True:
                 self.log('SetDefaultArt, return StockImage')
                 return StockImage
             # PTVL Icon
@@ -276,23 +256,22 @@ class Artdownloader:
             return THUMB
 
 
-    def DownloadMissingArt(self, type, title, year, id, arttype, cachefile, chname, mpath, arttypeEXT):
+    def DownloadMissingArt(self, type, title, year, id, arttype, chname, mpath, arttypeEXT):
         self.log('DownloadMissingArt')
         url = ''
         if ENHANCED_DATA == True and id != '0':  
-            url = self.findMissingArt(type, id, arttype, cachefile, chname, mpath, arttypeEXT)
+            url = self.findMissingArt(type, id, arttype, chname, mpath, arttypeEXT)
             if not url.startswith('http'):
                 # search fallback artwork
-                url = self.findMissingArt(type, id, self.getFallback_Arttype(arttype), cachefile, chname, mpath, self.getFallback_Arttype(arttype))
+                url = self.findMissingArt(type, id, self.getFallback_Arttype(arttype), chname, mpath, self.getFallback_Arttype(arttype))
         
         if not url.startswith('http'):
             # search metahanlder artwork
             url = self.findMissingArtMeta(type, title, year, arttype)
         
         if url.startswith('http'):
-            download_silent(url,cachefile)
-            return cachefile
-        return 'NA.png'
+            return url
+        return self.SetDefaultArt(chname, mpath, arttypeEXT)
            
            
     def findMissingArtMeta(self, type, title, year, arttype):
@@ -310,17 +289,11 @@ class Artdownloader:
             pass
         if url.startswith('http'):
             return url
-        return ''
+        return 'NA.png'
            
            
-    def findMissingArt(self, type, id, arttype, cachefile, chname, mpath, arttypeEXT):
-        url = ''
-        drive, Dpath = os.path.splitdrive(cachefile)
-        path, filename = os.path.split(Dpath)
-        
-        if FileAccess.exists(os.path.join(drive,path)) == False:
-            FileAccess.makedirs(os.path.join(drive,path))   
-                    
+    def findMissingArt(self, type, id, arttype, chname, mpath, arttypeEXT):
+        url = ''     
         if type == 'tvshow':
             self.log('findMissingArt, tvshow')
             tvdb_Types = ['banner', 'fanart', 'folder', 'poster']
@@ -329,7 +302,7 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('banner', 'graphical').replace('folder', 'poster')
                 url = self.findTVDBArt(type, id, arttype, arttypeEXT)
-            if not url.startswith('http'):
+            if url and not url.startswith('http'):
                 # correct database naming schema
                 arttype = arttype.replace('graphical', 'banner').replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
@@ -342,16 +315,16 @@ class Artdownloader:
                 # correct database naming schema
                 arttype = arttype.replace('folder', 'poster')
                 url = self.findTMDBArt(type, id, arttype, arttypeEXT)
-            if not url.startswith('http'):
+            if url and not url.startswith('http'):
                 # correct database naming schema
                 arttype = arttype.replace('folder', 'poster')
                 url = self.findFANTVArt(type, id, arttype, arttypeEXT)
 
         # todo music artwork support
         # todo google image search, obdb, metahandler search
-        if url.startswith('http'):
+        if url and not url.startswith('http'):
             return url
-        return ''
+        return 'NA.png'
  
  
     def findTVDBArt(self, type, id, arttype, arttypeEXT):
@@ -360,13 +333,11 @@ class Artdownloader:
         tvdb = str(self.tvdbAPI.getBannerByID(id, arttype))
         tvdbPath = tvdb.split(', ')[0].replace("[('", "").replace("'", "") 
         if tvdbPath.startswith('http'):
-            url = tvdbPath
-        return url
-        
+            return tvdbPath
+
         
     def findTMDBArt(self, type, id, arttype, arttypeEXT):
         self.log('findTMDBArt')
-        url = ''
         tmdb = self.tmdbAPI.get_image_list(id)
         # todo replace lazy code with regex parsing
         data = str(tmdb).replace("[", "").replace("]", "").replace("'", "")
@@ -376,8 +347,7 @@ class Artdownloader:
         if match:
             tmdbPath = match.group().replace(",", "").replace("url: u", "").replace("url: ", "")
             if tmdbPath.startswith('http'):
-                url = tmdbPath
-        return url
+                return tmdbPath
 
                 
     def findFANTVArt(self, type, id, arttype, arttypeEXT):
@@ -391,7 +361,6 @@ class Artdownloader:
 
         file_detail = re.compile( "{(.*?)}", re.DOTALL ).findall(fan)
         pref_language = get_abbrev(REAL_SETTINGS.getSetting('limit_preferred_language'))
-        
         for f in file_detail:
             try:
                 languages = re.search("'language' *: *(.*?),", f)
@@ -405,12 +374,12 @@ class Artdownloader:
                             if art_type.lower() == arttype.lower():
                                 if fanPaths and len(fanPaths.group(1)) > 0:
                                     fanPath = fanPaths.group(1).replace("u'",'').replace("'",'')
-                                    if fanPath.startswith('http'):
-                                        url = fanPath
+                                    if fanPath.startswith('http'):                                                            
+                                        url = fanPath     
             except:
-                pass                                                                     
+                pass  
         return url
-
+        
 
     def AlphaLogo(self, org, mod):
         self.log("AlphaLogo")
@@ -435,7 +404,7 @@ class Artdownloader:
         try:
             drive, path = os.path.splitdrive(mod)
             path, filename = os.path.split(path)
-            if FileAccess.exists(path) == False:
+            if xbmcvfs.exists(path) == False:
                 FileAccess.makedirs(path)
                 
             org =  xbmc.translatePath(org)
@@ -447,45 +416,40 @@ class Artdownloader:
             return mod
         except Exception,e:  
             self.log("ConvertBug, Failed " + str(e), xbmc.LOGERROR)
-            return org
+            return os.path.join(IMAGES_LOC,'icon_mono.png')
             
-        
-    def getDefaultBug(self, chname):     
-        self.log("getDefaultBug")       
-        if REAL_SETTINGS.getSetting('UNAlter_ChanBug') == 'true':
-            DefaultBug = os.path.join(IMAGES_LOC,'logo.png')
-            if chname == 'OnDemand':
-                DefaultBug = os.path.join(IMAGES_LOC,'ondemand.png')
-        else:
-            DefaultBug = os.path.join(IMAGES_LOC,'Default.png')
-            if chname == 'OnDemand':
-                DefaultBug = os.path.join(IMAGES_LOC,'Default_ondemand.png')
-        return DefaultBug
-        
         
     def FindBug(self, chtype, chname):
         self.log("FindBug, chname = " + chname)
         try:
-            setImage = ''
-            BugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png')))
-            cachedthumb = xbmc.getCacheThumbName(BugFLE)
-            cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + ".png")).replace("\\", "/")
-            DefaultBug = self.getDefaultBug(chname)
+            OEMBugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png')))
+            NEWBugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '_mono.png')))
             
+            OEMDefaultBugFLE = os.path.join(IMAGES_LOC,'logo.png')
+            NEWDefaultBugFLE = os.path.join(IMAGES_LOC,'icon_mono.png')
+            
+            #delete bad image file
+            if getSize(OEMBugFLE) <= 20:
+                try:
+                    xbmcvfs.delete(OEMBugFLE)
+                except:
+                    pass
+                    
             # no channel bug for livetv/internettv
             if chtype in [8,9]:
                 return 'NA.png' 
+
+            if REAL_SETTINGS.getSetting('ColorChannelBug') == 'true':
+                if xbmcvfs.exists(OEMBugFLE) == True:
+                    return OEMBugFLE
+                return OEMDefaultBugFLE
             else:
-                if REAL_SETTINGS.getSetting('UNAlter_ChanBug') == 'true':
-                    if FileAccess.exists(BugFLE) == False:
-                        BugFLE = DefaultBug
-                    return BugFLE
-                else:
-                    if FileAccess.exists(cachefile) == True:
-                        return cachefile
-                    elif FileAccess.exists(BugFLE) == False:
-                        return DefaultBug
-                    return self.ConvertBug(BugFLE, cachefile)
+                if xbmcvfs.exists(NEWBugFLE) == False:
+                    self.ConvertBug(OEMBugFLE, NEWBugFLE)
+                    
+                if xbmcvfs.exists(NEWBugFLE) == True:
+                    return NEWBugFLE
+                return NEWDefaultBugFLE
         except Exception,e:  
             self.log("FindBug, Failed" + str(e), xbmc.LOGERROR)
             return 'NA.png'

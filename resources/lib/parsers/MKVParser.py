@@ -20,7 +20,7 @@ import xbmc
 import os, struct
 import traceback
 
-from resources.lib.Globals import ascii
+from resources.lib.Globals import *
 from resources.lib.FileAccess import FileAccess
 
 

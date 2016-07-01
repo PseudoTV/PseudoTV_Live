@@ -126,7 +126,7 @@
                 <description>OnDemand Label</description>               
                 <width>375</width>
                 <height>38</height>
-                <label>OnDemand</label>
+                <label>VOD</label>
                 <font>font12</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -139,7 +139,7 @@
                 <description>Apps Label</description>        
                 <width>375</width>
                 <height>38</height>
-                <label>Apps</label>
+                <label>APP</label>
                 <font>font12</font>
                 <align>center</align>
                 <aligny>center</aligny>
@@ -277,6 +277,59 @@
                 <font>font12</font>
                 <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
             </control> 
-        </control> 
+        </control>
+        <control description="Panel" id="500" type="panel">
+            <viewtype label="Panel">Panel</viewtype>   
+            <posx>425</posx>
+            <posy>340</posy> 
+            <width>1492</width>
+            <height>700</height>
+            <orientation>vertical</orientation>
+            <onleft>655</onleft>
+            <onright>655</onright>
+            <onup>655</onup>
+            <ondown>655</ondown>
+            <preloaditems>4</preloaditems>
+            <pagecontrol>60</pagecontrol>
+            <content target="video" sortby="title" sortorder="ascending" limit="10">videodb://movies/titles/</content>
+            <itemlayout height="360" width="373">
+                <control type="image">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>370</width>
+                    <height min="5" max="370">auto</height>
+                    <bordersize>-18</bordersize>
+                    <texture border="8">borderNF.png</texture>
+                    <visible>ListItem.IsSelected</visible>
+                </control>
+                <control type="image">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>360</width>
+                    <height min="5" max="347">auto</height>
+                    <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                    <aspectratio aligny="top">keep</aspectratio>
+                </control>
+            </itemlayout>
+            <focusedlayout height="360" width="373">
+                <control type="image">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>370</width>
+                    <height min="5" max="370">auto</height>
+                    <bordersize>0</bordersize>
+                    <texture border="8">borderFO.png</texture>
+                    <visible>ListItem.IsSelected</visible>
+                </control>
+                <control type="image">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>360</width>
+                    <height min="5" max="347">auto</height>
+                    <texture background="true">$INFO[ListItem.Art(thumb)]</texture>
+                    <aspectratio aligny="top">keep</aspectratio>
+                </control>
+            </focusedlayout>
+        </control>         
     </controls>
 </window>

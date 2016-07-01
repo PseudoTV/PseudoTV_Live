@@ -1310,7 +1310,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
-        self.dlg.update(55, "Preparing Configuration", "finalizing data")
+        self.dlg.update(55, "Preparing Configuration", "finalizing data...")
         if isCompanionInstalled() == True:
             self.pluginPathList = ['plugin.video.pseudo.companion']
             self.pluginNameList = ['[COLOR=blue][B]PseudoCompanion[/B][/COLOR]']
@@ -1323,8 +1323,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             self.pluginPathList = ['plugin.video.playonbrowser'] + self.pluginPathList
             self.pluginNameList = ['[COLOR=blue][B]Playon[/B][/COLOR]'] + self.pluginNameList
             self.pluginIconList = [''] + self.pluginIconList  
-        if isUSTVnow() == True:
-            self.pluginPathList = ['plugin.video.ustvnow/?mode=live'] + self.pluginPathList
+        if isUSTVnow()!= False:
+            self.pluginPathList = [isUSTVnow()+'/?mode=live'] + self.pluginPathList
             self.pluginNameList = ['[COLOR=blue][B]USTVnow[/B][/COLOR]'] + self.pluginNameList
             self.pluginIconList = [''] + self.pluginIconList
         if isPlugin('plugin.video.meta') == True:

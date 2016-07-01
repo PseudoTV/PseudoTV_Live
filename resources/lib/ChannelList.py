@@ -97,6 +97,7 @@ class ChannelList:
         self.genre = ''
         self.rating = ''
         self.FileListCache = ''
+        self.includeMeta = ENHANCED_DATA
         self.videoParser = VideoParser()
         self.youtube_player = self.youtube_player_ok()
         self.ustv = ustvnow.ustvnow()
@@ -119,8 +120,6 @@ class ChannelList:
         self.log("IceLibrary is " + str(self.incIceLibrary))
         self.incBCTs = REAL_SETTINGS.getSetting('IncludeBCTs') == "true"
         self.log("IncludeBCTs is " + str(self.incBCTs)) 
-        self.accurateDuration = REAL_SETTINGS.getSetting('accurate_duration') == 'true'
-        self.log("AccurateDuration is " + str(self.accurateDuration))
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
         self.startTime = time.time()
@@ -141,7 +140,10 @@ class ChannelList:
             REAL_SETTINGS.setSetting('FavChanLst', '') # Reset FavChannels
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
             self.forceReset = False
-
+                   
+        if self.USTVnow_ok != False:
+            self.ustv.getXMLTV()
+            
         try:
             self.lastResetTime = int(ADDON_SETTINGS.getSetting("LastResetTime"))
         except Exception,e:
@@ -162,7 +164,6 @@ class ChannelList:
         foundvalid = False
         makenewlists = False
         self.background = background
-        setBackgroundLabel("Initializing: Updating Channel List")
         
         if self.background == False:
             self.updateDialog.create("PseudoTV Live", "Updating Channel List")
@@ -176,8 +177,8 @@ class ChannelList:
             
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
-            setBackgroundLabel("Initializing: Channel List (" + str(int(i * 100 // self.maxChannels)) + "%)")
             if self.background == False:
+                setBackgroundLabel("Initializing: Updating Channel list (" + str(int(i * 100 // self.maxChannels)) + "%)")
                 self.updateDialogProgress = i * 100 // self.enteredChannelCount
                 self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(i + 1), "waiting for file lock")
                 setProperty('loading.progress',str(self.updateDialogProgress))
@@ -201,8 +202,8 @@ class ChannelList:
 
         if foundvalid == False and makenewlists == False:
             for i in range(self.maxChannels):
-                setBackgroundLabel("Initializing: Updating Channel " + str(i + 1))
                 if self.background == False:
+                    setBackgroundLabel("Initializing: Updating Channels (" + str(int(i * 100 // self.maxChannels)) + "%)")
                     self.updateDialogProgress = i * 100 // self.enteredChannelCount
                     self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(i + 1), "waiting for file lock")
                     setProperty('loading.progress',str(self.updateDialogProgress))
@@ -211,8 +212,7 @@ class ChannelList:
                 if self.channels[i].isValid:
                     foundvalid = True
                     break
-        
-        setBackgroundLabel("Initializing: Complete")
+       
         if self.background == False:
             self.updateDialog.update(100, "Update complete", "")
             self.updateDialog.close()
@@ -249,7 +249,7 @@ class ChannelList:
                 chsetting4 = ADDON_SETTINGS.getSetting('Channel_' + str(i + 1) + '_4')
             except Exception,e:
                 pass
-
+                
             if chtype <= 7 and quickFlip == True:
                 localCount += 1
                     
@@ -273,15 +273,12 @@ class ChannelList:
                     
                 # find missing channel logos
                 if FIND_LOGOS == True:
-                    if self.background == False:
-                        self.myOverlay.setBackgroundLabel('Initializing: Searching for Channel logos (' + str((i + 1)/10) + '%)')
                     if chtype not in [6,7]:
                         chname = self.getChannelName(chtype, i + 1, chsetting1)
                         FindLogo(chtype, chname)
                             
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
-        setBackgroundLabel('Initializing: Channels') 
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
 
@@ -398,6 +395,7 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', _time failed! ' + str(e))
                 
         if createlist or needsreset:
+            durationCache.delete("%")
             self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
@@ -648,7 +646,6 @@ class ChannelList:
         
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
-        
             if chtype == 10:
                 setting2 = setting2.replace('7','Multi Playlist').replace('8','Multi Channel').replace('3','User Subscription')
                 setting2 = setting2.replace('4','User Favorites').replace('5','Search Query').replace('9','Raw gdata')
@@ -665,6 +662,9 @@ class ChannelList:
                 #REVERSE ORDER
                 israndom = False
                 isreverse = True
+
+            self.channels[channel - 1].isRandom = israndom
+            self.channels[channel - 1].isReverse = isreverse
               
             # Set Media Limit
             try:
@@ -676,14 +676,13 @@ class ChannelList:
                 limit = MEDIA_LIMIT  
         
             # set real max limits for 'unlimited' by chtype
-            if limit == 0 or limit > PLUGINUPNP_MAXPARSE or limit > YOUTUBERSS_MAXPARSE:
-                if chtype in [15,16]:
-                    limit = PLUGINUPNP_MAXPARSE
-                elif chtype in [10,11]:
-                    limit = YOUTUBERSS_MAXPARSE
-                else:
-                    limit = MAX_MEDIA_LIMIT
-                    
+            if chtype in [15,16] and (limit > PLUGINUPNP_MAXPARSE or limit == 0):
+                limit = PLUGINUPNP_MAXPARSE
+            elif chtype in [10,11] and (limit > YOUTUBERSS_MAXPARSE or limit == 0):
+                limit = YOUTUBERSS_MAXPARSE
+            elif limit == 0:
+                limit = MAX_MEDIA_LIMIT
+                         
         elif chtype == 8:
             limit = LIVETV_MAXPARSE
         elif chtype == 9:
@@ -707,11 +706,6 @@ class ChannelList:
             elif setting2[0:9] == 'hdhomerun' and REAL_SETTINGS.getSetting('HdhomerunMaster') == "false":
                 self.log("Building LiveTV using tuner1")
                 setting2 = re.sub(r'\d/tuner\d',"1/tuner1",setting2) 
-            
-            # USTVnow #
-            if self.USTVnow_ok == True and setting3 == 'ustvnow':
-                self.ustv.getXMLTV()
-
             fileList = self.buildLiveTVFileList(setting1, setting2, setting3, setting4, limit)
                 
         # InternetTV  
@@ -811,7 +805,7 @@ class ChannelList:
                     israndom = True
             except Exception,e:
                 pass
-
+        
         try:
             if append == True:
                 channelplaylist = FileAccess.open(CHANNELS_LOC + "channel_" + str(channel) + ".m3u", "r")
@@ -838,6 +832,9 @@ class ChannelList:
         elif isreverse:
             fileList.reverse()
             msg = 'reversing'
+        self.log("makeChannelList, Using Media Sort " + msg)
+        self.channels[channel - 1].isRandom = israndom
+        self.channels[channel - 1].isReverse = isreverse
         
         if append:
             if len(fileList) + self.channels[channel - 1].Playlist.size() > self.Playlist_Limit:
@@ -848,9 +845,6 @@ class ChannelList:
         
         if len(fileList) == 0:
             self.channels[channel - 1].isValid = False
-        self.channels[channel - 1].isRandom = israndom
-        self.channels[channel - 1].isReverse = isreverse
-        self.log("makeChannelList, Using Media Sort " + msg)
         fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
         
         # inject BCT into filelist
@@ -1304,7 +1298,7 @@ class ChannelList:
     
     
     def makeTMPSTR(self, duration, Stitle, year, SEtitle, description, GenreLiveID, file, timestamp=None, includeMeta=True):
-        self.log("makeTMPSTR")
+        self.log("makeTMPSTR, includeMeta = " + str(includeMeta))
         genre, LiveID = self.packGenreLiveID(GenreLiveID)
         type, id, dbepid, managed, playcount, rating, hd, cc, stars, year = self.unpackLiveID(LiveID)
         Stitle = self.cleanLabels(Stitle)
@@ -1317,12 +1311,12 @@ class ChannelList:
             # if no id, default to youtube type.
             if id == '0':
                 type = 'youtube'
-
+                
         if type in ['tvshow','episode']:
-            if includeMeta == True and ENHANCED_DATA == True:
+            if includeMeta == True:
                 stars, year, duration, description, Stitle, SEtitle, id, genre, rating, playcount = self.getTVmeta(stars, year, duration, description, title, SEtitle, id, genre, rating, playcount)
         elif type == 'movie':
-            if includeMeta == True and ENHANCED_DATA == True:
+            if includeMeta == True:
                 stars, year, duration, description, Stitle, subtitle, id, genre, rating, playcount = self.getMovieMeta(stars, year, duration, description, title, SEtitle, id, genre, rating, playcount)
         elif type == 'youtube':
             if includeMeta == True:
@@ -2054,10 +2048,10 @@ class ChannelList:
                         dur = 3600  #60 minute default
                                                          
                 #Enable Enhanced Parsing for current and future shows only
-                includeMeta = False
-                if (((now > startDate and now <= stopDate) or (now < startDate))):
-                    includeMeta = True  
-
+                includeMeta = self.includeMeta
+                if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                    includeMeta = False  
+                        
                 if dur > 3600:
                     type = 'movie'
                 else:
@@ -2090,18 +2084,18 @@ class ChannelList:
                     if self.background == False:
                         self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
                         setProperty('loading.progress',str(self.updateDialogProgress))
-               
-            if showcount < LIVETV_REFRESH:
-                self.setChannelChanged(self.settingChannel)
+
         except Exception,e:
-            self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
+            self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)               
+        if showcount < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
         return showList
         
         
     def fillLiveTVXMLTV(self, setting1, setting2, setting3, setting4, chname, limit):
         self.log("fillLiveTVXMLTV")
         showList = []
-        showcount = 0          
+        showcount = 0        
         try:
             # local or url xmltv file
             if setting3[0:4] == 'http':
@@ -2283,19 +2277,18 @@ class ChannelList:
                                 playcount = 1                        
 
                             #Enable Enhanced Parsing for current and future shows only
-                            includeMeta = False
-                            if (((now > startDate and now <= stopDate) or (now < startDate))):
-                                if showtitle.lower() != 'paid programing' or description.lower() != 'paid programing':
-                                    includeMeta = True  
+                            includeMeta = self.includeMeta
+                            if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                                includeMeta = False  
                                     
-                                if type == 'movie':
-                                    try:
-                                        year = elem.findtext('date')[0:4]
-                                    except:
-                                        year = 0      
-                                else:
-                                    year = 0
-                                    
+                            year = 0
+                            if type == 'movie':
+                                try:
+                                    year = elem.findtext('date')[0:4]
+                                except:
+                                    year = 0      
+
+                            if includeMeta == True:
                                 if type == 'tvshow' and ENHANCED_DATA == True:
                                     #Decipher the TVDB ID by using the Zap2it ID in dd_progid
                                     episodeNumList = elem.findall("episode-num") 
@@ -2368,10 +2361,10 @@ class ChannelList:
                                 setProperty('loading.progress',str(self.updateDialogProgress))
                 root.clear()
             f.close()                   
-            if showcount < LIVETV_REFRESH:
-                self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
+        if showcount < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
         return showList
         
             
@@ -2495,13 +2488,13 @@ class ChannelList:
                             thumburl = 0
                             
                         episodetitle = 'LiveTV'
-                        subtitle = 'LiveTV'             
+                        subtitle = 'LiveTV'
+                        
                         #Enable Enhanced Parsing
-                        includeMeta = False
-                        if (((now > startDate and now <= stopDate) or (now < startDate))):
-                            # if year != 0 or id != '0':
-                            includeMeta = True 
-                                 
+                        includeMeta = self.includeMeta 
+                        if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                            includeMeta = False  
+                                
                         # if type == 'tvshow':
                             # episodenames = re.search('"episodename" *: *"(.*?)"', f)
                             # if episodenames and len(episodenames) > 0:
@@ -2547,11 +2540,10 @@ class ChannelList:
                             
                         if showcount >= limit:
                             break     
-            if showcount < LIVETV_REFRESH:
-                self.setChannelChanged(self.settingChannel)
         except Exception,e:
             self.log("fillLiveTVPVR failed! " + str(e), xbmc.LOGERROR) 
-            pass
+        if showcount < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
         return showList
 
         
@@ -2673,8 +2665,12 @@ class ChannelList:
     
     def getYoutubeDetails(self, YTID):
         self.log('getYoutubeDetails')
-        YT_URL_Video = ('https://www.googleapis.com/youtube/v3/videos?key=%s&id=%s&part=id,snippet,contentDetails,statistics' % (YT_API_KEY, YTID))
-        return re.compile("},(.*?)}", re.DOTALL ).findall(read_url_cached(YT_URL_Video))
+        try:
+            YT_URL_Video = ('https://www.googleapis.com/youtube/v3/videos?key=%s&id=%s&part=id,snippet,contentDetails,statistics' % (YT_API_KEY, YTID))
+            details = re.compile("},(.*?)}", re.DOTALL ).findall(read_url_cached(YT_URL_Video))
+        except:
+            details = ''
+        return details
 
         
     def getYoutubeChname(self, YTID):
@@ -3211,11 +3207,13 @@ class ChannelList:
            
      
     def getDuration(self, filename):
-        self.log('getDuration')
         filesize = getSize(filename)
+        self.log('getDuration, filename = ' + ascii(filename) + ', filesize = ' + str(filesize))
         if CACHE_ENABLED == True:
             try:
-                result = monthly.cacheFunction(self.getDuration_NEW, filename, filesize)
+                result = durationCache.cacheFunction(self.getDuration_NEW, filename, filesize)
+                if result == 0:
+                    raise
             except:
                 result = self.getDuration_NEW(filename, filesize)
         else:
@@ -3226,12 +3224,13 @@ class ChannelList:
         
         
     def getDuration_NEW(self, filename, filesize):
+        self.log("getDuration_NEW")
         try:
-            duration = int(self.videoParser.getVideoLength(filename))
+            duration = self.videoParser.getVideoLength(filename)
         except:
             duration = 0
-        # if duration == 0:
-            # duration = self.getffprobeLength(filename)
+        if duration == 0:
+            duration = self.getffprobeLength(filename)
         return duration
         
         
@@ -3248,7 +3247,6 @@ class ChannelList:
       
     def rtmpDump(self, stream):
         self.log("rtmpDump")
-        rtmpValid = False
         try:
             url = urllib.unquote(stream)
             RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
@@ -3280,7 +3278,7 @@ class ChannelList:
                 self.log("rtmpDump, ERROR?: Unknown response..." + str(output))
                 rtmpValid = False
         except:
-            pass
+            rtmpValid = False
         self.log("rtmpValid = " + str(rtmpValid))
         return rtmpValid
         
@@ -4096,11 +4094,7 @@ class ChannelList:
         found = False
         if filename.startswith('http://mobilelistings.tvguide.com'):
             return CHname, CHname
-            
-        elif filename == USTVXML:
-            if self.ustv.makeXMLTV(self.ustv.get_guidedata(),self.ustv.xmltvPath) == False:
-                return CHname, CHname
-                
+
         elif filename == 'pvr':
             NameLst, PathLst, IconLst = self.PVRList
             for i in range(len(NameLst)):
@@ -4720,13 +4714,14 @@ class ChannelList:
     def getFileListCache(self, chtype, channel, purge=False):
         cachetype = str(chtype) + ':' + str(channel)
         try:
-            #Set Life of cache in hours, value needs to be lower than reset time.
             if chtype <= 7 or chtype == 12:
-                life = ((float(SETTOP_REFRESH - 900)/60)/60)
+                life = SETTOP_REFRESH
             elif chtype == 8:
-                life = ((float(LIVETV_REFRESH - 900)/60)/60)
+                life = LIVETV_REFRESH
             else:
-                life = ((float(PLUGIN_REFRESH - 900)/60)/60)
+                life = PLUGIN_REFRESH
+            life = (((float(life - 900)/60)/60))
+            #Set Life of cache in hours, value needs to expire before hourly refresh.
             self.FileListCache = StorageServer.StorageServer(("plugin://script.pseudotv.live/%s" % cachetype),life)
             self.log("getFileListCache, cachetype = " + cachetype + ', life = ' + str(life) + ', purge = ' + str(purge))
             if purge == True:
@@ -4812,7 +4807,7 @@ class ChannelList:
                                     duration = re.search('"duration" *: *([0-9]*?),', f)
                                     runtime  = re.search('"runtime" *: *([0-9]*?),', f)
                                     
-                                    # If duration returned, else 0
+                                    # If duration, else 0
                                     try:
                                         dur = int(duration.group(1))
                                     except Exception,e:
@@ -4826,17 +4821,14 @@ class ChannelList:
                                         except Exception,e:
                                             self.log('getFileList_NEW, runtime not found! ' + str(e))
                                             dur = 0
-                                        
-                                    if dur == 0 and self.accurateDuration == True:
+
+                                    if dur == 0 and isLowPower() == False:
                                         self.log('getFileList_NEW, parsing for accurate duration')
                                         if not file.startswith(("plugin", "upnp")):
-                                            try:
-                                                dur = self.getDuration(file)
-                                            except Exception,e:
-                                                self.log('getFileList_NEW, getDuration failed! ' + str(e))
-                                                dur = 0
+                                            dur = self.getDuration(file)
                                             
                                     if dur == 0 and (file.startswith(("plugin", "upnp")) or file[-4:].lower() == 'strm'):
+                                        #add a static duration rather then ignore content.
                                         self.log('getFileList_NEW, plugin/upnp/strm setting default duration')
                                         dur = 3600
                                     
@@ -5022,20 +5014,14 @@ class ChannelList:
                                                 file = ((file.split('PlayMedia("'))[1]).replace('")','')
                                             except:
                                                 pass      
-
-                                        #Enable Enhanced Parsing
-                                        # includeMeta = False
-                                        # if year != 0 or id != '0':
-                                        includeMeta = True 
-                                                
+  
                                         # convert minutes to seconds when needed / correct local tvshow runtimes
                                         if file.startswith(("plugin", "upnp")):
                                             if (len(str(dur)) < 3 or len(str(dur)) > 5):
                                                 dur = self.durationInSeconds(dur)
-                                        elif self.accurateDuration == False:
-                                            if type in ['tvshow','episode']:
-                                                dur = self.durationAdjust(dur)
                                             
+                                        #Enable Enhanced Parsing
+                                        includeMeta = self.includeMeta            
                                         # accurate real-time scheduling does not apply to chtypes <= 7, only chtype = 8. Doesn't hurt to keep track of it anyway, future feature for realtime mode?
                                         timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.startDate))
                                         self.startDate += dur
@@ -5070,7 +5056,10 @@ class ChannelList:
             except Exception,e:
                 self.log('getFileList_NEW, failed...' + str(e))
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
-
+        
+        if self.channels[channel - 1].isRandom == True:
+            random.shuffle(fileList)
+            
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
@@ -5081,9 +5070,7 @@ class ChannelList:
         if self.background == False and xbmc.Player().isPlaying():
             json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
-                                                                           
-        if len(fileList) == 0:             
-            self.log("getFileList_NEW, fileList = " + str(fileList))   
+                                                                              
         self.log("getFileList_NEW, fileList cnt = " + str(len(fileList)))
         
         # cleanup  

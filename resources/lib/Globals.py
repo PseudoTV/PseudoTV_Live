@@ -38,7 +38,7 @@ ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
 DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
-PTVL_SKINVER = '0.7.7'
+PTVL_SKINVER = '0.7.8'
 
 def log(msg, level = xbmc.LOGDEBUG):
     if level == xbmc.LOGDEBUG:
@@ -97,7 +97,7 @@ NOTIFICATION_DISPLAY_TIME = 6 #in seconds
 REMINDER_COUNTDOWN = 15 #secs
 ONNOW_REFRESH = 450 #secs
 ONNOW_REFRESH_LOW = 900 #secs
-SETTOP_REFRESH = 10800 #secs
+SETTOP_REFRESH = 4500 #secs, has to be >= 4500
 IDLE_TIMER = 180  #secs (3min)
 IDLE_DELAY = 30 #secs
 REMINDER_DELAY = 60 #secs
@@ -229,11 +229,10 @@ else:
 ADDON_SETTINGS = Settings.Settings()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
-ENHANCED_DATA = REAL_SETTINGS.getSetting('EnhancedGuideData') == 'true'
-FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" 
-ACU_DUR = REAL_SETTINGS.getSetting('accurate_duration') == 'true'
+FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true"
 CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
-
+ENHANCED_DATA = xbmcgui.Window(10000).getProperty('PTVL.LOWPOWER') == "false"
+    
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
 SETTINGS_FLE_DEFAULT_SIZE = 100 #bytes
@@ -247,14 +246,15 @@ guide = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "guide",2
 daily = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "daily",24)
 weekly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "weekly",24 * 7)
 monthly = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "monthly",((24 * 7) * 4))
+durationCache = StorageServer.StorageServer("plugin://script.pseudotv.live/" + "duration",((24 * 7) * 4))
 
 # pyfscache globals
 cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
 cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 
-IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
+IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
 BCT_TYPES = ['Bumper', 'Commercial', 'Trailer', 'Rating', 'PseudoCinema', 'Intro', 'Cellphone', 'Coming Soon', 'PreMovie', 'Feature Presentation', 'Intermission']
 
@@ -392,8 +392,8 @@ ACTION_SHIFT = 118
 ACTION_SYMBOLS = 119
 ACTION_CURSOR_LEFT  = 120
 ACTION_CURSOR_RIGHT = 121
+ACTION_NEXT_ITEM = [14]
 #unused
-ACTION_NEXT_ITEM = 14
 ACTION_PREV_ITEM = 15
 ACTION_STEP_FOWARD = 17
 ACTION_STEP_BACK = 18

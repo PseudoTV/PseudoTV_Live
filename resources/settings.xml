@@ -13,7 +13,7 @@
                 <setting id="EnableSettop" type="bool"   label="30998" default="true"/>
                 <setting id="ThreadMode" type="enum"   label="30008" visible="eq(-1,false)" values="On|Minimum Use|Off" default="0" />
                 <setting id="ChannelResetSetting" type="enum"   label="30006" visible="eq(-2,false)" values="Automatic|Daily|Weekly|Monthly|Never|Every Time" default="0"/>
-                <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="1"/>
+                <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="2"/>
                 <setting id="EnableNotify" type="bool"   label="30046" default="true"/>
                 <setting id="AutoBackup" type="bool"   label="30159" default="true"/>
                 <setting id="SFX_Enabled" type="bool"   label="30056" default="true"/>
@@ -29,10 +29,8 @@
         <setting id="Search_Option" type="enum"   label="30312" default="0" values="Global Search|Extended Info"/>
         <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
         <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
-        <setting id="DirectInput" type="bool"   label="30379" default="true"/>
         <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
         <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
-        <setting id="accurate_duration" type="bool"   label="30934" default="true"/>
         <setting type="sep"/>
         <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
         <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
@@ -53,7 +51,6 @@
         <setting label="30003" type="lsep"/>
         <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/addon_data/script.pseudotv.live/logos/"/>
         <setting id="ShowSeEp" type="bool"   label="30301" default="false"/>
-        <setting id="EnhancedGuideData" type="bool"   label="30405" default="true" />
         <setting id="Enable_FindLogo" type="bool"   label="34547" default="true"/>
         <setting id="LogoDB_Fallback" subsetting="true" visible="eq(-1,true)"type="bool"   label="34548" default="true"/>
         <setting id="LogoDB_Anymatch" subsetting="true" visible="eq(-2,true)"type="bool"   label="34549" default="true"/>
@@ -73,7 +70,7 @@
             <setting id="InfoOnChange" type="bool" label="30221" default="true"/>  
             <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)|eq(-2,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
             <setting id="ShowChannelBug" type="bool"   label="30224" default="true"/>
-            <setting id="UNAlter_ChanBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
+            <setting id="ColorChannelBug" subsetting="true" visible="eq(-1,true)" type="bool"   label="30228" default="false"/>
             <setting id="EnableSubtitles" type="bool"   label="30329" default="false"/>   
             <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Info Bar|On Screen PopUp|Notification" default="2"/>
    </category>
@@ -109,7 +106,7 @@
             <setting id="autoFindLiveHD"                      type="enum"   label="30097" subsetting="false" visible="eq(-8,true) + eq(-1,true)" values=" |Dual - Strms|Prime/Extend - Favourites" default="0" />
             <setting id="autoFindLiveXMLPath"                 type="file"   label="30771" subsetting="true"  visible="eq(-9,true) + !eq(-1,0)" source="auto" default=""/>
             <setting id="autoFindLiveHDPath"                  type="folder" label="30098" subsetting="true"  visible="eq(-10,true) + eq(-2,1)" source="auto" default=""/>
-            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="false" visible="eq(-11,true)" enable="System.HasAddon(plugin.video.ustvnow)" default="false"/>
+            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="false" visible="eq(-11,true)" enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)" default="false"/>
             <!-- Autotune Local -->
         <setting                                              type="lsep"   label="30076"                    visible="eq(-12,true)"/>
             <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="false" visible="eq(-13,true)" enable="Library.HasContent(TVShows)"default="false"/>
@@ -202,7 +199,6 @@
         <setting id="Remove_Settings2" type="action" option="close" label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
         <setting id="ClearChanFavs" type="action" option="close" label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
         <setting label="31998" type="lsep"/>
-        <setting id="ClearLiveArt" type="bool"   label="30996" default="false"/>
         <setting id="ClearCache" type="bool"   label="30988" default="false"/>
     </category>
     

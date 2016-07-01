@@ -280,10 +280,10 @@ class Migrate:
          
         # LiveTV - USTVnow
         self.updateDialogProgress = 13
-        if Globals.REAL_SETTINGS.getSetting("autoFindUSTVNOW") == "true" and isUSTVnow() == True:
+        if Globals.REAL_SETTINGS.getSetting("autoFindUSTVNOW") == "true" and isUSTVnow() != False:
             self.log("autoTune, adding USTVnow Channels")
             self.updateDialog.update(self.updateDialogProgress,"AutoTuning","adding USTVnow Channels"," ")
-            detail = uni(chanlist.requestList('plugin://plugin.video.ustvnow/?mode=live'))
+            detail = uni(chanlist.requestList('plugin://'+isUSTVnow()+'/?mode=live'))
             for ustv in detail:
                 files = re.search('"file" *: *"(.*?)",', ustv)
                 filetypes = re.search('"filetype" *: *"(.*?)",', ustv)
