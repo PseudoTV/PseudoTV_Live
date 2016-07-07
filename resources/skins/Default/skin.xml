@@ -1,7 +1,7 @@
 <skin>
   <defaultresolution>1080</defaultresolution>
   <defaultresolutionwide>1080</defaultresolutionwide>
-  <version>0.7.7</version>
+  <version>0.7.8</version>
   <!-- amount to zoom skin to remove overscan compensation -->
   <zoom>0</zoom>
   <credits>

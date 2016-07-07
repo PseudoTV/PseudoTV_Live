@@ -103,11 +103,9 @@
                 <height>1080</height>
                 <texture>pstvlInfoBackground.png</texture>
                 <visible>!Control.IsVisible(104)</visible> 
-                <animation effect="slide" start="0,400" end="0,0" tween="cubic" easing="out" delay="0" time="250" reversible="true">true</animation>                 
-<!--                 <animation effect="fade" start="0" end="100" delay="0" time="300" reversible="false">WindowOpen</animation>
-                <animation effect="fade" start="100" end="0" delay="0" time="300" reversible="false">WindowClose</animation> -->
+                <animation effect="slide" start="0,400" end="0,0" tween="cubic" easing="out" delay="0" time="250" reversible="true">true</animation> 
             </control>
-            <control type="group" id="104">       
+            <control type="group" id="104">        
                 <posx>0</posx>
                 <posy>0</posy>        
                 <control type="image">
@@ -152,7 +150,7 @@
                 <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                 <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
                 <visible>!Control.IsVisible(104)</visible>
-            </control>                
+            </control>                      
             <control type="image">
                 <description>Dynamic artwork</description>
                 <animation effect="fade" time="500">VisibleChange</animation> 
@@ -200,7 +198,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)] • [COLOR=C0C0C0C0][B][/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">             
                 <control type="image">
@@ -273,8 +271,9 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Time)] $INFO[Window(10000).Property(OVERLAY.Description)]</label>
+                    <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)][/B][/COLOR] • $INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
+            </control> 
         </control> 
         <!-- MOREINFO -->
         <control type="group" id="222">
@@ -494,6 +493,7 @@
                     <font>font12</font>
                     <label>$INFO[Window(10000).Property(OVERLAY.Playing.Time)] $INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
+            </control>
             <control type="grouplist">  
                 <posx>430</posx>
                 <posy>235r</posy>
@@ -939,8 +939,8 @@
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/Black.png</texture>
+                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/base_color.png</texture>
             </control> 
             <control type="grouplist">   
                 <posx>300</posx>
@@ -1002,8 +1002,8 @@
                 <width>1920</width>
                 <height>1080</height>
                 <visible>Control.IsVisible(7000)</visible>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
-                <texture colordiffuse="dd0c2134">overlays/Black.png</texture>
+                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
+                <texture colordiffuse="dd0c2134">overlays/base_color.png</texture>
             </control>
             <control type="group">
                 <description>Sleep/Idle/Reminder Prompt</description>

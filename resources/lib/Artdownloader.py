@@ -444,8 +444,8 @@ class Artdownloader:
                     return OEMBugFLE
                 return OEMDefaultBugFLE
             else:
-                if xbmcvfs.exists(NEWBugFLE) == False:
-                    self.ConvertBug(OEMBugFLE, NEWBugFLE)
+                if xbmcvfs.exists(NEWBugFLE) == False and xbmcvfs.exists(OEMBugFLE) == True:
+                    return self.ConvertBug(OEMBugFLE, NEWBugFLE)
                     
                 if xbmcvfs.exists(NEWBugFLE) == True:
                     return NEWBugFLE

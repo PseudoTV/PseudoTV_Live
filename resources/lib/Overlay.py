@@ -67,16 +67,16 @@ class MyPlayer(xbmc.Player):
             return ''
     
 
-    def getPlayerTotTime(self):
+    def getPlayerTotalTime(self):
         try:
-            return int(self.getTotalTime())
+            return self.getTotalTime()
         except:
             return 0
             
             
     def getPlayerTime(self):
         try:
-            return int(self.getTime())
+            return self.getTime()
         except:
             return 0
     
@@ -96,11 +96,10 @@ class MyPlayer(xbmc.Player):
         if self.isPlaybackPaused() == True:
             Playing = True
         else:
-            if self.isPlaybackValid() == True:
-                sample_time = self.getPlayerTime()
-                xbmc.sleep(time)
-                if self.getPlayerTime() > sample_time:
-                    Playing = True
+            sample_time = self.getPlayerTime()
+            xbmc.sleep(time)
+            if self.getPlayerTime() > sample_time:
+                Playing = True
         self.log('isPlayingValid = ' + str(Playing))
         return Playing
         
@@ -1003,7 +1002,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if self.channels[self.currentChannel - 1].mode & MODE_ALWAYSPAUSE > 0:
                     self.channels[self.currentChannel - 1].setPaused(True)
             # set resume points
-            self.channels[self.currentChannel - 1].setShowTime(self.Player.getTime())
+            self.channels[self.currentChannel - 1].setShowTime(self.Player.getPlayerTime())
             self.channels[self.currentChannel - 1].setShowPosition(self.channels[self.currentChannel - 1].playlistPosition)
             self.channels[self.currentChannel - 1].setAccessTime(time.time())
 
@@ -1278,16 +1277,15 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.Player.isPlaybackValid() == True:
             if self.infoOffset == 0:
                 if chtype <= 7:
-                    self.startTime = time.time() - self.Player.getTime()
-                    self.endTime = (time.time() - self.Player.getTime()) + self.Player.getTotalTime()
+                    self.startTime = time.time() - self.Player.getPlayerTime()
+                    self.endTime = (time.time() - self.Player.getPlayerTime()) + self.Player.getPlayerTotalTime()
                 elif chtype == 8:    
                     tmpDate = self.channels[self.currentChannel - 1].getItemtimestamp(position)
                     self.startTime = datetime_to_epoch(tmpDate)
-                    self.endTime = time.time() + self.channels[self.currentChannel - 1].getItemDuration(position)
-                else:
-                    self.startTime = time.time() - self.Player.getTime()
-                    self.endTime = time.time() + self.channels[self.currentChannel - 1].getItemDuration(position)
-                    
+                    self.endTime = self.startTime + self.channels[self.currentChannel - 1].getItemDuration(position)
+                # else:
+                    # self.startTime = time.time() - self.Player.getPlayerTime()
+                    # self.endTime = time.time() + self.channels[self.currentChannel - 1].getItemDuration(position)                    
             else:
                 self.startTime = self.endTime
                 self.endTime += float(self.channels[self.currentChannel - 1].getItemDuration(position))
@@ -1367,29 +1365,29 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.inputChannel = tmp
         curlabel = 0
 
-        if curlabel == 0 and channel == 0:
-            self.channelLabel.setImage(IMAGES_LOC + 'label_last.png')
-            self.channelLabel.setVisible(True)
-        else:
-            if channel > 99:
-                if FileAccess.exists(IMAGES_LOC):
-                    self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel // 100) + '.png')
-                self.channelLabel[curlabel].setVisible(True)
-                curlabel += 1
-
-            if channel > 9:
-                if FileAccess.exists(IMAGES_LOC):
-                    self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str((channel % 100) // 10) + '.png')
-                self.channelLabel[curlabel].setVisible(True)
-                curlabel += 1
-
-            self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel % 10) + '.png')
+        # if curlabel == 0 and channel == 0:
+            # self.channelLabel.setImage(IMAGES_LOC + 'label_last.png')
+            # self.channelLabel.setVisible(True)
+        # else:
+        if channel > 99:
+            if FileAccess.exists(IMAGES_LOC):
+                self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel // 100) + '.png')
             self.channelLabel[curlabel].setVisible(True)
+            curlabel += 1
 
-            self.getControl(203).setImage('NA.png')
-            if self.showChannelBug == True:
-                self.getControl(203).setImage(self.Artdownloader.FindBug(self.getChtype(self.currentChannel), self.getChname(self.currentChannel)))
-        
+        if channel > 9:
+            if FileAccess.exists(IMAGES_LOC):
+                self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str((channel % 100) // 10) + '.png')
+            self.channelLabel[curlabel].setVisible(True)
+            curlabel += 1
+
+        self.channelLabel[curlabel].setImage(IMAGES_LOC + 'label_' + str(channel % 10) + '.png')
+        self.channelLabel[curlabel].setVisible(True)
+
+        self.getControl(203).setImage('NA.png')
+        if self.showChannelBug == True:
+            self.getControl(203).setImage(self.Artdownloader.FindBug(self.getChtype(self.currentChannel), self.getChname(self.currentChannel)))
+    
         if self.inputChannel == -1:
             self.infoOffset = 0
         
@@ -2122,7 +2120,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
                 self.log("notificationAction, notificationShowedNotif = " + str(self.notificationShowedNotif)) 
                 if self.notificationShowedNotif == False:  
-                    timedif = self.channels[self.currentChannel - 1].getItemDuration(self.notificationLastShow) - self.Player.getTime()
+                    timedif = self.channels[self.currentChannel - 1].getItemDuration(self.notificationLastShow) - self.Player.getPlayerTime()
                     self.log("notificationAction, timedif = " + str(timedif))
                     
                     # Nextshow Info
@@ -2621,6 +2619,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def setPlayingTime(self):
         self.log("setPlayingTime")
         try:
+            if self.getChtype(self.currentChannel) > 8:
+                raise Exception()
+        
             if self.clockMode == 0:
                 st = datetime.datetime.fromtimestamp(float(self.startTime)).strftime("%I:%M%p").lower()
                 et = datetime.datetime.fromtimestamp(float(self.endTime)).strftime("%I:%M%p").lower()
@@ -2639,49 +2640,51 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
        
     # TODO add timebar and button update here         
     def setSeekBarTime(self):
-        if self.Player.isPlaybackValid() and self.Player.getTime() > 0:
-            # self.removeControls([self.currentPlayInfoTime])
-            # hide bar for content that doesn't produce progress details. Can't use setVisible because notice focus issue.
-            if self.Player.getTime() < self.Player.getTotalTime()/30 or self.Player.getTime() > (self.Player.getTotalTime()/30)*29:            
+        getPlayerTime = self.Player.getPlayerTime()
+        getPlayerTotalTime = self.Player.getPlayerTotalTime()
+        
+        # self.removeControls([self.currentPlayInfoTime])
+        # hide bar for content that doesn't produce progress details. Can't use setVisible because notice focus issue.
+        if getPlayerTime < getPlayerTotalTime/30 or getPlayerTime > (getPlayerTotalTime/30)*29:            
+            self.togglePlayTime(False)
+        else:       
+            try:
+                self.log("setSeekBarTime, MoreInfo")
+                temp_xpos = self.currentPlayMoreInfoTime_xpos
+                MoreInfoTimeseekButton_ypos = self.currentPlayMoreInfoTime_ypos
+                self.currentPlayMoreInfoTime.setWidth(self.getControl(5005).getWidth())
+                self.currentPlayMoreInfoTime.setHeight(self.getControl(5005).getHeight())
+                seekButton_width = int(round(self.getControl(5005).getWidth() / 2)) #find width of button and place in the middle.
+                seekBar_width = self.getControl(5004).getWidth()
+                seekBar_xpos, temp_ypos = self.getControl(5004).getPosition()
+                perPlayed = 100 - (((getPlayerTotalTime - getPlayerTime) / getPlayerTotalTime) * 100)
+                MoreInfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
+            except Exception,e:
+                self.log("setSeekBarTime, currentPlayMoreInfoTime, failed! " + str(e))          
                 self.togglePlayTime(False)
-            else:       
-                try:
-                    self.log("setSeekBarTime, MoreInfo")
-                    temp_xpos = self.currentPlayMoreInfoTime_xpos
-                    MoreInfoTimeseekButton_ypos = self.currentPlayMoreInfoTime_ypos
-                    self.currentPlayMoreInfoTime.setWidth(self.getControl(5005).getWidth())
-                    self.currentPlayMoreInfoTime.setHeight(self.getControl(5005).getHeight())
-                    seekButton_width = int(round(self.getControl(5005).getWidth() / 2)) #find width of button and place in the middle.
-                    seekBar_width = self.getControl(5004).getWidth()
-                    seekBar_xpos, temp_ypos = self.getControl(5004).getPosition()
-                    perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
-                    MoreInfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
-                except Exception,e:
-                    self.log("setSeekBarTime, currentPlayMoreInfoTime, failed! " + str(e))          
-                    self.togglePlayTime(False)
-                    MoreInfoTimeseekButton_xpos = -5000
-                    MoreInfoTimeseekButton_ypos = -5000
-                try:
-                    self.log("setSeekBarTime, Info")
-                    temp_xpos = self.currentPlayInfoTime_xpos
-                    InfoTimeseekButton_ypos = self.currentPlayInfoTime_ypos
-                    self.currentPlayInfoTime.setWidth(self.getControl(5006).getWidth())
-                    self.currentPlayInfoTime.setHeight(self.getControl(5006).getHeight())
-                    seekButton_width = int(round(self.getControl(5006).getWidth() / 2)) #find width of button and place in the middle.
-                    seekBar_width = self.getControl(5007).getWidth()
-                    seekBar_xpos, temp_ypos = self.getControl(5007).getPosition()
-                    perPlayed = 100 - (((self.Player.getTotalTime() - self.Player.getTime()) / self.Player.getTotalTime()) * 100)
-                    InfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
-                except Exception,e:
-                    self.log("setSeekBarTime, currentPlayInfoTime, failed! " + str(e))          
-                    self.togglePlayTime(False)
-                    InfoTimeseekButton_xpos = -5000
-                    InfoTimeseekButton_ypos = -5000  
-                    
-                self.togglePlayTime(True) 
-                self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)
-                self.currentPlayMoreInfoTime.setPosition(MoreInfoTimeseekButton_xpos, MoreInfoTimeseekButton_ypos)
-           
+                MoreInfoTimeseekButton_xpos = -5000
+                MoreInfoTimeseekButton_ypos = -5000
+            try:
+                self.log("setSeekBarTime, Info")
+                temp_xpos = self.currentPlayInfoTime_xpos
+                InfoTimeseekButton_ypos = self.currentPlayInfoTime_ypos
+                self.currentPlayInfoTime.setWidth(self.getControl(5006).getWidth())
+                self.currentPlayInfoTime.setHeight(self.getControl(5006).getHeight())
+                seekButton_width = int(round(self.getControl(5006).getWidth() / 2)) #find width of button and place in the middle.
+                seekBar_width = self.getControl(5007).getWidth()
+                seekBar_xpos, temp_ypos = self.getControl(5007).getPosition()
+                perPlayed = 100 - (((getPlayerTotalTime - getPlayerTime) / getPlayerTotalTime) * 100)
+                InfoTimeseekButton_xpos = (temp_xpos + int(round((perPlayed * seekBar_width)/100))) - seekButton_width
+            except Exception,e:
+                self.log("setSeekBarTime, currentPlayInfoTime, failed! " + str(e))          
+                self.togglePlayTime(False)
+                InfoTimeseekButton_xpos = -5000
+                InfoTimeseekButton_ypos = -5000  
+                
+            self.togglePlayTime(True) 
+            self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)
+            self.currentPlayMoreInfoTime.setPosition(MoreInfoTimeseekButton_xpos, MoreInfoTimeseekButton_ypos)
+       
            
     def togglePlayTime(self, state):
         self.currentPlayInfoTime.setVisible(state)
@@ -3369,7 +3372,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         del self.myOndemand
             
         if self.Player.isPlaybackValid() == True:
-            self.lastPlayTime = self.Player.getTime()
+            self.lastPlayTime = self.Player.getPlayerTime()
             # self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
             self.lastPlaylistPosition = self.channels[self.currentChannel - 1].playlistPosition
             self.Player.stop()
