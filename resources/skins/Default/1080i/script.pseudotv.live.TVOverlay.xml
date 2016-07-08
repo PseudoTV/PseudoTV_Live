@@ -198,7 +198,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)] • [COLOR=C0C0C0C0][B][/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">             
                 <control type="image">
@@ -271,7 +271,7 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)][/B][/COLOR] • $INFO[Window(10000).Property(OVERLAY.Description)]</label>
+                    <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)] • [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
             </control> 
         </control> 
@@ -417,7 +417,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">            
                 <control type="image">
@@ -491,7 +491,7 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <font>font12</font>
-                    <label>$INFO[Window(10000).Property(OVERLAY.Playing.Time)] $INFO[Window(10000).Property(OVERLAY.Description)]</label>
+                    <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)] • [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
             </control>
             <control type="grouplist">  

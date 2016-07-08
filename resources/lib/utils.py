@@ -156,14 +156,17 @@ def CleanCHnameSeq(text):
 def FindLogo(chtype, chname, mediapath=None):
     log('utils: FindLogo')
     if FIND_LOGOS == True and isLowPower() != True:
-        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-        if FindLogoThread.isAlive():
-            FindLogoThread.cancel()
-            FindLogoThread.join()
-        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-        FindLogoThread.name = "FindLogoThread"
-        FindLogoThread.start()
-
+        try:
+            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+            if FindLogoThread.isAlive():
+                FindLogoThread.cancel()
+                FindLogoThread.join()
+            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+            FindLogoThread.name = "FindLogoThread"
+            FindLogoThread.start()
+        except Exception,e:
+            log('utils: FindLogo, failed! ' + str(e))
+            
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
     LogoName = chname + '.png'
@@ -395,12 +398,15 @@ def POP_MSG():
                  
 def UpdateRSS():
     log('utils: UpdateRSS')
-    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    if UpdateRSSthread.isAlive():
-        UpdateRSSthread.cancel() 
-    UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
-    UpdateRSSthread.name = "UpdateRSSthread"
-    UpdateRSSthread.start()
+    try:
+        UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+        if UpdateRSSthread.isAlive():
+            UpdateRSSthread.cancel() 
+        UpdateRSSthread = threading.Timer(0.5, UpdateRSS_Thread)
+        UpdateRSSthread.name = "UpdateRSSthread"
+        UpdateRSSthread.start()
+    except Exception,e:
+        log('utils: UpdateRSS, failed! ' + str(e))
          
 def UpdateRSS_Thread():
     log('utils: UpdateRSS_Thread')
@@ -587,12 +593,15 @@ def download_silent_thread(url, dest):
 
 def download_silent(url, dest):
     log('download_silent')
-    download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
-    if download_silentThread.isAlive():
-        download_silentThread.join()
-    download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
-    download_silentThread.name = "download_silentThread"
-    download_silentThread.start()
+    try:
+        download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
+        if download_silentThread.isAlive():
+            download_silentThread.join()
+        download_silentThread = threading.Timer(0.5, download_silent_thread, [url, dest])
+        download_silentThread.name = "download_silentThread"
+        download_silentThread.start()
+    except Exception,e:
+        log('utils: download_silent, failed! ' + str(e))
 
 @cache_daily
 def getRequest(url, udata=None, headers=httpHeaders, dopost = False):
@@ -2123,9 +2132,12 @@ def egTrigger_Thread(message, sender):
        
 def egTrigger(message, sender='PTVL'):
     log("egTrigger")
-    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])      
-    if egTriggerTimer.isAlive():
-        egTriggerTimer.cancel()
-    egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
-    egTriggerTimer.name = "egTriggerTimer"   
-    egTriggerTimer.start()   
+    try:
+        egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])      
+        if egTriggerTimer.isAlive():
+            egTriggerTimer.cancel()
+        egTriggerTimer = threading.Timer(0.5, egTrigger_Thread, [message, sender])
+        egTriggerTimer.name = "egTriggerTimer"   
+        egTriggerTimer.start() 
+    except Exception,e:
+        log('utils: egTrigger, failed! ' + str(e))  

@@ -1764,7 +1764,7 @@ class ChannelList:
         return Media3D
           
 
-    def buildFileList(self, dir_name, channel, limit, FleType = 'video'):
+    def buildFileList(self, dir_name, channel, limit, fletype = 'video'):
         self.log("buildFileList")
         self.dircount = 0
         self.filecount = 0
@@ -1776,7 +1776,7 @@ class ChannelList:
             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying Kodi database")
             setProperty('loading.progress',str(self.updateDialogProgress))
 
-        fileList = self.getFileList(self.requestList(dir_name), channel, limit, FleType)
+        fileList = self.getFileList(self.requestList(dir_name, fletype), channel, limit)
         self.log("buildFileList return")
         return fileList
   
@@ -2289,7 +2289,7 @@ class ChannelList:
                                     year = 0      
 
                             if includeMeta == True:
-                                if type == 'tvshow' and ENHANCED_DATA == True:
+                                if type == 'tvshow':
                                     #Decipher the TVDB ID by using the Zap2it ID in dd_progid
                                     episodeNumList = elem.findall("episode-num") 
                                     for epNum in episodeNumList:
@@ -2568,7 +2568,7 @@ class ChannelList:
             dur = 5400  #90 minute default
                 
         GenreLiveID = ['Unknown','other',0,0,False,1,'NR',False, False, 0.0, 0]
-        tmpstr = self.makeTMPSTR(dur, title, 0, "InternetTV", description, GenreLiveID, setting2)
+        tmpstr = self.makeTMPSTR(dur, title, 0, "InternetTV", description, GenreLiveID, setting2, timestamp=None, includeMeta=False)
         for i in range(limit):
             showList.append(tmpstr)
         return showList
@@ -4256,7 +4256,7 @@ class ChannelList:
                         if LSTVlst[lstv+2].startswith('<thumbnail>'):
                             logo = (LSTVlst[lstv+2]).replace('\r','').replace('\t','').replace('\n','').replace('<thumbnail>','').replace('</thumbnail>','')
                             
-                            if logo[0:4] == 'http' and ENHANCED_DATA == True:
+                            if logo[0:4] == 'http':
                                 self.GrabLogo(logo, title)
                     LSTVlist.append(title+'@#@'+link)
                 except:
@@ -4280,7 +4280,7 @@ class ChannelList:
                     if 'thumb=' in PLXlst[PLX+1]:
                         logo = (PLXlst[PLX + 1]).replace('\r','').replace('\t','').replace('\n','').replace('thumb=','')
                         
-                        if logo[0:4] == 'http' and ENHANCED_DATA == True:
+                        if logo[0:4] == 'http':
                             self.GrabLogo(logo, title)
                             
                     if 'URL=' in PLXlst[PLX+2]:

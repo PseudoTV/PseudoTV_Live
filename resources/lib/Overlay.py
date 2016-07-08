@@ -127,7 +127,7 @@ class MyPlayer(xbmc.Player):
     def waitForVideoPlayback(self):
         self.log("waiting for VideoPlayback")
         while self.isSomethingPlaying() == False:
-            xbmc.sleep(100)
+            xbmc.sleep(250)
         return
     
     
@@ -164,15 +164,15 @@ class MyPlayer(xbmc.Player):
             self.overlay.setShowInfo()
         self.overlay.showChannelLabel(self.overlay.currentChannel)
 
+        # send play command to upnp
+        self.overlay.UPNPcontrol('play', self.getPlayerFile(), self.getPlayerTime())
+              
         # playback starts paused, resume automatically.
         self.resumePlayback()
-                
+          
         # Unmute
         self.overlay.setMute('false')
         self.overlay.setBackgroundVisible(False)
-        
-        # send play command to upnp
-        self.overlay.UPNPcontrol('play', self.getPlayerFile(), self.getPlayerTime())
         
         # trakt scrob. playing show
         if REAL_SETTINGS.getSetting("TraktScrob") == "true":
@@ -2117,8 +2117,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     # Don't show any notification if the current show is < shortItemLength
                     if self.channels[self.currentChannel - 1].getItemDuration(self.notificationLastShow) < self.shortItemLength:
                         self.notificationShowedNotif = True
-
                 self.log("notificationAction, notificationShowedNotif = " + str(self.notificationShowedNotif)) 
+                
                 if self.notificationShowedNotif == False:  
                     timedif = self.channels[self.currentChannel - 1].getItemDuration(self.notificationLastShow) - self.Player.getPlayerTime()
                     self.log("notificationAction, timedif = " + str(timedif))
@@ -2166,9 +2166,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                                     self.infoOffset = ((nextshow) - self.notificationLastShow)
                                     self.showInfo()
                             time.sleep(NOTIFICATION_TIME_BEFORE_END)
-                        else:
-                            time.sleep(NOTIFICATION_CHECK_TIME)
-                
+                time.sleep(NOTIFICATION_CHECK_TIME)
+
                 
     def CloseDialog(self, type=['Progress dialogue','Dialogue OK']):
         curwindow = currentWindow()
@@ -2662,8 +2661,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             except Exception,e:
                 self.log("setSeekBarTime, currentPlayMoreInfoTime, failed! " + str(e))          
                 self.togglePlayTime(False)
-                MoreInfoTimeseekButton_xpos = -5000
-                MoreInfoTimeseekButton_ypos = -5000
+                return
+                
             try:
                 self.log("setSeekBarTime, Info")
                 temp_xpos = self.currentPlayInfoTime_xpos
@@ -2678,8 +2677,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             except Exception,e:
                 self.log("setSeekBarTime, currentPlayInfoTime, failed! " + str(e))          
                 self.togglePlayTime(False)
-                InfoTimeseekButton_xpos = -5000
-                InfoTimeseekButton_ypos = -5000  
+                return
                 
             self.togglePlayTime(True) 
             self.currentPlayInfoTime.setPosition(InfoTimeseekButton_xpos, InfoTimeseekButton_ypos)

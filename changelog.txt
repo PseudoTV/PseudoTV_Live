@@ -1,9 +1,10 @@
 [*] "Direct Input" setting removed, now permanently enabled. Last Channel recall added to "0" key.
 [*] USTVnow support extended to alternative third-party plugins.
-[*] Removed independent artwork cache folder, using Kodi's thumbnail cache. Tweaked artwork fetching...
+[*] Removed independent artwork cache, switched to Kodi thumbnail cache and tweaked artwork query.
     Renamed "unaltered logo" to "Use color channel bug", Moved automatic channel bug watermarking to channel logo folder, new images are saved as ex. "ABC.png", new "ABC_mono.png".
-[*] Removed obsolete settings ie. Enhanced Guidedata, Disable Mute.
+[*] Removed obsolete settings ie. Enhanced Guidedata, disable mute.
 [*] Tweaked playlist positioning, position save states and skipnext detection. 
+[*] [COLOR=blue][B]^ v.0.7.8 ^[/B][/COLOR]
 [*] Updated LiveTV XMLTV parsing for improved metadata.
 [*] Settop refresh changed from every 1hr to every 2hrs.
 [*] Fixed channel logo rule.
