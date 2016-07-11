@@ -114,3 +114,5 @@ elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
 elif sys.argv[1] == '-YTDownloader':
     xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()
+elif sys.argv[1] == '-MetaHandler':
+    xbmcaddon.Addon(id='script.module.metahandler').openSettings()

@@ -93,8 +93,9 @@
     <string id="30709">Enter IP:Port</string>
     <string id="30710">Enter API KEY</string>
     <string id="30711">Enable CouchPotato</string>
-    <string id="30719">Configure Simple Downloader</string>
-    <string id="30720">Configure Youtube Downloader</string>
+    <string id="30719">Configure: Simple Downloader</string>
+    <string id="30720">Configure: Youtube Downloader</string>
+    <string id="30723">Configure: Metahandler</string>
     <string id="31110">USTVnow:</string>
     <string id="31111">Stream Quality</string>
     <string id="31112">Stream Type</string>

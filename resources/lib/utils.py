@@ -963,15 +963,17 @@ def get_Kodi_JSON(params):
     return json.loads(json_query)
     
 def isPlugin(plugin):
+    status = False
     if plugin[0:9] == 'plugin://':
         plugin = plugin.replace("plugin://","")
         addon = splitall(plugin)[0]
-        log("utils: plugin id = " + addon)
     else:
         addon = plugin
-    if addon in chkPSS(PSS_API_KEY):
-        return False
-    return xbmc.getCondVisibility('System.HasAddon(%s)' % addon) == 1
+        
+    if addon not in chkPSS(PSS_API_KEY):
+        status = xbmc.getCondVisibility('System.HasAddon(%s)' % addon) == 1
+    log("utils: plugin id = " + addon + ', Installed = ' + str(status))
+    return status
 
 def videoIsPlaying():
     return xbmc.getCondVisibility('Player.HasVideo')

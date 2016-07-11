@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <window>
-    <allowoverlay>no</allowoverlay>  
+    <allowoverlay>yes</allowoverlay>
     <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.EPG_Opened,false,10000)</onunload> 
-    <onload condition="StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
+    <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
+    <onload condition="Control.IsVisible(9000)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
+    <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload>
+    <onload condition="!Control.IsVisible(9000) + System.HasAddon(script.extendedinfo)">RunScript(script.extendedinfo,info=trendingshows)</onload>
     <onunload>ActivateWindow(12005)</onunload>
     <zorder>1</zorder>
     <coordinates>
@@ -54,8 +57,8 @@
                 <align>center</align>
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
-                <label>$INFO[Window(Home).Property(TrendingShows.1.Title)]</label>    
-                <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+                <label>$INFO[Window(Home).Property(TrendingShows.1.TVShowTitle)]</label>    
+                <visible>!Control.IsVisible(9000)</visible>
                 <aligny>center</aligny>
             </control>
             <control type="image">
@@ -65,8 +68,8 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <texture fallback="$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]">$INFO[Window(Home).Property(TrendingShows.1.Art(fanart))]</texture>
-                <visible>!StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+                <texture fallback="fanart.png">$INFO[Window(Home).Property(TrendingShows.1.Fanart)]</texture>
+                <visible>!Control.IsVisible(9000)</visible>
             </control>
         </control>   
         <control type="grouplist">
@@ -75,7 +78,7 @@
             <itemgap>10</itemgap>
             <orientation>vertical</orientation>
             <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
-            <control type="label"> 
+            <control type="label" id="9000"> 
                 <description>VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
@@ -86,7 +89,7 @@
                 <scroll>true</scroll>
                 <scrollspeed>40</scrollspeed>
                 <label>$INFO[Window(10000).Property(OVERLAY.Title)]</label>
-                <visible>StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+                <visible>Control.IsVisible(9000)</visible>
                 <aligny>center</aligny>
             </control>
             <control type="videowindow">
@@ -96,7 +99,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <aspectratio>keep</aspectratio>
-                <visible>StringCompare((Window(10000).Property(PTVL.VideoWindow)),true)</visible>
+                <visible>Control.IsVisible(9000)</visible>
             </control>
         </control>
         <control type="grouplist">

@@ -17,7 +17,9 @@
     <onload>SetProperty(EPG.shadowColor,0xFF000000,10000)</onload>
     <onload>SetProperty(EPG.focused_textColor,0xFF0297eb,10000)</onload>
     <onload>SetProperty(EPG.textColor,0xFFFFFFFF,10000)</onload>
-    <onload>SetProperty(EPG.textFont,font14,10000)</onload>
+    <onload>SetProperty(EPG.textFont,font14,10000)</onload>  
+    <onload condition="System.HasAddon(script.extendedinfo)">RunScript(script.extendedinfo,info=trendingshows)</onload>
+    <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload>
     <!-- Overlay controls -->
     <controls>   
         <control type="image" id="203">
@@ -198,7 +200,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">             
                 <control type="image">
@@ -417,7 +419,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">            
                 <control type="image">

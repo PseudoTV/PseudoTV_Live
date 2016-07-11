@@ -1,3 +1,8 @@
+[*] Improved Playonbrowser plugin support, requires v.1.0.13. LiveTV tested and working with Xfinity and TWC.
+    Users please disable "resume video" setting on playon server. If you receive error "This portion of the video is..." its a issue with playon server, not PTVL or Kodi.
+[*] NEW! Manually muting Kodi enables subtitles & closed captioning (when available).
+    Subtitles requires local file, Closed captioning requires Kodi Jarvis and "Parse close captioning" enabled under video/subtitle settings.
+[*] Tweaked core timings, and improved failed playback detection.
 [*] "Direct Input" setting removed, now permanently enabled. Last Channel recall added to "0" key.
 [*] USTVnow support extended to alternative third-party plugins.
 [*] Removed independent artwork cache, switched to Kodi thumbnail cache and tweaked artwork query.

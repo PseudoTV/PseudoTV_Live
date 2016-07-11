@@ -227,7 +227,6 @@ class ChannelList:
     # playlists until we don't find one
     def findMaxChannels(self):
         self.log('findMaxChannels')
-        chkValid = ''
         localCount = 0
         quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.maxChannels = 0
@@ -249,34 +248,40 @@ class ChannelList:
                 chsetting4 = ADDON_SETTINGS.getSetting('Channel_' + str(i + 1) + '_4')
             except Exception,e:
                 pass
-                
+
+            if chtype == 0:
+                if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+            elif chtype <= 6 or chtype in [12,14]:
+                if len(chsetting1) > 0:
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+            elif chtype == 7:
+                if FileAccess.exists(chsetting1) == True:
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+            elif chtype in [8,9]:
+                if self.Valid_ok(chsetting2) == True:
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+            elif chtype == 10:
+                if self.youtube_player != 'False':
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+            elif chtype in [11,15,16]:
+                if self.Valid_ok(chsetting1) == True:
+                    self.maxChannels = i + 1
+                    self.enteredChannelCount += 1
+
+            if self.forceReset:
+                ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
+               
+            #check if channel lineup includes local content
             if chtype <= 7 and quickFlip == True:
                 localCount += 1
-                    
-            if chtype in [8,9]:
-                chkValid = chsetting2
-            elif chtype in [11,15,16]:
-                chkValid = chsetting1
-             
-            if self.Valid_ok(chkValid) == True:
-                if chtype == 0:
-                    if FileAccess.exists(xbmc.translatePath(chsetting1)):
-                        self.maxChannels = i + 1
-                        self.enteredChannelCount += 1
-                elif chtype <= 20:
-                    if len(chsetting1) > 0:
-                        self.maxChannels = i + 1
-                        self.enteredChannelCount += 1
-       
-                if self.forceReset:
-                    ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-                    
-                # find missing channel logos
-                if FIND_LOGOS == True:
-                    if chtype not in [6,7]:
-                        chname = self.getChannelName(chtype, i + 1, chsetting1)
-                        FindLogo(chtype, chname)
-                            
+                
+        #if local quota not met, disable quickFlip.
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
         self.log('findMaxChannels return ' + str(self.maxChannels))
@@ -304,7 +309,7 @@ class ChannelList:
         needsreset = False
         self.background = background
         self.settingChannel = channel
-        
+                               
         try:
             chtype = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_type'))
             chsetting1 = ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_1')
@@ -320,7 +325,12 @@ class ChannelList:
         if chtype == 9999:
             self.channels[channel - 1].isValid = False
             return False
-
+            
+        # find missing channel logos
+        if FIND_LOGOS == True:
+            if chtype not in [6,7]:
+                FindLogo(chtype, self.getChannelName(chtype, channel, chsetting1))
+            
         self.channels[channel - 1].type = chtype
         self.channels[channel - 1].isSetup = True
         self.channels[channel - 1].loadRules(channel)

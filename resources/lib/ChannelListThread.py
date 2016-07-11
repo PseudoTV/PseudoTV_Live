@@ -92,7 +92,8 @@ class ChannelListThread(threading.Thread):
                         self.log("Unknown Channel Creation Exception", xbmc.LOGERROR)
                         self.log(traceback.format_exc(), xbmc.LOGERROR)
                         return
-                        
+                    time.sleep(2)
+                
         self.chanlist.sleepTime = 0.3
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
         self.myOverlay.postBackgroundLoading()
@@ -111,9 +112,9 @@ class ChannelListThread(threading.Thread):
                     
                     if self.myOverlay.isExiting:
                         self.log("Closing thread")
-                        return
-                        
+                        return 
                     time.sleep(2)
+
                     curtotal = self.myOverlay.channels[i].getTotalDuration()                   
                     if self.myOverlay.isMaster:
                         if self.myOverlay.getChtype(i + 1) != 9999:
@@ -155,6 +156,7 @@ class ChannelListThread(threading.Thread):
                                     self.log("Unknown Channel Modification Exception", xbmc.LOGERROR)
                                     self.log(traceback.format_exc(), xbmc.LOGERROR)
                                     return
+                            time.sleep(2)
                     else:
                         try:
                             # We're not master, so no modifications...just try and load the channel
@@ -164,7 +166,8 @@ class ChannelListThread(threading.Thread):
                             self.log("Unknown Channel Loading Exception", xbmc.LOGERROR)
                             self.log(traceback.format_exc(), xbmc.LOGERROR)
                             return
-                            
+                        time.sleep(2)
+                        
                     self.myOverlay.channels[i] = self.chanlist.channels[i]
                     if self.myOverlay.isMaster:
                         ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(self.myOverlay.channels[i].totalTimePlayed))

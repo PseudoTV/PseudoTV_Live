@@ -355,6 +355,11 @@ ACTION_MOUSE_DOUBLE_CLICK = 103
 ACTION_MOUSE_WHEEL_UP = 104
 ACTION_MOUSE_WHEEL_DOWN = 105
 ACTION_MOUSE_MOVE = 107
+# player
+ACTION_MUTE = 91
+ACTION_STOP = 13
+ACTION_PAUSE = 12
+ACTION_PLAYER_PLAYPAUSE = 249 #Play/pause. If playing it pauses, if paused it plays.
 # actions
 ACTION_SHOW_EPG = [ACTION_GESTURE_SWIPE_RIGHT,ACTION_MOUSE_DOUBLE_CLICK]
 ACTION_SHOW_INFO = [11,ACTION_GESTURE_SWIPE_LEFT,ACTION_MOUSE_LEFT_CLICK]
@@ -367,9 +372,6 @@ ACTION_PAGEDOWN = [6,ACTION_GESTURE_SWIPE_DOWN_TEN,ACTION_MOUSE_WHEEL_DOWN]
 ACTION_SELECT_ITEM = [7]
 ACTION_PREVIOUS_MENU = [9, 10, 92, 247, 257, 275, 61467, 61448]
 ACTION_DELETE_ITEM = 80
-ACTION_PAUSE = 12
-ACTION_PLAYER_PLAYPAUSE = 249 #Play/pause. If playing it pauses, if paused it plays.
-ACTION_STOP = 13
 ACTION_OSD = 124
 ACTION_NUMBER_0 = 58
 ACTION_NUMBER_1 = 59
@@ -411,7 +413,6 @@ ACTION_TELETEXT_RED = 215
 ACTION_TELETEXT_GREEN = 216
 ACTION_TELETEXT_YELLOW = 217
 ACTION_TELETEXT_BLUE = 218
-#define ACTION_MUTE                   91
 #define ACTION_CHANNEL_SWITCH         183 #last channel?
 #define ACTION_TOGGLE_WATCHED         200 // Toggle watched status (videos)
 #define ACTION_TOGGLE_DIGITAL_ANALOG  202 // switch digital <-> analog
@@ -425,8 +426,9 @@ UTC_XMLTV = []
 # Force settop update to rebuild playlists and not to append content.
 FORCE_MAKENEW = [8,16]
 
-# Ignore seeking for live feeds and other chtypes that don't support it.
-IGNORE_SEEKTIME = [8,9]
+# Ignore seeking for live feeds and other chtypes/plugins that don't support it.
+IGNORE_SEEKTIME_CHTYPE = [8,9]
+IGNORE_SEEKTIME_PLUGIN = []
 
 # Duration in seconds "stacked" for chtypes >= 10
 BYPASS_EPG_SECONDS = 900

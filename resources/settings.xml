@@ -87,6 +87,7 @@
         <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
         <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
         <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
+        <setting id="MetaHandler" type="action"   label="30723" option="close"  visible="System.HasAddon(script.module.metahandler)" action="RunScript($CWD/utilities.py, -MetaHandler)"/>
         <setting id="YTDownloader" type="action"   label="30720" option="close"  visible="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
     </category>  
 <!--Autotune-->
@@ -215,8 +216,7 @@
 <!--Debugging-->
     <category label="30900"> 
         <setting label="30308" type="lsep"/>
-        <setting id="ActionTimeInt" type="slider"   label="30309" range="2,2,60" option="int" default="2"/>
-        <setting id="PlayTimeoutInt" type="slider"   label="30319" range="2,2,120" option="int" default="60"/>
+        <setting id="playActionTime" type="slider"   label="30319" range="10,2,480" option="int" default="120"/>
         <setting id="channelDelay" type="enum"   label="30302" default="1" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
         <setting label="30914" type="lsep"/>
         <setting id="Include3D" type="bool"   label="39958" default="false"/>
