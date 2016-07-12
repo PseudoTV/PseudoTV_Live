@@ -169,7 +169,8 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.focusTime = int(starttime + 30)
                 self.focusEndTime = endtime
             self.focusRow = 2
-            self.setShowInfo()
+            self.setShowInfo()                
+            self.FEEDtoggle()
         except Exception,e:
             self.log("Unknown EPG Initialization exception " + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)          
@@ -183,8 +184,6 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 self.channelLabel[i].setVisible(False)
             except:
                 pass
-                
-        self.FEEDtoggle()
         self.log('onInit return')
           
 

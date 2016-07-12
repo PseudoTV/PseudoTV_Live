@@ -68,29 +68,30 @@ class ustvnow:
         response = self._fetch('%s/%s' % (self.mBASE_URL, path))
         if response:
             content = json.loads(response.read())
-        else:
-            content = False
         return content
 
         
-    # def get_guidedata(self):
-        # self.log('get_guidedata')
-        # try:
-            # result = guide.cacheFunction(self.get_guidedata_NEW)
-            # if not result:
-                # raise Exception()
-        # except:
-            # self.log('get_guidedata Failed')
-            # result = self.get_guidedata_NEW()
-        # if not result:
-            # result = []
-        # return result
-
-
     def get_guidedata(self):
+        self.log('get_guidedata')
+        try:
+            result = guide.cacheFunction(self.get_guidedata_NEW)
+            if not result:
+                raise Exception()
+        except:
+            self.log('get_guidedata Failed')
+            result = self.get_guidedata_NEW()
+        if not result:
+            result = []
+        return result
+
+
+    def get_guidedata_NEW(self):
         self.log('get_guidedata_NEW')
         cnt = 0
         content = self._get_json('gtv/1/live/channelguide')
+        if content == False:
+            return ''
+            
         results = content['results'];
         now = time.time();
         doc = minidom.Document();

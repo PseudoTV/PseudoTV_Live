@@ -285,6 +285,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.DisableOverlay = False
         self.notificationShowedNotif = False
         self.isExiting = False       
+        self.isChannelChanging = False       
         self.showingSleep = False
         self.showingReminder = False
         self.ignoreInfoAction = False
@@ -973,7 +974,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             
     # set the channel, the proper show offset, and time offset
     def setChannel(self, channel, surfing=False):
-        self.log('setChannel, channel = ' + str(channel))  
+        self.log('setChannel, channel = ' + str(channel)) 
+        self.isChannelChanging = True
         if self.OnDemand == True:
             self.OnDemand = False
 
@@ -1159,7 +1161,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 else:
                     self.toggleShowStartover(False)
             else:
-                self.log("setChannel, Ignoring Seektime")      
+                self.log("setChannel, Ignoring Seektime")   
+        self.isChannelChanging = False   
         self.lastActionTime = time.time() 
         self.Player.onPlaybackAction()     
         egTrigger('PseudoTV_Live - Loading: %s' % chname)
@@ -1277,7 +1280,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if position >= 0:
             self.setMediaInfo(chtype, self.getChname(self.currentChannel), self.currentChannel, mediapath, position)
         
-        # self.Player.waitForVideoPlayback()
         if self.Player.isPlaybackValid() == True:
             if self.infoOffset == 0:
                 if chtype <= 7:
@@ -1287,9 +1289,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     tmpDate = self.channels[self.currentChannel - 1].getItemtimestamp(position)
                     self.startTime = datetime_to_epoch(tmpDate)
                     self.endTime = self.startTime + self.channels[self.currentChannel - 1].getItemDuration(position)
-                # else:
-                    # self.startTime = time.time() - self.Player.getPlayerTime()
-                    # self.endTime = time.time() + self.channels[self.currentChannel - 1].getItemDuration(position)                    
+                else:
+                    self.startTime = time.time()
+                    self.endTime = time.time() + self.channels[self.currentChannel - 1].getItemDuration(position)                    
             else:
                 self.startTime = self.endTime
                 self.endTime += float(self.channels[self.currentChannel - 1].getItemDuration(position))
@@ -2218,8 +2220,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         while True:
             if self.isExiting == True:
                 break
-            
-            chtype = self.getChtype(self.currentChannel)
+                
+            if self.isChannelChanging == True:
+                continue
             
             try:
                 if self.Player.isSomethingPlaying() == False:
@@ -2234,7 +2237,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             except Exception,e:
                 self.notPlayingCount += 1
                 
-                #open epg when disabled plaback is enabled.
+                #open epg when DisablePlayback is enabled.
                 if self.DisablePlayback == True:
                     if self.notPlayingCount == 3:
                         self.openEPG()
@@ -2251,13 +2254,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         if (self.notPlayingCount == int(round(self.playActionTime / 2))) and self.lastActionTriggerCount == 0:
                             self.lastActionTrigger('Current')
                         elif self.notPlayingCount >= self.playActionTime:
-                            if self.lastActionTriggerCount == 0 and self.Player.ignoreNextStop == False:
+                            if self.lastActionTriggerCount < 3 and self.Player.ignoreNextStop == False:
                                 self.lastActionTrigger('Skip')
                             else:
                                 self.lastActionTrigger()                
                             
             # disable dialog checks while system is taxed or on low end hardware
-            if chtype != 15 and self.isLowPower == False:
+            if self.getChtype(self.currentChannel) != 15 and self.isLowPower == False:
                 if self.CloseDialog(['Dialogue OK']) == True:
                     self.lastActionTrigger()
             time.sleep(1)
@@ -3386,13 +3389,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             setBackgroundLabel('Exiting: Removing File Locks')
             GlobalFileLock.unlockFile('MasterLock')
         GlobalFileLock.close()
-                
-        # destroy window
-        del self.myDVR
-        del self.myApps
-        del self.myIdle
-        del self.myOndemand
-            
+                            
         if self.Player.isPlaybackValid() == True:
             self.lastPlayTime = self.Player.getPlayerTime()
             # self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
@@ -3571,6 +3568,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         elif action == 'Powerdown':
             xbmc.executebuiltin('XBMC.AlarmClock( Powering Down Device, XBMC.Powerdown(),0.5,true)')
             
+ #todo check streaming feed kodi player total runtime if greater than parsed runtime use it... helps catch preroll and commercials. 
  
 # xbmc.executebuiltin('StartAndroidActivity("com.netflix.mediaclient"),return')
 # http://localhost:9000/jsonrpc?request={"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"videoosd"},"id":5}

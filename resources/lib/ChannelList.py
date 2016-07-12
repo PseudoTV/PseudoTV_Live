@@ -227,6 +227,7 @@ class ChannelList:
     # playlists until we don't find one
     def findMaxChannels(self):
         self.log('findMaxChannels')
+        show_busy_dialog()
         localCount = 0
         quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.maxChannels = 0
@@ -284,6 +285,7 @@ class ChannelList:
         #if local quota not met, disable quickFlip.
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
+        hide_busy_dialog()
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
 
