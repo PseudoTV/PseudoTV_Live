@@ -1,3 +1,4 @@
+[*] Proper EPG/Overlay BCT content handling.
 [*] Improved Playonbrowser plugin support, requires v.1.0.13. LiveTV tested and working with Xfinity and TWC.
     Users please disable "resume video" setting on playon server. If you receive error "This portion of the video is..." its a issue with playon server, not PTVL or Kodi.
 [*] NEW! Manually muting Kodi enables subtitles & closed captioning (when available).

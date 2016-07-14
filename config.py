@@ -936,7 +936,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 chansetting3 = 'Global'
             chansetting4 = chansetting4.replace('0','Default').replace('1','Random').replace('2','Reverse')
    
-        self.getControl(110).setLabel('Channel Type:', label2=self.getChanTypeLabel(chantype))
+        self.getControl(110).setLabel('Channel Type:', label2=getChanTypeLabel(chantype))
         
         # Custom Playlist
         if chantype == 0:
@@ -1214,48 +1214,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def fillChanTypeLabel(self):
         show_busy_dialog()
         for i in range(NUMBER_CHANNEL_TYPES + 1):
-            self.ChanTypeList.append(self.getChanTypeLabel(i))
+            self.ChanTypeList.append(getChanTypeLabel(i))
         hide_busy_dialog()
             
             
-    def getChanTypeLabel(self, chantype):
-        if chantype == 0:
-            return "Custom Playlist"
-        elif chantype == 1:
-            return "TV Network"
-        elif chantype == 2:
-            return "Movie Studio"
-        elif chantype == 3:
-            return "TV Genre"
-        elif chantype == 4:
-            return "Movie Genre"
-        elif chantype == 5:
-            return "Mixed Genre"
-        elif chantype == 6:
-            return "TV Show"
-        elif chantype == 7:
-            return "Directory"
-        elif chantype == 8:
-            return "LiveTV"
-        elif chantype == 9:
-            return "InternetTV"
-        elif chantype == 10:
-            return "Youtube"
-        elif chantype == 11:
-            return "RSS"
-        elif chantype == 12:
-            return "Music"
-        elif chantype == 13:
-            return "Music Videos (Coming Soon)"
-        elif chantype == 14:
-            return "Exclusive (Coming Soon)"
-        elif chantype == 15:
-            return "Plugin"
-        elif chantype == 16:
-            return "UPNP"
-        return 'None'
-
-        
     def prepareConfig(self):
         self.log("prepareConfig")
         self.showList = []
@@ -1292,7 +1254,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.dlg.update(40, "Preparing Configuration", "querying Channel information")
         self.fillChanTypeLabel()
         
-        self.dlg.update(45, "Preparing Configuration", "gathering data")
+        self.dlg.update(45, "Preparing Configuration", "preparing Channel list")
         hide_busy_dialog()
         self.mixedGenreList = sorted_nicely(removeStringElem(self.chnlst.makeMixedList(self.chnlst.showGenreList, self.chnlst.movieGenreList)))
         self.networkList = sorted_nicely(removeStringElem(self.chnlst.networkList))
@@ -1310,7 +1272,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
-        self.dlg.update(55, "Preparing Configuration", "finalizing data...")
+        self.dlg.update(55, "Preparing Configuration", "finalizing Channel list")
         if isCompanionInstalled() == True:
             self.pluginPathList = ['plugin.video.pseudo.companion']
             self.pluginNameList = ['[COLOR=blue][B]PseudoCompanion[/B][/COLOR]']

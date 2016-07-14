@@ -288,7 +288,7 @@ class ChannelList:
         hide_busy_dialog()
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
-
+        
     def sendJSON(self, command):
         self.log('sendJSON')
         data = ''
@@ -655,6 +655,31 @@ class ChannelList:
         bctType = None
         fileList = []
         limit = MEDIA_LIMIT
+        
+        if chtype == 0:
+            if FileAccess.exists(xbmc.translatePath(setting1)) == False:
+                self.channels[channel - 1].isValid = False
+                return
+        elif chtype <= 6 or chtype in [12,14]:
+            if len(setting1) == 0:
+                self.channels[channel - 1].isValid = False
+                return
+        elif chtype == 7:
+            if FileAccess.exists(setting1) == False:
+                self.channels[channel - 1].isValid = False
+                return
+        elif chtype in [8,9]:
+            if self.Valid_ok(setting2) == False:
+                self.channels[channel - 1].isValid = False
+                return
+        elif chtype == 10:
+            if self.youtube_player == 'False':
+                self.channels[channel - 1].isValid = False
+                return
+        elif chtype in [11,15,16]:
+            if self.Valid_ok(setting1) == False:
+                self.channels[channel - 1].isValid = False
+                return
         
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
@@ -2154,11 +2179,11 @@ class ChannelList:
                         channel = elem.get("channel")
                         if setting1 == channel:
                             self.log("fillLiveTVXMLTV, setting1 = " + setting1 + ', channel id = ' + channel)
-                            showtitle = elem.findtext('title')
-                            description = elem.findtext("desc")
+                            showtitle = uni(elem.findtext('title'))
+                            description = uni(elem.findtext("desc"))
                             
                             icon = None
-                            iconElement = elem.find("icon")
+                            iconElement = uni(elem.find("icon"))
                             if iconElement is not None:
                                 icon = iconElement.get("src")
                                 if icon.startswith('http'):
@@ -2173,7 +2198,7 @@ class ChannelList:
                                             thumburl = encodeString(f.split('width:430,height:574,url:')[1])
                                             break
                                 
-                            subtitle = elem.findtext("sub-title")
+                            subtitle = uni(elem.findtext("sub-title"))
                             if not subtitle:                        
                                 subtitle = 'LiveTV'
                             if not description:
@@ -2186,7 +2211,7 @@ class ChannelList:
                             movie = False
                             genre = 'Unknown'
                             categories = ''
-                            categoryList = elem.findall("category")
+                            categoryList = uni(elem.findall("category"))
                             for cat in categoryList:
                                 categories += ', ' + cat.text
                                 if (cat.text).lower() == 'movie':
@@ -3341,7 +3366,6 @@ class ChannelList:
 
     def insertBCT(self, chtype, channel, fileList, type):
         self.log("insertBCT, channel = " + str(channel))
-        GenreLiveID = ['Unknown', 'other', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
         newFileList = []
         title = ''
         description = ''
@@ -3399,6 +3423,7 @@ class ChannelList:
             bctDur = 0 #todo automatic time filler (round shows to the 30/60min intervals)
             newFileList.append(fileList[i])
             if len(BumperLST) > 0:
+                GenreLiveID = ['Bumper', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numbumpers")) + 1):
                     tmpstr = ''
                     if self.background == False:
@@ -3412,6 +3437,7 @@ class ChannelList:
                     newFileList.append(tmpstr)
 
             if len(CommercialLST) > 0:
+                GenreLiveID = ['Commercial', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numcommercials")) + 1): 
                     tmpstr = ''   
                     if self.background == False:
@@ -3425,6 +3451,7 @@ class ChannelList:
                     newFileList.append(tmpstr)
 
             if len(TrailerLST) > 0:
+                GenreLiveID = ['Trailer', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numtrailers")) + 1):    
                     tmpstr = ''
                     if self.background == False:
@@ -4816,22 +4843,24 @@ class ChannelList:
                                     file = urllib.unquote('plugin://plugin'+file.split('plugin')[4]).replace('",return)','')
                                             
                                 if filetype == 'file' and self.filecount < limit:
-                                    duration = re.search('"duration" *: *([0-9]*?),', f)
                                     runtime  = re.search('"runtime" *: *([0-9]*?),', f)
+                                    duration = re.search('"duration" *: *([0-9]*?),', f)
                                     
                                     # If duration, else 0
                                     try:
                                         dur = int(duration.group(1))
+                                        self.log('getFileList_NEW, using duration')
                                     except Exception,e:
-                                        self.log('getFileList_NEW, duration using runtime! ' + str(e))
+                                        self.log('getFileList_NEW, no duration found! ' + str(e))
                                         dur = 0
                                        
                                     if dur == 0:
                                         # Less accurate duration
                                         try:
                                             dur = int(runtime.group(1))
+                                            self.log('getFileList_NEW, using runtime')
                                         except Exception,e:
-                                            self.log('getFileList_NEW, runtime not found! ' + str(e))
+                                            self.log('getFileList_NEW, no runtime found! ' + str(e))
                                             dur = 0
 
                                     if dur == 0 and isLowPower() == False:

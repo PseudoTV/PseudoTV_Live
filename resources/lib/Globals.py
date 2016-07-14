@@ -91,7 +91,7 @@ TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
 ALLOW_CHANNEL_HISTORY_TIME = 60 * 60 * 24 * 1
-NOTIFICATION_CHECK_TIME = 30 #in seconds
+NOTIFICATION_CHECK_TIME = 120 #in seconds
 NOTIFICATION_TIME_BEFORE_END = 240 #in seconds
 NOTIFICATION_DISPLAY_TIME = 6 #in seconds
 REMINDER_COUNTDOWN = 15 #secs
@@ -256,7 +256,7 @@ cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
 IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
-BCT_TYPES = ['Bumper', 'Commercial', 'Trailer', 'Rating', 'PseudoCinema', 'Intro', 'Cellphone', 'Coming Soon', 'PreMovie', 'Feature Presentation', 'Intermission']
+BCT_TYPES = ['bumper', 'commercial', 'trailer', 'rating', 'pseudocinema', 'intro', 'cellphone', 'coming soon', 'premovie', 'feature presentation', 'intermission']
 
 # Eventghost broadcasts
 EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']

@@ -39,152 +39,163 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         self.log('__init__')
-        self.channelLabel = []  
-        self.toRemove = []
-        self.showingInfo = False
-        self.showingContext = False
-        self.infoOffsetV = 0
-        self.inputChannel = -1
-        self.focusRow = 0
-        self.focusIndex = 0
-        self.focusTime = 0
-        self.focusEndTime = 0
-        self.shownTime = 0
-        self.infoOffset = 0
-        self.centerChannel = 0
-        self.channelLogos = ''
-        self.textcolor = "FFFFFFFF"
-        self.focusedcolor = "FF7d7d7d"
-        self.shadowcolor = "FF000000"
-        self.textfont  = "font14"
-        self.channelbugcolor = CHANBUG_COLOR
-        self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
-        self.timeButtonBar = MEDIA_LOC + TIME_BAR
-        self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
-        
         try:
-            self.rowCount = int(getProperty("EPG.rowCount"))
-        except:
-            self.rowCount = 6
+            self.channelLabel = []  
+            self.toRemove = []
+            self.showingInfo = False
+            self.showingContext = False
+            self.infoOffsetV = 0
+            self.inputChannel = -1
+            self.focusRow = 0
+            self.focusIndex = 0
+            self.focusTime = 0
+            self.focusEndTime = 0
+            self.shownTime = 0
+            self.infoOffset = 0
+            self.centerChannel = 0
+            self.channelLogos = ''
+            self.textcolor = "FFFFFFFF"
+            self.focusedcolor = "FF7d7d7d"
+            self.shadowcolor = "FF000000"
+            self.textfont  = "font14"
+            self.channelbugcolor = CHANBUG_COLOR
+            self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
+            self.timeButtonBar = MEDIA_LOC + TIME_BAR
+            self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
             
-        self.channelButtons = [None] * self.rowCount
-        self.channelTags = [None] * self.rowCount
-        
-        for i in range(self.rowCount):
-            self.channelButtons[i] = []
-            self.channelTags[i] = []
-        
-        self.chanlist = ChannelList()
-        self.lastActionTime = time.time()
-        self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
-        self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
-        self.actionSemaphore = threading.BoundedSemaphore()
-        
-          
-    def onInit(self):
-        self.log('onInit')          
-        self.curchannelIndex = []
-        
-        now = datetime.datetime.now()  
-        if self.MyOverlayWindow.clockMode == 0:
-            timeex = now.strftime("%I:%M%p").lower()
-        else:
-            timeex = now.strftime("%H:%M")
-        
-        timetx, timety = self.getControl(5006).getPosition()
-        timetw = self.getControl(5006).getWidth()
-        timeth = self.getControl(5006).getHeight()
-        timex, timey = self.getControl(5007).getPosition()
-        timew = self.getControl(5007).getWidth()
-        timeh = self.getControl(5007).getHeight()
-
-        self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
-        self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
-        self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
-        self.ButtonContextBackground = MEDIA_LOC + BUTTON_BACKGROUND_CONTEXT
-        self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
-        self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
-        self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
-        self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
-        
-        self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='font12', focusTexture=self.textureButtonFocusAlt, noFocusTexture=self.timeButtonNoFocus)
-        self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
-        self.addControl(self.currentTime)
-        self.addControl(self.currentTimeBar)
-        
-        textcolor = int(getProperty("EPG.textColor"), 16)            
-        if textcolor > 0:
-            self.textcolor = hex(textcolor)[2:]
-        
-        focusedcolor = int(getProperty("EPG.focused_textColor"), 16)
-        if focusedcolor > 0:
-            self.focusedcolor = hex(focusedcolor)[2:]
+            try:
+                self.rowCount = int(getProperty("EPG.rowCount"))
+            except:
+                self.rowCount = 6
+                
+            self.channelButtons = [None] * self.rowCount
+            self.channelTags = [None] * self.rowCount
             
-        shadowcolor = int(getProperty("EPG.shadowColor"), 16)
-        if shadowcolor > 0:
-            self.shadowColor = hex(shadowcolor)[2:]
-        
-        self.textfont = getProperty("EPG.textFont")
-        self.toggleVideoWindow(getProperty('PTVL.VideoWindow') == "true")
-        
-        try:
-            if self.setChannelButtons(time.time(), self.MyOverlayWindow.currentChannel) == False:
-                self.log('Unable to add channel buttons')
-                return
-
-            curtime = time.time()
-            self.focusIndex = -1
-            basex, basey = self.getControl(113).getPosition()
-            baseh = self.getControl(113).getHeight()
-            basew = self.getControl(113).getWidth()
+            for i in range(self.rowCount):
+                self.channelButtons[i] = []
+                self.channelTags[i] = []
             
-            # Update Channel Focus Highlight
-            chx, chy = self.getControl(5009).getPosition()
-            self.getControl(5009).setPosition(chx, basey)
-
-            # set the button that corresponds to the currently playing show
-            for i in range(len(self.channelButtons[2])):
-                left, top = self.channelButtons[2][i].getPosition()
-                width = self.channelButtons[2][i].getWidth()
-                left = left - basex
-                starttime = self.shownTime + (left / (basew / 5400.0))
-                endtime = starttime + (width / (basew / 5400.0))
-
-                if curtime >= starttime and curtime <= endtime:
-                    self.focusIndex = i
-                    self.setFocus(self.channelButtons[2][i])
-                    self.focusTime = int(time.time())
-                    self.focusEndTime = endtime
-                    break
-
-            # If nothing was highlighted, just select the first button
-            if self.focusIndex == -1:
-                self.focusIndex = 0
-                self.setFocus(self.channelButtons[2][0])
-                left, top = self.channelButtons[2][0].getPosition()
-                width = self.channelButtons[2][0].getWidth()
-                left = left - basex
-                starttime = self.shownTime + (left / (basew / 5400.0))
-                endtime = starttime + (width / (basew / 5400.0))
-                self.focusTime = int(starttime + 30)
-                self.focusEndTime = endtime
-            self.focusRow = 2
-            self.setShowInfo()                
-            self.FEEDtoggle()
+            self.chanlist = ChannelList()
+            self.lastActionTime = time.time()
+            self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
+            self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
+            self.actionSemaphore = threading.BoundedSemaphore()
         except Exception,e:
             self.log("Unknown EPG Initialization exception " + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR)          
+            buggalo.onExceptionRaised()     
             self.close()
-            return
+            
+          
+    def onInit(self):
+        self.log('onInit')  
+        try:
+            self.curchannelIndex = []   
+            now = datetime.datetime.now()  
+            if self.MyOverlayWindow.clockMode == 0:
+                timeex = now.strftime("%I:%M%p").lower()
+            else:
+                timeex = now.strftime("%H:%M")
+            
+            timetx, timety = self.getControl(5006).getPosition()
+            timetw = self.getControl(5006).getWidth()
+            timeth = self.getControl(5006).getHeight()
+            timex, timey = self.getControl(5007).getPosition()
+            timew = self.getControl(5007).getWidth()
+            timeh = self.getControl(5007).getHeight()
 
-        for i in range(3):
+            self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
+            self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
+            self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+            self.ButtonContextBackground = MEDIA_LOC + BUTTON_BACKGROUND_CONTEXT
+            self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
+            self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
+            self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
+            self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+            
+            self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='font12', focusTexture=self.textureButtonFocusAlt, noFocusTexture=self.timeButtonNoFocus)
+            self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
+            self.addControl(self.currentTime)
+            self.addControl(self.currentTimeBar)
+            
+            textcolor = int(getProperty("EPG.textColor"), 16)            
+            if textcolor > 0:
+                self.textcolor = hex(textcolor)[2:]
+            
+            focusedcolor = int(getProperty("EPG.focused_textColor"), 16)
+            if focusedcolor > 0:
+                self.focusedcolor = hex(focusedcolor)[2:]
+                
+            shadowcolor = int(getProperty("EPG.shadowColor"), 16)
+            if shadowcolor > 0:
+                self.shadowColor = hex(shadowcolor)[2:]
+            
+            self.textfont = getProperty("EPG.textFont")
+            self.toggleVideoWindow(getProperty('PTVL.VideoWindow') == "true")
+            
             try:
-                self.channelLabel.append(xbmcgui.ControlImage(50 + (50 * i), 50, 50, 50, IMAGES_LOC + 'solid.png', colorDiffuse = self.channelbugcolor))
-                self.addControl(self.channelLabel[i])
-                self.channelLabel[i].setVisible(False)
-            except:
-                pass
-        self.log('onInit return')
+                if self.setChannelButtons(time.time(), self.MyOverlayWindow.currentChannel) == False:
+                    self.log('Unable to add channel buttons')
+                    return
+
+                curtime = time.time()
+                self.focusIndex = -1
+                basex, basey = self.getControl(113).getPosition()
+                baseh = self.getControl(113).getHeight()
+                basew = self.getControl(113).getWidth()
+                
+                # Update Channel Focus Highlight
+                chx, chy = self.getControl(5009).getPosition()
+                self.getControl(5009).setPosition(chx, basey)
+
+                # set the button that corresponds to the currently playing show
+                for i in range(len(self.channelButtons[2])):
+                    left, top = self.channelButtons[2][i].getPosition()
+                    width = self.channelButtons[2][i].getWidth()
+                    left = left - basex
+                    starttime = self.shownTime + (left / (basew / 5400.0))
+                    endtime = starttime + (width / (basew / 5400.0))
+
+                    if curtime >= starttime and curtime <= endtime:
+                        self.focusIndex = i
+                        self.setFocus(self.channelButtons[2][i])
+                        self.focusTime = int(time.time())
+                        self.focusEndTime = endtime
+                        break
+
+                # If nothing was highlighted, just select the first button
+                if self.focusIndex == -1:
+                    self.focusIndex = 0
+                    self.setFocus(self.channelButtons[2][0])
+                    left, top = self.channelButtons[2][0].getPosition()
+                    width = self.channelButtons[2][0].getWidth()
+                    left = left - basex
+                    starttime = self.shownTime + (left / (basew / 5400.0))
+                    endtime = starttime + (width / (basew / 5400.0))
+                    self.focusTime = int(starttime + 30)
+                    self.focusEndTime = endtime
+                self.focusRow = 2
+                self.setShowInfo()                
+                self.FEEDtoggle()
+            except Exception,e:
+                self.log("Unknown EPG OnInitialization exception " + str(e), xbmc.LOGERROR)
+                self.log(traceback.format_exc(), xbmc.LOGERROR)          
+                self.close()
+                return
+
+            for i in range(3):
+                try:
+                    self.channelLabel.append(xbmcgui.ControlImage(50 + (50 * i), 50, 50, 50, IMAGES_LOC + 'solid.png', colorDiffuse = self.channelbugcolor))
+                    self.addControl(self.channelLabel[i])
+                    self.channelLabel[i].setVisible(False)
+                except:
+                    pass
+            self.log('onInit return')
+        except Exception,e:
+            self.log("Unknown EPG Initialization exception " + str(e), xbmc.LOGERROR)
+            self.log(traceback.format_exc(), xbmc.LOGERROR)          
+            buggalo.onExceptionRaised()     
+            self.close()
           
 
     def log(self, msg, level = xbmc.LOGDEBUG):
@@ -454,22 +465,15 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
             del self.channelTags[row][:]
             
             # # todo filter epg
-            # if chtype != 8:             
-                # self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, '', focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
-                # return
-            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
+            playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
             self.log('setButtons, playlistpos = ' + str(playlistpos))
-            
+
             # if the channel is paused, then only 1 button needed
             if self.MyOverlayWindow.channels[curchannel - 1].isPaused:
                 self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.channels[curchannel - 1].getCurrentTitle() + " (paused)", focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))
-            elif chtype == 12:
-                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))   
-            # if hideShortItems and chtype >=10 stack videos shorter than BYPASS_EPG_SECONDS. 
-            # if the channel is stacked, then only 1 button needed
-            # elif self.MyOverlayWindow.hideShortItems and (chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS and chname not in BYPASS_EPG_STACK) or chname in FORCE_EPG_STACK: #Under 15mins "Stacked"
-                # self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))   
-            
+            # if the channel is not local and duration is under BYPASS_EPG_SECONDS, then only 1 button needed
+            elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:    
+                self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor))               
             else:            
                 # Find the show that was running at the given time for the current channel.
                 if curchannel == self.MyOverlayWindow.currentChannel:
@@ -515,8 +519,9 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                 while reftime < endtime and totalloops < 1000:
                     xpos = int(basex + (totaltime * (basew / 5400.0)))
                     tmpdur = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos)
+                    # epochBeginDate = datetime_to_epoch(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos))
                     shouldskip = False
-
+                    
                     # this should only happen the first time through this loop
                     # it shows the small portion of the show before the current one
                     if reftime < starttime:
@@ -525,16 +530,17 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
                         if tmpdur < 60 * 3:
                             shouldskip = True
-                    
+
                     # Don't show very short videos or bct types
-                    if self.MyOverlayWindow.hideShortItems and shouldskip == False:
-                        if chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength:
+                    if shouldskip == False:
+                        if chtype <= 7 and self.MyOverlayWindow.hideShortItems and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < self.MyOverlayWindow.shortItemLength:
                             shouldskip = True
                             tmpdur = 0
-                        elif chtype <= 7 and self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos) in BCT_TYPES:
+                        elif chtype <= 7 and (self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos)).lower() in BCT_TYPES:
                             shouldskip = True
                             tmpdur = 0
-                        # elif chtype >= 10 and self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < BYPASS_EPG_SECONDS:
+                        # elif chtype == 8 and epochBeginDate + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) <  time.time():
+                            # self.chanlist.setChannelChanged(curchannel)
                             # shouldskip = True
                             # tmpdur = 0
                         elif chtype not in IGNORE_SEEKTIME_CHTYPE:
@@ -546,12 +552,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
 
                             if prevlen < 60:
                                 tmpdur += prevlen / 2
-                    
-                    # Check LiveTV for outdated timestamp:                       
-                    # elif chtype == 8 and datetime_to_epoch(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)) + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < time.time():
-                        # # self.chanlist.setResetLST(curchannel)
-                        # shouldskip = True
-                        
+
                     width = int((basew / 5400.0) * tmpdur)
                     if width < 30 and shouldskip == False:
                         width = 30
@@ -586,18 +587,12 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
                             self.textureButtonNoFocus = self.getEPGtype(rating)
                         else:   
                             self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
-                            
-                        # if self.MyOverlayWindow.channels[self.centerChannel - 1].getItemEpisodeTitle(-999) == ('[COLOR=%s][B]OnDemand[/B][/COLOR]' % ((self.MyOverlayWindow.channelbugcolor).replace('0x',''))):
-                            # self.textureButtonFocus = IMAGES_LOC + 'label_ondemand.png'
-                            # self.textureButtonNoFocus = MEDIA_LOC + 'label_ondemand.png'
-                        
+
                         #Create Control array
                         self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, width, baseh, mylabel, focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
                         self.addButtonTags(row, xpos, basey, width, baseh, mylabel, EPGtags)
-                    
-                    # elif chtype == 8 and shouldskip == True:
-                        # self.channelButtons[row].append(xbmcgui.ControlButton(xpos, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
-
+                        #todo set epg tag icon (addButtonTags)for ondemand
+                        
                     totaltime += tmpdur
                     reftime += tmpdur
                     playlistpos += 1
@@ -771,7 +766,7 @@ class EPGWindow(xbmcgui.WindowXMLDialog):
         if self.channelLabelTimer.isAlive():
             self.channelLabelTimer.cancel()
         if self.GotoChannelTimer.isAlive():
-            self.GotoChannelTimer.cancel()
+            self.GotoChannelTimer.cancel()  
         self.removeControl(self.currentTime)
         self.removeControl(self.currentTimeBar)
         self.close()

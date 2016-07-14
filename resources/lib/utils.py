@@ -2143,3 +2143,40 @@ def egTrigger(message, sender='PTVL'):
         egTriggerTimer.start() 
     except Exception,e:
         log('utils: egTrigger, failed! ' + str(e))  
+        
+def getChanTypeLabel(chantype):
+    if chantype == 0:
+        return "Custom Playlist"
+    elif chantype == 1:
+        return "TV Network"
+    elif chantype == 2:
+        return "Movie Studio"
+    elif chantype == 3:
+        return "TV Genre"
+    elif chantype == 4:
+        return "Movie Genre"
+    elif chantype == 5:
+        return "Mixed Genre"
+    elif chantype == 6:
+        return "TV Show"
+    elif chantype == 7:
+        return "Directory"
+    elif chantype == 8:
+        return "LiveTV"
+    elif chantype == 9:
+        return "InternetTV"
+    elif chantype == 10:
+        return "Youtube"
+    elif chantype == 11:
+        return "RSS"
+    elif chantype == 12:
+        return "Music"
+    elif chantype == 13:
+        return "Music Videos (Coming Soon)"
+    elif chantype == 14:
+        return "Exclusive (Coming Soon)"
+    elif chantype == 15:
+        return "Plugin"
+    elif chantype == 16:
+        return "UPNP"
+    return 'None'
