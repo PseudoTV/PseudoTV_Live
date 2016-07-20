@@ -40,6 +40,7 @@ from HTMLParser import HTMLParser
 try:
     from metahandler import metahandlers
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
+    ENHANCED_DATA = True
 except Exception,e:
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-Artdownloader: metahandler Import Failed" + str(e))   
@@ -175,7 +176,7 @@ class Artdownloader:
                 # query json for artwork
                 setImage = self.JsonArt(type, chname, mpath, arttypeEXT)
                 if xbmcvfs.exists(setImage):
-                    return SetImage
+                    return setImage
                 elif dbid != '0':
                     setImage = self.dbidArt(type, chname, mpath, dbid, arttypeEXT)
                     if xbmcvfs.exists(setImage):
@@ -211,7 +212,7 @@ class Artdownloader:
             self.log('FindArtwork, SetDefaultArt')
             return self.SetDefaultArt(chname, mpath, arttypeEXT)
         except Exception,e:  
-            self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed" + str(e), xbmc.LOGERROR)
+            self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed! " + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR) 
             return THUMB
                 

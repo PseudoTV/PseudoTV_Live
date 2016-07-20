@@ -140,7 +140,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         self.log("closeManager") 
         setProperty("PseudoTVSkinRunning", "False")
         self.close()
-                   
+        
  
     def onAction(self, act):
         action = act.getId()

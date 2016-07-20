@@ -41,6 +41,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             setProperty("PseudoTVConfigRunning", "True")
             self.madeChanges = 0
             self.showingList = True
+            setProperty("PTVL.showingList","True")
             self.channel = 0
             self.channel_type = 9999
             self.setting1 = ''
@@ -298,6 +299,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.setFocusId(102)
         self.getControl(105).setVisible(True)
         self.showingList = True
+        setProperty("PTVL.showingList","True")
         self.updateListing(self.channel)
         self.listcontrol.selectItem(self.channel - 1)
 
@@ -378,11 +380,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.channel = self.listcontrol.getSelectedPosition() + 1     
         
         if controlId == 102:        # Channel list entry selected
+            setProperty("PTVL.Window","ChannelEntry")
             self.getControl(105).setVisible(False)
             self.getControl(106).setVisible(True)
             self.changeChanType(self.channel)
             self.setFocusId(110)
             self.showingList = False
+            setProperty("PTVL.showingList","False")
             
         if controlId == 9:
             self.setChlogo(self.listcontrol.getSelectedPosition() + 1)
@@ -427,7 +431,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.hideChanDetails()
                 ADDON_SETTINGS.writeSettings()  
                 self.listSubmit(self.channel)
-                
+        elif controlId == 116:      # Preview button
+            self.previewChannel(self.listcontrol.getSelectedPosition() + 1)
         # Custom Playlist
         elif controlId == 330:      # Playlist-type channel, playlist button
             retval = browse(1, "Channel " + str(self.channel) + " Playlist", "files", ".xsp", False, False, "special://videoplaylists/")
@@ -592,7 +597,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.setFocusId(221)
                 xbmc.executebuiltin('SendClick(221)')
       
-        elif controlId == 221:    # InternetTV Browse Folders
+        elif controlId == 221:    # InternetTV Channel Name
             if len(self.getControl(225).getLabel()) > 1:
                 title, path = self.fillSources('InternetTV', self.getControl(220).getLabel2(), self.getControl(225).getLabel())
             else:
@@ -791,6 +796,17 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("onClick return")
 
 
+    def previewChannel(self, channel):
+        self.log("previewChannel")
+        self.saveSettings()   
+        chtype = int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_type"))        
+        setting1 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_1")
+        setting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
+        setting3 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3")
+        setting4 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4")
+        print self.chnlst.makeChannelList(channel, chtype, setting1, setting2, setting3, setting4, False, True)
+        
+        
     def changeListData(self, thelist, controlid, val):
         self.log("changeListData " + str(controlid) + ", " + str(val))
         curval = self.getControl(controlid).getLabel()
@@ -1038,7 +1054,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif chantype == 9:
             self.setFocusId(220)
             if len(chansetting2) != 0:
-                self.getControl(221).setLabel('Channel Name:', label2=channame)
+                self.getControl(221).setLabel('Channel Name:', label2='Click to Browse') 
                 self.getControl(225).setLabel(chansetting2)
                 self.getControl(222).setLabel('Show Title:', label2=chansetting3)
                 self.getControl(223).setLabel('Show Description:', label2=chansetting4)

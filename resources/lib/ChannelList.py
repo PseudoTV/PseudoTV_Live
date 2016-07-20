@@ -63,6 +63,7 @@ except Exception,e:
 try:
     from metahandler import metahandlers
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
+    ENHANCED_DATA = True
 except Exception,e:  
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-ChannelList: metahandler Import failed! " + str(e))    
@@ -97,7 +98,6 @@ class ChannelList:
         self.genre = ''
         self.rating = ''
         self.FileListCache = ''
-        self.includeMeta = ENHANCED_DATA
         self.videoParser = VideoParser()
         self.youtube_player = self.youtube_player_ok()
         self.ustv = ustvnow.ustvnow()
@@ -120,6 +120,8 @@ class ChannelList:
         self.log("IceLibrary is " + str(self.incIceLibrary))
         self.incBCTs = REAL_SETTINGS.getSetting('IncludeBCTs') == "true"
         self.log("IncludeBCTs is " + str(self.incBCTs)) 
+        self.includeMeta = ENHANCED_DATA
+        self.log("IncludeMeta is " + str(self.includeMeta)) 
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
         self.startTime = time.time()
@@ -158,7 +160,23 @@ class ChannelList:
         else:
             self.updateDialog = xbmcgui.DialogProgressBG()
 
+    #todo tmp build playlist for channel manager preview
+    def previewChannel(self, channel, background=False):
+        self.log('previewChannel')
+        self.readConfig()
+        self.background = background
+        
+        if self.background == False:
+            self.updateDialog.create("PseudoTV Live", "Updating Channel List")
+            self.updateDialog.update(0, "Updating Channel List", "")
+            self.updateDialogProgress = 0
+            setProperty('loading.progress',str(self.updateDialogProgress))
             
+        self.setupChannel(channel, self.background, True, False)
+        if self.channels[i].isValid:
+            foundvalid = True
+            
+
     def setupList(self, background=False):
         self.readConfig()
         foundvalid = False
@@ -887,7 +905,7 @@ class ChannelList:
         # inject BCT into filelist
         if self.incBCTs == True and bctType != None:
             fileList = self.insertBCT(chtype, channel, fileList, bctType)
-            
+
         # Write each entry into the new playlist
         for string in fileList:
             channelplaylist.write(uni("#EXTINF:") + uni(string) + uni("\n"))
@@ -2123,7 +2141,7 @@ class ChannelList:
                         setProperty('loading.progress',str(self.updateDialogProgress))
 
         except Exception,e:
-            self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)               
+            self.log("fillLiveTVGuide failed! " + str(e), xbmc.LOGERROR)               
         if showcount < LIVETV_REFRESH:
             self.setChannelChanged(self.settingChannel)
         return showList
@@ -2185,7 +2203,7 @@ class ChannelList:
                             icon = None
                             iconElement = uni(elem.find("icon"))
                             if iconElement is not None:
-                                icon = iconElement.get("src")
+                                icon = uni(iconElement.get("src"))
                                 if icon.startswith('http'):
                                     thumburl = encodeString(icon)
                                 elif icon.startswith('"photos"'):
@@ -2355,8 +2373,8 @@ class ChannelList:
                                                 episode = episode.find("Episode")
                                                 seasonNumber = episode.findtext("SeasonNumber")
                                                 episodeNumber = episode.findtext("EpisodeNumber")
-                                                episodeDesc = episode.findtext("Overview")
-                                                episodeName = episode.findtext("EpisodeName")
+                                                episodeDesc = (episode.findtext("Overview") or '')
+                                                episodeName = (episode.findtext("EpisodeName") or '')
                                                 
                                                 if len(episodeName) > 0:
                                                     subtitle = episodeName
@@ -3568,7 +3586,7 @@ class ChannelList:
                         ID = rating[1]
                 URL = self.youtube_player + ID
                 dur = self.getYoutubeDuration(ID)  
-                GenreLiveID = ['Unknown', 'movie', 0, 0, False, 1, mpaa,False, False, 0.0, 0]
+                GenreLiveID = ['Rating', 'bct', 0, 0, False, 1, mpaa,False, False, 0.0, 0]
                 tmpstr = self.makeTMPSTR(dur, chname, 0, 'Rating', 'Rating', GenreLiveID, URL, includeMeta=False)
                 newFileList.append(tmpstr)
             # cleanup   

@@ -347,6 +347,7 @@
                 <textcolor>C0C0C0C0</textcolor>
                 <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
+                <ondown>116</ondown>
                 <onleft>113</onleft>
                 <onright>555</onright>
                 <align>center</align>         
@@ -364,6 +365,7 @@
                 <textcolor>C0C0C0C0</textcolor>
                 <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
+                <ondown>116</ondown>
                 <onleft>112</onleft>
                 <onright>113</onright>
                 <align>center</align>  
@@ -381,10 +383,28 @@
                 <textcolor>C0C0C0C0</textcolor>
                 <focusedcolor>FFFFFFFF</focusedcolor>
                 <onup>114</onup>
+                <ondown>116</ondown>
                 <onleft>555</onleft>
                 <onright>112</onright>
                 <align>center</align>   
             </control>
+            <!-- Preview Channel -->
+            <!-- <control type="button" id="116">
+                <left>300</left>
+                <top>580</top>
+                <width>640</width>
+				<height>40</height>
+                <label>Preview Channel</label>
+                <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
+                <texturenofocus border="5">pstvlButtonFocus.png</texturenofocus>
+                <textoffsetx>7</textoffsetx>
+                <textcolor>C0C0C0C0</textcolor>
+                <focusedcolor>FFFFFFFF</focusedcolor>
+                <onup>114</onup>
+                <onleft>555</onleft>
+                <onright>112</onright>
+                <align>center</align>   
+            </control> -->
             
         </control>
 

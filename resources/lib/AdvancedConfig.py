@@ -76,10 +76,11 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                 if xbmcgui.Dialog().yesno("Save", "Would you like to save your changes?"):
                     self.saveRules()
                 self.close()
-            if currentWindow() == 'System':
+            xbmc.sleep(10)
+            if getProperty("PTVL.showingList") == 'True':
                 xbmc.executebuiltin("Control.SetFocus(102)")
             else:
-                xbmc.executebuiltin("Control.SetFocus(120)")
+                xbmc.executebuiltin("Control.SetFocus(112)")
                 
         elif action in ACTION_MOVE_DOWN:
             if focusid > 119 and focusid < (120 + RULES_PER_PAGE):

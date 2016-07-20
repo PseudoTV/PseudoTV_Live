@@ -91,7 +91,7 @@ TIMEOUT = 15 * 1000
 TOTAL_FILL_CHANNELS = 20
 PREP_CHANNEL_TIME = 60 * 60 * 24 * 5
 ALLOW_CHANNEL_HISTORY_TIME = 60 * 60 * 24 * 1
-NOTIFICATION_CHECK_TIME = 120 #in seconds
+NOTIFICATION_CHECK_TIME = 60 #in seconds
 NOTIFICATION_TIME_BEFORE_END = 240 #in seconds
 NOTIFICATION_DISPLAY_TIME = 6 #in seconds
 REMINDER_COUNTDOWN = 15 #secs
@@ -231,7 +231,6 @@ NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true"
 CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
-ENHANCED_DATA = xbmcgui.Window(10000).getProperty('PTVL.LOWPOWER') == "false"
     
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))

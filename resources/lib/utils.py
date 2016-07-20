@@ -804,7 +804,6 @@ def currentWindow():
         id = re.search('"label" *: *"(.*?)"', f)
         if id and len(id.group(1)) > 0:
             currentWindow = id.group(1)
-            
             break
     log("utils: currentWindow = " + currentWindow)
     return currentWindow
@@ -1587,8 +1586,7 @@ def HandleUpgrade():
     
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
-          
-    REAL_SETTINGS.setSetting('ClearLiveArt', "true")
+    
     # Force Channel rebuild
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
     # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
@@ -1934,7 +1932,7 @@ def listXMLTV():
     xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
     select = selectDialog(xmltvLst, 'Select Guidedata Type', 30000)
 
-    if select != -1:
+    if select and select != -1:
         if xmltvLst[select] == 'Enter URL':
             retval = inputDialog(xmltvLst[select], key=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:
