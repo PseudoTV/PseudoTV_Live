@@ -40,7 +40,7 @@
                 <description>Static VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
@@ -71,7 +71,7 @@
                 <description>VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
@@ -101,7 +101,7 @@
                 <width>375</width>
                 <height>38</height>
                 <label>EPG</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -114,7 +114,7 @@
                 <width>375</width>
                 <height>38</height>
                 <label>DVR</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -127,7 +127,7 @@
                 <width>375</width>
                 <height>38</height>
                 <label>VOD</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -140,7 +140,7 @@
                 <width>375</width>
                 <height>38</height>
                 <label>APP</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -169,7 +169,7 @@
                 <description>PTVL RSS Feed Label</description>  
                 <width>370</width>
                 <height>35</height>
-                <font>font10</font>
+                <font>PTVL10</font>
                 <aligny>center</aligny>
                 <align>left</align>
                 <scroll>true</scroll>
@@ -194,7 +194,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font10</font>
+                <font>PTVL10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>Control.IsVisible(505)</visible>
@@ -210,7 +210,7 @@
                 <description>Show Title Label</description>
                 <width min="5" max="1100">auto</width>
                 <height>30</height>
-                <font>font14</font>
+                <font>PTVL14</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <scroll>true</scroll>
@@ -274,7 +274,7 @@
                 <wrapmultiline>true</wrapmultiline>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <label>$INFO[Window(10000).Property(OVERLAY.Description)]</label>
             </control> 
         </control> 

@@ -36,7 +36,7 @@ __settings__   = xbmcaddon.Addon(id='script.pseudotv.live')
 __cwd__        = __settings__.getAddonInfo('path')
 __version__    = __settings__.getAddonInfo('version')
 __language__   = __settings__.getLocalizedString
-       
+      
 def PseudoTV():
     try:
         import resources.lib.Overlay as Overlay         
@@ -62,7 +62,7 @@ def PseudoTV():
         buggalo.onExceptionRaised()
     setProperty("PseudoTVRunning", "False")
     clearProperty('SkinHelperShutdownRequested')
-        
+
 #Start PseudoTV
 # Adapting a solution from ronie (http://forum.xbmc.org/showthread.php?t=97353)
 if getProperty("PseudoTVRunning") != "True":

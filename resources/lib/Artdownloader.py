@@ -52,10 +52,10 @@ except:
     pass
     
 try:
-    from PIL import Image
-    from PIL import ImageEnhance
+    from PIL import Image, ImageEnhance
 except:
-    REAL_SETTINGS.setSetting("ColorChannelBug","true")
+    if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) == 2:
+        REAL_SETTINGS.setSetting("Enable_ChannelBug","1")
         
 socket.setdefaulttimeout(30)
 
@@ -144,10 +144,7 @@ class Artdownloader:
             fle = id + '-' + arttypeEXT
             ext = arttypeEXT.split('.')[1]
             setImage = 'NA.png'
-                    
-            if isLowPower() == True:
-                return self.SetDefaultArt(chname, mpath, arttypeEXT)
-            
+
             # local media
             if chtype <= 7 or chtype == 12:
                 self.log('FindArtwork, chtype <= 7 - Local Artwork')
@@ -205,9 +202,11 @@ class Artdownloader:
                         self.log('FindArtwork, skin.helper getpvrthumb')
                         setProperty('SkinHelper.EnablePVRThumbs','true')
                         #return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
-                        
+                
                 # lookup tvdb/tmdb artwork & download missing artwork
-                return self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
+                setImage = self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
+                if xbmcvfs.exists(setImage):
+                    return setImage
                     
             self.log('FindArtwork, SetDefaultArt')
             return self.SetDefaultArt(chname, mpath, arttypeEXT)
@@ -259,7 +258,10 @@ class Artdownloader:
 
     def DownloadMissingArt(self, type, title, year, id, arttype, chname, mpath, arttypeEXT):
         self.log('DownloadMissingArt')
-        url = ''
+        url = ''               
+        if isLowPower() == True:
+            return self.SetDefaultArt(chname, mpath, arttypeEXT)
+        
         if ENHANCED_DATA == True and id != '0':  
             url = self.findMissingArt(type, id, arttype, chname, mpath, arttypeEXT)
             if not url.startswith('http'):
@@ -423,9 +425,12 @@ class Artdownloader:
     def FindBug(self, chtype, chname):
         self.log("FindBug, chname = " + chname)
         try:
+            FindBug_Type = int(REAL_SETTINGS.getSetting('Enable_ChannelBug'))
+            
+            OEMBugFLE_ANI = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.gif')))
             OEMBugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png')))
             NEWBugFLE = xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '_mono.png')))
-            
+
             OEMDefaultBugFLE = os.path.join(IMAGES_LOC,'logo.png')
             NEWDefaultBugFLE = os.path.join(IMAGES_LOC,'icon_mono.png')
             
@@ -440,17 +445,19 @@ class Artdownloader:
             if chtype in [8,9]:
                 return 'NA.png' 
 
-            if REAL_SETTINGS.getSetting('ColorChannelBug') == 'true':
+            if FindBug_Type > 0:
+                if FindBug_Type == 3:
+                    if xbmcvfs.exists(OEMBugFLE_ANI) == True:
+                        return OEMBugFLE_ANI
+                if FindBug_Type == 2:    
+                    if xbmcvfs.exists(NEWBugFLE) == False and xbmcvfs.exists(OEMBugFLE) == True:
+                        return self.ConvertBug(OEMBugFLE, NEWBugFLE)
+                    if xbmcvfs.exists(NEWBugFLE) == True:
+                        return NEWBugFLE
+                    return NEWDefaultBugFLE
                 if xbmcvfs.exists(OEMBugFLE) == True:
                     return OEMBugFLE
                 return OEMDefaultBugFLE
-            else:
-                if xbmcvfs.exists(NEWBugFLE) == False and xbmcvfs.exists(OEMBugFLE) == True:
-                    return self.ConvertBug(OEMBugFLE, NEWBugFLE)
-                    
-                if xbmcvfs.exists(NEWBugFLE) == True:
-                    return NEWBugFLE
-                return NEWDefaultBugFLE
         except Exception,e:  
             self.log("FindBug, Failed" + str(e), xbmc.LOGERROR)
             return 'NA.png'

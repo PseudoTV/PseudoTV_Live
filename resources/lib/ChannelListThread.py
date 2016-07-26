@@ -66,7 +66,7 @@ class ChannelListThread(threading.Thread):
 
             for i in range(self.myOverlay.maxChannels):
                 if self.myOverlay.channels[i].isValid == False:
-                    while True:
+                    while not KODI_MONITOR.abortRequested():
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return
@@ -97,8 +97,8 @@ class ChannelListThread(threading.Thread):
         self.chanlist.sleepTime = 0.3
         REAL_SETTINGS.setSetting('ForceChannelReset', 'false')
         self.myOverlay.postBackgroundLoading()
-            
-        while True:
+                 
+        while not KODI_MONITOR.abortRequested():      
             DebugNotify("Background Updating...")     
             self.myOverlay.setCurrentChannel()
             
@@ -176,7 +176,7 @@ class ChannelListThread(threading.Thread):
                         modified = True
 
                     # A do-while loop for the paused state
-                    while True:
+                    while not KODI_MONITOR.abortRequested():
                         if self.myOverlay.isExiting:
                             self.log("Closing thread")
                             return

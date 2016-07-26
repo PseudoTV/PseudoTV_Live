@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -131,22 +131,17 @@ def fillGithubItems(url, ext=None, removeEXT=False):
 ##############
         
 def CleanCHname(text):
-    text = text.replace("AE", "A&E")
+    text = text.lower().strip(' ').rstrip(' ')
+    text = text.replace("ae", "a&e")
     text = text.replace(" (uk)", "")
-    text = text.replace(" (UK)", "")
     text = text.replace(" (us)", "")
-    text = text.replace(" (US)", "")
     text = text.replace(" (ca)", "")
-    text = text.replace(" (CA)", "")
     text = text.replace(" (en)", "")
-    text = text.replace(" (EN)", "")
     text = text.replace(" hd", "")
-    text = text.replace(" HD", "")
-    text = text.replace(" PVR", "")
-    text = text.replace(" LiveTV", "") 
-    text = text.replace(" USTV", "")
-    text = text.replace(" USTVnow", "")  
-    text = text.replace(" USTVNOW", "") 
+    text = text.replace(" pvr", "")
+    text = text.replace(" livetv", "") 
+    text = text.replace(" ustvnow", "")
+    text = text.replace(" ustv", "") 
     return text
   
 def CleanCHnameSeq(text):
@@ -155,7 +150,7 @@ def CleanCHnameSeq(text):
                 
 def FindLogo(chtype, chname, mediapath=None):
     log('utils: FindLogo')
-    if FIND_LOGOS == True and isLowPower() != True:
+    if FIND_LOGOS == True and isLowPower() != True and len(chname) > 0:
         try:
             FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
             if FindLogoThread.isAlive():
@@ -169,42 +164,54 @@ def FindLogo(chtype, chname, mediapath=None):
             
 def FindLogo_Thread(chtype, chname, mediapath):
     url = False
-    LogoName = chname + '.png'
-    LogoPath = os.path.join(LOGO_LOC,LogoName)
+    LogoPath     = os.path.join(LOGO_LOC,chname + '.png')
+    LogoPath_Ani = os.path.join(LOGO_LOC,chname + '.gif')
     
+    if xbmcvfs.exists(LOGO_LOC) == False:
+        xbmcvfs.mkdirs(LOGO_LOC)
+
     # if logo exists & logo override is disabled return
     if xbmcvfs.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
-        return
-    elif xbmcvfs.exists(LOGO_LOC) == False:
-        xbmcvfs.mkdirs(LOGO_LOC)
-    log("utils: FindLogo_Thread, LogoFile = " + LogoPath)
-    Cchname = CleanCHname(chname)
-    
-    url = FindLogo_URL(chtype, Cchname, mediapath)
-    if not url:
-        url = FindLogo_URL(chtype, CleanCHnameSeq(Cchname), mediapath)
-    if url:
-        GrabLogo(url, chname)
-           
+        if ANIM_LOGOS == True:
+            if xbmcvfs.exists(LogoPath_Ani) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+                return
+        else:
+            return
+    FindLogo_URL(chtype, chname, mediapath)
+
 def FindLogo_URL(chtype, chname, mediapath):
-    if not chname:
-        return
     log("utils: FindLogo_URL, chtype = " + str(chtype) + ", chname = " + chname)
-    url = ''
+    url = False
+    LogoPath = os.path.join(LOGO_LOC,chname + '.png')
+    LogoPath_Ani = os.path.join(LOGO_LOC,chname + '.gif')
+    clean_chname = CleanCHname(chname)
+    
     # thelogodb search
     if chtype in [0,1,8,9,15]:
         log("utils: FindLogo_URL, findLogodb")
-        user_region = REAL_SETTINGS.getSetting('limit_preferred_region')
-        user_type = REAL_SETTINGS.getSetting('LogoDB_Type')
-        useMix = REAL_SETTINGS.getSetting('LogoDB_Fallback') == "true"
-        useAny = REAL_SETTINGS.getSetting('LogoDB_Anymatch') == "true"
-        url = findLogodb(chname, user_region, user_type, useMix, useAny)
-
-    # github search
-    if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
-        log("utils: FindLogo_URL, findGithubLogo")
-        url = findGithubLogo(chname)
+        url = findLogodb(clean_chname)
+        if url:
+            GrabLogo(url, chname, LogoPath)
             
+    if not url:
+        # github search
+        if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
+            log("utils: FindLogo_URL, findGithubLogo")
+            url = findGithubLogo(clean_chname)
+            if url:
+                GrabLogo(url, chname, LogoPath)
+            else:
+                url = findGithubLogo(CleanCHnameSeq(clean_chname))
+                if url:
+                    GrabLogo(url, chname, LogoPath)
+
+    if ANIM_LOGOS == True:
+        if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
+            log("utils: FindLogo_URL, findGithubLogo animated")
+            url = findGithubLogo(clean_chname, animated=True) 
+            if url:
+                GrabLogo(url, chname, LogoPath_Ani) 
+    
     # local tvshow logo search
     if mediapath and chtype == 6:
         log("utils: FindLogo_URL, local TVlogo")
@@ -216,37 +223,31 @@ def FindLogo_URL(chtype, chname, mediapath):
             url = artSeries
         elif xbmcvfs.exists(artSeason): 
             url = artSeason
-    return url
+        if url:
+            GrabLogo(url, chname, LogoPath_Ani) 
     # todo google image logo search
-
-def GrabLogo(url, chname, clean=False):
-    log("utils: GrabLogo, url = " + url)        
-    LogoFile = os.path.join(LOGO_LOC, chname + '.png')
-    url = url.replace('.png/','.png').replace('.jpg/','.jpg')
-    log("utils: GrabLogo, LogoFile = " + LogoFile)
-   
-    if REAL_SETTINGS.getSetting('LogoDB_Override') == "true" or clean == True:
-        try:
-            xbmcvfs.delete(LogoFile)
-            log("utils: GrabLogo, removed old logo")   
-        except:
-            pass
     
-    if xbmcvfs.exists(LogoFile) == False:
-        log("utils: GrabLogo, grabbing new logo")   
-        if url.startswith('image'):
-            url = (unquote(url)).replace("image://",'')
-            return GrabLogo(url, chname)
-        elif url.startswith('http'):
-            return download_silent(url, LogoFile)
-        else:
-            return xbmcvfs.copy(xbmc.translatePath(url), LogoFile) 
-     
-def FindLogo_Default(chname, chpath):
-    log('utils: FindLogo_Default')
+def GrabLogo(url, chname, LogoFile=None):
+    url = url.rstrip('/')
+    if not LogoFile:
+        LogoFile = os.path.join(LOGO_LOC, chname + '.png')
+    log("utils: GrabLogo, url = " + url)
+    log("utils: GrabLogo, LogoFile = " + LogoFile)
 
-def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
+    if url.startswith('image'):
+        url = (unquote(url)).replace("image://",'')
+        GrabLogo(url, chname, LogoFile)
+    elif url.startswith('http'):
+        download_silent(url, LogoFile)
+    else:
+        xbmcvfs.copy(xbmc.translatePath(url), LogoFile) 
+
+def findLogodb(chname):
     try:
+        user_region = REAL_SETTINGS.getSetting('limit_preferred_region')
+        user_type = REAL_SETTINGS.getSetting('LogoDB_Type')
+        useMix = REAL_SETTINGS.getSetting('LogoDB_Fallback') == "true"
+        useAny = REAL_SETTINGS.getSetting('LogoDB_Anymatch') == "true"
         urlbase = 'http://www.thelogodb.com/api/json/v1/%s/tvchannel.php?s=' % LOGODB_API_KEY
         chanurl = (urlbase+chname).replace(' ','%20')
         log("utils: findLogodb, chname = " + chname + ', url = ' + chanurl)
@@ -256,7 +257,7 @@ def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
         MatchLst = []
         mixRegionMatch = []
         mixTypeMatch = []
-        image = ''
+        image = False
         for f in detail:
             try:
                 regions = re.search('"strCountry" *: *"(.*?)"', f)
@@ -269,7 +270,7 @@ def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
                         types = re.search('"'+typelst[i]+'" *: *"(.*?)"', f)
                         if types:
                             type = types.group(1)
-                            if channel.lower() == chname.lower():
+                            if channel.lower() == chname:
                                 if typelst[i] == user_type:
                                     if region.lower() == user_region.lower():
                                         MatchLst.append(type.replace('\/','/'))
@@ -302,27 +303,48 @@ def findLogodb(chname, user_region, user_type, useMix=True, useAny=True):
     except Exception,e:
         log("utils: findLogodb, Failed! " + str(e))
          
-def findGithubLogo(chname): 
-    log("utils: findGithubLogo, chname = " + chname)
-    url = ''
-    baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/%s' % (chname[0]).upper()
-    Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
-    if not Studiolst:
-        miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
-        Misclst = fillGithubItems(miscurl, '.png', removeEXT=True)
-        for i in range(len(Misclst)):
-            Studio = Misclst[i]
-            if uni((Studio).lower()) == uni(chname.lower()):
-                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
-                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
-                break
+def findGithubLogo(chname, animated=False): 
+    log("utils: findGithubLogo, chname = " + chname + ', animated = ' + str(animated))
+    url = False
+    if animated == True:
+        print (chname[0]).upper()
+        baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/_Animated/'+(chname[0]).upper()
+        Studiolst = fillGithubItems(baseurl, '.gif', removeEXT=True)
+        if not Studiolst:
+            miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/_Animated/0'
+            Misclst = fillGithubItems(miscurl, '.gif', removeEXT=True)
+            for i in range(len(Misclst)):
+                Studio = Misclst[i]
+                if uni((Studio).lower()) == uni(chname.lower()):
+                    url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/_Animated/0/'+((Studio+'.gif').replace('&','&amp;').replace(' ','%20'))
+                    log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
+                    break
+        else:
+            for i in range(len(Studiolst)):
+                Studio = Studiolst[i]
+                if uni((Studio).lower()) == uni(chname.lower()):
+                    url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/_Animated/'+(chname[0]).upper()+'/'+((Studio+'.gif').replace('&','&amp;').replace(' ','%20'))
+                    log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
+                    break
     else:
-        for i in range(len(Studiolst)):
-            Studio = Studiolst[i]
-            if uni((Studio).lower()) == uni(chname.lower()):
-                url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/'+chname[0]+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
-                log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
-                break
+        baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/'+(chname[0]).upper()
+        Studiolst = fillGithubItems(baseurl, '.png', removeEXT=True)
+        if not Studiolst:
+            miscurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/0'
+            Misclst = fillGithubItems(miscurl, '.png', removeEXT=True)
+            for i in range(len(Misclst)):
+                Studio = Misclst[i]
+                if uni((Studio).lower()) == uni(chname.lower()):
+                    url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/0/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                    log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Misclst[i]).lower())
+                    break
+        else:
+            for i in range(len(Studiolst)):
+                Studio = Studiolst[i]
+                if uni((Studio).lower()) == uni(chname.lower()):
+                    url = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Logos/master/'+(chname[0]).upper()+'/'+((Studio+'.png').replace('&','&amp;').replace(' ','%20'))
+                    log('utils: findGithubLogo, Logo Match: ' + Studio.lower() + ' = ' + (Studiolst[i]).lower())
+                    break
     return url
     
 def hasAPI(key):
@@ -971,7 +993,6 @@ def isPlugin(plugin):
         
     if addon not in chkPSS(PSS_API_KEY):
         status = xbmc.getCondVisibility('System.HasAddon(%s)' % addon) == 1
-    log("utils: plugin id = " + addon + ', Installed = ' + str(status))
     return status
 
 def videoIsPlaying():
@@ -1425,11 +1446,10 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "2")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
-            REAL_SETTINGS.setSetting('ColorChannelBug', "true")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
-            REAL_SETTINGS.setSetting('sickbeard.enabled', "false")
-            REAL_SETTINGS.setSetting('couchpotato.enabled', "false")
+            if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
+                REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
             infoDialog("Settings Optimized for Performance")
     else:
         log("utils: chkLowPower Override = True")
@@ -1672,10 +1692,11 @@ def preStart():
     log('utils: preStart')
     if chkVersion() == False:
         return
-        
+
     # chkChanges()
     chkAPIS(RSS_API_KEY)
     patchSeekbar()
+    patchFont()
     chkLowPower()
     
     # Disable long term debugging
@@ -2103,27 +2124,41 @@ def getChanPrefix(chantype, channame):
         newlabel = channame
     return newlabel
     
+def patchFont():    
+    log("utils: patchFont") 
+    if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
+        import MyFont
+        fontName = MyFont.getFont()
+        if MyFont.getSkinRes() == '1080i':
+            MyFont.addFont("PTVL10", fontName, "24")
+            MyFont.addFont("PTVL12", fontName, "25")
+            MyFont.addFont("PTVL13", fontName, "30")
+            MyFont.addFont("PTVL14", fontName, "33")
+        else:
+            MyFont.addFont("PTVL10", fontName, "14")
+            MyFont.addFont("PTVL12", fontName, "16")
+            MyFont.addFont("PTVL13", fontName, "20")
+            MyFont.addFont("PTVL14", fontName, "22")
+    
 def patchSeekbar():
-    DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
-    log("utils: patchSeekbar, DSPath = " + ascii(DSPath)) 
-    #Patch dialogseekbar to ignore OSD for PTVL.
-    found = False
-    try:
-        f = open(DSPath, "r")
-        lineLST = f.readlines()            
-        f.close()
-
-        for i in range(len(lineLST)):
-            patch = lineLST[i].find('<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
-            if patch > 0:
-                found = True
-                
-        if found == False:
-            replaceAll(DSPath,'<window>','<window>\n\t<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
-            xbmc.executebuiltin('XBMC.ReloadSkin()')
-            log('utils: patchSeekbar, Patched dialogseekbar.xml')
-    except Exception,e:
-        log('utils: patchSeekbar, Failed! ' + str(e))
+    if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
+        DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
+        log("utils: patchSeekbar, DSPath = " + ascii(DSPath)) 
+        #Patch dialogseekbar to ignore OSD for PTVL.
+        found = False
+        try:
+            lineLST = file(DSPath, "r").readlines()   
+            for i in range(len(lineLST)):
+                patch = lineLST[i].find('<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
+                if patch > 0:
+                    found = True
+                    
+            if found == False:
+                replaceAll(DSPath,'<window>','<window>\n\t<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
+                xbmc.executebuiltin('XBMC.ReloadSkin()')
+                log('utils: patchSeekbar, Patched dialogseekbar.xml')
+        except Exception,e:
+            log('utils: patchSeekbar, Failed! ' + str(e))
 
 def egTrigger_Thread(message, sender):
     log("egTrigger_Thread")

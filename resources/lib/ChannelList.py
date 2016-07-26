@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Jason Anderson, Kevin S. Graer
+#   Copyright (C) 2016 Jason Anderson, Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -160,6 +160,7 @@ class ChannelList:
         else:
             self.updateDialog = xbmcgui.DialogProgressBG()
 
+            
     #todo tmp build playlist for channel manager preview
     def previewChannel(self, channel, background=False):
         self.log('previewChannel')
@@ -174,7 +175,16 @@ class ChannelList:
             
         self.setupChannel(channel, self.background, True, False)
         if self.channels[i].isValid:
-            foundvalid = True
+            xbmc.PlayList(xbmc.PLAYLIST_MUSIC).clear()
+            self.log("previewChannel, loading playlist = " + ascii(self.channels[channel].fileName))
+            if xbmc.PlayList(xbmc.PLAYLIST_MUSIC).load(self.channels[channel].fileName) == False:
+                return
+            
+            if xbmc.getInfoLabel('Playlist.Random').lower() == 'random':
+                self.log('previewChannel, Random on.  Disabling.')
+                xbmc.PlayList(xbmc.PLAYLIST_MUSIC).unshuffle()
+            
+
             
 
     def setupList(self, background=False):
@@ -245,7 +255,6 @@ class ChannelList:
     # playlists until we don't find one
     def findMaxChannels(self):
         self.log('findMaxChannels')
-        show_busy_dialog()
         localCount = 0
         quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.maxChannels = 0
@@ -303,7 +312,6 @@ class ChannelList:
         #if local quota not met, disable quickFlip.
         if quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
-        hide_busy_dialog()
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
         
@@ -425,7 +433,6 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', _time failed! ' + str(e))
                 
         if createlist or needsreset:
-            durationCache.delete("%")
             self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
@@ -672,7 +679,7 @@ class ChannelList:
         isreverse = False
         bctType = None
         fileList = []
-        limit = MEDIA_LIMIT
+        limit = MEDIA_LIMIT #Global
         
         if chtype == 0:
             if FileAccess.exists(xbmc.translatePath(setting1)) == False:
@@ -712,15 +719,9 @@ class ChannelList:
             if setting4 == '1':
                 #RANDOM
                 israndom = True
-                isreverse = False
             elif setting4 == '2':
                 #REVERSE ORDER
-                israndom = False
                 isreverse = True
-
-            self.channels[channel - 1].isRandom = israndom
-            self.channels[channel - 1].isReverse = isreverse
-              
             # Set Media Limit
             try:
                 limit = int(setting3)
@@ -742,10 +743,12 @@ class ChannelList:
             limit = LIVETV_MAXPARSE
         elif chtype == 9:
             limit = int(INTERNETTV_MAXPARSE / INTERNETTV_DURATION)
+        elif limit == 0:
+            limit = MAX_MEDIA_LIMIT #Unlimited limit ie. '0' is a invalid limit count, and only valid for kodi xsp. Make it a real number by setting a boundary.
         else:
             limit = MEDIA_LIMIT
         self.log("makeChannelList, Using Parse-limit " + str(limit))
-
+        
         # Directory
         if chtype == 7:
             fileList = self.createDirectoryPlaylist(setting1, setting3, setting4, limit)     
@@ -838,25 +841,25 @@ class ChannelList:
 
             if self.getSmartPlaylistType(dom) == 'mixed':
                 bctType = 'mixed'
-                fileList = self.buildMixedFileList(dom, channel, MAX_MEDIA_LIMIT)
+                fileList = self.buildMixedFileList(dom, channel, limit)
                 
             elif self.getSmartPlaylistType(dom) == 'movies':
                 bctType = 'movies'
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
+                fileList = self.buildFileList(fle, channel, limit, 'video')
             
             elif self.getSmartPlaylistType(dom) in ['episodes','tvshow']:
                 bctType = 'episodes'
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
+                fileList = self.buildFileList(fle, channel, limit, 'video')
                 
             elif self.getSmartPlaylistType(dom) in ['songs','albums','artists']:
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'music')
+                fileList = self.buildFileList(fle, channel, limit, 'music')
                 
             else:
-                fileList = self.buildFileList(fle, channel, MAX_MEDIA_LIMIT, 'video')
+                fileList = self.buildFileList(fle, channel, limit, 'video')
 
             try:
                 order = dom.getElementsByTagName('order')
-                if order[0].childNodes[0].nodeValue.lower() == 'random':
+                if order[0].childNodes[0].nodeValue.lower() == 'random' and self.channels[channel - 1].mode == 8:
                     israndom = True
             except Exception,e:
                 pass
@@ -883,10 +886,10 @@ class ChannelList:
     
         if israndom:
             random.shuffle(fileList)
-            msg = 'randomizing' 
+            msg = 'random' 
         elif isreverse:
             fileList.reverse()
-            msg = 'reversing'
+            msg = 'reverse'
         self.log("makeChannelList, Using Media Sort " + msg)
         self.channels[channel - 1].isRandom = israndom
         self.channels[channel - 1].isReverse = isreverse
@@ -977,15 +980,16 @@ class ChannelList:
             
         
     def createNetworkPlaylist(self, network, setting2):
-        sort = 'random'    
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'network_' + '_' + network + '.xsp')
+
         try:
-            if int(setting2) & MODE_ORDERAIRDATE > 0:
-                sort = 'episode'
-        except Exception,e:
-            pass
-        
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'network_' + '_' + network + '_' + sort + '.xsp')
-        try:
+
+
+
+
+
+
+
             fle = FileAccess.open(flename, "w")
         except:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
@@ -995,7 +999,7 @@ class ChannelList:
         fle.write('    <rule field="studio" operator="is">\n')        
         fle.write('        <value>' + self.cleanString(network) + '</value>\n')
         fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
+        self.writeXSPFooter(fle, 0, "random")
         fle.close()
         return flename
 
@@ -1003,14 +1007,14 @@ class ChannelList:
     def createShowPlaylist(self, show, setting2):
         show = show.split('|')
         chname = ' & '.join(show)
-        sort = 'random'   
-        try:
-            if int(setting2) & MODE_ORDERAIRDATE > 0:
-                sort = 'episode'
-        except Exception,e:
-            pass
 
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + chname + '_' + sort + '.xsp')
+
+
+
+
+
+
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + chname + '.xsp')
         
         try:
             fle = FileAccess.open(flename, "w")
@@ -1025,7 +1029,7 @@ class ChannelList:
             fle.write('        <value>' + self.cleanString((show[i])) + '</value>\n')
         fle.write('    </rule>\n')
         
-        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
+        self.writeXSPFooter(fle, 0, "random")
         fle.close()
         return flename
 
@@ -1056,15 +1060,15 @@ class ChannelList:
 
         
     def createGenreMixedPlaylist(self, genre, setting2):
-        sort = 'random'
-        try:
-            setting = int(setting2)
-            if setting & MODE_ORDERAIRDATE > 0:
-                sort = 'episode'
-        except Exception,e:
-            pass
 
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '_' + sort + '.xsp')
+
+
+
+
+
+
+
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '.xsp')
         
         try:
             fle = FileAccess.open(flename, "w")
@@ -1076,21 +1080,21 @@ class ChannelList:
         self.writeXSPHeader(fle, 'mixed', self.getChannelName(5, self.settingChannel, genre))
         fle.write('    <rule field="playlist" operator="is">' + epname + '</rule>\n')
         fle.write('    <rule field="playlist" operator="is">' + moname + '</rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
+        self.writeXSPFooter(fle, 0, "random")
         fle.close()
         return flename
 
 
     def createGenrePlaylist(self, pltype, chtype, genre, setting2=None):  
-        sort = 'random'    
-        try:
-            setting = int(setting2)
-            if setting & MODE_ORDERAIRDATE > 0:
-                sort = 'episode'
-        except Exception,e:
-            pass
-        
-        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '_' + sort + '.xsp')
+
+
+
+
+
+
+
+
+        flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
         try:
             fle = FileAccess.open(flename, "w")
         except Exception,e:
@@ -1101,7 +1105,7 @@ class ChannelList:
         fle.write('    <rule field="genre" operator="is">\n')
         fle.write('        <value>' + self.cleanString(genre) + '</value>\n')
         fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, sort)
+        self.writeXSPFooter(fle, 0, "random")
         fle.close()
         return flename
 
@@ -1118,7 +1122,7 @@ class ChannelList:
         fle.write('    <rule field="studio" operator="is">\n')
         fle.write('        <value>' + self.cleanString(studio) + '</value>\n')
         fle.write('    </rule>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "random")
+        self.writeXSPFooter(fle, 0, "random")
         fle.close()
         return flename
         
@@ -1139,7 +1143,7 @@ class ChannelList:
         fle.write('        <value>0</value>\n')
         fle.write('    </rule>\n')
         fle.write('    <group>none</group>\n')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded", "descending")
+        self.writeXSPFooter(fle, 0, "dateadded", "descending")
         fle.close()
         return flename
         
@@ -1153,7 +1157,7 @@ class ChannelList:
             return ''
 
         self.writeXSPHeader(fle, "episodes", 'Recently Added TV', 'all')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded", "descending")
+        self.writeXSPFooter(fle, 0, "dateadded", "descending")
         fle.close()
         return flename
         
@@ -1167,7 +1171,7 @@ class ChannelList:
             return ''
 
         self.writeXSPHeader(fle, "movies", 'Recently Added Movies', 'all')
-        self.writeXSPFooter(fle, MEDIA_LIMIT, "dateadded", "descending")
+        self.writeXSPFooter(fle, 0, "dateadded", "descending")
         fle.close()
         return flename
         
@@ -4817,7 +4821,7 @@ class ChannelList:
         
         
     def getFileList_NEW(self, file_detail, channel, limit, excludeLST=[]):
-        self.log("getFileList_NEW")
+        self.log("getFileList_NEW, channel = " + str(channel) + " ,limit = " + str(limit) + " ,excludeLST = " + str(excludeLST))
         fileList = []
         seasoneplist = []
         dirlimit = limit
@@ -4842,7 +4846,7 @@ class ChannelList:
                 
                 if files:
                     if not files.group(1).startswith(("plugin", "upnp")) and (files.group(1).endswith("/") or files.group(1).endswith("\\")):
-                        fileList.extend(self.buildFileList(files.group(1), channel, limit))
+                        fileList.extend(self.getFileList(files.group(1), channel, limit, excludeLST))
                     else:
                         f = self.runActions(RULES_ACTION_JSON, channel, f)
                         filetypes = re.search('"filetype" *: *"(.*?)",', f)
@@ -4867,7 +4871,7 @@ class ChannelList:
                                     # If duration, else 0
                                     try:
                                         dur = int(duration.group(1))
-                                        self.log('getFileList_NEW, using duration')
+                                        self.log('getFileList_NEW, using duration = ' + str(dur))
                                     except Exception,e:
                                         self.log('getFileList_NEW, no duration found! ' + str(e))
                                         dur = 0
@@ -4876,21 +4880,21 @@ class ChannelList:
                                         # Less accurate duration
                                         try:
                                             dur = int(runtime.group(1))
-                                            self.log('getFileList_NEW, using runtime')
+                                            self.log('getFileList_NEW, using runtime = ' + str(dur))
                                         except Exception,e:
                                             self.log('getFileList_NEW, no runtime found! ' + str(e))
                                             dur = 0
 
-                                    if dur == 0 and isLowPower() == False:
+                                    if dur == 0:
                                         self.log('getFileList_NEW, parsing for accurate duration')
-                                        if not file.startswith(("plugin", "upnp")):
+                                        if not file.startswith(("plugin", "upnp")) and isLowPower() == False:
                                             dur = self.getDuration(file)
                                             
                                     if dur == 0 and (file.startswith(("plugin", "upnp")) or file[-4:].lower() == 'strm'):
                                         #add a static duration rather then ignore content.
                                         self.log('getFileList_NEW, plugin/upnp/strm setting default duration')
                                         dur = 3600
-                                    
+                                        
                                     # Remove any file types that we don't want (ex. IceLibrary, ie. Strms)
                                     if self.incIceLibrary == False and file[-4:].lower() == 'strm':
                                         self.log("getFileList_NEW, ignoring strm")
@@ -5073,7 +5077,7 @@ class ChannelList:
                                                 file = ((file.split('PlayMedia("'))[1]).replace('")','')
                                             except:
                                                 pass      
-  
+
                                         # convert minutes to seconds when needed / correct local tvshow runtimes
                                         if file.startswith(("plugin", "upnp")):
                                             if (len(str(dur)) < 3 or len(str(dur)) > 5):
@@ -5115,11 +5119,8 @@ class ChannelList:
             except Exception,e:
                 self.log('getFileList_NEW, failed...' + str(e))
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
-        
-        if self.channels[channel - 1].isRandom == True:
-            random.shuffle(fileList)
-            
         if self.channels[channel - 1].mode & MODE_ORDERAIRDATE > 0:
+            self.log('getFileList_NEW, MODE_ORDERAIRDATE')
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
             for seepitem in seasoneplist:
@@ -5130,8 +5131,8 @@ class ChannelList:
             json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"stop"},"id":1}')
             self.sendJSON(json_query);  
                                                                               
-        self.log("getFileList_NEW, fileList cnt = " + str(len(fileList)))
-        
+        self.log("getFileList_NEW, fileList cnt = " + str(len(fileList)))    
+
         # cleanup  
         del seasoneplist[:]                 
         return fileList

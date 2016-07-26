@@ -60,4 +60,4 @@ if AUTOSTART_TIMER != 0:
         # if xbmc.getCondVisibility('Window.IsActive(busydialog)') == 1:
             # xbmc.executebuiltin('Dialog.Close(busydialog)')
         # if xbmc.getCondVisibility('Window.IsActive(infodialog)') == 1:
-            # xbmc.executebuiltin('Dialog.Close(infodialog)')     
+            # xbmc.executebuiltin('Dialog.Close(infodialog)')

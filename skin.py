@@ -30,7 +30,7 @@ try:
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
     pass
-    
+
 class SkinManager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         if getProperty("PseudoTVSkinRunning") != "True":

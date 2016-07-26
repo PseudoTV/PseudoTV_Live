@@ -24,7 +24,7 @@
             <top>205</top>
             <width>1280</width>
             <height>40</height>
-            <font>font13_title</font>
+            <font>PTVL13</font>
             <label>Skin Manager - PseudoTV Live</label>
             <align>center</align>
             <aligny>center</aligny>
@@ -132,7 +132,7 @@
             <top>955</top>      
             <width>1024</width>
             <height>25</height>
-            <font>font13_title</font>
+            <font>PTVL13</font>
             <align>center</align>
             <aligny>center</aligny>
             <label>[COLOR=FFFFFFFF]$INFO[Container(500).ListItem.Label][/COLOR]</label>
@@ -143,7 +143,7 @@
             <top>990</top>      
             <width>1024</width>
             <height>25</height>
-            <font>font10</font>
+            <font>PTVL10</font>
             <align>center</align>
             <aligny>center</aligny>
             <label>[COLOR=C0C0C0C0]$INFO[Container(500).ListItem.Property(PTVL.SKINAUTHOR)] $INFO[Container(500).ListItem.Property(PTVL.SKINVERSION)] [/COLOR]</label>

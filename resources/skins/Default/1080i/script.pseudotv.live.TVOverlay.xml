@@ -17,7 +17,7 @@
     <onload>SetProperty(EPG.shadowColor,0xFF000000,10000)</onload>
     <onload>SetProperty(EPG.focused_textColor,0xFF0297eb,10000)</onload>
     <onload>SetProperty(EPG.textColor,0xFFFFFFFF,10000)</onload>
-    <onload>SetProperty(EPG.textFont,font14,10000)</onload>  
+    <onload>SetProperty(EPG.textFont,PTVL12,10000)</onload>  
     <onload condition="System.HasAddon(script.extendedinfo)">RunScript(script.extendedinfo,info=trendingshows)</onload>
     <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload>
     <!-- Overlay controls -->
@@ -40,7 +40,7 @@
             <width min="5" max="430">auto</width>
             <height>30</height>
             <label>$INFO[System.Time] | $INFO[Window(weather).Property(Current.Temperature)] $INFO[System.TemperatureUnits]</label>
-            <font>font30</font>
+            <font>PTVL14</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
@@ -62,7 +62,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font14</font>
+                <font>PTVL14</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
@@ -70,7 +70,7 @@
             <control type="label">
                 <width>1880</width>
                 <height>55</height>
-                <font>font12</font>
+                <font>PTVL10</font>
                 <aligny>center</aligny>
                 <align>left</align>
                 <scroll>True</scroll>
@@ -90,7 +90,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font14</font>
+                <font>PTVL10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(10000).Property(RSS.FEED))</visible>
@@ -128,7 +128,7 @@
                         <height>75</height>
                         <description>StarOver Label</description>
                         <label>To Start Over | Press </label>
-                        <font>font14</font>
+                        <font>PTVL12</font>
                         <align>center</align>
                         <aligny>center</aligny>
                         <textcolor>FFFFFFFF</textcolor>
@@ -191,7 +191,7 @@
                 <description>Show Title Label</description>
                 <width min="5" max="1400">auto</width>
                 <height>30</height>
-                <font>font14</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <scroll>true</scroll>
@@ -247,7 +247,7 @@
                 <posy>235r</posy>
                 <width>165</width>
                 <height>30</height>
-                <font>font12</font>
+                <font>PTVL10</font>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
@@ -272,7 +272,7 @@
                     <wrapmultiline>true</wrapmultiline>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <font>font12</font>
+                    <font>PTVL12</font>
                     <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)] • [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
             </control> 
@@ -316,7 +316,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -332,7 +332,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -348,7 +348,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -364,7 +364,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -410,7 +410,7 @@
                 <description>Show Title Label</description>
                 <width min="5" max="1100">auto</width>
                 <height>30</height>
-                <font>font14</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <scroll>true</scroll>
@@ -469,7 +469,7 @@
                 <height>30</height>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
+                <font>PTVL10</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>$INFO[Player.TimeRemaining]</label>
@@ -492,7 +492,7 @@
                     <wrapmultiline>true</wrapmultiline>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <font>font12</font>
+                    <font>PTVL12</font>
                     <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)] • [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
             </control>
@@ -511,7 +511,7 @@
                     <wrapmultiline>true</wrapmultiline>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <label>$INFO[Window(10000).Property(OVERLAY.Genre),Genre: ] $INFO[VideoPlayer.Premiered,Premiered ] $INFO[VideoPlayer.Studio,on ]</label>
                 </control> 
             </control>  
@@ -659,7 +659,7 @@
                     <label>Coming Up Next</label>
                     <label>Coming Up Next</label>
                     <label>$INFO[Window(10000).Property(OVERLAY.NEXT.Title)]</label>
-                    <font>font16</font>
+                    <font>PTVL13</font>
                     <scroll>false</scroll>
                     <scrollout>false</scrollout>
                     <textcolor>FFFFFFFF</textcolor>
@@ -752,7 +752,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -767,7 +767,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -782,7 +782,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -797,7 +797,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -812,7 +812,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -827,7 +827,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -842,7 +842,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -857,7 +857,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -872,7 +872,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -887,7 +887,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -902,7 +902,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -917,7 +917,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <texturefocus>pstvlButtonFocus.png</texturefocus>
@@ -961,11 +961,19 @@
                     <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
                     <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
                 </control>
+                <control type="image">
+                    <description>Busy animation</description>
+                    <width>1280</width>
+                    <height>50</height>
+                    <animation effect="rotate" condition="true" start="0" end="360" loop="true" time="1000" center="auto">Conditional</animation>
+                    <texture colordiffuse="FF0297eb">spinner.gif</texture>
+                    <aspectratio>keep</aspectratio>
+                </control>
                 <control type="label">
                     <description>Loading Background Text</description>
                     <width>1280</width>
                     <height>40</height>
-                    <font>font30</font>
+                    <font>PTVL14</font>
                     <align>center</align>
                     <aligny>center</aligny>
                     <textcolor>FFFFFFFF</textcolor>
@@ -1019,7 +1027,7 @@
                     <posy>700</posy>
                     <width>1980</width>
                     <height min="40" max="80">auto</height>
-                    <font>font30</font>
+                    <font>PTVL14</font>
                     <aligny>center</aligny>
                     <align>center</align>
                     <scroll>True</scroll>
@@ -1037,7 +1045,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL12</font>
                     <textcolor>C0C0C0C0</textcolor>
                     <focusedcolor>FFFFFFFF</focusedcolor> 
                     <shadowcolor>ff000000</shadowcolor>
@@ -1056,7 +1064,7 @@
                     <label></label>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <font>font12</font>
+                    <font>PTVL12</font>
                     <textcolor>C0C0C0C0</textcolor>
                     <focusedcolor>FFFFFFFF</focusedcolor> 
                     <shadowcolor>ff000000</shadowcolor>

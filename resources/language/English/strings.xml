@@ -62,7 +62,8 @@
     <string id="34045">Run Service Every (hours)</string>
     <string id="34446">Run During Playback?</string>
     <string id="30225">Channel Logo Folder</string>  
-    <string id="34547">Find Missing Logos</string> 
+    <string id="34547">Find Missing Logos</string>
+    <string id="34551">Use Animated Logos (When avail.)</string> 
     <string id="34548">Allow Multi-Region Fallbacks</string> 
     <string id="34549">Allow Any-Image Fallbacks</string> 
     <string id="34550">Override Existing Logos</string> 

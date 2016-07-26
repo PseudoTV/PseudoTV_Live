@@ -51,7 +51,7 @@
                 <description>Static VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
-                <font>font12</font>
+                <font>PTVL10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
@@ -82,7 +82,7 @@
                 <description>VideoWindow Box Label</description>
                 <width>360</width>       
                 <height>24</height>
-                <font>font12</font>
+                <font>PTVL10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
@@ -117,7 +117,7 @@
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>C0C0C0C0</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
@@ -156,7 +156,7 @@
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
@@ -195,7 +195,7 @@
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                     <align>center</align>
@@ -234,7 +234,7 @@
                 <control type="label">
                     <width>360</width>       
                     <height>24</height>
-                    <font>font12</font>
+                    <font>PTVL10</font>
                     <align>center</align>
                     <aligny>center</aligny>
                     <label>$INFO[Window(Home).Property(NextAired.1.Label)]</label>
@@ -282,7 +282,7 @@
                 <width>377</width>
                 <height>40</height>
                 <label>EPG</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -295,7 +295,7 @@
                 <width>377</width>
                 <height>40</height>
                 <label>DVR</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -308,7 +308,7 @@
                 <width>376</width>
                 <height>40</height>
                 <label>VOD</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -321,7 +321,7 @@
                 <width>378</width>
                 <height>40</height>
                 <label>APP</label>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <align>center</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -350,7 +350,7 @@
                 <description>PTVL RSS Feed Label</description>  
                 <width>370</width>
                 <height>35</height>
-                <font>font10</font>
+                <font>PTVL10</font>
                 <aligny>center</aligny>
                 <align>left</align>
                 <scroll>true</scroll>
@@ -375,7 +375,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font10</font>
+                <font>PTVL10</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>Control.IsVisible(505)</visible>
@@ -391,7 +391,7 @@
             <align>center</align>
             <aligny>center</aligny>
             <label>Current Date</label>
-            <font>font12</font>
+            <font>PTVL10</font>
             <textcolor>FFFFFFFF</textcolor>
             <shadowcolor>ff000000</shadowcolor>
         </control>
@@ -413,7 +413,7 @@
             <width min="155" max="400">auto</width>
             <height>38</height>
             <label>Time 1</label>
-            <font>font12</font>
+            <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
@@ -427,7 +427,7 @@
             <width min="150" max="400">auto</width>
             <height>38</height>
             <label>Time 2</label>
-            <font>font12</font>
+            <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
@@ -441,7 +441,7 @@
             <width min="150" max="400">auto</width>
             <height>38</height>
             <label>Time 3</label>
-            <font>font12</font>
+            <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
@@ -483,7 +483,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -494,7 +494,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -505,7 +505,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -516,7 +516,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -527,7 +527,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -538,7 +538,7 @@
                 <width>75</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>right</align>
                 <aligny>center</aligny>
                 <textcolor>FFFFFFFF</textcolor>
@@ -557,7 +557,7 @@
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -568,7 +568,7 @@
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -579,7 +579,7 @@
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -590,7 +590,7 @@
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -601,7 +601,7 @@
                 <label>|</label>
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -612,7 +612,7 @@
                 <label>|</label> 
                 <align>center</align>
                 <aligny>center</aligny>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
             </control>
@@ -628,7 +628,7 @@
                 <width>278</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -649,7 +649,7 @@
                 <width>278</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -670,7 +670,7 @@
                 <width>278</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -691,7 +691,7 @@
                 <width>411</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -712,7 +712,7 @@
                 <width>278</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -733,7 +733,7 @@
                 <width>278</width>
                 <height>75</height>
                 <label></label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <align>left</align>
                 <aligny>center</aligny>
                 <textcolor>FF0297eb</textcolor>
@@ -824,7 +824,7 @@
             <fadetime>250</fadetime>
             <textcolor>FFFFFFFF</textcolor>
             <shadowcolor>ff000000</shadowcolor>
-            <font>font12</font>
+            <font>PTVL10</font>
             <align>center</align>
             <aligny>center</aligny>
         </control>
@@ -889,9 +889,9 @@
             <itemgap>5</itemgap>
             <control type="label">
                 <description>Show Title Label</description>
-                <width min="5" max="1100">auto</width>
+                <width min="5" max="1400">auto</width>
                 <height>30</height>
-                <font>font14</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <scroll>true</scroll>
@@ -958,7 +958,7 @@
                 <wrapmultiline>true</wrapmultiline>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <label>$INFO[Window(10000).Property(EPG.Description)]</label>
             </control> 
         </control> 
@@ -976,7 +976,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(Home).Property(NextAired.1.Label))</visible>
@@ -984,7 +984,7 @@
             <control type="label">
                 <width>1880</width>
                 <height>55</height>
-                <font>font12</font>
+                <font>PTVL12</font>
                 <aligny>center</aligny>
                 <align>left</align>
                 <scroll>True</scroll>
@@ -1004,7 +1004,7 @@
                 <align>center</align>
                 <aligny>center</aligny>
                 <label>|</label>
-                <font>font14</font>
+                <font>PTVL12</font>
                 <textcolor>C0C0C0C0</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
                 <visible>!IsEmpty(Window(Home).Property(NextAired.1.Label))</visible>

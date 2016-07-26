@@ -1,3 +1,8 @@
+[*] Custom skin fonts *Thanks Steveb
+[*] Tweaked internal timings, corrected various bugs.
+[*] Added automatic animated logo download when enabled.
+[*] Added support for animated gif TV Logos & Channel Bugs. New options added under "Visual" settings tab.
+    Ex. http://static.oprah.com/css/OWN_2/global_assets/logo-owntv-gold-anim.gif
 [*] "OnNow" Menu temporarily disabled
 [*] Proper EPG/Overlay BCT content handling.
 [*] Improved Playonbrowser plugin support, requires v.1.0.13. LiveTV tested and working with Xfinity and TWC.

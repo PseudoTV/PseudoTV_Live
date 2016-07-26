@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -57,7 +57,7 @@ try:
             self.textcolor = "FFFFFFFF"
             self.focusedcolor = "FF7d7d7d"
             self.shadowcolor = "FF000000"
-            self.textfont  = "font14"
+            self.textfont  = "PTVL12"
             self.channelbugcolor = CHANBUG_COLOR
             self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
             self.timeButtonBar = MEDIA_LOC + TIME_BAR
@@ -107,7 +107,7 @@ try:
             self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
             self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
             
-            self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='font12', focusTexture=self.textureButtonFocusAlt, noFocusTexture=self.timeButtonNoFocus)
+            self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='PTVL10', focusTexture=self.textureButtonFocusAlt, noFocusTexture=self.timeButtonNoFocus)
             self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
             self.addControl(self.currentTime)
             self.addControl(self.currentTimeBar)
@@ -1134,8 +1134,7 @@ try:
             
             
         def setMediaInfo(self, chtype, chname, mediapath, newchan, plpos):
-            self.log('setMediaInfo')
-            self.MyOverlayWindow.clearProp('EPG')  
+            self.log('setMediaInfo') 
             mpath = getMpath(mediapath)
             if plpos == -999:
                 if len(getProperty("OVERLAY.OnDemand_tmpstr")) > 0:
@@ -1390,7 +1389,7 @@ try:
             self.addControl(self.contextButtonC)
             self.contextButtonF = xbmcgui.ControlButton(ChanButtonx-4, ChanButtony, ChanButtonw+8, ChanButtonh, '[ '+getProperty("EPG.Title")+' ]', focusTexture=self.ButtonContextFocus, noFocusTexture=self.ButtonContextFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor)
             self.addControl(self.contextButtonF)
-            self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, self.textfont, self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
+            self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, 'PTVL10', self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
             self.addControl(self.contextButton)
             self.ContextList = ['More Info','Find Similar','Record Show','Set Reminder']
             if self.MyOverlayWindow.isReminder(getProperty("EPG.Chtype"), getProperty("EPG.Chnum"), getProperty("EPG.TimeStamp"), pType='EPG') == True:

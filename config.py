@@ -32,7 +32,7 @@ try:
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
     pass
-     
+
 class ConfigWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
@@ -1517,6 +1517,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         
     def setChname(self, name, channel=None):
+        name = name.strip(' ').rstrip(' ')
         if not channel:
             channel = self.channel
         self.log("setChname, channel = " + str(channel))

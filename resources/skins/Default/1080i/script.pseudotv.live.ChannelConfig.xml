@@ -24,7 +24,7 @@
             <top>205</top>
             <width>1280</width>
             <height>40</height>
-            <font>font13_title</font>
+            <font>PTVL13</font>
             <label>Channel Manager - PseudoTV Live</label>
             <align>center</align>
             <aligny>center</aligny>
@@ -38,7 +38,7 @@
                 <left>40</left>
                 <width>720</width>
                 <height>35</height>
-                <font>font13_title</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>black</shadowcolor>
                 <align>left</align>
@@ -49,7 +49,7 @@
                 <left>40</left>
                 <width>880</width>
                 <height>35</height>
-                <font>font13_title</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>black</shadowcolor>
                 <align>right</align>
@@ -176,7 +176,7 @@
                     <onleft>102</onleft>
                     <onright>102</onright>
                     <aspectratio>keep</aspectratio>
-                    <font>font10</font>
+                    <font>PTVL10</font>
                     <textcolor>C0C0C0C0</textcolor>
                     <focusedcolor>FFFFFFFF</focusedcolor>
                     <align>center</align>
@@ -298,7 +298,7 @@
                 <top>20</top>
                 <width>640</width>
                 <height>35</height>               
-                <font>font13_title</font>
+                <font>PTVL13</font>
                 <textcolor>FF0297eb</textcolor>
                 <shadowcolor>black</shadowcolor>
                 <aligny>center</aligny>
@@ -438,7 +438,7 @@
                     <top>150</top>
                     <width>1140</width>
                     <height>35</height>               
-                    <font>font13</font>
+                    <font>PTVL13</font>
                     <radiowidth>35</radiowidth>
                     <radioheight>35</radioheight>
                     <texturefocus border="5">pstvlButtonFocusAlt.png</texturefocus>
@@ -459,7 +459,7 @@
                     <top>195</top>
                     <width>1140</width>
                     <height>35</height>               
-                    <font>font13</font>
+                    <font>PTVL13</font>
                     <label></label>
                     <textcolor>C0C0C0C0</textcolor>
                     <focusedcolor>FFFFFFFF</focusedcolor>

@@ -25,7 +25,7 @@
             <top>295</top>
             <width>880</width>
             <height>40</height>
-            <font>font13_title</font>
+            <font>PTVL13</font>
             <label>Advanced Channel Rules - PseudoTV Live</label>
             <align>center</align>
             <aligny>center</aligny>
@@ -256,7 +256,7 @@
                         <top>55</top>
                         <width>288</width>
                         <height>40</height>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>FF0297eb</textcolor>
                         <shadowcolor>black</shadowcolor>
                         <align>center</align>
@@ -272,7 +272,7 @@
                         <onup>131</onup>
                         <ondown>162</ondown>
                         <onright>161</onright>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
@@ -286,7 +286,7 @@
                         <top>55</top>
                         <width>288</width>
                         <height>40</height>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>FF0297eb</textcolor>
                         <shadowcolor>black</shadowcolor>
                         <align>center</align>
@@ -303,7 +303,7 @@
                         <ondown>163</ondown>
                         <onleft>160</onleft>
                         <onright>162</onright>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
@@ -317,7 +317,7 @@
                         <top>145</top>
                         <width>288</width>
                         <height>40</height>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>FF0297eb</textcolor>
                         <shadowcolor>black</shadowcolor>
                         <align>center</align>
@@ -333,7 +333,7 @@
                         <onup>160</onup>
                         <onright>163</onright>
                         <onleft>161</onleft>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
@@ -347,7 +347,7 @@
                         <top>145</top>
                         <width>288</width>
                         <height>40</height>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>FF0297eb</textcolor>
                         <shadowcolor>black</shadowcolor>
                         <align>center</align>
@@ -362,7 +362,7 @@
                         <align>center</align>
                         <onup>161</onup>
                         <onleft>162</onleft>
-                        <font>font12</font>
+                        <font>PTVL12</font>
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>

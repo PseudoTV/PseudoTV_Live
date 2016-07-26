@@ -212,13 +212,7 @@ if xbmcvfs.exists(xbmc.translatePath(os.path.join('special://','skin','720p','')
     XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','720p',''))
 else:
     XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','1080i',''))
-    
-# Find XBMC Skin path
-if xbmcvfs.exists(xbmc.translatePath(os.path.join('special://','skin','720p',''))):
-    XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','720p',''))
-else:
-    XBMC_SKIN_LOC = xbmc.translatePath(os.path.join('special://','skin','1080i',''))
-    
+
 # Find PTVL selected skin folder 720 or 1080i ?
 if xbmcvfs.exists(os.path.join(PTVL_SKIN_LOC, Skin_Select, '720p','')):
     PTVL_SKIN_SELECT = xbmc.translatePath(os.path.join(PTVL_SKIN_LOC, Skin_Select, '720p', ''))
@@ -230,8 +224,10 @@ ADDON_SETTINGS = Settings.Settings()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true"
+ANIM_LOGOS = REAL_SETTINGS.getSetting('Enable_AnimLogo') == "true" 
 CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
-    
+KODI_MONITOR = xbmc.Monitor()
+
 # Settings2 filepaths
 SETTINGS_FLE = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'settings2.xml'))
 SETTINGS_FLE_DEFAULT_SIZE = 100 #bytes
