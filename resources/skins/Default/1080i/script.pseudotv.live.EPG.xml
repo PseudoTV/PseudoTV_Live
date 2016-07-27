@@ -5,9 +5,9 @@
     <onunload>SetProperty(PTVL.EPG_Opened,false,10000)</onunload> 
     <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onload condition="Control.IsVisible(9000)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
+    <onunload>ActivateWindow(12005)</onunload>
     <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload>
     <onload condition="!Control.IsVisible(9000) + System.HasAddon(script.extendedinfo)">RunScript(script.extendedinfo,info=trendingshows)</onload>
-    <onunload>ActivateWindow(12005)</onunload>
     <zorder>1</zorder>
     <coordinates>
         <system>1</system>
@@ -900,7 +900,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(EPG.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(EPG.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(EPG.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(EPG.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(EPG.Title)][COLOR=C0C0C0C0][B] Â· [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(EPG.SEtitle)][/COLOR]</label>
             </control>
         </control>
         <control type="grouplist">

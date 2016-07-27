@@ -200,7 +200,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">             
                 <control type="image">
@@ -245,7 +245,7 @@
                 <description>Info Progressbar Time Button</description>
                 <posx>430</posx><!-- #should match 5007 -->
                 <posy>235r</posy>
-                <width>165</width>
+                <width>170</width>
                 <height>30</height>
                 <font>PTVL10</font>
                 <textcolor>FFFFFFFF</textcolor>
@@ -419,7 +419,7 @@
                 <wrapmultiline>false</wrapmultiline>
                 <scrollspeed>40</scrollspeed>
                 <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] • [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
             </control>
             <control type="group">            
                 <control type="image">
@@ -465,7 +465,7 @@
                 <description>MoreInfo Progressbar Time Button</description>
                 <posx>430</posx><!-- #should match 5004 -->
                 <posy>435r</posy>
-                <width>165</width>
+                <width>170</width>
                 <height>30</height>
                 <textcolor>FFFFFFFF</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
@@ -966,7 +966,7 @@
                     <width>1280</width>
                     <height>50</height>
                     <animation effect="rotate" condition="true" start="0" end="360" loop="true" time="1000" center="auto">Conditional</animation>
-                    <texture colordiffuse="FF0297eb">spinner.gif</texture>
+                    <texture flipx="true" colordiffuse="FF0297eb">spinner.gif</texture>
                     <aspectratio>keep</aspectratio>
                 </control>
                 <control type="label">

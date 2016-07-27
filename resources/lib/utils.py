@@ -307,7 +307,6 @@ def findGithubLogo(chname, animated=False):
     log("utils: findGithubLogo, chname = " + chname + ', animated = ' + str(animated))
     url = False
     if animated == True:
-        print (chname[0]).upper()
         baseurl='https://github.com/PseudoTV/PseudoTV_Logos/tree/master/_Animated/'+(chname[0]).upper()
         Studiolst = fillGithubItems(baseurl, '.gif', removeEXT=True)
         if not Studiolst:
@@ -1413,6 +1412,10 @@ def isRepoInstalled():
     log('utils: isRepoInstalled = ' + str(repo))
     return repo
 
+def chkKodiSkin():
+    if xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
+        okDialog("Its recommended you don't use Kodi's"+' "Default skin", Please select another Kodi Skin for the best viewing experience.')
+    
 def chkAutoplay(silent=False):
     log('utils: chkAutoplay')
     fle = xbmc.translatePath("special://profile/guisettings.xml")
@@ -1603,6 +1606,7 @@ def HandleUpgrade():
     
     # Check if autoplay playlist is enabled
     chkAutoplay()
+    chkKodiSkin()
     
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
