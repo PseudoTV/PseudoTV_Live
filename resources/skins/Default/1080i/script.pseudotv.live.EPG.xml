@@ -393,7 +393,6 @@
             <label>Current Date</label>
             <font>PTVL10</font>
             <textcolor>FFFFFFFF</textcolor>
-            <shadowcolor>ff000000</shadowcolor>
         </control>
         <control type="image" id="5002">
             <description>Left Arrow</description>
@@ -405,47 +404,71 @@
             <colordiffuse>C0C0C0C0</colordiffuse>
             <texture>left.png</texture>  
         </control> 
-        <!--Time Bar 1/3-->
+        <!-- Dynamic Time Bar-->
+        <control type="label" id="5006">
+            <description>Timebar Current Time Button</description>
+            <posx>420</posx>
+            <posy>300</posy>
+            <width min="155" max="200">auto</width>
+            <height>38</height>
+            <fadetime>250</fadetime>
+            <textcolor>FFFFFFFF</textcolor>
+            <font>PTVL10</font>
+            <align>center</align>
+            <aligny>center</aligny>
+        </control>
+        <!--Time Bar 1/4-->
         <control type="label" id="101">
             <description>Time Left Label</description>
             <posx>420</posx>
             <posy>300</posy>
-            <width min="155" max="400">auto</width>
+            <width min="155" max="200">auto</width>
             <height>38</height>
             <label>Time 1</label>
             <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
         </control>
-        <!--Time Bar 2/3-->
+        <!--Time Bar 2/4-->
         <control type="label" id="102">
             <description>Time Middle Label</description>
             <posx>915</posx>
             <posy>300</posy>
-            <width min="150" max="400">auto</width>
+            <width min="155" max="200">auto</width>
             <height>38</height>
             <label>Time 2</label>
             <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
         </control>
-        <!--Time Bar 3/3-->
+        <!--Time Bar 3/4-->
         <control type="label" id="103">
-            <description>Time Right Label</description>
-            <posx>1410</posx>
+            <description>Time Middle Label</description>
+            <posx>1420</posx>
             <posy>300</posy>
-            <width min="150" max="400">auto</width>
+            <width min="155" max="200">auto</width>
             <height>38</height>
             <label>Time 3</label>
             <font>PTVL10</font>
             <align>left</align>
             <aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor>
-            <shadowcolor>ff000000</shadowcolor>
+        </control>
+        <!--Time Bar 4/4-->
+        <control type="label" id="104">
+            <description>Time Right Label</description>
+            <posx>1900</posx>
+            <posy>300</posy>
+            <width min="155" max="200">auto</width>
+            <height>38</height>
+            <label>Time 4</label>
+            <font>PTVL10</font>
+            <align>right</align>
+            <aligny>center</aligny>
+            <textcolor>FFFFFFFF</textcolor>
+            <visible>false</visible>
         </control>
         <control type="image" id="5003">
             <description>Right Arrow</description>
@@ -815,19 +838,6 @@
             <texture>pstvlTimeFadeF.png</texture>
             <visible>false</visible>
         </control>  
-        <control type="label" id="5006">
-            <description>Timebar Current Time Button</description>
-            <posx>420</posx>
-            <posy>300</posy>
-            <width min="128" max="400">auto</width>
-            <height>38</height>
-            <fadetime>250</fadetime>
-            <textcolor>FFFFFFFF</textcolor>
-            <shadowcolor>ff000000</shadowcolor>
-            <font>PTVL10</font>
-            <align>center</align>
-            <aligny>center</aligny>
-        </control>
         <control type="image" id="5007">
             <description>Timebar line</description>
             <posx>411</posx>

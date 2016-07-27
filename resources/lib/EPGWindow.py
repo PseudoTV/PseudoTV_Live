@@ -206,7 +206,7 @@ try:
             self.getControl(5001).setLabel(now.strftime('%A, %B %d'))
             delta = datetime.timedelta(minutes=30)
 
-            for i in range(3):
+            for i in range(4):
                 if self.MyOverlayWindow.clockMode == 0:
                     self.getControl(101 + i).setLabel(now.strftime("%I:%M%p").lower())
                 else:
@@ -333,10 +333,12 @@ try:
             Time1X, Time1Y = self.getControl(101).getPosition()
             Time2X, Time2Y = self.getControl(102).getPosition()
             Time3X, Time3Y = self.getControl(103).getPosition()
+            Time4X, Time4Y = self.getControl(104).getPosition()
             TimeBW = int(self.currentTime.getWidth())
             Time1W = int(self.getControl(101).getWidth())
             Time2W = int(self.getControl(102).getWidth())
             Time3W = int(self.getControl(103).getWidth())
+            Time4W = int(self.getControl(104).getWidth())
             
             # Arrow color
             if TimeBX > Time3X:
@@ -366,6 +368,12 @@ try:
                 self.getControl(103).setVisible(True)
             else:
                 self.getControl(103).setVisible(False)
+     
+            self.getControl(104).setVisible(True)            
+            if TimeBX + TimeBW < Time4X or TimeBX > Time4X + Time4W:
+                self.getControl(104).setVisible(True)
+            else:
+                self.getControl(104).setVisible(False)
      
             try:
                 self.removeControls(self.toRemove)

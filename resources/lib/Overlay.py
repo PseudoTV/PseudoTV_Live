@@ -2746,19 +2746,22 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
      
     def setProp(self, title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, duration, pType='OVERLAY'):
         self.log("setProp, title = " + title + ', pType = ' + pType)
-        if pType == 'EPG':
-            time = 0.5
-            if self.setPropTimer.isAlive():
-                self.setPropTimer.cancel()
-        else:
-            time = 0.1
-            if self.setPropTimer.isAlive():
-                self.setPropTimer.join()
-        self.setPropTimer = threading.Timer(time, self.setProp_thread, [title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, duration, pType])
-        self.setPropTimer.name = "setPropTimer"   
-        if self.isExiting == False:    
-            self.setPropTimer.start()
-
+        try:
+            if pType == 'EPG':
+                time = 0.5
+                if self.setPropTimer.isAlive():
+                    self.setPropTimer.cancel()
+            else:
+                time = 0.1
+                if self.setPropTimer.isAlive():
+                    self.setPropTimer.join()
+            self.setPropTimer = threading.Timer(time, self.setProp_thread, [title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, duration, pType])
+            self.setPropTimer.name = "setPropTimer"   
+            if self.isExiting == False:    
+                self.setPropTimer.start()
+        except Exception,e:
+            self.log('setProp failed! ' + str(e) + traceback.format_exc(),  xbmc.LOGERROR)
+            
             
     def setProp_thread(self, title, year, chlogo, chtype, chnum, id, genre, rating, hd, cc, stars, mpath, mediapath, chname, SEtitle, type, dbid, epid, Description, subtitle, playcount, season, episode, timestamp, duration, pType='OVERLAY'):
         self.log("setProp_thread, title = " + title + ', pType = ' + pType)  
