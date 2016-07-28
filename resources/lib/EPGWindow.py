@@ -462,7 +462,7 @@ try:
                 del self.channelTags[row][:]
                 
                 # # todo filter epg
-                playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
+                playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_VIDEO).getposition())
                 self.log('setButtons, playlistpos = ' + str(playlistpos))
 
                 # if the channel is paused, then only 1 button needed

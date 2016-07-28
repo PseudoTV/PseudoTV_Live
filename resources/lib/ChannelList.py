@@ -3158,8 +3158,8 @@ class ChannelList:
             return True
         elif path.lower() == 'ustvnow':
             self.xmlTvFile = USTVXML
-        elif path.lower() == 'ptvlguide':
-            self.xmlTvFile = PTVLXML
+        # elif path.lower() == 'ptvlguide':
+            # self.xmlTvFile = PTVLXML
         elif path != '':
             self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(path) +'.xml'))
         

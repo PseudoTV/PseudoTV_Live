@@ -1968,8 +1968,8 @@ def listXMLTV():
 def xmltvflePath(setting3):          
     if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
         xmltvFle = setting3
-    elif setting3.lower() == 'ptvlguide':
-        xmltvFle = PTVLXML
+    # elif setting3.lower() == 'ptvlguide':
+        # xmltvFle = PTVLXML
     elif setting3.lower() == 'ustvnow':
         xmltvFle = USTVXML                
     else:
