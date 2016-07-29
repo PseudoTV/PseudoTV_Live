@@ -25,7 +25,7 @@ from Globals import *
 
 def getFont():
     try:
-        for item in os.listdir(os.path.join(PTVL_SkinPath,'fonts')):
+        for item in os.listdir(os.path.join(PTVL_SELECT_SKIN_LOC,'fonts')):
             if item.endswith('ttf'):
                 log("MyFont: getFont = " + item) 
                 return item
@@ -33,9 +33,8 @@ def getFont():
         pass
 
 SkinPath = xbmc.translatePath('special://skin')
-PTVL_SkinPath = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins' , Skin_Select))
 FontName = getFont()
-FontPath = os.path.join(PTVL_SkinPath, 'fonts', FontName)
+FontPath = os.path.join(PTVL_SELECT_SKIN_LOC, 'fonts', FontName)
 
 class PCParser(ET.XMLTreeBuilder):
    def __init__(self):

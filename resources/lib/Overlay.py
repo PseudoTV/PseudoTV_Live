@@ -2269,7 +2269,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     if self.notPlayingCount == 3:
                         self.openEPG()
                 else:
-                    if self.notPlayingCount > int(round(self.playActionTime / 2)):
+                    if self.notPlayingCount > int(round(self.playActionTime / 4))*3:
                         setBackgroundLabel(('Loading: %s (%ss)') % (self.getChname(self.currentChannel), str(self.playActionTime - self.notPlayingCount)))
                     self.log("playerTimerAction, notPlayingCount = " + str(self.notPlayingCount))
                     
@@ -2748,7 +2748,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.log("setProp, title = " + title + ', pType = ' + pType)
         try:
             if pType == 'EPG':
-                time = 0.5
+                time = 0.25
                 if self.setPropTimer.isAlive():
                     self.setPropTimer.cancel()
             else:
@@ -2808,7 +2808,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
   
     def fillArtwork(self, type, title, year, chtype, chname, id, dbid, mpath, pType):
         if pType == 'EPG':
-            time = 0.1
+            time = 0.25
             if self.fillArtworkTimer.isAlive():
                 self.fillArtworkTimer.cancel()
         else:

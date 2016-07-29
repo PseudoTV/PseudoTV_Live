@@ -29,6 +29,7 @@ from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
 from email import Encoders
 from xml.dom.minidom import parse, parseString
+from xml.etree import ElementTree
 from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
 from pyfscache import *
@@ -1957,7 +1958,7 @@ def listXMLTV():
     xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
     select = selectDialog(xmltvLst, 'Select Guidedata Type', 30000)
 
-    if select and select != -1:
+    if select != -1:
         if xmltvLst[select] == 'Enter URL':
             retval = inputDialog(xmltvLst[select], key=xbmcgui.INPUT_ALPHANUM)
             if retval and len(retval) > 0:
@@ -2132,18 +2133,17 @@ def patchFont():
     log("utils: patchFont") 
     if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
         import MyFont
-        fontName = MyFont.getFont()
-        if MyFont.getSkinRes() == '1080i':
-            MyFont.addFont("PTVL10", fontName, "24")
-            MyFont.addFont("PTVL12", fontName, "25")
-            MyFont.addFont("PTVL13", fontName, "30")
-            MyFont.addFont("PTVL14", fontName, "33")
-        else:
-            MyFont.addFont("PTVL10", fontName, "14")
-            MyFont.addFont("PTVL12", fontName, "16")
-            MyFont.addFont("PTVL13", fontName, "20")
-            MyFont.addFont("PTVL14", fontName, "22")
-    
+        path = os.path.join(PTVL_SKIN_SELECT, 'script.pseudotv.live.fonts.xml')
+        if xbmcvfs.exists(path):
+            with open(path, 'rt') as f:
+                tree = ElementTree.parse(f)
+            for node in tree.iter('font'):
+                try:
+                    if node.attrib.get('res') == MyFont.getSkinRes():
+                        MyFont.addFont(node.attrib.get('name'), node.attrib.get('filename'), node.attrib.get('size'))
+                except Exception,e:
+                    log('utils: patchFont, failed! ' + str(e))
+                
 def patchSeekbar():
     if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
         DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))

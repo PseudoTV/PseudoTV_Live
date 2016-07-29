@@ -2105,12 +2105,7 @@ class ChannelList:
                         dur = int(float(b['EndTime']) - float(b['StartTime']))
                     except Exception,e:
                         dur = 3600  #60 minute default
-                                                         
-                #Enable Enhanced Parsing for current and future shows only
-                includeMeta = self.includeMeta
-                if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
-                    includeMeta = False  
-                        
+    
                 if dur > 3600:
                     type = 'movie'
                 else:
@@ -2133,8 +2128,14 @@ class ChannelList:
                         if str(episodetitle[0:5]) == '00x00':
                             episodetitle = episodetitle.split("- ", 1)[-1]
                         subtitle = episodetitle
-
-                    year, title, showtitle = getTitleYear(Stitle, 0)
+                                            
+                    year, title, showtitle = getTitleYear(Stitle, 0) 
+                    
+                    #Enable Enhanced Parsing for current and future shows only
+                    includeMeta = self.includeMeta
+                    if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                        includeMeta = False  
+                    
                     GenreLiveID = ['Unknown',type,0,0,False,1,rating, False, False, 0.0, year]
                     tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                     showList.append(tmpstr)
