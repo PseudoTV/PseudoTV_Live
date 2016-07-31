@@ -155,7 +155,7 @@ class Artdownloader:
                 artSeason_fallback = xbmc.translatePath(os.path.join(mpath, self.getFallback_Arttype(arttypeEXT)))
 
                 # lookup artwork via local folder
-                if type == 'tvshow': 
+                if type in ['tvshow','episode']:
                     if xbmcvfs.exists(artSeries):
                         return artSeries
                     elif xbmcvfs.exists(artSeason):
@@ -198,15 +198,11 @@ class Artdownloader:
                     elif chtype in [8] and dbid != '0':
                         self.log('FindArtwork, decode dbid')
                         return decodeString(dbid)
-                    elif chtype == 8 and dbid == '0':
-                        self.log('FindArtwork, skin.helper getpvrthumb')
-                        setProperty('SkinHelper.EnablePVRThumbs','true')
-                        #return ('http://localhost:52307/getthumb&amp;title=%s&amp;type=%s&fallback=%s' %(title,arttype,self.getFallback_Arttype(arttype)))
-                
-                # lookup tvdb/tmdb artwork & download missing artwork
-                setImage = self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
-                if xbmcvfs.exists(setImage):
-                    return setImage
+                else:
+                    # lookup tvdb/tmdb artwork & download missing artwork
+                    setImage = self.DownloadMissingArt(type, title, year, id, arttype, chname, mpath, arttypeEXT)
+                    if xbmcvfs.exists(setImage):
+                        return setImage
                     
             self.log('FindArtwork, SetDefaultArt')
             return self.SetDefaultArt(chname, mpath, arttypeEXT)

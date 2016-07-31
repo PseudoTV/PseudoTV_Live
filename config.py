@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,10 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import subprocess, os, sys, re, random
-import datetime, time
+import datetime, time, subprocess, os, sys, re, random
 
-from urllib import unquote, quote
 from xml.dom.minidom import parse, parseString
 from resources.lib.utils import *
 from resources.lib.Globals import *
@@ -346,9 +344,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def setChlogo(self, channel):
         self.log("setChlogo") 
         chname = self.getChname(channel)
-        # if chname:
-            # xbmc.executebuiltin("RunScript(script.tvlogo.downloader,/context/%s)" % (urllib.quote(chname)) )
-        # else:
         # todo icon selectDialog from tvlogodb
         if chname:
             retval = browse(1, "Select %s's replacement logo" %(chname), "files", ".png")
@@ -469,28 +464,33 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         elif controlId == 140:      # TV Network channel
             select = selectDialog(self.networkList, 'Select TV Network')
             if select != -1:
+                self.setChname(self.networkList[select])
                 self.getControl(140).setLabel('Network:', label2=self.networkList[select])
                 self.setFocusId(141)
                 
         elif controlId == 150:      # Movie Studio channel
             select = selectDialog(self.studioList, 'Select Movie Studio')
             if select != -1:
+                self.setChname(self.studioList[select])
                 self.getControl(150).setLabel('Studio:', label2=self.studioList[select])
                 
         elif controlId == 160:      # TV Genre channel
             select = selectDialog(self.showGenreList, 'Select TV Genre')
             if select != -1:
+                self.setChname(self.showGenreList[select])
                 self.getControl(160).setLabel('Genre:', label2=self.showGenreList[select])
                 self.setFocusId(161)
                 
         elif controlId == 170:      # Movie Genre channel
             select = selectDialog(self.movieGenreList, 'Select Movie Genre')
             if select != -1:
+                self.setChname(self.movieGenreList[select])
                 self.getControl(170).setLabel('Genre:', label2=self.movieGenreList[select])
         
         elif controlId == 180:      # Mixed Genre channel
             select = selectDialog(self.mixedGenreList, 'Select Mixed Genre')
             if select != -1:
+                self.setChname(self.mixedGenreList[select])
                 self.getControl(180).setLabel('Genre:', label2=self.mixedGenreList[select])
                 self.setFocusId(181)
                 

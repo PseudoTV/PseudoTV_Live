@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -19,14 +19,14 @@
 import os, sys, re, shutil, threading
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
+from resources.lib.Globals import *
+from resources.lib.utils import *
+
 try:
     import buggalo
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
 except:
     pass
-    
-from resources.lib.Globals import *
-from resources.lib.utils import *
 
 # Script constants
 __scriptname__ = "PseudoTV Live"
@@ -44,7 +44,6 @@ def PseudoTV():
             return HandleUpgrade()
 
         setProperty("PseudoTVRunning", "True")
-        setProperty("SkinHelperShutdownRequested", "True")
         preStart()
         MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
         
@@ -52,13 +51,13 @@ def PseudoTV():
             log("Active Thread: " + str(curthread.name))   
             if curthread.name != "MainThread":
                 try:
-                    curthread.join()      
+                    curthread.join()
+                    log("Joined Thread: " + str(curthread.name))      
                 except: 
                     pass
-                log("Joined Thread: " + str(curthread.name))
         del MyOverlayWindow
     except Exception,e:
-        log('default: PseudoTV Overlay Failed! ' + str(e))
+        log('default: PseudoTV Overlay Failed! ' + str(e), xbmc.LOGERROR)
         buggalo.onExceptionRaised()
     setProperty("PseudoTVRunning", "False")
     clearProperty('SkinHelperShutdownRequested')

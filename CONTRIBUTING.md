@@ -22,17 +22,13 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 
 ###Unassigned Tasks
 * Proper Youtube auth. and parsing
-* Ondemand/APP interface
+* Ondemand/APP/DVR interface
 * DVR recording/scheduling 
 * Schedule-Direct xmltv support
 * zap2it website parsing xmltv support
-* Activewindow playback support
-* Clean utils and replace redundant functions throughout code
 * Random todo's can be found commented in code
 * Localize all strings to string.po
-* Improve channel configuration code
-* Unicode utf-8 encoding for all strings?
-* Advanced Channel rule - pin lock; required to play.
+* Improve channel configuration manager
 
 
 ###Final Tasks before release candidate
@@ -40,7 +36,6 @@ For other subjects, visit [#pseudotv on Freenode IRC](http://freenode.net)
 
 
 ###assignment Details:
-* Ondemand/App interface:
-Visual idea: https://twitter.com/PseudoTV_Live/status/604792495315255296
-5x2 control.panel column that, data generated from json/kodi/getDirectory
+* ...
+
 

@@ -252,10 +252,10 @@
                 <shadowcolor>ff000000</shadowcolor>
                 <align>center</align>
                 <aligny>center</aligny>
-                <label>$INFO[Player.Time]</label>
+                <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.Time)]</label>
                 <texturefocus>pstvlButtonFocus.png</texturefocus>
                 <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>!Control.IsVisible(101) + [Control.IsVisible(5007)]</visible>
+                <visible>!Control.IsVisible(101)</visible>
             </control>
             <control type="grouplist">
                 <posx>430</posx>
@@ -472,10 +472,10 @@
                 <font>PTVL10</font>
                 <align>center</align>
                 <aligny>center</aligny>
-                <label>$INFO[Player.TimeRemaining]</label>
+                <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.TimeRemaining)]</label>
                 <texturefocus>pstvlButtonFocus.png</texturefocus>
                 <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>!Control.IsVisible(101) + [Control.IsVisible(5004)]</visible>
+                <visible>!Control.IsVisible(101)</visible>
             </control>
             <control type="grouplist">
                 <posx>430</posx>

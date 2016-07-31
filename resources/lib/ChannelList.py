@@ -100,7 +100,6 @@ class ChannelList:
         self.FileListCache = ''
         self.videoParser = VideoParser()
         self.youtube_player = self.youtube_player_ok()
-        self.ustv = ustvnow.ustvnow()
         self.USTVnow_ok = isUSTVnow()
         random.seed() 
 
@@ -142,10 +141,7 @@ class ChannelList:
             REAL_SETTINGS.setSetting('FavChanLst', '') # Reset FavChannels
             REAL_SETTINGS.setSetting('ForceChannelReset', 'false') # Force Channel Reset
             self.forceReset = False
-                   
-        if self.USTVnow_ok != False:
-            self.ustv.getXMLTV()
-            
+
         try:
             self.lastResetTime = int(ADDON_SETTINGS.getSetting("LastResetTime"))
         except Exception,e:
@@ -302,7 +298,7 @@ class ChannelList:
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
 
-            if self.forceReset:
+            if self.forceReset and (chtype != 9999):
                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
                
             #check if channel lineup includes local content
@@ -680,32 +676,7 @@ class ChannelList:
         bctType = None
         fileList = []
         limit = MEDIA_LIMIT #Global
-        
-        if chtype == 0:
-            if FileAccess.exists(xbmc.translatePath(setting1)) == False:
-                self.channels[channel - 1].isValid = False
-                return
-        elif chtype <= 6 or chtype in [12,14]:
-            if len(setting1) == 0:
-                self.channels[channel - 1].isValid = False
-                return
-        elif chtype == 7:
-            if FileAccess.exists(setting1) == False:
-                self.channels[channel - 1].isValid = False
-                return
-        elif chtype in [8,9]:
-            if self.Valid_ok(setting2) == False:
-                self.channels[channel - 1].isValid = False
-                return
-        elif chtype == 10:
-            if self.youtube_player == 'False':
-                self.channels[channel - 1].isValid = False
-                return
-        elif chtype in [11,15,16]:
-            if self.Valid_ok(setting1) == False:
-                self.channels[channel - 1].isValid = False
-                return
-        
+                
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
             if chtype == 10:
@@ -2079,10 +2050,11 @@ class ChannelList:
             d = datetime.datetime.utcnow()
             dnow = calendar.timegm(d.utctimetuple())
             #example setting3 = 'http://mobilelistings.tvguide.com/Listingsweb/ws/rest/airings/20405/start/1464292664/duration/20160?channelsourceids=74313%7C62.4&formattype=json'
-            listing = setting3.split('/start/')[0] + '/start/' + str(dnow) + '/duration/' + setting3.split('/duration/')[1]                   
+            listing = setting3.split('/start/')[0] + '/start/' + str(dnow) + '/duration/' + setting3.split('/duration/')[1]   
+            self.log("fillLiveTVGuide, listing = " + listing)                    
             offset = ((time.timezone / 3600) - 5 ) * -1     
             
-            a = json.loads(getRequest(setting3))
+            a = json.loads(getRequest(listing))
             for b in a[:((LIVETV_MAXPARSE/60)/60)]:
                 b = b['ProgramSchedule']     
                 stopDate = self.parseXMLTVDate((datetime.datetime.fromtimestamp(float(b['EndTime'])).strftime('%Y%m%d%H%M%S')),offset)
@@ -2105,7 +2077,7 @@ class ChannelList:
                         dur = int(float(b['EndTime']) - float(b['StartTime']))
                     except Exception,e:
                         dur = 3600  #60 minute default
-    
+
                 if dur > 3600:
                     type = 'movie'
                 else:
@@ -2114,13 +2086,17 @@ class ChannelList:
                 Stitle = b['Title']
                 if b['EpisodeTitle'] != '':
                     subtitle = (b['EpisodeTitle'] or 'LiveTV')
-                    seasonNumber = b['TVObject'].get('SeasonNumber')
-                    if seasonNumber is not None:
+                    try:
+                        seasonNumber = b['TVObject'].get('SeasonNumber')
                         seasonNumber = int(seasonNumber)
-                    episodeNumber = b['TVObject']['EpisodeNumber']
-                    if episodeNumber is not None:
+                    except:
+                        seasonNumber = 0
+                    try:
+                        episodeNumber = b['TVObject']['EpisodeNumber']
                         episodeNumber = int(episodeNumber)
-                    description = b['CopyText']
+                    except:
+                        episodeNumber = 0
+                    description = (b['CopyText'] or Stitle)
                     rating = (b.get('Rating').split('@')[0] or 'NR')
 
                     if type == 'tvshow':
@@ -2622,7 +2598,7 @@ class ChannelList:
         if not description:
             description = title
         # setting2 = (tidy(setting2)).replace(',', '')
-        if setting1 != '':
+        if len(setting1) > 0:
             dur = setting1
         else:
             dur = 5400  #90 minute default
@@ -3150,22 +3126,26 @@ class ChannelList:
                 
                 
     def xmltv_ok(self, path):
-        self.log("xmltv_ok, setting3 = " + path)
         xmltvValid = False
         if path[0:4] == 'http':
             self.xmlTvFile = path
             return self.url_ok(path)
         elif path.lower() in ['pvr','zap2it','scheduledirect']:
             return True
-        elif path.lower() == 'ustvnow':
+        elif path.lower() == 'ustvnow':    
+            if self.USTVnow_ok == False:
+                return False
+            self.ustv = ustvnow.ustvnow()
+            self.ustv.getXMLTV()
             self.xmlTvFile = USTVXML
         # elif path.lower() == 'ptvlguide':
             # self.xmlTvFile = PTVLXML
-        elif path != '':
+        elif len(path) > 0:
             self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(path) +'.xml'))
         
         if FileAccess.exists(self.xmlTvFile):
-            xmltvValid = True            
+            xmltvValid = True 
+        self.log("xmltv_ok, path = " + path + ", status = " + str(xmltvValid))           
         return xmltvValid
            
            
@@ -3177,6 +3157,9 @@ class ChannelList:
         #upnp check
         elif url[0:4] == 'upnp':
             return self.upnp_ok(url)
+        #pvr/udp check
+        elif url[0:3] in ['pvr','udp']:
+            return True
         #Override Check# 
         elif REAL_SETTINGS.getSetting('Override_ok') == "true":
             return True 
@@ -3189,9 +3172,6 @@ class ChannelList:
         #strm check  
         elif url[-4:] == 'strm':         
             return self.strm_ok(url)
-        #pvr/udp check
-        elif url[0:3] in ['pvr','udp']:
-            return True
         else:
             return True
   
@@ -3306,51 +3286,42 @@ class ChannelList:
       
       
     def rtmpDump(self, stream):
-        self.log("rtmpDump")
+        rtmpValid = False    
         try:
             url = urllib.unquote(stream)
             RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
-            self.log("RTMPDUMP = " + RTMPDUMP)
+            self.log("rtmpDump, RTMPDUMP = " + RTMPDUMP)
             assert os.path.isfile(RTMPDUMP)
             
             if "playpath" in url:
                 url = re.sub(r'playpath',"-y playpath",url)
-                self.log("playpath url = " + str(url))
+                self.log("rtmpDump, playpath url = " + str(url))
                 command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-                self.log("RTMPDUMP command = " + str(command))
             else:
                 command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-                self.log("RTMPDUMP command = " + str(command))
-           
+            self.log("rtmpDump, RTMPDUMP command = " + str(command))
             CheckRTMP = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
             output = CheckRTMP.communicate()[0]
             
-            if "ERROR: RTMP_ReadPacket" in output:
-                self.log("rtmpDump, ERROR: RTMP_ReadPacket")
-                rtmpValid = False 
-            elif "ERROR: Problem accessing the DNS." in output:
-                rtmpValid = False    
-                self.log("rtmpDump, ERROR: Problem accessing the DNS.")
-            elif "INFO: Connected..." in output:
+            if "INFO: Connected..." in output:
                 self.log("rtmpDump, INFO: Connected...")
                 rtmpValid = True
-            else:
-                self.log("rtmpDump, ERROR?: Unknown response..." + str(output))
-                rtmpValid = False
-        except:
-            rtmpValid = False
-        self.log("rtmpValid = " + str(rtmpValid))
+        except Exception,e:
+            self.log('rtmpDump, failed! ' + str(e))
+        self.log("rtmpDump, rtmpValid = " + str(rtmpValid))
         return rtmpValid
         
                 
     def url_ok(self, url):
         urlValid = False
         try:
-            if open_url(url):
-                urlValid = True
-        except urllib2.HTTPError,e:
-            self.log("url_ok, ERROR: HTTP URL NOT VALID, ERROR: " + str(e))
-        self.log("urlValid = " + str(urlValid))
+            urllib2.urlopen(url)
+            urlValid = True
+        except urllib2.HTTPError, e:
+            self.log("url_ok, failed! HTTPError " + str((e.code)))
+        except urllib2.URLError, e:
+            self.log("url_ok, failed! URLError " + str((e.args)))
+        self.log("url_ok, urlValid = " + str(urlValid))
         return urlValid
         
 
@@ -5147,9 +5118,8 @@ class ChannelList:
         self.log('getStreamDetails') 
 
         
-    def setChannelChanged(self, channel=None):
-        if not channel:
-            channel = self.settingChannel
+    def setChannelChanged(self, channel):
+        self.log('setChannelChanged, channel = ' + str(channel))
         ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', "True")
             
             

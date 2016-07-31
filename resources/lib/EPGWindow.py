@@ -710,11 +710,11 @@ try:
 
                 elif action == ACTION_TELETEXT_YELLOW:
                     self.log('ACTION_TELETEXT_YELLOW')
-                    self.MyOverlayWindow.windowSwap('ONDEMAND')
+                    self.MyOverlayWindow.windowSwap('VOD')
                
                 elif action == ACTION_TELETEXT_BLUE:
                     self.log('ACTION_TELETEXT_BLUE') 
-                    self.MyOverlayWindow.windowSwap('APPS')
+                    self.MyOverlayWindow.windowSwap('APP')
 
                 elif action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
                     if self.inputChannel < 0:
@@ -790,10 +790,10 @@ try:
                             self.MyOverlayWindow.windowSwap('DVR')
                         elif controlid == 6003:
                             self.log('ACTION_TELETEXT_YELLOW')
-                            self.MyOverlayWindow.windowSwap('ONDEMAND')
+                            self.MyOverlayWindow.windowSwap('VOD')
                         elif controlid == 6004:
                             self.log('ACTION_TELETEXT_BLUE') 
-                            self.MyOverlayWindow.windowSwap('APPS')
+                            self.MyOverlayWindow.windowSwap('APP')
                     else:
                         lastaction = time.time() - self.lastActionTime
                         if lastaction >= 2:

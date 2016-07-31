@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,10 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
-import subprocess, os, sys, re, random, threading
-import datetime, time, shutil
+import datetime, time, shutil, subprocess, os, sys, re, random
 
-from urllib import unquote
 from xml.dom.minidom import parse, parseString
 from resources.lib.utils import *
 from resources.lib.Globals import *
@@ -37,13 +35,12 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             setProperty("PseudoTVSkinRunning", "True")
             xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
             self.doModal()
-        
     
     def onInit(self):
+        self.isExiting = False
         self.CurrentSkin = Skin_Select
         self.SkinPanel = self.getControl(500)
         self.fillSkins()
-        
         
     def log(self, msg, level = xbmc.LOGDEBUG):
         log('SkinManager: ' + msg, level)
@@ -107,20 +104,41 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         self.SkinItems.setProperty('PTVL.SKINNAME',sknname)
         self.SkinItems.setProperty('PTVL.SKIN',cleanSkin)
         self.SkinItems.setProperty('PTVL.SKINRESOLUTION',str(resolution))
-        self.SkinItems.setProperty('PTVL.SKINLOGO',skinBase + '/logo.png')
+        self.SkinItems.setProperty('PTVL.SKINLOGO',os.path.join(skinBase,'logo.png'))
         self.SkinItems.setProperty('PTVL.SKINVERSION','v.'+version)
-        self.SkinItems.setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue)
-        self.SkinItems.setProperty('PTVL.SKINSHOT1',skinBase + '/screenshot01.png')  
-        self.SkinItems.setProperty('PTVL.SKINSHOT2',skinBase + '/screenshot02.png')  
-        self.SkinItems.setProperty('PTVL.SKINSHOT3',skinBase + '/screenshot03.png')  
-        self.SkinItems.setProperty('PTVL.SKINSHOT4',skinBase + '/screenshot04.png')
+        self.SkinItems.setProperty('PTVL.SKINAUTHOR','Designed by: ' + name[0].childNodes[0].nodeValue) 
+        self.SkinItems.setProperty('PTVL.SKINSHOT1',os.path.join(skinBase,'screenshot01.png'))  
+        self.SkinItems.setProperty('PTVL.SKINSHOT2',os.path.join(skinBase,'screenshot02.png')) 
+        self.SkinItems.setProperty('PTVL.SKINSHOT3',os.path.join(skinBase,'screenshot03.png'))
+        self.SkinItems.setProperty('PTVL.SKINSHOT4',os.path.join(skinBase,'screenshot04.png'))
         self.SkinItems.setProperty("PTVL.SKINPATH", str(skinBasePath)) 
+        self.SkinItems.setProperty("PTVL.SKINBASE", str(skinBase))
         self.SkinItems.setProperty("PTVL.SKINURL", str(skinBaseURL))   
         self.SkinItems.setProperty("PTVL.SKINZIP", str(skinBaseURL + '/' + sknname +'.zip'))       
         self.SkinPanel.addItem(self.SkinItems)
         return
         
         
+    def clearSKINSHOT(self):
+        clearProperty('PTVL.SHOT')
+        clearProperty('PTVL.SHOT_FALLBACK')
+        
+        
+    def cycleSKINSHOT(self):
+        self.log("cycleSKINSHOT")
+        while not KODI_MONITOR.abortRequested():
+            if self.isExiting == True:
+                return
+            xbmc.sleep(1000)
+            for i in range(4):
+                self.clearSKINSHOT()
+                skinBase = self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINBASE')
+                setProperty('PTVL.SHOT',os.path.join(skinBase,'screenshot0%s.png' %str(i+1)))
+                setProperty('PTVL.SHOT_FALLBACK',os.path.join(skinBase,'screenshot01.png'))
+                xbmc.sleep(2500)
+            xbmc.sleep(5000)
+            
+            
     def fillSkins(self):
         self.log("fillSkins")
         show_busy_dialog()
@@ -134,25 +152,30 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                     break
         hide_busy_dialog()
         self.setFocusId(500)
+        self.cycleSKINSHOT()
 
         
     def closeManager(self):
         self.log("closeManager") 
+        self.isExiting = True
         setProperty("PseudoTVSkinRunning", "False")
         self.close()
         
  
     def onAction(self, act):
         action = act.getId()
+        self.clearSKINSHOT()
         if action in ACTION_SELECT_ITEM:
             self.SelectAction(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKIN'))
         elif action in ACTION_MOVE_LEFT:   
             self.log("onAction, ACTION_MOVE_LEFT")
             setProperty('PTVL.SSLEFTD','FF0297eb')
             setProperty('PTVL.SSRIGHTD','FFFFFFFF') 
+            self.cycleSKINSHOT()
         elif action in ACTION_MOVE_RIGHT:
             self.log("onAction, ACTION_MOVE_RIGHT")
             setProperty('PTVL.SSRIGHTD','FF0297eb')
+            self.cycleSKINSHOT()
         elif action in ACTION_PREVIOUS_MENU:
             self.closeManager()
         elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:

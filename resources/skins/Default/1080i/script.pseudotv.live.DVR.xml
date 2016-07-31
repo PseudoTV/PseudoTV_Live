@@ -22,13 +22,6 @@
                 <colordiffuse>FFFFFFFF</colordiffuse>
             </control>         
             <control type="image">
-                <description>EPG Selection Overlay</description>
-                <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">DVRoverlay.png</texture>
-                <width>1920</width>
-                <height>1080</height>
-                <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation>
-            </control>
-            <control type="image">
                 <width>1920</width>
                 <height>1080</height>
                 <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>

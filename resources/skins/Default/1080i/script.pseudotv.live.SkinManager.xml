@@ -63,7 +63,7 @@
             <preloaditems>3</preloaditems>
             <pagecontrol>3</pagecontrol>
             <focusedlayout height="845" width="1024">
-                <control description="SKINSHOTS" type="multiimage"> 
+                <control description="SKINSHOTS" type="image"> 
                     <description>Screenshots</description>
                     <width>1024</width>
                     <height>576</height>
@@ -71,12 +71,12 @@
                     <fadetime>200</fadetime>
                     <randomize>true</randomize>
                     <loop>yes</loop>
-                    <info background="true">ListItem.Property(PTVL.SKINSHOT1)</info>
+                    <info background="true">ListItem.Property(PTVL.SKINSHOT)</info>
                     <aspectratio aligny="top">keep</aspectratio>
                 </control>
             </focusedlayout>
             <itemlayout height="845" width="1024">
-                <control description="SKINSHOTS" type="multiimage">  
+                <control description="SKINSHOTS" type="image">  
                     <description>Screenshots</description>
                     <width>1024</width>
                     <height>576</height>
@@ -148,5 +148,14 @@
             <aligny>center</aligny>
             <label>[COLOR=C0C0C0C0]$INFO[Container(500).ListItem.Property(PTVL.SKINAUTHOR)] $INFO[Container(500).ListItem.Property(PTVL.SKINVERSION)] [/COLOR]</label>
         </control> 
+        <control type="image"> 
+            <description>Screenshots</description>
+            <left>445</left>
+            <top>280</top>   
+            <width>1024</width>
+            <height>576</height>
+            <texture background="true" fallback="$INFO[Window(10000).Property(PTVL.SHOT_FALLBACK)]">$INFO[Window(10000).Property(PTVL.SHOT)]</texture>
+            <aspectratio aligny="top">keep</aspectratio>
+        </control>
     </controls>
 </window>

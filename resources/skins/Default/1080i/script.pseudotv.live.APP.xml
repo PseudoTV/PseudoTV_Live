@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <window>
     <allowoverlay>yes</allowoverlay>  
-    <onload>SetProperty(PTVL.APPS_Opened,true,10000)</onload>
-    <onunload>SetProperty(PTVL.APPS_Opened,false,10000)</onunload>
+    <onload>SetProperty(PTVL.APP_Opened,true,10000)</onload>
+    <onunload>SetProperty(PTVL.APP_Opened,false,10000)</onunload>
     <onload condition="Control.IsVisible(9000)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
     <onunload>ActivateWindow(12005)</onunload>
     <zorder>1</zorder>
@@ -19,16 +19,9 @@
                 <width>1920</width>
                 <height>1080</height>
                 <description>APP Background</description>
-                <texture>APPSbackground.png</texture>
+                <texture>APPbackground.png</texture>
                 <colordiffuse>FFFFFFFF</colordiffuse>
             </control>         
-            <control type="image">
-                <description>EPG Selection Overlay</description>
-                <texture colordiffuse="$INFO[Window(home).Property(WindowColor)]">APPSoverlay.png</texture>
-                <width>1920</width>
-                <height>1080</height>
-                <!-- <animation effect="fade" start="100" end="0" time="1000">WindowOpen</animation> -->
-            </control>
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>

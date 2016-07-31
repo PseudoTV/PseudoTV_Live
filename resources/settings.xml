@@ -107,7 +107,7 @@
             <setting id="autoFindLiveHD"                      type="enum"   label="30097" subsetting="false" visible="eq(-8,true) + eq(-1,true)" values=" |Dual - Strms|Prime/Extend - Favourites" default="0" />
             <setting id="autoFindLiveXMLPath"                 type="file"   label="30771" subsetting="true"  visible="eq(-9,true) + !eq(-1,0)" source="auto" default=""/>
             <setting id="autoFindLiveHDPath"                  type="folder" label="30098" subsetting="true"  visible="eq(-10,true) + eq(-2,1)" source="auto" default=""/>
-            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="false" visible="eq(-11,true)" enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)" default="false"/>
+            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="false" visible="eq(-11,true)" enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)|System.HasAddon(plugin.video.ustvnow.plus)" default="false"/>
             <!-- Autotune Local -->
         <setting                                              type="lsep"   label="30076"                    visible="eq(-12,true)"/>
             <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="false" visible="eq(-13,true)" enable="Library.HasContent(TVShows)"default="false"/>
@@ -211,6 +211,7 @@
         <setting id="UploadLog" type="action"   label="30989" action="RunScript($CWD/uploadLog.py)"/>
         <setting type="sep" visible="true" />
         <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
+        <setting id="email" type="text" label="30902" visible="false" default=""/>
     </category>
     
 <!--Debugging-->
@@ -245,7 +246,7 @@
         <setting id="GOOGLE_API_KEY"  option="hidden" visible="false" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="LOGODB_API_KEY" option="hidden" visible="false" type="text" default="8332" />
         <setting id="DOX_API_KEY"  option="hidden" visible="false" type="text" default="Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6IiVzIiwiZW5hYmxlZCI6ZmFsc2V9" />
-        <setting id="USTV_Token" option="hidden" visible="false" type="text" default="False" />
+        <setting id="PBIN_API_KEY" option="hidden" visible="false" type="text" default="OWJiZDllNDhiYmU2YTFjZDMwZjk3NWJlOTRjZGM2MzU=" />
         <setting label="30197" type="lsep"/>
         <setting id="ffprobePath" type="file" label="30198" source="auto" default="C:\ffmpeg\bin\ffprobe.exe"/>
         <setting id="rtmpdumpPath" type="file" label="30199" source="auto" default="C:\rtmpdump\bin\rtmpdump.exe"/>

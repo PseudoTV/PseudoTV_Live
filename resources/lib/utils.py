@@ -787,12 +787,15 @@ def Unavailable():
 def TryAgain():
     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", "Try Again Later...", 1000, THUMB) )
 
+def is_busy_dialog():
+    return xbmc.getCondVisibility('Window.IsActive(busydialog)')
+    
 def show_busy_dialog():
     xbmc.executebuiltin('ActivateWindow(busydialog)')
 
 def hide_busy_dialog():
     xbmc.executebuiltin('Dialog.Close(busydialog)')
-    while xbmc.getCondVisibility('Window.IsActive(busydialog)'):
+    while is_busy_dialog():
         xbmc.sleep(100)
         
 def Error(line1= '', line2= '', line3= '',header=ADDON_NAME):
@@ -1943,6 +1946,8 @@ def isUSTVnow():
         return 'plugin.video.ustvnow'
     elif isPlugin('plugin.video.ustvnow.tva'):
         return 'plugin.video.ustvnow.tva'
+    elif isPlugin('plugin.video.ustvnow.plus'):
+        return 'plugin.video.ustvnow.plus'
     else:
         return False
 

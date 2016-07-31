@@ -1,4 +1,4 @@
-#   Copyright (C) 2015 Kevin S. Graer
+#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -37,7 +37,7 @@ def showInfo(addonID=None, type='changelog'):
             f = open(os.path.join(ADDON_PATH,'README.md'))
         elif type == 'disclaimer':
             title = "PseudoTV Live - Privacy Disclaimer"
-            f = open(os.path.join(ADDON_PATH,'disclaimer'))
+            f = open(os.path.join(ADDON_PATH,'DISCLAIMER.md'))
         elif type == 'settings':
             title = "PseudoTV Live - User Settings"
             f = open(os.path.join(ADDON_PATH,'settings'))

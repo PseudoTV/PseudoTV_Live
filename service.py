@@ -1,4 +1,4 @@
-﻿#   Copyright (C) 2015 Kevin S. Graer
+﻿#   Copyright (C) 2016 Kevin S. Graer
 #
 #
 # This file is part of PseudoTV Live.
@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, xbmc, xbmcgui, xbmcaddon, xbmcvfs
+import os
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
@@ -26,7 +27,8 @@ ADDON_PATH = REAL_SETTINGS.getAddonInfo('path').decode('utf-8')
 THUMB = (xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images')) + '/' + 'icon.png')
 AUTOSTART_TIMER = [0,5,10,15,20,25,30][int(REAL_SETTINGS.getSetting('AutoStart'))]
 
-def handle_wait(time_to_wait): #*Thanks enen92
+# Adapting a solution from enen92 (https://github.com/enen92/program.plexus/blob/master/resources/plexus/plexusutils/utilities.py)
+def handle_wait(time_to_wait):
     dlg = xbmcgui.DialogProgress()
     dlg.create("PseudoTV Live", 'AutoStart')
     secs=0
@@ -37,7 +39,7 @@ def handle_wait(time_to_wait): #*Thanks enen92
         secs += 1
         percent = increment*secs
         secs_left = str((time_to_wait - secs))
-        dlg.update(percent,"PseudoTV Live will autoStart in " + str(secs_left) + " seconds, Cancel?")
+        dlg.update(percent,"PseudoTV Live will autostart in " + str(secs_left) + " seconds, Cancel?")
         xbmc.sleep(1000)
         if (dlg.iscanceled()):
             cancelled = True
@@ -53,11 +55,3 @@ if AUTOSTART_TIMER != 0:
     xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (ADDON_NAME, "AutoStart Enabled", (AUTOSTART_TIMER * 1000)/2, THUMB))
     if handle_wait(AUTOSTART_TIMER) == True:
         xbmc.executebuiltin('RunScript("' + ADDON_PATH + '/default.py' + '")')
-        
-# while (not xbmc.abortRequested):
-    # xbmc.sleep(100)
-    # if xbmcgui.Window(10000).getProperty('PseudoTVRunning') == 'True':
-        # if xbmc.getCondVisibility('Window.IsActive(busydialog)') == 1:
-            # xbmc.executebuiltin('Dialog.Close(busydialog)')
-        # if xbmc.getCondVisibility('Window.IsActive(infodialog)') == 1:
-            # xbmc.executebuiltin('Dialog.Close(infodialog)')
