@@ -1,4 +1,5 @@
-[*] Custom skin fonts *Thanks Steveb
+[*] Removed Kodi progressbar/player time for accurate internal reference. #see skin wiki
+[*] Custom skin fonts *Thanks Steveb #see skin wiki
 [*] Tweaked internal timings, corrected various bugs.
 [*] Added automatic animated logo download when enabled.
 [*] Added support for animated gif TV Logos & Channel Bugs. New options added under "Visual" settings tab.

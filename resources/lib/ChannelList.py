@@ -85,8 +85,8 @@ class ChannelList:
         self.channels = []
         self.file_detail_CHK = []
         self.threadPaused = False
-        self.quickflipEnabled = False
         self.background = True   
+        self.quickflipEnabled = False
         self.runningActionChannel = 0
         self.runningActionId = 0
         self.enteredChannelCount = 0
@@ -123,6 +123,7 @@ class ChannelList:
         self.log("IncludeMeta is " + str(self.includeMeta)) 
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
+        self.quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.startTime = time.time()
         self.tvdbAPI = tvdb.TVDB()
         self.tmdbAPI = tmdb.TMDB() 
@@ -247,12 +248,10 @@ class ChannelList:
         log('ChannelList: ' + msg, level)
 
 
-    # Determine the maximum number of channels by opening consecutive
-    # playlists until we don't find one
+    # Determine the maximum number of channels by opening consecutive settings until we don't find one.
     def findMaxChannels(self):
         self.log('findMaxChannels')
         localCount = 0
-        quickFlip = REAL_SETTINGS.getSetting('Enable_quickflip') == "true"
         self.maxChannels = 0
         self.enteredChannelCount = 0      
         self.freshBuild = False
@@ -275,14 +274,17 @@ class ChannelList:
 
             if chtype == 0:
                 if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
+                    localCount += 1
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
             elif chtype <= 6 or chtype in [12,14]:
                 if len(chsetting1) > 0:
+                    localCount += 1
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
             elif chtype == 7:
                 if FileAccess.exists(chsetting1) == True:
+                    localCount += 1
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
             elif chtype in [8,9]:
@@ -300,14 +302,11 @@ class ChannelList:
 
             if self.forceReset and (chtype != 9999):
                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-               
-            #check if channel lineup includes local content
-            if chtype <= 7 and quickFlip == True:
-                localCount += 1
-                
+
         #if local quota not met, disable quickFlip.
-        if quickFlip == True and localCount > (self.enteredChannelCount/4):
+        if self.quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
+        self.log('findMaxChannels, quickflipEnabled = ' + str(self.quickflipEnabled))
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
         
@@ -3175,7 +3174,74 @@ class ChannelList:
         else:
             return True
   
-  
+      
+    def rtmpDump(self, stream):
+        rtmpValid = False    
+        try:
+            url = urllib.unquote(stream)
+            RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
+            self.log("rtmpDump, RTMPDUMP = " + RTMPDUMP)
+            assert os.path.isfile(RTMPDUMP)
+            if FileAccess.exists(RTMPDUMP) == False:
+                raise Exception()
+            
+            if "playpath" in url:
+                url = re.sub(r'playpath',"-y playpath",url)
+                self.log("rtmpDump, playpath url = " + str(url))
+                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
+            else:
+                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
+            self.log("rtmpDump, RTMPDUMP command = " + str(command))
+            CheckRTMP = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+            output = CheckRTMP.communicate()[0]
+            
+            if "INFO: Connected..." in output:
+                self.log("rtmpDump, INFO: Connected...")
+                rtmpValid = True
+        except Exception,e:
+            rtmpValid = True
+            self.log('rtmpDump, failed! ' + str(e))
+        self.log("rtmpDump, rtmpValid = " + str(rtmpValid))
+        return rtmpValid
+        
+                
+    def url_ok(self, url):
+        urlValid = False
+        try:
+            urllib2.urlopen(url)
+            urlValid = True
+        except urllib2.HTTPError, e:
+            self.log("url_ok, failed! HTTPError " + str((e.code)))
+        except urllib2.URLError, e:
+            self.log("url_ok, failed! URLError " + str((e.args)))
+        self.log("url_ok, urlValid = " + str(urlValid))
+        return urlValid
+        
+
+    def plugin_ok(self, plugin):
+        self.log("plugin_ok, plugin = " + plugin)
+        return isPlugin(plugin)
+        
+        
+    def youtube_ok(self, YTtype, YTid):
+        # todo finish valid youtube channel/playlist check
+        if self.youtube_player != 'False':
+            return True
+
+        
+    def youtube_player_ok(self):
+        try:
+            return self.youtube_player
+        except:
+            self.log("youtube_player_ok")
+            if self.plugin_ok('plugin.video.youtube') == True:
+                self.youtube_player = 'plugin://plugin.video.youtube/?action=play_video&videoid='
+            else:
+                self.youtube_player = 'False'
+            self.log("youtube_player_ok = " + str(self.youtube_player))
+            return self.youtube_player
+           
+
     def upnp_ok(self, url):
         self.log("upnp_ok, " + str(url))
         upnpID = (url.split('/')[2:-1])[0]
@@ -3283,81 +3349,8 @@ class ChannelList:
             duration = 0
         self.log("getffprobeLength, duration = " + str(duration))
         return duration
-      
-      
-    def rtmpDump(self, stream):
-        rtmpValid = False    
-        try:
-            url = urllib.unquote(stream)
-            RTMPDUMP = xbmc.translatePath(REAL_SETTINGS.getSetting('rtmpdumpPath'))
-            self.log("rtmpDump, RTMPDUMP = " + RTMPDUMP)
-            assert os.path.isfile(RTMPDUMP)
-            
-            if "playpath" in url:
-                url = re.sub(r'playpath',"-y playpath",url)
-                self.log("rtmpDump, playpath url = " + str(url))
-                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-            else:
-                command = [RTMPDUMP, '-B 1', '-m 2', '-r', url,'-o','test.flv']
-            self.log("rtmpDump, RTMPDUMP command = " + str(command))
-            CheckRTMP = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-            output = CheckRTMP.communicate()[0]
-            
-            if "INFO: Connected..." in output:
-                self.log("rtmpDump, INFO: Connected...")
-                rtmpValid = True
-        except Exception,e:
-            self.log('rtmpDump, failed! ' + str(e))
-        self.log("rtmpDump, rtmpValid = " + str(rtmpValid))
-        return rtmpValid
-        
-                
-    def url_ok(self, url):
-        urlValid = False
-        try:
-            urllib2.urlopen(url)
-            urlValid = True
-        except urllib2.HTTPError, e:
-            self.log("url_ok, failed! HTTPError " + str((e.code)))
-        except urllib2.URLError, e:
-            self.log("url_ok, failed! URLError " + str((e.args)))
-        self.log("url_ok, urlValid = " + str(urlValid))
-        return urlValid
-        
-
-    def plugin_ok(self, plugin):
-        self.log("plugin_ok, plugin = " + plugin)
-        return isPlugin(plugin)
-        
-        
-    def youtube_ok(self, YTtype, YTid):
-        # todo finish valid youtube channel/playlist check
-        if self.youtube_player != 'False':
-            return True
-            # if YTtype == 1:
-                # tmpstr = self.getYoutubeVideos(YTtype, YTid, '', 1, '')  
-            # elif YTtype == 2:
-                # tmpstr = self.getYoutubeVideos(YTtype, YTid, '', 1, '')
-            # else:
-                # return True
-            # if len(tmpstr) > 0:
-                # return True
-        # return False
 
         
-    def youtube_player_ok(self):
-        try:
-            return self.youtube_player
-        except:
-            self.log("youtube_player_ok")
-            if self.plugin_ok('plugin.video.youtube') == True:
-                self.youtube_player = 'plugin://plugin.video.youtube/?action=play_video&videoid='
-            else:
-                self.youtube_player = 'False'
-            self.log("youtube_player_ok = " + str(self.youtube_player))
-            return self.youtube_player
-           
-
     def insertBCT(self, chtype, channel, fileList, type):
         self.log("insertBCT, channel = " + str(channel))
         newFileList = []

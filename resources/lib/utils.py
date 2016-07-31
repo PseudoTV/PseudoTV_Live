@@ -2142,7 +2142,7 @@ def patchFont():
         if xbmcvfs.exists(path):
             with open(path, 'rt') as f:
                 tree = ElementTree.parse(f)
-            for node in tree.iter('font'):
+            for node in tree.findall('font'):
                 try:
                     if node.attrib.get('res') == MyFont.getSkinRes():
                         MyFont.addFont(node.attrib.get('name'), node.attrib.get('filename'), node.attrib.get('size'))

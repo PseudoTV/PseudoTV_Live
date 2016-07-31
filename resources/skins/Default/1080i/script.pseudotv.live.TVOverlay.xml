@@ -209,36 +209,18 @@
                     <posy>225r</posy>
                     <width>1400</width>
                     <height>4</height>
-                    <texture>seek/progress_mid.png</texture>
+                    <texture>pstvlHighlightAlt3.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
                 </control>
-                <control type="progress">
+                <control type="image" id="5007">
                     <posx>430</posx>
                     <posy>225r</posy>
                     <width>1400</width>
                     <height>4</height>
-                    <texturebg>seek/progresscache_back.png</texturebg>
-                    <lefttexture border="0">seek/progresscache_left.png</lefttexture>
-                    <midtexture border="0">seek/progresscache_mid.png</midtexture>
-                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <info>Player.ProgressCache</info>
-                    <visible>Control.IsVisible(5007)</visible>
-                </control>
-                <control type="progress" id="5007">
-                    <posx>430</posx>
-                    <posy>225r</posy>
-                    <width>1400</width>
-                    <height>4</height>
-                    <texturebg>seek/progress_back.png</texturebg>
-                    <lefttexture border="0">seek/progress_left.png</lefttexture>
-                    <midtexture border="0">seek/progress_mid.png</midtexture>
-                    <righttexture border="0">seek/progress_right.png</righttexture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <info>Player.Progress</info>
                 </control> 
             </control>  
             <control type="button" id="5006">
@@ -428,37 +410,18 @@
                     <posy>425r</posy>
                     <width>1100</width>
                     <height>4</height>
-                    <texture>seek/progress_mid.png</texture>
+                    <texture>pstvlHighlightAlt3.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
                 </control>
-                <control type="progress">
+                <control type="image" id="5004">
                     <posx>430</posx>
                     <posy>425r</posy>
                     <width>1100</width>
                     <height>4</height>
-                    <texturebg>seek/progresscache_back.png</texturebg>
-                    <lefttexture border="0">seek/progresscache_left.png</lefttexture>
-                    <midtexture border="0">seek/progresscache_mid.png</midtexture>
-                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <info>Player.ProgressCache</info>
-                    <visible>Control.IsVisible(5004)</visible>
-                </control>
-                <control type="progress" id="5004">
-                    <posx>430</posx>
-                    <posy>425r</posy>
-                    <width>1100</width>
-                    <height>4</height>
-                    <texturebg>seek/progress_back.png</texturebg>
-                    <lefttexture border="0">seek/progress_left.png</lefttexture>
-                    <midtexture border="0">seek/progress_mid.png</midtexture>
-                    <righttexture border="0">seek/progress_right.png</righttexture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <info>Player.Progress</info>
-                    <visible>Control.IsVisible(5007)</visible>
                 </control> 
             </control>
             <control type="button" id="5005">

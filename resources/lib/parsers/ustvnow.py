@@ -64,6 +64,19 @@ class ustvnow:
 
     def _get_json(self, path):
         self.log('_get_json')
+        try:
+            result = guide.cacheFunction(self._get_json_NEW, path)
+            if len(result) == 0:
+                raise Exception()
+        except:
+            result = self._get_json_NEW(path)
+        if not result:
+            result = False
+        return result
+
+        
+    def _get_json_NEW(self, path):
+        self.log('_get_json_NEW')
         content = False
         response = self._fetch('%s/%s' % (self.mBASE_URL, path))
         if response:
@@ -73,20 +86,6 @@ class ustvnow:
         
     def get_guidedata(self):
         self.log('get_guidedata')
-        try:
-            result = guide.cacheFunction(self.get_guidedata_NEW)
-            if not result:
-                raise Exception()
-        except:
-            self.log('get_guidedata Failed')
-            result = self.get_guidedata_NEW()
-        if not result:
-            result = []
-        return result
-
-
-    def get_guidedata_NEW(self):
-        self.log('get_guidedata_NEW')
         cnt = 0
         content = self._get_json('gtv/1/live/channelguide')
         if content == False:
@@ -101,34 +100,34 @@ class ustvnow:
         base.setAttribute("generator-info-name", "USTVnow Guidedata");
         base.setAttribute("generator-info-url", "http://www.xmltv.org/");
         doc.appendChild(base)
-        channels = [{'sname': u'WHTM'   , 'name': u'ABC', 'icon': u'http://m.ustvnow.com/images/WHTM.png'}, 
-                    {'sname': u'WHP'    , 'name': u'CBS', 'icon': u'http://m.ustvnow.com/images/WHP.png'}, 
-                    {'sname': u'WLYH'   , 'name': u'CW', 'icon': u'http://m.ustvnow.com/images/WLYH.png'}, 
-                    {'sname': u'WPMT'   , 'name': u'FOX', 'icon': u'http://m.ustvnow.com/images/WPMT.png'}, 
-                    {'sname': u'WGAL'   , 'name': u'NBC', 'icon': u'http://m.ustvnow.com/images/WGAL.png'}, 
-                    {'sname': u'WPSU'   , 'name': u'PBS', 'icon': u'http://m.ustvnow.com/images/WPSU.png'}, 
-                    {'sname': u'WHVLLD' , 'name': u'My9', 'icon': u'http://m.ustvnow.com/images/WHVLLD.png'}, 
-                    {'sname': u'AETV'   , 'name': u'AETV', 'icon': u'http://m.ustvnow.com/images/AETV.png'}, 
-                    {'sname': u'AMC'    , 'name': u'AMC', 'icon': u'http://m.ustvnow.com/images/AMC.png'}, 
-                    {'sname': u'APL'    , 'name': u'Animal Planet', 'icon': u'http://m.ustvnow.com/images/APL.png'}, 
-                    {'sname': u'BRAVO'  , 'name': u'Bravo', 'icon': u'http://m.ustvnow.com/images/BRAVO.png'}, 
-                    {'sname': u'TOON'   , 'name': u'Cartoon Network', 'icon': u'http://m.ustvnow.com/images/TOON.png'}, 
-                    {'sname': u'CNBC'   , 'name': u'CNBC', 'icon': u'http://m.ustvnow.com/images/CNBC.png'}, 
-                    {'sname': u'CNN'    , 'name': u'CNN', 'icon': u'http://m.ustvnow.com/images/CNN.png'}, 
-                    {'sname': u'COMEDY' , 'name': u'Comedy Central', 'icon': u'http://m.ustvnow.com/images/COMEDY.png'}, 
-                    {'sname': u'DSC'    , 'name': u'Discovery Channel', 'icon': u'http://m.ustvnow.com/images/DSC.png'}, 
-                    {'sname': u'ESPN'   , 'name': u'ESPN', 'icon': u'http://m.ustvnow.com/images/ESPN.png'}, 
-                    {'sname': u'FNC'    , 'name': u'Fox News Channel', 'icon': u'http://m.ustvnow.com/images/FNC.png'}, 
-                    {'sname': u'FX'     , 'name': u'FX', 'icon': u'http://m.ustvnow.com/images/FX.png'}, 
-                    {'sname': u'HISTORY', 'name': u'History', 'icon': u'http://m.ustvnow.com/images/HISTORY.png'}, 
-                    {'sname': u'LIFE'   , 'name': u'Lifetime', 'icon': u'http://m.ustvnow.com/images/LIFE.png'}, 
+        channels = [{'sname': u'WHTM'   , 'name': u'ABC',                         'icon': u'http://m.ustvnow.com/images/WHTM.png'}, 
+                    {'sname': u'WHP'    , 'name': u'CBS',                         'icon': u'http://m.ustvnow.com/images/WHP.png'}, 
+                    {'sname': u'WLYH'   , 'name': u'CW',                          'icon': u'http://m.ustvnow.com/images/WLYH.png'}, 
+                    {'sname': u'WPMT'   , 'name': u'FOX',                         'icon': u'http://m.ustvnow.com/images/WPMT.png'}, 
+                    {'sname': u'WGAL'   , 'name': u'NBC',                         'icon': u'http://m.ustvnow.com/images/WGAL.png'}, 
+                    {'sname': u'WPSU'   , 'name': u'PBS',                         'icon': u'http://m.ustvnow.com/images/WPSU.png'}, 
+                    {'sname': u'WHVLLD' , 'name': u'My9',                         'icon': u'http://m.ustvnow.com/images/WHVLLD.png'}, 
+                    {'sname': u'AETV'   , 'name': u'AETV',                        'icon': u'http://m.ustvnow.com/images/AETV.png'}, 
+                    {'sname': u'AMC'    , 'name': u'AMC',                         'icon': u'http://m.ustvnow.com/images/AMC.png'}, 
+                    {'sname': u'APL'    , 'name': u'Animal Planet',               'icon': u'http://m.ustvnow.com/images/APL.png'}, 
+                    {'sname': u'BRAVO'  , 'name': u'Bravo',                       'icon': u'http://m.ustvnow.com/images/BRAVO.png'}, 
+                    {'sname': u'TOON'   , 'name': u'Cartoon Network',             'icon': u'http://m.ustvnow.com/images/TOON.png'}, 
+                    {'sname': u'CNBC'   , 'name': u'CNBC',                        'icon': u'http://m.ustvnow.com/images/CNBC.png'}, 
+                    {'sname': u'CNN'    , 'name': u'CNN',                         'icon': u'http://m.ustvnow.com/images/CNN.png'}, 
+                    {'sname': u'COMEDY' , 'name': u'Comedy Central',              'icon': u'http://m.ustvnow.com/images/COMEDY.png'}, 
+                    {'sname': u'DSC'    , 'name': u'Discovery Channel',           'icon': u'http://m.ustvnow.com/images/DSC.png'}, 
+                    {'sname': u'ESPN'   , 'name': u'ESPN',                        'icon': u'http://m.ustvnow.com/images/ESPN.png'}, 
+                    {'sname': u'FNC'    , 'name': u'Fox News Channel',            'icon': u'http://m.ustvnow.com/images/FNC.png'}, 
+                    {'sname': u'FX'     , 'name': u'FX',                          'icon': u'http://m.ustvnow.com/images/FX.png'}, 
+                    {'sname': u'HISTORY', 'name': u'History',                     'icon': u'http://m.ustvnow.com/images/HISTORY.png'}, 
+                    {'sname': u'LIFE'   , 'name': u'Lifetime',                    'icon': u'http://m.ustvnow.com/images/LIFE.png'}, 
                     {'sname': u'NGC'    , 'name': u'National Geographic Channel', 'icon': u'http://m.ustvnow.com/images/NGC.png'}, 
-                    {'sname': u'NIK'    , 'name': u'Nickelodeon', 'icon': u'http://m.ustvnow.com/images/NIK.png'}, 
-                    {'sname': u'SPIKETV', 'name': u'SPIKE TV', 'icon': u'http://m.ustvnow.com/images/SPIKETV.png'}, 
-                    {'sname': u'SYFY'   , 'name': u'Syfy', 'icon': u'http://m.ustvnow.com/images/SYFY.png'}, 
-                    {'sname': u'TBS'    , 'name': u'TBS', 'icon': u'http://m.ustvnow.com/images/TBS.png'}, 
-                    {'sname': u'TNT'    , 'name': u'TNT', 'icon': u'http://m.ustvnow.com/images/TNT.png'}, 
-                    {'sname': u'USA'    , 'name': u'USA', 'icon': u'http://m.ustvnow.com/images/USA.png'}]
+                    {'sname': u'NIK'    , 'name': u'Nickelodeon',                 'icon': u'http://m.ustvnow.com/images/NIK.png'}, 
+                    {'sname': u'SPIKETV', 'name': u'SPIKE TV',                    'icon': u'http://m.ustvnow.com/images/SPIKETV.png'}, 
+                    {'sname': u'SYFY'   , 'name': u'Syfy',                        'icon': u'http://m.ustvnow.com/images/SYFY.png'}, 
+                    {'sname': u'TBS'    , 'name': u'TBS',                         'icon': u'http://m.ustvnow.com/images/TBS.png'}, 
+                    {'sname': u'TNT'    , 'name': u'TNT',                         'icon': u'http://m.ustvnow.com/images/TNT.png'}, 
+                    {'sname': u'USA'    , 'name': u'USA',                         'icon': u'http://m.ustvnow.com/images/USA.png'}]
         
         for channel in channels:
             cnt +=1
