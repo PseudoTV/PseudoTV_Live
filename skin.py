@@ -136,12 +136,11 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                 setProperty('PTVL.SHOT',os.path.join(skinBase,'screenshot0%s.png' %str(i+1)))
                 setProperty('PTVL.SHOT_FALLBACK',os.path.join(skinBase,'screenshot01.png'))
                 xbmc.sleep(2500)
-            xbmc.sleep(5000)
+            xbmc.sleep(10)
             
             
     def fillSkins(self):
         self.log("fillSkins")
-        show_busy_dialog()
         self.skinMeta('Default')
         github_skinList = fillGithubItems('https://github.com/PseudoTV/PseudoTV_Skins')
         for i in range(len(github_skinList)):
@@ -150,7 +149,6 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                 if ((ssList[n].lower()).startswith('screenshot') and github_skinList[i] != '_Outdated'):
                     self.skinMeta(github_skinList[i])
                     break
-        hide_busy_dialog()
         self.setFocusId(500)
         self.cycleSKINSHOT()
 

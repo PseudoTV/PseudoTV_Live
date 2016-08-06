@@ -35,7 +35,7 @@ from urllib2 import HTTPError, URLError
 from pyfscache import *
 
 sys.setcheckinterval(25)
-socket.setdefaulttimeout(30)
+socket.setdefaulttimeout(15)
                     
 USERAGENT   = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.101 Safari/537.36'
 httpHeaders = {'User-Agent': USERAGENT,
@@ -106,7 +106,6 @@ def isKodiRepo(plugin=''):
 def fillGithubItems(url, ext=None, removeEXT=False):
     log("utils: fillGithubItems, url = " + url)
     Sortlist = []
-    # show_busy_dialog()
     try:
         list = []
         catlink = re.compile('title="(.+?)">').findall(read_url_cached(url))
@@ -114,7 +113,7 @@ def fillGithubItems(url, ext=None, removeEXT=False):
             link = catlink[i]
             name = (catlink[i]).lower()
             if ext != None:
-                if ([x.lower for x in ext if name.endswith(x)]):
+                if name.endswith(ext.lower()):
                     if removeEXT == True:
                         link = os.path.splitext(os.path.basename(link))[0]
                     list.append(link.replace('&amp;','&'))
@@ -124,7 +123,6 @@ def fillGithubItems(url, ext=None, removeEXT=False):
         log("utils: fillGithubItems, found %s items" % str(len(Sortlist)))
     except Exception,e:
         pass
-    # hide_busy_dialog()
     return Sortlist
 
 ##############
@@ -151,7 +149,9 @@ def CleanCHnameSeq(text):
                 
 def FindLogo(chtype, chname, mediapath=None):
     log('utils: FindLogo')
-    if FIND_LOGOS == True and isLowPower() != True and len(chname) > 0:
+    if FIND_LOGOS == False:
+        return
+    if isLowPower() != True and len(chname) > 0:
         try:
             FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
             if FindLogoThread.isAlive():
@@ -172,9 +172,9 @@ def FindLogo_Thread(chtype, chname, mediapath):
         xbmcvfs.mkdirs(LOGO_LOC)
 
     # if logo exists & logo override is disabled return
-    if xbmcvfs.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+    if xbmcvfs.exists(LogoPath) == True and OVER_LOGOS == False:
         if ANIM_LOGOS == True:
-            if xbmcvfs.exists(LogoPath_Ani) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+            if xbmcvfs.exists(LogoPath_Ani) == True and OVER_LOGOS == False:
                 return
         else:
             return
@@ -232,9 +232,13 @@ def GrabLogo(url, chname, LogoFile=None):
     url = url.rstrip('/')
     if not LogoFile:
         LogoFile = os.path.join(LOGO_LOC, chname + '.png')
-    log("utils: GrabLogo, url = " + url)
-    log("utils: GrabLogo, LogoFile = " + LogoFile)
-
+    url = url.rstrip('/')
+    log("utils: GrabLogo, url = " + url + " ,LogoFile = " + LogoFile)
+    if OVER_LOGOS == True:
+        try:
+            xbmcvfs.delete(LogoFile)
+        except:
+            pass
     if url.startswith('image'):
         url = (unquote(url)).replace("image://",'')
         GrabLogo(url, chname, LogoFile)
@@ -406,18 +410,30 @@ def GA_Request():
     except Exception,e:  
         log("GA_Request Failed" + str(e), xbmc.LOGERROR)
 
+def RSS_API():
+    log('utils: RSS_API')
+    try:
+        list = (open_url('http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/rss_api.xml')).read()
+    except:
+        list = ''
+    return list
+
+def LOW_MSG():
+    log('utils: LOW_MSG')
+    try:
+        list = (open_url('http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/low_msg.xml')).read()
+    except:
+        list = ''
+    return list
+    
 def POP_MSG():
     log('utils: POP_MSG')
-    poplist = ''
     try:
-        popmsg = 'http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/pop_msg.xml'
-        file = open_url(popmsg)
-        poplist = file.read().replace('\n','').replace('\r','').replace('\t','')
-        file.close()
+        list = (open_url('http://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/pop_msg.xml')).read().replace('\n','').replace('\r','').replace('\t','')
     except:
-        pass
-    return poplist
-                 
+        list = ''
+    return list
+
 def UpdateRSS():
     log('utils: UpdateRSS')
     try:
@@ -625,7 +641,7 @@ def download_silent(url, dest):
     except Exception,e:
         log('utils: download_silent, failed! ' + str(e))
 
-@cache_daily
+@cache_hourly
 def getRequest(url, udata=None, headers=httpHeaders, dopost = False):
     log("utils: getRequest")
     req = urllib2.Request(url.encode('utf-8'), udata, headers)
@@ -1329,8 +1345,6 @@ def getGithubZip(url, lib, addonpath, MSG):
         MSG = MSG + ' Installed'
     except: 
         MSG = MSG + ' Failed to install, Try Again Later'
-        
-    xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
     infoDialog(MSG)
       
 def getContext():  
@@ -1368,8 +1382,6 @@ def getRepo():
     except: 
         MSG = 'Failed to install Lunatixz Repository, Try Again Later'
         pass
-        
-    xbmc.executebuiltin("XBMC.UpdateLocalAddons()"); 
     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSG, 1000, THUMB) )
     return   
  
@@ -1398,7 +1410,6 @@ def chkVersion():
             else:
                 set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
             xbmc.executebuiltin('UpdateAddonRepos')
-            xbmc.executebuiltin('UpdateLocalAddons')
     return isRepoInstalled()
     
 def isCompanionInstalled():
@@ -1467,7 +1478,7 @@ def isLowPower():
     
 def chkAPIS(list):
     try:
-        list = list.split('|')
+        list = list.split('|') 
         for i in range(len(list)):
             key = decodeString(list[i])
             hasAPI(key)
@@ -1490,8 +1501,6 @@ def ClearCache(type='Files'):
             daily.delete("%") 
             weekly.delete("%")
             monthly.delete("%")
-            shutil.rmtree(REQUESTS_LOC)
-            xbmcvfs.mkdirs(REQUESTS_LOC)
         except:
             pass
         REAL_SETTINGS.setSetting('ClearCache', "false")
@@ -1607,8 +1616,8 @@ def hasVersionChanged(__version__):
 def HandleUpgrade():
     log('utils: HandleUpgrade')
     okDialog(POP_MSG(),header="PseudoTV Live - Notification")
+    textViewer(LOW_MSG(),header="PseudoTV Live - Notification")
     
-    # Check if autoplay playlist is enabled
     chkAutoplay()
     chkKodiSkin()
     
@@ -1699,10 +1708,10 @@ def chkChanges():
 def preStart(): 
     log('utils: preStart')
     if chkVersion() == False:
-        return
-
+        return False
+        
     # chkChanges()
-    chkAPIS(RSS_API_KEY)
+    chkAPIS(RSS_API())
     patchSeekbar()
     patchFont()
     chkLowPower()
@@ -1727,6 +1736,8 @@ def preStart():
             
     # Backup/Restore settings2
     chkSettings2()
+    
+    return True
         
 ##############
 # PTVL Tools #
@@ -2135,39 +2146,37 @@ def getChanPrefix(chantype, channame):
     return newlabel
     
 def patchFont():    
-    log("utils: patchFont") 
-    if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
-        import MyFont
-        path = os.path.join(PTVL_SKIN_SELECT, 'script.pseudotv.live.fonts.xml')
-        if xbmcvfs.exists(path):
-            with open(path, 'rt') as f:
-                tree = ElementTree.parse(f)
-            for node in tree.findall('font'):
-                try:
-                    if node.attrib.get('res') == MyFont.getSkinRes():
-                        MyFont.addFont(node.attrib.get('name'), node.attrib.get('filename'), node.attrib.get('size'))
-                except Exception,e:
-                    log('utils: patchFont, failed! ' + str(e))
+    log("utils: patchFont")
+    import MyFont
+    path = os.path.join(PTVL_SKIN_SELECT, 'script.pseudotv.live.fonts.xml')
+    if xbmcvfs.exists(path):
+        with open(path, 'rt') as f:
+            tree = ElementTree.parse(f)
+        for node in tree.findall('font'):
+            try:
+                if node.attrib.get('res') == MyFont.getSkinRes():
+                    MyFont.addFont(node.attrib.get('name'), node.attrib.get('filename'), node.attrib.get('size'))
+            except Exception,e:
+                log('utils: patchFont, failed! ' + str(e))
                 
 def patchSeekbar():
-    if not xbmc.getSkinDir() in ('skin.confluence', 'skin.estuary'):
-        DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
-        log("utils: patchSeekbar, DSPath = " + ascii(DSPath)) 
-        #Patch dialogseekbar to ignore OSD for PTVL.
-        found = False
-        try:
-            lineLST = file(DSPath, "r").readlines()   
-            for i in range(len(lineLST)):
-                patch = lineLST[i].find('<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
-                if patch > 0:
-                    found = True
-                    
-            if found == False:
-                replaceAll(DSPath,'<window>','<window>\n\t<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
-                xbmc.executebuiltin('XBMC.ReloadSkin()')
-                log('utils: patchSeekbar, Patched dialogseekbar.xml')
-        except Exception,e:
-            log('utils: patchSeekbar, Failed! ' + str(e))
+    DSPath = xbmc.translatePath(os.path.join(XBMC_SKIN_LOC, 'DialogSeekBar.xml'))
+    log("utils: patchSeekbar, DSPath = " + ascii(DSPath)) 
+    #Patch dialogseekbar to ignore OSD for PTVL.
+    found = False
+    try:
+        lineLST = file(DSPath, "r").readlines()   
+        for i in range(len(lineLST)):
+            patch = lineLST[i].find('<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
+            if patch > 0:
+                found = True
+                
+        if found == False:
+            replaceAll(DSPath,'<window>','<window>\n\t<visible>Window.IsActive(fullscreenvideo) + !Window.IsActive(script.pseudotv.TVOverlay.xml) + !Window.IsActive(script.pseudotv.live.TVOverlay.xml)</visible>')
+            xbmc.executebuiltin('XBMC.ReloadSkin()')
+            log('utils: patchSeekbar, Patched dialogseekbar.xml')
+    except Exception,e:
+        log('utils: patchSeekbar, Failed! ' + str(e))
 
 def egTrigger_Thread(message, sender):
     log("egTrigger_Thread")

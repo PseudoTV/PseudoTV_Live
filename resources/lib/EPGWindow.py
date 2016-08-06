@@ -21,13 +21,13 @@ import subprocess, os, sys, re
 import time, threading, datetime, _strptime, traceback
 import urllib, urllib2
 
+from utils import *
 from Playlist import Playlist
 from Globals import *
 from Channel import Channel
 from ChannelList import ChannelList
 from FileAccess import FileAccess
 from xml.etree import ElementTree as ET
-from utils import *
 
 try:
     import buggalo
@@ -80,8 +80,8 @@ try:
             self.channelLabelTimer = threading.Timer(2.0, self.hideChannelLabel)
             self.GotoChannelTimer = threading.Timer(0.5, self.GotoChannel)
             self.actionSemaphore = threading.BoundedSemaphore()
-                
-              
+            
+            
         def onInit(self):
             self.log('onInit')
             self.curchannelIndex = []   

@@ -40,7 +40,7 @@ class VOD(xbmcgui.WindowXMLDialog):
         
         
     def log(self, msg, level = xbmc.LOGDEBUG):
-        log('Ondemand: ' + msg, level)
+        log('VOD: ' + msg, level)
 
     
     def onInit(self):
@@ -58,17 +58,17 @@ class VOD(xbmcgui.WindowXMLDialog):
                 self.MyOverlayWindow.windowSwap('DVR')
             elif controlid == 6003:
                 self.log('ACTION_TELETEXT_YELLOW')
-                self.MyOverlayWindow.windowSwap('ONDEMAND')
+                self.MyOverlayWindow.windowSwap('VOD')
             elif controlid == 6004:
                 self.log('ACTION_TELETEXT_BLUE') 
-                self.MyOverlayWindow.windowSwap('APPS')
+                self.MyOverlayWindow.windowSwap('APP')
 
                 
     def onAction(self, act):
         self.log('onAction ' + str(act.getId()))
         action = act.getId()
         if action in ACTION_PREVIOUS_MENU:
-            self.closeOndemand()   
+            self.closeVOD()   
             
         elif action == ACTION_TELETEXT_RED:
             self.log('ACTION_TELETEXT_RED')
@@ -80,11 +80,11 @@ class VOD(xbmcgui.WindowXMLDialog):
         
         elif action == ACTION_TELETEXT_YELLOW:
             self.log('ACTION_TELETEXT_YELLOW')
-            self.MyOverlayWindow.windowSwap('ONDEMAND')
+            self.MyOverlayWindow.windowSwap('VOD')
                 
         elif action == ACTION_TELETEXT_BLUE:
             self.log('ACTION_TELETEXT_BLUE')
-            self.MyOverlayWindow.windowSwap('APPS')
+            self.MyOverlayWindow.windowSwap('APP')
             
         if action in ACTION_PREVIOUS_MENU:
             print 'ACTION_PREVIOUS_MENU'
@@ -111,6 +111,6 @@ class VOD(xbmcgui.WindowXMLDialog):
             print 'ACTION_SELECT_ITEM'
                 
            
-    def closeOndemand(self):
-        self.log('closeOndemand')
+    def closeVOD(self):
+        self.log('closeVOD')
         self.close()

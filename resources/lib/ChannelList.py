@@ -63,7 +63,9 @@ except Exception,e:
 try:
     from metahandler import metahandlers
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
-    ENHANCED_DATA = True
+    ENHANCED_DATA = True                
+    if isLowPower() == True:
+        raise Exception()
 except Exception,e:  
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-ChannelList: metahandler Import failed! " + str(e))    
@@ -273,30 +275,17 @@ class ChannelList:
                 pass
 
             if chtype == 0:
-                if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
+                if FileAccess.exists(xbmc.translatePath(chsetting1)):
                     localCount += 1
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
-            elif chtype <= 6 or chtype in [12,14]:
+            elif chtype <= 7:
                 if len(chsetting1) > 0:
                     localCount += 1
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
-            elif chtype == 7:
-                if FileAccess.exists(chsetting1) == True:
-                    localCount += 1
-                    self.maxChannels = i + 1
-                    self.enteredChannelCount += 1
-            elif chtype in [8,9]:
-                if self.Valid_ok(chsetting2) == True:
-                    self.maxChannels = i + 1
-                    self.enteredChannelCount += 1
-            elif chtype == 10:
-                if self.youtube_player != 'False':
-                    self.maxChannels = i + 1
-                    self.enteredChannelCount += 1
-            elif chtype in [11,15,16]:
-                if self.Valid_ok(chsetting1) == True:
+            elif chtype != 9999:
+                if len(chsetting1) > 0:
                     self.maxChannels = i + 1
                     self.enteredChannelCount += 1
 
@@ -330,6 +319,7 @@ class ChannelList:
         chsetting3 = ''
         chsetting4 = ''
         needsreset = False
+        valid = False 
         self.background = background
         self.settingChannel = channel
                                
@@ -345,14 +335,34 @@ class ChannelList:
         while len(self.channels) < channel:
             self.channels.append(Channel())
 
-        if chtype == 9999:
+        #Check channel configuration.
+        if chtype == 0:
+            if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
+                valid = True
+        elif chtype == 7:
+            if FileAccess.exists(chsetting1) == True:
+                valid = True
+        elif chtype in [8,9]:
+            if self.Valid_ok(chsetting2) == True:
+                valid = True
+        elif chtype == 10:
+            if self.youtube_player != 'False':
+                valid = True
+        elif chtype in [11,15,16]:
+            if self.Valid_ok(chsetting1) == True:
+                valid = True
+        elif chtype != 9999:
+            if len(chsetting1) > 0:
+                valid = True
+
+        self.log('setupChannel ' + str(channel) + ', valid = ' + str(valid))
+        if valid == False:
             self.channels[channel - 1].isValid = False
             return False
-            
+
         # find missing channel logos
-        if FIND_LOGOS == True:
-            if chtype not in [6,7]:
-                FindLogo(chtype, self.getChannelName(chtype, channel, chsetting1))
+        if chtype not in [6,7]:
+            FindLogo(chtype, self.getChannelName(chtype, channel, chsetting1))
             
         self.channels[channel - 1].type = chtype
         self.channels[channel - 1].isSetup = True
@@ -398,8 +408,7 @@ class ChannelList:
                         # If this channel has been watched for longer than it lasts, reset the channel
                         if self.channels[channel - 1].totalTimePlayed < self.channels[channel - 1].getTotalDuration():
                             createlist = False 
-                            
-                        # Reset livetv after LIVETV_MAXPARSE         
+       
                         if timedif >= (LIVETV_REFRESH) or self.channels[channel - 1].totalTimePlayed >= (LIVETV_REFRESH):
                             createlist = True
                     else: 
@@ -668,14 +677,14 @@ class ChannelList:
     def makeChannelList(self, channel, chtype, setting1, setting2, setting3, setting4, append = False):
         self.log('makeChannelList, CHANNEL: ' + str(channel))
         self.getFileListCache(chtype, channel)
-        msg = 'default'   
+        msg = 'default' 
         fileListCHK = False
         israndom = False  
         isreverse = False
         bctType = None
         fileList = []
         limit = MEDIA_LIMIT #Global
-                
+
         # Correct Youtube/Media Limit/Sort Values from outdated configurations
         if chtype in [7,10,11,13,15,16]:
             if chtype == 10:
@@ -3219,8 +3228,9 @@ class ChannelList:
         
 
     def plugin_ok(self, plugin):
-        self.log("plugin_ok, plugin = " + plugin)
-        return isPlugin(plugin)
+        status = isPlugin(plugin)
+        self.log("plugin_ok, plugin = " + plugin + ' ,installed = ' + str(status))
+        return status
         
         
     def youtube_ok(self, YTtype, YTid):

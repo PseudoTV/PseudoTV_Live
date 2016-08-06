@@ -135,7 +135,7 @@
                 <texturefocus>EPGbuttonFocus.png</texturefocus>
             </control>               
             <control type="button" id="6004">
-                <description>Apps Label</description>        
+                <description>App Label</description>        
                 <width>378</width>
                 <height>40</height>
                 <label>APP</label>

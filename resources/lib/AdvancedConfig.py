@@ -76,7 +76,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
                 if xbmcgui.Dialog().yesno("Save", "Would you like to save your changes?"):
                     self.saveRules()
                 self.close()
-            xbmc.sleep(10)
+            xbmc.sleep(25)
             if getProperty("PTVL.showingList") == 'True':
                 xbmc.executebuiltin("Control.SetFocus(102)")
             else:

@@ -39,6 +39,8 @@ else:
 
 API_URL = 'http://www.thetvdb.com/api/%s/series/%s/banners.xml'
 
+socket.setdefaulttimeout(5)
+
 class TVDB(object):
     def __init__(self):
         self.name = 'TVDB'

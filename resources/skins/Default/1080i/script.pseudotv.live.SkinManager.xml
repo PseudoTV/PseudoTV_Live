@@ -12,6 +12,16 @@
             <texture border="40">pstvlButtonNoFocusAlt.png</texture>
         </control>
         <control type="image">
+            <description>Busy animation</description>
+            <top>50%</top>
+            <left>50%</left>
+            <width>50</width>
+            <height>50</height>
+            <animation effect="rotate" condition="true" start="0" end="360" loop="true" time="1000" center="auto">Conditional</animation>
+            <texture flipx="true" colordiffuse="FF0297eb">spinner.gif</texture>
+            <aspectratio>keep</aspectratio>
+        </control>
+        <control type="image">
             <description>Dialog Header image</description>
             <left>320</left>
             <top>180</top>

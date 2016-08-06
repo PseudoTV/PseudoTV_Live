@@ -44,18 +44,18 @@ def PseudoTV():
             return HandleUpgrade()
 
         setProperty("PseudoTVRunning", "True")
-        preStart()
-        MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
-        
-        for curthread in threading.enumerate():
-            log("Active Thread: " + str(curthread.name))   
-            if curthread.name != "MainThread":
-                try:
-                    curthread.join()
-                    log("Joined Thread: " + str(curthread.name))      
-                except: 
-                    pass
-        del MyOverlayWindow
+        if preStart() == True:
+            MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
+            
+            for curthread in threading.enumerate():
+                log("Active Thread: " + str(curthread.name))   
+                if curthread.name != "MainThread":
+                    try:
+                        curthread.join()
+                        log("Joined Thread: " + str(curthread.name))      
+                    except: 
+                        pass
+            del MyOverlayWindow
     except Exception,e:
         log('default: PseudoTV Overlay Failed! ' + str(e), xbmc.LOGERROR)
         buggalo.onExceptionRaised()

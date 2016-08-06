@@ -1,3 +1,8 @@
+[*] NEW! Advanced Channel rule - PIN Channel Lock
+[*] Rewrote core artwork code, added additional parsers incl. google image search.
+[*] Added multi-font support to PTVL skins.
+[*] Increased channel surfing performance/responsiveness .
+[*] [COLOR=blue][B]^ v.0.7.9 ^[/B][/COLOR]
 [*] Removed Kodi progressbar/player time for accurate internal reference. #see skin wiki
 [*] Custom skin fonts *Thanks Steveb #see skin wiki
 [*] Tweaked internal timings, corrected various bugs.

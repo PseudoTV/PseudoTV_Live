@@ -1,10 +1,10 @@
 <fonts>
-    <font res="720p"  name="PTVL10" filename="Poppins-Medium.ttf" size="14" />
-    <font res="1080i" name="PTVL10" filename="Poppins-Medium.ttf" size="24" />
-    <font res="720p"  name="PTVL12" filename="Poppins-Medium.ttf" size="16" />
-    <font res="1080i" name="PTVL12" filename="Poppins-Medium.ttf" size="25" />
-    <font res="720p"  name="PTVL13" filename="Poppins-Medium.ttf" size="20" />
-    <font res="1080i" name="PTVL13" filename="Poppins-Medium.ttf" size="30" />
-    <font res="720p"  name="PTVL14" filename="Poppins-Medium.ttf" size="22" />
-    <font res="1080i" name="PTVL14" filename="Poppins-Medium.ttf" size="33" />
+    <font res="720p"  name="PTVL10" filename="Roboto-Regular.ttf" size="14" />
+    <font res="1080i" name="PTVL10" filename="Roboto-Regular.ttf" size="24" />
+    <font res="720p"  name="PTVL12" filename="Roboto-Regular.ttf" size="16" />
+    <font res="1080i" name="PTVL12" filename="Roboto-Regular.ttf" size="25" />
+    <font res="720p"  name="PTVL13" filename="Roboto-Regular.ttf" size="20" />
+    <font res="1080i" name="PTVL13" filename="Roboto-Regular.ttf" size="30" />
+    <font res="720p"  name="PTVL14" filename="Roboto-Regular.ttf" size="22" />
+    <font res="1080i" name="PTVL14" filename="Roboto-Regular.ttf" size="33" />
 </fonts>

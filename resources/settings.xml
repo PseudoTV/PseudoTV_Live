@@ -241,7 +241,6 @@
         <setting id="FANARTTV_API_KEY"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
         <setting id="GBOX_API_KEY"  label="30924" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="YT_API_KEY"  option="hidden" visible="false" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
-        <setting id="RSS_API_KEY" option="hidden" visible="false" type="text" default="cmVwb3NpdG9yeS5rb2RpbA==|cmVwb3NpdG9yeS50aGV2aWJl|cmVwb3NpdG9yeS5kb25hdGVsbG9hbmRoeWJyaWQ=|" />  
         <setting id="PSS_API_KEY" option="hidden" visible="false" type="text" default="cGx1Z2luOi8vcGx1Z2luLnZpZGVvLnR2Mmdv|" />  
         <setting id="GOOGLE_API_KEY"  option="hidden" visible="false" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="LOGODB_API_KEY" option="hidden" visible="false" type="text" default="8332" />

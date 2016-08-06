@@ -30,8 +30,6 @@ from resources.lib.Globals import *
 from urllib2 import HTTPError, URLError
 from resources.lib.utils import *
 from language import *
-
-socket.setdefaulttimeout(30)
  
 API_KEY = FANARTTV_API_KEY
 API_URL_TV = 'http://webservice.fanart.tv/v3/tv/%s?api_key=%s'
@@ -79,7 +77,9 @@ IMAGE_TYPES = ['clearlogo',
                'hdmovieclearart',
                'moviethumb',
                'moviebanner']
-               
+  
+socket.setdefaulttimeout(5)
+             
 class fanarttv:
     def __init__(self):
         self.name = 'fanart.tv - TV API'

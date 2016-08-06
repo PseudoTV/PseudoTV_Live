@@ -38,6 +38,8 @@ API_CFG = 'http://api.themoviedb.org/3/configuration?api_key=%s'
 API_URL = 'http://api.themoviedb.org/3/movie/%s/images?api_key=%s'
 BASE_IMAGEURL = "http://d3gtl9l2a4fn1j.cloudfront.net/t/p/"
 
+socket.setdefaulttimeout(5)
+
 class TMDB(object):
     def __init__(self):
         self.name = 'TMDB'

@@ -59,10 +59,10 @@ class DVR(xbmcgui.WindowXMLDialog):
                 self.MyOverlayWindow.windowSwap('DVR')
             elif controlid == 6003:
                 self.log('ACTION_TELETEXT_YELLOW')
-                self.MyOverlayWindow.windowSwap('ONDEMAND')
+                self.MyOverlayWindow.windowSwap('VOD')
             elif controlid == 6004:
                 self.log('ACTION_TELETEXT_BLUE') 
-                self.MyOverlayWindow.windowSwap('APPS')
+                self.MyOverlayWindow.windowSwap('APP')
 
                 
     def onAction(self, act):
@@ -81,11 +81,11 @@ class DVR(xbmcgui.WindowXMLDialog):
         
         elif action == ACTION_TELETEXT_YELLOW:
             self.log('ACTION_TELETEXT_YELLOW')
-            self.MyOverlayWindow.windowSwap('ONDEMAND')
+            self.MyOverlayWindow.windowSwap('VOD')
                 
         elif action == ACTION_TELETEXT_BLUE:
             self.log('ACTION_TELETEXT_BLUE')
-            self.MyOverlayWindow.windowSwap('APPS')
+            self.MyOverlayWindow.windowSwap('APP')
             
         if action in ACTION_PREVIOUS_MENU:
             print 'ACTION_PREVIOUS_MENU'

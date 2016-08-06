@@ -158,43 +158,49 @@ class Settings:
 
     def repairSettings(self):
         self.log("repairSettings")
-        xbmcgui.Dialog().ok("PseudoTV Live - Channel Repair", "[COLOR=red]Warning!![/COLOR] The repair process can alter your channel configurations.", "Its recommended you backup before continuing.")
+        rules = True
+        MSG = "Channel Repair Failed!"
+        MSG1 = ""
+
+        xbmcgui.Dialog().ok("PseudoTV Live - Channel Repair", "[COLOR=red]Warning!![/COLOR] The repair process can alter your channel configurations. Its recommended you backup before continuing.")
         if xbmcgui.Dialog().yesno("PseudoTV Live - Channel Repair", "Start repair process?"):
+            # if xbmcgui.Dialog().yesno("PseudoTV Live - Channel Repair", "Remove Channel rules?"):
+                # rules = False
+
+            self.log("repairSettings, Keep rules = " + str(rules))
             updateDialog = xbmcgui.DialogProgress()
             updateDialog.create("PseudoTV Live - Channel Repair", "Initializing Channels")
             self.loadSettings()
             chanErrors = ''
             self.amendedSettings = []
             self.amendedErrors = []
-            
-            MSG = "Channel Repair Failed!"
-            MSG1 = ""
-            
+
             for i in range(Globals.CHANNEL_LIMIT):
-                updateDialog.update(int(i * .07) + 1, "Initializing Channels", "Scanning Channel " + str(i+1))
+                self.log("repairSettings, Channel " + str(i+1))
                 list(set(self.amendedErrors))
                 self.setSetting('Channel_' + str(i + 1) + '_time', '0')
                 self.setSetting('Channel_' + str(i + 1) + '_changed', "True")
-                
+                if rules == False:
+                    self.setSetting('Channel_' + str(i + 1) + '_rulecount', "0")
+    
                 for n in range(len(self.currentSettings)):
+                    self.log("repairSettings, Analyzing Channel " + str(i+1))
                     if (self.currentSettings[n][0]).startswith('Channel_'+ str(i + 1) + '_'):
-                        updateDialog.update(int(i * .07) + 1, "Repairing Channels", "Analyzing Channel " + str(i+1), MSG1)
+                        updateDialog.update(int(i * .07) + 1, "Repairing Channels, Analyzing Channel " + str(i+1), MSG1)
                         if self.currentSettings[n] not in self.amendedSettings:
+                            if rules == False:
+                                for r in range(Globals.RULES_PER_PAGE):      
+                                    if (self.currentSettings[n][0]).startswith("Channel_" + str(i + 1) + "_rule_%s" %str(r+1)):
+                                        self.log("repairSettings, Removing Channel Rule " + str(r+1))    
+                                        pass
                             self.amendedSettings.append(self.currentSettings[n])
                         else:
                             self.amendedErrors.append(i + 1)
-                            
-                    # for r in range(Globals.RULES_PER_PAGE):         
-                        # try:
-                            # if int(self.getSetting("Channel_" + str(i + 1) + "_rule_%s_id" %str(r+1))) == 1:
-                                # return self.getSetting("Channel_" + str(i + 1) + "_rule_%s_opt_1" %str(r+1))
-                                # if self.currentSettings[n] not in self.amendedSettings:
-                                    # self.amendedSettings.append(self.currentSettings[n])
-                        # except:
-                            # return ''                        
+
+                    
                     if len(self.amendedErrors) > 0:
-                        MSG1 = "Errors found on channels " + str(list(set(self.amendedErrors)))
-                        updateDialog.update(int(i * .07) + 1, "Repairing Channels", "Analyzing Channel " + str(i+1), MSG1)
+                        MSG1 = "Errors found and fix on channels " + str(list(set(self.amendedErrors)))
+                        updateDialog.update(int(i * .07) + 1, "Repairing Channels, Analyzing Channel " + str(i+1), MSG1)
                         
             self.writeSettingsNew(updateDialog)
             MSG = "Channel Repair Complete"
