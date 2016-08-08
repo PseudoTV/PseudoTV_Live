@@ -169,7 +169,8 @@ class Artdownloader:
         self.log('FindArtwork, chtype = ' + str(chtype) + ', id = ' + str(id) +  ', dbid = ' + str(dbid) + ', arttypeEXT = ' + arttypeEXT)
         try:
             setImage = 'NA.png'
-
+            SetDefault = self.SetDefaultArt(chname, mpath, arttypeEXT)
+            
             # local media
             if chtype <= 7 or chtype == 12:
                 if type in ['tvshow','episode']:
@@ -212,7 +213,7 @@ class Artdownloader:
             
             if chtype in [8,11] and dbid != '0':
                 self.log('FindArtwork, Decode thumb')
-                return decodeString(dbid)      
+                return dbidDecode(dbid)      
    
             if chtype == 8 and dbid == '0':
                 setImage = self.findMissingArtLive(title)
@@ -220,7 +221,7 @@ class Artdownloader:
                     return setImage
                     
             self.log('FindArtwork, Using Default Art')
-            return self.SetDefaultArt(chname, mpath, arttypeEXT)
+            return SetDefault
         except Exception,e:  
             self.log("script.pseudotv.live-Artdownloader: FindArtwork Failed! " + str(e), xbmc.LOGERROR)
             self.log(traceback.format_exc(), xbmc.LOGERROR) 
@@ -270,28 +271,29 @@ class Artdownloader:
     def LookupMissingArtwork(self, type, title, year, id, arttype, chname, mpath, arttypeEXT):
         self.log('LookupMissingArtwork')
         url = '' 
-        if ENHANCED_DATA == True and id != '0' and isLowPower() == False:  
+        if id != '0' and isLowPower() == False:  
             url = self.findMissingArt(type, id, arttype, chname, mpath, arttypeEXT)                
-        if url.startswith('http'):
-            return url
+            if url.startswith('http'):
+                return url
         return 'NA.png'
           
 
     def findMissingArtLive(self, title):
         self.log('findMissingArtLive, title = ' + title)
-        request = self.getGoogleImages('"%s"+site:zap2it.com' %title)
-        for image in request:
-            image = image.split('?')[0]
-            image = image.split('.jpg%')[0]+'.jpg'
-            if image.endswith(('png','jpg')):
-                if 'tribzap2it' and 'l_h12_aa' in image:
-                    return image
-                elif 'images.zap2it.com' and 'b_h12_ab' in image:
-                    return image
-                elif 'images.zap2it.com' and 'l_h6_aa' in image:
-                    return image
-                elif 'images.zap2it.com' and 'b_h6_ab' in image:
-                    return image
+        if isLowPower() == False:  
+            request = self.getGoogleImages('"%s"+site:zap2it.com' %title)
+            for image in request:
+                image = image.split('?')[0]
+                image = image.split('.jpg%')[0]+'.jpg'
+                if image.endswith(('png','jpg')):
+                    if 'tribzap2it' and 'l_h12_aa' in image:
+                        return image
+                    elif 'images.zap2it.com' and 'b_h12_ab' in image:
+                        return image
+                    elif 'images.zap2it.com' and 'l_h6_aa' in image:
+                        return image
+                    elif 'images.zap2it.com' and 'b_h6_ab' in image:
+                        return image
         return 'NA.png'
           
            

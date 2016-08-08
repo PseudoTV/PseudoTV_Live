@@ -4663,39 +4663,41 @@ class ChannelList:
         
     def getMovieMeta(self, stars, year, duration, plot, title, tagline, imdb_id, genre, rating, playcount):
         self.log("getMovieMeta")
-        try:
-            meta = metaget.get_meta('movie', title, str(year))
-            year     = int(year                                 or (meta['year']               or '0'))
-            duration = int(duration                             or (meta['duration']           or ''))
-            plot     = uni(plot                                 or (meta['plot']               or ''))
-            title    = uni(title                                or (meta['title']              or ''))
-            tagline  = uni(tagline                              or (meta['tagline']            or ''))
-            imdb_id  = uni(meta['imdb_id']                      or imdb_id                     or '0')
-            playcount= int(playcount                            or (meta['playcount']          or '1'))
-            stars    = float(meta['rating']                     or stars                       or '0.0')
-            genre    = uni(meta['genre'].split(',')[0]          or genre                       or 'Unknown')
-            rating   = uni(meta['mpaa']                         or rating                      or 'NR')
-        except:
-            pass
+        if ENHANCED_DATA == True: 
+            try:
+                meta = metaget.get_meta('movie', title, str(year))
+                year     = int(year                                 or (meta['year']               or '0'))
+                duration = int(duration                             or (meta['duration']           or ''))
+                plot     = uni(plot                                 or (meta['plot']               or ''))
+                title    = uni(title                                or (meta['title']              or ''))
+                tagline  = uni(tagline                              or (meta['tagline']            or ''))
+                imdb_id  = uni(meta['imdb_id']                      or imdb_id                     or '0')
+                playcount= int(playcount                            or (meta['playcount']          or '1'))
+                stars    = float(meta['rating']                     or stars                       or '0.0')
+                genre    = uni(meta['genre'].split(',')[0]          or genre                       or 'Unknown')
+                rating   = uni(meta['mpaa']                         or rating                      or 'NR')
+            except:
+                pass
         self.log("getMovieMeta, return = " + str(stars) +','+ str(year) +','+ str(duration) +','+ plot +','+ title +','+ tagline +','+ imdb_id +','+ genre +','+ rating +','+ str(playcount))
         return stars, year, duration, plot, title, tagline, imdb_id, genre, rating, playcount
         
         
     def getTVmeta(self, stars, year, duration, plot, title, tagline, tvdb_id, genre, rating, playcount):
         self.log("getTVmeta")
-        try:
-            meta = metaget.get_meta('tvshow', title, str(year))
-            year     = int(year                                 or (meta['year']               or '0'))
-            duration = int(duration                             or (meta['duration']           or ''))
-            plot     = uni(plot                                 or (meta['plot']               or ''))
-            title    = uni(title                                or (meta['title']              or ''))
-            tvdb_id  = uni(meta['tvdb_id']                      or tvdb_id                     or '0')
-            playcount= int(playcount                            or (meta['playcount']          or '1'))
-            stars    = float(meta['rating']                     or stars                       or '0.0')
-            genre    = uni(meta['genre'].split(',')[0]          or genre                       or 'Unknown')
-            rating   = uni(meta['mpaa']                         or rating                      or 'NR')
-        except:
-            pass
+        if ENHANCED_DATA == True: 
+            try:
+                meta = metaget.get_meta('tvshow', title, str(year))
+                year     = int(year                                 or (meta['year']               or '0'))
+                duration = int(duration                             or (meta['duration']           or ''))
+                plot     = uni(plot                                 or (meta['plot']               or ''))
+                title    = uni(title                                or (meta['title']              or ''))
+                tvdb_id  = uni(meta['tvdb_id']                      or tvdb_id                     or '0')
+                playcount= int(playcount                            or (meta['playcount']          or '1'))
+                stars    = float(meta['rating']                     or stars                       or '0.0')
+                genre    = uni(meta['genre'].split(',')[0]          or genre                       or 'Unknown')
+                rating   = uni(meta['mpaa']                         or rating                      or 'NR')
+            except:
+                pass
         self.log("getTVmeta, return = " + str(stars) +','+ str(year) +','+ str(duration) +','+ plot +','+ title +','+ tagline +','+ tvdb_id +','+ genre +','+ rating +','+ str(playcount))
         return stars, year, duration, plot, title, tagline, tvdb_id, genre, rating, playcount
 
