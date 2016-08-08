@@ -212,9 +212,9 @@ class Artdownloader:
             
             if chtype in [8,11] and dbid != '0':
                 self.log('FindArtwork, Decode thumb')
-                return decodeString(dbid)                      
+                return decodeString(dbid)      
    
-            if chtype == 8:
+            if chtype == 8 and dbid == '0':
                 setImage = self.findMissingArtLive(title)
                 if setImage.startswith('http'):
                     return setImage
@@ -226,7 +226,7 @@ class Artdownloader:
             self.log(traceback.format_exc(), xbmc.LOGERROR) 
             return THUMB
                 
-              
+
     def dbidDecode(self, dbid):
         self.log('dbidDecode')
         return decodeString(dbid)
@@ -279,10 +279,19 @@ class Artdownloader:
 
     def findMissingArtLive(self, title):
         self.log('findMissingArtLive, title = ' + title)
-        request = self.getGoogleImages('%s+site:zap2it.com' %title)
+        request = self.getGoogleImages('"%s"+site:zap2it.com' %title)
         for image in request:
+            image = image.split('?')[0]
+            image = image.split('.jpg%')[0]+'.jpg'
             if image.endswith(('png','jpg')):
-                return image
+                if 'tribzap2it' and 'l_h12_aa' in image:
+                    return image
+                elif 'images.zap2it.com' and 'b_h12_ab' in image:
+                    return image
+                elif 'images.zap2it.com' and 'l_h6_aa' in image:
+                    return image
+                elif 'images.zap2it.com' and 'b_h6_ab' in image:
+                    return image
         return 'NA.png'
           
            
@@ -388,18 +397,16 @@ class Artdownloader:
                 pass  
         return url
         
-        
+    # Adapted from https://github.com/marcelveldt/script.skin.helper.service/blob/master/resources/lib/ArtworkUtils.py#L712
     def getGoogleImages(self, terms, **kwargs):
         start = ''
         page = 1
-        args = ['q={0}'.format(urllib.quote_plus(terms.encode("utf-8","ignore")))]
+        args = ['q={0}'.format(urllib.quote_plus(uni(terms)))]
         for k in kwargs.keys():
             if kwargs[k]: args.append('{0}={1}'.format(k,kwargs[k]))
         query = '&'.join(args)
         start = ''
-    ##    baseURL = 'https://www.google.com/search?site=imghp&tbm=isch&tbs=isz:l{start}{query}'
         baseURL = 'http://www.google.com/search?site=imghp&tbm=isch&tbs=isz:m{start}{query}'
-    ##    if page > 1: start = '&start=%s' % ((page - 1) * 1)
         url = baseURL.format(start=start,query='&' + query)
         self.log("getGoogleImages, url = " + url)
         html = requests.get(url, headers={'User-agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows Phone OS 7.0; Trident/3.1; IEMobile/7.0; LG; GW910)'}, timeout=5).text
