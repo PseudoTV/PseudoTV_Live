@@ -177,14 +177,14 @@
             <setting id="SettingsFolder" subsetting="true" type="folder" source="auto" visible="eq(-2,true)"   label="30010" default="" />
         <setting label="30102" type="lsep"/>
             <setting id="UPNP1" type="bool"   label="30103" default="false" />
-            <setting id="UPNP1_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
-            <setting id="UPNP1_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP1_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP1_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP2" type="bool"   label="30104" default="false" />
-            <setting id="UPNP2_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
-            <setting id="UPNP2_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP2_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP2_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP3" type="bool"   label="30105" default="false" />
-            <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:9090" />
-            <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="xbmc:xbmc" />
+            <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0.1" range="0,.01,5" option="float" />
     </category>
     
@@ -223,6 +223,7 @@
         <setting id="Include3D" type="bool"   label="39958" default="false"/>
         <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
         <setting id="IncludeBCTs" type="bool"   label="39997" default="true"/>
+        <setting id="IncludeMeta" type="bool"   label="39998" default="true"/>
         <setting id="showNextItem" type="bool"   label="39994" visible="false" default="true"/>
         <setting label="30939" type="lsep"/>
         <setting id="ForceLiveChannelReset" type="bool"   label="30944" default="false"/>

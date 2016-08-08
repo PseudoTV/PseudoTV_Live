@@ -30,7 +30,7 @@
     <extension point="xbmc.service" library="service.py" start="startup"/>
     <extension point="xbmc.addon.metadata">
         <summary lang="en">Channel surfing for your local and online content.</summary>
-        <description lang="en">PseudoTV Live acts similar to a normal broadcast or cable TV. Complete with multiple preset and user-defined channels.</description>
+        <description lang="en">PseudoTV Live acts similar to normal broadcast or cable TV, complete with multiple preset, user-defined channels and a EPG. PseudoTV Live, PTVL for short; can directly integrate with various Kodi sources such as Plugins, Library Media, Hdhomerun, UPNP and PVR backends. The project goal is to create a familiar, easy to use "Settop Box" experience while using all Kodi has to offer.</description>
         <disclaimer lang="en" >This software is a BETA release, bugs maybe common until final release.</disclaimer>  
         <platform>all</platform>
         <license>GNU GENERAL PUBLIC LICENSE. Version 3, June 2007</license>

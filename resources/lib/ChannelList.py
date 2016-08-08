@@ -64,8 +64,6 @@ try:
     from metahandler import metahandlers
     metaget = metahandlers.MetaData(preparezip=False, tmdb_api_key=TMDB_API_KEY)
     ENHANCED_DATA = True                
-    if isLowPower() == True:
-        raise Exception()
 except Exception,e:  
     ENHANCED_DATA = False
     xbmc.log("script.pseudotv.live-ChannelList: metahandler Import failed! " + str(e))    
@@ -121,7 +119,7 @@ class ChannelList:
         self.log("IceLibrary is " + str(self.incIceLibrary))
         self.incBCTs = REAL_SETTINGS.getSetting('IncludeBCTs') == "true"
         self.log("IncludeBCTs is " + str(self.incBCTs)) 
-        self.includeMeta = ENHANCED_DATA
+        self.includeMeta = REAL_SETTINGS.getSetting('IncludeMeta') == "true"
         self.log("IncludeMeta is " + str(self.includeMeta)) 
         self.sbAPI = sickbeard.SickBeard(REAL_SETTINGS.getSetting('sickbeard.baseurl'),REAL_SETTINGS.getSetting('sickbeard.apikey'))
         self.cpAPI = couchpotato.CouchPotato(REAL_SETTINGS.getSetting('couchpotato.baseurl'),REAL_SETTINGS.getSetting('couchpotato.apikey'))
@@ -962,13 +960,6 @@ class ChannelList:
         flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'network_' + '_' + network + '.xsp')
 
         try:
-
-
-
-
-
-
-
             fle = FileAccess.open(flename, "w")
         except:
             self.Error('Unable to open the cache file ' + flename, xbmc.LOGERROR)
@@ -986,13 +977,6 @@ class ChannelList:
     def createShowPlaylist(self, show, setting2):
         show = show.split('|')
         chname = ' & '.join(show)
-
-
-
-
-
-
-
         flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'Show_' + chname + '.xsp')
         
         try:
@@ -1039,14 +1023,6 @@ class ChannelList:
 
         
     def createGenreMixedPlaylist(self, genre, setting2):
-
-
-
-
-
-
-
-
         flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + 'mixed_' + genre + '.xsp')
         
         try:
@@ -1065,14 +1041,6 @@ class ChannelList:
 
 
     def createGenrePlaylist(self, pltype, chtype, genre, setting2=None):  
-
-
-
-
-
-
-
-
         flename = xbmc.makeLegalFilename(GEN_CHAN_LOC + pltype + '_' + genre + '.xsp')
         try:
             fle = FileAccess.open(flename, "w")
@@ -2039,7 +2007,7 @@ class ChannelList:
             else:   
                 showList = self.fillLiveTVXMLTV(setting1, setting2, setting3, setting4, chname, limit)
         
-        if len(showList) == 0:
+        if showList and len(showList) == 0:
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
@@ -2117,7 +2085,7 @@ class ChannelList:
                     
                     #Enable Enhanced Parsing for current and future shows only
                     includeMeta = self.includeMeta
-                    if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                    if (showtitle.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
                         includeMeta = False  
                     
                     GenreLiveID = ['Unknown',type,0,0,False,1,rating, False, False, 0.0, year]
@@ -2180,6 +2148,7 @@ class ChannelList:
                 type = ''
                 LiveID = 'tvshow|0|0|False|1|NR|'
                 thumburl = '0'
+                includeMeta = self.includeMeta
                 
                 if event == "end":
                     if elem.tag == "programme":
@@ -2320,11 +2289,6 @@ class ChannelList:
                             else:
                                 playcount = 1                        
 
-                            #Enable Enhanced Parsing for current and future shows only
-                            includeMeta = self.includeMeta
-                            if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
-                                includeMeta = False  
-                                    
                             year = 0
                             if type == 'movie':
                                 try:
@@ -2394,6 +2358,10 @@ class ChannelList:
                                     episodetitle = episodetitle.split("- ", 1)[-1]
                                 subtitle = episodetitle
 
+                            #Enable Enhanced Parsing for current and future shows only
+                            if (showtitle.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                                includeMeta = False  
+                                    
                             managed =  False # todo check sickbeard/sonar/couchpotato
                             GenreLiveID = [genre,type,id,thumburl,managed,playcount,rating, HD, CC, stars, year]
                             tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
@@ -2431,6 +2399,7 @@ class ChannelList:
                     del showList[:]
                     return
                     
+                includeMeta = self.includeMeta
                 titles = re.search('"title" *: *"(.*?)"', f)
                 if titles and len(titles.group(1)) > 0:
                     showtitle = titles.group(1)
@@ -2533,12 +2502,7 @@ class ChannelList:
                             
                         episodetitle = 'LiveTV'
                         subtitle = 'LiveTV'
-                        
-                        #Enable Enhanced Parsing
-                        includeMeta = self.includeMeta 
-                        if (showtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
-                            includeMeta = False  
-                                
+
                         # if type == 'tvshow':
                             # episodenames = re.search('"episodename" *: *"(.*?)"', f)
                             # if episodenames and len(episodenames) > 0:
@@ -2571,7 +2535,11 @@ class ChannelList:
                             if str(episodetitle[0:5]) == '00x00':
                                 episodetitle = episodetitle.split("- ", 1)[-1]
                             subtitle = episodetitle
-                         
+                                                 
+                        #Enable Enhanced Parsing for current and future shows only
+                        if (showtitle.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                            includeMeta = False     
+                            
                         managed =  False     
                         GenreLiveID = [genre,type,id,thumburl,managed,playcount,rating,hd,cc,stars, year]
                         tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)

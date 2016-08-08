@@ -159,6 +159,8 @@ DEFAULT_EPGGENRE_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 
 THUMB = IMAGES_LOC + 'icon.png'
 INTRO = IMAGES_LOC + 'intro.mp4'
 INTRO_TUBE = 'Y8WlAhpHzkM'
+FAILED_TUBE = '6XjXAWlSwN8'
+INVALID_TUBE = '6XjXAWlSwN8'
 
 # EPG
 TIME_BAR = 'pstvlTimeBar.png'
@@ -253,6 +255,7 @@ cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 MUSIC_TYPES = ['.mp3','.flac','.mp4']
 IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
 MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
+STREAM_TYPES = ('http','https','rtsp','rtmp','udp','PlayMedia')
 BCT_TYPES = ['bumper', 'commercial', 'trailer', 'rating', 'pseudocinema', 'intro', 'cellphone', 'coming soon', 'premovie', 'feature presentation', 'intermission']
 
 # Eventghost broadcasts

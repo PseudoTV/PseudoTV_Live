@@ -101,7 +101,6 @@ class ChannelListThread(threading.Thread):
         while not KODI_MONITOR.abortRequested():      
             DebugNotify("Background Updating...")     
             self.myOverlay.setCurrentChannel()
-            
             for i in range(self.myOverlay.maxChannels):
                 modified = True
                 while modified == True and self.myOverlay.channels[i].getTotalDuration() < PREP_CHANNEL_TIME and self.myOverlay.channels[i].Playlist.size() < self.chanlist.Playlist_Limit:
@@ -185,7 +184,7 @@ class ChannelListThread(threading.Thread):
                         if self.paused == False:
                             break
                 timeslept = 0 
-                
+              
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 

@@ -21,16 +21,26 @@
             <posx>0</posx>
             <posy>0</posy>
             <control type="image">
+                <description>Loading Background AniImage</description>
+                <width>1920</width>
+                <height>1080</height>
+                <texture>background.gif</texture>
+                <align>center</align>
+                <aligny>center</aligny>
+                <!-- <visible>StringCompare($INFO[Window(10000).Property(PTVL.LOWPOWER)],true)</visible> -->
+            </control> 
+            <control type="image">
                 <width>1920</width>
                 <height>1080</height>
                 <description>EPG Background</description>
                 <texture>EPGbackground.png</texture>
                 <colordiffuse>FFFFFFFF</colordiffuse>
+                <animation effect="fade" start="85" end="85" condition="True">Conditional</animation>
             </control>         
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
             </control>
         </control>

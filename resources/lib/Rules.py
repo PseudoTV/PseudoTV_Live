@@ -30,7 +30,7 @@ from Playlist import PlaylistItem
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D(), HandleDurFilter(), HandleSeek(), PinLock()]
+        self.ruleList = [BaseRule(), RenameRule(), NoShowRule(), ScheduleChannelRule(), OnlyWatchedRule(), DontAddChannel(), InterleaveChannel(), ForceRealTime(), AlwaysPause(), ForceResume(), ForceRandom(), OnlyUnWatchedRule(), PlayShowInOrder(), SetResetTime(), HandleIceLibrary(), HandleChannelLogo(), EvenShowsRule(), HandleBCT(), HandlePOP(), Handle3D(), HandleDurFilter(), HandleSeek(), PinLock(), HandleMeta()]
         
 
     def getRuleCount(self):
@@ -1378,6 +1378,48 @@ class HandleIceLibrary(BaseRule):
             channelList.incIceLibrary = self.storedIceLibValue
         
         return channeldata
+                                  
+                                  
+class HandleMeta(BaseRule):
+    def __init__(self):
+        self.name = "Include Metadata"
+        self.optionLabels = ['Include Metadata']
+        self.optionValues = ['Yes']
+        self.myId = 23
+        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
+        self.selectBoxOptions = [["Yes", "No"]]
+
+        
+    def copy(self):
+        return HandleMeta()
+
+
+    def getTitle(self):
+        if self.optionValues[0] == 'Yes':
+            return 'Include Metadata'
+        else:
+            return 'Exclude Metadata'
+
+
+    def onAction(self, act, optionindex):
+        self.onActionSelectBox(act, optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, channelList, channeldata):
+        if actionid == RULES_ACTION_START:
+            self.storedMetaValue = channelList.includeMeta
+            self.log("Option for HandleMeta is " + self.optionValues[0])
+
+            if self.optionValues[0] == 'Yes':
+                channelList.includeMeta = True
+            else:
+                channelList.includeMeta = False
+        elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
+            channelList.includeMeta = self.storedMetaValue
+        
+        return channeldata
+      
       
 class HandleDurFilter(BaseRule):
     def __init__(self):

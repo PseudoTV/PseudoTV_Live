@@ -49,7 +49,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible allowhiddenfocus="true">Control.HasFocus(120) | ![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,120)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -66,7 +66,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,121)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -83,7 +83,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,122)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -100,7 +100,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,123)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -117,7 +117,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,124)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -134,7 +134,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,125)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -150,7 +150,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <visible>![StringCompare(Window.Property(itempress),120) | StringCompare(Window.Property(itempress),121) | StringCompare(Window.Property(itempress),122) | StringCompare(Window.Property(itempress),123) | StringCompare(Window.Property(itempress),124) | StringCompare(Window.Property(itempress),125) | StringCompare(Window.Property(itempress),126)]</visible>
                     <onclick>SetProperty(itempress,126)</onclick>
                     <onclick>SetFocus(131)</onclick>
@@ -167,7 +167,7 @@
                     <width>720</width>
                     <height>40</height>
                     <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                    <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                    <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                     <onclick>SetProperty(itempress,100)</onclick>
                     <onclick>SetFocus(120)</onclick>
                     <colordiffuse></colordiffuse>
@@ -246,7 +246,7 @@
                         <align>center</align>
                         <textcolor>white</textcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                        <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                         <onup>130</onup>
                         <ondown>160</ondown>
                         <colordiffuse></colordiffuse>
@@ -276,7 +276,7 @@
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                        <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                         <colordiffuse></colordiffuse>
                         <scroll>true</scroll>
                         <scrollspeed>40</scrollspeed>
@@ -307,7 +307,7 @@
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                        <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                         <colordiffuse></colordiffuse>
                         <scroll>true</scroll>
                         <scrollspeed>40</scrollspeed>
@@ -337,7 +337,7 @@
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                        <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                         <colordiffuse></colordiffuse>
                         <scroll>true</scroll>
                         <scrollspeed>40</scrollspeed>
@@ -366,7 +366,7 @@
                         <textcolor>gray</textcolor>
                         <focusedcolor>white</focusedcolor>
                         <texturefocus>pstvlButtonFocusAlt.png</texturefocus>
-                        <texturenofocus>pstvlButtonFocus.png</texturenofocus>
+                        <texturenofocus>pstvlButtonFocusAlt1.png</texturenofocus>
                         <colordiffuse></colordiffuse>
                         <scroll>true</scroll>
                         <scrollspeed>40</scrollspeed>

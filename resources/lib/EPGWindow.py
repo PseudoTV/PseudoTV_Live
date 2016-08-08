@@ -91,9 +91,10 @@ try:
             else:
                 timeex = now.strftime("%H:%M")
             
-            timetx, timety = self.getControl(5006).getPosition()
-            timetw = self.getControl(5006).getWidth()
-            timeth = self.getControl(5006).getHeight()
+            self.currentTime = self.getControl(5006)
+            timetx, timety = self.currentTime.getPosition()
+            timetw = self.currentTime.getWidth()
+            timeth = self.currentTime.getHeight()
             timex, timey = self.getControl(5007).getPosition()
             timew = self.getControl(5007).getWidth()
             timeh = self.getControl(5007).getHeight()
@@ -107,9 +108,7 @@ try:
             self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
             self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
             
-            self.currentTime = xbmcgui.ControlButton(timetx, timety, timetw, timeth, timeex, font='PTVL10', focusTexture=self.textureButtonFocusAlt, noFocusTexture=self.timeButtonNoFocus)
             self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
-            self.addControl(self.currentTime)
             self.addControl(self.currentTimeBar)
             
             textcolor = int(getProperty("EPG.textColor"), 16)            
@@ -247,16 +246,15 @@ try:
             basew = self.getControl(111).getWidth()
             tmpx, tmpy =  self.getControl(110 + self.rowCount).getPosition()
 
-            timetx, timety = self.getControl(5006).getPosition()
-            timetw = self.getControl(5006).getWidth()
-            timeth = self.getControl(5006).getHeight()
+            timetx, timety = self.currentTime.getPosition()
+            timetw = self.currentTime.getWidth()
+            timeth = self.currentTime.getHeight()
             timex, timey = self.getControl(5007).getPosition()
             timew = self.getControl(5007).getWidth()
             timeh = self.getControl(5007).getHeight()
             self.log('setChannelButtons, settime')
                 
             basecur = curchannel            
-            self.toRemove.append(self.currentTime)
             self.toRemove.append(self.currentTimeBar)
             myadds = []
             
@@ -302,7 +300,7 @@ try:
 
             if time.time() >= starttime and time.time() < starttime + 5400:
                 dif = int((starttime + 5400 - time.time())) 
-                self.currentTime.setPosition(int((basex + basew - (timew / 2)) - (dif * (basew / 5400.0))), timety)
+                self.currentTime.setPosition(int((basex + basew - (timew / 2)) - (dif * (basew / 5400.0))) - (timetw / 2), timety)
                 self.currentTimeBar.setPosition(int((basex + basew - (timew / 2)) - (dif * (basew / 5400.0))), timey)
             else:
                 if time.time() < starttime:
@@ -312,7 +310,6 @@ try:
                     self.currentTime.setPosition(-1800, timety)
                     self.currentTimeBar.setPosition(basex + basew - timew, timey)
 
-            myadds.append(self.currentTime)
             myadds.append(self.currentTimeBar)
             
             # Update timebutton
@@ -764,7 +761,6 @@ try:
                 self.channelLabelTimer.cancel()
             if self.GotoChannelTimer.isAlive():
                 self.GotoChannelTimer.cancel()  
-            self.removeControl(self.currentTime)
             self.removeControl(self.currentTimeBar)
             self.close()
                 
@@ -1397,7 +1393,7 @@ try:
             self.addControl(self.contextButtonC)
             self.contextButtonF = xbmcgui.ControlButton(ChanButtonx-4, ChanButtony, ChanButtonw+8, ChanButtonh, '[ '+getProperty("EPG.Title")+' ]', focusTexture=self.ButtonContextFocus, noFocusTexture=self.ButtonContextFocus, alignment=4, shadowColor=self.shadowColor, textColor=self.textcolor, focusedColor=self.focusedcolor)
             self.addControl(self.contextButtonF)
-            self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, 'PTVL10', self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
+            self.contextButton = xbmcgui.ControlList(ChanButtonx, ChanButtony+75, 250, 1000, self.textfont, self.textcolor, self.ButtonContextNoFocus, self.textureButtonFocus, self.focusedcolor, 0, 0, 0, 0, 75, 0, 4)
             self.addControl(self.contextButton)
             self.ContextList = ['More Info','Find Similar','Record Show','Set Reminder']
             if self.MyOverlayWindow.isReminder(getProperty("EPG.Chtype"), getProperty("EPG.Chnum"), getProperty("EPG.TimeStamp"), pType='EPG') == True:

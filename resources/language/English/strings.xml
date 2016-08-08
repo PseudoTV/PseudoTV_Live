@@ -226,7 +226,7 @@
     <string id="32903">Channel Types</string>
     <string id="32904">User Settings</string>
     <string id="30989">Upload Kodi Log</string>   
-    <string id="31906">Broadcast all Eventghost triggers</string>   
+    <string id="31906">Broadcast Eventghost Introspect</string>   
     <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
 <string id="30900">Debugging</string>
@@ -238,6 +238,7 @@
     <string id="39958">Include 3D Content [Global]</string>
     <string id="30997">Include Strm Content [Global]</string>
     <string id="39997">Include BCT Content [Global]</string>
+    <string id="39997">Include Metadata [Global]</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30993">Enable Log Debugging</string>
     <string id="39999">Enable File Cache</string>

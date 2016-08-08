@@ -228,11 +228,11 @@ def FindLogo_URL(chtype, chname, mediapath):
             GrabLogo(url, chname, LogoPath_Ani) 
     # todo google image logo search
     
-def GrabLogo(url, chname, LogoFile=None):
+def GrabLogo(url, chname, LogoFile=''):
     url = url.rstrip('/')
     if not LogoFile:
         LogoFile = os.path.join(LOGO_LOC, chname + '.png')
-    url = url.rstrip('/')
+
     log("utils: GrabLogo, url = " + url + " ,LogoFile = " + LogoFile)
     if OVER_LOGOS == True:
         try:
@@ -915,7 +915,7 @@ def matchMselect(list, select):
             slist.append(list[select[i]]) 
         return slist
 
-def inputDialog(str, default='', key=xbmcgui.INPUT_ALPHANUM):
+def inputDialog(heading, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
     # Types:
     # - xbmcgui.INPUT_ALPHANUM (standard keyboard)
     # - xbmcgui.INPUT_NUMERIC (format: #)
@@ -923,7 +923,7 @@ def inputDialog(str, default='', key=xbmcgui.INPUT_ALPHANUM):
     # - xbmcgui.INPUT_TIME (format: HH:MM)
     # - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
     # - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
-    retval = xbmcgui.Dialog().input(str, default, type=key)
+    retval = xbmcgui.Dialog().input(heading, default, key, opt, close)
     return retval    
     
 def yesnoDialog(str1, str2='', header=ADDON_NAME, yes='', no=''):
@@ -1095,6 +1095,9 @@ def normalizeString(string):
         return t.encode("utf-8")
     except:
         return string
+        
+def hash2string(string):
+    return hashlib.md5(string).hexdigest()
 
 def encodeString(string):
     return (string.encode('base64')).replace('\n','').replace('\r','').replace('\t','')
@@ -1466,6 +1469,7 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
+            REAL_SETTINGS.setSetting('IncludeMeta', "false")
             if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
                 REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
             infoDialog("Settings Optimized for Performance")

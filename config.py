@@ -344,12 +344,17 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def setChlogo(self, channel):
         self.log("setChlogo") 
         chname = self.getChname(channel)
+        try:
+            LastLogoDir = REAL_SETTINGS.getSetting('LastLogoDir')
+        except:
+            LastLogoDir = LOGO_LOC
         # todo icon selectDialog from tvlogodb
         if chname:
-            retval = browse(1, "Select %s's replacement logo" %(chname), "files", ".png")
+            retval = browse(1, "Select %s's replacement logo" %(chname), "files", ".png", True, True, LastLogoDir, False)
             if retval and len(retval) > 0:
+                REAL_SETTINGS.setSetting('LastLogoDir',os.path.dirname(os.path.abspath(retval)))
                 if yesnoDialog("Replace Channel %s's Logo?"%(str(channel))):
-                    GrabLogo(retval, chname, True)
+                    GrabLogo(retval, chname)
                     theitem = self.listcontrol.getListItem(channel-1)
                     theitem.setProperty('chlogo',(xbmc.translatePath(retval)))     
                     cachedthumb = xbmc.getCacheThumbName(xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png'))))
