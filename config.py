@@ -1298,6 +1298,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.movieGenreList = sorted_nicely(removeStringElem(self.chnlst.movieGenreList))
         self.musicGenreList = sorted_nicely(removeStringElem(self.chnlst.musicGenreList))
         
+        # If the user pressed cancel, stop everything and exit
+        if self.dlg.iscanceled():
+            self.log('prepareConfig cancelled')
+            self.dlg.close()
+            return
+            
         self.dlg.update(50, "Preparing Configuration", "sorting data")
         self.GenreLst = ['TV','Movies','Episodes','Sports','Kids','News','Music','Seasonal','Other']
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
@@ -1358,6 +1364,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.dlg.update(95)
         self.updateListing()
         self.dlg.update(100)
+        
+        # If the user pressed cancel, stop everything and exit
+        if self.dlg.iscanceled():
+            self.log('prepareConfig cancelled')
+            self.dlg.close()
+            return
+            
         self.getControl(105).setVisible(True)
         self.getControl(106).setVisible(False)
         self.setFocusId(102)

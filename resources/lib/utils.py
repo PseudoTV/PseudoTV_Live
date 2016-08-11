@@ -1632,11 +1632,11 @@ def HandleUpgrade():
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
     # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
         
-    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
-    xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/default.py)")
-        
     chkAutoplay()
     chkKodiSkin()
+    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
+        
+    # xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/default.py)")
         
 def isPTVLOutdated():
     log('utils: isPTVLOutdated')

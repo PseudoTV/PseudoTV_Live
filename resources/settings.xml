@@ -74,10 +74,10 @@
             <setting id="EnableSubtitles" type="bool"   label="30329" default="false"/>   
             <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Info Bar|On Screen PopUp|Notification" default="2"/>
    </category>
-<!--PVR-->
+<!--DVR-->
    <category label="30400">
         <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv" />
-        <setting id="LIVETV_MAXPARSE" type="enum"   label="30405" values="1 day|2 days|3 days" default="3"/>
+        <setting id="LIVETV_MAXPARSE" type="enum"   label="30405" values="1 day|2 days|3 days" default="1"/>
         <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
         <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
         <setting id="AutoJump" type="bool"   label="30408" default="true" />

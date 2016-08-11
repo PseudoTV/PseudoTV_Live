@@ -835,9 +835,10 @@
             <description>Timebar line</description>
             <posx>411</posx>
             <posy>334</posy>
-            <width>2</width>
+            <width>4</width>
             <height>452</height>
             <aspectratio>keep</aspectratio>
+            <texture>pstvlTimeBar.png</texture>
         </control> 
         <control type="image">
             <description>Dynamic art1</description>

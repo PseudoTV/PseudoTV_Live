@@ -19,6 +19,7 @@
 import os
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
+
 # Plugin Info
 ADDON_ID = 'script.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)

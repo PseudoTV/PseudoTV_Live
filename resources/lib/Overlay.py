@@ -478,8 +478,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 if isUSTVnow() != False:
                     REAL_SETTINGS.setSetting("autoFindUSTVNOW","true")
                     
-                if isCompanionInstalled() == True:
-                    REAL_SETTINGS.setSetting("autoFindCommunity_PseudoNetworks","true")
+                # if isCompanionInstalled() == True and isLowPower() == False:
+                    # REAL_SETTINGS.setSetting("autoFindCommunity_PseudoNetworks","true")
                 
                 #TEMP isCom pass
                 setProperty("Verified_Community", 'true')
@@ -2241,7 +2241,14 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             if self.isExiting == True:
                 return
             time.sleep(1)
-                            
+
+            if isLowPower() == True:   
+                self.currentPlayInfoBar.setVisible(False)
+                self.currentPlayInfoTime.setVisible(False)
+                self.currentPlayMoreInfoBar.setVisible(False)
+                self.currentPlayMoreInfoTime.setVisible(False)
+                return
+                
             if self.isChannelChanging == True or self.isWindowOpen() != False:
                 self.log("SeekTimerAction, sleep")
                 time.sleep(1)
@@ -2685,7 +2692,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
        
        
     # TODO add timebar and button update here         
-    def setSeekBarTime(self):    
+    def setSeekBarTime(self):
         if self.showingInfo == True or self.showingMoreInfo == True:
             if self.Player.ignoreNextStop == True and self.Player.getPlayerFile().startswith(STREAM_TYPES):
                 # position = self.getPlaylistPOS(self.getChtype(self.currentChannel), self.currentChannel)

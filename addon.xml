@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-        <import addon="script.module.urlresolver" version="0.0.1"/>
+<addon id="script.pseudotv.live" version="0.7.9b" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
         <import addon="context.pseudotv.live.export" version="1.0.8"/>
         <import addon="plugin.video.pseudo.companion" version="0.0.7"/>
         <import addon="script.module.pil" version="0.0.1"/>
+        <import addon="script.module.urlresolver" version="0.0.1"/>
         <import addon="script.module.buggalo" version="1.1.6"/>
         <import addon="script.module.requests" version="2.7.0"/>
         <import addon="script.module.pyfscache" version="0.9.12"/>
@@ -30,7 +31,7 @@
     <extension point="xbmc.service" library="service.py" start="startup"/>
     <extension point="xbmc.addon.metadata">
         <summary lang="en">Channel surfing for your local and online content.</summary>
-        <description lang="en">PseudoTV Live acts similar to normal broadcast or cable TV, complete with multiple preset, user-defined channels and a EPG. PseudoTV Live, PTVL for short; can directly integrate with various Kodi sources such as Plugins, Library Media, Hdhomerun, UPNP and PVR backends. The project goal is to create a familiar, easy to use "Settop Box" experience while using all Kodi has to offer.</description>
+        <description lang="en">PseudoTV Live acts similar to a normal broadcast or cable TV. Complete with multiple preset and user-defined channels.</description>
         <disclaimer lang="en" >This software is a BETA release, bugs maybe common until final release.</disclaimer>  
         <platform>all</platform>
         <license>GNU GENERAL PUBLIC LICENSE. Version 3, June 2007</license>
