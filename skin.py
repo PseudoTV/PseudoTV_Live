@@ -38,6 +38,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
     
     def onInit(self):
         self.isExiting = False
+        self.isSwitching = False
         self.CurrentSkin = Skin_Select
         self.SkinPanel = self.getControl(500)
         self.fillSkins()
@@ -129,8 +130,13 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         while not KODI_MONITOR.abortRequested():
             if self.isExiting == True:
                 return
-            xbmc.sleep(1000)
+                
             for i in range(4):
+                if self.isSwitching == True:
+                    clearProperty('PTVL.SHOT')
+                    clearProperty('PTVL.SHOT_FALLBACK')
+                    pass
+                    
                 self.clearSKINSHOT()
                 skinBase = self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINBASE')
                 setProperty('PTVL.SHOT',os.path.join(skinBase,'screenshot0%s.png' %str(i+1)))
@@ -167,17 +173,20 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             self.SelectAction(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKIN'))
         elif action in ACTION_MOVE_LEFT:   
             self.log("onAction, ACTION_MOVE_LEFT")
+            self.isSwitching = True
             setProperty('PTVL.SSLEFTD','FF0297eb')
             setProperty('PTVL.SSRIGHTD','FFFFFFFF') 
             self.cycleSKINSHOT()
         elif action in ACTION_MOVE_RIGHT:
             self.log("onAction, ACTION_MOVE_RIGHT")
+            self.isSwitching = True
             setProperty('PTVL.SSRIGHTD','FF0297eb')
             self.cycleSKINSHOT()
         elif action in ACTION_PREVIOUS_MENU:
             self.closeManager()
         elif act.getButtonCode() == 61575 or action == ACTION_DELETE_ITEM:
             self.deleteSkin(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKIN'))
+        self.isSwitching = False
                  
 
     def deleteSkin(self, selSkin):

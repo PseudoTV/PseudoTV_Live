@@ -51,7 +51,7 @@ class Upnp:
         return IPPlst, PWlst
 
         
-    def RequestExtJson(IPP, AUTH, params):
+    def RequestExtJson(self, IPP, AUTH, params):
         self.log('RequestExtJson, IPP = ' + IPP)
         try:
             xbmc_host, xbmc_port = IPP.split(":")
@@ -97,7 +97,9 @@ class Upnp:
         except:
             playing_file = ''
         
-        if label.lower() == playing_label.lower():
+        self.log('isPlayingUPNP, ' + playing_label.lower() + ' ?=? ' + playing_label.lower())
+        self.log('isPlayingUPNP, ' + file + ' ?=? ' + playing_file)
+        if playing_label.lower() == playing_label.lower():
             return True
         elif file == playing_file:
             return True
@@ -105,9 +107,11 @@ class Upnp:
             return False
             
          
-    def chkUPNP(self, label, file, seektime):  
+    def chkUPNP(self, label, file, seektime): 
+        self.log('chkUPNP') 
         for i in range(len(self.IPPlst)):   
             if self.isPlayingUPNP(self.IPPlst[i], self.AUTHlst[i], label, file) == False:
+                self.log('chkUPNP, ' + str(self.IPPlst[i]) + ' not playing') 
                 if seektime > 0:
                     seek = str(datetime.timedelta(seconds=seektime))
                     seek = seek.split(":")

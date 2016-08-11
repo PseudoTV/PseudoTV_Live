@@ -280,20 +280,23 @@ class Artdownloader:
 
     def findMissingArtLive(self, title):
         self.log('findMissingArtLive, title = ' + title)
-        if isLowPower() == False:  
+        if isLowPower() == False:
+            url = ''
             request = self.getGoogleImages('"%s"+site:zap2it.com' %title)
             for image in request:
                 image = image.split('?')[0]
                 image = image.split('.jpg%')[0]+'.jpg'
                 if image.endswith(('png','jpg')):
                     if 'tribzap2it' and 'l_h12_aa' in image:
-                        return image
+                        url = image
                     elif 'images.zap2it.com' and 'b_h12_ab' in image:
-                        return image
+                        url = image
                     elif 'images.zap2it.com' and 'l_h6_aa' in image:
-                        return image
+                        url = image
                     elif 'images.zap2it.com' and 'b_h6_ab' in image:
-                        return image
+                        url = image   
+                    if url.startswith('http'):
+                        return url
         return 'NA.png'
           
            

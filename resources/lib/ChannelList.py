@@ -2296,6 +2296,10 @@ class ChannelList:
                                 except:
                                     year = 0      
 
+                            #Enable Enhanced Parsing for current and future shows only
+                            if (showtitle.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                                includeMeta = False  
+                                    
                             if includeMeta == True:
                                 if type == 'tvshow':
                                     #Decipher the TVDB ID by using the Zap2it ID in dd_progid
@@ -2358,10 +2362,6 @@ class ChannelList:
                                     episodetitle = episodetitle.split("- ", 1)[-1]
                                 subtitle = episodetitle
 
-                            #Enable Enhanced Parsing for current and future shows only
-                            if (showtitle.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
-                                includeMeta = False  
-                                    
                             managed =  False # todo check sickbeard/sonar/couchpotato
                             GenreLiveID = [genre,type,id,thumburl,managed,playcount,rating, HD, CC, stars, year]
                             tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
@@ -3894,7 +3894,7 @@ class ChannelList:
                                 setProperty('loading.progress',str(self.updateDialogProgress))
         except Exception,e:
             self.log("InternetTrailer failed! " + str(e))
-            pass
+
         TrailerLST = sorted_nicely(TrailerLST)
         if TrailerLST and len(TrailerLST) > 0:
             random.shuffle(TrailerLST)
@@ -5083,10 +5083,6 @@ class ChannelList:
         return fileList
 
         
-    def getItem(self, mediapath):
-        self.log('getItem') 
-    
-    
     def getStreamDetails(self, mediapath):
         self.log('getStreamDetails') 
 

@@ -1735,7 +1735,7 @@ class EvenShowsRule(BaseRule):
 class HandleSeek(BaseRule):
     def __init__(self):
         self.name = 'Disable Real-Time'
-        self.optionLabels = ['Disable Seeking']
+        self.optionLabels = ['Disable Real-Time offsets']
         self.optionValues = ['Yes']
         self.myId = 21
         self.actions = RULES_ACTION_OVERLAY_SET_CHANNEL | RULES_ACTION_OVERLAY_SET_CHANNEL_END

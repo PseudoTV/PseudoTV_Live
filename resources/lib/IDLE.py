@@ -292,7 +292,6 @@ class GUI( xbmcgui.WindowXMLDialog ):
         counter.start()
         mover = self.MoveClock(self)
         mover.start()
-        pass
     
    
     def onClick( self, controlId ):

@@ -26,7 +26,6 @@
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
-    <string id="30405">Find Missing GuideData [Art & Meta]</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos</string>  
@@ -88,10 +87,12 @@
 <string id="30400">DVR</string>  
     <string id="30397">Enable trakt scrobbler</string>
     <string id="30404">XMLTV file location</string>
+    <string id="30405">Guidedata days to display</string>
     <string id="30801">Enable DVR (Coming Soon)</string>
     <string id="30802">Record Folder</string>
     <string id="30708">Enable SickBeard</string>
     <string id="30709">Enter IP:Port</string>
+    <string id="30902">Enter Username:Password</string>
     <string id="30710">Enter API KEY</string>
     <string id="30711">Enable CouchPotato</string>
     <string id="30719">Configure: Simple Downloader</string>
@@ -238,7 +239,7 @@
     <string id="39958">Include 3D Content [Global]</string>
     <string id="30997">Include Strm Content [Global]</string>
     <string id="39997">Include BCT Content [Global]</string>
-    <string id="39997">Include Metadata [Global]</string>
+    <string id="39998">Include Metadata [Global]</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30993">Enable Log Debugging</string>
     <string id="39999">Enable File Cache</string>

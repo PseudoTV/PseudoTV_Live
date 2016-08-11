@@ -878,7 +878,7 @@ def okDialog(str1, str2='', str3='', header=ADDON_NAME):
 def textViewer(text, header=ADDON_NAME):
     xbmcgui.Dialog().textviewer(header, text)
     
-def browse(type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', enableMultiple=False, heading=ADDON_NAME):
+def browse(type=0, heading=ADDON_NAME, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', enableMultiple=False):
     return xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, default, enableMultiple)
     # Types:
     # - 0 : ShowAndGetDirectory
@@ -929,10 +929,6 @@ def inputDialog(heading, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0)
 def yesnoDialog(str1, str2='', header=ADDON_NAME, yes='', no=''):
     answer = xbmcgui.Dialog().yesno(header, str1, str2, '', yes, no)
     return answer
-     
-def browse(type, heading, shares, mask='', useThumbs=False, treatAsFolder=False, path='', enableMultiple=False):
-    retval = xbmcgui.Dialog().browse(type, heading, shares, mask, useThumbs, treatAsFolder, path, enableMultiple)
-    return retval
      
 ##################
 # Property Tools #
@@ -1384,7 +1380,6 @@ def getRepo():
         log('utils: extracted new package')
     except: 
         MSG = 'Failed to install Lunatixz Repository, Try Again Later'
-        pass
     xbmc.executebuiltin("Notification( %s, %s, %d, %s)" % ("PseudoTV Live", MSG, 1000, THUMB) )
     return   
  
@@ -1397,22 +1392,22 @@ def chkVersion():
     match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
     
     for vernum in match:
-        log("utils: Current Version = " + str(vernum))
-    try:
-        link = open_url('https://raw.githubusercontent.com/Lunatixz/XBMC_Addons/master/script.pseudotv.live/addon.xml').read() 
-        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-    except:
-        pass
-        
+        log("utils: chkVersion, Current Version = " + str(vernum))
+
+    link = open_url(decodeString('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0x1bmF0aXh6L1hCTUNfQWRkb25zL21hc3Rlci9zY3JpcHQucHNldWRvdHYubGl2ZS9hZGRvbi54bWw=')).read() 
+    link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+    match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+
     if len(match) > 0:
+        log("utils: chkVersion, Repo Version = " + str(match[0]))
         if vernum != str(match[0]):
             if isRepoInstalled() == False:
                 getRepo()
                 okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
             else:
-                set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"repository.lunatixz","enabled":true}')
+                set_Kodi_JSON(decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6InJlcG9zaXRvcnkubHVuYXRpeHoiLCJlbmFibGVkIjp0cnVlfQ=='))
             xbmc.executebuiltin('UpdateAddonRepos')
+            xbmc.executebuiltin('UpdateLocalAddons')
     return isRepoInstalled()
     
 def isCompanionInstalled():
@@ -1470,6 +1465,7 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
             REAL_SETTINGS.setSetting('IncludeMeta', "false")
+            REAL_SETTINGS.setSetting('LIVETV_MAXPARSE', "0")
             if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
                 REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
             infoDialog("Settings Optimized for Performance")
@@ -1619,24 +1615,28 @@ def hasVersionChanged(__version__):
         
 def HandleUpgrade():
     log('utils: HandleUpgrade')
-    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
-    textViewer(LOW_MSG(),header="PseudoTV Live - Notification")
-    
-    chkAutoplay()
-    chkKodiSkin()
-    
+    # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
+    # set 'optional' as true so users can disable if unwanted.
+    if getXBMCVersion() > 14 and isContextInstalled() == False:
+        if yesnoDialog('Would you like to install the PseudoTV Live context export tool?'):       
+            getContext()
+            
+    chkLowPower()
+    if isLowPower() == True:
+        textViewer(LOW_MSG(),header="PseudoTV Live - Notification")
+
     # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
     xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
     
     # Force Channel rebuild
     # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
     # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
-
-    # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
-    # set 'optional' as true so users can disable if unwanted.
-    if getXBMCVersion() > 14 and isContextInstalled() == False:
-        if yesnoDialog('Would you like to install PseudoTV Live export context menu?'):       
-            getContext()
+        
+    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
+    xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/default.py)")
+        
+    chkAutoplay()
+    chkKodiSkin()
         
 def isPTVLOutdated():
     log('utils: isPTVLOutdated')

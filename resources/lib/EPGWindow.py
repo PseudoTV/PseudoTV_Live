@@ -340,12 +340,17 @@ try:
             # Arrow color
             if TimeBX > Time3X:
                 self.getControl(5002).setColorDiffuse('0x'+self.focusedcolor)
+                self.getControl(5005).setVisible(False)
             else:
                 self.getControl(5002).setColorDiffuse('0x'+self.textcolor)
+                self.getControl(5005).setVisible(True)
+                
             if TimeBX < Time1X:
                 self.getControl(5003).setColorDiffuse('0x'+self.focusedcolor)
+                self.getControl(5004).setVisible(False)
             else:
                 self.getControl(5003).setColorDiffuse('0x'+self.textcolor)
+                self.getControl(5004).setVisible(True)
              
             # Hide timebutton when near timebar
             self.getControl(101).setVisible(True)

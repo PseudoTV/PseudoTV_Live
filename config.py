@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import xbmc, xbmcgui, xbmcaddon, xbmcvfs
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs, urlresolver
 import datetime, time, subprocess, os, sys, re, random
 
 from xml.dom.minidom import parse, parseString
@@ -301,6 +301,20 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.updateListing(self.channel)
         self.listcontrol.selectItem(self.channel - 1)
 
+        
+    def isChanPinLocked(self, chan):
+        try:
+            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(chan) + '_rulecount'))
+            for i in range(rulecount):
+                try:
+                    if int(ADDON_SETTINGS.getSetting("Channel_" + str(chan) + "_rule_%s_id" %str(i+1))) == 22:
+                        return ADDON_SETTINGS.getSetting("Channel_" + str(chan) + "_rule_%s_opt_1" %str(i+1)) == 'Yes'                                     
+                except:
+                    pass
+            return False
+        except:
+            return False
+            
 
     def isChanFavorite(self, chan):
         Favorite = False
@@ -809,7 +823,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         setting2 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_2")
         setting3 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_3")
         setting4 = ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_4")
-        print self.chnlst.makeChannelList(channel, chtype, setting1, setting2, setting3, setting4, False, True)
+        # print self.chnlst.makeChannelList(channel, chtype, setting1, setting2, setting3, setting4, False, True)
         
         
     def changeListData(self, thelist, controlid, val):
@@ -1334,6 +1348,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             ChanColor = ''      
             if self.isChanFavorite(i + 1):
                 ChanColor = 'gold'
+            elif self.isChanPinLocked(i + 1):
+                ChanColor = 'red'
             theitem.setLabel("[COLOR=%s][B]%d[/COLOR]|[/B]" % (ChanColor, i + 1))
             self.listcontrol.addItem(theitem)
 
@@ -1716,7 +1732,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 self.log("URL")
                 input = inputDialog('Enter URL')
                 if len(input) > 0:
-                    return input, input
+                    url = urlresolver.resolve(input)
+                    if url:
+                        return url, url
+                    else:
+                        return input, input
                      
             elif source == 'Community List':
                 self.log("Community List")

@@ -1,3 +1,6 @@
+[*] Added LiveTV parsing limit under "DVR" setting tab; "Guidedata days to display".
+[*] Added urlresolver for LiveTV/InternetTV to in-app channel manager. *Thanks Eldorado
+    Users can enter a web url, if resolved PTVL will covert to a kodi playable link.
 [*] Video Mirror updated.
 [*] NEW! Advanced Channel rule - Include Metadata
 [*] NEW! Advanced Channel rule - Channel PIN Lock
