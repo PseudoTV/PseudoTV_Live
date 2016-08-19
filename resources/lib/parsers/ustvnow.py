@@ -44,17 +44,11 @@ try:
             self.log('__init__')
             self.mBASE_URL = 'http://m-api.ustvnow.com'
             self.uBASE_URL = 'http://lv2.ustvnow.com'
-            self.xmltvPath = USTVXML
             self.channels = ['ABC','CBS','CW','FOX','NBC','PBS','My9','A&E','AMC','Animal Planet','Bravo','Cartoon Network','CNBC','CNN','Comedy Central','Discovery','ESPN','Fox News','FX','History','Lifetime','National Geographic','Nickelodeon','SPIKE TV','Syfy','TBS','TNT','USA']
 
             
         def log(self, msg, level = xbmc.LOGDEBUG):
             log('USTVnow: ' + msg, level)
-
-            
-        def getXMLTV(self):
-            self.log('getXMLTV')
-            return self.makeXMLTV(self.get_guidedata(),self.xmltvPath)
 
             
         def _fetch(self, url, form_data=False):

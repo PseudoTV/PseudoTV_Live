@@ -12,7 +12,7 @@
         <string id="30006">Time between channel resets</string>
         <string id="30007">Default channel times at startup</string>
         <string id="30008">Background Updating</string>  
-        <string id="30998">Enable Settop Box Mode [Automatic Updating]</string>
+        <string id="30998">Enable Settop Box Mode [COLOR=dimgrey][Automatic Updating][/COLOR]</string>
         <string id="30046">Show Notifications</string>
         <string id="30056">Use Navigation Sound Effects</string>
 
@@ -22,17 +22,16 @@
     <string id="30402">Choose Your Operating System</string>  
     <string id="32055">Preferred Language</string>  
     <string id="32056">Preferred Region</string>  
-    <string id="30374">Enable Quickflip [Surfing Ignores plugins & strms]</string>
+    <string id="30374">Enable Quickflip [COLOR=dimgrey]Surfing Ignores plugins & strms][/COLOR]</string>
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos</string>  
-    <string id="30310">Media Limit [Global]</string>
+    <string id="30310">Media Limit [COLOR=dimgrey][Global][/COLOR]</string>
     <string id="30373">Mute between channel change</string>
-    <string id="30379">Enable Direct Channel Input [Disable 'OK']</string>
-    <string id="30050">Enable global menu [Experimental]</string>
+    <string id="30379">Enable Direct Channel Input [COLOR=dimgrey][Disable 'OK'][/COLOR]</string>
     <string id="30158">Menu style</string>
     <string id="30159">Enable Automatic Channel Backup</string>
     <string id="31311">Start Over Option after % Played</string>
@@ -72,7 +71,7 @@
         <string id="30211">Clock Mode</string>
         <string id="30212">EPG Color by</string>
         <string id="30213">Include Movie Genres</string>
-        <string id="30214">Menu uses Channel</string>
+        <string id="30214">EPG grid displays (When avail.)</string> 
         <string id="30229">Show extra epg Tags (ie. HD,CC,Ratings)</string>
     <string id="30220">Overlay Options:</string>
         <string id="30203">Select Overlay Number Color</string>
@@ -107,16 +106,16 @@
 <string id="30070">AutoTune</string>
         <string id="30071">Enable Autotuning</string>
         <string id="30072">Warning!! this will delete your current channel configuration</string>
+        <string id="30372">Reserve Channels 500-999 for AutoTuning</string>
+        <string id="30474">Use Native Channel Numbers</string>
         <string id="30099">Custom Playlists:</string>
-            <string id="30077">Find Custom Playlist</string>
+            <string id="30077">Find Smartplaylist</string>
             <string id="30093">Find Super Favourites</string>
             <string id="30073">LiveTV:</string>
-                <string id="30075">Find Kodi PVR Backend</string>
+                <string id="30075">Find PVR Backend</string>
                 <string id="30097">Find HDHomeRun</string>
-                <string id="30098">HDHomeRun Path</string>
                 <string id="30074">Find USTVnow</string>
                 <string id="30076">Local Media:</string>
-                <string id="30096">HDHomeRun XMLTV Path</string>
                     <string id="30078">Find TV Networks</string>
                     <string id="30079">Find Movie Studios</string>
                     <string id="30080">Find TV Genres</string>
@@ -125,13 +124,13 @@
                     <string id="30883">Find Recently Added</string>
                     <string id="30884">Find 3D Movies (Coming Soon)</string>
                     <string id="30083">Music:</string>
-                        <string id="30084">Find Music Genres [Experimental]</string>
+                        <string id="30084">Find Music Genres [COLOR=dimgrey][Experimental][/COLOR]</string>
                         <string id="30898">Find Music Videos using Youtube</string>
                         <string id="30087">Find Music Videos using Last.FM</string>
                         <string id="30088">Last.FM Username</string>
                         <string id="30085">Find Music Videos using Youtube</string>
                         <string id="30086">Find Music Videos using Vevo</string>
-                        <string id="30089">Find Music Videos using Local Directory</string>
+                        <string id="30089">Find Videos using Local Directory</string>
                         <string id="30110">Community List:</string>
                             <string id="30112">Find Recommended RSS Channels</string>
                             <string id="30115">Find PseudoNetwork Channels</string>
@@ -159,7 +158,6 @@
                    
     <string id="30700">AutoTune Options:</string>
     <string id="33310">AutoTune Channel Limit</string>
-    <string id="30372">Reserve Channels 500-999 for AutoTuning</string>
     <string id="30699">Kodi PVR GuideData from</string>
     <string id="30771">Select XMLTV.xml file</string>
     <string id="30701">AutoTune Genres:</string>
@@ -236,10 +234,10 @@
     <string id="30319">Force Playback timeout (seconds)</string> 
     <string id="30302">Channel Change Delay (seconds)</string>
     <string id="30914">Global Controls:</string>
-    <string id="39958">Include 3D Content [Global]</string>
-    <string id="30997">Include Strm Content [Global]</string>
-    <string id="39997">Include BCT Content [Global]</string>
-    <string id="39998">Include Metadata [Global]</string>
+    <string id="39958">Include 3D Content [COLOR=dimgrey][Global][/COLOR]</string>
+    <string id="30997">Include Strm Content [COLOR=dimgrey][Global][/COLOR]</string>
+    <string id="39997">Include BCT Content [COLOR=dimgrey][Global][/COLOR]</string>
+    <string id="39998">Include Metadata [COLOR=dimgrey][Global][/COLOR]</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30993">Enable Log Debugging</string>
     <string id="39999">Enable File Cache</string>
@@ -248,7 +246,7 @@
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
     <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
-    <string id="30994">Disable Video Playback [Stop & Play functionality ]</string>
+    <string id="30994">Disable Video Playback [COLOR=dimgrey][Stop & Play functionality ][/COLOR]</string>
     <string id="30944">Force LiveTV reset on every startup</string>
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>
@@ -259,5 +257,5 @@
     <string id="30198">ffprobe executable</string>
     <string id="30199">rtmpdump executable</string>
     <string id="30939">Miscellaneous</string>
-    <string id="30934">Enable Accurate Durations [Slower Channel Building]</string>
+    <string id="30934">Enable Accurate Durations [COLOR=dimgrey][Slower Channel Building][/COLOR]</string>
 </strings>

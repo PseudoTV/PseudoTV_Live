@@ -62,7 +62,7 @@
             <setting id="ClockMode" type="enum"   label="30211" default="0" values="12 Hour|24 Hour"/>
             <setting id="EPGcolor_enabled"   label="30212" type="enum" values="Disabled|Genre|Chtype|Rating" default="1" />
             <setting id="EPGcolor_MovieGenre" subsetting="true" type="bool"   label="30213" default="false" visible="eq(-1,1)" />
-            <setting id="EPGTextEnable" type="enum"   label="30214" values="Logo|Text" default="0"/>
+            <setting id="EPGTextEnable" type="enum"   label="30214" values="Logo|Text|Logo + Text" default="2"/>
             <setting id="EPG.xInfo" type="bool"   label="30229" default="false" />
         <!-- Overlay -->
         <setting label="30220" type="lsep"/>
@@ -91,55 +91,41 @@
         <setting id="MetaHandler" type="action"   label="30723" option="close"  visible="System.HasAddon(script.module.metahandler)" action="RunScript($CWD/utilities.py, -MetaHandler)"/>
         <setting id="YTDownloader" type="action"   label="30720" option="close"  visible="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
     </category>  
-<!--Autotune-->
+    <!-- Autotune  -->
     <category label="30070">
-            <!-- Autotune Enable  -->
-            <setting id="Autotune"                            type="bool"   label="30071" default="false"/>
-            <setting id="Warning1"                            type="bool"   label="30072" subsetting="true"  visible="eq(-1,true)" default="false"/>
-        <setting                                              type="lsep"   label="30099"                    visible="eq(-1,true)"                />
-            <!-- Autotune Playlists -->
-            <setting id="autoFindCustom"                      type="bool"   label="30077" subsetting="false" visible="eq(-2,true)" default="false"/>
-            <setting id="autoFindSuperFav"                    type="bool"   label="30093" subsetting="false" visible="eq(-3,true)" enable="System.HasAddon(plugin.program.super.favourites)" default="false"/>
-        <setting                                              type="lsep"   label="30073"                    visible="eq(-4,true)"                />
-            <!-- Autotune LiveTV -->
-            <setting id="autoFindLivePVR"                     type="bool"   label="30075" subsetting="false" visible="eq(-5,true)" enable="Pvr.HasTVChannels" default="false"/>
-            <setting id="PVR_Listing"                         type="enum"   label="30699" subsetting="true"  visible="eq(-6,true) + eq(-1,true)" values="PVR Backend|XMLTV File|ScheduleDirect (Coming Soon)" default="0" />
-            <setting id="PVR_XMLTVpath"                       type="file"   label="30771" subsetting="true"  visible="eq(-7,true) + eq(-1,1) + eq(-2,true)" source="auto" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv"/>
-            <setting id="autoFindLiveHD"                      type="enum"   label="30097" subsetting="false" visible="eq(-8,true) + eq(-1,true)" values=" |Dual - Strms|Prime/Extend - Favourites" default="0" />
-            <setting id="autoFindLiveXMLPath"                 type="file"   label="30771" subsetting="true"  visible="eq(-9,true) + !eq(-1,0)" source="auto" default=""/>
-            <setting id="autoFindLiveHDPath"                  type="folder" label="30098" subsetting="true"  visible="eq(-10,true) + eq(-2,1)" source="auto" default=""/>
-            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074" subsetting="false" visible="eq(-11,true)" enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)|System.HasAddon(plugin.video.ustvnow.plus)" default="false"/>
-            <!-- Autotune Local -->
-        <setting                                              type="lsep"   label="30076"                    visible="eq(-12,true)"/>
-            <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="false" visible="eq(-13,true)" enable="Library.HasContent(TVShows)"default="false"/>
-            <setting id="autoFindStudios"                     type="bool"   label="30079" subsetting="false" visible="eq(-14,true)" enable="Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFindTVGenres"                    type="bool"   label="30080" subsetting="false" visible="eq(-15,true)" enable="Library.HasContent(TVShows)"default="false"/>
-            <setting id="autoFindMovieGenres"                 type="bool"   label="30081" subsetting="false" visible="eq(-16,true)" enable="Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFindMixGenres"                   type="bool"   label="30082" subsetting="false" visible="eq(-17,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFindRecent"                      type="bool"   label="30883" subsetting="false" visible="eq(-18,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFind3DMovies"                    type="bool"   label="30884" subsetting="false" visible="eq(-19,true)" enable="Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFindMusicGenres"                 type="bool"   label="30084" subsetting="false" visible="eq(-20,true)" enable="Library.HasContent(Music)" default="false"/>
-            <setting id="autoFindMusicVideosLocal"            type="folder" label="30089" subsetting="false" visible="eq(-21,true)"           source="auto"                               default=""/>  
-        <setting                                              type="lsep"   label="30110"                    visible="eq(-22,true)"/>
-            <setting id="autoFindCommunity_PseudoNetworks"    type="bool"   label="30115" subsetting="false" visible="eq(-23,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>
-            <setting id="autoFindCommunity_Youtube_Seasonal"  type="bool"   label="30817" subsetting="false" visible="eq(-24,true)" enable="System.HasAddon(plugin.video.youtube)"   default="false"/>
-            <setting id="autoFindCommunity_RSS"               type="bool"   label="30112" subsetting="false" visible="eq(-25,true)" enable="False + System.HasNetwork + System.HasAddon(plugin.video.pseudo.companion)"                       default="false"/>
-        <setting     id=""                                    type="bool"                                    visible="false"                                                                                                                         default="false" />    
-        <setting                                              type="lsep"   label="30782"                    visible="eq(-27,true)"                                                                                                                  default="" /> 
-            <setting id="autoFindIPTV_Source"                 type="enum"   label="30965" subsetting="false" visible="eq(-28,true)" values=" |Local|Online"                                                                                         default="0" />
-            <setting id="autoFindIPTV_Path_Local"             type="file"   label="30966" subsetting="true"  visible="eq(-29,true) + eq(-1,1)"             source="auto"                                                                             default=""/>
-            <setting id="autoFindIPTV_Path_Online"            type="text"   label="30967" subsetting="true"  visible="eq(-30,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto"                                              default=""/>
-            <setting id="autoFindLive_Source"                 type="enum"   label="30969" subsetting="false" visible="eq(-31,true)"                         values=" |Local|Online" source="auto"                                                   default="0" />
-            <setting id="autoFindLive_Path_Local"             type="file"   label="30970" subsetting="true"  visible="eq(-32,true) + eq(-1,1)"                                                                                                       default=""/>
-            <setting id="autoFindLive_Path_Online"            type="text"   label="30971" subsetting="true"  visible="eq(-33,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto"                                              default=""/>
-            <setting id="autoFindPLX_Source"                  type="enum"   label="30972" subsetting="false" visible="eq(-34,true)"                         values=" |Local|Online"                                                                 default="0" />
-            <setting id="autoFindPLX_Path_Local"              type="file"   label="30973" subsetting="true"  visible="eq(-35,true) + eq(-1,1)"             source="auto"                                                                             default=""/>
-            <setting id="autoFindPLX_Path_Online"             type="text"   label="30974" subsetting="true"  visible="eq(-36,true) + eq(-2,2)"     enable="System.HasNetwork"             source="auto"                                              default=""/>                                                                         
-            <!-- Autotune Options -->
-        <setting type="lsep"   label="30700"/>
-            <setting id="reserveChannels"                     type="bool"   label="30372" default="false"/>
-            <setting id="AT_LIMIT"                            type="enum"   label="33310" values="25|50|100|250|500|1000" default="4"/>
+            <setting id="Autotune"                            type="bool"   label="30071"                                          default="false" />
+            <setting id="Warning1"                            type="bool"   label="30072"                    visible="eq(-1,true)" default="false" />
+            <setting id="reserveChannels"                     type="bool"   label="30372" subsetting="true"  visible="eq(-1,true)" default="false" />
+            <setting id="respectChannels"                     type="bool"   label="30474" subsetting="true"  visible="eq(-2,true)" default="false" />
+        
+        <!-- Autotune LiveTV -->
+        <setting                                              type="lsep"   label="30073"                    visible="eq(-3,true)"                />
+            <setting id="autoFindLivePVR"                     type="bool"   label="30075"                    visible="eq(-4,true)" enable="Pvr.HasTVChannels" default="false"/>
+            <setting id="autoFindLiveHDHR"                    type="bool"   label="30097"                    visible="eq(-5,true)" default="false"/>
+            <setting id="autoFindUSTVNOW"                     type="bool"   label="30074"                    visible="eq(-6,true)" enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)|System.HasAddon(plugin.video.ustvnow.plus)" default="false"/>        
+        
+        <!-- Autotune Playlists -->
+        <setting                                              type="lsep"   label="30099"                    visible="eq(-7,true)"                 />
+            <setting id="autoFindCustom"                      type="bool"   label="30077" subsetting="false" visible="eq(-8,true)" default="false" />
+            <setting id="autoFindSuperFav"                    type="bool"   label="30093" subsetting="false" visible="eq(-9,true)" default="false" enable="System.HasAddon(plugin.program.super.favourites)" />
+            
+        <!-- Autotune Local -->
+        <setting                                              type="lsep"   label="30076"                    visible="eq(-10,true)"/>
+            <setting id="autoFindNetworks"                    type="bool"   label="30078" subsetting="false" visible="eq(-11,true)" enable="Library.HasContent(TVShows)"default="false"/>
+            <setting id="autoFindStudios"                     type="bool"   label="30079" subsetting="false" visible="eq(-12,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindTVGenres"                    type="bool"   label="30080" subsetting="false" visible="eq(-13,true)" enable="Library.HasContent(TVShows)"default="false"/>
+            <setting id="autoFindMovieGenres"                 type="bool"   label="30081" subsetting="false" visible="eq(-14,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindMixGenres"                   type="bool"   label="30082" subsetting="false" visible="eq(-15,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindRecent"                      type="bool"   label="30883" subsetting="false" visible="eq(-16,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFind3DMovies"                    type="bool"   label="30884" subsetting="false" visible="eq(-17,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFindMusicGenres"                 type="bool"   label="30084" subsetting="false" visible="eq(-18,true)" enable="Library.HasContent(Music)" default="false"/>
+            <setting id="autoFindVideosLocal"                 type="folder" label="30089" subsetting="false" visible="eq(-19,true)"           source="auto"                               default=""/>  
+        
+        <!-- Autotune Online -->
+        <setting                                              type="lsep"   label="30110"                    visible="eq(-20,true)"/>
+            <setting id="autoFindCommunity_PseudoNetworks"    type="bool"   label="30115" subsetting="false" visible="eq(-21,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>                                                                                                                default="false" />          
     </category>
+    
 <!--BCTs-->   
     <category label="30499">
     <setting label="30500" type="lsep"/>

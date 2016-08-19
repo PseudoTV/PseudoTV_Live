@@ -213,7 +213,7 @@ class Artdownloader:
             
             if chtype in [8,11] and dbid != '0':
                 self.log('FindArtwork, Decode thumb')
-                return dbidDecode(dbid)      
+                return self.dbidDecode(dbid)      
    
             if chtype == 8 and dbid == '0':
                 setImage = self.findMissingArtLive(title)
@@ -280,7 +280,7 @@ class Artdownloader:
 
     def findMissingArtLive(self, title):
         self.log('findMissingArtLive, title = ' + title)
-        if isLowPower() == False:
+        if len(title) > 0 and isLowPower() == False:
             url = ''
             request = self.getGoogleImages('"%s"+site:zap2it.com' %title)
             for image in request:

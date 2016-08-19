@@ -81,6 +81,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         self.log("onInit")
+        chkLowPower()
+        
         for i in range(NUMBER_CHANNEL_TYPES):
             try:
                 self.getControl(120 + i).setVisible(False)
@@ -561,21 +563,13 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                               
                 if self.getControl(210).getLabel2() in ['Plugin','UPNP']:
                     title, path = self.fillSources('LiveTV', self.getControl(210).getLabel2(), self.getControl(215).getLabel())
-                    
                     if path and len(path) > 0:      
                         self.getControl(215).setLabel(path)
                     
-                        if path.startswith('plugin://plugin.video.ustvnow'):
-                            title = title.split(' - ')[0]
-                            self.getControl(213).setLabel('Guidedata Type:', label2='ustvnow')
-                            self.getControl(214).setLabel('Guidedata ID:', label2=title)
-                else:
-                    if self.getControl(210).getLabel2() in ['PVR','HDhomerun']:
+                elif self.getControl(210).getLabel2() in ['PVR','HDhomerun','USTVnow']:
                         chid, title = title.split(' - ')
-
-                        if self.getControl(210).getLabel2() == 'PVR':
-                            self.getControl(213).setLabel('Guidedata Type:', label2='pvr')
-                            self.getControl(214).setLabel('Guidedata ID:', label2=chid)
+                        self.getControl(213).setLabel('Guidedata Type:', label2=self.getControl(210).getLabel2().lower())
+                        self.getControl(214).setLabel('Guidedata ID:', label2=chid)
                         
                 self.setChname(title)  
                 self.getControl(211).setLabel('Channel Name:', label2=title)
@@ -601,10 +595,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                 infoDialog("Enter Channel Name & Guidedata Type")
             else:                              
                 dname = self.chnlst.cleanLabels(self.getControl(212).getLabel2())
-                dnameID, CHid = self.chnlst.findZap2itID(dname, xbmc.translatePath( xmltvflePath(setting3)))
+                dnameID, CHid = self.chnlst.findZap2itID(dname, xbmc.translatePath(xmltvflePath(setting3)))
                 if 'XMLTV ERROR' not in dnameID:
                     self.getControl(214).setLabel('Guidedata ID:', label2=CHid)
-                    self.getControl(212).setLabel('Guidedata Channel Name:', label2=self.chnlst.cleanLabels(dnameID))
+                    # self.getControl(212).setLabel('Guidedata Channel Name:', label2=self.chnlst.cleanLabels(dnameID))
                     
         # InternetTV
         elif controlId == 220:    # InternetTV Browse, select
@@ -630,11 +624,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     
                     if path and len(path) > 0:      
                         self.getControl(225).setLabel(path)
-                else:
-                    if path.startswith('plugin://plugin.video.ustvnow'):
-                        title = title.split(' - ')[0]
-                        
-                    if self.getControl(220).getLabel2() in ['PVR','HDhomerun']:
+                elif self.getControl(220).getLabel2() in ['PVR','HDhomerun','USTVnow']:
                         chid, title = title.split(' - ')
                         
                 self.setChname(title)  
@@ -744,7 +734,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                         infoDialog("Select Directory")
                         loop = False
                         
-                if PluginDirPathLst[select].startswith('plugin://plugin.video.ustvnow'):
+                if PluginDirPathLst[select].startswith(isUSTVnow()):
                     selectItem = selectItem.split(' - ')[0]
                     
                 # Return to menu
@@ -780,7 +770,8 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             else:
                 if len(self.getControl(290).getLabel2()) > 1:
                     PluginDirNameLst, PluginDirPathLst = self.parsePlugin(self.chnlst.PluginInfo('upnp://'), 'Dir')
-                
+                    if len(PluginDirNameLst) == 0:
+                        okDialog('No UPNP sources detected, Please make sure you have "upnp://" added as a Kodi video source')
             loop = True
             while loop:
                 select = selectDialog(PluginDirNameLst, 'Select [COLOR=red][D][/COLOR]irectory')
@@ -900,7 +891,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             select = selectDialog(self.ChanTypeList, 'Select Channel Type')
             if select != -1:
                 chantype = select
-                ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_type", str(chantype))      
+                ADDON_SETTINGS.setSetting("Channel_" + str(channel) + "_type", str(chantype))   
+            else:
+                return
         else:
             self.setting1 = ''
             self.setting2 = ''
@@ -1249,7 +1242,10 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
     def fillChanTypeLabel(self):
         show_busy_dialog()
         for i in range(NUMBER_CHANNEL_TYPES + 1):
-            self.ChanTypeList.append(getChanTypeLabel(i))
+            if i in [7] and isLowPower() == True:
+                self.ChanTypeList.append('[COLOR=dimgrey]'+getChanTypeLabel(i)+'[/COLOR]')
+            else:
+                self.ChanTypeList.append('[COLOR=white]'+getChanTypeLabel(i)+'[/COLOR]')
         hide_busy_dialog()
             
             
@@ -1309,7 +1305,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.MediaLimitList = ['25','50','100','150','200','250','500','1000','5000','Unlimited','Global']
         self.SortOrderList = ['Default','Random','Reverse']
         self.ExternalPlaylistSources = ['Local File','URL']
-        self.SourceList = ['PVR','HDhomerun','Community List (Coming Soon)','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
+        self.SourceList = ['PVR','HDhomerun','Local Video','Local Music','Plugin','UPNP','Kodi Favourites','Youtube Live','URL','M3U Playlist','XML Playlist','PLX Playlist']
         self.YoutubeList = ['Channel','Playlist','Multi Playlist','Multi Channel','Seasonal','Search Query']
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
@@ -1626,7 +1622,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     path = PathLst[select]
                     if len(path) > 0:
                         return name, path
-
+                        
             if source == 'Meta Plugin':
                 retval = inputDialog('Enter Live network name','')
                 if retval and len(retval) > 0:
@@ -1634,13 +1630,11 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                      
             elif source == 'HDhomerun':
                 self.log("HDhomerun")
-                NameLst, PathLst = self.chnlst.HDHRList
+                NameLst, PathLst, IconLst = self.chnlst.HDHRList
                 select = selectDialog(NameLst, 'Select HDhomerun Channel')
                 if select != -1:
-                    name = self.chnlst.cleanLabels(NameLst[select])
-                    path = PathLst[select]
-                    if len(path) > 0:
-                        return name, path
+                    if len(PathLst[select]) > 0:
+                        return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
                                     
             elif source == 'Local Video':
                 self.log("Local Video")
@@ -1725,7 +1719,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     select = selectDialog(NameLst, 'Select [COLOR=green][F][/COLOR]ile')
                     if select != -1:
                         return self.chnlst.cleanLabels(NameLst[select]), PathLst[select]
-                    
+                    elif len(NameLst) == 0:
+                        okDialog('No UPNP sources detected, Please make sure you have "upnp://" added as a Kodi video source')
+                        
             elif source == 'Kodi Favourites':
                 self.log("Kodi Favourites")
                 FavouritesNameList, FavouritesPathList = self.chnlst.FavouritesList

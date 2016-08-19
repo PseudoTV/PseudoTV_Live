@@ -38,6 +38,7 @@ class Channel:
         self.ruleList = []
         self.channelNumber = 0
         self.isSetup = False
+        self.hasChanged = False
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):

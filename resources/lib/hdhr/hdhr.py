@@ -6,6 +6,8 @@ import traceback
 import struct
 import StringIO
 import time
+import dump
+import urllib, urllib2, re, HTMLParser
 
 DEVICE_DISCOVERY_PORT = 65001
 
@@ -141,3 +143,34 @@ def discover(device=None):
                 traceback.print_exc()
 
     return responses
+
+def authID():
+    return dump.discoverHDHRList()
+    
+def getChannelList():
+    HDHRList = ''
+    try:
+        import json
+        from resources.lib.utils import *
+        HDHRList = []
+        for b in json.loads(getRequest('http://my.hdhomerun.com/api/guide.php?DeviceAuth=%s' %authID())):
+            try:
+                chid = b['GuideNumber']
+            except:
+                chid = 0
+            try:
+                chlogo = b['ImageURL']
+            except:
+                chlogo = ''
+            try:
+                chname = b['Affiliate']
+            except:
+                chname = ''
+            try:
+                dname = b['GuideName']
+            except:
+                dname = ''
+            HDHRList.append({'chid':chid,'chlogo':chlogo,'chname':chname,'dname':dname})
+    except:
+        pass
+    return HDHRList

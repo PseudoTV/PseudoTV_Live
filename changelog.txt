@@ -1,3 +1,17 @@
+[*] Fixed issue with strm files not playing correctly.
+[*] Tweaked "Custom Playlist" Autotuning. File naming scheme for Video/Music/Mixed playlists "channel_#_name.xsp" ex. channel_1_mychannel.xsp.
+[*] Added "Use Native Channel Numbers" Autotuning option. 
+    When enabled autotuning "LiveTV" ie. (PVR & HDHomeRun) or "Custom Smartplaylists" PTVL will use (if availabe) the backend or playlist's given channel number. 
+    Channel numbers that exceed max allowable value will roll over to lowest 10th degree. ex. Channel 1000 becomes Channel 100.
+    [COLOR=red]Caution[/COLOR] creating a large segmented channel lineup can greatly increase channel building times]
+[*] Fixed "Offline" & missing HDHomeRun device issues.
+[*] Removed "Directory" Autotuining & Disabled Directory Channels for LowPower devices. 
+[*] Added groundwork for HDHomerun API support, Currently includes EPG listings. DVR Coming Soon!
+[*] Simplified options for Autotuning PVR and HDHomerun. 
+[*] Removed HDHomerun "Dual" device support in favor of supporting HDhomerun API devices ie. "Prime", "Connect", "Extend".
+[*] Removed Autotuning third-party playlists ie. m3u,xml,plx formats. Support for playlist formats availabe via in-app channel manager.
+[*] Updated default skin to include both channel logo and name; Options availabe in "Visual/EPG Settings".
+[*] [COLOR=blue][B]^ v.0.8.0 ^[/B][/COLOR]
 [*] Added LiveTV parsing limit under "DVR" setting tab; "Guidedata days to display".
 [*] Added urlresolver for LiveTV/InternetTV to in-app channel manager. *Thanks Eldorado
     Users can enter a web url, if resolved PTVL will covert to a kodi playable link.

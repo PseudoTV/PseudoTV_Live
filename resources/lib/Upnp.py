@@ -64,8 +64,8 @@ class Upnp:
                     headers=headers,
                     auth=(user,password)) 
             return r.json()
-        except:
-            ErrorNotify("Unable to connect with %s" %str(xbmc_host), "Video Mirroring Failed!")
+        except Exception,e:
+            self.log('RequestExtJson, failed! ' + str(e), xbmc.LOGERROR)
             
             
     def SendExtJson(self, IPP, params):
@@ -80,8 +80,8 @@ class Upnp:
             s.send(json.dumps(params2))
             s.shutdown(socket.SHUT_RDWR)
             s.close()
-        except:
-            ErrorNotify("Unable to connect with %s" %str(xbmc_host), "Video Mirroring Failed!")
+        except Exception,e:
+            self.log('SendExtJson, failed! ' + str(e), xbmc.LOGERROR)
 
 
     def isPlayingUPNP(self, IPP, AUTH, label, file):
@@ -114,9 +114,17 @@ class Upnp:
                 self.log('chkUPNP, ' + str(self.IPPlst[i]) + ' not playing') 
                 if seektime > 0:
                     seek = str(datetime.timedelta(seconds=seektime))
+                    self.log('chkUPNP, seek = ' + seek)
                     seek = seek.split(":")
-                    hours = int(seek[0])
-                    minutes = int(seek[1])
+                    try:
+                        hours = int(seek[0])
+                    except:
+                        hours = 0
+                    try:
+                        minutes = int(seek[1])
+                    except:
+                        minutes = 0
+
                     Mseconds = str(seek[2])
                     seconds = int(Mseconds.split(".")[0])
                     
@@ -139,9 +147,17 @@ class Upnp:
         for i in range(len(self.IPPlst)):  
             if seektime > 0:
                 seek = str(datetime.timedelta(seconds=seektime))
+                self.log('SendUPNP, seek = ' + seek)
                 seek = seek.split(":")
-                hours = int(seek[0])
-                minutes = int(seek[1])
+                try:
+                    hours = int(seek[0])
+                except:
+                    hours = 0
+                try:
+                    minutes = int(seek[1])
+                except:
+                    minutes = 0
+
                 Mseconds = str(seek[2])
                 seconds = int(Mseconds.split(".")[0])
                 

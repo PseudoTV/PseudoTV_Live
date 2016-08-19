@@ -237,7 +237,7 @@
                 <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.Time)]</label>
                 <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
                 <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>!Control.IsVisible(101)</visible>
+                <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5006),) + !StringCompare(Control.GetLabel(5006),00:00:00)]</visible>
             </control>
             <control type="grouplist">
                 <posx>430</posx>
@@ -438,7 +438,7 @@
                 <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.TimeRemaining)]</label>
                 <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
                 <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>!Control.IsVisible(101)</visible>
+                <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5005),) + !StringCompare(Control.GetLabel(5005),00:00:00)]</visible>
             </control>
             <control type="grouplist">
                 <posx>430</posx>
@@ -931,8 +931,8 @@
                     <aspectratio>keep</aspectratio>
                     <align>center</align>
                     <aligny>center</aligny>
+                    <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     <texture fallback="logo.png">$INFO[Window(10000).Property(OVERLAY.LOGOART)]</texture>
-                    <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
                 </control>
                 <control type="image">
                     <description>Busy animation</description>

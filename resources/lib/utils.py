@@ -33,6 +33,7 @@ from xml.etree import ElementTree
 from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
 from pyfscache import *
+from hdhr import hdhr
 
 sys.setcheckinterval(25)
 socket.setdefaulttimeout(15)
@@ -149,92 +150,85 @@ def CleanCHnameSeq(text):
                 
 def FindLogo(chtype, chname, mediapath=None):
     log('utils: FindLogo')
-    if FIND_LOGOS == False:
+    if len(chname) == 0 or REAL_SETTINGS.getSetting('Enable_FindLogo') == "false":
         return
-    if isLowPower() != True and len(chname) > 0:
-        try:
-            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-            if FindLogoThread.isAlive():
-                FindLogoThread.cancel()
-                FindLogoThread.join()
-            FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
-            FindLogoThread.name = "FindLogoThread"
-            FindLogoThread.start()
-        except Exception,e:
-            log('utils: FindLogo, failed! ' + str(e))
+    try:
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        if FindLogoThread.isAlive():
+            FindLogoThread.cancel()
+            FindLogoThread.join()
+        FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
+        FindLogoThread.name = "FindLogoThread"
+        FindLogoThread.start()
+    except Exception,e:
+        log('utils: FindLogo, failed! ' + str(e))
             
 def FindLogo_Thread(chtype, chname, mediapath):
-    url = False
-    LogoPath     = os.path.join(LOGO_LOC,chname + '.png')
-    LogoPath_Ani = os.path.join(LOGO_LOC,chname + '.gif')
-    
-    if xbmcvfs.exists(LOGO_LOC) == False:
-        xbmcvfs.mkdirs(LOGO_LOC)
-
-    # if logo exists & logo override is disabled return
-    if xbmcvfs.exists(LogoPath) == True and OVER_LOGOS == False:
-        if ANIM_LOGOS == True:
-            if xbmcvfs.exists(LogoPath_Ani) == True and OVER_LOGOS == False:
-                return
-        else:
-            return
-    FindLogo_URL(chtype, chname, mediapath)
-
-def FindLogo_URL(chtype, chname, mediapath):
     log("utils: FindLogo_URL, chtype = " + str(chtype) + ", chname = " + chname)
+    if xbmcvfs.exists(LOGO_LOC) == False:
+        xbmcvfs.mkdirs(LOGO_LOC)  
     url = False
     LogoPath = os.path.join(LOGO_LOC,chname + '.png')
     LogoPath_Ani = os.path.join(LOGO_LOC,chname + '.gif')
     clean_chname = CleanCHname(chname)
-    
-    # thelogodb search
-    if chtype in [0,1,8,9,15]:
-        log("utils: FindLogo_URL, findLogodb")
-        url = findLogodb(clean_chname)
-        if url:
-            GrabLogo(url, chname, LogoPath)
-            
-    if not url:
-        # github search
-        if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
-            log("utils: FindLogo_URL, findGithubLogo")
-            url = findGithubLogo(clean_chname)
+
+    if REAL_SETTINGS.getSetting('Enable_AnimLogo') == "true" :
+        try:
+            if xbmcvfs.exists(LogoPath_Ani) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+                raise Exception()
+            if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
+                log("utils: FindLogo_URL, findGithubLogo animated")
+                url = findGithubLogo(clean_chname, animated=True) 
+                if url:
+                    GrabLogo(url, chname, LogoPath_Ani) 
+        except:
+            pass
+    try:    
+        if xbmcvfs.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
+            raise Exception()
+
+        # thelogodb search
+        if chtype in [0,1,8,9,15]:
+            log("utils: FindLogo_URL, findLogodb")
+            url = findLogodb(clean_chname)
             if url:
                 GrabLogo(url, chname, LogoPath)
-            else:
-                url = findGithubLogo(CleanCHnameSeq(clean_chname))
+                
+        if not url:
+            # github search
+            if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
+                log("utils: FindLogo_URL, findGithubLogo")
+                url = findGithubLogo(clean_chname)
                 if url:
                     GrabLogo(url, chname, LogoPath)
+                else:
+                    url = findGithubLogo(CleanCHnameSeq(clean_chname))
+                    if url:
+                        GrabLogo(url, chname, LogoPath)
 
-    if ANIM_LOGOS == True:
-        if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
-            log("utils: FindLogo_URL, findGithubLogo animated")
-            url = findGithubLogo(clean_chname, animated=True) 
+        # local tvshow logo search
+        if mediapath and chtype == 6:
+            log("utils: FindLogo_URL, local TVlogo")
+            mpath = getMpath(mediapath)
+            smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
+            artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
+            artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
+            if xbmcvfs.exists(artSeries): 
+                url = artSeries
+            elif xbmcvfs.exists(artSeason): 
+                url = artSeason
             if url:
                 GrabLogo(url, chname, LogoPath_Ani) 
-    
-    # local tvshow logo search
-    if mediapath and chtype == 6:
-        log("utils: FindLogo_URL, local TVlogo")
-        mpath = getMpath(mediapath)
-        smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
-        artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
-        artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
-        if xbmcvfs.exists(artSeries): 
-            url = artSeries
-        elif xbmcvfs.exists(artSeason): 
-            url = artSeason
-        if url:
-            GrabLogo(url, chname, LogoPath_Ani) 
-    # todo google image logo search
-    
+    except:
+        pass
+
 def GrabLogo(url, chname, LogoFile=''):
     url = url.rstrip('/')
     if not LogoFile:
         LogoFile = os.path.join(LOGO_LOC, chname + '.png')
-
     log("utils: GrabLogo, url = " + url + " ,LogoFile = " + LogoFile)
-    if OVER_LOGOS == True:
+    
+    if REAL_SETTINGS.getSetting('LogoDB_Override') == "true" :
         try:
             xbmcvfs.delete(LogoFile)
         except:
@@ -685,7 +679,6 @@ def read_url_cached_monthly(url, userpass=False, return_type='read'):
   
 def open_url(url, userpass=None):
     log("utils: open_url")
-    page = ''
     try:
         request = urllib2.Request(url)
         if userpass:
@@ -702,7 +695,7 @@ def open_url(url, userpass=None):
         page.close
         return page
     except urllib2.HTTPError, e:
-        return page
+        return ''
          
 def retrieve_url(url, userpass, dest):
     log("utils: retrieve_url")
@@ -1385,30 +1378,33 @@ def getRepo():
  
 def chkVersion():
     log('utils: chkVersion')
-    curver = xbmc.translatePath(os.path.join(ADDON_PATH,'addon.xml'))    
-    source = open(curver, mode='r')
-    link = source.read()
-    source.close()
-    match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
-    
-    for vernum in match:
-        log("utils: chkVersion, Current Version = " + str(vernum))
+    try:
+        curver = xbmc.translatePath(os.path.join(ADDON_PATH,'addon.xml'))    
+        source = open(curver, mode='r')
+        link = source.read()
+        source.close()
+        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+        
+        for vernum in match:
+            log("utils: chkVersion, Current Version = " + str(vernum))
 
-    link = open_url(decodeString('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0x1bmF0aXh6L1hCTUNfQWRkb25zL21hc3Rlci9zY3JpcHQucHNldWRvdHYubGl2ZS9hZGRvbi54bWw=')).read() 
-    link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
-    match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
+        link = open_url(decodeString('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0x1bmF0aXh6L1hCTUNfQWRkb25zL21hc3Rlci9zY3JpcHQucHNldWRvdHYubGl2ZS9hZGRvbi54bWw=')).read() 
+        link = link.replace('\r','').replace('\n','').replace('\t','').replace('&nbsp;','')
+        match = re.compile('" version="(.+?)" name="PseudoTV Live"').findall(link)
 
-    if len(match) > 0:
-        log("utils: chkVersion, Repo Version = " + str(match[0]))
-        if vernum != str(match[0]):
-            if isRepoInstalled() == False:
-                getRepo()
-                okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
-            else:
-                set_Kodi_JSON(decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6InJlcG9zaXRvcnkubHVuYXRpeHoiLCJlbmFibGVkIjp0cnVlfQ=='))
-            xbmc.executebuiltin('UpdateAddonRepos')
-            xbmc.executebuiltin('UpdateLocalAddons')
-    return isRepoInstalled()
+        if len(match) > 0:
+            log("utils: chkVersion, Repo Version = " + str(match[0]))
+            if vernum != str(match[0]):
+                if isRepoInstalled() == False:
+                    getRepo()
+                    okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
+                else:
+                    set_Kodi_JSON(decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6InJlcG9zaXRvcnkubHVuYXRpeHoiLCJlbmFibGVkIjp0cnVlfQ=='))
+                xbmc.executebuiltin('UpdateAddonRepos')
+                xbmc.executebuiltin('UpdateLocalAddons')
+        return isRepoInstalled()
+    except:
+        return True
     
 def isCompanionInstalled():
     companion = isPlugin('plugin.video.pseudo.companion')
@@ -1466,6 +1462,7 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
             REAL_SETTINGS.setSetting('IncludeMeta', "false")
             REAL_SETTINGS.setSetting('LIVETV_MAXPARSE', "0")
+            REAL_SETTINGS.setSetting('respectChannels', "false")
             if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
                 REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
             infoDialog("Settings Optimized for Performance")
@@ -1956,22 +1953,35 @@ def isSFAV():
 def isPlayOn():
     return isPlugin('plugin.video.playonbrowser')
     
+def isHDHR():
+    devices = hdhr.discover()
+    if devices and len(devices) > 0:
+        return devices
+    return False
+
+def isPVR():
+    return xbmc.getCondVisibility('Pvr.HasTVChannels')
+    
 def isUSTVnow():
-    if isPlugin('plugin.video.ustvnow'):
-        return 'plugin.video.ustvnow'
-    elif isPlugin('plugin.video.ustvnow.tva'):
+    if isPlugin('plugin.video.ustvnow.tva'):
         return 'plugin.video.ustvnow.tva'
     elif isPlugin('plugin.video.ustvnow.plus'):
         return 'plugin.video.ustvnow.plus'
+    elif isPlugin('plugin.video.ustvnow'):
+        return 'plugin.video.ustvnow'
     else:
         return False
 
 def listXMLTV():
     log("utils: listXMLTV")
     xmltvLst = []   
-    EXxmltvLst = ['pvr','Enter URL','scheduledirect (Coming Soon)']
+    EXxmltvLst = ['Enter URL']
     if isUSTVnow() != False:
         EXxmltvLst.append('ustvnow')
+    if isHDHR() != False:
+        EXxmltvLst.append('hdhomerun')
+    if isPVR() != False:
+        EXxmltvLst.append('pvr')
     dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
     dir,file = xbmcvfs.listdir(XMLTV_LOC)
     xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
@@ -1987,14 +1997,11 @@ def listXMLTV():
             return xmltvLst[select]            
             
 def xmltvflePath(setting3):          
-    if setting3[0:4] == 'http' or setting3.lower() == 'pvr' or setting3.lower() == 'scheduledirect' or setting3.lower() == 'zap2it':
-        xmltvFle = setting3
-    # elif setting3.lower() == 'ptvlguide':
-        # xmltvFle = PTVLXML
-    elif setting3.lower() == 'ustvnow':
-        xmltvFle = USTVXML                
+    xmlpath = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+    if xbmcvfs.exists(xmlpath) == True:
+        xmltvFle = xmlpath
     else:
-        xmltvFle = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
+        xmltvFle = setting3
     log("utils: xmltvflePath, xmltvFle = " + xmltvFle)  
     return xmltvFle
     

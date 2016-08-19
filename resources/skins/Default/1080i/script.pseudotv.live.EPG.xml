@@ -490,7 +490,7 @@
             <texture>pstvlHighlightAlt2.png</texture>
         </control>
         <control type="grouplist">            
-            <posx>0</posx>
+            <posx>-20</posx>
             <posy>339</posy>
             <itemgap>0</itemgap>
             <orientation>vertical</orientation>
@@ -562,7 +562,7 @@
             </control>
         </control>
         <control type="grouplist">            
-            <posx>77</posx>
+            <posx>57</posx>
             <posy>339</posy>
             <itemgap>0</itemgap>
             <orientation>vertical</orientation>
@@ -766,6 +766,164 @@
                 <visible>!StringCompare(Control.GetLabel(326),)</visible>
             </control>   
         </control>
+        <control type="group">            
+            <posx>60</posx>
+            <posy>0</posy>
+            <width>278</width>
+            <height>75</height>
+            <itemgap>0</itemgap>
+            <orientation>vertical</orientation>
+            <visible>[StringCompare(Control.GetLabel(301),) + StringCompare(Control.GetLabel(321),)]</visible>
+            <control type="image">
+                <description>Channel 1 Icon</description>            
+                <posx>10</posx>
+                <posy>339</posy>                         
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio> 
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW1)]</texture>
+            </control>
+            <control type="label">
+                <description>Channel 1 Name</description>          
+                <posx>90</posx>
+                <posy>339</posy>
+                <width>255</width>
+                <height>75</height>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW1)]</label>
+            </control>
+            <control type="image">
+                <description>Channel 2 Icon</description>         
+                <posx>10</posx>
+                <posy>414</posy>                          
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW2)]</texture>
+            </control>
+            <control type="label">
+                <description>Channel 2 Name</description>     
+                <posx>90</posx>
+                <posy>414</posy>  
+                <width>255</width>
+                <height>75</height>
+                <label></label>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW2)]</label>
+            </control>
+            <control type="image">
+                <description>Channel 3 Icon</description>         
+                <posx>10</posx>
+                <posy>489</posy>                       
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW3)]</texture>
+            </control>
+            <control type="label">
+                <description>Channel 3 Name</description>     
+                <posx>90</posx>
+                <posy>489</posy>  
+                <width>255</width>
+                <height>75</height>
+                <label></label>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW3)]</label>
+            </control>
+            <control type="image">
+                <description>Channel 4 Icon</description>         
+                <posx>10</posx>
+                <posy>564</posy>                       
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW4)]</texture>
+            </control>
+            <control type="label">
+                <description>Channel 4 Name</description>     
+                <posx>90</posx>
+                <posy>564</posy>  
+                <width>255</width>
+                <height>75</height>
+                <label></label>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW4)]</label>
+            </control>
+            <control type="image">
+                <description>Channel 5 Icon</description>         
+                <posx>10</posx>
+                <posy>639</posy>                       
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio> 
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW5)]</texture>
+            </control> 
+            <control type="label">
+                <description>Channel 5 Name</description>     
+                <posx>90</posx>
+                <posy>639</posy>  
+                <width>255</width>
+                <height>75</height>
+                <label></label>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW5)]</label>
+            </control> 
+            <control type="image">
+                <description>Channel 6 Icon</description>         
+                <posx>10</posx>
+                <posy>714</posy>                       
+                <width>75</width>
+                <height>75</height>
+                <align>left</align>
+                <aligny>center</aligny>
+                <aspectratio>keep</aspectratio>  
+                <texture fallback="logo.png">$INFO[Window(10000).Property(EPG.LOGO_ROW6)]</texture>
+            </control>   
+            <control type="label">
+                <description>Channel 6 Name</description>     
+                <posx>90</posx>
+                <posy>714</posy>  
+                <width>255</width>
+                <height>75</height>
+                <label></label>
+                <font>PTVL12</font>
+                <align>left</align>
+                <aligny>center</aligny>
+                <textcolor>FF0297eb</textcolor>
+                <shadowcolor>ff000000</shadowcolor>
+                <label>$INFO[Window(10000).Property(EPG.NAME_ROW6)]</label>
+            </control>
+        </control>
         <control type="button">
             <description>Cat Button</description>     
             <posx>0</posx>
@@ -838,7 +996,6 @@
             <width>4</width>
             <height>452</height>
             <aspectratio>keep</aspectratio>
-            <texture>pstvlTimeBar.png</texture>
         </control> 
         <control type="image">
             <description>Dynamic art1</description>

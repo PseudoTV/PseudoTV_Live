@@ -67,6 +67,11 @@ class Main:
         self.ImportChannel()
           
    
+    def onInit(self):
+        self.log("onInit")
+        chkLowPower()
+        
+        
     def ImportChannel(self):
         self.log("ImportChannel")
         show_busy_dialog()

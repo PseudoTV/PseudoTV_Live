@@ -81,6 +81,7 @@ class ChannelList:
         self.PVRList = []
         self.FavouritesList = []
         self.HDHRList = []
+        self.USTVList = []
         self.showList = []
         self.channels = []
         self.file_detail_CHK = []
@@ -338,7 +339,7 @@ class ChannelList:
             if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
                 valid = True
         elif chtype == 7:
-            if FileAccess.exists(chsetting1) == True:
+            if FileAccess.exists(chsetting1) == True and isLowPower() == False:
                 valid = True
         elif chtype in [8,9]:
             if self.Valid_ok(chsetting2) == True:
@@ -479,9 +480,12 @@ class ChannelList:
                         self.channels[channel - 1].totalTimePlayed = 0
                         ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_time', '0')
 
-                        if needsreset:
+                        if needsreset and self.channels[channel - 1].hasChanged == False:
                             ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', 'False')
                             self.channels[channel - 1].isSetup = True
+                            
+                    if self.channels[channel - 1].hasChanged == True:
+                        ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', 'True')
                     
         self.runActions(RULES_ACTION_BEFORE_CLEAR, channel, self.channels[channel - 1])
 
@@ -1143,7 +1147,7 @@ class ChannelList:
                 del fileList[:]
                 break
                 
-            LocalFLE = (LocalLST[i])[0]
+            LocalFLE = (LocalLST[i])
             duration = self.getDuration(LocalFLE)
                                                                 
             if duration > 0:
@@ -2004,6 +2008,10 @@ class ChannelList:
                 showList = self.fillLiveTVGuide(setting1, setting2, setting3, setting4, chname, limit)
             elif setting3 == 'pvr':
                 showList = self.fillLiveTVPVR(setting1, setting2, setting3, setting4, chname, limit)
+            elif setting3 == 'hdhomerun':
+                showList = self.fillLiveHDHRGuide(setting1, setting2, setting3, setting4, chname, limit)
+            elif setting3 == 'ustvnow':
+                showList = self.fillLiveUSTVGuide(setting1, setting2, setting3, setting4, chname, limit)
             else:   
                 showList = self.fillLiveTVXMLTV(setting1, setting2, setting3, setting4, chname, limit)
         
@@ -2013,7 +2021,215 @@ class ChannelList:
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
         return showList     
         
+                
+    def fillLiveUSTVGuide(self, setting1, setting2, setting3, setting4, chname, limit):
+        self.log("fillLiveUSTVGuide")    
+        showList = []
+        showcount = 0  
+        now = datetime.datetime.now()         
+        offset = ((time.timezone / 3600) - 5 ) * -1          
+        try:
+            listing = 'http://m-api.ustvnow.com/gtv/1/live/channelguide'
+            self.log("fillLiveUSTVGuide, listing = " + listing)  
+            a = json.loads(getRequest(listing))
+            for b in a['results'][:((LIVETV_MAXPARSE/60)/60)]:
+                if b['stream_code'].lower() == setting1.lower():
+                    startDate  = datetime.datetime.fromtimestamp(float(b['ut_start']));
+                    stopDate   = startDate + datetime.timedelta(seconds=int(b['guideremainingtime']));
         
+                    #skip old shows that have already ended
+                    if now > stopDate:
+                        continue
+                        
+                    try:
+                        dur = b['actualremainingtime']
+                    except Exception,e:
+                        dur = 3600  #60 minute default
+                    # try:
+                        # GrabLogo('http://m.ustvnow.com/%s' %b['img'],chname)
+                    # except:
+                        # pass
+                    try:
+                        dbid = encodeString('http://mc.ustvnow.com/gtv/1/live/viewposter?srsid=' + str(b['srsid']) + '&cs=' + b['callsign'] + '&tid=' + b['mediatype'])
+                    except:
+                        dbid = 0
+                    try:
+                        epid = b['scheduleid']
+                    except:
+                        epid = 0
+                    try:
+                        genre = b['xcdrappname']
+                    except:
+                        genre = 'Unknown'
+
+                    title = b['title']
+                    subtitle = b['episode_title']
+                    description = b['description']
+                    synopsis = b['synopsis']
+                    if not subtitle:                        
+                        subtitle = 'USTVnow'
+                    if not description:
+                        if not subtitle:
+                            description = title  
+                        else:
+                            description = subtitle
+                    try:
+                        labelseasonepval = re.findall(r"(?:s|season)(\d{2})(?:e|x|episode|\n)(\d{2})", subtitle.lower(), re.I)
+                        seasonNumber = int(labelseasonepval[0][0])
+                        episodeNumber = int(labelseasonepval[0][1])
+                    except Exception,e:
+                        seasonNumber = 0
+                        episodeNumber = 0
+
+                    year, title, showtitle = getTitleYear(title) 
+                    
+                    if dur > 3600:
+                        type = 'movie'
+                    else:
+                        type = 'tvshow'
+              
+                    if type == 'tvshow':
+                        showtitle = title
+                        episodetitle = (('0' if seasonNumber < 10 else '') + str(seasonNumber) + 'x' + ('0' if episodeNumber < 10 else '') + str(episodeNumber) + ' - '+ (subtitle)).replace('  ',' ')
+                        if str(episodetitle[0:5]) == '00x00':
+                            episodetitle = episodetitle.split("- ", 1)[-1]
+                        subtitle = episodetitle
+                    
+                    #Enable Enhanced Parsing for current and future shows only
+                    includeMeta = self.includeMeta
+                    if (title.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                        includeMeta = False  
+                        
+                    dbid = str(dbid) +':'+ str(epid)
+                    GenreLiveID = [genre,type,0,dbid,False,1,'NR', False, False, 0.0, year]
+                    tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
+                    showList.append(tmpstr)
+                    showcount += dur
+
+                    if self.background == False:
+                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
+                        setProperty('loading.progress',str(self.updateDialogProgress))
+
+        except Exception,e:
+            self.log("fillLiveUSTVGuide failed! " + str(e), xbmc.LOGERROR)               
+        if showcount < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
+        return showList
+        
+        
+    def fillLiveHDHRGuide(self, setting1, setting2, setting3, setting4, chname, limit):
+        self.log("fillLiveHDHRGuide")    
+        showList = []
+        showcount = 0  
+        now = datetime.datetime.now()         
+        offset = ((time.timezone / 3600) - 5 ) * -1          
+        try:
+            listing = 'http://my.hdhomerun.com/api/guide.php?DeviceAuth=%s' %hdhr.authID()
+            self.log("fillLiveHDHRGuide, listing = " + listing)  
+            a = json.loads(getRequest(listing))
+            for b in a[:((LIVETV_MAXPARSE/60)/60)]:
+                chid = str(b['GuideNumber'])
+                if chid == setting1:
+                    self.log("fillLiveHDHRGuide, "+chid+" == "+setting1)    
+                    try:
+                        if b['ImageURL'].startswith('http'):
+                            GrabLogo(b['ImageURL'],chname)
+                    except:
+                        pass
+                    try:
+                        name  = b['Affiliate']
+                    except:
+                        name = b['GuideName']
+                    rating = 'NR' 
+                    for i in b['Guide']:            
+                        stopDate = datetime.datetime.fromtimestamp(float(i['EndTime']))
+                        startDate= datetime.datetime.fromtimestamp(float(i['StartTime']))
+
+                        #skip old shows that have already ended
+                        if now > stopDate:
+                            continue
+
+                        try:
+                            dur = int(float(i['EndTime']) - float(i['StartTime']))
+                        except Exception,e:
+                            dur = 3600  #60 minute default
+
+                        title = i['Title']
+                        try:
+                            dbid = encodeString(i['ImageURL'])
+                        except:
+                            dbid = 0
+                        try:
+                            epid = i['SeriesID']
+                        except:
+                            epid = 0
+                        try:
+                            description = i['Synopsis']
+                        except:
+                            description = ''
+                        try:
+                            genre = list(i['Filter'])[0]
+                        except:
+                            genre = 'Unknown'
+                        try:
+                            EpisodeNumber  = i['EpisodeNumber']
+                        except:
+                            EpisodeNumber = 'S00E00'
+                        try:
+                            subtitle  = i['EpisodeTitle']
+                        except:
+                            subtitle = ''
+                            
+                        if not subtitle:                        
+                            subtitle = 'HDHomerun'
+                        if not description:
+                            if not subtitle:
+                                description = title  
+                            else:
+                                description = subtitle
+                        try:
+                            labelseasonepval = re.findall(r"(?:s|season)(\d{2})(?:e|x|episode|\n)(\d{2})", EpisodeNumber.lower(), re.I)
+                            seasonNumber = int(labelseasonepval[0][0])
+                            episodeNumber = int(labelseasonepval[0][1])
+                        except Exception,e:
+                            seasonNumber = 0
+                            episodeNumber = 0
+
+                        year, title, showtitle = getTitleYear(title) 
+                        if dur > 3600:
+                            type = 'movie'
+                        else:
+                            type = 'tvshow'
+                  
+                        if type == 'tvshow':
+                            showtitle = title
+                            episodetitle = (('0' if seasonNumber < 10 else '') + str(seasonNumber) + 'x' + ('0' if episodeNumber < 10 else '') + str(episodeNumber) + ' - '+ (subtitle)).replace('  ',' ')
+                            if str(episodetitle[0:5]) == '00x00':
+                                episodetitle = episodetitle.split("- ", 1)[-1]
+                            subtitle = episodetitle
+                        
+                        #Enable Enhanced Parsing for current and future shows only
+                        includeMeta = self.includeMeta
+                        if (title.lower() == 'paid programing' or subtitle.lower() == 'paid programing' or description.lower() == 'paid programing'):
+                            includeMeta = False  
+                            
+                        dbid = str(dbid) +':'+ str(epid)
+                        GenreLiveID = [genre,type,0,dbid,False,1,rating, False, False, 0.0, year]
+                        tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
+                        showList.append(tmpstr)
+                        showcount += dur
+
+                        if self.background == False:
+                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
+                            setProperty('loading.progress',str(self.updateDialogProgress))
+
+        except Exception,e:
+            self.log("fillLiveHDHRGuide failed! " + str(e), xbmc.LOGERROR)               
+        if showcount < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
+        return showList
+        
+
     def fillLiveTVGuide(self, setting1, setting2, setting3, setting4, chname, limit):
         self.log("fillLiveTVGuide")    
         showList = []
@@ -2028,20 +2244,19 @@ class ChannelList:
             #example setting3 = 'http://mobilelistings.tvguide.com/Listingsweb/ws/rest/airings/20405/start/1464292664/duration/20160?channelsourceids=74313%7C62.4&formattype=json'
             listing = setting3.split('/start/')[0] + '/start/' + str(dnow) + '/duration/' + setting3.split('/duration/')[1]   
             self.log("fillLiveTVGuide, listing = " + listing)                    
-            offset = ((time.timezone / 3600) - 5 ) * -1     
-            
+
             a = json.loads(getRequest(listing))
             for b in a[:((LIVETV_MAXPARSE/60)/60)]:
                 b = b['ProgramSchedule']     
-                stopDate = self.parseXMLTVDate((datetime.datetime.fromtimestamp(float(b['EndTime'])).strftime('%Y%m%d%H%M%S')),offset)
-                startDate = self.parseXMLTVDate((datetime.datetime.fromtimestamp(float(b['StartTime'])).strftime('%Y%m%d%H%M%S')),offset)
+                stopDate = datetime.datetime.fromtimestamp(float(b['EndTime']))
+                startDate = datetime.datetime.fromtimestamp(float(b['StartTime']))
                 
                 #skip old shows that have already ended
                 if now > stopDate:
                     continue
                 
                 #adjust the duration of the current show
-                if now > startDate and now <= stopDate:
+                if now >= startDate and now <= stopDate:
                     try:
                         dur = int(float(b['EndTime']) - float(b['StartTime']))
                     except Exception,e:
@@ -2427,19 +2642,10 @@ class ChannelList:
                             continue
 
                         runtimes = re.search('"runtime" *: *"(.*?)",', f)
-                        #adjust the duration of the current show
-                        if now > startDate and now <= stopDate:
-                            if runtimes and len(runtimes.group(1)) > 0:
-                                dur = int(runtimes.group(1)) * 60
-                            else:
-                                dur = int((stopDate - startDate).seconds)
-
-                        #use the full duration for an upcoming show
-                        if now < startDate:
-                            if runtimes:
-                                dur = int(runtimes.group(1)) * 60
-                            else:
-                                dur = ((stopDate - startDate).seconds)   
+                        if runtimes:
+                            dur = int(runtimes.group(1)) * 60
+                        else:
+                            dur = ((stopDate - startDate).seconds)   
                  
                         years = re.search('"year" *: *([\d.]*\d+)', f)
                         # if possible find year by title
@@ -3102,27 +3308,17 @@ class ChannelList:
                 
                 
     def xmltv_ok(self, path):
-        xmltvValid = False
+        self.log("xmltv_ok")
         if path[0:4] == 'http':
             self.xmlTvFile = path
             return self.url_ok(path)
-        elif path.lower() in ['pvr','zap2it','scheduledirect']:
+        elif path.lower() in ['pvr','hdhomerun','ustvnow']:
             return True
-        elif path.lower() == 'ustvnow':    
-            if self.USTVnow_ok == False:
-                return False
-            self.ustv = ustvnow.ustvnow()
-            self.ustv.getXMLTV()
-            self.xmlTvFile = USTVXML
-        # elif path.lower() == 'ptvlguide':
-            # self.xmlTvFile = PTVLXML
         elif len(path) > 0:
             self.xmlTvFile = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(path) +'.xml'))
-        
-        if FileAccess.exists(self.xmlTvFile):
-            xmltvValid = True 
-        self.log("xmltv_ok, path = " + path + ", status = " + str(xmltvValid))           
-        return xmltvValid
+            if FileAccess.exists(self.xmlTvFile):
+                return True          
+        return False
            
            
     def Valid_ok(self, url):
@@ -3454,7 +3650,7 @@ class ChannelList:
                 for i in range(len(LocalLST)):  
                     try:
                         duration = 0
-                        filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i])[0])))
+                        filename = xbmc.translatePath(os.path.join(PATH,((LocalLST[i]))))
                         duration = self.getDuration(filename)
                         if duration > 0:
                             BumperCNT += 1
@@ -3591,7 +3787,7 @@ class ChannelList:
                         if self.background == False:
                             self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Local Commercials")
                             setProperty('loading.progress',str(self.updateDialogProgress))
-                        filename = xbmc.translatePath(os.path.join(PATH,LocalLST[i][0]))
+                        filename = xbmc.translatePath(os.path.join(PATH,LocalLST[i]))
                         duration = self.getDuration(filename)
                         
                         if duration == 0:
@@ -3902,8 +4098,8 @@ class ChannelList:
     
     
     # Adapted from Ronie's screensaver.picture.slideshow * https://github.com/XBMC-Addons/screensaver.picture.slideshow/blob/master/resources/lib/utils.py    
-    def walk(self, path):     
-        self.log("walk " + path)
+    def walk(self, path, types=MEDIA_TYPES):     
+        self.log("walk " + path + ' ,' + str(types))
         video = []
         folders = []
         # multipath support
@@ -3913,22 +4109,23 @@ class ChannelList:
             for item in paths:
                 folders.append(urllib.unquote_plus(item))
         else:
-            folders.append(path)
+            folders.append(os.path.join(path,''))
         for folder in folders:
-            if FileAccess.exists(xbmc.translatePath(folder)):
+            if xbmcvfs.exists(xbmc.translatePath(folder)):
                 # get all files and subfolders
-                dirs,files = xbmcvfs.listdir(os.path.join(xbmc.translatePath(folder),''))
+                dirs,files = xbmcvfs.listdir(folder)
+                print dirs, files
                 # natural sort
                 convert = lambda text: int(text) if text.isdigit() else text
                 alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
                 files.sort(key=alphanum_key)
                 for item in files:
                     # filter out all video
-                    if os.path.splitext(item)[1].lower() in MEDIA_TYPES:
-                        video.append([os.path.join(folder,item), ''])
+                    if os.path.splitext(item)[1].lower() in types:
+                        video.append(os.path.join(folder,item))
                 for item in dirs:
                     # recursively scan all subfolders
-                    video += self.walk(os.path.join(folder,item,'')) # make sure paths end with a slash
+                    video += self.walk(os.path.join(folder,item)) # make sure paths end with a slash
         # cleanup   
         del folders[:]
         return video
@@ -4089,26 +4286,44 @@ class ChannelList:
         # return ['XMLTV ERROR : IMPROPER FORMATING']
 
                 
-    def findZap2itID(self, CHname, filename):
+    def findZap2itID(self, CHname, xmlflename):
         self.log("findZap2itID, CHname = " + CHname)
         orgCHname = CHname
-        CHname = CHname.upper()
-        XMLTVMatchlst = []
-        sorted_XMLTVMatchlst = []
-        found = False
-        if filename.startswith('http://mobilelistings.tvguide.com'):
+        fuzzyCHname = (CHname.upper()).replace('HD','')
+        CHmatchLST = [CHname, fuzzyCHname, orgCHname]
+        
+        if xmlflename.startswith('http://mobilelistings.tvguide.com'):
             return CHname, CHname
-
-        elif filename == 'pvr':
-            NameLst, PathLst, IconLst = self.PVRList
+        
+        elif xmlflename in ['pvr','hdhomerun','ustvnow']:
+            NameLst = []
+            if xmlflename == 'pvr':
+                if not self.PVRList:
+                    self.fillPVR()
+                NameLst, PathLst, IconLst = self.PVRList
+            elif xmlflename == 'hdhomerun':
+                if not self.HDHRList:
+                    self.fillHDHR()
+                NameLst, PathLst, IconLst = self.HDHRList
+            elif xmlflename == 'ustvnow':
+                if not self.USTVList:
+                    self.fillUSTV()
+                NameLst, PathLst, IconLst = self.USTVList
+            
             for i in range(len(NameLst)):
                 CHid, dnameID = (self.cleanLabels(NameLst[i])).split(' - ')
                 if CHname.lower() == dnameID.lower():
-                    return dnameID, CHid
-        else:
+                    return CHname, CHid
+          
+        else:        
+            XMLTVMatchlst = []
+            sorted_XMLTVMatchlst = []
+            found = False
+
+                    
             try:
                 show_busy_dialog()
-                XMLTVMatchlst = self.readXMLTV(filename)
+                XMLTVMatchlst = self.readXMLTV(xmlflename)
                 try:
                     CHnum = int(CHname.split(' ')[0])
                     CHname = (CHname.split(' ')[1]).upper()
@@ -4261,7 +4476,7 @@ class ChannelList:
                             logo = (LSTVlst[lstv+2]).replace('\r','').replace('\t','').replace('\n','').replace('<thumbnail>','').replace('</thumbnail>','')
                             
                             if logo[0:4] == 'http':
-                                self.GrabLogo(logo, title)
+                                GrabLogo(logo, title)
                     LSTVlist.append(title+'@#@'+link)
                 except:
                     pass
@@ -4285,7 +4500,7 @@ class ChannelList:
                         logo = (PLXlst[PLX + 1]).replace('\r','').replace('\t','').replace('\n','').replace('thumb=','')
                         
                         if logo[0:4] == 'http':
-                            self.GrabLogo(logo, title)
+                            GrabLogo(logo, title)
                             
                     if 'URL=' in PLXlst[PLX+2]:
                         link = (PLXlst[PLX + 2]).replace('\r','').replace('\t','').replace('\n','').replace('URL=','')
@@ -4336,10 +4551,7 @@ class ChannelList:
                 if CHids and len(CHids.group(1)) > 0:
                     CHnames = re.search('"label" *: *"(.*?)"', f)
                     CHthmbs = re.search('"thumbnail" *: *"(.*?)"', f)
-                    CHid = CHids.group(1) or ''
-                    CHname = CHnames.group(1) or ''
-                    CHthmb = CHthmbs.group(1) or ''
-                    Channels.append([CHid,CHname,unquote(CHthmb)])
+                    Channels.append([CHids.group(1),CHnames.group(1),(unquote(CHthmbs.group(1))).replace("image://",'')])
             except:
                 pass
         return Channels
@@ -4364,19 +4576,44 @@ class ChannelList:
         PVRPathList = []
         PVRIconList = []
         PVRChannels = self.getPVRChannels()
-        
         for i in range(len(PVRChannels)):
-            CHid = PVRChannels[i][0]
-            CHname = self.cleanLabels(PVRChannels[i][1])
-            thumb = PVRChannels[i][2]
-            PVRNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (str(CHid), CHname))
+            PVRNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (PVRChannels[i][0], self.cleanLabels(PVRChannels[i][1])))
             PVRPathList.append(self.getPVRLink(i))
-            PVRIconList.append(thumb)
+            PVRIconList.append(PVRChannels[i][2])
         if len(PVRNameList) == 0:
             PVRNameList = ['Kodi PVR is empty or unavailable!']
         self.PVRList = [PVRNameList, PVRPathList, PVRIconList]
 
         
+    def getUSTVChannels(self):
+        self.log('getUSTVChannels')
+        Channels = []
+        detail = uni(self.requestList('plugin://'+isUSTVnow()+'/?mode=live'))
+        for ustv in detail:
+            files = re.search('"file" *: *"(.*?)",', ustv)
+            filetypes = re.search('"filetype" *: *"(.*?)",', ustv)
+            labels = re.search('"label" *: *"(.*?)",', ustv)
+            icons = re.search('"thumbnail" *: *"(.*?)",', ustv)
+            if filetypes and labels and files:
+                Channels.append([(self.cleanLabels(labels.group(1))).split(' - ')[0],(files.group(1).replace("\\\\", "\\")),(unquote(icons.group(1))).replace("image://",'')])
+        return Channels
+        
+        
+    def fillUSTV(self):
+        self.log('fillUSTV')
+        USTVNameList = []
+        USTVPathList = []
+        USTVIconList = []
+        USTVChannels = self.getUSTVChannels()
+        for i in range(len(USTVChannels)):
+            USTVNameList.append(('[COLOR=blue][B]%s[/B][/COLOR] - %s') % (USTVChannels[i][0], self.cleanLabels(USTVChannels[i][0])))
+            USTVPathList.append(USTVChannels[i][1])
+            USTVIconList.append(USTVChannels[i][2])
+        if len(USTVNameList) == 0:
+            USTVNameList = ['USTVnow is empty or unavailable!']
+        self.USTVList = [USTVNameList, USTVPathList, USTVIconList]
+
+              
     def fillFavourites(self):
         self.log('fillFavourites')
         json_query = ('{"jsonrpc":"2.0","method":"Favourites.GetFavourites","params":{"properties":["path","thumbnail"]},"id":1}')
@@ -4478,14 +4715,24 @@ class ChannelList:
         Favlist = []
         HDHRNameList = []
         HDHRPathList  = []
+        HDHRIconList = []
         HDHRChannels = self.getHDHRChannels(favorite)
+        HDHRChannelList = hdhr.getChannelList()
         for i in range(len(HDHRChannels)):
             chnum = HDHRChannels[i][0]
             chname = self.cleanLabels(HDHRChannels[i][1])
             fav = HDHRChannels[i][2]
             drm = HDHRChannels[i][3]
             link = HDHRChannels[i][4]
+            chid = link.split('/v')[1]
             
+            for n in HDHRChannelList:
+                if chid == n['chid']:
+                    if len(n['chname']) > 0:
+                        chname = n['chname']
+                    icon  = n['chlogo']
+                    break
+                    
             if fav == True:
                 chname = chname+'[COLOR=gold] [Favorite][/COLOR]'
             if drm == True:
@@ -4494,13 +4741,12 @@ class ChannelList:
             
             HDHRNameList.append(chname)
             HDHRPathList.append(link)
-
-        if len(HDHRNameList) == 0:
-            HDHRNameList = ['HDHR ERROR: Unable to find device or favorite channels']
-        
+            HDHRIconList.append(icon)
+            
         # cleanup
         del HDHRChannels[:]
-        self.HDHRList = [HDHRNameList, HDHRPathList]
+        del HDHRChannelList[:]
+        self.HDHRList = [HDHRNameList, HDHRPathList, HDHRIconList]
 
         
     def sbManaged(self, tvdbid):
@@ -5087,9 +5333,9 @@ class ChannelList:
         self.log('getStreamDetails') 
 
         
-    def setChannelChanged(self, channel):
+    def setChannelChanged(self, channel, changed=True):
         self.log('setChannelChanged, channel = ' + str(channel))
-        ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', "True")
+        self.channels[channel - 1].hasChanged = changed
             
             
     def dict2tmpstr(self, dList):

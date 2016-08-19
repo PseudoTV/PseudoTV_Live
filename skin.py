@@ -235,6 +235,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                     if self.downloadSkin(selSkin) == False:
                         return
                 REAL_SETTINGS.setSetting("SkinSelector",selSkin)
+                REAL_SETTINGS.setSetting('EPGTextEnable', '0')
                 self.closeManager()
         
         

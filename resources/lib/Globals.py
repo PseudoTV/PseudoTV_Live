@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, re
+import os, sys, re, traceback
 import xbmcaddon, xbmc, xbmcgui, xbmcvfs
 import Settings
 
@@ -44,6 +44,7 @@ def log(msg, level = xbmc.LOGDEBUG):
     if level == xbmc.LOGDEBUG:
         xbmcgui.Window(10000).setProperty('PTVL.DEBUG_LOG', uni(msg))
     else:
+        msg += ' ,' + traceback.format_exc()
         xbmcgui.Window(10000).setProperty('PTVL.ERROR_LOG', uni(msg))
     if DEBUG != True and level == xbmc.LOGDEBUG:
         return
@@ -68,7 +69,6 @@ def uni(string):
     return string
 
 # API Keys
-USTV_Token       = REAL_SETTINGS.getSetting("USTV_Token")
 TVDB_API_KEY     = REAL_SETTINGS.getSetting("TVDB_API_KEY")
 TMDB_API_KEY     = REAL_SETTINGS.getSetting("TMDB_API_KEY")
 FANARTTV_API_KEY = REAL_SETTINGS.getSetting("FANARTTV_API_KEY")
@@ -185,8 +185,6 @@ else:
 XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'xmltv',''))
 STRM_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'strm','')) 
 ART_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'artwork',''))
-PTVLXML = os.path.join(XMLTV_CACHE_LOC, 'ptvlguide.xml')
-USTVXML = os.path.join(XMLTV_CACHE_LOC, 'ustvnow.xml')
 
 # Chk for custom skin        
 if xbmcvfs.exists(os.path.join(PTVL_SKIN_LOC,REAL_SETTINGS.getSetting("SkinSelector"),'skin.xml')) == False:
@@ -225,9 +223,6 @@ else:
 ADDON_SETTINGS = Settings.Settings()
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
-FIND_LOGOS = REAL_SETTINGS.getSetting('Enable_FindLogo') == "true"
-ANIM_LOGOS = REAL_SETTINGS.getSetting('Enable_AnimLogo') == "true" 
-OVER_LOGOS = REAL_SETTINGS.getSetting('LogoDB_Override') == "true" 
 CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
 KODI_MONITOR = xbmc.Monitor()
 
@@ -277,13 +272,6 @@ except:
     MEDIA_LIMIT = 25
     xbmc.log('Channel Media Limit Failed!')
 xbmc.log('Channel Media Limit is ' + str(MEDIA_LIMIT))
-
-try:
-    AT_LIMIT = LIMIT_VALUES[int(REAL_SETTINGS.getSetting('AT_LIMIT'))]
-except:
-    AT_LIMIT = 25
-    xbmc.log('Autotune Channel Limit Failed!')
-xbmc.log('Autotune Channel Limit is ' + str(AT_LIMIT))
             
 # HEX COLOR OPTIONS 4 (Overlay CHANBUG, EPG Genre & CHtype) 
 # http://www.w3schools.com/html/html_colornames.asp
@@ -445,7 +433,6 @@ BYPASS_COMINGUP = ['PseudoCinema']
 # Plugin exclusion strings
 SF_FILTER = ['isearch', 'iplay - kodi playlist manager','create new super folder','explore kodi favourites']
 EX_FILTER = SF_FILTER + ['This folder contains no content.','video resolver settings','<<','back','previous','home','search','find','clips','seasons','trailers']
-
 GETADDONS_FILTER = ['hdhomerun','pseudolibrary']
 
 # SFX

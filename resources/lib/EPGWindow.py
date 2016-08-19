@@ -61,6 +61,15 @@ try:
             self.channelbugcolor = CHANBUG_COLOR
             self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
             self.timeButtonBar = MEDIA_LOC + TIME_BAR
+            self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
+            self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
+            self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+            self.ButtonContextBackground = MEDIA_LOC + BUTTON_BACKGROUND_CONTEXT
+            self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
+            self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
+            self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
+            self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+            
             self.showSeasonEpisode = REAL_SETTINGS.getSetting("ShowSeEp") == "true"
             
             try:
@@ -85,29 +94,15 @@ try:
         def onInit(self):
             self.log('onInit')
             self.curchannelIndex = []   
-            now = datetime.datetime.now()  
-            if self.MyOverlayWindow.clockMode == 0:
-                timeex = now.strftime("%I:%M%p").lower()
-            else:
-                timeex = now.strftime("%H:%M")
             
             self.currentTime = self.getControl(5006)
             timetx, timety = self.currentTime.getPosition()
             timetw = self.currentTime.getWidth()
             timeth = self.currentTime.getHeight()
+            
             timex, timey = self.getControl(5007).getPosition()
             timew = self.getControl(5007).getWidth()
             timeh = self.getControl(5007).getHeight()
-
-            self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
-            self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
-            self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
-            self.ButtonContextBackground = MEDIA_LOC + BUTTON_BACKGROUND_CONTEXT
-            self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
-            self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
-            self.textureButtonFocusAlt = MEDIA_LOC + BUTTON_FOCUS_ALT
-            self.textureButtonNoFocusAlt = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
-            
             self.currentTimeBar = xbmcgui.ControlImage(timex, timey, timew, timeh, self.timeButtonBar) 
             self.addControl(self.currentTimeBar)
             
@@ -126,7 +121,7 @@ try:
             self.textfont = getProperty("EPG.textFont")
             self.toggleVideoWindow(getProperty('PTVL.VideoWindow') == "true")
             
-            try:
+            try:          
                 if self.setChannelButtons(time.time(), self.MyOverlayWindow.currentChannel) == False:
                     self.log('Unable to add channel buttons')
                     return
@@ -269,26 +264,44 @@ try:
             self.log('setChannelButtons, row init')  
 
             for i in range(self.rowCount):
-                self.getControl(301 + i).setLabel(self.MyOverlayWindow.getChname(basecur))
+                chname = self.MyOverlayWindow.getChname(basecur)
+                setProperty("EPG.NAME_ROW%s"%str(i+1),chname)
+                try:
+                    if REAL_SETTINGS.getSetting("EPGTextEnable") == "2": 
+                        self.getControl(301 + i).setLabel('')
+                    else:
+                        self.getControl(301 + i).setLabel(chname)
+                except:
+                    pass
                 basecur = self.MyOverlayWindow.fixChannel(basecur + 1)
-                
+            
             self.getControl(5010).setVisible(False)
             for i in range(self.rowCount):
-                self.getControl(311 + i).setLabel(str(curchannel))
-                if REAL_SETTINGS.getSetting("EPGTextEnable") == "0":   
-                    chlogo = self.MyOverlayWindow.getChlogo(curchannel, False)
-                    self.getControl(321 + i).setImage(chlogo)
+                setProperty("EPG.NUMB_ROW%s"%str(i+1),str(curchannel))
+                try:
+                    self.getControl(311 + i).setLabel(str(curchannel))
+                except:
+                    pass
+                
+                chlogo = self.MyOverlayWindow.getChlogo(curchannel, False)
+                setProperty("EPG.LOGO_ROW%s"%str(i+1),chlogo)
+  
+                if REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" and FileAccess.exists(chlogo) == False:
+                    chtype = self.MyOverlayWindow.getChtype(curchannel)
+                    if chtype in [6,7]:
+                        plpos = self.determinePlaylistPosAtTime(starttime, (curchannel - 1))
+                        mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(plpos))
+                        FindLogo(chtype, self.MyOverlayWindow.getChname(curchannel), mediapath)
+
+                try:
+                    if REAL_SETTINGS.getSetting("EPGTextEnable") == "0": 
+                        self.getControl(321 + i).setImage(chlogo)
+                    else:
+                        self.getControl(321 + i).setImage('')
+                except:
+                    pass
                     
-                    if REAL_SETTINGS.getSetting('Enable_FindLogo') == "true" and FileAccess.exists(chlogo) == False:
-                        chtype = self.MyOverlayWindow.getChtype(curchannel)
-                        if chtype in [6,7]:
-                            plpos = self.determinePlaylistPosAtTime(starttime, (curchannel - 1))
-                            mediapath = ascii(self.MyOverlayWindow.channels[curchannel - 1].getItemFilename(plpos))
-                            FindLogo(chtype, self.MyOverlayWindow.getChname(curchannel), mediapath)
-                else:
-                    self.getControl(321 + i).setImage('NA.png')
-                    
-                if int(self.getControl(311 + i).getLabel()) == self.MyOverlayWindow.currentChannel:
+                if int(getProperty("EPG.NUMB_ROW%s"%str(i+1))) == self.MyOverlayWindow.currentChannel:
                     self.log('setChannelButtons, current playing channel row')  
                     self.getControl(5010).setVisible(True)                                
                     # Update Channel Playing Highlight
@@ -354,25 +367,25 @@ try:
              
             # Hide timebutton when near timebar
             self.getControl(101).setVisible(True)
-            if TimeBX < Time1X or TimeBX > Time1X + Time1W:
+            if TimeBX <= Time1X or TimeBX >= Time1X + Time1W:
                 self.getControl(101).setVisible(True)
             else:
                 self.getControl(101).setVisible(False)
                 
             self.getControl(102).setVisible(True)
-            if TimeBX + TimeBW < Time2X or TimeBX > Time2X + Time2W:
+            if TimeBX + TimeBW <= Time2X or TimeBX >= Time2X + Time2W:
                 self.getControl(102).setVisible(True)
             else:
                 self.getControl(102).setVisible(False)
                 
             self.getControl(103).setVisible(True)            
-            if TimeBX + TimeBW < Time3X or TimeBX > Time3X + Time3W:
+            if TimeBX + TimeBW <= Time3X or TimeBX >= Time3X + Time3W:
                 self.getControl(103).setVisible(True)
             else:
                 self.getControl(103).setVisible(False)
      
             self.getControl(104).setVisible(True)            
-            if TimeBX + TimeBW < Time4X or TimeBX > Time4X + Time4W:
+            if TimeBX + TimeBW <= Time4X or TimeBX >= Time4X + Time4W:
                 self.getControl(104).setVisible(True)
             else:
                 self.getControl(104).setVisible(False)
@@ -954,6 +967,7 @@ try:
             self.log('goLeft')
             if self.getFocus() in [EPG_BUTTON_IDS]:
                 return
+                
             basex, basey = self.getControl(111 + self.focusRow).getPosition()
             basew = self.getControl(111 + self.focusRow).getWidth()
 
@@ -989,6 +1003,7 @@ try:
             self.log('goRight')
             if self.getFocus() in [EPG_BUTTON_IDS]:
                 return
+                
             basex, basey = self.getControl(111 + self.focusRow).getPosition()
             basew = self.getControl(111 + self.focusRow).getWidth()
 
@@ -1380,8 +1395,7 @@ try:
                 
                         
         def getFocus(self):
-            win = xbmcgui.Window (xbmcgui.getCurrentWindowId())
-            id = win.getFocusId()
+            id = xbmcgui.Window(xbmcgui.getCurrentWindowId()).getFocusId()
             self.log('getFocus, id = ' + str(id))
             return id
             

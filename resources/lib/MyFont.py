@@ -23,17 +23,6 @@ import xbmc, xbmcaddon, xbmcvfs
 from utils import *
 from Globals import *
 
-def getFont():
-    FontLst = []
-    try:
-        for item in os.listdir(os.path.join(PTVL_SELECT_SKIN_LOC,'fonts')):
-            if item.endswith('ttf'):
-                log("MyFont: getFont = " + item) 
-                FontLst.append(item)
-        return FontLst
-    except:
-        pass
-
 SkinPath = xbmc.translatePath('special://skin')
 
 class PCParser(ET.XMLTreeBuilder):
@@ -46,6 +35,17 @@ class PCParser(ET.XMLTreeBuilder):
         self._target.data(data)
         self._target.end(ET.Comment)
 
+def getFonts():
+    FontLst = []
+    try:
+        for item in os.listdir(os.path.join(PTVL_SELECT_SKIN_LOC,'fonts')):
+            if item.endswith('ttf'):
+                log("MyFont: getFonts = " + item) 
+                FontLst.append(item)
+        return FontLst
+    except:
+        pass
+    
 def getFontsXML():
     fontxml_paths = []
     ListDir = os.listdir(SkinPath)
