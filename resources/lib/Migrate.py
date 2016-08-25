@@ -50,7 +50,7 @@ class Migrate:
             self.chanlist.background = True
             self.chanlist.makenewlists = True
             self.chanlist.forceReset = True
-            self.myOverlay.setBackgroundStatus("Initializing: Autotuning",0)
+            self.myOverlay.setBackgroundStatus("Initializing: Autotuning",0,string2=" ")
             
             #Reserve channel check 
             channelNum = 1       

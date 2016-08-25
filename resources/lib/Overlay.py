@@ -371,7 +371,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.background = self.getControl(101)
         self.BackgroundProgress = self.getControl(99)
         self.BackgroundProgress.setVisible(False)
-        self.setBackgroundStatus('Initializing: PseudoTV Live',0)
+        self.setBackgroundStatus('Initializing: PseudoTV Live',0,string2=" ")
         setProperty("PTVL.LOGO",THUMB)
         setProperty("OVERLAY.LOGOART",THUMB)
         setProperty("PTVL.INIT_CHANNELSET","false")
@@ -1038,7 +1038,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.channelThread.isAlive():
             self.channelThread.pause()
             
-        setBackgroundLabel(('Loading: %s') % chname)
+        setBackgroundLabel(('Loading: %s') % chname,' ',' ')
         setProperty("OVERLAY.LOGOART",self.getChlogo(channel))
         self.setBackgroundVisible(True)
         egTrigger('PseudoTV_Live - Loading: %s' % chname)
@@ -1086,8 +1086,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                     timedif -= self.channels[self.currentChannel - 1].getCurrentDuration() - self.channels[self.currentChannel - 1].showTimeOffset
                     self.channels[self.currentChannel - 1].addShowPosition(1)
                     self.channels[self.currentChannel - 1].setShowTime(0)
-                   
+        
         setBackgroundLabel(('Loading: %s') % chname,'Now Playing: %s' %self.channels[self.currentChannel - 1].getItemTitle(self.channels[self.currentChannel - 1].playlistPosition))
+        
+        # Delay Playback
+        xbmc.sleep(int(round((self.channelDelay/4))))   
         
         # save current subtitle state to restore later
         subSave = bool(int(self.isSubtitle()) + int(REAL_SETTINGS.getSetting("EnableSubtitles") == "true"))
@@ -1097,7 +1100,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.disableSubtitle()
         
         # Delay Playback
-        xbmc.sleep(int(round((self.channelDelay/2))))
+        xbmc.sleep(int(round((self.channelDelay/4))))
         
         # Mute the channel before changing
         self.log("setChannel, about to mute")
@@ -1108,7 +1111,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.setPlayselected(chtype, mediapath)
 
         # Delay Playback
-        xbmc.sleep(int(round((self.channelDelay/2))))
+        xbmc.sleep(int(round((self.channelDelay/4))))
         self.Player.showSubtitles(subSave)
                 
         # set the time offset
@@ -2278,23 +2281,23 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                         self.openEPG()
                 else:
                     if self.notPlayingCount > 3:
-                        setBackgroundLabel(('Loading: %s (%ss)') % (self.getChname(self.currentChannel), str(self.playActionTime - self.notPlayingCount)))
+                        setBackgroundLabel(('Loading: %s (%ss)') % (self.getChname(self.currentChannel), str(self.playActionTime - self.notPlayingCount)),' ', ' ')
                         self.log("playerTimerAction, notPlayingCount = " + str(self.notPlayingCount))
 
                         #First tier actions
                         if self.notPlayingCount > self.playActionTime:
                             if self.Player.ignoreNextStop == False:
                                 self.log("playerTimerAction, Skipping to Next Program") 
-                                setBackgroundLabel("Loading Error: Skipping to Next Program")
+                                setBackgroundLabel("Loading Error: Skipping to Next Program",' ', ' ')
                                 self.SkipNext()
                                 pass
                             elif self.Player.ignoreNextStop == True:
                                 self.log("playerTimerAction, Changing Channel")
-                                setBackgroundLabel("Loading Error: Changing Channel")
+                                setBackgroundLabel("Loading Error: Changing Channel",' ', ' ')
                                 newChannel = self.lastActionTrigger()
                             else:
                                 self.log("playerTimerAction, Returning to last valid Channel")
-                                setBackgroundLabel("Loading Error: Returning to last valid Channel")
+                                setBackgroundLabel("Loading Error: Returning to last valid Channel",' ', ' ')
                                 newChannel = self.lastActionTrigger('LastValid')
                                     
                         if newChannel > 0:
@@ -2305,7 +2308,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
            
     def SkipNext(self, noAction=False):
         self.log('SkipNext')
-        setBackgroundLabel("Skipping Next")
+        setBackgroundLabel("Skipping Next",' ', ' ')
         if noAction == False:
             xbmc.executebuiltin("PlayerControl(Next)")
         self.channels[self.currentChannel - 1].addShowPosition(1)
@@ -2314,7 +2317,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def Paused(self, action=False):
         self.log('Paused')
         self.setBackgroundVisible(True)
-        setBackgroundLabel('Paused')   
+        setBackgroundLabel('Paused',' ', ' ')  
         if action and self.Player.isPlaybackValid() == True:
             json_query = ('{"jsonrpc":"2.0","method":"Player.PlayPause","params":{"playerid":1}, "id": 1}')
             self.channelList.sendJSON(json_query)
@@ -3508,7 +3511,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         xbmc.executebuiltin("PlayerControl(RepeatOff)")
         setProperty("OVERLAY.LOGOART",THUMB)
         self.BackgroundProgress.setVisible(True)
-        self.setBackgroundStatus('Exiting: PseudoTV Live',0)
+        self.setBackgroundStatus('Exiting: PseudoTV Live',0,string2=" ")
         self.setMute(False)
         self.setBackgroundVisible(True)
         
@@ -3526,7 +3529,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         # Prevent the player from setting the sleep/thread timers
         self.isExiting = True 
         self.Player.stopped = True
-        self.setBackgroundStatus('Exiting: Stopping Timers')
+        self.setBackgroundStatus('Exiting: PseudoTV Live',string2='Stopping Timers')
             
         if self.channelLabelTimer.isAlive():
             self.channelLabelTimer.cancel()
@@ -3609,7 +3612,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.channelThread.isAlive():
             for i in range(30):
                 try:
-                    self.setBackgroundStatus('Exiting: Stopping Channel Threads')
+                    self.setBackgroundStatus('Exiting: PseudoTV Live',string2='Stopping Channel Threads')
                     self.channelThread.join(1.0)
                 except:
                     pass
@@ -3627,13 +3630,13 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             validcount = 0
 
             for i in range(self.maxChannels):
-                self.setBackgroundStatus('Exiting: Saving Settings.')  
+                self.setBackgroundStatus('Exiting: PseudoTV Live',string2='Saving Settings.')
                 if self.channels[i].isValid:
                     validcount += 1
             
             if validcount > 0:
                 for i in range(self.maxChannels):   
-                    self.setBackgroundStatus('Exiting: Saving Settings..')               
+                    self.setBackgroundStatus('Exiting: PseudoTV Live',string2='Saving Settings..')              
                     if self.channels[i].isValid:
                         if self.channels[i].mode & MODE_RESUME == 0:
                             ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(int(curtime - self.timeStarted + self.channels[i].totalTimePlayed)))
@@ -3651,10 +3654,11 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                                     tottime += self.channels[i].getItemDuration(j)
                                 tottime += self.channels[i].showTimeOffset
                                 ADDON_SETTINGS.setSetting('Channel_' + str(i + 1) + '_time', str(int(tottime)))
+                self.setBackgroundStatus('Exiting: PseudoTV Live',string2='Saving Settings...')
                 self.storeFiles()
 
         REAL_SETTINGS.setSetting('Normal_Shutdown', "true")
-        self.setBackgroundStatus('Exiting: Shutting Down',100)  
+        self.setBackgroundStatus('Exiting: PseudoTV Live',100,string2='Shutting Down')  
         setProperty("PseudoTVRunning", "False")
         clearProperty('SkinHelperShutdownRequested')
         self.clearProp(['OVERLAY','OVERLAY.PLAYING','OVERLAY.NEXT','OVERLAY.ONDEMAND','EPG','OVERLAY.ChannelGuide'])
@@ -3676,7 +3680,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             self.progressPercentage = progress
         else:
             self.progressPercentage += inc
-        if self.isBackgroundVisible() == True and self.isChannelChanging == False:
+        if self.isBackgroundVisible() == True and self.isChannelChanging == False and self.Player.isPlaybackValid() == False:
             setBackgroundLabel(string1,string2,string3)
             setBackgroundProgress(self.progressPercentage)
             self.ProgressUpdate(self.progressPercentage,self.BackgroundProgress)

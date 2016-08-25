@@ -222,7 +222,6 @@
                     <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control> 
             </control>  
             <control type="button" id="5006">
@@ -425,7 +424,6 @@
                     <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control> 
             </control>
             <control type="button" id="5005">
