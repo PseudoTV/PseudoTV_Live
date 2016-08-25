@@ -4751,7 +4751,7 @@ class ChannelList:
                                         seasonval = -1
                                         epval = -1
 
-                                        left = int(((filecount) // limit) // self.enteredChannelCount)
+                                        left = int(((self.filecount) // limit) // self.enteredChannelCount)
                                         self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(self.filecount),inc=left)
                                         self.log('getFileList_NEW, filecount = ' + str(self.filecount) +'/'+ str(limit))
                                         
