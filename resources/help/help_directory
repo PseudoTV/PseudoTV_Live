@@ -1,10 +1,11 @@
 [B]Directory Channel Building[/B]
 
-[COLOR=blue][B]Directory:[/B][/COLOR] - Select video folder
+[COLOR=blue][B]Directory:[/B][/COLOR] - Select local folder containing supported formats.
 
-[COLOR=blue][B]Media Limit:[/B][/COLOR] - Set Media Limit
+[COLOR=blue][B]Media Limit:[/B][/COLOR] - Set Channel Media Limit
 
-[COLOR=blue][B]Sort Order:[/B][/COLOR] - Preferred Sort Order
+[COLOR=blue][B]Sort Order:[/B][/COLOR] - Set Preferred Channel Sort Order
 
-All valid video extensions found in the root and subfolders are added.
-Recommended for media not found in Kodi's library only! ie. Custom Videos
+This channel type is recommended for media not found in Kodi's library only! ie. Custom Videos.
+Directory search is recursion, all valid video extensions found in the root and subfolders are added.
+http://kodi.wiki/view/Features_and_supported_formats#Format_support

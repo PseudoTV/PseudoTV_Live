@@ -1,11 +1,14 @@
+[*] Interface enhancements, seamless autotuing and channel building.
+[*] Added "Headless" server option for channel sharing. More info: http://forum.kodi.tv/showthread.php?tid=279789
+[*] Removed "Override logo" setting, Moved logo maintenance to in-app channel manager.
+[*] Reconfigured settings menu, Various tweaks and bug corrections.
 [*] Fixed issue with strm files not playing correctly.
 [*] Tweaked "Custom Playlist" Autotuning. File naming scheme for Video/Music/Mixed playlists "channel_#_name.xsp" ex. channel_1_mychannel.xsp.
-[*] Added "Use Native Channel Numbers" Autotuning option. 
-    When enabled autotuning "LiveTV" ie. (PVR & HDHomeRun) or "Custom Smartplaylists" PTVL will use (if availabe) the backend or playlist's given channel number. 
-    Channel numbers that exceed max allowable value will roll over to lowest 10th degree. ex. Channel 1000 becomes Channel 100.
-    [COLOR=red]Caution[/COLOR] creating a large segmented channel lineup can greatly increase channel building times]
+[*] Added "Use Native Channel Numbers" Autotuning option. When enabled autotuning "LiveTV" ie. (PVR & HDHomeRun) or "Custom Smartplaylists" 
+    PTVL will use (if availabe) the backend or playlist's given channel number. Channel numbers that exceed max allowable value will roll over 
+    to lowest 10th degree. ex. Channel 1000 becomes Channel 100. [COLOR=red]Caution[/COLOR] creating a large segmented channel lineup can greatly increase channel building times.
 [*] Fixed "Offline" & missing HDHomeRun device issues.
-[*] Removed "Directory" Autotuining & Disabled Directory Channels for LowPower devices. 
+[*] Removed "Directory" Autotuning & Disabled Directory Channels for LowPower devices. Directory channels still availabe via in-app channel manager.
 [*] Added groundwork for HDHomerun API support, Currently includes EPG listings. DVR Coming Soon!
 [*] Simplified options for Autotuning PVR and HDHomerun. 
 [*] Removed HDHomerun "Dual" device support in favor of supporting HDhomerun API devices ie. "Prime", "Connect", "Extend".

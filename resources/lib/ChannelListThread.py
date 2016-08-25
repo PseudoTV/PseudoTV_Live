@@ -62,7 +62,8 @@ class ChannelListThread(threading.Thread):
         # Don't load invalid channels if minimum threading mode is on
         if self.fullUpdating and self.myOverlay.isMaster:
             if validchannels < self.chanlist.enteredChannelCount:
-                DebugNotify("Background Loading...")
+                OptNotify("Background Loading...")
+                setProperty("PTVL.BackgroundLoading","true")  
 
             for i in range(self.myOverlay.maxChannels):
                 if self.myOverlay.channels[i].isValid == False:
@@ -99,7 +100,8 @@ class ChannelListThread(threading.Thread):
         self.myOverlay.postBackgroundLoading()
                  
         while not KODI_MONITOR.abortRequested():      
-            DebugNotify("Background Updating...")     
+            OptNotify("Background Updating...")   
+            setProperty("PTVL.BackgroundLoading","true")                   
             self.myOverlay.setCurrentChannel()
             for i in range(self.myOverlay.maxChannels):
                 modified = True
@@ -188,6 +190,7 @@ class ChannelListThread(threading.Thread):
             if self.fullUpdating == False and self.myOverlay.isMaster:
                 return
 
+            self.myOverlay.postBackgroundLoading()
             # If we're master, wait x minutes in between checks.  If not, wait 15 minutes.
             while (timeslept < SETTOP_REFRESH and self.myOverlay.isMaster == True) or (timeslept < 900 and self.myOverlay.isMaster == False):
                 if self.myOverlay.isExiting:

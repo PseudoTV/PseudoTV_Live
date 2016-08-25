@@ -44,6 +44,9 @@ def PseudoTV():
             return HandleUpgrade()
 
         setProperty("PseudoTVRunning", "True")
+        while getProperty("PseudoTVService") == "True":
+            xbmc.sleep(25)
+            
         if preStart() == True:
             MyOverlayWindow = Overlay.TVOverlay("script.pseudotv.live.TVOverlay.xml", __cwd__, Skin_Select)
             

@@ -122,7 +122,9 @@ class APP(xbmcgui.WindowXMLDialog):
                 
                 
     def closeAPP(self):
-        self.log('closeAPP')
+        self.log('closeAPP')     
+        if self.MyOverlayWindow.channelThread.isAlive():
+            self.MyOverlayWindow.channelThread.unpause()
         self.close()
         
         

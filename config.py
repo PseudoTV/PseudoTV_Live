@@ -24,6 +24,7 @@ from resources.lib.utils import *
 from resources.lib.Globals import *
 from resources.lib.ChannelList import ChannelList
 from resources.lib.AdvancedConfig import AdvancedConfig
+from resources.lib.FileAccess import FileAccess
 
 try:
     import buggalo
@@ -34,9 +35,13 @@ except:
 class ConfigWindow(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         self.log("__init__")
-        if getProperty("PseudoTVRunning") != "True" and getProperty("PseudoTVConfigRunning") != "True":
+        if getProperty("PseudoTVRunning") != "True" and getProperty("PseudoTVConfig") != "True":
             xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-            setProperty("PseudoTVConfigRunning", "True")
+            
+            setProperty("PseudoTVConfig", "True")
+            while getProperty("PseudoTVService") == "True":
+                xbmc.sleep(25)
+                
             self.madeChanges = 0
             self.showingList = True
             setProperty("PTVL.showingList","True")
@@ -65,7 +70,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             
             if CHANNEL_SHARING:
                 realloc = REAL_SETTINGS.getSetting('SettingsFolder')
-                xbmcvfs.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
+                FileAccess.copy(realloc + '/settings2.xml', SETTINGS_LOC + '/settings2.xml')
 
             ADDON_SETTINGS.loadSettings()
             ADDON_SETTINGS.disableWriteOnSave()
@@ -99,12 +104,15 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
 
     def closeConfig(self, channel=0):
-        setProperty("PseudoTVConfigRunning", "False")
         if self.madeChanges == 1:
             if yesnoDialog("Changes Detected, Do you want to save all changes?"):
                 self.writeChanges()
         if channel > 0:
-            xbmc.executebuiltin('XBMC.AlarmClock( Restarting Configuration Manager, XBMC.RunScript(' + ADDON_PATH + '/config.py, %s),0.5,true)'%str(channel))
+            xbmc.executebuiltin('XBMC.AlarmClock(Restarting Configuration Manager, XBMC.RunScript(' + ADDON_PATH + '/config.py, %s),0.5,true)'%str(channel))
+        else:
+            xbmc.executebuiltin('XBMC.AlarmClock(Opening Settings Manager, XBMC.Addon.OpenSettings(%s),0.5,true)'%ADDON_ID)
+        self.setChannelCount()
+        setProperty("PseudoTVConfig", "False")
         self.close()
         
         
@@ -373,11 +381,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                     GrabLogo(retval, chname)
                     theitem = self.listcontrol.getListItem(channel-1)
                     theitem.setProperty('chlogo',(xbmc.translatePath(retval)))     
-                    cachedthumb = xbmc.getCacheThumbName(xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '.png'))))
-                    cachefile = xbmc.translatePath(os.path.join(ART_LOC, cachedthumb[0], cachedthumb[:-4] + ".png")).replace("\\", "/")
                     # delete old bug
                     try:
-                        xbmcvfs.delete(cachefile)
+                        FileAccess.delete(xbmc.translatePath(os.path.join(LOGO_LOC,(chname + '_mono.png'))))
                     except:
                         pass
             
@@ -1257,6 +1263,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.pluginIconList = []
         self.getControl(105).setVisible(False)
         self.getControl(106).setVisible(False)
+        self.setChannelCount()
         self.dlg = xbmcgui.DialogProgress()
         self.dlg.create("PseudoTV Live", "Preparing Configuration")
         
@@ -1310,6 +1317,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.YTFilter = ['User Subscription','User Favorites','Search Query']
         
         self.dlg.update(55, "Preparing Configuration", "finalizing Channel list")
+        
         if isCompanionInstalled() == True:
             self.pluginPathList = ['plugin.video.pseudo.companion']
             self.pluginNameList = ['[COLOR=blue][B]PseudoCompanion[/B][/COLOR]']
@@ -1346,6 +1354,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         
         self.dlg.update(75)
         for i in range(CHANNEL_LIMIT):
+            # If the user pressed cancel, stop everything and exit
+            if self.dlg.iscanceled():
+                self.log('prepareConfig cancelled')
+                self.dlg.close()
+                return
+                
             theitem = xbmcgui.ListItem()  
             ChanColor = ''      
             if self.isChanFavorite(i + 1):
@@ -1361,12 +1375,6 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.updateListing()
         self.dlg.update(100)
         
-        # If the user pressed cancel, stop everything and exit
-        if self.dlg.iscanceled():
-            self.log('prepareConfig cancelled')
-            self.dlg.close()
-            return
-            
         self.getControl(105).setVisible(True)
         self.getControl(106).setVisible(False)
         self.setFocusId(102)
@@ -1445,6 +1453,12 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                             self.getControl(id).setLabel('')  
                         except:
                             pass
+                            
+                            
+    def setChannelCount(self):
+        self.chnlst.quickFlip = False
+        self.chnlst.forceReset = False
+        self.chnlst.findMaxChannels()
                             
                             
     def clearLabel2(self, id=None):
@@ -1996,7 +2010,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
 
         if CHANNEL_SHARING:
             realloc = REAL_SETTINGS.getSetting('SettingsFolder')
-            xbmcvfs.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
+            FileAccess.copy(SETTINGS_LOC + '/settings2.xml', realloc + '/settings2.xml')
 
             
     def updateListing(self, channel = -1):

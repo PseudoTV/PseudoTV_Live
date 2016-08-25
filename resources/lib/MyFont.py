@@ -22,6 +22,7 @@ import xbmc, xbmcaddon, xbmcvfs
 
 from utils import *
 from Globals import *
+from FileAccess import FileAccess
 
 SkinPath = xbmc.translatePath('special://skin')
 
@@ -143,7 +144,7 @@ def addFont(fntname, filename, size, style=""):
         dest = os.path.join(SkinPath, 'fonts', FontName)
         if os.path.exists(dest) == False:
             log("MyFont: copyFont, FontPath = " + FontPath + ", SkinPath = " + SkinPath)
-            xbmcvfs.copy(FontPath, dest)
+            FileAccess.copy(FontPath, dest)
     
     if reload_skin:
         xbmc.executebuiltin("XBMC.ReloadSkin()")

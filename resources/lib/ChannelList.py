@@ -136,7 +136,7 @@ class ChannelList:
         self.log('Background Updating is ' + str(self.backgroundUpdating))
         self.log('Channel Reset Setting is ' + str(self.channelResetSetting))
             
-        if self.forceReset:
+        if self.forceReset == True:
             REAL_SETTINGS.setSetting("INTRO_PLAYED","false") # Intro Video Reset
             REAL_SETTINGS.setSetting('StartupMessage', 'false') # Startup Message Reset 
             REAL_SETTINGS.setSetting('ReminderLst', '') # Reset Reminders
@@ -153,49 +153,14 @@ class ChannelList:
         except Exception,e:
             self.lastExitTime = int(time.time())
                       
-        if self.backgroundUpdating > 0:
-            self.updateDialog = xbmcgui.DialogProgress()
-        else:
-            self.updateDialog = xbmcgui.DialogProgressBG()
-
-            
-    #todo tmp build playlist for channel manager preview
-    def previewChannel(self, channel, background=False):
-        self.log('previewChannel')
-        self.readConfig()
-        self.background = background
-        
-        if self.background == False:
-            self.updateDialog.create("PseudoTV Live", "Updating Channel List")
-            self.updateDialog.update(0, "Updating Channel List", "")
-            self.updateDialogProgress = 0
-            setProperty('loading.progress',str(self.updateDialogProgress))
-            
-        self.setupChannel(channel, self.background, True, False)
-        if self.channels[i].isValid:
-            xbmc.PlayList(xbmc.PLAYLIST_MUSIC).clear()
-            self.log("previewChannel, loading playlist = " + ascii(self.channels[channel].fileName))
-            if xbmc.PlayList(xbmc.PLAYLIST_MUSIC).load(self.channels[channel].fileName) == False:
-                return
-            
-            if xbmc.getInfoLabel('Playlist.Random').lower() == 'random':
-                self.log('previewChannel, Random on.  Disabling.')
-                xbmc.PlayList(xbmc.PLAYLIST_MUSIC).unshuffle()
-            
-
-            
 
     def setupList(self, background=False):
         self.readConfig()
         foundvalid = False
         makenewlists = False
         self.background = background
-        
-        if self.background == False:
-            self.updateDialog.create("PseudoTV Live", "Updating Channel List")
-            self.updateDialog.update(0, "Updating Channel List", "")
-            self.updateDialogProgress = 0
-            setProperty('loading.progress',str(self.updateDialogProgress))
+        self.updateDialogProgress = 0
+        self.myOverlay.setBackgroundStatus('Initializing: Updating Channels',0)
         self.log("setupList, background = " + str(self.background))
 
         if self.backgroundUpdating > 0 and self.myOverlay.isMaster == True:
@@ -203,24 +168,11 @@ class ChannelList:
             
         # Go through all channels, create their arrays, and setup the new playlist
         for i in range(self.maxChannels):
-            if self.background == False:
-                setBackgroundLabel("Initializing: Updating Channel list (" + str(int(i * 100 // self.maxChannels)) + "%)")
-                self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(i + 1), "waiting for file lock")
-                setProperty('loading.progress',str(self.updateDialogProgress))
-            self.channels.append(Channel())
-            
-            try:
-                # If the user pressed cancel, stop everything and exit
-                if self.updateDialog.iscanceled():
-                    self.log('Update channels cancelled')
-                    self.updateDialog.close()
-                    return None
-            except:
-                pass
-                
+            self.updateDialogProgress = i * 100 // self.enteredChannelCount
+            self.myOverlay.setBackgroundStatus('Initializing: Updating Channels',self.updateDialogProgress)
+            self.channels.append(Channel())                
             self.setupChannel(i + 1, self.background, makenewlists, False)
-            if self.channels[i].isValid:
+            if self.channels[i].isValid == True:
                 foundvalid = True
                 
         if makenewlists == True:
@@ -228,20 +180,14 @@ class ChannelList:
 
         if foundvalid == False and makenewlists == False:
             for i in range(self.maxChannels):
-                if self.background == False:
-                    setBackgroundLabel("Initializing: Updating Channels (" + str(int(i * 100 // self.maxChannels)) + "%)")
-                    self.updateDialogProgress = i * 100 // self.enteredChannelCount
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(i + 1), "waiting for file lock")
-                    setProperty('loading.progress',str(self.updateDialogProgress))
+                self.updateDialogProgress = i * 100 // self.enteredChannelCount
+                self.myOverlay.setBackgroundStatus('Initializing: Updating Channels',self.updateDialogProgress)
                 self.setupChannel(i + 1, self.background, True, False)
 
-                if self.channels[i].isValid:
+                if self.channels[i].isValid == True:
                     foundvalid = True
                     break
-       
-        if self.background == False:
-            self.updateDialog.update(100, "Update complete", "")
-            self.updateDialog.close()
+        self.myOverlay.setBackgroundStatus('Initializing: Updating complete',100)
         return self.channels 
 
         
@@ -294,6 +240,11 @@ class ChannelList:
         #if local quota not met, disable quickFlip.
         if self.quickFlip == True and localCount > (self.enteredChannelCount/4):
             self.quickflipEnabled = True
+        
+        if self.maxChannels == 1:
+            REAL_SETTINGS.setSetting("Config","%i channel"%self.maxChannels)
+        else:
+            REAL_SETTINGS.setSetting("Config","%i channels"%self.maxChannels)
         self.log('findMaxChannels, quickflipEnabled = ' + str(self.quickflipEnabled))
         self.log('findMaxChannels return ' + str(self.maxChannels))
 
@@ -309,7 +260,6 @@ class ChannelList:
         
      
     def setupChannel(self, channel, background = False, makenewlist = False, append = False):
-        self.log('setupChannel ' + str(channel))
         returnval = False
         createlist = makenewlist
         chtype = 9999
@@ -334,8 +284,9 @@ class ChannelList:
         while len(self.channels) < channel:
             self.channels.append(Channel())
 
-        #Check channel configuration.
-        if chtype == 0:
+        if chtype == 9999:
+            valid = False
+        elif chtype == 0:
             if FileAccess.exists(xbmc.translatePath(chsetting1)) == True:
                 valid = True
         elif chtype == 7:
@@ -350,15 +301,15 @@ class ChannelList:
         elif chtype in [11,15,16]:
             if self.Valid_ok(chsetting1) == True:
                 valid = True
-        elif chtype != 9999:
+        else:
             if len(chsetting1) > 0:
                 valid = True
-
         self.log('setupChannel ' + str(channel) + ', valid = ' + str(valid))
+        
         if valid == False:
             self.channels[channel - 1].isValid = False
             return False
-
+        
         # find missing channel logos
         if chtype not in [6,7]:
             FindLogo(chtype, self.getChannelName(chtype, channel, chsetting1))
@@ -391,12 +342,7 @@ class ChannelList:
                 self.channels[channel - 1].totalTimePlayed = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_time', True))
                 createlist = True
 
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Loading Channel " + str(channel), "reading playlist")
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-                else:
-                    self.log('setupChannel, Loading Channel ' + str(channel) + ' reading playlist')
-
+                self.myOverlay.setBackgroundStatus("Initializing: Loading Channel " + str(channel) + ' loading playlist')
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
                     self.channels[channel - 1].isValid = True
                     self.channels[channel - 1].fileName = CHANNELS_LOC + 'channel_' + str(channel) + '.m3u'
@@ -436,11 +382,11 @@ class ChannelList:
                 self.log('setupChannel ' + str(channel) + ', _time failed! ' + str(e))
                 
         if createlist or needsreset:
-            self.clearFileListCache(chtype, channel)
+            # self.clearFileListCache(chtype, channel)
             self.channels[channel - 1].isValid = False
             if makenewlist:
                 try:
-                    xbmcvfs.delete(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u')
+                    FileAccess.delete(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u')
                 except:
                     self.log("Unable to delete " + 'channel_' + str(channel) + '.m3u', xbmc.LOGERROR)
                 append = False
@@ -462,13 +408,9 @@ class ChannelList:
                     self.channels[channel - 1].mode |= MODE_RANDOM
 
         if ((createlist or needsreset) and makenewlist) or append:
-            if self.background == False:
-                self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "")
-                setProperty('loading.progress',str(self.updateDialogProgress))
-            else:
-                self.log('setupChannel, Updating Channel ' + str(channel))
-            
+            self.log('setupChannel, Updating Channel ' + str(channel))
+            self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
+            self.myOverlay.setBackgroundStatus("Initializing: Loading Channel " + str(channel) + ' reading playlist', self.updateDialogProgress)
             if self.makeChannelList(channel, chtype, chsetting1, chsetting2, chsetting3, chsetting4, append) == True:
                 if self.channels[channel - 1].setPlaylist(CHANNELS_LOC + 'channel_' + str(channel) + '.m3u') == True:
                     returnval = True
@@ -492,13 +434,8 @@ class ChannelList:
         # Don't clear history when appending channels            
         if append == False and self.myOverlay.isMaster:
             self.clearPlaylistHistory(channel)
-            
-            if self.background == False:
-                self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
-                self.updateDialog.update(self.updateDialogProgress, "Initializing: Channel " + str(channel), "clearing history")
-                setProperty('loading.progress',str(self.updateDialogProgress))
-            else:
-                self.log('setupChannel, Initializing: Channel ' + str(channel) + " clearing history")
+            self.updateDialogProgress = (channel - 1) * 100 // self.enteredChannelCount
+            self.myOverlay.setBackgroundStatus("Initializing: Loading Channel " + str(channel) + ' clearing playlist', self.updateDialogProgress)
             
         if append == False:
             self.runActions(RULES_ACTION_BEFORE_TIME, channel, self.channels[channel - 1])
@@ -641,9 +578,10 @@ class ChannelList:
                         if int(ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_id" %str(i+1))) == 1:
                             return ADDON_SETTINGS.getSetting("Channel_" + str(channel) + "_rule_%s_opt_1" %str(i+1))
                     except:
-                        return ''
+                        pass
         except:
-            return ''
+            pass
+        return ''
                 
                 
     # Open the smart playlist and read the name out of it...this is the channel name
@@ -678,7 +616,7 @@ class ChannelList:
     # Based on a smart playlist, create a normal playlist that can actually be used by us
     def makeChannelList(self, channel, chtype, setting1, setting2, setting3, setting4, append = False):
         self.log('makeChannelList, CHANNEL: ' + str(channel))
-        self.getFileListCache(chtype, channel)
+        # self.getFileListCache(chtype, channel)
         msg = 'default' 
         fileListCHK = False
         israndom = False  
@@ -875,20 +813,24 @@ class ChannelList:
         self.channels[channel - 1].isRandom = israndom
         self.channels[channel - 1].isReverse = isreverse
         
-        if append:
-            if len(fileList) + self.channels[channel - 1].Playlist.size() > self.Playlist_Limit:
-                fileList = fileList[:(self.Playlist_Limit - self.channels[channel - 1].Playlist.size())]
-        else:
-            if len(fileList) > self.Playlist_Limit:
-                fileList = fileList[:self.Playlist_Limit]
-        
-        if len(fileList) == 0:
-            self.channels[channel - 1].isValid = False
+        if len(fileList) > self.Playlist_Limit:
+            fileList = fileList[:self.Playlist_Limit]
         fileList = self.runActions(RULES_ACTION_LIST, channel, fileList)
         
         # inject BCT into filelist
         if self.incBCTs == True and bctType != None:
             fileList = self.insertBCT(chtype, channel, fileList, bctType)
+
+        if append:
+            if len(fileList) + self.channels[channel - 1].Playlist.size() > self.Playlist_Limit:
+                fileList = fileList[:(self.Playlist_Limit - self.channels[channel - 1].Playlist.size())]
+        else:
+            if len(fileList) > self.Playlist_Limit:
+
+                fileList = fileList[:self.Playlist_Limit]
+                        
+        if len(fileList) == 0:
+            self.channels[channel - 1].isValid = False
 
         # Write each entry into the new playlist
         for string in fileList:
@@ -1137,11 +1079,7 @@ class ChannelList:
         if not setting1.endswith('/'):
             setting1 = os.path.join(setting1,'')
         LocalLST = self.walk(setting1)
-
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing Directories")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-            
+        
         for i in range(len(LocalLST)):         
             if self.threadPause() == False:
                 del fileList[:]
@@ -1152,11 +1090,9 @@ class ChannelList:
                                                                 
             if duration > 0:
                 filecount += 1
-                
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(filecount))
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-                    
+                left = int(((filecount) // limit) // self.enteredChannelCount)
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(filecount),inc=left)
+
                 title = (os.path.split(LocalFLE)[1])
                 title = os.path.splitext(title)[0].replace('.', ' ')
                 description = LocalFLE.replace('//','/').replace('/','\\')
@@ -1186,10 +1122,8 @@ class ChannelList:
         showcount = 0
         
         if self.youtube_player != 'False':
-            if self.background == False:
-                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "Populating the PseudoCinema Experience")    
-                setProperty('loading.progress',str(self.updateDialogProgress))
-                     
+            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " Populating the PseudoCinema Experience")
+            
             for f in self.requestList(setting2):
                 if self.threadPause() == False:
                     del fileList[:]
@@ -1248,10 +1182,7 @@ class ChannelList:
                 fileList.append(line)
                 fileList.append(IntermissionStr)
                 showcount += 1
-                
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "Preparing %s Movies" % str(showcount))
-                    setProperty('loading.progress',str(self.updateDialogProgress))
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " Populating the PseudoCinema Experience, Preparing %s Movies" % str(showcount))
 
             for i in range(len(TrailerLST)):
                 aTrailer = TrailerLST[i]
@@ -1491,11 +1422,6 @@ class ChannelList:
         self.log("fillMusicInfo")
         self.musicGenreList = []
         json_query = ('{"jsonrpc": "2.0", "method": "AudioLibrary.GetAlbums", "params": {"properties":["genre"]}, "id": 1}')
-        
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing Music")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
 
@@ -1544,11 +1470,6 @@ class ChannelList:
     def fillTVInfo(self, sortbycount = False):
         self.log("fillTVInfo")
         json_query = ('{"jsonrpc": "2.0", "method": "VideoLibrary.GetTVShows", "params": {"properties":["studio", "genre"]}, "id": 1}')
-
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing TV Shows")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
 
@@ -1653,11 +1574,6 @@ class ChannelList:
         self.log("fillMovieInfo")
         studioList = []
         json_query = ('{"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies", "params": {"properties":["studio", "genre"]}, "id": 1}')
-
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing Movies")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile( "{(.*?)}", re.DOTALL ).findall(json_folder_detail)
 
@@ -1781,11 +1697,7 @@ class ChannelList:
         fileList = []
         self.file_detail_CHK = []
         self.startDate = self.startTime
-        
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying Kodi database")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
+        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " querying Kodi database")
         fileList = self.getFileList(self.requestList(dir_name, fletype), channel, limit)
         self.log("buildFileList return")
         return fileList
@@ -1804,10 +1716,6 @@ class ChannelList:
             
         PluginPath = (setting1.replace('plugin://','')).split('/')[0]
         PluginName = (xbmcaddon.Addon(id=PluginPath)).getAddonInfo('name')
-        
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing plugin - %s"%PluginName)
-            setProperty('loading.progress',str(self.updateDialogProgress))
         
         try:
             excludeLST = setting2.split(',')
@@ -1830,10 +1738,6 @@ class ChannelList:
         fileList = []  
         self.file_detail_CHK = []
         
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "parsing upnp source")
-            setProperty('loading.progress',str(self.updateDialogProgress))
-        
         if setting1.endswith('/'):
             setting1 = setting1[:-1]
                     
@@ -1845,65 +1749,6 @@ class ChannelList:
         excludeLST += EX_FILTER
         excludeLST = removeStringElem(excludeLST)
         self.log('buildUPNPFileList, excludeLST = ' + str(excludeLST))
-        upnpID = 'upnp://' + (setting1.split('/')[2:-1])[0]
-    
-        # todo convert upnp:// to file/path names, store in setting1
-        # ADDON_SETTINGS.setSetting("Channel_" + str(self.settingChannel) + "_1", setting1)
-        
-        # try:
-            # Directs = (setting1.split('/')) # split folders
-            # Directs = ([x.replace('%2F','/') for x in Directs if x != '']) # remove empty elements
-            # PluginName = Directs[0]
-            # Directs = Directs[2:]
-        # except:
-            # Directs = []
-            # PluginName = setting1
-            # pass
-            # self.log('BuildUPNPFileList_NEW, Directs = ' + str(Directs))
-
-            # if self.background == False:
-                # self.updateDialog.update(self.updateDialogProgress, "Updating channel " + str(self.settingChannel), "Building Playon", 'parsing ' + str(PluginName))
-                # setProperty('loading.progress',str(self.updateDialogProgress))
-
-            # Match = True
-            # while Match:
-
-                # DetailLST = self.PluginInfo(upnpID)
-
-                # #Plugin listitems return parent list during error, catch repeat list and end loops.
-                # if DetailLST_CHK == DetailLST:
-                    # break
-                # else:
-                    # DetailLST_CHK = DetailLST
-
-                # #end while when no more directories to walk
-                # if len(Directs) <= 1:
-                    # Match = False
-                
-                # try:
-                    # for i in range(len(DetailLST)):
-                        # Detail = (DetailLST[i]).split(',')
-                        # filetype = Detail[0]
-                        # title = Detail[1]
-                        # genre = Detail[2]
-                        # dur = Detail[3]
-                        # description = Detail[4]
-                        # file = Detail[5]
-                                     
-                        # if filetype == 'directory':
-                            # if Directs[0].lower() == title.lower():
-                                # self.log('BuildUPNPFileList_NEW, Directory Match: ' + Directs[0].lower() + ' = ' + title.lower())
-                                # Directs.pop(0) #remove old directory, search next element
-                                # upnpID = file
-                                # break
-                # except Exception,e:
-                    # pass    
-                
-        # #all directories found, walk final folder
-        # if len(Directs) == 0:
-            # showList = self.PluginWalk(upnpID, excludeLST, limit, 'UPNP', 'video')
-        # return showList
-
         fileList = self.getFileList(self.requestList(setting1), self.settingChannel, limit, excludeLST)
         self.log("buildUPNPFileList return")
         return fileList
@@ -2014,16 +1859,17 @@ class ChannelList:
                 showList = self.fillLiveUSTVGuide(setting1, setting2, setting3, setting4, chname, limit)
             else:   
                 showList = self.fillLiveTVXMLTV(setting1, setting2, setting3, setting4, chname, limit)
-        
+
         if showList and len(showList) == 0:
             self.setChannelChanged(self.settingChannel)
             desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
+        elif showList and len(showList) < LIVETV_REFRESH:
+            self.setChannelChanged(self.settingChannel)
         return showList     
         
                 
-    def fillLiveUSTVGuide(self, setting1, setting2, setting3, setting4, chname, limit):
-        self.log("fillLiveUSTVGuide")    
+    def fillLiveUSTVGuide(self, setting1, setting2, setting3, setting4, chname, limit): 
         showList = []
         showcount = 0  
         now = datetime.datetime.now()         
@@ -2032,7 +1878,7 @@ class ChannelList:
             listing = 'http://m-api.ustvnow.com/gtv/1/live/channelguide'
             self.log("fillLiveUSTVGuide, listing = " + listing)  
             a = json.loads(getRequest(listing))
-            for b in a['results'][:((LIVETV_MAXPARSE/60)/60)]:
+            for b in a['results']:
                 if b['stream_code'].lower() == setting1.lower():
                     startDate  = datetime.datetime.fromtimestamp(float(b['ut_start']));
                     stopDate   = startDate + datetime.timedelta(seconds=int(b['guideremainingtime']));
@@ -2042,7 +1888,7 @@ class ChannelList:
                         continue
                         
                     try:
-                        dur = b['actualremainingtime']
+                        dur = b['guideremainingtime']
                     except Exception,e:
                         dur = 3600  #60 minute default
                     # try:
@@ -2105,15 +1951,10 @@ class ChannelList:
                     tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                     showList.append(tmpstr)
                     showcount += dur
-
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
-                        setProperty('loading.progress',str(self.updateDialogProgress))
-
+                    left = int(((showcount/60/60) // limit) // self.enteredChannelCount)
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(showcount/60/60),inc=left)
         except Exception,e:
             self.log("fillLiveUSTVGuide failed! " + str(e), xbmc.LOGERROR)               
-        if showcount < LIVETV_REFRESH:
-            self.setChannelChanged(self.settingChannel)
         return showList
         
         
@@ -2127,7 +1968,7 @@ class ChannelList:
             listing = 'http://my.hdhomerun.com/api/guide.php?DeviceAuth=%s' %hdhr.authID()
             self.log("fillLiveHDHRGuide, listing = " + listing)  
             a = json.loads(getRequest(listing))
-            for b in a[:((LIVETV_MAXPARSE/60)/60)]:
+            for b in a:
                 chid = str(b['GuideNumber'])
                 if chid == setting1:
                     self.log("fillLiveHDHRGuide, "+chid+" == "+setting1)    
@@ -2218,15 +2059,10 @@ class ChannelList:
                         tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                         showList.append(tmpstr)
                         showcount += dur
-
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
-                            setProperty('loading.progress',str(self.updateDialogProgress))
-
+                        left = int(((showcount/60/60) // limit) // self.enteredChannelCount)
+                        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(showcount/60/60),inc=left)
         except Exception,e:
             self.log("fillLiveHDHRGuide failed! " + str(e), xbmc.LOGERROR)               
-        if showcount < LIVETV_REFRESH:
-            self.setChannelChanged(self.settingChannel)
         return showList
         
 
@@ -2246,7 +2082,7 @@ class ChannelList:
             self.log("fillLiveTVGuide, listing = " + listing)                    
 
             a = json.loads(getRequest(listing))
-            for b in a[:((LIVETV_MAXPARSE/60)/60)]:
+            for b in a:
                 b = b['ProgramSchedule']     
                 stopDate = datetime.datetime.fromtimestamp(float(b['EndTime']))
                 startDate = datetime.datetime.fromtimestamp(float(b['StartTime']))
@@ -2307,15 +2143,10 @@ class ChannelList:
                     tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                     showList.append(tmpstr)
                     showcount += dur
-
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
-                        setProperty('loading.progress',str(self.updateDialogProgress))
-
+                    left = int(((showcount/60/60) // limit) // self.enteredChannelCount)
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(showcount/60/60),inc=left)
         except Exception,e:
             self.log("fillLiveTVGuide failed! " + str(e), xbmc.LOGERROR)               
-        if showcount < LIVETV_REFRESH:
-            self.setChannelChanged(self.settingChannel)
         return showList
         
         
@@ -2336,10 +2167,6 @@ class ChannelList:
             else:
                 offset = 0
                 
-            if self.background == False:
-                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding LiveTV, parsing " + chname)
-                setProperty('loading.progress',str(self.updateDialogProgress))
-
             context = ET.iterparse(f, events=("start", "end")) 
             context = iter(context)
             event, root = context.next()
@@ -2582,16 +2409,12 @@ class ChannelList:
                             tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                             showList.append(tmpstr)
                             showcount += dur
-
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
-                                setProperty('loading.progress',str(self.updateDialogProgress))
+                            left = int(((showcount/60/60) // limit) // self.enteredChannelCount)
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(showcount/60/60),inc=left)
                 root.clear()
             f.close()                   
         except Exception,e:
             self.log("fillLiveTVXMLTV failed! " + str(e), xbmc.LOGERROR)
-        if showcount < LIVETV_REFRESH:
-            self.setChannelChanged(self.settingChannel)
         return showList
         
             
@@ -2602,12 +2425,7 @@ class ChannelList:
         json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","plotoutline","starttime","endtime","runtime","genre","episodename","episodenum","episodepart","firstaired","hastimer","parentalrating","thumbnail","rating"]}, "id": 1}' % setting1)
         json_folder_detail = self.sendJSON(json_query)
         detail = re.compile("{(.*?)}", re.DOTALL ).findall(json_folder_detail)
-        now = self.parsePVRDate((str(datetime.datetime.utcnow())).split(".")[0])
-        
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding LiveTV, parsing " + chname)
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
+        now = self.parsePVRDate((str(datetime.datetime.utcnow())).split(".")[0])       
         try:
             for f in detail:
                 if self.threadPause() == False:
@@ -2751,17 +2569,13 @@ class ChannelList:
                         tmpstr = self.makeTMPSTR(dur, showtitle, year, subtitle, description, GenreLiveID, setting2, startDate, includeMeta)
                         showList.append(tmpstr)
                         showcount += dur
-                        
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount/60/60))
-                            setProperty('loading.progress',str(self.updateDialogProgress))
-                            
+                        left = int(((showcount/60/60) // limit) // self.enteredChannelCount)
+                        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(showcount/60/60),inc=left)
+
                         if showcount >= limit:
                             break     
         except Exception,e:
             self.log("fillLiveTVPVR failed! " + str(e), xbmc.LOGERROR) 
-        if showcount < LIVETV_REFRESH:
-            self.setChannelChanged(self.settingChannel)
         return showList
 
         
@@ -2770,11 +2584,6 @@ class ChannelList:
         showList = []
         showcount = 0
         dur = 0
-        
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding InternetTV, parsing " + str(setting3))
-            setProperty('loading.progress',str(self.updateDialogProgress))
-
         title = setting3
         description = setting4
         if not description:
@@ -3001,11 +2810,8 @@ class ChannelList:
             self.log("getYoutubeVideos, requestSearchVideosInfo = " + YT_URL_Search) 
             
         try:
-            detail = re.compile( "{(.*?)}", re.DOTALL ).findall(read_url_cached(YT_URL_Search))
-            if self.background == False:
-                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding Youtube, parsing " + str(YTMSG))     
-                setProperty('loading.progress',str(self.updateDialogProgress))
-            
+            detail = re.compile( "{(.*?)}", re.DOTALL ).findall(read_url_cached(YT_URL_Search))  
+                            
             for f in detail:
                 if self.threadPause() == False:
                     del self.YT_showList[:]
@@ -3030,11 +2836,8 @@ class ChannelList:
                             tmpstr = self.makeTMPSTR(dur, '', 0, 'Youtube', '', GenreLiveID, self.youtube_player + YTID)   
                             self.YT_showList.append(tmpstr)
                             self.YT_VideoCount += 1
-                            
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(self.YT_VideoCount))
-                                setProperty('loading.progress',str(self.updateDialogProgress))
-
+                            left = int(((self.YT_VideoCount) // limit) // self.enteredChannelCount)
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(self.YT_VideoCount),inc=left)
                             if self.YT_VideoCount >= limit:
                                 return self.YT_showList
                 except:
@@ -3063,11 +2866,6 @@ class ChannelList:
             try:
                 showtitle = feed.channel.title
                 eptitle = feed.entries[i].title
-                
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding RSS, parsing " + showtitle)
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-                    
                 # if 'author_detail' in feed.entries[i]:
                     # studio = feed.entries[i].author_detail['name']  
                 # elif 'itunes:author' in feed.entries[i]:
@@ -3154,117 +2952,16 @@ class ChannelList:
                 GenreLiveID = [genre,'rss',0,thumburl,False,1,'NR',False, False, 0.0, 0]
                 tmpstr = self.makeTMPSTR(duration, eptitle, 0, "RSS - " + showtitle, epdesc, GenreLiveID, url)
                 fileList.append(tmpstr)
-                filecount += 1
-                                    
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(filecount))
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-                
+                filecount += 1   
+                left = int(((filecount) // limit) // self.enteredChannelCount)
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(filecount),inc=left)      
+
                 if filecount > limit:
                     break
             except Exception,e:
                 pass
         return fileList
      
-     
-    def MusicVideos(self, setting1, setting2, setting3, setting4, limit):
-        self.log("MusicVideos")
-        showList = []
-        if setting1 == '1':
-            self.log("MusicVideos - LastFM")
-            msg_type = "Last.FM"
-            PluginCHK = self.youtube_player
-            if PluginCHK != False:
-                showList = self.lastFM(setting1, setting2, setting3, setting4, limit)
-        elif setting1 == '2':
-            self.log("MusicVideos - MyMusicTV")
-            PluginCHK = self.plugin_ok('plugin.video.my_music_tv')
-            if PluginCHK != False:
-                msg_type = "My MusicTV"
-                showList = self.myMusicTV(setting1, setting2, setting3, setting4, limit)             
-        return showList
-           
-
-    def myMusicTV(self, setting1, setting2, setting3, setting4, limit):
-        self.log("myMusicTV")
-        # path = xbmc.translatePath("special://profile/addon_data/plugin.video.my_music_tv/cache/plist")
-        # fle = os.path.join(path,setting2+".xml.plist")
-        # showcount = 0
-        # YTid = 0
-        # MyMusicLST = []
-        # type = 'musicvideo'
-        
-        # try:
-            # if FileAccess.exists(fle):
-                # f = FileAccess.open(fle, "r")
-                # lineLST = f.readlines()
-                # f.close()
-                
-                # if self.background == False:
-                    # self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding My MusicTV, parsing " + setting2)
-                    # setProperty('loading.progress',str(self.updateDialogProgress))
-
-                # for n in range(len(lineLST)):
-                    # if self.threadPause() == False:
-                        # del fileList[:]
-                        # break
-                        
-                    # line = lineLST[n].replace("['",'').replace("']",'').replace('["','').replace("\n",'')
-                    # line = line.split(", ")
-                    # title = line[0]
-                    # link = line[1].replace("'",'')
-                    # link = self.cleanPlayableFile(link)
-                    
-                    # try:
-                        # id = str(os.path.split(link)[1]).split('?url=')[1]
-                        # source = str(id).split('&mode=')[1]
-                        # id = str(id).split('&mode=')[0]
-                    # except:
-                        # pass
-
-                    # try:
-                        # artist = title.split(' - ')[0]
-                        # track = title.split(' - ')[1].replace("'",'')
-                    # except:
-                        # artist = title
-                        # track = ''
-                        # pass
-                    
-                    # # Parse each source for duration details todo
-                    # #if source == 'playVevo':
-                        # #playVevo()
-                    # # def playVevo(id):
-                        # # opener = urllib2.build_opener()
-                        # # userAgent = "Mozilla/5.0 (Windows NT 6.1; rv:30.0) Gecko/20100101 Firefox/30.0"
-                        # # opener.addheaders = [('User-Agent', userAgent)]
-                        # # content = opener.open("http://videoplayer.vevo.com/VideoService/AuthenticateVideo?isrc="+id).read()
-                        # # content = str(json.loads(content))
-                        # # print content
-                        
-                    # if link.startswith('plugin://plugin.video.bromix.youtube') or mediapath.startswith('plugin://plugin.video.youtube'):
-                        # link = self.cleanPlayableFile(link)
-                        # YTid = link.split('id=')[1]
-                        # type = 'youtube'
-                        
-                    # tmpstr = str(300) + ',' + artist + "//" + "My MusicTV" + "//" + track + "//" + 'Music' + "////" + type+'|0|'+YTid+'|False|1|NR|' + '\n' + link
-                    # GenreLiveID = [Genre,'youtube',0,VidID,False,1,'NR'] 
-                    # tmpstr = self.makeTMPSTR(YT_Meta[2]), YT_Meta[0], "Youtube - " + YT_Meta[4], YT_Meta[1], GenreLiveID, self.youtube_player + VidID)     
-                    # MyMusicLST.append(tmpstr)
-                    # showcount += 1    
-                    
-                    # if showcount > limit:
-                        # break
-
-                    # if self.background == False:
-                        # self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(showcount))
-                        # setProperty('loading.progress',str(self.updateDialogProgress))
-            # else:
-                # self.log("myMusicTV, No MyMusic plist cache found = " + str(fle))
-                
-        # except Exception,e:  
-            # pass  
-        # return MyMusicLST
-
         
     def isXMLTVCurrent(self, xmlfle):
         self.log("isXMLTVCurrent, xmlfle = " + xmlfle)
@@ -3419,7 +3116,7 @@ class ChannelList:
     def upnp_ok(self, url):
         self.log("upnp_ok, " + str(url))
         upnpID = (url.split('/')[2:-1])[0]
-        dirs, files = xbmcvfs.listdir(os.path.join('upnp://',''))
+        dirs, files = FileAccess.listdir(os.path.join('upnp://',''))
         if upnpID in dirs:
             return True
         else:
@@ -3587,9 +3284,7 @@ class ChannelList:
                 GenreLiveID = ['Bumper', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numbumpers")) + 1):
                     tmpstr = ''
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Bumpers")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Bumpers")
                     Bumper = random.choice(BumperLST)#random fill Bumper per show by user selected amount
                     BumperDur, BumperMedia = Bumper.split(',')
                     BumperDur = int(BumperDur)
@@ -3600,10 +3295,8 @@ class ChannelList:
             if len(CommercialLST) > 0:
                 GenreLiveID = ['Commercial', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numcommercials")) + 1): 
-                    tmpstr = ''   
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Commercials")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
+                    tmpstr = ''
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Commercials")
                     Commercial = random.choice(CommercialLST)#random fill Commercial per show by user selected amount
                     CommercialDur, CommercialMedia = Commercial.split(',')
                     CommercialDur = int(CommercialDur)
@@ -3615,9 +3308,7 @@ class ChannelList:
                 GenreLiveID = ['Trailer', 'bct', 0, 0, False, 1, 'NR',False, False, 0.0, 0]
                 for n in range(int(REAL_SETTINGS.getSetting("numtrailers")) + 1):    
                     tmpstr = ''
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Trailers")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Trailers")
                     trailer = random.choice(TrailerLST)#random fill trailers per show by user selected amount
                     trailerDur, trailerMedia = trailer.split(',') #duration of trailer
                     trailerDur = int(trailerDur)
@@ -3655,10 +3346,7 @@ class ChannelList:
                         if duration > 0:
                             BumperCNT += 1
                             LocalBumperLST.append((str(duration) + ',' + filename))    
-                            
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Local Bumpers"%str(BumperCNT))
-                                setProperty('loading.progress',str(self.updateDialogProgress))      
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " querying %s Local Bumpers"%str(BumperCNT))   
                     except: 
                         pass
                 BumperLST.extend(LocalBumperLST)      
@@ -3691,10 +3379,7 @@ class ChannelList:
                         if duration > 0:
                             BumperCNT += 1
                             InternetBumperLST.append((str(duration) + ',' + url))     
-                            
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Internet Bumpers"%str(BumperCNT))
-                                setProperty('loading.progress',str(self.updateDialogProgress))     
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " querying %s Internet Bumpers"%str(BumperCNT))
                 except: 
                     pass
             BumperLST.extend(InternetBumperLST)      
@@ -3717,11 +3402,7 @@ class ChannelList:
                 newFileList.append(fileList[i])
                 lineLST = (fileList[i]).split('movie|')[1]
                 mpaa = (lineLST.split('\n')[0]).split('|')[4]
-                
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Ratings: " + str(mpaa))
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-                             
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Ratings: " + str(mpaa))
                 ID = 'qlRaA8tAfc0'
                 for i in range(len(Ratings)):
                     rating = Ratings[i]        
@@ -3753,12 +3434,8 @@ class ChannelList:
             self.log("getCommercialList, AsSeenOn")
             try:      
                 YoutubeLST = self.createYoutubeFilelist('PL_ikfJ-FJg77ioZ9nPuhJxuMe9GKu7plT|PL_ikfJ-FJg774gky7eu8DroAqCR_COS79|PL_ikfJ-FJg75N3Gn6DjL0ZArAcfcGigLY|PL_ikfJ-FJg765O5ppOPGTpQht1LwXmck4|PL_ikfJ-FJg75wIMSXOTdq0oMKm63ucQ_H|PL_ikfJ-FJg77yht1Z6Xembod33QKUtI2Y|PL_ikfJ-FJg77PW8AJ3yk5HboSwWatCg5Z|PL_ikfJ-FJg75v4dTW6P0m4cwEE4-Oae-3|PL_ikfJ-FJg76zae4z0TX2K4i_l5Gg-Flp|PL_ikfJ-FJg74_gFvBqCfDk2E0YN8SsGS8|PL_ikfJ-FJg758W7GVeTVZ4aBAcCBda63J', '7', '100', '1', limit)
-                for i in range(len(YoutubeLST)): 
-                
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding AsSeenOnTV Commercials")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
-
+                for i in range(len(YoutubeLST)):    
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding AsSeenOnTV Commercials")
                     Youtube = YoutubeLST[i]
                     duration = Youtube.split(',')[0]
                     Commercial = Youtube.split('\n', 1)[-1]
@@ -3784,9 +3461,7 @@ class ChannelList:
                     LocalLST = self.walk(PATH)
                     
                     for i in range(len(LocalLST)):    
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Local Commercials")
-                            setProperty('loading.progress',str(self.updateDialogProgress))
+                        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Local Commercials")
                         filename = xbmc.translatePath(os.path.join(PATH,LocalLST[i]))
                         duration = self.getDuration(filename)
                         
@@ -3808,10 +3483,7 @@ class ChannelList:
                 YoutubeLST = self.createYoutubeFilelist(REAL_SETTINGS.getSetting('commercialschannel'), '2', '200', '2', '200')
                 
                 for i in range(len(YoutubeLST)):    
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Youtube Commercials")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
-                    
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Youtube Commercials")
                     Youtube = YoutubeLST[i]
                     duration = Youtube.split(',')[0]
                     Commercial = Youtube.split('\n', 1)[-1]
@@ -3838,9 +3510,7 @@ class ChannelList:
         
     def InternetCommercial(self):
         self.log("InternetCommercial")
-        if self.background == False:
-            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding Internet Commercials")     
-            setProperty('loading.progress',str(self.updateDialogProgress))
+        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Internet Commercials")     
         CommercialLST = splitStringItem(getProperty("PTVL.ADVERTS")) 
         
         if len(CommercialLST) > 0:
@@ -3876,11 +3546,7 @@ class ChannelList:
                     LocalLST = self.walk(PATH)
                     
                     for i in range(len(LocalLST)):    
-                        
-                        if self.background == False:
-                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Local Trailers")
-                            setProperty('loading.progress',str(self.updateDialogProgress))
-                        
+                        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Local Trailers")
                         LocalFLE = LocalLST[i]
                         
                         if '-trailer' in LocalFLE:
@@ -3912,9 +3578,7 @@ class ChannelList:
                         match = [s for s in JsonLST if genre in s]
                         
                         for i in range(len(match)):    
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Library Genre Trailers")
-                                setProperty('loading.progress',str(self.updateDialogProgress))
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Library Genre Trailers")
                             duration = 120
                             json = (match[i])
                             trailer = json.split(',"trailer":"',1)[-1]
@@ -3933,9 +3597,8 @@ class ChannelList:
                     else:
                         JsonLST = (json_detail.split("},{"))
                         match = [s for s in JsonLST if 'trailer' in s]
-                        for i in range(len(match)):    
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Library Trailers")
+                        for i in range(len(match)):                  
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Library Trailers")
                             duration = 120
                             json = (match[i])
                             trailer = json.split(',"trailer":"',1)[-1]
@@ -3960,11 +3623,7 @@ class ChannelList:
                 YoutubeLST = self.createYoutubeFilelist(REAL_SETTINGS.getSetting('trailerschannel'), '2', '200', '2', '200')
                 
                 for i in range(len(YoutubeLST)):    
-                    
-                    if self.background == False:
-                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Youtube Trailers")
-                        setProperty('loading.progress',str(self.updateDialogProgress))
-                    
+                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Youtube Trailers")
                     Youtube = YoutubeLST[i]
                     duration = Youtube.split(',')[0]
                     trailer = Youtube.split('\n', 1)[-1]
@@ -3980,9 +3639,7 @@ class ChannelList:
         if TrailersType == '4':
             self.log("getTrailerList, Internet")
             try:   
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(channel), "adding Internet Trailers")
-                    setProperty('loading.progress',str(self.updateDialogProgress))
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding Internet Trailers")
                 TrailerLST = self.InternetTrailer()
             except Exception,e:
                 self.log("getTrailerList failed! " + str(e), xbmc.LOGERROR)
@@ -4085,9 +3742,7 @@ class ChannelList:
                             InternetTrailers = (str(duration) + ',' + str(playable_url))
                             TrailerLST.append(InternetTrailers)  
                             TrailersCount += 1
-                            if self.background == False:
-                                self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "querying %s Internet Trailers"%str(TrailersCount))
-                                setProperty('loading.progress',str(self.updateDialogProgress))
+                            self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " querying %s Internet Trailers"%str(TrailersCount))
         except Exception,e:
             self.log("InternetTrailer failed! " + str(e))
 
@@ -4111,9 +3766,9 @@ class ChannelList:
         else:
             folders.append(os.path.join(path,''))
         for folder in folders:
-            if xbmcvfs.exists(xbmc.translatePath(folder)):
+            if FileAccess.exists(xbmc.translatePath(folder)):
                 # get all files and subfolders
-                dirs,files = xbmcvfs.listdir(folder)
+                dirs,files = FileAccess.listdir(folder)
                 print dirs, files
                 # natural sort
                 convert = lambda text: int(text) if text.isdigit() else text
@@ -4201,11 +3856,7 @@ class ChannelList:
         for rule in self.channels[channel - 1].ruleList:
             if rule.actions & action > 0:
                 self.runningActionId = index
-
-                if self.background == False:
-                    self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "processing rule " + str(index + 1))
-                    setProperty('loading.progress',str(self.updateDialogProgress))
-
+                self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " processing rule " + str(index + 1))
                 parameter = rule.runAction(action, self, parameter)
             index += 1
         
@@ -4564,7 +4215,7 @@ class ChannelList:
                 PVRverPath = "pvr://channels/tv/All TV channels/"
             else:
                 PVRverPath = "pvr://channels/tv/All channels/"   
-            PVRPath = xbmcvfs.listdir(PVRverPath)
+            PVRPath = FileAccess.listdir(PVRverPath)
             return os.path.join(PVRverPath,PVRPath[1][channel])
         except:
             pass
@@ -4999,15 +4650,13 @@ class ChannelList:
             
     def getFileList(self, file_detail, channel, limit, excludeLST=[]):
         self.log('getFileList')
-        if CACHE_ENABLED == True:
-            try:
-                result = self.FileListCache.cacheFunction(self.getFileList_NEW, file_detail, channel, limit, excludeLST)
-            except:
-                result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
-        else:
-            result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
-        if not result:
-            result = []
+        # if CACHE_ENABLED == True:
+            # try:
+                # result = self.FileListCache.cacheFunction(self.getFileList_NEW, file_detail, channel, limit, excludeLST)
+            # except:
+                # result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
+        # else:
+        result = self.getFileList_NEW(file_detail, channel, limit, excludeLST)
         return result  
         
         
@@ -5102,9 +4751,8 @@ class ChannelList:
                                         seasonval = -1
                                         epval = -1
 
-                                        if self.background == False:
-                                            self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "adding %s Videos" % str(self.filecount))  
-                                            setProperty('loading.progress',str(self.updateDialogProgress))                                         
+                                        left = int(((filecount) // limit) // self.enteredChannelCount)
+                                        self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " adding %s Videos" % str(self.filecount),inc=left)
                                         self.log('getFileList_NEW, filecount = ' + str(self.filecount) +'/'+ str(limit))
                                         
                                         titles = re.search('"label" *: *"(.*?)",', f)
@@ -5297,11 +4945,7 @@ class ChannelList:
                                 
                                 elif filetype == 'directory' and (self.filecount < limit and self.dircount < dirlimit):
                                     self.log('getFileList_NEW, directory')
-
-                                    if self.background == False:
-                                        self.updateDialog.update(self.updateDialogProgress, "Updating Channel " + str(self.settingChannel), "searching Directory - %s" % label)
-                                        setProperty('loading.progress',str(self.updateDialogProgress))
-
+                                    self.myOverlay.setBackgroundStatus("Initializing: Updating Channel " + str(self.settingChannel) + " searching Directory - %s" % label)
                                     fileList.extend(self.getFileList(self.requestList(file), channel, limit, excludeLST))
                                     self.dircount += 1
                                     self.log('getFileList_NEW, dircount = ' + str(self.dircount) +'/'+ str(dirlimit))

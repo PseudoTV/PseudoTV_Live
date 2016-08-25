@@ -14,7 +14,7 @@
 
 - PseudoTV Live can not be held liable for the misuse of this software. Content/Media configurations made by the user are solely their responsibility.
 
-- PseudoTV Live is never deployed "Preconfigured", "Bundled", or Sold as a retail product. PseudoTV Live is a non-profit donation driven project.
+- PseudoTV Live is never deployed "Preconfigured", "Bundled", or Sold as a retail product. PseudoTV Live is a [B]non-profit[/B] donation driven project.
 
 - Kodi is a trademark of the XBMC Foundation
 

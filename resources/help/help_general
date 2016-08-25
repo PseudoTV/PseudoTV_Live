@@ -1,24 +1,24 @@
 [B]Channel Types:[/B]
 Channel Types are based on the source or type of media that will be used to populate channels.
 
-[COLOR=blue][B][CHtype 0]Custom Playlist[/B][/COLOR] - Uses a Kodi Smartplaylists (*.xsp) to create channels biased on the rules and filters added to the playlist. This Chtype provides the greatest amount of channel customization.
-[COLOR=blue][B][CHtype 1]TV Network - TV Network are based on the media found in Kodi's Library, Channels are created using library metadata.
-[COLOR=blue][B][CHtype 2]Movie Studio[B][/COLOR] - Movie Studio's are based on the media found in Kodi's Library, Channels are created using library metadata.
-[COLOR=blue][B][CHtype 3]TV Genre[/B][/COLOR] - TV Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
-[COLOR=blue][B][CHtype 4]Movie Genre[/B][/COLOR] - Movie Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
-[COLOR=blue][B][CHtype 5]Mixed Genre[/B][/COLOR] - Mixed (TV/Movie) Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
-[COLOR=blue][B][CHtype 6]TV Show[/B][/COLOR] - about setting
-[COLOR=blue][B][CHtype 7]Directory[/B][/COLOR] - about setting
-[COLOR=blue][B][CHtype 08]LiveTV[/B][/COLOR] - Is designed for any single video source that is accompanied by a XMLTV TV-Listings file. The XMLTV file provides EPG guide-data for live content.
-[COLOR=blue][B][CHtype 19]InternetTV[/B][/COLOR] - Similar to "LiveTV" this chtype is meant for any single video source that does not have a matching XMLTV file. You can customize the EPG listing data within settings.
-[COLOR=blue][B][CHtype 10]Youtube[/B][/COLOR] - Populate channels from Youtube.
-[COLOR=blue][B][CHtype 11]RSS[/B][/COLOR] - Currently only Atom/iTunes and some feedburner xml news feeds are compatible.
-[COLOR=blue][B][CHtype 12]Music[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
-[COLOR=blue][B][CHtype 13]Music Videos[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
-[COLOR=blue][B][CHtype 14]Exclusive[/B][/COLOR] - "Coming Soon" Available through manual settings2.xml configuration.
-[COLOR=blue][B][CHtype 15]Plugin[/B][/COLOR] - Plugin; parses most modern Kodi plug-ins allowing PseudoTV Live to directly build channels from directories and files found within a Kodi plug-in.
-[COLOR=blue][B][CHtype 16]UPNP[/B][/COLOR] - Similar to the "Plugin" chtype, UPNP builds from external video servers like "Plex".
-[COLOR=blue][B]None[/B][/COLOR] - Clear and Disable Channel
+[COLOR=blue][B]Custom Playlist[/B][/COLOR] - Uses a Kodi Smartplaylists (*.xsp) to create channels biased on the rules and filters added to the playlist. This Chtype provides the greatest amount of channel customization.
+[COLOR=blue][B]TV Network                  - TV Network are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B]Movie Studio[B][/COLOR]     - Movie Studio's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B]TV Genre[/B][/COLOR]        - TV Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B]Movie Genre[/B][/COLOR]     - Movie Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B]Mixed Genre[/B][/COLOR]     - Mixed (TV/Movie) Genre's are based on the media found in Kodi's Library, Channels are created using library metadata.
+[COLOR=blue][B]TV Show[/B][/COLOR]         - about setting
+[COLOR=blue][B]Directory[/B][/COLOR]       - about setting
+[COLOR=blue][B]LiveTV[/B][/COLOR]          - Is designed for any single video source that is accompanied by a XMLTV TV-Listings file. The XMLTV file provides EPG guide-data for live content.
+[COLOR=blue][B]InternetTV[/B][/COLOR]      - Similar to "LiveTV" this chtype is meant for any single video source that does not have a matching XMLTV file. You can customize the EPG listing data within settings.
+[COLOR=blue][B]Youtube[/B][/COLOR]         - Populate channels from Youtube.
+[COLOR=blue][B]RSS[/B][/COLOR]             - Currently only Atom/iTunes and some feedburner xml news feeds are compatible.
+[COLOR=blue][B]Music[/B][/COLOR]           - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B]Music Videos[/B][/COLOR]    - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B]Exclusive[/B][/COLOR]       - "Coming Soon" Available through manual settings2.xml configuration.
+[COLOR=blue][B]Plugin[/B][/COLOR]          - Plugin; parses most modern Kodi plug-ins allowing PseudoTV Live to directly build channels from directories and files found within a Kodi plug-in.
+[COLOR=blue][B]UPNP[/B][/COLOR]            - Similar to the "Plugin" chtype, UPNP builds from external video servers like "Plex".
+[COLOR=blue][B]None[/B][/COLOR]            - Clear and Disable Channel
 
 
 [B]Advanced Channel Rules:[/B]

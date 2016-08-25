@@ -29,7 +29,7 @@ from xml.dom import minidom
 from xml.etree import ElementTree as ET
 from resources.lib.Globals import *
 from resources.lib.utils import *
-
+from resources.lib.FileAccess import FileAccess
 try:
     import buggalo
     buggalo.SUBMIT_URL = 'http://pseudotvlive.com/buggalo-web/submit.php'
@@ -219,15 +219,15 @@ try:
         def makeXMLTV(self, data, filepath):
             self.log('makeXMLTV')
             finished = False
-            if not xbmcvfs.exists(os.path.dirname(filepath)):
-                xbmcvfs.mkdir(os.path.dirname(filepath))
-            if xbmcvfs.exists(filepath):
-                xbmcvfs.delete(filepath)
+            if not FileAccess.exists(os.path.dirname(filepath)):
+                FileAccess.mkdir(os.path.dirname(filepath))
+            if FileAccess.exists(filepath):
+                FileAccess.delete(filepath)
             fle = open(filepath, "w")
             try:
                 xml = data.toxml(encoding='UTF-8');
                 log('writing item: %s' % (filepath))
-                if xbmcvfs.exists(filepath):
+                if FileAccess.exists(filepath):
                     finished = True
             except Exception as e:
                 xml  = '<?xml version="1.0" encoding="UTF-8"?>'

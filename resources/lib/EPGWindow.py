@@ -774,11 +774,17 @@ try:
                  
         def closeEPG(self):
             self.log('closeEPG')
-            self.closeContext()        
+            self.closeContext()   
+            
             if self.channelLabelTimer.isAlive():
                 self.channelLabelTimer.cancel()
+                
             if self.GotoChannelTimer.isAlive():
                 self.GotoChannelTimer.cancel()  
+                
+            if self.MyOverlayWindow.channelThread.isAlive():
+                self.MyOverlayWindow.channelThread.unpause()
+                
             self.removeControl(self.currentTimeBar)
             self.close()
                 

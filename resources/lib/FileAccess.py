@@ -44,6 +44,24 @@ class FileAccess:
 
 
     @staticmethod
+    def listdir(fle):
+        FileAccess.log('listdir ' + fle)
+        try:
+            results = xbmcvfs.listdir(fle)
+            return results
+        except:
+            return []
+            
+    @staticmethod
+    def mkdirs(fle):
+        FileAccess.log('mkdirs ' + fle)
+        try:
+            xbmcvfs.mkdirs(fle)
+            return True
+        except:
+            return False
+
+    @staticmethod
     def delete(fle):
         FileAccess.log('deleting ' + fle)
         try:
@@ -51,11 +69,10 @@ class FileAccess:
             return True
         except:
             FileAccess._delete(fle)
-
-            
+           
     def _delete(fle):
         try:
-            os.delete(fle)
+            os.remove(xbmc.translatePath(fle))
             return True
         except:
             return False
@@ -229,12 +246,11 @@ class FileAccess:
 class VFSFile:
     def __init__(self, filename, mode):
         Globals.log("VFSFile: trying to open " + filename)
-
+        
         if mode == 'w':
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:        
             self.currentFile = xbmcvfs.File(filename)
-
         Globals.log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
         
         if self.currentFile == None:
@@ -314,8 +330,6 @@ class FileLock:
 
 
     def refreshLocks(self):
-        self.log("refreshLocks")
-
         for item in self.lockedList:
             if self.isExiting:
                 self.log("IsExiting")

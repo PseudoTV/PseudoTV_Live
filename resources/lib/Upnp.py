@@ -21,8 +21,7 @@ import datetime, socket, json, copy, re, requests
 from utils import *
 from Globals import *
 
-socket.setdefaulttimeout(15)
-    
+
 class Upnp:
 
     def __init__(self):   
@@ -34,7 +33,6 @@ class Upnp:
         
         
     def initUPNP(self):
-        self.log('initUPNP')
         IPPlst = []
         PWlst = []
         #UPNP Clients
@@ -47,7 +45,7 @@ class Upnp:
         if REAL_SETTINGS.getSetting("UPNP3") == "true":
             IPPlst.append(REAL_SETTINGS.getSetting("UPNP3_IPP"))
             PWlst.append(REAL_SETTINGS.getSetting("UPNP3_UPW"))
-        self.log("chkUPNP = " + str(IPPlst))
+        self.log("initUPNP = " + str(IPPlst))
         return IPPlst, PWlst
 
         

@@ -112,5 +112,7 @@ class VOD(xbmcgui.WindowXMLDialog):
                 
            
     def closeVOD(self):
-        self.log('closeVOD')
+        self.log('closeVOD')   
+        if self.MyOverlayWindow.channelThread.isAlive():
+            self.MyOverlayWindow.channelThread.unpause()
         self.close()

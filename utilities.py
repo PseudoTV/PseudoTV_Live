@@ -21,6 +21,7 @@ import os, sys, time, urllib
 
 from resources.lib.Globals import *
 from resources.lib.utils import *
+from resources.lib.FileAccess import FileAccess
 
 def showInfo(addonID=None, type='changelog'):
     log('utilities: showInfo')
@@ -50,11 +51,12 @@ def showInfo(addonID=None, type='changelog'):
 def DeleteSettings2():
     log('utilities: DeleteSettings2')
     ClearChanFavorites(False)
-    if xbmcvfs.exists(SETTINGS_FLE):
+    if FileAccess.exists(SETTINGS_FLE):
         if yesnoDialog("Delete Current Channel Configurations?"):
             try:
+                REAL_SETTINGS.setSetting("Config","")
                 REAL_SETTINGS.setSetting("CurrentChannel","1")
-                xbmcvfs.delete(SETTINGS_FLE)
+                FileAccess.delete(SETTINGS_FLE)
                 infoDialog("Channel Configurations Cleared")
             except:
                 pass           
@@ -82,9 +84,7 @@ def EGIntro():
         egTrigger('PseudoTV_Live - ' + EG_ALL[e])
     infoDialog("Eventghost Broadcast Complete")
     
-if sys.argv[1] == '-SimpleDownloader':
-    xbmcaddon.Addon(id='script.module.simple.downloader').openSettings()  
-elif sys.argv[1] == '-showChangelog':
+if sys.argv[1] == '-showChangelog':
     showInfo(ADDON_ID, 'changelog') 
 elif sys.argv[1] == '-showReadme':
     showInfo(ADDON_ID, 'readme') 
@@ -113,6 +113,26 @@ elif sys.argv[1] == '-EGIntro':
 elif sys.argv[1] == '-ClearChanFavorites':
     ClearChanFavorites()
 elif sys.argv[1] == '-YTDownloader':
-    xbmcaddon.Addon(id='script.module.youtube.dl').openSettings()
+    openAddonSettings('script.module.youtube.dl')
 elif sys.argv[1] == '-MetaHandler':
-    xbmcaddon.Addon(id='script.module.metahandler').openSettings()
+    openAddonSettings('script.module.metahandler')
+elif sys.argv[1] == '-Youtube':
+    openAddonSettings('plugin.video.youtube')
+elif sys.argv[1] == '-URLresolver':
+    openAddonSettings('script.module.urlresolver')
+elif sys.argv[1] == '-SimpleDownloader':
+    openAddonSettings('script.module.simple.downloader')
+elif sys.argv[1] == '-USTVnow':
+    openAddonSettings(isUSTVnow())
+elif sys.argv[1] == '-PseudoCompanion':
+    openAddonSettings('plugin.video.pseudo.companion')
+elif sys.argv[1] == '-PlayonBrowser':
+    openAddonSettings('plugin.video.playonbrowser')
+elif sys.argv[1] == '-SuperFavourites':
+    openAddonSettings('plugin.program.super.favourites')
+elif sys.argv[1] == '-Vimeo':
+    openAddonSettings('plugin.video.Vimeo')
+elif sys.argv[1] == '-ArtworkDownloader':
+    openAddonSettings('script.artwork.downloader')
+elif sys.argv[1] == '-ExtendedInfo':
+    openAddonSettings('script.extendedinfo')

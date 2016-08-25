@@ -37,6 +37,7 @@ from urllib import unquote, quote
 from utils import *
 from HTMLParser import HTMLParser
 from BeautifulSoup import BeautifulSoup
+from FileAccess import FileAccess
 
 try:
     from metahandler import metahandlers
@@ -177,22 +178,22 @@ class Artdownloader:
                     self.log('FindArtwork, Local TVShow Folder')
                     smpath = mpath.rsplit('/',2)[0]
                     setImage = self.FolderArt(type, chname, smpath, arttypeEXT)
-                    if xbmcvfs.exists(setImage):
+                    if FileAccess.exists(setImage):
                         return setImage
                     
                 self.log('FindArtwork, Local Season Folder')
                 setImage = self.FolderArt(type, chname, mpath, arttypeEXT)
-                if xbmcvfs.exists(setImage):
+                if FileAccess.exists(setImage):
                     return setImage
                                     
                 self.log('FindArtwork, Local DBID Lookup')
                 setImage = self.dbidArt(type, chname, dbid, arttypeEXT)
-                if xbmcvfs.exists(setImage):
+                if FileAccess.exists(setImage):
                     return setImage
                         
             self.log('FindArtwork, Local Title Lookup')
             setImage = self.TitleArt(type, chname, title, arttypeEXT)
-            if xbmcvfs.exists(setImage):
+            if FileAccess.exists(setImage):
                 return setImage
                   
             self.log('FindArtwork, Online Lookup')
@@ -204,7 +205,7 @@ class Artdownloader:
                 fallback = True
                 self.log('FindArtwork, Checking Fallback')
                 setImage = self.FindArtwork(type, title, year, chtype, chname, id, dbid, mpath, self.getFallback_Arttype(arttypeEXT), fallback)
-                if xbmcvfs.exists(setImage):
+                if FileAccess.exists(setImage):
                     return setImage
 
             if (type == 'youtube' or mpath.startswith(self.chanlist.youtube_player)) and dbid != '0':
@@ -243,11 +244,11 @@ class Artdownloader:
             ChannelLogo = os.path.join(LOGO_LOC,chname + '.png')
             
             # Selected Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            if xbmcvfs.exists(MediaImage) == True:
+            if FileAccess.exists(MediaImage) == True:
                 self.log('SetDefaultArt, return MediaImage')
                 return MediaImage
             # Channel Logo
-            elif xbmcvfs.exists(ChannelLogo) == True:
+            elif FileAccess.exists(ChannelLogo) == True:
                 self.log('SetDefaultArt, return ChannelLogo')
                 return ChannelLogo
             # Plugin Icon
@@ -256,7 +257,7 @@ class Artdownloader:
                 self.log('SetDefaultArt, return plugin icon')
                 return icon
             # Default Skin Fallback ie (poster.jpg, landscape.jpg, logo.png, etc...)
-            elif xbmcvfs.exists(StockImage) == True:
+            elif FileAccess.exists(StockImage) == True:
                 self.log('SetDefaultArt, return StockImage')
                 return StockImage
             # PTVL Icon
@@ -452,7 +453,7 @@ class Artdownloader:
         try:
             drive, path = os.path.splitdrive(mod)
             path, filename = os.path.split(path)
-            if xbmcvfs.exists(path) == False:
+            if FileAccess.exists(path) == False:
                 FileAccess.makedirs(path)
                 
             org =  xbmc.translatePath(org)
@@ -478,29 +479,22 @@ class Artdownloader:
 
             OEMDefaultBugFLE = os.path.join(IMAGES_LOC,'logo.png')
             NEWDefaultBugFLE = os.path.join(IMAGES_LOC,'icon_mono.png')
-            
-            #delete bad image file
-            if getSize(OEMBugFLE) <= 20:
-                try:
-                    xbmcvfs.delete(OEMBugFLE)
-                except:
-                    pass
-                    
+                                
             # no channel bug for livetv/internettv
             if chtype in [8,9]:
                 return 'NA.png' 
 
             if FindBug_Type > 0:
                 if FindBug_Type == 3:
-                    if xbmcvfs.exists(OEMBugFLE_ANI) == True:
+                    if FileAccess.exists(OEMBugFLE_ANI) == True:
                         return OEMBugFLE_ANI
                 if FindBug_Type == 2:
-                    if xbmcvfs.exists(NEWBugFLE) == True:
+                    if FileAccess.exists(NEWBugFLE) == True:
                         return NEWBugFLE
-                    if xbmcvfs.exists(NEWBugFLE) == False and xbmcvfs.exists(OEMBugFLE) == True:
+                    if FileAccess.exists(NEWBugFLE) == False and FileAccess.exists(OEMBugFLE) == True:
                         return self.ConvertBug(OEMBugFLE, NEWBugFLE)
                     return NEWDefaultBugFLE
-                if xbmcvfs.exists(OEMBugFLE) == True:
+                if FileAccess.exists(OEMBugFLE) == True:
                     return OEMBugFLE
                 return OEMDefaultBugFLE
         except Exception,e:  

@@ -38,7 +38,6 @@ ADDON_PATH = REAL_SETTINGS.getAddonInfo('path').decode('utf-8')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 ICON = os.path.join(ADDON_PATH, 'icon.png')
 FANART = os.path.join(ADDON_PATH, 'fanart.jpg')
-DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 
 def log(msg, level = xbmc.LOGDEBUG):
     if level == xbmc.LOGDEBUG:
@@ -136,20 +135,30 @@ CHANNEL_LIMIT = 999
 
 #LOCATIONS
 SETTINGS_LOC = REAL_SETTINGS.getAddonInfo('profile') #LOCKED
-CHANNELS_LOC = os.path.join(SETTINGS_LOC, 'cache','') #LOCKED
-REQUESTS_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'requests','')) #LOCKED
-MADE_CHAN_LOC = os.path.join(CHANNELS_LOC, 'stored','') #LOCKED
-GEN_CHAN_LOC = os.path.join(CHANNELS_LOC, 'generated','') #LOCKED
+CHANNELS_LOC = os.path.join(SETTINGS_LOC, 'cache','')#LOCKED
+BACKUP_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'backups'))
+
+REQUESTS_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'requests',''))
+MADE_CHAN_LOC = os.path.join(CHANNELS_LOC, 'stored','')
+GEN_CHAN_LOC = os.path.join(CHANNELS_LOC, 'generated','')
+XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'xmltv',''))
+STRM_CACHE_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'strm','')) 
+MOUNT_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'mountpnt',''))
 IMAGES_LOC = xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'images',''))
 PTVL_SKIN_LOC = os.path.join(ADDON_PATH, 'resources', 'skins', '') #Path to PTVL Skin folder
+SFX_LOC = os.path.join(ADDON_PATH, 'resources','sfx','')
+XSP_LOC = xbmc.translatePath("special://profile/playlists/video/")
+XMLTV_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'),''))
 LOGO_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('ChannelLogoFolder'),'')) #Channel Logo location   
 PVR_DOWNLOAD_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('PVR_Folder'),'')) #PVR Download location
-XMLTV_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'),''))
-XSP_LOC = xbmc.translatePath("special://profile/playlists/video/")
-SFX_LOC = os.path.join(ADDON_PATH, 'resources','sfx','')
-BACKUP_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'backups'))
-MOUNT_LOC = xbmc.translatePath(os.path.join(CHANNELS_LOC, 'mountpnt',''))
-mountedFS = False
+
+#Channel Sharing location
+CHANNEL_SHARING = False  
+HEADLESS_SHARING = REAL_SETTINGS.getSetting('HeadlessServer') == "true"
+LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache',''))
+if REAL_SETTINGS.getSetting('ChannelSharing') == "true":
+    CHANNEL_SHARING = True
+    LOCK_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache',''))
 
 # Core Default Image Locations
 DEFAULT_MEDIA_LOC =  xbmc.translatePath(os.path.join(ADDON_PATH, 'resources', 'skins', 'Default', 'media',''))
@@ -173,18 +182,6 @@ BUTTON_FOCUS_ALT = 'pstvlButtonFocusAlt.png'
 BUTTON_NO_FOCUS_ALT = 'pstvlButtonNoFocusAlt.png'
 BACKGROUND_SKIN = 'pstvlBackground.png'
 EPG_BUTTON_IDS = [6000,6001,6002,6003,6004]
-
-#Channel Sharing location
-if REAL_SETTINGS.getSetting('ChannelSharing') == "true":
-    CHANNEL_SHARING = True
-    LOCK_LOC = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('SettingsFolder'), 'cache',''))
-else:
-    CHANNEL_SHARING = False  
-    LOCK_LOC = xbmc.translatePath(os.path.join(SETTINGS_LOC, 'cache',''))
-    
-XMLTV_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'xmltv',''))
-STRM_CACHE_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'strm','')) 
-ART_LOC = xbmc.translatePath(os.path.join(LOCK_LOC, 'artwork',''))
 
 # Chk for custom skin        
 if xbmcvfs.exists(os.path.join(PTVL_SKIN_LOC,REAL_SETTINGS.getSetting("SkinSelector"),'skin.xml')) == False:
@@ -219,11 +216,19 @@ if xbmcvfs.exists(os.path.join(PTVL_SELECT_SKIN_LOC, '720p','')):
 else:
     PTVL_SKIN_SELECT = xbmc.translatePath(os.path.join(PTVL_SELECT_SKIN_LOC, '1080i', ''))
 
-# Globals
-ADDON_SETTINGS = Settings.Settings()
+# Notice
+DEBUG = REAL_SETTINGS.getSetting('enable_Debug') == "true"
 NOTIFY = REAL_SETTINGS.getSetting('EnableNotify') == "true"
+if DEBUG == True:
+    NOTIFY = True
+    
+# Globals
+mountedFS = False
+ADDON_SETTINGS = Settings.Settings()
 SETTOP = REAL_SETTINGS.getSetting("EnableSettop") == "true"
 CACHE_ENABLED = REAL_SETTINGS.getSetting('Cache_Enabled') == 'true'
+AUTOSTART_TIMER = [0,5,10,15,20,25,30][int(REAL_SETTINGS.getSetting('AutoStart'))]
+ALL_PROPERTIES = []
 KODI_MONITOR = xbmc.Monitor()
 
 # Settings2 filepaths

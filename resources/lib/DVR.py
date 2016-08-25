@@ -135,6 +135,8 @@ class DVR(xbmcgui.WindowXMLDialog):
 
     def closeDVR(self):
         self.log('closeDVR')
+        if self.MyOverlayWindow.channelThread.isAlive():
+            self.MyOverlayWindow.channelThread.unpause()
         self.close()
            
 

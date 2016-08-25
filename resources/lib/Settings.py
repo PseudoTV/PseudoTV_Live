@@ -67,12 +67,9 @@ class Settings:
     def getSetting(self, name, force = False):
         if force:
             self.loadSettings()
-
         result = self.getSettingNew(name)
-
         if result is None:
             return self.realGetSetting(name)
-
         return result
 
 
@@ -80,7 +77,6 @@ class Settings:
         for i in range(len(self.currentSettings)):
             if self.currentSettings[i][0] == name:
                 return self.currentSettings[i][1]
-
         return None
 
 
@@ -94,7 +90,6 @@ class Settings:
 
     def setSetting(self, name, value):
         found = False
-
         for i in range(len(self.currentSettings)):
             if self.currentSettings[i][0] == name:
                 self.currentSettings[i][1] = value
@@ -131,7 +126,7 @@ class Settings:
         self.log("writeSettingsNew")
         updateDialog.update(90, "Repairing Channel Configurations", "Saving Changes")
         if FileAccess.exists(Globals.SETTINGS_FLE_REPAIR):
-            xbmcvfs.delete(Globals.SETTINGS_FLE_REPAIR)
+            FileAccess.delete(Globals.SETTINGS_FLE_REPAIR)
             
         try:
             fle = FileAccess.open(Globals.SETTINGS_FLE_REPAIR, "w")
@@ -152,8 +147,8 @@ class Settings:
         fle.close()
         
         if FileAccess.exists(Globals.SETTINGS_FLE_REPAIR):
-            xbmcvfs.delete(self.logfile)
-            xbmcvfs.rename(Globals.SETTINGS_FLE_REPAIR, self.logfile)
+            FileAccess.delete(self.logfile)
+            FileAccess.rename(Globals.SETTINGS_FLE_REPAIR, self.logfile)
         
 
     def repairSettings(self):

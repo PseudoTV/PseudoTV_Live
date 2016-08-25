@@ -1,58 +1,57 @@
 <strings>
-<string id="30000">General</string>
+<string id="60000">General</string>
     <string id="30001">Channel Manager:</string>
-    <string id="30002">Open Channel Configuration</string>    
+    <string id="30002">Open Channel Manager</string>    
     <string id="30003">General Options:</string>
-        <string id="30044">Enable Autostart</string>
-        <string id="30045">Delay Startup</string>
-        <string id="30004">Auto-off on Idle</string>
-        <string id="30009">Auto-off/Sleep Action</string>
-        <string id="29999">Enable Idle ScreenSaver</string>
-        <string id="30005">Force channel reset on next start</string>
-        <string id="30006">Time between channel resets</string>
+        <string id="30044">Enable AutoStart</string>
+        <string id="30004">Enable AutoOff</string>
+        <string id="29999">Enable ScreenSaver</string>
+        <string id="30159">Enable Automatic Backup</string>
         <string id="30007">Default channel times at startup</string>
+        <string id="30998">Enable Settop Box [COLOR=dimgrey][Automatic Updating][/COLOR]</string>
+        <string id="30798">Background Service [COLOR=dimgrey][Experimental][/COLOR]</string>
         <string id="30008">Background Updating</string>  
-        <string id="30998">Enable Settop Box Mode [COLOR=dimgrey][Automatic Updating][/COLOR]</string>
+        <string id="30006">Time between channel resets</string>
         <string id="30046">Show Notifications</string>
         <string id="30056">Use Navigation Sound Effects</string>
+        <string id="30005">Force channel reset on next start [COLOR=dimgrey][Hard Reset][/COLOR]</string>
+    <string id="30504">Platform Options:</string>
+        <string id="30401">Choose Your Device Type</string>  
+        <string id="30402">Choose Your Operating System</string>  
+        <string id="32055">Preferred Language</string>  
+        <string id="32056">Preferred Region</string>  
 
-<string id="30300">Tweaks</string>
+<string id="60001">Tweaks</string>
+    <string id="30506">Tweaks Options:</string>
+    <string id="30310">Media Limit [COLOR=dimgrey][Global][/COLOR]</string>
+    <string id="30009">Auto-off/Sleep Action</string>
     <string id="30312">Choose Search Type</string> 
-    <string id="30401">Choose Your Device Type</string>  
-    <string id="30402">Choose Your Operating System</string>  
-    <string id="32055">Preferred Language</string>  
-    <string id="32056">Preferred Region</string>  
-    <string id="30374">Enable Quickflip [COLOR=dimgrey]Surfing Ignores plugins & strms][/COLOR]</string>
+    <string id="30374">Enable Quickflip [COLOR=dimgrey][Surfing ignores plugins & strms][/COLOR]</string>
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
     <string id="30311">Disable Watch Flagging</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos</string>  
-    <string id="30310">Media Limit [COLOR=dimgrey][Global][/COLOR]</string>
     <string id="30373">Mute between channel change</string>
-    <string id="30379">Enable Direct Channel Input [COLOR=dimgrey][Disable 'OK'][/COLOR]</string>
-    <string id="30158">Menu style</string>
-    <string id="30159">Enable Automatic Channel Backup</string>
-    <string id="31311">Start Over Option after % Played</string>
-    <string id="30935">Disable Seeking for specified Plugins</string>
-    <string id="31315">Smart Seek plugins/strms Over % Seeked</string>
-    <string id="30447">Seek step backward [I](Isengard)[/I]</string>
-    <string id="30446">Seek step forward [I](Isengard)[/I]</string>
+    <string id="30505">Advanced Options:</string>
+        <string id="31311">Start Over available after</string>
+        <string id="31315">SmartSeek plugins & strms over</string>
+        <string id="30447">Seek step backward [I](Isengard)[/I]</string>
+        <string id="30446">Seek step forward [I](Isengard)[/I]</string>
     
-<string id="30100">Sharing</string>
+<string id="60006">Sharing</string>
     <string id="30101">Channel Sharing:</string>
         <string id="30789">Enable Channel Sharing</string>
         <string id="30010">Shared Channels Folder</string>    
-        <string id="30011">HDHomeRun Master</string>     
+        <string id="30011">Headless Server</string>     
     <string id="30102">Video Mirroring:</string>
     <string id="30103">Enable UPNP1</string>   
     <string id="30104">Enable UPNP2</string>   
     <string id="30105">Enable UPNP3</string>    
     <string id="30106">Playback Offset (milliseconds)</string>  
     
-<string id="30200">Visuals</string>
-    <string id="30201">Change Skin:</string>
+<string id="60002">Visuals</string>
     <string id="30202">Open Skin Manager</string> 
     <string id="30301">Use (S01E01), Instead of (01x01)</string>
     <string id="30201">Enable Dynamic Artwork (Incl. Service)</string>
@@ -83,7 +82,7 @@
         <string id="30226">Show Coming Up Next box</string>
         <string id="30229">Use Classic Coming Up Next box</string>
         <string id="30329">Enable Subtitles when Available</string>
-<string id="30400">DVR</string>  
+<string id="60005">DVR</string>  
     <string id="30397">Enable trakt scrobbler</string>
     <string id="30404">XMLTV file location</string>
     <string id="30405">Guidedata days to display</string>
@@ -94,68 +93,54 @@
     <string id="30902">Enter Username:Password</string>
     <string id="30710">Enter API KEY</string>
     <string id="30711">Enable CouchPotato</string>
-    <string id="30719">Configure: Simple Downloader</string>
-    <string id="30720">Configure: Youtube Downloader</string>
-    <string id="30723">Configure: Metahandler</string>
-    <string id="31110">USTVnow:</string>
-    <string id="31111">Stream Quality</string>
-    <string id="31112">Stream Type</string>
-    <string id="31113">Premium Subscription</string>
-    <string id="31114">Account Email</string>
-    <string id="31115">Account Password</string>
-<string id="30070">AutoTune</string>
-        <string id="30071">Enable Autotuning</string>
-        <string id="30072">Warning!! this will delete your current channel configuration</string>
-        <string id="30372">Reserve Channels 500-999 for AutoTuning</string>
-        <string id="30474">Use Native Channel Numbers</string>
-        <string id="30099">Custom Playlists:</string>
-            <string id="30077">Find Smartplaylist</string>
-            <string id="30093">Find Super Favourites</string>
-            <string id="30073">LiveTV:</string>
-                <string id="30075">Find PVR Backend</string>
-                <string id="30097">Find HDHomeRun</string>
-                <string id="30074">Find USTVnow</string>
-                <string id="30076">Local Media:</string>
-                    <string id="30078">Find TV Networks</string>
-                    <string id="30079">Find Movie Studios</string>
-                    <string id="30080">Find TV Genres</string>
-                    <string id="30081">Find Movie Genres</string>
-                    <string id="30082">Find Mixed Genres</string>
-                    <string id="30883">Find Recently Added</string>
-                    <string id="30884">Find 3D Movies (Coming Soon)</string>
-                    <string id="30083">Music:</string>
-                        <string id="30084">Find Music Genres [COLOR=dimgrey][Experimental][/COLOR]</string>
-                        <string id="30898">Find Music Videos using Youtube</string>
-                        <string id="30087">Find Music Videos using Last.FM</string>
-                        <string id="30088">Last.FM Username</string>
-                        <string id="30085">Find Music Videos using Youtube</string>
-                        <string id="30086">Find Music Videos using Vevo</string>
-                        <string id="30089">Find Videos using Local Directory</string>
-                        <string id="30110">Community List:</string>
-                            <string id="30112">Find Recommended RSS Channels</string>
-                            <string id="30115">Find PseudoNetwork Channels</string>
-                            <string id="30113">Find Recommended Youtube Channels</string>
-                            <string id="30114">Find Recommended Youtube Playlists</string>
-                            <string id="30817">Find Seasonal Youtube Playlists</string>
-                                <string id="30116">Find LiveTV Channels</string>
-                                <string id="30117">Find InternetTV Channels</string>
-                                <string id="30111">Find Plugin Channels</string>
-                                <string id="30090">Extras:</string>
-                                <string id="30092">Popcorn Movie Channel</string>
-                                <string id="30950">PseudoCinema Movie Channel</string>  
-                                <string id="30908">PseudoCinema Experience</string>
-                            <string id="30782">3rd Party Playlist:</string>  
-                                <string id="30965">Find M3U Channels</string>
-                                <string id="30966">Select M3U File</string>
-                                <string id="30967">Enter M3U URL</string>
-                                <string id="30968">Optional M3U XMLTV Filename/URL</string>
-                                <string id="30969">Find XML Channels</string>
-                                <string id="30970">Select XML File</string>
-                                <string id="30971">Enter XML URL</string>
-                                <string id="30972">Find PLX Channels</string>
-                                <string id="30973">Select PLX File</string>
-                                <string id="30974">Enter PLX URL</string>
-                   
+    
+<string id="60003">AutoTune</string>
+    <string id="30071">Enable Autotuning</string>
+    <string id="30072">Warning!! this will delete your current channel configuration</string>
+    <string id="30372">Reserve Channels 500-999 for AutoTuning</string>
+    <string id="30474">Use Native Channel Numbers [COLOR=dimgrey][When avail. use backend ordering][/COLOR]</string>
+    <string id="30099">Custom Playlists:</string>
+        <string id="30077">Find Smartplaylist</string>
+        <string id="30093">Find Super Favourites</string>
+        <string id="30073">LiveTV:</string>
+            <string id="30075">Find PVR Backend</string>
+            <string id="30097">Find HDHomerun</string>
+            <string id="30074">Find USTVnow</string>
+            <string id="30076">Local Media:</string>
+                <string id="30078">Find TV Networks</string>
+                <string id="30079">Find Movie Studios</string>
+                <string id="30080">Find TV Genres</string>
+                <string id="30081">Find Movie Genres</string>
+                <string id="30082">Find Mixed Genres</string>
+                <string id="30883">Find Recently Added</string>
+                <string id="30884">Find 3D Movies (Coming Soon)</string>
+                <string id="30083">Music:</string>
+                    <string id="30084">Find Music Genres [COLOR=dimgrey][Experimental][/COLOR]</string>
+                    <string id="30110">Community List:</string>
+                        <string id="30112">Find Recommended RSS Channels</string>
+                        <string id="30115">Find PseudoNetworks</string>
+                        <string id="30113">Find Recommended Youtube Channels</string>
+                        <string id="30114">Find Recommended Youtube Playlists</string>
+                        <string id="30817">Find Seasonal Youtube Playlists</string>
+                            <string id="30116">Find LiveTV Channels</string>
+                            <string id="30117">Find InternetTV Channels</string>
+                            <string id="30111">Find Plugin Channels</string>
+                            <string id="30090">Extras:</string>
+                            <string id="30092">Popcorn Movie Channel</string>
+                            <string id="30950">PseudoCinema Movie Channel</string>  
+                            <string id="30908">PseudoCinema Experience</string>
+                        <string id="30782">3rd Party Playlist:</string>  
+                            <string id="30965">Find M3U Channels</string>
+                            <string id="30966">Select M3U File</string>
+                            <string id="30967">Enter M3U URL</string>
+                            <string id="30968">Optional M3U XMLTV Filename/URL</string>
+                            <string id="30969">Find XML Channels</string>
+                            <string id="30970">Select XML File</string>
+                            <string id="30971">Enter XML URL</string>
+                            <string id="30972">Find PLX Channels</string>
+                            <string id="30973">Select PLX File</string>
+                            <string id="30974">Enter PLX URL</string>
+               
     <string id="30700">AutoTune Options:</string>
     <string id="33310">AutoTune Channel Limit</string>
     <string id="30699">Kodi PVR GuideData from</string>
@@ -170,7 +155,7 @@
     <string id="30712">Music</string>
     <string id="30713">Other</string>
     
-<string id="30499">BCTs</string> 
+<string id="60004">BCTs</string> 
     <string id="30500">(B)umpers:</string> 
         <string id="30501">Enable Bumpers</string>
         <string id="30502">Select Bumper Folder</string>
@@ -195,40 +180,46 @@
                 <string id="30527">Enable HD-Trailers.net*, Select Type</string>
                 <string id="30528">HD-Trailers.net Movie Title Limit</string>
                 <string id="30530">Number of Trailers Between Shows</string>
-                
-<string id="39000">Community</string>
-    <string id="39001">Community Lists requires a vaild email in-order to submit channels.</string>
-    <string id="39002">Users cannot access the list until they are willing to submit entries.</string>
-    <string id="30776">Community Verified:</string>
-    <string id="30905">Enable Community List</string>
-    <string id="30906">Enter your gmail address</string>
-    <string id="30907">Enter your gmail password</string>
-    
-<string id="31900">Utilities</string>
-    <string id="31999">Channel Configuration Tools:</string>
-    <string id="31997">Clear Channel Favourites</string>
-    <string id="31901">Backup Configurations</string>
-    <string id="31902">Restore Configurations</string>
-    <string id="31903">Repair Configurations</string>                         
-    <string id="31904">Delete Channel Configurations</string>                 
-    <string id="31905">Purge all Backups</string>
-    <string id="31998">Cache Tools:</string>
-    <string id="30995">Clear BCT Cache</string>
-    <string id="30996">Clear Artwork Cache</string>
-    <string id="30988">Clear Filelist Cache</string>
-    <string id="30721">Open KeyMap Editor</string>
-    <string id="30722">Control Tools:</string>
-    
-<string id="32900">Help</string>
-    <string id="32901">Changelog</string>
-    <string id="32902">ReadMe</string>
-    <string id="32903">Channel Types</string>
+                    
+<string id="60007">Utilities</string>
+        <string id="30721">Open Keymap Editor</string>
+        <string id="38419">Custom Keymaps [COLOR=dimgrey][View/Install][/COLOR]</string>
+    <string id="31999">Channel Tools:</string>
+        <string id="31997">Clear Channel Favourites</string>
+        <string id="31901">Backup Configurations</string>
+        <string id="31902">Restore Configurations</string>
+        <string id="31903">Repair Configurations</string>                         
+        <string id="31904">Delete Channel Configurations</string>                 
+        <string id="31905">Purge all Backups</string>
+        <string id="31998">Cache Tools:</string>
+        <string id="30995">Clear BCT Cache</string>
+        <string id="30996">Clear Artwork Cache</string>
+        <string id="30988">Clear Filelist Cache</string>
+    <string id="30722">Plugin Tools:</string>
+        <string id="30728">Configure: PseudoCompanion</string>
+        <string id="30729">Configure: Playon Browser</string>
+        <string id="30730">Configure: Super Favourites</string>
+        <string id="30726">Configure: Youtube</string>
+        <string id="30731">Configure: Vimeo</string>
+        <string id="30727">Configure: USTVnow</string>
+        <string id="30723">Configure: Metahandler</string>
+        <string id="30725">Configure: URLresolver</string>
+        <string id="30719">Configure: Simple Downloader</string>
+        <string id="30720">Configure: Youtube Downloader</string>
+        <string id="30732">Configure: Artwork Downloader</string>
+        <string id="30733">Configure: ExtendedInfo</string>
+        
+<string id="60008">Help</string>
+    <string id="30507">Documents:</string>
+        <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
+        <string id="32901">Changelog</string>
+        <string id="32902">ReadMe</string>
+        <string id="32903">Channel Types</string>
     <string id="32904">User Settings</string>
     <string id="30989">Upload Kodi Log</string>   
     <string id="31906">Broadcast Eventghost Introspect</string>   
-    <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
     
-<string id="30900">Debugging</string>
+<string id="60009">Debug</string>
     <string id="30308">Internal Timers: (Use with Caution!)</string>
     <string id="30309">Wait for Playback (seconds)</string> 
     <string id="30319">Force Playback timeout (seconds)</string> 

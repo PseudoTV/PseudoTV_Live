@@ -212,6 +212,7 @@
                     <texture>pstvlHighlightAlt3.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control>
                 <control type="image" id="5007">
                     <posx>430</posx>
@@ -221,6 +222,7 @@
                     <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control> 
             </control>  
             <control type="button" id="5006">
@@ -413,6 +415,7 @@
                     <texture>pstvlHighlightAlt3.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control>
                 <control type="image" id="5004">
                     <posx>430</posx>
@@ -422,6 +425,7 @@
                     <texture>pstvlHighlight.png</texture>
                     <align>center</align>
                     <aligny>center</aligny>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 </control> 
             </control>
             <control type="button" id="5005">
@@ -938,10 +942,11 @@
                     <description>Busy animation</description>
                     <width>1280</width>
                     <height>50</height>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                     <animation effect="rotate" condition="true" start="0" end="360" loop="true" time="1000" center="auto">Conditional</animation>
                     <texture flipx="true" colordiffuse="FF0297eb">spinner.gif</texture>
                     <aspectratio>keep</aspectratio>
-                </control>
+                </control>              
                 <control type="label">
                     <description>Loading Background Text</description>
                     <width>1280</width>
@@ -952,20 +957,41 @@
                     <textcolor>FFFFFFFF</textcolor>
                     <shadowcolor>ff000000</shadowcolor>
                     <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT)]</label>
-                </control> 
-                <control type="progress">
+                </control>   
+                <control type="label">
+                    <description>Loading Background Text</description>
                     <width>1280</width>
                     <height>20</height>
-                    <texturebg>seek/progresscache_back.png</texturebg>
-                    <lefttexture border="0">seek/progress_left.png</lefttexture>
-                    <midtexture border="0">seek/progress_mid.png</midtexture>
-                    <righttexture border="0">seek/progress_right.png</righttexture>
-                    <righttexture border="0">seek/progresscache_right.png</righttexture>
+                    <font>PTVL12</font>
                     <align>center</align>
                     <aligny>center</aligny>
-                    <info>$INFO[Window(10000).Property(loading.progress)]</info>
-                    <visible>False</visible>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_TEXT2)]</label>
+                </control> 
+                <control type="progress" id="99">
+                    <width>1280</width>
+                    <height>20</height>
+                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
+                    <texturebg>pstvlButtonFocus.png</texturebg>
+                    <lefttexture border="0"></lefttexture>
+                    <midtexture border="0">pstvlButtonFocusAlt.png</midtexture>
+                    <righttexture border="0"></righttexture>
+                    <align>center</align>
+                    <aligny>center</aligny>
                 </control>
+                <control type="label">
+                    <description>Loading Background Text</description>
+                    <width>1280</width>
+                    <height>20</height>
+                    <font>PTVL10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFFFFFFF</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <label>$INFO[Window(10000).Property(OVERLAY.BACKGROUND_STATUS)]</label>
+                    <visible>Control.IsVisible(99)</visible>
+                </control> 
             </control>          
         </control> 
         <control type="group" id="7000"> 

@@ -22,6 +22,7 @@ import datetime, time, shutil, subprocess, os, sys, re, random
 from xml.dom.minidom import parse, parseString
 from resources.lib.utils import *
 from resources.lib.Globals import *
+from resources.lib.FileAccess import FileAccess
 
 try:
     import buggalo
@@ -53,7 +54,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
         cleanSkin = skinname
         
         #Skin local (already downloaded)
-        if xbmcvfs.exists(os.path.join(skinBasePath,'skin.xml')):
+        if FileAccess.exists(os.path.join(skinBasePath,'skin.xml')):
             SkinLocal = 'true' 
             skinBase = skinBasePath
             LocalLogo = 'local.png'
@@ -190,7 +191,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
                  
 
     def deleteSkin(self, selSkin):
-        if selSkin == 'Default' or xbmcvfs.exists(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINPATH')) == 'false':
+        if selSkin == 'Default' or FileAccess.exists(self.SkinPanel.getSelectedItem().getProperty('PTVL.SKINPATH')) == 'false':
             return
         try:
             if yesnoDialog('%s "%s" Skin' %('Delete', selSkin)) == True:
@@ -210,7 +211,7 @@ class SkinManager(xbmcgui.WindowXMLDialog):
             download(url, dl, '')
             all(dl, os.path.join(PTVL_SKIN_LOC,''),True)
             try:
-                xbmcvfs.delete(dl)
+                FileAccess.delete(dl)
             except:
                 pass
             return True

@@ -34,6 +34,7 @@ from urllib import unquote, quote
 from urllib2 import HTTPError, URLError
 from pyfscache import *
 from hdhr import hdhr
+from FileAccess import FileAccess
 
 sys.setcheckinterval(25)
 socket.setdefaulttimeout(15)
@@ -44,18 +45,12 @@ httpHeaders = {'User-Agent': USERAGENT,
                         'Accept-Encoding':'gzip,deflate,sdch',
                         'Accept-Language':'en-US,en;q=0.8'
                        }
-# Commoncache plugin import
-try:
-    import StorageServer
-except Exception,e:
-    import storageserverdummy as StorageServer
 
 if sys.version_info < (2, 7):
     import simplejson as json
 else:
     import json
     
-
 ################
 # Github Tools #
 ################
@@ -131,18 +126,18 @@ def fillGithubItems(url, ext=None, removeEXT=False):
 ##############
         
 def CleanCHname(text):
-    text = text.lower().strip(' ').rstrip(' ')
+    text = text.lower()
     text = text.replace("ae", "a&e")
-    text = text.replace(" (uk)", "")
-    text = text.replace(" (us)", "")
-    text = text.replace(" (ca)", "")
-    text = text.replace(" (en)", "")
-    text = text.replace(" hd", "")
-    text = text.replace(" pvr", "")
-    text = text.replace(" livetv", "") 
-    text = text.replace(" ustvnow", "")
-    text = text.replace(" ustv", "") 
-    return text
+    text = text.replace("(uk)", "")
+    text = text.replace("(us)", "")
+    text = text.replace("(ca)", "")
+    text = text.replace("(en)", "")
+    text = text.replace("hd", "")
+    text = text.replace("pvr", "")
+    text = text.replace("livetv", "") 
+    text = text.replace("ustv", "") 
+    text = text.replace("hdhr", "") 
+    return text.strip(' ').rstrip(' ')
   
 def CleanCHnameSeq(text):
     # try removing number from channel ie NBC2 = NBC, or 5 FOX = FOX
@@ -155,7 +150,6 @@ def FindLogo(chtype, chname, mediapath=None):
     try:
         FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
         if FindLogoThread.isAlive():
-            FindLogoThread.cancel()
             FindLogoThread.join()
         FindLogoThread = threading.Timer(0.5, FindLogo_Thread, [chtype, chname, mediapath])
         FindLogoThread.name = "FindLogoThread"
@@ -165,81 +159,70 @@ def FindLogo(chtype, chname, mediapath=None):
             
 def FindLogo_Thread(chtype, chname, mediapath):
     log("utils: FindLogo_URL, chtype = " + str(chtype) + ", chname = " + chname)
-    if xbmcvfs.exists(LOGO_LOC) == False:
-        xbmcvfs.mkdirs(LOGO_LOC)  
+    if FileAccess.exists(LOGO_LOC) == False:
+        FileAccess.mkdirs(LOGO_LOC)  
     url = False
     LogoPath = os.path.join(LOGO_LOC,chname + '.png')
     LogoPath_Ani = os.path.join(LOGO_LOC,chname + '.gif')
     clean_chname = CleanCHname(chname)
 
-    if REAL_SETTINGS.getSetting('Enable_AnimLogo') == "true" :
-        try:
-            if xbmcvfs.exists(LogoPath_Ani) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
-                raise Exception()
+    if REAL_SETTINGS.getSetting('Enable_AnimLogo') == "true":
+        if FileAccess.exists(LogoPath_Ani) == False:
             if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
                 log("utils: FindLogo_URL, findGithubLogo animated")
                 url = findGithubLogo(clean_chname, animated=True) 
                 if url:
                     GrabLogo(url, chname, LogoPath_Ani) 
-        except:
-            pass
-    try:    
-        if xbmcvfs.exists(LogoPath) == True and REAL_SETTINGS.getSetting('LogoDB_Override') == "false":
-            raise Exception()
 
-        # thelogodb search
-        if chtype in [0,1,8,9,15]:
-            log("utils: FindLogo_URL, findLogodb")
-            url = findLogodb(clean_chname)
-            if url:
-                GrabLogo(url, chname, LogoPath)
-                
-        if not url:
-            # github search
-            if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
-                log("utils: FindLogo_URL, findGithubLogo")
-                url = findGithubLogo(clean_chname)
+    if REAL_SETTINGS.getSetting('Enable_FindLogo') == "true":
+        if FileAccess.exists(LogoPath) == False:
+            # thelogodb search
+            if chtype in [0,1,8,9,15]:
+                log("utils: FindLogo_URL, findLogodb")
+                url = findLogodb(clean_chname)
                 if url:
                     GrabLogo(url, chname, LogoPath)
-                else:
-                    url = findGithubLogo(CleanCHnameSeq(clean_chname))
+                    
+            if not url:
+                # github search
+                if chtype in [0,1,2,3,4,5,8,9,12,13,14,15]:
+                    log("utils: FindLogo_URL, findGithubLogo")
+                    url = findGithubLogo(clean_chname)
                     if url:
                         GrabLogo(url, chname, LogoPath)
+                    else:
+                        url = findGithubLogo(CleanCHnameSeq(clean_chname))
+                        if url:
+                            GrabLogo(url, chname, LogoPath)
 
-        # local tvshow logo search
-        if mediapath and chtype == 6:
-            log("utils: FindLogo_URL, local TVlogo")
-            mpath = getMpath(mediapath)
-            smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
-            artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
-            artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
-            if xbmcvfs.exists(artSeries): 
-                url = artSeries
-            elif xbmcvfs.exists(artSeason): 
-                url = artSeason
-            if url:
-                GrabLogo(url, chname, LogoPath_Ani) 
-    except:
-        pass
+            # local tvshow logo search
+            if mediapath and chtype == 6:
+                log("utils: FindLogo_URL, local TVlogo")
+                mpath = getMpath(mediapath)
+                smpath = mpath.rsplit('/',2)[0] #Path Above mpath ie Series folder
+                artSeries = xbmc.translatePath(os.path.join(smpath, 'logo.png'))
+                artSeason = xbmc.translatePath(os.path.join(mpath, 'logo.png'))
+                if FileAccess.exists(artSeries): 
+                    url = artSeries
+                elif FileAccess.exists(artSeason): 
+                    url = artSeason
+                if url:
+                    GrabLogo(url, chname, LogoPath_Ani) 
 
 def GrabLogo(url, chname, LogoFile=''):
     url = url.rstrip('/')
     if not LogoFile:
         LogoFile = os.path.join(LOGO_LOC, chname + '.png')
-    log("utils: GrabLogo, url = " + url + " ,LogoFile = " + LogoFile)
+    log("utils: GrabLogo, url = " + url + " ,LogoFile = " + LogoFile) 
     
-    if REAL_SETTINGS.getSetting('LogoDB_Override') == "true" :
-        try:
-            xbmcvfs.delete(LogoFile)
-        except:
-            pass
-    if url.startswith('image'):
-        url = (unquote(url)).replace("image://",'')
-        GrabLogo(url, chname, LogoFile)
-    elif url.startswith('http'):
-        download_silent(url, LogoFile)
-    else:
-        xbmcvfs.copy(xbmc.translatePath(url), LogoFile) 
+    if FileAccess.exists(LogoFile) == False:
+        if url.startswith('image'):
+            url = (unquote(url)).replace("image://",'')
+            GrabLogo(url, chname, LogoFile)
+        elif url.startswith('http'):
+            download_silent(url, LogoFile)
+        else:
+            FileAccess.copy(xbmc.translatePath(url), LogoFile) 
 
 def findLogodb(chname):
     try:
@@ -761,9 +744,9 @@ def allWithProgress(_in, _out, dp):
 # GUI Tools #
 ##################
 
-def handle_wait(time_to_wait,header,title,string=None): #*Thanks enen92
+def handle_wait(time_to_wait,string=None,header=ADDON_NAME): #*Thanks enen92
     dlg = xbmcgui.DialogProgress()
-    dlg.create("PseudoTV Live", header)
+    dlg.create(header)
     secs=0
     percent=0
     increment = int(100 / time_to_wait)
@@ -773,10 +756,9 @@ def handle_wait(time_to_wait,header,title,string=None): #*Thanks enen92
         percent = increment*secs
         secs_left = str((time_to_wait - secs))
         if not string:
-            remaining_display = "Starts In " + str(secs_left) + " seconds, Cancel Channel Change?" 
-        else:
-            remaining_display = string
-        dlg.update(percent,title,remaining_display)
+            string = "Starts In %s seconds, Cancel Channel Change?"
+        remaining_display = string.replace('%s',str(secs_left))
+        dlg.update(percent,remaining_display)
         xbmc.sleep(1000)
         if (dlg.iscanceled()):
             cancelled = True
@@ -936,6 +918,7 @@ def getProperty(str):
           
 def setProperty(str1, str2):
     try:
+        ALL_PROPERTIES.append(str1)
         xbmcgui.Window(10000).setProperty(str1, str2)
     except Exception,e:
         log("utils: setProperty, Failed! " + str(e))
@@ -1162,9 +1145,9 @@ def modification_date(filename):
     return datetime.datetime.fromtimestamp(t)
     
 def getSize(file):
-    if xbmcvfs.exists(file):
+    if FileAccess.exists(file):
         try:
-            f = xbmcvfs.File(file)
+            f = FileAccess.open(file)
             size = f.size()
             f.close()
         except:
@@ -1224,8 +1207,8 @@ def writeCache(theitem, thepath, thefile):
     log("writeCache")  
     now = datetime.datetime.today()
 
-    if not xbmcvfs.exists(os.path.join(thepath)):
-        xbmcvfs.mkdirs(os.path.join(thepath))
+    if not FileAccess.exists(os.path.join(thepath)):
+        FileAccess.mkdirs(os.path.join(thepath))
     
     thefile = os.path.join(thepath,thefile)
     try:
@@ -1241,7 +1224,7 @@ def readCache(thepath, thefile):
     log("readCache") 
     thefile = os.path.join(thepath,thefile)
     
-    if xbmcvfs.exists(thefile):
+    if FileAccess.exists(thefile):
         try:
             fle = open(thefile, "r")
             theitems = fle.readlines()
@@ -1259,7 +1242,7 @@ def Cache_Expired(thepath, thefile, life=31):
     now = datetime.datetime.today()
     log("Cache_Expired, now = " + str(now))
     
-    if xbmcvfs.exists(thefile):
+    if FileAccess.exists(thefile):
         try:
             fle = open(thefile, "r")
             cacheline = fle.readlines()
@@ -1283,11 +1266,11 @@ def Cache_Expired(thepath, thefile, life=31):
  
 def makeSTRM(mediapath):
     log('utils: makeSTRM')            
-    if not xbmcvfs.exists(STRM_CACHE_LOC):
-        xbmcvfs.mkdirs(STRM_CACHE_LOC)
+    if not FileAccess.exists(STRM_CACHE_LOC):
+        FileAccess.mkdirs(STRM_CACHE_LOC)
     path = (mediapath.encode('base64'))[:16] + '.strm'
     filepath = os.path.join(STRM_CACHE_LOC,path)
-    if xbmcvfs.exists(filepath):
+    if FileAccess.exists(filepath):
         return filepath
     else:
         fle = open(filepath, "w")
@@ -1297,24 +1280,24 @@ def makeSTRM(mediapath):
          
 def Backup(org, bak):
     log('utils: Backup ' + str(org) + ' - ' + str(bak))
-    if xbmcvfs.exists(org):
-        if xbmcvfs.exists(bak):
+    if FileAccess.exists(org):
+        if FileAccess.exists(bak):
             try:
-                xbmcvfs.delete(bak)
+                FileAccess.delete(bak)
             except:
                 pass
-        xbmcvfs.copy(org, bak)
+        FileAccess.copy(org, bak)
         infoDialog("Backup Complete")
        
 def Restore(bak, org):
     log('utils: Restore ' + str(bak) + ' - ' + str(org))
-    if xbmcvfs.exists(bak):
-        if xbmcvfs.exists(org):
+    if FileAccess.exists(bak):
+        if FileAccess.exists(org):
             try:
-                xbmcvfs.delete(org)
+                FileAccess.delete(org)
             except:
                 pass
-        xbmcvfs.rename(bak, org)
+        FileAccess.rename(bak, org)
         infoDialog("Restore Complete, Restarting...")
  
 ######################
@@ -1325,7 +1308,7 @@ def getGithubZip(url, lib, addonpath, MSG):
     log('utils: getGithubZip, url = ' + url)
     # Delete old install package
     try: 
-        xbmcvfs.delete(lib)
+        FileAccess.delete(lib)
         log('utils: deleted old package')
     except: 
         pass  
@@ -1397,7 +1380,7 @@ def chkVersion():
             if vernum != str(match[0]):
                 if isRepoInstalled() == False:
                     getRepo()
-                    okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
+                    # okDialog('Your current build of PseudoTV Live v.%s is outdated,' %str(vernum), 'The latest build is v.%s' %str(match[0]),'Please remember to update regularly, Thank You')
                 else:
                     set_Kodi_JSON(decodeString('Im1ldGhvZCI6IkFkZG9ucy5TZXRBZGRvbkVuYWJsZWQiLCJwYXJhbXMiOnsiYWRkb25pZCI6InJlcG9zaXRvcnkubHVuYXRpeHoiLCJlbmFibGVkIjp0cnVlfQ=='))
                 xbmc.executebuiltin('UpdateAddonRepos')
@@ -1454,7 +1437,6 @@ def chkLowPower():
         platform = getPlatform()
         if platform in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true")
-            REAL_SETTINGS.setSetting('AT_LIMIT', "0")
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "2")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
@@ -1463,12 +1445,31 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('IncludeMeta', "false")
             REAL_SETTINGS.setSetting('LIVETV_MAXPARSE', "0")
             REAL_SETTINGS.setSetting('respectChannels', "false")
+            REAL_SETTINGS.setSetting('Cache_Enabled', "false")
             if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
                 REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
             infoDialog("Settings Optimized for Performance")
     else:
         log("utils: chkLowPower Override = True")
-    log("utils: chkLowPower = " + getProperty("PTVL.LOWPOWER"))
+        
+    setProperty("PTVL.SHARING","false") 
+    setProperty("PTVL.HEADLESS","false") 
+    if CHANNEL_SHARING == True:
+        setProperty("PTVL.SHARING","true") 
+        REAL_SETTINGS.setSetting('IncludeBCTs', "false")
+        if HEADLESS_SHARING == True:
+            setProperty("PTVL.HEADLESS","true") 
+            REAL_SETTINGS.setSetting('AutoStart', "2")
+            REAL_SETTINGS.setSetting('AutoOff', "0")
+            REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
+            REAL_SETTINGS.setSetting('EnableNotify', "false")
+            REAL_SETTINGS.setSetting('SFX_Enabled', "false")
+            REAL_SETTINGS.setSetting('DisablePlayback', "true")
+            REAL_SETTINGS.setSetting('EPG.xInfo', "false")
+            REAL_SETTINGS.setSetting('Enable_ChannelBug', "0")
+    log("utils: LOWPOWER = " + getProperty("PTVL.LOWPOWER"))
+    log("utils: SHARING = " + getProperty("PTVL.SHARING"))
+    log("utils: HEADLESS = " + getProperty("PTVL.HEADLESS"))
 
 def isLowPower():
     return getProperty("PTVL.LOWPOWER") == "true"
@@ -1486,7 +1487,7 @@ def ClearPlaylists():
     log('utils: ClearPlaylists')
     for i in range(CHANNEL_LIMIT):
         try:
-            xbmcvfs.delete(CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
+            FileAccess.delete(CHANNELS_LOC + 'channel_' + str(i) + '.m3u')
         except:
             pass
     infoDialog("Channel Playlists Cleared")
@@ -1501,14 +1502,6 @@ def ClearCache(type='Files'):
         except:
             pass
         REAL_SETTINGS.setSetting('ClearCache', "false")
-    elif type == 'Art':
-        try:    
-            shutil.rmtree(ART_LOC)
-            log('utils: Removed ART_LOC')  
-            infoDialog("Artwork Folder Cleared")
-        except:
-            pass
-        REAL_SETTINGS.setSetting('ClearLiveArt', "false")
     elif type == 'Files':
         try:
             shutil.rmtree(GEN_CHAN_LOC)
@@ -1529,9 +1522,9 @@ def chkSettings2():
         REAL_SETTINGS.setSetting('Normal_Shutdown', "true")
         Normal_Shutdown = REAL_SETTINGS.getSetting('Normal_Shutdown') == "true"
                  
-    if xbmcvfs.exists(BACKUP_LOC) == False:
+    if FileAccess.exists(BACKUP_LOC) == False:
         try:
-            xbmcvfs.mkdirs(BACKUP_LOC)
+            FileAccess.mkdirs(BACKUP_LOC)
         except Exception,e:
             pass
             
@@ -1556,8 +1549,8 @@ def backupSettings2():
 
 def restoreSettings2():
     log('utils: restoreSettings2')
-    dirs,files = xbmcvfs.listdir(BACKUP_LOC)
-    dir,file = xbmcvfs.listdir(XMLTV_LOC)
+    dirs,files = FileAccess.listdir(BACKUP_LOC)
+    dir,file = FileAccess.listdir(XMLTV_LOC)
     backuplist = [s.replace('.xml','') for s in files if s.endswith('.xml')]
     if backuplist and len(backuplist) > 0:
         backuplist.reverse()
@@ -1586,10 +1579,10 @@ def chkPSS(list):
 def purgeSettings2():
     log('utils: purgeSettings2')
     if yesnoDialog('Are you sure you want to remove all previous backups?'):       
-        dirs,files = xbmcvfs.listdir(BACKUP_LOC)
+        dirs,files = FileAccess.listdir(BACKUP_LOC)
         for i in range(len(files)):
             try:
-                xbmcvfs.delete(os.path.join(BACKUP_LOC,files[i]))
+                FileAccess.delete(os.path.join(BACKUP_LOC,files[i]))
             except:
                 pass
         infoDialog("Backup Purge Complete")
@@ -1612,28 +1605,27 @@ def hasVersionChanged(__version__):
         
 def HandleUpgrade():
     log('utils: HandleUpgrade')
-    # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
-    # set 'optional' as true so users can disable if unwanted.
-    if getXBMCVersion() > 14 and isContextInstalled() == False:
-        if yesnoDialog('Would you like to install the PseudoTV Live context export tool?'):       
-            getContext()
-            
     chkLowPower()
-    if isLowPower() == True:
-        textViewer(LOW_MSG(),header="PseudoTV Live - Notification")
+    if HEADLESS_SHARING == False:
+        # Install PTVL Isengard Context Export, Workaround for addon.xml 'optional' flag not working.
+        # set 'optional' as true so users can disable if unwanted.
+        if getXBMCVersion() > 14 and isContextInstalled() == False:
+            if yesnoDialog('Would you like to install the PseudoTV Live context export tool?'):       
+                getContext()
+            
+        if isLowPower() == True:
+            textViewer(LOW_MSG(),header="PseudoTV Live - Notification")
 
-    # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
-    xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
-    
-    # Force Channel rebuild
-    # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
-    # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
+        # Call showChangeLog like this to workaround bug in openElec, *Thanks spoyser
+        xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/utilities.py,-showChangelog)")
         
-    chkAutoplay()
-    chkKodiSkin()
-    okDialog(POP_MSG(),header="PseudoTV Live - Notification")
-        
-    # xbmc.executebuiltin("RunScript(" + ADDON_PATH + "/default.py)")
+        # Force Channel rebuild
+        # REAL_SETTINGS.setSetting('ForceChannelReset', 'true')
+        # okDialog("Forced Channel Reset Required","Please Be Patient while rebuilding channels...",header="PseudoTV Live - Notification") 
+            
+        chkAutoplay()
+        chkKodiSkin()
+        okDialog(POP_MSG(),header="PseudoTV Live - Notification")
         
 def isPTVLOutdated():
     log('utils: isPTVLOutdated')
@@ -1711,17 +1703,18 @@ def preStart():
     if chkVersion() == False:
         return False
         
-    # chkChanges()
-    chkAPIS(RSS_API())
-    patchSeekbar()
-    patchFont()
     chkLowPower()
-    
-    # Disable long term debugging
-    if isDebug() == True:
-        if yesnoDialog('Its recommended you disable debug logging for standard use',header='PseudoTV Live - Disable Debugging?') == True:
-            REAL_SETTINGS.setSetting('enable_Debug', "false")
-    
+    chkAPIS(RSS_API())
+    if HEADLESS_SHARING == False:
+        # chkChanges()
+        patchSeekbar()
+        patchFont()
+
+        # Disable long term debugging
+        if isDebug() == True:
+            if yesnoDialog('Its recommended you disable debug logging for standard use',header='PseudoTV Live - Disable Debugging?') == True:
+                REAL_SETTINGS.setSetting('enable_Debug', "false")
+        
     # Chk forcereset, clearcache & playlists
     if REAL_SETTINGS.getSetting("ForceChannelReset") == "true":
         ClearCache()
@@ -1943,9 +1936,19 @@ def joinListItem(list, opt='@#@'):
 def isBackgroundVisible():
     return getProperty("OVERLAY.BackgroundVisible") == 'True'
       
-def setBackgroundLabel(string):
-    setProperty("PTVL.STATUS_LOG",string) 
-    setProperty("OVERLAY.BACKGROUND_TEXT",string) 
+def setBackgroundLabel(string=None, string2=None, string3=None):
+    if string:
+        setProperty("PTVL.STATUS_LOG",string) 
+        setProperty("OVERLAY.BACKGROUND_TEXT",string) 
+    if string2:
+        setProperty("OVERLAY.BACKGROUND_TEXT2",string2) 
+    else:
+        clearProperty("OVERLAY.BACKGROUND_TEXT2")
+    if string3:
+        setProperty("OVERLAY.BACKGROUND_STATUS",string3) 
+        
+def setBackgroundProgress(val):
+    setProperty("OVERLAY.BACKGROUND_PROG",str(val)) 
            
 def isSFAV():
     return isPlugin('plugin.program.super.favourites')
@@ -1982,8 +1985,8 @@ def listXMLTV():
         EXxmltvLst.append('hdhomerun')
     if isPVR() != False:
         EXxmltvLst.append('pvr')
-    dirs,files = xbmcvfs.listdir(XMLTV_CACHE_LOC)
-    dir,file = xbmcvfs.listdir(XMLTV_LOC)
+    dirs,files = FileAccess.listdir(XMLTV_CACHE_LOC)
+    dir,file = FileAccess.listdir(XMLTV_LOC)
     xmltvcacheLst = [s.replace('.xml','') for s in files if s.endswith('.xml')] + EXxmltvLst
     xmltvLst = sorted_nicely([s.replace('.xml','') for s in file if s.endswith('.xml')] + xmltvcacheLst)
     select = selectDialog(xmltvLst, 'Select Guidedata Type', 30000)
@@ -1998,7 +2001,7 @@ def listXMLTV():
             
 def xmltvflePath(setting3):          
     xmlpath = xbmc.translatePath(os.path.join(REAL_SETTINGS.getSetting('xmltvLOC'), str(setting3) +'.xml'))
-    if xbmcvfs.exists(xmlpath) == True:
+    if FileAccess.exists(xmlpath) == True:
         xmltvFle = xmlpath
     else:
         xmltvFle = setting3
@@ -2160,7 +2163,7 @@ def patchFont():
     log("utils: patchFont")
     import MyFont
     path = os.path.join(PTVL_SKIN_SELECT, 'script.pseudotv.live.fonts.xml')
-    if xbmcvfs.exists(path):
+    if FileAccess.exists(path):
         with open(path, 'rt') as f:
             tree = ElementTree.parse(f)
         for node in tree.findall('font'):
@@ -2242,3 +2245,19 @@ def getChanTypeLabel(chantype):
     elif chantype == 16:
         return "UPNP"
     return 'None'
+    
+# Adapted from tria http://forum.kodi.tv/showthread.php?tid=201627
+# addonId is the Addon ID
+# id1 is the Category (Tab) offset (0=first, 1=second, 2...etc)
+# id2 is the Setting (Control) offse (0=first, 1=second, 2...etc)
+# Example: OpenAddonSettings('plugin.video.name', 2, 3)
+# This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
+
+def openAddonSettings(addonId, id1=None, id2=None, ret=True):
+    xbmc.executebuiltin('Addon.OpenSettings(%s)' % addonId)
+    if id1 != None:
+        xbmc.executebuiltin('SetFocus(%i)' % (id1 + 60000))
+    if id2 != None:
+        xbmc.executebuiltin('SetFocus(%i)' % (id2 + 100))
+    if ret == True:
+        REAL_SETTINGS.openSettings()

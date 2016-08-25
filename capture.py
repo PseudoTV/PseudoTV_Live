@@ -31,6 +31,11 @@ class Main:
         
     def __init__(self):
         self.log("__init__")
+        setProperty("PseudoTVConfigRunning", "True")
+        
+        while getProperty("PseudoTVService") == "True":
+            xbmc.sleep(25)
+            
         self.chnlst = ChannelList()
         self.chnlst.fillPVR() 
         
@@ -285,6 +290,8 @@ class Main:
     def openManager(self):
         if yesnoDialog('Channel Successfully Added', 'Open Channel Manager?'):
             xbmc.executebuiltin("RunScript("+ADDON_PATH+"/config.py, %s)" %str(self.channel))
+        else:
+            setProperty("PseudoTVConfigRunning", "False")
 
             
     def getChtype(self, channel):

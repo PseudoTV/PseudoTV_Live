@@ -1,23 +1,20 @@
 <settings>
 <!--General-->
-    <category label="30000">
-        <setting label="30001" type="lsep"/>
-            <setting id="Config" type="action" option="close" label="30002" action="RunScript($CWD/config.py)"/>
+    <category label="60000">
+            <setting id="Config" type="action" option="close" default="" label="30002" action="RunScript($CWD/config.py)"/>
             <setting label="30003" type="lsep"/>
-                <setting id="AutoStart" type="enum" values="Disable|5s delay|10s delay|15s delay|20s delay|25s delay|30s delay"  label="30044" default="0"/>
-                <setting id="AutoOff" type="enum"   label="30004" values="Disable|30m|60m|90m|120m|150m|180m|210m|240m" default="0"/>
-                <setting id="AutoOff_Mode" type="enum"   label="30009" values="Exit PTVL|Quit Kodi|System Sleep|System Shutdown|EventGhost Trigger|CEC TV Standby|Stop Playback|Switch to Preferred Channel" default="0"/>
-                <setting id="Idle_Screensaver" type="bool"   label="29999" default="false" />
-                <setting id="ForceChannelReset" type="bool"   label="30005" default="false" />
-                <setting id="StartMode" type="enum"   label="30007" values="Resume|Real Time|Random" default="1" />
-                <setting id="EnableSettop" type="bool"   label="30998" default="true"/>
-                <setting id="ThreadMode" type="enum"   label="30008" visible="eq(-1,false)" values="On|Minimum Use|Off" default="0" />
-                <setting id="ChannelResetSetting" type="enum"   label="30006" visible="eq(-2,false)" values="Automatic|Daily|Weekly|Monthly|Never|Every Time" default="0"/>
-                <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="2"/>
-                <setting id="EnableNotify" type="bool"   label="30046" default="true"/>
+                <setting id="AutoStart"             type="enum" values="Disable|5s delay|10s delay|15s delay|20s delay|25s delay|30s delay"  label="30044" default="0"/>
+                <setting id="AutoOff"               type="enum"   label="30004" values="Disable|30m|60m|90m|120m|150m|180m|210m|240m" default="0"/>
+                <setting id="Idle_Screensaver"      type="bool"   label="29999" default="false" />
                 <setting id="AutoBackup" type="bool"   label="30159" default="true"/>
+                <setting id="EnableSettop" type="bool"   label="30998" default="true"/>
+                <setting id="ThreadMode" type="enum" subsetting="true" label="30008" visible="eq(-1,false)" values="On|Minimum Use|Off" default="0" />
+                <setting id="ChannelResetSetting" type="enum" subsetting="true" label="30006" visible="eq(-2,false)" values="Automatic|Daily|Weekly|Monthly|Never|Every Time" default="0"/>
+                <setting id="StartMode" type="enum" subsetting="true" label="30007" visible="eq(-3,false)" values="Resume|Real Time|Random" default="1" />
+                <setting id="EnableNotify" type="bool"   label="30046" default="true"/>
                 <setting id="SFX_Enabled" type="bool"   label="30056" default="true"/>
-                <setting type="sep"/>
+                <setting id="ForceChannelReset" type="bool"   label="30005" default="false" />
+            <setting label="30504" type="lsep"/>
                 <setting id="platform" type="enum" values="Android|ATV|IOS|PowerPC|Raspberry Pi|Intel Budget|Intel Core|AMD Budget|AMD FX" label="30401" default="6" />
                 <setting id="os" type="enum" values="Android Arm|Android x86|ATV1 Linux|ATV1 Stock|ATV2|IOS|Linux 32bit|Linux 64bit|Mac 32bit|Mac 64bit|Raspberry P|Windows|TLBB" label="30402" default="11" />
                 <setting id="limit_preferred_language" type="select"   label="32055" values="Chinese|Dutch|English|Finnish|French|German|Hungarian|Italian|Japanese|Polish|Portuguese|Russian|Spanish|Swedish" default="English"/>
@@ -25,28 +22,31 @@
                 
     </category>
 <!--Tweaks-->
-    <category label="30300">
-        <setting id="Search_Option" type="enum"   label="30312" default="0" values="Global Search|Extended Info"/>
-        <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
-        <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
-        <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
-        <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
-        <setting type="sep"/>
-        <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
-        <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
-        <setting id="SeekForward" type="enum" label="30446" values="10s|30s|60s|3m|5m|10m|30m" default="1"/>
-        <setting id="SeekBackward" type="enum" label="30447" values="-10s|-30s|-60s|-3m|-5m|-10m|-30m" default="1"/>
-        <setting type="sep"/>
-        <setting id="enable_mute" type="bool"   label="30373" default="false"/>
-        <setting id="HideClips" type="bool"   label="30215" default="true"/>
-        <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15s|30s|60s|90s|120s|240s|360s|480s" default="5"/>
-        <setting type="sep"/>
-        <setting id="TraktScrob" enabled="System.HasAddon(script.trakt)" type="bool"   label="30397" default="false"/>
-        <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
+    <category label="60001">
+        <setting label="30506" type="lsep"/>
+            <setting id="MEDIA_LIMIT"   label="30310" type="enum" values="25|50|100|250|500|1000|5000|Unlimited" default="2"/>
+            <setting id="AutoOff_Mode"          type="enum"   label="30009" values="Exit PTVL|Quit Kodi|System Sleep|System Shutdown|EventGhost Trigger|CEC TV Standby|Stop Playback|Switch to Preferred Channel" default="0"/>
+            <setting id="Search_Option" type="enum"   label="30312" default="0" values="Global Search|Extended Info"/>
+            <setting id="SUPchannel" type="enum"  label="30303" values="Last Channel|Preferred Channel" default="0"/>
+            <setting id="CurrentChannel" type="text"   label="30304" subsetting="true" visible="eq(-1,1)" default="1"/>
+            <setting id="TraktScrob" enabled="System.HasAddon(script.trakt)" type="bool"   label="30397" default="false"/>
+            <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
+            <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
+            <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
+            <setting id="enable_mute" type="bool"   label="30373" default="true"/>
+            <setting id="HideClips" type="bool"   label="30215" default="true"/>
+            <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15s|30s|60s|90s|120s|240s|360s|480s" default="5"/>
+        <setting label="30505" type="lsep"/>
+            <setting id="StartOverTime" type="enum"   label="31311" default="5" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
+            <setting id="StreamOverTime" type="enum"   label="31315" default="8" values="Always|10%|20%|30%|40%|50%|60%|70%|80%|90%|Disable"/>
+            <setting id="SeekForward" type="enum" label="30446" values="10s|30s|60s|3m|5m|10m|30m" default="1"/>
+            <setting id="SeekBackward" type="enum" label="30447" values="-10s|-30s|-60s|-3m|-5m|-10m|-30m" default="1"/>
+        <setting label="30308" type="lsep"/>
+            <setting id="playActionTime" type="slider"   label="30319" range="15,2,120" option="int" default="30"/>
+            <setting id="channelDelay" type="enum"   label="30302" default="1" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
     </category>
 <!--Visual-->
-    <category label="30200">
-        <setting label="30201" type="lsep"/>
+    <category label="60002">
         <setting id="SkinSelector" type="action" default="Default"  label="30202" action="RunScript($CWD/skin.py)"/>
         <setting label="30003" type="lsep"/>
         <setting id="ChannelLogoFolder" type="folder" source="auto"   label="30225" default="special://userdata/addon_data/script.pseudotv.live/logos/"/>
@@ -55,7 +55,6 @@
         <setting id="Enable_FindLogo" type="bool"   label="34547" default="true"/>
         <setting id="LogoDB_Fallback" subsetting="true" visible="eq(-1,true)"type="bool"   label="34548" default="true"/>
         <setting id="LogoDB_Anymatch" subsetting="true" visible="eq(-2,true)"type="bool"   label="34549" default="true"/>
-        <setting id="LogoDB_Override" subsetting="true" visible="eq(-3,true)"type="bool"   label="34550" default="false"/>
         <setting id="LogoDB_Type" subsetting="true" type="enum" visible="eq(-4,true)"   label="30376" values="Color Square|White Square|Color Wide|White Wide" default="2"/>
         <!-- EPG -->
         <setting label="30210" type="lsep"/>
@@ -74,25 +73,8 @@
             <setting id="EnableSubtitles" type="bool"   label="30329" default="false"/>   
             <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Info Bar|On Screen PopUp|Notification" default="2"/>
    </category>
-<!--DVR-->
-   <category label="30400">
-        <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv" />
-        <setting id="LIVETV_MAXPARSE" type="enum"   label="30405" values="1 day|2 days|3 days" default="1"/>
-        <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
-        <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
-        <setting id="AutoJump" type="bool"   label="30408" default="true" />
-        <setting id="sickbeard.enabled"   label="30708" type="bool" default="false" />
-        <setting id="sickbeard.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:8081"/>
-        <setting id="sickbeard.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
-        <setting id="couchpotato.enabled"   label="30711" type="bool" default="false" />
-        <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
-        <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
-        <setting id="SimpleDownloader" type="action"   label="30719" option="close"  visible="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
-        <setting id="MetaHandler" type="action"   label="30723" option="close"  visible="System.HasAddon(script.module.metahandler)" action="RunScript($CWD/utilities.py, -MetaHandler)"/>
-        <setting id="YTDownloader" type="action"   label="30720" option="close"  visible="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
-    </category>  
     <!-- Autotune  -->
-    <category label="30070">
+    <category label="60003">
             <setting id="Autotune"                            type="bool"   label="30071"                                          default="false" />
             <setting id="Warning1"                            type="bool"   label="30072"                    visible="eq(-1,true)" default="false" />
             <setting id="reserveChannels"                     type="bool"   label="30372" subsetting="true"  visible="eq(-1,true)" default="false" />
@@ -117,17 +99,16 @@
             <setting id="autoFindMovieGenres"                 type="bool"   label="30081" subsetting="false" visible="eq(-14,true)" enable="Library.HasContent(Movies)"default="false"/>
             <setting id="autoFindMixGenres"                   type="bool"   label="30082" subsetting="false" visible="eq(-15,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
             <setting id="autoFindRecent"                      type="bool"   label="30883" subsetting="false" visible="eq(-16,true)" enable="Library.HasContent(TVShows) | Library.HasContent(Movies)"default="false"/>
-            <setting id="autoFind3DMovies"                    type="bool"   label="30884" subsetting="false" visible="eq(-17,true)" enable="Library.HasContent(Movies)"default="false"/>
+            <setting id="autoFind3DMovies"                    type="bool"   label="30884" subsetting="false" visible="eq(-17,true)" enable="false" default="false"/>
             <setting id="autoFindMusicGenres"                 type="bool"   label="30084" subsetting="false" visible="eq(-18,true)" enable="Library.HasContent(Music)" default="false"/>
-            <setting id="autoFindVideosLocal"                 type="folder" label="30089" subsetting="false" visible="eq(-19,true)"           source="auto"                               default=""/>  
-        
+            
         <!-- Autotune Online -->
-        <setting                                              type="lsep"   label="30110"                    visible="eq(-20,true)"/>
-            <setting id="autoFindCommunity_PseudoNetworks"    type="bool"   label="30115" subsetting="false" visible="eq(-21,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>                                                                                                                default="false" />          
+        <setting                                              type="lsep"   label="30110"                    visible="eq(-19,true)"/>
+            <setting id="autoFindCommunity_PseudoNetworks"    type="bool"   label="30115" subsetting="false" visible="eq(-20,true)" enable="System.HasAddon(plugin.video.youtube) + System.HasAddon(plugin.video.pseudo.companion)"   default="false"/>                                                                                                                default="false" />          
     </category>
-    
+
 <!--BCTs-->   
-    <category label="30499">
+    <category label="60004">
     <setting label="30500" type="lsep"/>
         <setting label="30501" id="bumpers" type="enum" values="Disabled|Local|Internet" default="0" />
         <setting label="30502" id="bumpersfolder" type="folder" source="auto" visible="eq(-1,1)" default="" />
@@ -155,57 +136,80 @@
         <setting label="30517" id="trailerschannel" type="text" visible="eq(-7,3)" enabled="System.HasAddon(plugin.video.youtube)" default="PL1DD10E84B9B08A35" /> 
         <setting label="30530" id="numtrailers" type="enum" visible="!eq(-8,0)" values="1|2|3|4|5" default="0"/>
     </category>
+        
+<!--DVR-->
+   <category label="60005">
+        <setting id="xmltvLOC" type="folder" source="auto"   label="30404" default="special://userdata/addon_data/script.pseudotv.live/cache/xmltv" />
+        <setting id="LIVETV_MAXPARSE" type="enum"   label="30405" values="1 day|2 days|3 days" default="1"/>
+        <setting id="DVR_Enabled"   label="30801" type="bool" default="false"/>
+        <setting id="DVR_Folder" subsetting="true"   label="30802" visible="eq(-1,true)" type="folder" source="auto" default="" />        
+        <setting id="AutoJump" type="bool"   label="30408" default="true" />
+        <setting id="sickbeard.enabled"   label="30708" type="bool" default="false" />
+        <setting id="sickbeard.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:8081"/>
+        <setting id="sickbeard.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
+        <setting id="couchpotato.enabled"   label="30711" type="bool" default="false" />
+        <setting id="couchpotato.baseurl" subsetting="true"   label="30709" visible="eq(-1,true)" type="text" default="http://localhost:5050"/>
+        <setting id="couchpotato.apikey" subsetting="true"   label="30710" visible="eq(-2,true)" type="text" default="Enter API KEY"/>
+    </category>  
     
 <!--Sharing-->
-    <category label="30100">
+    <category label="60006">
         <setting label="30101" type="lsep"/>
             <setting id="ChannelSharing" type="bool"   label="30789" default="false" />
-            <setting id="HdhomerunMaster" subsetting="true" type="bool"   label="30011" default="true" visible="eq(-1,true)" />
+            <setting id="HeadlessServer" type="bool"  subsetting="true" label="30011" visible="eq(-1,true)"   default="false"/>
             <setting id="SettingsFolder" subsetting="true" type="folder" source="auto" visible="eq(-2,true)"   label="30010" default="" />
         <setting label="30102" type="lsep"/>
             <setting id="UPNP1" type="bool"   label="30103" default="false" />
-            <setting id="UPNP1_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP1_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="0.0.0.0:8080" />
             <setting id="UPNP1_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP2" type="bool"   label="30104" default="false" />
-            <setting id="UPNP2_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP2_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="0.0.0.0:8080" />
             <setting id="UPNP2_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP3" type="bool"   label="30105" default="false" />
-            <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="IP:8080" />
+            <setting id="UPNP3_IPP" subsetting="true" type="text"  label="30709" visible="eq(-1,true)" default="0.0.0.0:8080" />
             <setting id="UPNP3_UPW" subsetting="true" type="text"   label="30902" visible="eq(-2,true)" default="kodi:kodi" />
             <setting id="UPNP_OFFSET" subsetting="true" type="slider"   label="30106" visible="eq(-9,true) | eq(-6,true) | eq(-3,true) " default="0.1" range="0,.01,5" option="float" />
     </category>
-    
+       
 <!--Utilities-->
-    <category label="31900">  
-        <setting label="30722" type="lsep"/>
-        <setting id="KeyMapEditor" type="action"   label="30721" visible="System.HasAddon(script.keymap)" action="RunScript(script.keymap)"/>
+    <category label="60007">  
+        <setting id="KeyMapEditor" type="action"   label="30721" enable="System.HasAddon(script.keymap)" action="RunScript(script.keymap)"/>
+        <setting id="CustomKeymap" type="action"   label="38419" enable="false" action="RunScript($CWD/utilities.py, -Keymap)"/>
         <setting label="31999" type="lsep"/>
-        <setting id="Repair_Settings2" type="action"   label="31903" action="RunScript($CWD/utilities.py, -repairSettings2)"/>
-        <setting id="Backup_Settings2" type="action"   label="31901" action="RunScript($CWD/utilities.py, -backupSettings2)"/>
-        <setting id="Restore_Settings2" type="action"   label="31902" action="RunScript($CWD/utilities.py, -restoreSettings2)"/>
-        <setting id="Purge_Settings2" type="action"   label="31905" action="RunScript($CWD/utilities.py, -purgeSettings2)"/>
-        <setting id="Remove_Settings2" type="action" option="close" label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
-        <setting id="ClearChanFavs" type="action" option="close" label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
+            <setting id="Repair_Settings2" type="action"   label="31903" action="RunScript($CWD/utilities.py, -repairSettings2)"/>
+            <setting id="Backup_Settings2" type="action"   label="31901" action="RunScript($CWD/utilities.py, -backupSettings2)"/>
+            <setting id="Restore_Settings2" type="action"   label="31902" action="RunScript($CWD/utilities.py, -restoreSettings2)"/>
+            <setting id="Purge_Settings2" type="action"   label="31905" action="RunScript($CWD/utilities.py, -purgeSettings2)"/>
+            <setting id="Remove_Settings2" type="action" option="close" label="31904" action="RunScript($CWD/utilities.py, -DeleteSettings2)"/>
+            <setting id="ClearChanFavs" type="action" option="close" label="31997" action="RunScript($CWD/utilities.py, -ClearChanFavorites)"/>
         <setting label="31998" type="lsep"/>
-        <setting id="ClearCache" type="bool"   label="30988" default="false"/>
+            <setting id="ClearCache" type="bool"   label="30988" default="false"/>
+        <setting label="30722" type="lsep"/> 
+            <setting id="PseudoCompanion" type="action"   label="30728" option="close"  enable="System.HasAddon(plugin.video.pseudo.companion)" action="RunScript($CWD/utilities.py, -PseudoCompanion)"/>
+            <setting id="PlayonBrowser" type="action"   label="30729" option="close"  enable="System.HasAddon(plugin.video.playonbrowser)" action="RunScript($CWD/utilities.py, -PlayonBrowser)"/>
+            <setting id="SuperFavourites" type="action"   label="30730" option="close"  enable="System.HasAddon(plugin.program.super.favourites)" action="RunScript($CWD/utilities.py, -SuperFavourites)"/>           
+            <setting id="Youtube" type="action"   label="30726" option="close"  enable="System.HasAddon(plugin.video.youtube)" action="RunScript($CWD/utilities.py, -Youtube)"/>          
+            <setting id="Vimeo" type="action"   label="30731" option="close"  enable="System.HasAddon(plugin.video.Vimeo)" action="RunScript($CWD/utilities.py, -Vimeo)"/>
+            <setting id="USTVnow" type="action"   label="30727" option="close"  enable="System.HasAddon(plugin.video.ustvnow)|System.HasAddon(plugin.video.ustvnow.tva)|System.HasAddon(plugin.video.ustvnow.plus)" action="RunScript($CWD/utilities.py, -USTVnow)"/>
+            <setting id="MetaHandler" type="action"   label="30723" option="close"  enable="System.HasAddon(script.module.metahandler)" action="RunScript($CWD/utilities.py, -MetaHandler)"/>
+            <setting id="URLresolver" type="action"   label="30725" option="close"  enable="System.HasAddon(script.module.urlresolver)" action="RunScript($CWD/utilities.py, -URLresolver)"/>
+            <setting id="SimpleDownloader" type="action"   label="30719" option="close"  enable="System.HasAddon(script.module.simple.downloader)" action="RunScript($CWD/utilities.py, -SimpleDownloader)"/>
+            <setting id="YTDownloader" type="action"   label="30720" option="close"  enable="System.HasAddon(script.module.youtube.dl)" action="RunScript($CWD/utilities.py, -YTDownloader)"/>
+            <setting id="ArtworkDownloader" type="action"   label="30732" option="close"  enable="System.HasAddon(script.artwork.downloader)" action="RunScript($CWD/utilities.py, -ArtworkDownloader)"/>
+            <setting id="ExtendedInfo" type="action"   label="30733" option="close"  enable="System.HasAddon(script.extendedinfo)" action="RunScript($CWD/utilities.py, -ExtendedInfo)"/>        
     </category>
-    
+     
 <!-- Help -->
-    <category label="32900">  
+    <category label="60008">  
+        <setting label="30507" type="lsep"/>
+        <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
         <setting id="Show_Changelog" type="action"   label="32901" action="RunScript($CWD/utilities.py, -showChangelog)"/>
         <setting id="Show_Readme" type="action"   label="32902" action="RunScript($CWD/utilities.py, -showReadme)"/>
         <setting id="Show_Readme" type="action"   label="32903" action="RunScript($CWD/utilities.py, -showChtype)"/>
-        <setting id="UploadLog" type="action"   label="30989" action="RunScript($CWD/uploadLog.py)"/>
-        <setting type="sep" visible="true" />
-        <setting id="Show_Disclaimer" type="action"   label="30999" action="RunScript($CWD/utilities.py, -showDisclaimer)"/>
-        <setting id="email" type="text" label="30902" visible="false" default=""/>
     </category>
     
 <!--Debugging-->
-    <category label="30900"> 
-        <setting label="30308" type="lsep"/>
-        <setting id="playActionTime" type="slider"   label="30319" range="10,2,480" option="int" default="120"/>
-        <setting id="channelDelay" type="enum"   label="30302" default="1" values="None|0.25|0.5|0.75|1.0|1.25|1.5|1.75|2.0"/>
+    <category label="60009"> 
         <setting label="30914" type="lsep"/>
         <setting id="Include3D" type="bool"   label="39958" default="false"/>
         <setting id="IncludeIceLib" type="bool"   label="30997" default="true"/>
@@ -227,7 +231,7 @@
         <setting id="TMDB_API_KEY"  label="30922" option="hidden" type="text" default="9c47d05a3f5f3a00104f6586412306af" />
         <setting id="TVDB_API_KEY"  label="30932" option="hidden" type="text" default="078845CE15BC08A7" />
         <setting id="FANARTTV_API_KEY"  label="30942" option="hidden" type="text" default="0da4365d363db853f10fd800b6a245e5" />
-        <setting id="GBOX_API_KEY"  label="30924" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
+        <setting id="GBOX_API_KEY"  label="30924" visible="false" option="hidden" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
         <setting id="YT_API_KEY"  option="hidden" visible="false" type="text" default="AIzaSyAnwpqhAmdRShnEHnxLiOUjymHlG4ecE7c" />
         <setting id="PSS_API_KEY" option="hidden" visible="false" type="text" default="cGx1Z2luOi8vcGx1Z2luLnZpZGVvLnR2Mmdv|" />  
         <setting id="GOOGLE_API_KEY"  option="hidden" visible="false" type="text" default="rKPHzBmsYrFYROD98HS0Bt6rScBccAVm" />
