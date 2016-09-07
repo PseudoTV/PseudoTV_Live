@@ -1437,13 +1437,12 @@ def chkLowPower():
         platform = getPlatform()
         if platform in ['ATV','iOS','XBOX','rPi','Android']:
             setProperty("PTVL.LOWPOWER","true")
-            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "2")
+            REAL_SETTINGS.setSetting('MEDIA_LIMIT', "0")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('Disable_Watched', "false")
             REAL_SETTINGS.setSetting('Idle_Screensaver', "false")
             REAL_SETTINGS.setSetting('IncludeMeta', "false")
-            REAL_SETTINGS.setSetting('LIVETV_MAXPARSE', "0")
             REAL_SETTINGS.setSetting('respectChannels', "false")
             REAL_SETTINGS.setSetting('Cache_Enabled', "false")
             if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
@@ -1942,10 +1941,8 @@ def setBackgroundLabel(string=None, string2=None, string3=None):
         setProperty("OVERLAY.BACKGROUND_TEXT",string) 
     if string2:
         setProperty("OVERLAY.BACKGROUND_TEXT2",string2) 
-    else:
-        clearProperty("OVERLAY.BACKGROUND_TEXT2")
     if string3:
-        setProperty("OVERLAY.BACKGROUND_STATUS",string3) 
+        setProperty("OVERLAY.BACKGROUND_STATUS",string3)
         
 def setBackgroundProgress(val):
     setProperty("OVERLAY.BACKGROUND_PROG",str(val)) 
@@ -2007,18 +2004,41 @@ def xmltvflePath(setting3):
         xmltvFle = setting3
     log("utils: xmltvflePath, xmltvFle = " + xmltvFle)  
     return xmltvFle
+
+def setKodiRuntime(type,dbid,dur):
+    if type == 'movie':
+        set_Kodi_JSON('"method": "VideoLibrary.SetMovieDetails", "params": {"movieid" : %s, "runtime" : %i }' %(str(dbid),int(dur)))
+    elif type in ['episode','tvshow']:
+        set_Kodi_JSON('"method": "VideoLibrary.SetEpisodeDetails", "params": {"episodeid" : %s, "runtime" : %i }' %(str(dbid),int(dur)))
+
+def setKodiPlaycount(type,dbid,count):
+    if type == 'movie':
+        set_Kodi_JSON('"method": "VideoLibrary.SetMovieDetails", "params": {"movieid" : %s, "playcount" : %i }' %(str(dbid),int(count)))
+    elif type in ['episode','tvshow']:
+        set_Kodi_JSON('"method": "VideoLibrary.SetEpisodeDetails", "params": {"episodeid" : %s, "playcount" : %i }' %(str(dbid),int(count)))
+
+def EnableTrakt(val):
+    log("utils: EnableTrakt")
+    state = 'false'
+    status = "Disabled"
+    if val == True:
+        state = 'true'
+        status = "Enabled"
+    OptNotify('Trakt %s'%status)
+    set_Kodi_JSON('"method":"Addons.SetAddonEnabled","params":{"addonid":"script.trakt","enabled":%s}'%state)
     
 def clearTraktScrob():
     clearProperty("script.trakt.ids")
 
 def setTraktScrob():
+    # Example code:
     # {u'tmdb': 264660}
     # {u'tvdb': 121361}
     # {u'imdb': u'tt0470752'}
     # {u'slug': u'ex-machina-2014'}
     # {u'trakt': 163375}
     # {u'tmdb': 264660, u'imdb': u'tt0470752', u'slug': u'ex-machina-2014', u'trakt': 163375}
-    trakt = ''
+    ids = ''
     id    = getProperty("OVERLAY.ID")
     dbid  = getProperty("OVERLAY.DBID")
     type  = getProperty("OVERLAY.Type")
@@ -2027,13 +2047,12 @@ def setTraktScrob():
     # if content is not part of kodis db and has id scrob
     if (dbid == '0' or len(dbid) > 6) and id != '0':
         if type == 'movie':
-            trakt = {'imdb': id, 'slug': title}
+            ids = json.dumps({u'imdb': id, u'slug': u'%s' %title})
         elif type == 'tvshow':
-            trakt = {'tvdb': id, 'slug': title}
-            
-        ids = json.dumps(trakt)
-        log("utils: setTraktScrob, trakt = " + str(trakt))     
-        setProperty('script.trakt.ids', ids)
+            ids = json.dumps({u'tvdb': id, u'slug': u'%s' %title})
+        if ids:
+            log("utils: setTraktScrob, trakt = " + str(ids))     
+            setProperty('script.trakt.ids', ids)
             
 def setTraktTag(pType='OVERLAY'):
     log("utils: setTraktTag")

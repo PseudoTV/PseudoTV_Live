@@ -262,7 +262,6 @@ BCT_TYPES = ['bumper', 'commercial', 'trailer', 'rating', 'pseudocinema', 'intro
 EG_ALL = ['Starting','Loading: CHANNELNAME','Sleeping','Exiting']
 
 # Media Limits
-LIVETV_REFRESH  = 172800 #secs (48hrs)
 PLUGIN_REFRESH  = 172800#secs (48hrs)
 LIVETV_MAXPARSE = [86400,172800,259200][int(REAL_SETTINGS.getSetting('LIVETV_MAXPARSE'))]
 INTERNETTV_MAXPARSE = 86400 #secs (24hrs)

@@ -202,6 +202,7 @@ class AdvancedConfig(xbmcgui.WindowXMLDialog):
 
         self.getControl(102).setVisible(True)
 
+        
     def scrollRulesLeft(self):
         self.log("scrollRulesLeft")
 

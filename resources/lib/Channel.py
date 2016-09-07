@@ -53,7 +53,7 @@ class Channel:
         del self.ruleList[:]
         listrules = RulesList()
         self.channelNumber = channel
-
+        
         try:
             rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
 
@@ -89,6 +89,10 @@ class Channel:
     def setAccessTime(self, thetime):
         self.lastAccessTime = thetime // 1
 
+        
+    def getNextDuration(self):
+        return self.getItemDuration(self.playlistPosition + 1)
+        
 
     def getCurrentDuration(self):
         return self.getItemDuration(self.playlistPosition)
@@ -101,6 +105,10 @@ class Channel:
     def getTotalDuration(self):
         return self.Playlist.totalDuration
 
+        
+    def getNextLiveID(self):
+        return self.getItemLiveID(self.playlistPosition + 1)
+        
 
     def getCurrentLiveID(self):
         return self.getItemLiveID(self.playlistPosition)
@@ -110,6 +118,10 @@ class Channel:
         return self.Playlist.getLiveID(self.fixPlaylistIndex(index))
 
         
+    def getNexttimestamp(self):
+        return self.getItemtimestamp(self.playlistPosition + 1)
+        
+        
     def getCurrenttimestamp(self):
         return self.getItemtimestamp(self.playlistPosition)
 
@@ -117,6 +129,11 @@ class Channel:
     def getItemtimestamp(self, index):
         return self.Playlist.gettimestamp(self.fixPlaylistIndex(index))
 
+        
+    def getNextgenre(self):
+        return self.getItemgenre(self.playlistPosition + 1)
+        
+        
     def getCurrentgenre(self):
         return self.getItemgenre(self.playlistPosition)
 
@@ -125,6 +142,10 @@ class Channel:
         return self.Playlist.getgenre(self.fixPlaylistIndex(index))
 
 
+    def getNextDescription(self):
+        return self.getItemDescription(self.playlistPosition + 1)
+        
+        
     def getCurrentDescription(self):
         return self.getItemDescription(self.playlistPosition)
 
@@ -133,6 +154,10 @@ class Channel:
         return self.Playlist.getdescription(self.fixPlaylistIndex(index))
 
 
+    def getNextEpisodeTitle(self):
+        return self.getItemEpisodeTitle(self.playlistPosition + 1)
+        
+        
     def getCurrentEpisodeTitle(self):
         return self.getItemEpisodeTitle(self.playlistPosition)
 
@@ -141,6 +166,10 @@ class Channel:
         return self.Playlist.getepisodetitle(self.fixPlaylistIndex(index))
 
 
+    def getNexttTitle(self):
+        return self.getItemTitle(self.playlistPosition + 1)
+        
+        
     def getCurrentTitle(self):
         return self.getItemTitle(self.playlistPosition)
 
@@ -149,6 +178,10 @@ class Channel:
         return self.Playlist.getTitle(self.fixPlaylistIndex(index))
 
 
+    def getNextFilename(self):
+        return self.getItemFilename(self.playlistPosition + 1)
+        
+        
     def getCurrentFilename(self):
         return self.getItemFilename(self.playlistPosition)
 

@@ -185,67 +185,67 @@
                 <visible>true</visible>
                 <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
             </control>
-            <control type="label">
-                <posx>430</posx>
-                <posy>280r</posy>
-                <description>Show Title Label</description>
-                <width min="5" max="1400">auto</width>
-                <height>30</height>
-                <font>PTVL13</font>
-                <textcolor>FF0297eb</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <scroll>true</scroll>
-                <align>left</align>
-                <aligny>top</aligny>
-                <wrapmultiline>false</wrapmultiline>
-                <scrollspeed>40</scrollspeed>
-                <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
-            </control>
-            <control type="group">             
-                <control type="image">
-                    <description>Info Seekbar Line</description>
-                    <posx>430</posx>
-                    <posy>225r</posy>
-                    <width>1400</width>
-                    <height>4</height>
-                    <texture>pstvlHighlightAlt3.png</texture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
-                </control>
-                <control type="image" id="5007">
-                    <posx>430</posx>
-                    <posy>225r</posy>
-                    <width>1400</width>
-                    <height>4</height>
-                    <texture>pstvlHighlight.png</texture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                </control> 
-            </control>  
-            <control type="button" id="5006">
-                <description>Info Progressbar Time Button</description>
-                <posx>430</posx><!-- #should match 5007 -->
-                <posy>235r</posy>
-                <width>170</width>
-                <height>30</height>
-                <font>PTVL10</font>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <align>center</align>
-                <aligny>center</aligny>
-                <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.Time)]</label>
-                <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
-                <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5006),) + !StringCompare(Control.GetLabel(5006),00:00:00)]</visible>
-            </control>
             <control type="grouplist">
                 <posx>430</posx>
-                <posy>205r</posy>
+                <posy>280r</posy>
                 <width>1400</width>
-                <itemgap>1</itemgap>
+                <itemgap>20</itemgap>
                 <orientation>vertical</orientation>
+                <control type="label">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <description>Show Title Label</description>
+                    <width min="5" max="1400">auto</width>
+                    <height>30</height>
+                    <font>PTVL13</font>
+                    <textcolor>FF0297eb</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <scroll>true</scroll>
+                    <align>left</align>
+                    <aligny>top</aligny>
+                    <wrapmultiline>false</wrapmultiline>
+                    <scrollspeed>40</scrollspeed>
+                    <scrollsuffix> - </scrollsuffix>
+                    <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                </control> 
+                <control type="group">     
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy> 
+                        <width>1400</width>
+                        <height>5</height>
+                        <texture>pstvlHighlightAlt3.png</texture>
+                    </control>               
+                    <control type="progress" id="5007">
+                        <posx>0</posx>
+                        <posy>0</posy> 
+                        <width>1400</width>
+                        <height>5</height>
+                        <texturebg>pstvlHighlightAlt3.png</texturebg>
+                        <lefttexture border="0"></lefttexture>
+                        <midtexture border="0">pstvlHighlight.png</midtexture>
+                        <righttexture border="0"></righttexture>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <info>Player.Progress</info>   
+                    </control>
+                    <control type="button" id="5006">
+                        <description>Info Progressbar Time Button</description>
+                        <posx>0</posx><!-- #should match 5007 -->
+                        <posy>-10</posy>
+                        <width>170</width>
+                        <height>30</height>
+                        <font>PTVL10</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <shadowcolor>ff000000</shadowcolor>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.Time)]</label>
+                        <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
+                        <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
+                        <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5006),) + !StringCompare(Control.GetLabel(5006),00:00:00)]</visible>
+                    </control>
+                </control>
                 <control type="label">
                     <description>Show Description</description>
                     <width>1400</width>
@@ -387,71 +387,71 @@
                 <aspectratio>keep</aspectratio>
                 <texture background="true">$INFO[Window(10000).Property(OVERLAY.isNew)]</texture>
             </control>
-            <control type="label">
-                <posx>430</posx>
-                <posy>480r</posy>
-                <description>Show Title Label</description>
-                <width min="5" max="1100">auto</width>
-                <height>30</height>
-                <font>PTVL13</font>
-                <textcolor>FF0297eb</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <scroll>true</scroll>
-                <align>left</align>
-                <aligny>top</aligny>
-                <wrapmultiline>false</wrapmultiline>
-                <scrollspeed>40</scrollspeed>
-                <scrollsuffix> - </scrollsuffix>
-                <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
-            </control>
-            <control type="group">            
-                <control type="image">
-                    <description>MoreInfo Seekbar Line</description>
-                    <posx>430</posx>
-                    <posy>425r</posy>
-                    <width>1100</width>
-                    <height>4</height>
-                    <texture>pstvlHighlightAlt3.png</texture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                    <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
-                </control>
-                <control type="image" id="5004">
-                    <posx>430</posx>
-                    <posy>425r</posy>
-                    <width>1100</width>
-                    <height>4</height>
-                    <texture>pstvlHighlight.png</texture>
-                    <align>center</align>
-                    <aligny>center</aligny>
-                </control> 
-            </control>
-            <control type="button" id="5005">
-                <description>MoreInfo Progressbar Time Button</description>
-                <posx>430</posx><!-- #should match 5004 -->
-                <posy>435r</posy>
-                <width>170</width>
-                <height>30</height>
-                <textcolor>FFFFFFFF</textcolor>
-                <shadowcolor>ff000000</shadowcolor>
-                <font>PTVL10</font>
-                <align>center</align>
-                <aligny>center</aligny>
-                <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.TimeRemaining)]</label>
-                <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
-                <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
-                <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5005),) + !StringCompare(Control.GetLabel(5005),00:00:00)]</visible>
-            </control>
             <control type="grouplist">
                 <posx>430</posx>
-                <posy>400r</posy>
+                <posy>480r</posy>
                 <width>1100</width>
-                <itemgap>1</itemgap> 
+                <itemgap>20</itemgap>
                 <orientation>vertical</orientation>
+                <control type="label">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <description>Show Title Label</description>
+                    <width min="5" max="1100">auto</width>
+                    <height>30</height>
+                    <font>PTVL13</font>
+                    <textcolor>FF0297eb</textcolor>
+                    <shadowcolor>ff000000</shadowcolor>
+                    <scroll>true</scroll>
+                    <align>left</align>
+                    <aligny>top</aligny>
+                    <wrapmultiline>false</wrapmultiline>
+                    <scrollspeed>40</scrollspeed>
+                    <scrollsuffix> - </scrollsuffix>
+                    <label>[COLOR=C0C0C0C0]$INFO[Window(10000).Property(OVERLAY.DYNAMIC_LABEL)] : [/COLOR]$INFO[Window(10000).Property(OVERLAY.Title)][COLOR=C0C0C0C0][B] · [/B][/COLOR][COLOR=FFFFFFFF]$INFO[Window(10000).Property(OVERLAY.SEtitle)][/COLOR]</label>
+                </control> 
+                <control type="group">     
+                    <control type="image">
+                        <posx>0</posx>
+                        <posy>0</posy> 
+                        <width>1100</width>
+                        <height>5</height>
+                        <texture>pstvlHighlightAlt3.png</texture>
+                    </control>               
+                    <control type="progress" id="5004">
+                        <posx>0</posx>
+                        <posy>0</posy> 
+                        <width>1100</width>
+                        <height>5</height>
+                        <texturebg>pstvlHighlightAlt3.png</texturebg>
+                        <lefttexture border="0"></lefttexture>
+                        <midtexture border="0">pstvlHighlight.png</midtexture>
+                        <righttexture border="0"></righttexture>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <info>Player.Progress</info>   
+                    </control>
+                    <control type="button" id="5005">
+                        <description>Info Progressbar Time Button</description>
+                        <posx>0</posx><!-- #should match 5004 -->
+                        <posy>-10</posy>
+                        <width>170</width>
+                        <height>30</height>
+                        <font>PTVL10</font>
+                        <textcolor>FFFFFFFF</textcolor>
+                        <shadowcolor>ff000000</shadowcolor>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <label>$INFO[Window(10000).Property(OVERLAY.PLAYING.TimeRemaining)]</label>
+                        <texturefocus>pstvlButtonFocusAlt1.png</texturefocus>
+                        <texturenofocus>pstvlButtonNoFocusAlt.png</texturenofocus>
+                        <visible>[!Control.IsVisible(101) + !StringCompare(Control.GetLabel(5005),) + !StringCompare(Control.GetLabel(5005),00:00:00)]</visible>
+                    </control>
+                </control>
                 <control type="label">
                     <description>Show Description</description>
                     <width>1100</width>
-                    <height>125</height>
+                    <height>90</height>
                     <align>left</align>
                     <aligny>bottom</aligny>
                     <wrapmultiline>true</wrapmultiline>
@@ -460,7 +460,7 @@
                     <font>PTVL12</font>
                     <label>[COLOR=C0C0C0C0][B]$INFO[Window(10000).Property(OVERLAY.Time)] • [/B][/COLOR]$INFO[Window(10000).Property(OVERLAY.Description)]</label>
                 </control>
-            </control>
+            </control> 
             <control type="grouplist">  
                 <posx>430</posx>
                 <posy>235r</posy>
@@ -590,7 +590,7 @@
                         <texture colordiffuse="FFFFFFFF">$INFO[VideoPlayer.Country,flags/language/,.png]</texture>
                     </control>
                 </control>
-            </control>
+            </control>   
         </control>
         <control type="group" id="120">
             <posx>0</posx>

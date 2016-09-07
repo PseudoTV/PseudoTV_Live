@@ -79,16 +79,17 @@ class Migrate:
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHid)
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", self.chanlist.getPVRLink(i))
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", 'pvr')
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "1")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' PVR')
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "23")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", 'No')
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")  
                         self.myOverlay.setBackgroundStatus("Initializing: Autotuning adding PVR channels",string2=CHname,progress=int(channelNum*100//CHANNEL_LIMIT))
                     except:
                         pass
             
-            # LiveTV - HDHomeRun
-            
+            # LiveTV - HDHomeRun           
             if REAL_SETTINGS.getSetting("autoFindLiveHDHR")  == "true":
                 self.log("autoTune, adding Live HDHomeRun Channels")
                 channelNum = baseNum
@@ -108,11 +109,13 @@ class Migrate:
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", CHid)
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", link)
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "hdhomerun")
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "3")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", CHname + ' HDHR')    
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "13")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", "2") 
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "23")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", 'No')
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")       
                         self.myOverlay.setBackgroundStatus("Initializing: Autotuning adding HDHomeRun channels",string2=CHname,progress=int(channelNum*100//CHANNEL_LIMIT))
                     except Exception,e:
@@ -133,11 +136,13 @@ class Migrate:
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_1", name)
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_2", path)
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_3", "ustvnow")
-                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "2")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rulecount", "3")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_id", "1")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_1_opt_1", chname) 
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_id", "13")
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_2_opt_1", "2")   
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_id", "23")
+                        ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_rule_3_opt_1", 'No')
                         ADDON_SETTINGS.setSetting("Channel_" + str(channelNum) + "_changed", "true")                    
                         self.myOverlay.setBackgroundStatus("Initializing: Autotuning adding USTVnow channels",string2=chname,progress=int(channelNum*100//CHANNEL_LIMIT))
                     except:

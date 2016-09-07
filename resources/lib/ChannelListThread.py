@@ -116,10 +116,12 @@ class ChannelListThread(threading.Thread):
                         return 
                     time.sleep(2)
 
-                    curtotal = self.myOverlay.channels[i].getTotalDuration()                   
+                    curtotal = self.myOverlay.channels[i].getTotalDuration()
+                    chtype = self.myOverlay.getChtype(i + 1)
                     if self.myOverlay.isMaster:
-                        if self.myOverlay.getChtype(i + 1) != 9999:
-                            if curtotal > 0 and self.myOverlay.getChtype(i + 1) not in FORCE_MAKENEW:
+                        if chtype != 9999:
+                            if curtotal > 0:
+                            # if curtotal > 0 and chtype not in FORCE_MAKENEW:
                                 # When appending, many of the channel variables aren't set, so copy them over.
                                 # This needs to be done before setup since a rule may use one of the values.
                                 # It also needs to be done after since one of them may have changed while being setup.

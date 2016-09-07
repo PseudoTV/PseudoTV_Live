@@ -8,13 +8,13 @@
         <string id="29999">Enable ScreenSaver</string>
         <string id="30159">Enable Automatic Backup</string>
         <string id="30007">Default channel times at startup</string>
-        <string id="30998">Enable Settop Box [COLOR=dimgrey][Automatic Updating][/COLOR]</string>
+        <string id="30998">Enable Settop Box [COLOR=dimgrey][24/7 Operation][/COLOR]</string>
         <string id="30798">Background Service [COLOR=dimgrey][Experimental][/COLOR]</string>
         <string id="30008">Background Updating</string>  
         <string id="30006">Time between channel resets</string>
         <string id="30046">Show Notifications</string>
         <string id="30056">Use Navigation Sound Effects</string>
-        <string id="30005">Force channel reset on next start [COLOR=dimgrey][Hard Reset][/COLOR]</string>
+        <string id="30005">Force channel reset on next start [COLOR=dimgrey][Soft Reset][/COLOR]</string>
     <string id="30504">Platform Options:</string>
         <string id="30401">Choose Your Device Type</string>  
         <string id="30402">Choose Your Operating System</string>  
@@ -29,7 +29,8 @@
     <string id="30374">Enable Quickflip [COLOR=dimgrey][Surfing ignores plugins & strms][/COLOR]</string>
     <string id="30303">Startup Channel</string> 
     <string id="30304">Enter Preferred Channel</string>
-    <string id="30311">Disable Watch Flagging</string>
+    <string id="30397">Disable Trakt</string>
+    <string id="30311">Disable Playcount</string>
     <string id="30408">Jump to Channel on Reminder</string>
     <string id="30215">Hide very short videos</string>
     <string id="30216">Duration of "short" videos</string>  
@@ -53,7 +54,7 @@
     
 <string id="60002">Visuals</string>
     <string id="30202">Open Skin Manager</string> 
-    <string id="30301">Use (S01E01), Instead of (01x01)</string>
+    <string id="30301">Display "S01E01", Instead of "01x01"</string>
     <string id="30201">Enable Dynamic Artwork (Incl. Service)</string>
     <string id="34046">Show Notification</string>
     <string id="34045">Run Service Every (hours)</string>
@@ -64,26 +65,25 @@
     <string id="34548">Allow Multi-Region Fallbacks</string> 
     <string id="34549">Allow Any-Image Fallbacks</string> 
     <string id="34550">Override Existing Logos</string> 
-    <string id="30376">Select LogoDB Type</string> 
+    <string id="30376">Select Preferred Type</string> 
     <string id="30375">Enable Background ArtService</string> 
     <string id="30210">EPG Options:</string> 
         <string id="30211">Clock Mode</string>
         <string id="30212">EPG Color by</string>
         <string id="30213">Include Movie Genres</string>
-        <string id="30214">EPG grid displays (When avail.)</string> 
-        <string id="30229">Show extra epg Tags (ie. HD,CC,Ratings)</string>
+        <string id="30214">EPG displays (When avail.)</string> 
+        <string id="30229">Show extra EPG Tags (ie. HD,CC,Ratings)</string>
     <string id="30220">Overlay Options:</string>
         <string id="30203">Select Overlay Number Color</string>
         <string id="30221">Show info on channel change</string>
         <string id="30227">Show info when show starts</string>
         <string id="30222">Info window duration (seconds)</string>   
-        <string id="30224">Always show channel bug</string>
+        <string id="30224">Channel bug preference</string>
         <string id="30228">Use color channel bug</string>
         <string id="30226">Show Coming Up Next box</string>
         <string id="30229">Use Classic Coming Up Next box</string>
         <string id="30329">Enable Subtitles when Available</string>
 <string id="60005">DVR</string>  
-    <string id="30397">Enable trakt scrobbler</string>
     <string id="30404">XMLTV file location</string>
     <string id="30405">Guidedata days to display</string>
     <string id="30801">Enable DVR (Coming Soon)</string>
@@ -104,7 +104,7 @@
         <string id="30093">Find Super Favourites</string>
         <string id="30073">LiveTV:</string>
             <string id="30075">Find PVR Backend</string>
-            <string id="30097">Find HDHomerun</string>
+            <string id="30097">Find HDHomerun Favorites</string>
             <string id="30074">Find USTVnow</string>
             <string id="30076">Local Media:</string>
                 <string id="30078">Find TV Networks</string>
@@ -164,21 +164,20 @@
         <string id="30510">(C)ommercials:</string> 
             <string id="30511">Enable Commercials</string>
             <string id="30512">Select Commercials Folder</string>
-            <string id="30513">Enable Advert.com*</string>
-            <string id="30514">Select Region</string>
-            <string id="30515">Preferred Commercial Resolution</string>
-            <string id="30516">Enable iSpot.tv*, Select Type</string>
+            <string id="30514">Add Advertlog</string>
+            <string id="30515">Add Telly Ads</string>
+            <string id="30516">Add iSpot Ads</string>
             <string id="30517">Youtube Playlist</string>
+            <string id="30519">Add AsSeenOnTV Ads</string>
             <string id="30518">Number of Commercials Between Shows</string>
-            <string id="30519">Add As Seen On TV Commercials</string>
             <string id="30520">(T)railers:</string> 
                 <string id="30521">Enable Trailers</string>
                 <string id="30522">Select Trailer Folder</string>
                 <string id="30523">Match Trailer Genre to Genre Channels</string>
-                <string id="30524">Enable Trailers in Movie Channels</string>
-                <string id="30525">Preferred Internet Trailer Resolution</string>
-                <string id="30527">Enable HD-Trailers.net*, Select Type</string>
-                <string id="30528">HD-Trailers.net Movie Title Limit</string>
+                <string id="30524">Enable Trailers in Movie Channels</string>    
+                <string id="30525">Add HDTrailers</string>
+                <string id="30527">Add Apple Trailers</string>
+                <string id="30528">Add Trailer Addict</string>
                 <string id="30530">Number of Trailers Between Shows</string>
                     
 <string id="60007">Utilities</string>
@@ -214,7 +213,7 @@
         <string id="30999">[COLOR=orange]Disclaimer[/COLOR]</string>
         <string id="32901">Changelog</string>
         <string id="32902">ReadMe</string>
-        <string id="32903">Channel Types</string>
+        <string id="32903">E-Manual</string>
     <string id="32904">User Settings</string>
     <string id="30989">Upload Kodi Log</string>   
     <string id="31906">Broadcast Eventghost Introspect</string>   

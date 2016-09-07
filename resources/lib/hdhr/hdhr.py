@@ -155,19 +155,19 @@ def getChannelList():
         HDHRList = []
         for b in json.loads(getRequest('http://my.hdhomerun.com/api/guide.php?DeviceAuth=%s' %authID())):
             try:
-                chid = b['GuideNumber']
+                chid = (b['GuideNumber'] or '')
             except:
                 chid = 0
             try:
-                chlogo = b['ImageURL']
+                chlogo = (b['ImageURL'] or '')
             except:
                 chlogo = ''
             try:
-                chname = b['Affiliate']
+                chname = (b['Affiliate'] or '')
             except:
                 chname = ''
             try:
-                dname = b['GuideName']
+                dname = (b['GuideName'] or '')
             except:
                 dname = ''
             HDHRList.append({'chid':chid,'chlogo':chlogo,'chname':chname,'dname':dname})

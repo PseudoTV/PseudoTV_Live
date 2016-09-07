@@ -1168,7 +1168,14 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         self.log("getRuleName")
         if ruleindex < 0 or ruleindex >= len(self.AdvRules.ruleList):
             return ""
-        return self.AdvRules.ruleList[ruleindex].getName()#getTitle
+        return self.AdvRules.ruleList[ruleindex].getName()
+        
+        
+    def getRuleTitle(self, ruleindex):
+        self.log("getRuleTitle")
+        if ruleindex < 0 or ruleindex >= len(self.AdvRules.ruleList):
+            return ""
+        return self.AdvRules.ruleList[ruleindex].getTitle()
 
         
     def fillRules(self, channel):
@@ -1178,10 +1185,9 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
         ruleList = []
         ruleValue = [] 
         try:
-            rulecount = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rulecount'))
-            for i in range(rulecount):
+            for i in range(RULES_PER_PAGE):
                 ruleid = int(ADDON_SETTINGS.getSetting('Channel_' + str(channel) + '_rule_' + str(i + 1) + '_id'))
-                ruleList.append(self.getRuleName(ruleid))     
+                ruleList.append(self.getRuleTitle(ruleid))     
         except:
             pass
         return ruleList

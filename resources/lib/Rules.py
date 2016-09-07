@@ -159,6 +159,7 @@ class BaseRule:
                     info = "0" + info
                 self.optionValues[optionindex] = info
 
+                
     def validateTimeBox(self, optionindex):
         values = []
         broken = False
@@ -300,7 +301,6 @@ class BaseRule:
         # Delete
         if button == 0xF02E:
             self.optionValues[optionindex] = ''
-
 
 
 class RenameRule(BaseRule):
@@ -1314,9 +1314,9 @@ class Handle3D(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Include 3D Media'
+            return 'Include 3D'
         else:
-            return 'Exclude 3D Media'
+            return 'Exclude 3D'
 
 
     def onAction(self, act, optionindex):
@@ -1355,9 +1355,9 @@ class HandleIceLibrary(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Include STRM Files'
+            return 'Include STRM'
         else:
-            return 'Exclude STRM Files'
+            return 'Exclude STRM'
 
 
     def onAction(self, act, optionindex):
@@ -1437,7 +1437,7 @@ class HandleDurFilter(BaseRule):
     def getTitle(self):
         if len(self.optionValues[0]) > 0:
             if int(self.optionValues[0]) > 0:        
-                return "Exclude Content under " + self.optionValues[0] + " seconds"
+                return "Exclude under " + self.optionValues[0] + "s"
             else:
                 return "No Minimum Duration"
         return self.name
@@ -1479,9 +1479,9 @@ class HandleBCT(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return "Include BCT's"
+            return "Include BCT"
         else:
-            return "Exclude BCT's"
+            return "Exclude BCT"
 
 
     def onAction(self, act, optionindex):
@@ -1520,9 +1520,9 @@ class HandlePOP(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Display Coming Up Next'
+            return 'Display ComingUp'
         else:
-            return 'Hide Coming Up Next'
+            return 'Hide ComingUp'
 
 
     def onAction(self, act, optionindex):
@@ -1614,9 +1614,9 @@ class HandleChannelLogo(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Display the Channel Logo'
+            return 'Display Channel Logo'
         else:
-            return 'Hide the Channel Logo'
+            return 'Hide Channel Logo'
 
 
     def onAction(self, act, optionindex):
@@ -1748,9 +1748,9 @@ class HandleSeek(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0] == 'Yes':
-            return 'Disable Real-Time'
+            return 'Disable RealTime'
         else:
-            return 'Allow Real-Time'
+            return 'Allow RealTime'
 
 
     def onAction(self, act, optionindex):
