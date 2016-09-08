@@ -47,10 +47,10 @@ class FileAccess:
     def listdir(fle):
         FileAccess.log('listdir ' + fle)
         try:
-            results = xbmcvfs.listdir(fle)
+            results = xbmcvfs.listdir(os.path.join(fle,''))
             return results
         except:
-            return []
+            return [],[]
             
     @staticmethod
     def mkdirs(fle):

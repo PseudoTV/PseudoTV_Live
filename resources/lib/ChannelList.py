@@ -1970,7 +1970,7 @@ class ChannelList:
             self.log("fillLiveUSTVGuide failed! " + str(e), xbmc.LOGERROR)               
         return showList
         
-        
+    #todo move all hrhr to apis/pyHDHR
     def fillLiveHDHRGuide(self, setting1, setting2, setting3, setting4, chname, limit):
         self.log("fillLiveHDHRGuide")    
         showList = []

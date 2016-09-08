@@ -102,7 +102,7 @@ REMINDER_DELAY = 60 #secs
 MONITOR_SLEEP = 5 #secs
 
 # Limits
-FILELIST_LIMIT = [4096,8192,16384]
+FILELIST_LIMIT = [2048,4096,8192,16384]
 MAXFILE_DURATION = 16000
 MINFILE_DURATION = 900
 
@@ -252,9 +252,9 @@ cache_daily = FSCache(REQUESTS_LOC, days=1, hours=0, minutes=0)
 cache_weekly = FSCache(REQUESTS_LOC, days=7, hours=0, minutes=0)
 cache_monthly = FSCache(REQUESTS_LOC, days=28, hours=0, minutes=0)
 
-MUSIC_TYPES = ['.mp3','.flac','.mp4']
-IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.tif', '.tiff', '.gif', '.pcx', '.bmp', '.tga', '.ico', '.nef']
-MEDIA_TYPES = ['.avi', '.mp4', '.m4v', '.3gp', '.3g2', '.f4v', '.mov', '.mkv', '.flv', '.ts', '.m2ts', '.mts', '.strm']
+MUSIC_TYPES = (xbmc.getSupportedMedia('music')).split('|')  
+IMAGE_TYPES = (xbmc.getSupportedMedia('picture')).split('|')
+MEDIA_TYPES = (xbmc.getSupportedMedia('video')).split('|')
 STREAM_TYPES = ('http','https','rtsp','rtmp','udp','PlayMedia')
 BCT_TYPES = ['bumper', 'commercial', 'trailer', 'rating', 'pseudocinema', 'intro', 'cellphone', 'coming soon', 'premovie', 'feature presentation', 'intermission']
 

@@ -76,7 +76,7 @@ def get_abbrev(lang_string):
     try:
         language_abbrev = xbmc.convertLanguage(lang_string, xbmc.ISO_639_1)
     except:
-        language_abbrev = REAL_SETTINGS.getSetting('limit_preferred_language')
+        language_abbrev = REAL_SETTINGS.getSetting('preferred_language')
     if language_abbrev in LANGUAGES:
         return LANGUAGES[language_abbrev]
     else:

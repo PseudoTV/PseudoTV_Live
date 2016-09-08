@@ -172,6 +172,9 @@ class Artdownloader:
             setImage = 'NA.png'
             SetDefault = self.SetDefaultArt(chname, mpath, arttypeEXT)
             
+            if isLowPower() == True:
+                return SetDefault
+                
             # local media
             if chtype <= 7 or chtype == 12:
                 if type in ['tvshow','episode']:

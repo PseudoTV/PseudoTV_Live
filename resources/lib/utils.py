@@ -836,7 +836,7 @@ def infoDialog(message, header=ADDON_NAME, show=True, sound=False, time=1000, ic
             xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, THUMB))
 
 # Error
-def ErrorNotify(message, header=ADDON_NAME, show=True, sound=False, time=1000, icon=THUMB):
+def ErrorNotify(message, header=ADDON_NAME, show=True, sound=True, time=1000, icon=THUMB):
     infoDialog("ERROR: " + message, header, show, sound, time, icon)
 
 # Debug
@@ -1001,37 +1001,45 @@ def getPlatform():
     
 def chkPlatform():
     log("utils: chkPlatform")
-    if xbmc.getCondVisibility('System.Platform.ATV2'):
-        REAL_SETTINGS.setSetting('platform', "1")
-        return "ATV"
-    elif xbmc.getCondVisibility('System.Platform.IOS'):
-        REAL_SETTINGS.setSetting('platform', "2")
-        return "iOS"
-    elif xbmc.getCondVisibility('System.Platform.Xbox'):
-        REAL_SETTINGS.setSetting('platform', "5")
-        return "XBOX"
-    elif xbmc.getCondVisibility('System.Platform.Linux.RaspberryPi'): 
+    chkLanguage()
+    if xbmc.getCondVisibility('System.Platform.Linux'):
+        REAL_SETTINGS.setSetting('environment', "3")
+    elif xbmc.getCondVisibility('System.Platform.Linux.RaspberryPi'):
+        REAL_SETTINGS.setSetting('environment', "5")
         REAL_SETTINGS.setSetting('platform', "4")
         return "rPi"
-    elif xbmc.getCondVisibility('System.Platform.Android'): 
+    elif xbmc.getCondVisibility('System.Platform.Windows'):
+        REAL_SETTINGS.setSetting('environment', "6")
+    elif xbmc.getCondVisibility('System.Platform.OSX'):
+        REAL_SETTINGS.setSetting('environment', "4")
+        REAL_SETTINGS.setSetting('platform', "3")   
+        return "MAC"
+    elif xbmc.getCondVisibility('System.Platform.IOS'):
+        REAL_SETTINGS.setSetting('environment', "2")
+        REAL_SETTINGS.setSetting('platform', "2")
+        return "iOS"
+    elif xbmc.getCondVisibility('System.Platform.Darwin'):
+        REAL_SETTINGS.setSetting('environment', "3")
+    elif xbmc.getCondVisibility('System.Platform.ATV2'):
+        REAL_SETTINGS.setSetting('environment', "1")
+        REAL_SETTINGS.setSetting('platform', "1")
+        return "ATV"
+    elif xbmc.getCondVisibility('System.Platform.Android'):
+        REAL_SETTINGS.setSetting('environment', "0")
         REAL_SETTINGS.setSetting('platform', "0")
         return "Android"
-    elif REAL_SETTINGS.getSetting("platform") == '0': 
-        return "Android"
-    elif REAL_SETTINGS.getSetting("platform") == '1': 
-        return "ATV"
-    elif REAL_SETTINGS.getSetting("platform") == "2": 
-        return "iOS"
-    elif REAL_SETTINGS.getSetting("platform") == "3": 
-        return "PowerPC"
-    elif REAL_SETTINGS.getSetting("platform") == "4": 
-        return "rPi"
     elif REAL_SETTINGS.getSetting("platform") in ["5","7"]: 
         return "APU"
     elif REAL_SETTINGS.getSetting("platform") in ["6","8"]: 
         return "Pro"
     return "Unknown"
-     
+
+def chkLanguage():
+    langs = ["Chinese","Dutch","English","Finnish","French","German","Hungarian","Italian","Japanese","Polish","Portuguese","Russian","Spanish","Swedish"]
+    for l in range(len(langs)):
+        if langs[l].lower() in (xbmc.getInfoLabel('System.Language')).lower():
+            REAL_SETTINGS.setSetting('preferred_language', langs[l])
+            
 #####################
 # String/File Tools #
 #####################
@@ -1287,7 +1295,7 @@ def Backup(org, bak):
             except:
                 pass
         FileAccess.copy(org, bak)
-        infoDialog("Backup Complete")
+        OptNotify("Backup Complete")
        
 def Restore(bak, org):
     log('utils: Restore ' + str(bak) + ' - ' + str(org))
@@ -1432,10 +1440,10 @@ def chkAutoplay(silent=False):
         pass
        
 def chkLowPower(): 
+    chkHeadless()
     setProperty("PTVL.LOWPOWER","false") 
     if REAL_SETTINGS.getSetting("Override.LOWPOWER") == "false":
-        platform = getPlatform()
-        if platform in ['ATV','iOS','XBOX','rPi','Android']:
+        if getPlatform() in ['rPi','iOS','ATV','Android']:
             setProperty("PTVL.LOWPOWER","true")
             REAL_SETTINGS.setSetting('MEDIA_LIMIT', "0")
             REAL_SETTINGS.setSetting('SFX_Enabled', "false")
@@ -1445,12 +1453,20 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('IncludeMeta', "false")
             REAL_SETTINGS.setSetting('respectChannels', "false")
             REAL_SETTINGS.setSetting('Cache_Enabled', "false")
-            if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 0:
+            
+            if int(REAL_SETTINGS.getSetting('Enable_ChannelBug')) > 1:
                 REAL_SETTINGS.setSetting('Enable_ChannelBug', "1")
+            
+            REAL_SETTINGS.setSetting('EnableSettop', "false")
+            if int(REAL_SETTINGS.getSetting('ChannelResetSetting')) in [0,5]:
+                REAL_SETTINGS.setSetting('ChannelResetSetting', "2")
+                
             infoDialog("Settings Optimized for Performance")
     else:
         log("utils: chkLowPower Override = True")
-        
+    log("utils: LOWPOWER = " + getProperty("PTVL.LOWPOWER"))
+    
+def chkHeadless():     
     setProperty("PTVL.SHARING","false") 
     setProperty("PTVL.HEADLESS","false") 
     if CHANNEL_SHARING == True:
@@ -1466,7 +1482,6 @@ def chkLowPower():
             REAL_SETTINGS.setSetting('DisablePlayback', "true")
             REAL_SETTINGS.setSetting('EPG.xInfo', "false")
             REAL_SETTINGS.setSetting('Enable_ChannelBug', "0")
-    log("utils: LOWPOWER = " + getProperty("PTVL.LOWPOWER"))
     log("utils: SHARING = " + getProperty("PTVL.SHARING"))
     log("utils: HEADLESS = " + getProperty("PTVL.HEADLESS"))
 
@@ -1533,18 +1548,32 @@ def chkSettings2():
             Restore(SETTINGS_FLE_LASTRUN, SETTINGS_FLE)
     else:
         log('utils: chkSettings2, Setting2 Backup')
-        if getSize(SETTINGS_FLE) > SETTINGS_FLE_DEFAULT_SIZE:
-            Backup(SETTINGS_FLE, SETTINGS_FLE_LASTRUN)
-            if REAL_SETTINGS.getSetting("AutoBackup") == "true":               
-                SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
-                Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
+        if REAL_SETTINGS.getSetting("AutoBackup") == "true":               
+            backupSettings2()
     return
     
+def cleanBackupSettings2():
+    dirs,files = FileAccess.listdir(BACKUP_LOC)
+    for file in files:
+        try:
+            max = datetime.datetime.now() + datetime.timedelta(days=7)
+            try:
+                epoch = datetime.datetime.strptime((re.compile('settings2.(.+?).xml').findall(file)[0]),"%Y-%m-%d.%H.%M.%S")
+            except:
+                epoch = datetime.datetime.strptime((re.compile('settings2.(.+?).xml').findall(file)[0]),"%Y-%m-%d.%H.%M.%S")
+            if max > epoch:
+                log('utils: cleanBackupSettings2, cleaning ' + ascii(file))
+                FileAccess.delete(os.path.join(BACKUP_LOC,file))
+        except Exception,e:
+            pass
+
 def backupSettings2():
     log('utils: backupSettings2')
-    if getSize(SETTINGS_FLE) > SETTINGS_FLE_DEFAULT_SIZE:
-        SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (str(datetime.datetime.now()).split('.')[0]).replace(' ','.').replace(':','.') + '.xml')
-        Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
+    cleanBackupSettings2()
+    SETTINGS_FLE_BACKUP = os.path.join(BACKUP_LOC, 'settings2.' + (datetime.datetime.now().strftime("%Y-%m-%d.%H.%M.%S")) + '.xml')
+    Backup(SETTINGS_FLE, SETTINGS_FLE_BACKUP)
+    if FileAccess.exists(SETTINGS_FLE_BACKUP) == False:
+        ErrorNotify("Backup Failed")
 
 def restoreSettings2():
     log('utils: restoreSettings2')
@@ -1749,13 +1778,16 @@ def TimeRemainder(val):
         delta = 1
     return delta
 
-def PlaylistLimit():  
-    if isLowPower() == True or getPlatform() == 'Unknown':
+def PlaylistLimit(): 
+    platform = getPlatform()
+    if platform in ['rPi','iOS','ATV','Android']:
         Playlist_Limit = FILELIST_LIMIT[0]
-    elif getPlatform() in ['APU','PowerPC']:
+    elif platform in ['APU','MAC','Unknown']:
         Playlist_Limit = FILELIST_LIMIT[1]
     else:
         Playlist_Limit = FILELIST_LIMIT[2]
+    # else:
+        # Playlist_Limit = FILELIST_LIMIT[3]
     log('utils: PlaylistLimit = ' + str(Playlist_Limit))
     return Playlist_Limit
 

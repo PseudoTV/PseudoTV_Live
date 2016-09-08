@@ -41,7 +41,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
             setProperty("PseudoTVConfig", "True")
             while getProperty("PseudoTVService") == "True":
                 xbmc.sleep(25)
-                
+
             self.madeChanges = 0
             self.showingList = True
             setProperty("PTVL.showingList","True")
@@ -536,7 +536,7 @@ class ConfigWindow(xbmcgui.WindowXMLDialog):
                                 
         #Directory
         elif controlId == 200:    # Directory channel, select
-            retval = browse(0, "Channel " + str(self.channel) + " Directory", "files")
+            retval = browse(0, "Channel " + str(self.channel) + " Directory", "videos")
             if retval and len(retval) > 0:
                 chname = self.chnlst.getChannelName(7, self.channel, retval)
                 self.getControl(200).setLabel('Directory:',label2=chname)

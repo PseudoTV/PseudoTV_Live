@@ -183,6 +183,7 @@
 <string id="60007">Utilities</string>
         <string id="30721">Open Keymap Editor</string>
         <string id="38419">Custom Keymaps [COLOR=dimgrey][View/Install][/COLOR]</string>
+        <string id="31906">Broadcast Available Eventghost Triggers</string>   
     <string id="31999">Channel Tools:</string>
         <string id="31997">Clear Channel Favourites</string>
         <string id="31901">Backup Configurations</string>
@@ -191,9 +192,7 @@
         <string id="31904">Delete Channel Configurations</string>                 
         <string id="31905">Purge all Backups</string>
         <string id="31998">Cache Tools:</string>
-        <string id="30995">Clear BCT Cache</string>
-        <string id="30996">Clear Artwork Cache</string>
-        <string id="30988">Clear Filelist Cache</string>
+        <string id="30988">Clear Cache</string>
     <string id="30722">Plugin Tools:</string>
         <string id="30728">Configure: PseudoCompanion</string>
         <string id="30729">Configure: Playon Browser</string>
@@ -216,7 +215,6 @@
         <string id="32903">E-Manual</string>
     <string id="32904">User Settings</string>
     <string id="30989">Upload Kodi Log</string>   
-    <string id="31906">Broadcast Eventghost Introspect</string>   
     
 <string id="60009">Debug</string>
     <string id="30308">Internal Timers: (Use with Caution!)</string>
@@ -230,20 +228,20 @@
     <string id="39998">Include Metadata [COLOR=dimgrey][Global][/COLOR]</string>
     <string id="30990">DEBUGGING: (Use with Caution!)</string>
     <string id="30993">Enable Log Debugging</string>
-    <string id="39999">Enable File Cache</string>
-    <string id="30991">Override Stream Validation</string>
+    <string id="39999">Enable Caching</string>
     <string id="30992">Disable Google Analytics</string>
     <string id="36996">Opting out? No personal information is shared,</string>
     <string id="36997">only data relevant to the continuation of this project.</string>
-    <string id="30943">Override Optimized Settings ie. Disable "LowPower"</string>
-    <string id="30994">Disable Video Playback [COLOR=dimgrey][Stop & Play functionality ][/COLOR]</string>
-    <string id="30944">Force LiveTV reset on every startup</string>
+    <string id="30991">Override Stream Validation [COLOR=dimgrey][Disable Source Verification][/COLOR]</string>
+    <string id="30943">Override Optimized Settings [COLOR=dimgrey][Disable LowPower Profile][/COLOR]</string>
+    <string id="30994">Disable Video Playback [COLOR=dimgrey][Stop & Play functionality][/COLOR]</string>
+    <string id="30944">Force LiveTV rebuilding on every startup</string>
     <string id="30912">Personal APIKEY (Optional)</string>
     <string id="30922">TMDB APIKEY</string>
     <string id="30932">TVDB APIKEY</string>
     <string id="30942">FANART.TV APIKEY</string>
     <string id="30924">GUIDEBOX APIKEY</string>
-    <string id="30197">binaries (Optional)</string>
+    <string id="30197">Binaries (Optional)</string>
     <string id="30198">ffprobe executable</string>
     <string id="30199">rtmpdump executable</string>
     <string id="30939">Miscellaneous</string>

@@ -207,29 +207,27 @@ class MyPlayer(xbmc.Player):
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded')
         self.stopped = True
+        # revert playcount
+        self.overlay.setWatchedStatus()
         # resume playlist after ondemand
         self.onDemandEnded()
         # clear trakt scrob.
         clearTraktScrob()
-        # revert playcount
-        self.overlay.setWatchedStatus()
             
             
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
         self.stopped = True
-        
         # set static videowindow
         setProperty("PTVL.VideoWindow","false")
         self.overlay.setBackgroundVisible(True)
         self.overlay.UPNPcontrol('stop')
-        
+        # revert playcount
+        self.overlay.setWatchedStatus()
         # resume playlist after ondemand
         self.onDemandEnded()
         # clear trakt scrob.
         clearTraktScrob()
-        # revert playcount
-        self.overlay.setWatchedStatus()
 
         if self.overlay.DisablePlayback == True and getProperty("PTVL.EPG_Opened") == "false":
             self.overlay.openEPG()
@@ -394,8 +392,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.setBackgroundVisible(True)
         self.BackgroundProgress.setVisible(True)
         
-        if self.DisableTrakt == True:
-            EnableTrakt(False)
+        # if self.DisableTrakt == True:
+            # EnableTrakt(False)
                   
         #xbmc.executeJSONRPC('{"jsonrpc":"2.0", "id":1, "method":"Settings.SetSettingValue","params":{"setting":"%s","value":%s}}' %('lookandfeel.enablerssfeeds','true'))()
         try:
@@ -1442,37 +1440,29 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         
     def getExtendedInfo(self, action='', pType='OVERLAY'):
-        # # https://github.com/phil65/script.extendedinfo/blob/master/resources/lib/process.py
-        # title = getProperty(("%s.Title")%pType)
-        # type = getProperty(("%s.Type")%pType)
-        # dbid = getProperty(("%s.DBID")%pType)
-        # id = getProperty(("%s.ID")%pType)
-        # self.log("getExtendedInfo, action = " + action + ", pType = " + pType + ", type = " + type)
-        # self.log("getExtendedInfo, title = " + title + ", dbid = " + dbid + ", id = " + id)
-        # if type == 'movie':
-            # if dbid != '0' and len(dbid) < 6:
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedinfo,dbid=%s,imdb_id=%s)" % (dbid,id))
-            # elif id != '0':
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedinfo,imdb_id=%s)" % (id))
-            # else:
-                # Unavailable()
-        # elif type == 'tvshow':
-            # if dbid != '0' and len(dbid) < 6:
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedtvinfo,name=%s,dbid=%s,tvdb_id=%s)" % (title,dbid,id))
-            # elif id != '0':
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedtvinfo,name=%s,tvdb_id=%s)" % (title,id))
-            # else:
-                # Unavailable()
-        # elif type == 'youtube':
-            # YTtype = (ADDON_SETTINGS.getSetting('Channel_' + getProperty(("%s.Chnum")%pType) + '_2'))
-            # YTinfo = ADDON_SETTINGS.getSetting('Channel_' + getProperty(("%s.Chnum")%pType) + '_1')
-            # if YTtype in ['1','Channel']:
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=youtubeusersearch,id=%s)" % YTinfo)
-            # elif YTtype in ['2','Playlist']:
-                # xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=youtubeplaylist,id=%s)" % YTinfo)
-            # else:
-                # Unavailable()
-        Unavailable()
+        # https://github.com/phil65/script.extendedinfo/blob/master/resources/lib/process.py
+        title = getProperty(("%s.Title")%pType)
+        type = getProperty(("%s.Type")%pType)
+        dbid = getProperty(("%s.DBID")%pType)
+        id = getProperty(("%s.ID")%pType)
+        self.log("getExtendedInfo, action = " + action + ", pType = " + pType + ", type = " + type)
+        self.log("getExtendedInfo, title = " + title + ", dbid = " + dbid + ", id = " + id)
+        if type == 'movie':
+            if dbid != '0' and len(dbid) < 6:
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedinfo,name=%s,dbid=%s)" % (title,dbid))
+            elif id != '0':
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedinfo,name=%s,imdb_id=%s)" % (title,id))
+            else:
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedinfo,name=%s)" % (title))
+        elif type in ['tvshow','episode']:
+            if dbid != '0' and len(dbid) < 6:
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedtvinfo,name=%s,dbid=%s)" % (title,dbid))
+            elif id != '0':
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedtvinfo,name=%s,tvdb_id=%s)" % (title,id))
+            else:
+                xbmc.executebuiltin("XBMC.RunScript(script.extendedinfo,info=extendedtvinfo,name=%s)" % (title))
+        else:
+            Unavailable()
                 
       
     def toggleShowStartover(self, state):
@@ -1598,17 +1588,19 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
     def showMoreInfo(self):
         self.log('showMoreInfo') 
-        self.showingMoreInfo = True           
-        self.getControl(1012).setLabel('More Info')
-        self.getControl(1013).setLabel('Find Similar')
-        self.getControl(1014).setLabel('Record Show')
-        self.getControl(1015).setLabel('Set Reminder')
-        
-        self.hidePOP()
-        self.hideInfo()
-        self.setVisible(102,False)
-        self.setVisible(222,True)
-        self.setFocus(1012)
+        if self.showingMoreInfo == False:
+            self.showingMoreInfo = True           
+            self.getControl(1012).setLabel('More Info')
+            self.getControl(1013).setLabel('Find Similar')
+            self.getControl(1014).setLabel('Record Show')
+            self.getControl(1015).setLabel('Set Reminder')
+            
+            self.hidePOP()
+            self.hideInfo()
+            self.setVisible(102,False)
+            self.setVisible(222,True)
+            xbmc.sleep(25)
+            self.setFocus(1012)
         self.hideMenuControl('MoreInfo')
 
             
@@ -2299,6 +2291,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 self.notPlayingCount = 0              
                 self.lastPlayTime = self.Player.getPlayerTime()
                 self.lastPlayingChannel = self.currentChannel
+                # self.lastPlaylistPosition = xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition()
                 self.lastPlaylistPosition = self.channels[self.currentChannel - 1].playlistPosition
                 time.sleep(2)
                 continue
@@ -3703,8 +3696,8 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.UPNPcontrol('stop')
         FileAccess.finish()
                 
-        if self.DisableTrakt == True:
-            EnableTrakt(True)
+        # if self.DisableTrakt == True:
+            # EnableTrakt(True)
             
         if action == 'Restart':
             xbmc.executebuiltin('XBMC.AlarmClock( Restarting PseudoTV Live, XBMC.RunScript(' + ADDON_PATH + '/default.py),0.5,true)')

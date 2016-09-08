@@ -1,8 +1,9 @@
-[*] Tweaked Trakt and playcount behavior. "Disable Trakt" temporarily disables trakt scrobbling. "Disable Playcount" keeps Kodi from updating playcount while in PTVL.
-[*] Modified LiveTV autotuning to include advanced channel rule "exclude metadata". LiveTV channels build faster but missing meta will be ignored.
+[*] Fixed extendinfo plugin support and MoreInfo Overlay buttons.
+[*] Tweaked playcount behavior. "Disable Playcount" keeps Kodi from updating playcount while in PTVL.
+[*] Modified LiveTV autotuning for LowPower devices; Advanced channel rule "exclude metadata" added. LiveTV channels build faster but missing meta will be ignored.
 [*] Modified default settings; Settop disabled and channel building parameters changed. "IncludeMeta [Global]" disabled.
 [*] Reverted back to Kodi player progress bar.
-[*] Reworked BCT sources and integration. Commercials and Trailers can now use Kodi plugins.
+[*] Reworked BCT sources and integration. "Work In Progress" Commercials and Trailers can use Kodi plugins, both temporarily disabled until update is complete.
 [*] Interface enhancements, seamless autotuning and channel building.
 [*] Added "Headless" server option for channel sharing. More info: http://forum.kodi.tv/showthread.php?tid=279789
 [*] Removed "Override logo" setting, Moved logo maintenance to in-app channel manager.
