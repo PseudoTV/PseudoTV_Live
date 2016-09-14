@@ -318,6 +318,7 @@ class ChannelList:
             
         self.channels[channel - 1].type = chtype
         self.channels[channel - 1].isSetup = True
+        self.channels[channel - 1].hasChanged = False
         self.channels[channel - 1].loadRules(channel)
         self.runActions(RULES_ACTION_START, channel, self.channels[channel - 1])
 
@@ -429,8 +430,8 @@ class ChannelList:
                             ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', 'False')
                             self.channels[channel - 1].isSetup = True
                             
-                    if self.channels[channel - 1].hasChanged == True:
-                        ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', 'True')
+        if self.channels[channel - 1].hasChanged == True:
+            ADDON_SETTINGS.setSetting('Channel_' + str(channel) + '_changed', 'True')
                     
         self.runActions(RULES_ACTION_BEFORE_CLEAR, channel, self.channels[channel - 1])
 
@@ -659,14 +660,14 @@ class ChannelList:
             elif chtype in [10,11] and (limit > YOUTUBERSS_MAXPARSE or limit == 0):
                 limit = YOUTUBERSS_MAXPARSE
             elif limit == 0:
-                limit = MAX_MEDIA_LIMIT
+                limit = self.Playlist_Limit
                          
         elif chtype == 8:
             limit = LIVETV_MAXPARSE
         elif chtype == 9:
             limit = int(INTERNETTV_MAXPARSE / INTERNETTV_DURATION)
         elif limit == 0:
-            limit = MAX_MEDIA_LIMIT #Unlimited limit ie. '0' is a invalid limit count, and only valid for kodi xsp. Make it a real number by setting a boundary.
+            limit = self.Playlist_Limit #Unlimited limit ie. '0' is a invalid limit count, and only valid for kodi xsp. Make it a real number by setting a boundary.
         else:
             limit = MEDIA_LIMIT
         self.log("makeChannelList, Using Parse-limit " + str(limit))
@@ -1866,7 +1867,7 @@ class ChannelList:
 
         if len(showList) == 0:
             self.setChannelChanged(self.settingChannel)
-            desc = 'Guidedata from ' + str(setting3) + ' is currently unavailable, please verify channel configuration.'
+            desc = 'Guidedata from ' + str(setting3) + ' currently unavailable, please verify channel configuration.'
             showList = self.buildInternetTVFileList('5400', setting2, self.getChannelName(9, self.settingChannel, setting1), desc, 24)
         # elif len(showList) < LIVETV_MAXPARSE:
             # self.setChannelChanged(self.settingChannel)
@@ -4984,7 +4985,7 @@ class ChannelList:
     def setChannelChanged(self, channel, changed=True):
         self.log('setChannelChanged, channel = ' + str(channel))
         self.channels[channel - 1].hasChanged = changed
-            
+
             
     def dict2tmpstr(self, dList):
         self.log('dict2tmpstr')

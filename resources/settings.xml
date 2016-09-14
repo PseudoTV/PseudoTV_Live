@@ -33,6 +33,7 @@
             <setting id="Disable_Watched" type="bool"   label="30311" default="false"/>
             <setting id="DisablePlayback" type="bool"   label="30994" default="false"/>
             <setting id="Enable_quickflip" type="bool"   label="30374" default="false"/>
+            <setting id="enable_subtitle" type="enum" values="Disabled|Enabled|Last State" label="30329" default="0" />
             <setting id="enable_mute" type="bool"   label="30373" default="true"/>
             <setting id="HideClips" type="bool"   label="30215" default="true"/>
             <setting id="ClipLength" type="enum" subsetting="true"   label="30216" visible="eq(-1,true)" values="15s|30s|60s|90s|120s|240s|360s|480s" default="5"/>
@@ -69,8 +70,7 @@
             <setting id="infoOnStart" type="bool" label="30227" default="true"/>       
             <setting id="InfoOnChange" type="bool" label="30221" default="true"/>  
             <setting id="InfoTimer" subsetting="true" visible="eq(-1,true)|eq(-2,true)" type="enum"   label="30222" values="3|5|10|15|20|25" default="1"/>
-            <setting id="Enable_ChannelBug" type="enum"   label="30224" values="Disabled|Color|White|Animated" default="2"/>
-            <setting id="EnableSubtitles" type="bool"   label="30329" default="false"/>   
+            <setting id="Enable_ChannelBug" type="enum"   label="30224" values="Disabled|Color|White|Animated" default="2"/> 
             <setting id="EnableComingUp" type="enum"   label="30226" values="Disabled|Info Bar|On Screen PopUp|Notification" default="2"/>
    </category>
     <!-- Autotune  -->

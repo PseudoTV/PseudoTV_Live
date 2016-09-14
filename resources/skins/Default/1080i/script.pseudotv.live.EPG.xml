@@ -3,7 +3,6 @@
     <allowoverlay>yes</allowoverlay>
     <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onunload>SetProperty(PTVL.EPG_Opened,false,10000)</onunload> 
-    <onload>SetProperty(PTVL.EPG_Opened,true,10000)</onload>
     <onload condition="Control.IsVisible(9000)">ActivateWindow(10006)</onload><!-- Activate random window, workaround for videowindow starting paused -->
     <onunload>ActivateWindow(12005)</onunload>
     <onload condition="System.HasAddon(script.tv.show.next.aired)">RunScript(script.tv.show.next.aired,backend=True)</onload>

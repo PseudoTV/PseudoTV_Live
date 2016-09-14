@@ -31,7 +31,7 @@
                 <texture>VODbackground.png</texture>
                 <colordiffuse>FFFFFFFF</colordiffuse>
                 <animation effect="fade" start="85" end="85" condition="True">Conditional</animation>
-            </control>         
+            </control>        
             <control type="image">
                 <width>1920</width>
                 <height>1080</height>
@@ -342,6 +342,15 @@
                     <aspectratio aligny="top">keep</aspectratio>
                 </control>
             </focusedlayout>
+        </control>    
+        <control type="image">
+            <posx>30</posx>
+            <posy>300</posy>
+            <width>300</width>
+            <height>300</height>
+            <description>VOD Background</description>
+            <texture>comingsoon.png</texture>
+            <animation effect="fade" start="85" end="85" condition="True">Conditional</animation>
         </control>         
     </controls>
 </window>

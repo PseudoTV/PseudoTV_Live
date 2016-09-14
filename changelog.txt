@@ -1,3 +1,5 @@
+[*] New! "missing" duration details that are queried by PTVL are permanently written to Kodis DB for future channel building.
+[*] Tweaked EPG performance, added livetv guidedata cutoffs to avoid repeating old listings.
 [*] Fixed extendinfo plugin support and MoreInfo Overlay buttons.
 [*] Tweaked playcount behavior. "Disable Playcount" keeps Kodi from updating playcount while in PTVL.
 [*] Modified LiveTV autotuning for LowPower devices; Advanced channel rule "exclude metadata" added. LiveTV channels build faster but missing meta will be ignored.
@@ -12,7 +14,7 @@
 [*] Tweaked "Custom Playlist" Autotuning. File naming scheme for Video/Music/Mixed playlists "channel_#_name.xsp" ex. channel_1_mychannel.xsp.
 [*] Added "Use Native Channel Numbers" Autotuning option. When enabled autotuning "LiveTV" ie. (PVR & HDHomeRun) or "Custom Smartplaylists" 
     PTVL will use (if availabe) the backend or playlist's given channel number. Channel numbers that exceed max allowable value will roll over 
-    to lowest 10th degree. ex. Channel 1000 becomes Channel 100. [COLOR=red]Caution[/COLOR] creating a large segmented channel lineup can greatly increase channel building times.
+    to lowest 10th degree. ex. A default max of 999; channel 1000 becomes Channel 100. [COLOR=red]Caution[/COLOR] creating a large segmented channel lineup can greatly increase channel building times.
 [*] Fixed "Offline" & missing HDHomeRun device issues.
 [*] Removed "Directory" Autotuning & Disabled Directory Channels for LowPower devices. Directory channels still availabe via in-app channel manager.
 [*] Added groundwork for HDHomerun API support, Currently includes EPG listings. DVR Coming Soon!

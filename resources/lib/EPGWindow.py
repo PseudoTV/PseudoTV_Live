@@ -74,7 +74,7 @@ try:
             try:
                 self.rowCount = int(getProperty("EPG.rowCount"))
             except:
-                self.rowCount = 6
+                self.closeEPG()
                 
             self.channelButtons = [None] * self.rowCount
             self.channelTags = [None] * self.rowCount
@@ -475,7 +475,7 @@ try:
                 del self.channelButtons[row][:]
                 del self.channelTags[row][:]
                 
-                # # todo filter epg
+                # todo filter epg
                 playlistpos = int(xbmc.PlayList(xbmc.PLAYLIST_MUSIC).getposition())
                 self.log('setButtons, playlistpos = ' + str(playlistpos))
 
@@ -526,11 +526,10 @@ try:
                     endtime = starttime + 5400
                     totaltime = 0
                     totalloops = 0
-                    
-                    while reftime < endtime and totalloops < 1000:
+
+                    while reftime < endtime and totalloops < GUIDE_LIMIT:
                         xpos = int(basex + (totaltime * (basew / 5400.0)))
                         tmpdur = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos)
-                        # epochBeginDate = datetime_to_epoch(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos))
                         shouldskip = False
                         
                         # this should only happen the first time through this loop
@@ -550,10 +549,9 @@ try:
                             elif chtype <= 7 and (self.MyOverlayWindow.channels[curchannel - 1].getItemgenre(playlistpos)).lower() in BCT_TYPES:
                                 shouldskip = True
                                 tmpdur = 0
-                            # elif chtype == 8 and epochBeginDate + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) <  time.time():
-                                # self.chanlist.setChannelChanged(curchannel)
-                                # shouldskip = True
-                                # tmpdur = 0
+                            elif chtype == 8 and datetime_to_epoch(self.MyOverlayWindow.channels[curchannel - 1].getItemtimestamp(playlistpos)) + self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos) < time.time():
+                                shouldskip = True
+                                tmpdur = LIVETV_MAXPARSE 
                             elif chtype not in IGNORE_SEEKTIME_CHTYPE:
                                 nextlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos + 1)
                                 prevlen = self.MyOverlayWindow.channels[curchannel - 1].getItemDuration(playlistpos - 1)
@@ -609,14 +607,14 @@ try:
                         playlistpos += 1
                         totalloops += 1
 
-                    if totalloops >= 1000:
-                        self.log("Broken big loop, too many loops, reftime is " + str(reftime) + ", endtime is " + str(endtime))
+                    if totalloops >= GUIDE_LIMIT:
+                        self.log("setButtons, Broken big loop, too many loops, reftime is " + str(reftime) + ", endtime is " + str(endtime))
 
                     # If there were no buttons added, show some default button
                     if len(self.channelButtons[row]) == 0:
                         self.channelButtons[row].append(xbmcgui.ControlButton(basex, basey, basew, baseh, self.MyOverlayWindow.getChname(curchannel), focusTexture=self.textureButtonFocus, noFocusTexture=self.textureButtonNoFocus, alignment=4, shadowColor=self.shadowColor, font=self.textfont, textColor=self.textcolor, focusedColor=self.focusedcolor))
-            except:
-                self.log("exception in setButtons", xbmc.LOGERROR)
+            except Exception,e:
+                self.log("setButtons, exception " + str(e), xbmc.LOGERROR)
                 self.log(traceback.format_exc(), xbmc.LOGERROR)
             self.log('setButtons return')
             return True
@@ -781,9 +779,6 @@ try:
             if self.GotoChannelTimer.isAlive():
                 self.GotoChannelTimer.cancel()  
                 
-            if self.MyOverlayWindow.channelThread.isAlive():
-                self.MyOverlayWindow.channelThread.unpause()
-                
             self.removeControl(self.currentTimeBar)
             self.close()
                 
@@ -917,22 +912,28 @@ try:
                
         def GoPgDown(self):
             self.log('GoPgDown')
-            newchannel = self.centerChannel
-            for x in range(0, 6):
-                newchannel = self.MyOverlayWindow.fixChannel(newchannel + 1)
-            self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel))
-            self.setProperButton(0)
-            self.log('GoPgDown return') 
+            try:
+                newchannel = self.centerChannel
+                for x in range(0, 6):
+                    newchannel = self.MyOverlayWindow.fixChannel(newchannel + 1)
+                self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel))
+                self.setProperButton(0)
+                self.log('GoPgDown return') 
+            except:
+                pass
 
         
         def GoPgUp(self):
             self.log('GoPgUp')
-            newchannel = self.centerChannel
-            for x in range(0, 6):
-                newchannel = self.MyOverlayWindow.fixChannel(newchannel - 1, False)
-            self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel))
-            self.setProperButton(0)
-            self.log('GoPgUp return')
+            try:
+                newchannel = self.centerChannel
+                for x in range(0, 6):
+                    newchannel = self.MyOverlayWindow.fixChannel(newchannel - 1, False)
+                self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(newchannel))
+                self.setProperButton(0)
+                self.log('GoPgUp return')
+            except:
+                pass
 
 
         def GoDown(self):
@@ -940,14 +941,16 @@ try:
             # if self.getFocus() in [EPG_BUTTON_IDS]:
                 # self.setProperButton(0)
             # else:
-            
-            # change controls to display the proper junks
-            if self.focusRow == self.rowCount - 1:
-                self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel + 1))
-                self.focusRow = self.rowCount - 2
+            try:
+                # change controls to display the proper junks
+                if self.focusRow == self.rowCount - 1:
+                    self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel + 1))
+                    self.focusRow = self.rowCount - 2
 
-            self.setProperButton(self.focusRow + 1)
-            self.log('goDown return')
+                self.setProperButton(self.focusRow + 1)
+                self.log('goDown return')
+            except:
+                pass
 
             
         def GoUp(self):
@@ -958,87 +961,93 @@ try:
                 # return
             # elif self.getFocus() in [EPG_BUTTON_IDS]:
                 # self.setProperButton(0)
+            try:
+                # change controls to display the proper junks
+                if self.focusRow == 0:
+                    self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel - 1, False))
+                    self.focusRow = 1
 
-            # change controls to display the proper junks
-            if self.focusRow == 0:
-                self.setChannelButtons(self.shownTime, self.MyOverlayWindow.fixChannel(self.centerChannel - 1, False))
-                self.focusRow = 1
-
-            self.setProperButton(self.focusRow - 1)
-            self.log('goUp return')
+                self.setProperButton(self.focusRow - 1)
+                self.log('goUp return')
+            except:
+                pass
 
         
         def GoLeft(self):
             self.log('goLeft')
             if self.getFocus() in [EPG_BUTTON_IDS]:
                 return
-                
-            basex, basey = self.getControl(111 + self.focusRow).getPosition()
-            basew = self.getControl(111 + self.focusRow).getWidth()
+            try:     
+                basex, basey = self.getControl(111 + self.focusRow).getPosition()
+                basew = self.getControl(111 + self.focusRow).getWidth()
 
-            # change controls to display the proper junks
-            if self.focusIndex == 0:
+                # change controls to display the proper junks
+                if self.focusIndex == 0:
+                    left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
+                    width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
+                    left = left - basex
+                    starttime = self.shownTime + (left / (basew / 5400.0))
+                    self.setChannelButtons(self.shownTime - 1800, self.centerChannel)
+                    curbutidx = self.findButtonAtTime(self.focusRow, starttime + 30)
+
+                    if(curbutidx - 1) >= 0:
+                        self.focusIndex = curbutidx - 1
+                    else:
+                        self.focusIndex = 0
+                else:
+                    self.focusIndex -= 1
+
                 left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
                 width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
                 left = left - basex
                 starttime = self.shownTime + (left / (basew / 5400.0))
-                self.setChannelButtons(self.shownTime - 1800, self.centerChannel)
-                curbutidx = self.findButtonAtTime(self.focusRow, starttime + 30)
-
-                if(curbutidx - 1) >= 0:
-                    self.focusIndex = curbutidx - 1
-                else:
-                    self.focusIndex = 0
-            else:
-                self.focusIndex -= 1
-
-            left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
-            width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
-            left = left - basex
-            starttime = self.shownTime + (left / (basew / 5400.0))
-            endtime = starttime + (width / (basew / 5400.0))
-            self.setFocus(self.channelButtons[self.focusRow][self.focusIndex])
-            self.setShowInfo()
-            self.focusEndTime = endtime
-            self.focusTime = starttime + 30
-            self.log('goLeft return')
+                endtime = starttime + (width / (basew / 5400.0))
+                self.setFocus(self.channelButtons[self.focusRow][self.focusIndex])
+                self.setShowInfo()
+                self.focusEndTime = endtime
+                self.focusTime = starttime + 30
+                self.log('goLeft return')
+            except:
+                pass
 
         
         def GoRight(self):
             self.log('goRight')
             if self.getFocus() in [EPG_BUTTON_IDS]:
-                return
-                
-            basex, basey = self.getControl(111 + self.focusRow).getPosition()
-            basew = self.getControl(111 + self.focusRow).getWidth()
+                return  
+            try:
+                basex, basey = self.getControl(111 + self.focusRow).getPosition()
+                basew = self.getControl(111 + self.focusRow).getWidth()
 
-            # change controls to display the proper junks
-            if self.focusIndex == len(self.channelButtons[self.focusRow]) - 1:
+                # change controls to display the proper junks
+                if self.focusIndex == len(self.channelButtons[self.focusRow]) - 1:
+                    left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
+                    width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
+                    left = left - basex
+                    starttime = self.shownTime + (left / (basew / 5400.0))
+                    self.setChannelButtons(self.shownTime + 1800, self.centerChannel)
+                    curbutidx = self.findButtonAtTime(self.focusRow, starttime + 30)
+
+                    if(curbutidx + 1) < len(self.channelButtons[self.focusRow]):
+                        self.focusIndex = curbutidx + 1
+                    else:
+                        self.focusIndex = len(self.channelButtons[self.focusRow]) - 1
+                else:
+                    self.focusIndex += 1
+
                 left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
                 width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
                 left = left - basex
                 starttime = self.shownTime + (left / (basew / 5400.0))
-                self.setChannelButtons(self.shownTime + 1800, self.centerChannel)
-                curbutidx = self.findButtonAtTime(self.focusRow, starttime + 30)
-
-                if(curbutidx + 1) < len(self.channelButtons[self.focusRow]):
-                    self.focusIndex = curbutidx + 1
-                else:
-                    self.focusIndex = len(self.channelButtons[self.focusRow]) - 1
-            else:
-                self.focusIndex += 1
-
-            left, top = self.channelButtons[self.focusRow][self.focusIndex].getPosition()
-            width = self.channelButtons[self.focusRow][self.focusIndex].getWidth()
-            left = left - basex
-            starttime = self.shownTime + (left / (basew / 5400.0))
-            endtime = starttime + (width / (basew / 5400.0))
-            self.setFocus(self.channelButtons[self.focusRow][self.focusIndex])
-            self.setShowInfo()
-            self.focusEndTime = endtime
-            self.focusTime = starttime + 30
-            self.log('goRight return')
-
+                endtime = starttime + (width / (basew / 5400.0))
+                self.setFocus(self.channelButtons[self.focusRow][self.focusIndex])
+                self.setShowInfo()
+                self.focusEndTime = endtime
+                self.focusTime = starttime + 30
+                self.log('goRight return')
+            except:
+                pass
+            
             
         def findButtonAtTime(self, row, selectedtime):
             self.log('findButtonAtTime ' + str(row))

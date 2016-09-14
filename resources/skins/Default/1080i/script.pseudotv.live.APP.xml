@@ -37,7 +37,7 @@
                 <height>1080</height>
                 <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
                 <texture colordiffuse="dd0c2134">overlays/vignette_full.png</texture>
-            </control>
+            </control>     
         </control>
         <control type="grouplist">
             <posx>30</posx>
@@ -452,5 +452,14 @@
                 <!-- <animation effect="fade" start="100" end="0" time="250">WindowClose</animation> -->
             </control>
         </control>
+        <control type="image">
+            <posx>30</posx>
+            <posy>300</posy>
+            <width>300</width>
+            <height>300</height>
+            <description>VOD Background</description>
+            <texture>comingsoon.png</texture>
+            <animation effect="fade" start="85" end="85" condition="True">Conditional</animation>
+        </control>           
     </controls>
 </window>
