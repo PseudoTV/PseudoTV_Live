@@ -1,4 +1,5 @@
-[*] New! "missing" duration details that are queried by PTVL are permanently written to Kodis DB for future channel building.
+[*] Improved "Disable Playback" and "Failed Playback".
+[*] New! Missing duration details that are queried by PTVL are permanently written to Kodis DB for future channel building.
 [*] Tweaked EPG performance, added livetv guidedata cutoffs to avoid repeating old listings.
 [*] Fixed extendinfo plugin support and MoreInfo Overlay buttons.
 [*] Tweaked playcount behavior. "Disable Playcount" keeps Kodi from updating playcount while in PTVL.
@@ -38,7 +39,7 @@
 [*] Tweaked internal timings, corrected various bugs.
 [*] Added automatic animated logo download when enabled.
 [*] Added support for animated gif TV Logos & Channel Bugs. New options added under "Visual" settings tab.
-    Ex. http://static.oprah.com/css/OWN_2/global_assets/logo-owntv-gold-anim.gif
+    Ex. https://github.com/PseudoTV/PseudoTV_Logos/blob/master/_Animated/O/Own%20TV.gif
 [*] "OnNow" Menu temporarily disabled
 [*] Proper EPG/Overlay BCT content handling.
 [*] Improved Playonbrowser plugin support, requires v.1.0.13. LiveTV tested and working with Xfinity and TWC.

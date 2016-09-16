@@ -195,15 +195,27 @@ class MyPlayer(xbmc.Player):
         self.log('onPlayBackStarted')
         self.stopped = False
         self.manuallyStopped = False
-        # show pip videowindow    
         setProperty("PTVL.VideoWindow","true")
-        setProperty('PTVL.PLAYER_LOG',self.getPlayerFile())
-        # devise a way to detect ondemand playback todo   
+        self.isOndemand(self.getPlayerTitle(),self.getPlayerFile())        
         # fix for fullscreen video bug when playback is started while epg is opened.
         if self.overlay.isWindowOpen() != False:
             self.overlay.windowSwap(self.overlay.isWindowOpen(),True)
  
+ 
+    def isOndemand(self, title, file):
+        self.overlay.OnDemand = False
+        if len(getProperty('OVERLAY.Mediapath')) > 0 and len(file) > 0:
+            if getProperty('OVERLAY.Mediapath').startswith(('plugin','PlayMedia')) or getProperty('OVERLAY.Mediapath')[-4:].lower() == 'strm':  
+                if getProperty('OVERLAY.Title').lower() != title.lower():
+                    self.overlay.OnDemand = True
+            else:
+                if getProperty('OVERLAY.Mediapath') != file:
+                    self.overlay.OnDemand = True
+            setProperty('PTVL.PLAYER_LOG',file)
+        self.log('isOndemand = ' + str(self.overlay.OnDemand))
+        return self.overlay.OnDemand
 
+        
     def onDemandEnded(self):
         self.log('onDemandEnded') 
         #Force next playlist item after impromptu ondemand playback
@@ -237,10 +249,7 @@ class MyPlayer(xbmc.Player):
         self.onDemandEnded()
         # clear trakt scrob.
         clearTraktScrob()
-
-        # open epg when DisablePlayback is enabled.
-        if self.overlay.DisablePlayback == True and self.overlay.isWindowOpen() == False:
-            self.overlay.openEPG()
+        
         
 # overlay window to catch events and change channels
 class TVOverlay(xbmcgui.WindowXMLDialog):
@@ -267,7 +276,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.fillArtworkTimer = threading.Timer(0.1, self.fillArtwork_thread)
         self.GotoChannelTimer = threading.Timer(0.1, self.setChannel)
         self.UPNPcontrolTimer = threading.Timer(2.0, self.UPNPcontrol_thread)
-        self.getTMPSTRTimer = threading.Timer(0.1, self.getTMPSTR_Thread)
+        self.getTMPSTRTimer = threading.Timer(1.0, self.getTMPSTR_Thread)
         self.ReminderTimer = threading.Timer(2.0, self.showReminder)      
         self.ChangeWatchedTimer = threading.Timer(5.0, self.setWatchedStatus_Thread)
         self.sleepTimer = threading.Timer(2.0, self.sleepPrompt)
@@ -293,6 +302,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.showingNextAired = False  
         self.showingMenuAlt = False
         self.showingBrowse = False
+        self.OnDemand = False
         self.OnInput = False
         self.DisableOverlay = False
         self.notificationShowedNotif = False
@@ -301,7 +311,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.showingSleep = False
         self.showingReminder = False
         self.ignoreInfoAction = False
-        self.OnDemand = False 
         self.showChannelBug = False
         self.showNextItem = False
         self.ignoreSeektime = False
@@ -598,11 +607,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             if self.channelThread.isAlive() == False:
                 self.channelThread.start()
         else:
-            self.postBackgroundLoading()
-        
-        if self.DisablePlayback == True:
-            self.openEPG()
-        
+            self.postBackgroundLoading()      
         self.actionSemaphore.release() 
         self.log('onInit return')
             
@@ -674,8 +679,9 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             FileAccess.copy(os.path.join(realloc,'settings2.xml'), os.path.join(SETTINGS_LOC,'settings2.xml'))
             realloc = xbmc.translatePath(os.path.join(realloc, 'cache',''))
 
-            for i in range(CHANNEL_LIMIT):
-                FileAccess.copy(os.path.join(realloc,'channel_' + str(i) + '.m3u'), os.path.join(CHANNELS_LOC,'channel_' + str(i) + '.m3u'))
+            for i in range(self.maxChannels):
+                if self.channels[i].isValid:
+                    FileAccess.copy(os.path.join(realloc,'channel_' + str(i+1) + '.m3u'), os.path.join(CHANNELS_LOC,'channel_' + str(i+1) + '.m3u'))
 
 
                 
@@ -688,7 +694,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
 
             for i in range(self.maxChannels):
                 if self.channels[i].isValid:
-                    FileAccess.copy(os.path.join(CHANNELS_LOC,'channel_' + str(i) + '.m3u'), os.path.join(realloc,'channel_' + str(i) + '.m3u'))
+                    FileAccess.copy(os.path.join(CHANNELS_LOC,'channel_' + str(i+1) + '.m3u'), os.path.join(realloc,'channel_' + str(i+1) + '.m3u'))
 
                 
     def message(self, data):
@@ -1050,10 +1056,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.infoOffset = 0
         self.lastActionTime = 0
         self.notPlayingCount = 0
-   
-        if self.OnDemand == True:
-            self.OnDemand = False
-                 
+
         self.Cinema_Mode = False
         if chname == 'PseudoCinema':
             self.Cinema_Mode = True
@@ -1421,7 +1424,6 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
             Browse_FILE, Browse_EXT = os.path.splitext(self.Browse)
             if Browse_EXT.lower() in extTypes:
                 self.log("SideBarAction, Browse = " + self.Browse)
-                self.OnDemand = True
                 self.Player.play(self.Browse)
         elif type == 'Search':
             self.showingBrowse = True
@@ -1525,7 +1527,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         if self.OnDemand == True:   
             position = -999
             mediapath = self.Player.getPlayingFile()
-            setProperty("OVERLAY.DYNAMIC_LABEL",'ON DEMAND')   
+            setProperty("OVERLAY.DYNAMIC_LABEL",'ONDEMAND')   
             self.currentPlayInfoBar.setVisible(True)
             self.currentPlayMoreInfoBar.setVisible(True)
             self.currentPlayInfoTime.setVisible(True)
@@ -2137,15 +2139,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         self.runningActionId = 0
         return parameter
 
-        
-    # def TitleCHK(self, title):
-        # if title == getProperty('PTVL.TitleCHK'):
-            # self.OnDemand = False
-        # else:
-            # self.OnDemand = True
-        # self.log("TitleCHK, OnDemand = " + str(self.OnDemand))
 
-        
     def notificationAction(self):        
         while not KODI_MONITOR.abortRequested():
             if self.isExiting == True:
@@ -2300,39 +2294,37 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
                 # self.lastPlaylistPosition = self.channels[self.currentChannel - 1].playlistPosition
             else:
                 self.notPlayingCount += 1
-                
-                if self.notPlayingCount >= 3:
-                    setBackgroundLabel(('Loading: %s (%ss)') % (self.getChname(self.currentChannel), str(self.playActionTime - self.notPlayingCount)),' ', ' ')
-                    self.log("playerTimerAction, notPlayingCount = " + str(self.notPlayingCount))
-                
-                    if self.notPlayingCount >= self.playActionTime:
-                        if xbmc.getCondVisibility('Window.IsActive(busydialog)') == True and self.Player.isAnythingPlaying() == False:
-                            self.ForceStop()
-                            
-                        if self.Player.ignoreNextStop == False:
-                            if self.notPlayingCount > int(round(self.playActionTime/3)*3):
-                                setBackgroundLabel("Loading Error: Returning Channel",' ', ' ')
-                                self.setChannel(self.fixChannel(self.lastActionTrigger('LastValid')))
-                            elif self.notPlayingCount > int(round(self.playActionTime/3)*2): 
-                                setBackgroundLabel("Loading Error: Skipping Channel",' ', ' ')
-                                self.setChannel(self.fixChannel(self.lastActionTrigger()))
-                            else: 
-                                setBackgroundLabel("Loading Error: Skipping Program",' ', ' ')
-                                self.SkipNext()
-                        else:
-                            setBackgroundLabel("Loading Error: Ignoring Channel",' ', ' ')
-                            self.InvalidateChannel(self.currentChannel, self.lastActionTrigger())
 
-                        
+                if self.DisablePlayback == True and self.notPlayingCount == 3:
+                    self.log("playerTimerAction, DisablePlayback = True")
+                    self.openEPG()
+                else:
+                    if self.notPlayingCount >= 3:
+                        setBackgroundLabel(('Loading: %s (%ss)') % (self.getChname(self.currentChannel), str(self.playActionTime - self.notPlayingCount)),' ', ' ')
+                        self.log("playerTimerAction, notPlayingCount = " + str(self.notPlayingCount))
+                    
+                        if self.notPlayingCount >= self.playActionTime:
+                            if xbmc.getCondVisibility('Window.IsActive(busydialog)') == True and self.Player.isAnythingPlaying() == False:
+                                self.ForceStop()
+                                
+                            if self.Player.ignoreNextStop == False:
+                                if self.notPlayingCount > int(round(self.playActionTime/3)*3):
+                                    setBackgroundLabel("Loading Error: Returning Channel",' ', ' ')
+                                    self.setChannel(self.fixChannel(self.lastActionTrigger('LastValid')))
+                                elif self.notPlayingCount > int(round(self.playActionTime/3)*2): 
+                                    setBackgroundLabel("Loading Error: Skipping Channel",' ', ' ')
+                                    self.setChannel(self.fixChannel(self.lastActionTrigger()))
+                                else: 
+                                    setBackgroundLabel("Loading Error: Skipping Program",' ', ' ')
+                                    self.SkipNext()
+                            else:
+                                setBackgroundLabel("Loading Error: Ignoring Channel",' ', ' ')
+                                self.InvalidateChannel(self.currentChannel, self.lastActionTrigger())
                             
            
-                # if self.DisablePlayback == True and self.notPlayingCount == 3:
-                    # self.log("playerTimerAction, DisablePlayback = True")
-                    # self.openEPG()
 
-                # # else:
-                    # # 
          
+
 
 
     def SkipNext(self, noAction=False):
@@ -2561,17 +2553,17 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
     def getTMPSTR(self, chtype, chname, chnum, mediapath, position):
         self.log('getTMPSTR')         
         if self.getTMPSTRTimer.isAlive():
-            self.getTMPSTRTimer.join() 
             self.getTMPSTRTimer.cancel()
-        self.getTMPSTRTimer = threading.Timer(0.1, self.getTMPSTR_Thread, [chtype, chname, chnum, mediapath, position])
+        self.getTMPSTRTimer = threading.Timer(2.0, self.getTMPSTR_Thread, [chtype, chname, chnum, mediapath, position])
         self.getTMPSTRTimer.name = "getTMPSTRTimer" 
         if self.isExiting == False:
             self.getTMPSTRTimer.start()  
         
         
     def getTMPSTR_Thread(self, chtype, chname, chnum, mediapath, position):
-        self.log('getTMPSTR_Thread') 
-        tmpstr = self.channelList.getItem(self.channelList.requestItem(mediapath))
+        self.log('getTMPSTR_Thread')
+        # tmpstr = self.channelList.getFileList(self.channelList.requestItem(mediapath), chnum, 2)
+        tmpstr = '0,'
         setProperty("OVERLAY.OnDemand_tmpstr",str(tmpstr))
         self.setMediaInfo(chtype, chname, chnum, mediapath, position, tmpstr)
 
@@ -3432,7 +3424,7 @@ class TVOverlay(xbmcgui.WindowXMLDialog):
         
         
     def openEPG(self):
-        if getProperty("PTVL.EPG_Opened") != "true":
+        if self.isWindowOpen() != 'EPG':
             self.log("openEPG")
             # Pause Background channel building while EPG is opened
             if self.channelThread.isAlive() and self.DisablePlayback == False:

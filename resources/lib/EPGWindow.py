@@ -62,8 +62,8 @@ try:
             self.timeButtonNoFocus = MEDIA_LOC + TIME_BUTTON
             self.timeButtonBar = MEDIA_LOC + TIME_BAR
             self.ButtonContextGauss = MEDIA_LOC + BUTTON_GAUSS_CONTEXT
-            self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS_ALT
-            self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS_ALT
+            self.ButtonContextFocus = MEDIA_LOC + BUTTON_FOCUS
+            self.ButtonContextNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS
             self.ButtonContextBackground = MEDIA_LOC + BUTTON_BACKGROUND_CONTEXT
             self.textureButtonFocus = MEDIA_LOC + BUTTON_FOCUS
             self.textureButtonNoFocus = MEDIA_LOC + BUTTON_NO_FOCUS

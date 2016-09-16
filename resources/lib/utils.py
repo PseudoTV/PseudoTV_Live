@@ -134,9 +134,8 @@ def CleanCHname(text):
     text = text.replace("(en)", "")
     text = text.replace("hd", "")
     text = text.replace("pvr", "")
-    text = text.replace("livetv", "") 
     text = text.replace("ustv", "") 
-    text = text.replace("hdhr", "") 
+    text = text.replace("hdhr", "")
     return text.strip(' ').rstrip(' ')
   
 def CleanCHnameSeq(text):
