@@ -5,9 +5,9 @@
 - Channel surfing for your Video Library. Add content from Kodi's Library, PVR Backend, Plugins and more... 
   Cut the cord with ease, familair controls and functionality of a standard settop box.
   
-- [Lunatixz Repo](https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip)
 - [PTVL support forum](http://pseudotvlive.com/index.php/forum)
 - [Kodi support forum](http://forum.kodi.tv/showthread.php?tid=244889)
+- [Lunatixz Repository Download](https://github.com/Lunatixz/XBMC_Addons/raw/master/zips/repository.lunatixz/repository.lunatixz-1.0.zip)
 
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/fanart.jpg)
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/skins/Default/screenshot01.png)
@@ -80,30 +80,30 @@ Pressing the ``Context Menu`` will show the "MoreInfo" bar.
 
 ### General
 
-- [General Settings](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_settings)
-- [Advanced Rules](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_rules)
-- [Controls](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_controls)
+- [General Settings](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_settings)
+- [Advanced Rules](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_rules)
+- [Controls](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_controls)
 
 
 ### Understanding Chtypes
 
--  (0).  - [Custom Smartplaylist](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_custom%20playlist)
--  (1).  - [TV networks](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_tv%20network)
--  (2).  - [Movie Studios](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_movie%20studio)
--  (3).  - [TV Genre](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_tv%20genre)
--  (4).  - [Movie Genre](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_movie%20genre)
--  (5).  - [Mixed TV/Movie Genre](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_mixed%20genre)
--  (6).  - [TV Show](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_tv%20show)
--  (7).  - [Directory Channel](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_directory)
--  (8).  - [LiveTV](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_livetv)
--  (9).  - [InternetTV](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_internettv)
-- (10). - [Youtube/Viemo/Reddit Channels](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_youtube)
-- (11). - [RSS/iTunes/Atom Feed](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_rss)
-- (12). - [Music Genres](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_music%20genre)
-- (13). - [PseudoNetworks](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_pseudonetwork)
-- (14). - [Reserved Chtype](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_extras)
-- (15). - [Plugin Folders](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_plugin)
-- (16). - [UPNP Folders](https://github.com/PseudoTV/PseudoTV_Live/blob/master/resources/help/help_upnp)
+-  (0). - [Custom Smartplaylist](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_custom%20playlist)
+-  (1). - [TV networks](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_tv%20network)
+-  (2). - [Movie Studios](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_movie%20studio)
+-  (3). - [TV Genre](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_tv%20genre)
+-  (4). - [Movie Genre](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_movie%20genre)
+-  (5). - [Mixed TV/Movie Genre](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_mixed%20genre)
+-  (6). - [TV Show](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_tv%20show)
+-  (7). - [Directory Channel](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_directory)
+-  (8). - [LiveTV](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_livetv)
+-  (9). - [InternetTV](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_internettv)
+- (10). - [Youtube/Viemo/Reddit Channels](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_youtube)
+- (11). - [RSS/iTunes/Atom Feed](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_rss)
+- (12). - [Music Genres](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_music%20genre)
+- (13). - [PseudoNetworks](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_pseudonetwork)
+- (14). - [Reserved Chtype](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_extras)
+- (15). - [Plugin Folders](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_plugin)
+- (16). - [UPNP Folders](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/resources/help/help_upnp)
 
 
 ## Credits
@@ -111,6 +111,7 @@ Pressing the ``Context Menu`` will show the "MoreInfo" bar.
 - PseudoTV Live: ``Lunatixz``
 - PseudoTV: ``Jason102``
 - TVTime: ``Jtucker1972``
+
 ``All work is either original, or modified code from the properly credited creators.``
 
 
