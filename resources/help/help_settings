@@ -1,52 +1,87 @@
+# General #
 
 
-- Configure Channels: This is the channel configuration tool.  From here you can modify the settings for each individual channel.
+- Open Channel Manager: 
+        This is the in-app channel configuration tool.
+        From here you can modify the settings for each individual channel.
 
-- Auto-off Timer: The amount of time (in minutes) of idle time before the script is automatically stopped.
+- AutoStart:
+        Start after Kodi boots, select delay.[F]
+        
+- AutoOff:
+        Quit after x minutes idle, select "OFF" action under tweaks tab.[F]
 
-- Force Channel Reset: If you want your channels to be reanalyzed then you
-can turn this on.
+- ScreenSaver:
+        Enable screensaver when paused or EPG open longer than 3 minutes.[F][*]
 
-- Time Between Channel Resets: This is how often your channels will be reset.
-Generally, this is done automatically based on the duration of the individual
-channels and how long they've been watched.  You can change this to reset every
-certain time period (day, week, month).
+- Automatic Backup:
+        Backup channel lineups before starting andor changes.[T]
+        
+- Settop Box:
+        Optimize settings for 24/7 operations.[F][*]
+        
+    - Background Service:
+            Contuine to build/update channels when not in use.[F][*]
+            Contuinusouly building channels will take up system resources.
+            Experimental feature and may be prone to bugs!
+            
+    - Background Updating:
+            (On)          After the first channel is built, the rest will build in the background.
+            (Minimum Use) After a breif initialization, channels will build in the background.[D][*]
+            (Off)         All channels are built before running.
+            
+    - Time between channel resets:
+            (Automatic)  When needed channels will be updated.
+            (Daily)      Channels will rebuild daily.
+            (Weekly)     Channels will rebuild weekly.[D][*]
+            (Monthly)    Channels will rebuild monthly.
+            (Never)      Channels will never rebuild.
+            (Every Time) Channels will rebuild on every start.
+            
+    - Channel Times at Startup:
+            (Resume)    Resume from your last position.
+            (Real Time) Emulate "Real-Time" broadcast TV.[D]
+            (Random)    Random position each start.
 
-- Default channel times at startup: This affects where the channels start
-playing when the script starts.  Resume will pick everything up where it left
-off.  Random will start each channel in a random spot.  Real-Time will act like
-the script was never shut down, and will play things at the time the EPG said
-they would play.
+- Show Notifications: 
+        View visual cues when channels and background updates are running.[T]
+            
+- Navigation Sounds:
+        Hear audial cues when events occur. ie. Reminders, Key-Press, etc.[F][*]
+        
+- Force Channel Reset on Next Start:
+        Clear playlist, caches and rebuild all channels from scratch.[F]
+        
+- Device Type:
+        Device Kodi is running on.
+        
+- Operating System:
+        Installed Operating System.
 
-- Background Updating: The script uses multiple threads to keep channels up-
-to-date while other channels are playing.  In general, this is fine.  If your
-computer is too slow, though, it may cause stuttering in the video playback.
-This setting allows you to minimize or disable the use of these background
-threads.
+- Language:
+        Select your Preferred language.
+        
+- Region:
+        Select your current region.
 
-- Enable Channel Sharing: Share the same configuration and channel list
-between multiple computers.  If you're using real-time mode (the default) then
-you can stop watching one show on one computer and pick it up on the other.  Or
-you can have both computers playing the same lists at the same time.
-
-- Shared Channels Folder: If channel sharing is enabled, this is the location
-available from both computers that will keep the settings and channel infor-
-mation.
+        
+[D] Default Configuration, [T] Enabled [F] Disabled
+[*] Optimaial Configuration forced in LowPower Profile  
+  
+  
+# Tweaks #
 
 
+- AutoOff/Sleep Action:
+        Action taken after system idle or sleep timer has expired.
+        (Exit PTVL)          Exit PseudoTV Live.[D]
+        (Quit Kodi)          Quit Kodi, Some system reboot automaticly on quit.
+        (System Sleep)       When available suspend device.
+        (System Shutdown)    Shutdown device if available.
+        (EventGhost Trigger) Trigger "PTVL.Sleeping" eventghost trigger.
+        (CEC Standby)        Place device in CEC standby when available.
+        (Stop Playback)      Stop playback and open EPG, leaving PTVL dormant until media selection.
+        (Preferred Channel)  Switch to Preferred Channel, see below.
 
-- Info when Changing Channels: Pops up a small window on the bottom of the
-screen where the current show information is displayed when changing channels.
-
-- Always show channel logo: Always display the current channel logo.
-
-- Channel Logo Folder: The place where channel logos are stored.
-
-- Clock Display: Select between a 12-hour or 24-hour clock in the EPG.
-
-- Show Coming Up Next box: A little box will notify you of what's coming up
-next when the current show is nearly finished.
-
-- Hide very short videos: Don't show clips shorter than 60 seconds in the
-EPG, coming up next box, or info box.  This is helpful if you use bumpers or
-commercials.
+  
+  
