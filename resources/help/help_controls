@@ -1,0 +1,25 @@
+
+#### Additional controls: Use the keymap plugin to link these action to a remote key.
+
+- Mute ``F8``
+- Last Channel Recall ``ACTION_SHIFT``
+- Favourite Channel Jump ``ACTION_SYMBOL``
+- Subtitles ``ACTION_SHOW_SUBTITLES``, ``ShowSubtitles``
+- Next Subtitle ``NextSubtitle``
+- Show Codec ``ACTION_SHOW_CODEC``
+- Sleep Timer ``ACTION_ASPECT_RATIO``
+- Record ``ACTION_RECORD`` -- To be used with future PVR features.
+- GREEN,BLUE,RED,YELLOW -- Future access to the 'EPG/ONDEMAND/DVR/APPS' menus  
+    
+### Touch/Mouse
+
+- MOVE_LEFT ``ACTION_GESTURE_SWIPE_LEFT_TEN``
+- MOVE_RIGHT ``ACTION_GESTURE_SWIPE_RIGHT_TEN``
+- MOVE_UP ``ACTION_GESTURE_SWIPE_UP``
+- MOVE_DOWN ``ACTION_GESTURE_SWIPE_DOWN``
+- PAGEUP ``ACTION_GESTURE_SWIPE_UP_TEN``
+- PAGEDOWN ``ACTION_GESTURE_SWIPE_DOWN_TEN``
+- SELECT_ITEM ``ACTION_TOUCH_TAP``
+- SHOW_INFO ``ACTION_TOUCH_LONGPRESS,ACTION_GESTURE_SWIPE_LEFT``
+- CONTEXT_MENU ``ACTION_TOUCH_LONGPRESS_TEN``
+- SHOW_EPG ``ACTION_GESTURE_SWIPE_RIGHT``

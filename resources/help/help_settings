@@ -1,0 +1,52 @@
+
+
+- Configure Channels: This is the channel configuration tool.  From here you can modify the settings for each individual channel.
+
+- Auto-off Timer: The amount of time (in minutes) of idle time before the script is automatically stopped.
+
+- Force Channel Reset: If you want your channels to be reanalyzed then you
+can turn this on.
+
+- Time Between Channel Resets: This is how often your channels will be reset.
+Generally, this is done automatically based on the duration of the individual
+channels and how long they've been watched.  You can change this to reset every
+certain time period (day, week, month).
+
+- Default channel times at startup: This affects where the channels start
+playing when the script starts.  Resume will pick everything up where it left
+off.  Random will start each channel in a random spot.  Real-Time will act like
+the script was never shut down, and will play things at the time the EPG said
+they would play.
+
+- Background Updating: The script uses multiple threads to keep channels up-
+to-date while other channels are playing.  In general, this is fine.  If your
+computer is too slow, though, it may cause stuttering in the video playback.
+This setting allows you to minimize or disable the use of these background
+threads.
+
+- Enable Channel Sharing: Share the same configuration and channel list
+between multiple computers.  If you're using real-time mode (the default) then
+you can stop watching one show on one computer and pick it up on the other.  Or
+you can have both computers playing the same lists at the same time.
+
+- Shared Channels Folder: If channel sharing is enabled, this is the location
+available from both computers that will keep the settings and channel infor-
+mation.
+
+
+
+- Info when Changing Channels: Pops up a small window on the bottom of the
+screen where the current show information is displayed when changing channels.
+
+- Always show channel logo: Always display the current channel logo.
+
+- Channel Logo Folder: The place where channel logos are stored.
+
+- Clock Display: Select between a 12-hour or 24-hour clock in the EPG.
+
+- Show Coming Up Next box: A little box will notify you of what's coming up
+next when the current show is nearly finished.
+
+- Hide very short videos: Don't show clips shorter than 60 seconds in the
+EPG, coming up next box, or info box.  This is helpful if you use bumpers or
+commercials.
