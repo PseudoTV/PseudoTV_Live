@@ -1,87 +1,201 @@
-# General #
+# General
 
-
-- Open Channel Manager: 
-        This is the in-app channel configuration tool.
-        From here you can modify the settings for each individual channel.
-
-- AutoStart:
-        Start after Kodi boots, select delay.[F]
-        
-- AutoOff:
-        Quit after x minutes idle, select "OFF" action under tweaks tab.[F]
-
-- ScreenSaver:
-        Enable screensaver when paused or EPG open longer than 3 minutes.[F][*]
-
-- Automatic Backup:
-        Backup channel lineups before starting andor changes.[T]
-        
-- Settop Box:
-        Optimize settings for 24/7 operations.[F][*]
-        
-    - Background Service:
-            Continue to build/update channels when not in use.[F][*]
-            Continuously building channels take up system resources.
-            Experimental feature and may be prone to bugs!
+    - Open Channel Manager: 
+            This is the in-app channel configuration tool.
+            From here you can modify the settings for each individual channel.
             
-    - Background Updating:
-            (On)          After the first channel is built, the rest build in the background.
-            (Minimum Use) After a brief initialization, channels build in the background.[D][*]
-            (Off)         All channels build before running.
             
-    - Time between channel resets:
-            (Automatic)  When needed channels are updated.
-            (Daily)      Rebuild daily.
-            (Weekly)     Rebuild weekly.[D][*]
-            (Monthly)    Rebuild monthly.
-            (Never)      Channels never rebuild.
-            (Every Time) Channels rebuild on every start.
+    ## General Options:
+
+    - AutoStart:
+            Start after Kodi boots, select delay.[F]
             
-    - Channel Times at Startup:
-            (Resume)    Resume from your last position.
-            (Real Time) Emulate "Real-Time" broadcast TV.[D]
-            (Random)    Random position each start.
+    - AutoOff:
+            Quit after x minutes idle, select "OFF" action under tweaks tab.[F]
 
-- Show Notifications: 
-        View visual cues when channels and background updates are running.[T]
+    - ScreenSaver:
+            Enable screensaver when paused or EPG open longer than 3 minutes.[F][*]
+
+    - Automatic Backup:
+            Backup channel lineups before starting andor changes.[T]
             
-- Navigation Sounds:
-        Hear audial cues when events occur. ie. Reminders, Key-Press, etc.[F][*]
-        
-- Force Channel Reset on Next Start:
-        Clear playlist, caches and rebuild all channels from scratch.[F]
-        
-- Device Type:
-        Device Kodi is running on.
-        
-- Operating System:
-        Installed Operating System.
+    - Settop Box:
+            Optimize settings for 24/7 operations.[F][*]
+            
+        - Background Service:
+                Continue to build/update channels when not in use.[F][*]
+                Continuously building channels take up system resources.
+                Experimental feature and may be prone to bugs!
+                
+        - Background Updating:
+                (On)          After the first channel is built, the rest build in the background.
+                (Minimum Use) After a brief initialization, channels build in the background.[D][*]
+                (Off)         All channels build before running.
+                
+        - Time between channel resets:
+                (Automatic)  When needed channels are updated.
+                (Daily)      Rebuild daily.
+                (Weekly)     Rebuild weekly.[D][*]
+                (Monthly)    Rebuild monthly.
+                (Never)      Channels never rebuild.
+                (Every Time) Channels rebuild on every start.
+                
+        - Channel Times at Startup:
+                (Resume)    Resume from your last position.
+                (Real Time) Emulate "Real-Time" broadcast TV.[D]
+                (Random)    Random position each start.
 
-- Language:
-        Select your Preferred language.
-        
-- Region:
-        Select your current region.
+    - Show Notifications: 
+            View visual cues when channels and background updates are running.[T]
+                
+    - Navigation Sounds:
+            Hear audial cues when events occur. ie. Reminders, Key-Press, etc.[F][*]
+            
+    - Force Channel Reset on Next Start:
+            Clear playlist, caches and rebuild all channels from scratch.[F]
+              
+                    
+    ## Platform Options:
+       
+    - Device Type:
+            Device Kodi is running on.
+            
+    - Operating System:
+            Installed Operating System.
 
-        
+    - Language:
+            Select your Preferred language.
+            
+    - Region:
+            Select your current region.
+
+            
 [D] Default Configuration, [T] Enabled [F] Disabled
-[*] optimal Configuration forced in LowPower Profile  
+[*] Optimal Configuration forced in LowPower Profile  
   
   
-# Tweaks #
+# Tweaks
 
+    ## Tweak Options:
 
-- AutoOff/Sleep Action:
-        Action taken after system idle or sleep timer has expired.
-        (Exit PTVL)          Exit PseudoTV Live.[D]
-        (Quit Kodi)          Quit Kodi, Some system reboot automaticly on quit.
-        (System Sleep)       When available suspend device.
-        (System Shutdown)    Shutdown device if available.
-        (EventGhost Trigger) Trigger "PTVL.Sleeping" eventghost trigger.
-        (CEC Standby)        Place device in CEC standby when available.
-        (Stop Playback)      Stop playback and open EPG, leaving PTVL dormant until media selection.
-        (Preferred Channel)  Switch to Preferred Channel, see below.
+    - AutoOff/Sleep Action:
+            Action taken after system idle or sleep timer has expired.
+            (Exit PTVL)          Exit PseudoTV Live.[D]
+            (Quit Kodi)          Quit Kodi, Some system reboot automatically on quit.
+            (System Sleep)       When available suspend device.
+            (System Shutdown)    Shutdown device if available.
+            (EventGhost Trigger) Trigger "PTVL.Sleeping" eventghost trigger.
+            (CEC Standby)        Place device in CEC standby when available.
+            (Stop Playback)      Stop playback and open EPG, leaving PTVL dormant until media selection.
+            (Preferred Channel)  Switch to Preferred Channel, see below.
 
+    - Search Engine:
+            Preferred search dialog.
+            (Global Search[D]|Extended Info)
+            
+    - Startup Channel:
+            Start PTVL on channel.
+            (Last Channel[D]|Preferred Channel)
+        
+        - Preffered Channel:
+            Enter preffered channel for startup and AutoOff/Sleep action.
+            
+    - Disable Trakt Scrobbling:
+            When possible ignore trakt scrobbling.[F]
+            
+    - Disable Watchcount:
+            When possible disable playcount tracking.[F]
+            
+    - Disable Playback:
+            Use PTVL with Stop & Play functionality. On launch view the EPG and select channel.[F]
+            
+    - Enable QuickFlip:
+            While channel surfing PTVL will ignore channels that potentially take longer to load. ie Plugins, Internet Streams.[F]
+            
+    - Enable Subtitles:
+            When available enable subtitles/close captioning automatically.[F]
+            
+    - Mute Between Channel Change:
+            Some receivers "POP" or create noise between format changes, Muting sliences the disturbance.[T]
+            
+    - Hide Short Videos:
+            Content plays normally without displaying EPG or Overlay info.
+            (Disable|15s|30s|60s|90s|120s|240s[D]|360s|480s)
+
+        
+    ## Global Rules:
+            Global rules apply to ALL channels. Individual "Advanced Channel Rules" override global rules.
+                 
+    - Media Limit:
+            (25[D]|50|100|250|500|1000|5000|Unlimited)[*]
+
+    - Include 3D Videos:
+            Remove 3D content from channels.[F]
+
+    - Include STRM's:
+            Allow .strm files.[T]
+
+    - Include BCT's:
+            When available apply (B)umpers, (C)ommercials and (T)railers to applicable channels.[T]
+
+    - Include Metadata Lookups:
+            Parse metadata while building channels to provide additional content information and artwork.
+            Increases internet traffic and can slow down channel building.[F][*]
+
+    - Include Missing Metadata Lookups:
+            Find missing metadata when information or artwork is unavailable.
+            Increases internet traffic and may slow down EPG browsing.[F][*]
+
+    - Include XMLTV TimeShift
+            Apply one "global time adjustment to all LiveTV xmltv channels.[F]
+        
+        
+    ## Advanced Options:
+                
+    - Start Over After:
+            On channel change prompt "Start Over" if percentage played.
+            (Always|10%|20%|30%|40%|50%[D]|60%|70%|80%|90%|Disable)
+            
+    - SmartSeek Over:
+            While channel changing avoid starting "Online" content toward the end of it's runtime.
+            Select the allowable percentage played before content is forced to start at the beginning.
+            (Always|10%|20%|30%|40%|50%|60%|70%|80%[D]|90%|Disable)
+            
+    - SeekStep Backward:
+            Select the backward skip rate.
+            (10s[D]|30s|60s|3m|5m|10m|30m)
+            
+    - SeekStep Forward:
+            Select the forward skip rate.
+            (10s[D]|30s|60s|3m|5m|10m|30m)
+            
+            
+    ## Internal Timers:
+              
+    - Force Timeout (Seconds):
+            Stop "Failed" playback after a given amount of time.
+            (15s - 120s)[D:30s]
+            
+    - Channel Change Delay (Seconds)
+            (None|0.25[D]|0.5|0.75|1.0|1.25|1.5|1.75|2.0)
+  
+            
+[D] Default Configuration, [T] Enabled [F] Disabled
+[*] Optimal Configuration forced in LowPower Profile  
+  
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
   
   
