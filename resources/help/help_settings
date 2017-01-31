@@ -21,22 +21,22 @@
         Optimize settings for 24/7 operations.[F][*]
         
     - Background Service:
-            Contuine to build/update channels when not in use.[F][*]
-            Contuinusouly building channels will take up system resources.
+            Continue to build/update channels when not in use.[F][*]
+            Continuously building channels take up system resources.
             Experimental feature and may be prone to bugs!
             
     - Background Updating:
-            (On)          After the first channel is built, the rest will build in the background.
-            (Minimum Use) After a breif initialization, channels will build in the background.[D][*]
-            (Off)         All channels are built before running.
+            (On)          After the first channel is built, the rest build in the background.
+            (Minimum Use) After a brief initialization, channels build in the background.[D][*]
+            (Off)         All channels build before running.
             
     - Time between channel resets:
-            (Automatic)  When needed channels will be updated.
-            (Daily)      Channels will rebuild daily.
-            (Weekly)     Channels will rebuild weekly.[D][*]
-            (Monthly)    Channels will rebuild monthly.
-            (Never)      Channels will never rebuild.
-            (Every Time) Channels will rebuild on every start.
+            (Automatic)  When needed channels are updated.
+            (Daily)      Rebuild daily.
+            (Weekly)     Rebuild weekly.[D][*]
+            (Monthly)    Rebuild monthly.
+            (Never)      Channels never rebuild.
+            (Every Time) Channels rebuild on every start.
             
     - Channel Times at Startup:
             (Resume)    Resume from your last position.
@@ -66,7 +66,7 @@
 
         
 [D] Default Configuration, [T] Enabled [F] Disabled
-[*] Optimaial Configuration forced in LowPower Profile  
+[*] optimal Configuration forced in LowPower Profile  
   
   
 # Tweaks #
