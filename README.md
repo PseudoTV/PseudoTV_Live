@@ -1,5 +1,7 @@
 # PseudoTV Live
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/08d94293d3d8403fb5502c22eddfd32b)](https://www.codacy.com/app/Lunatixz/PseudoTV_Live?utm_source=github.com&utm_medium=referral&utm_content=PseudoTV/PseudoTV_Live&utm_campaign=badger)
+
 ![screenshot](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/icon.png)
 
 - Channel surfing for your Video Library. Add content from Kodi's Library, PVR Backend, Plugins and more... 
