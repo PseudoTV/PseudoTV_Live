@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+	<category label="30018">
+        <setting                           type="lsep"   label="30022"            visible="true" />
+        <setting id=" "                    type="bool"   label="30002" default="" visible="false"/>
+        <setting id="Select_TV_Networks"   type="action" label="30002" default="" visible="true" action="RunScript($CWD/config.py, TV_Networks)"        subsetting="true" option="close" />
+        <setting id="Select_TV_Shows"      type="action" label="30003" default="" visible="true" action="RunScript($CWD/config.py, TV_Shows)"           subsetting="true" option="close" />
+        <setting id="Select_TV_Genres"     type="action" label="30004" default="" visible="true" action="RunScript($CWD/config.py, TV_Genres)"          subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Genres"  type="action" label="30005" default="" visible="true" action="RunScript($CWD/config.py, MOVIE_Genres)"       subsetting="true" option="close" />
+        <setting id="Select_MIXED_Genres"  type="action" label="30006" default="" visible="true" action="RunScript($CWD/config.py, MIXED_Genres)"       subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Studios" type="action" label="30007" default="" visible="true" action="RunScript($CWD/config.py, MOVIE_Studios)"      subsetting="true" option="close" />
+        <setting                           type="lsep"   label="30023"            visible="true"/>
+        <setting id="Select_RECOMMENDED"   type="action" label="30026" default="" visible="false" action="RunScript($CWD/config.py, Select_RECOMMENDED)" subsetting="true" option="close" />
+        <setting                           type="lsep"   label="30024"            visible="true" />
+        <setting id="Select_CUSTOM"        type="action" label="30027" default="" visible="false" action="RunScript($CWD/config.py, CUSTOM)"             subsetting="true" option="close" />
+    </category> 
+    <category label="30025">
+        <setting id="Enable_Grouping"      type="bool"   label="30019" default="true" />
+        <setting id="Use_Color_Logos"      type="bool"   label="30044" default="false" />
+        <setting id="User_Folder"          type="folder" label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />
+    </category> 
+    <category label="30048">
+        <setting id="Playback_Method"      type="enum"   label="30045" default="0"  values="PVR Callback|Playlist" />
+        <setting id="Seek_Tolerence"       type="slider" label="30040" default="30" range="0,1,120"   option="int" />
+        <setting                           type="lsep"   visible="true" />
+        <setting id="Parse_Duration"       type="bool"   label="30041" default="false" />
+        <setting id="Store_Duration"       type="bool"   label="30042" default="false"  visible="eq(-1,true)" subsetting="true"/>
+        <setting id="Strict_Duration"      type="bool"   label="30043" default="false"  visible="eq(-2,true)" subsetting="true"/>
+        <setting id="Page_Limit"           type="slider" label="30038" default="24" range="25,25,250" option="int" />
+        <setting id="Max_Days"             type="slider" label="30039" default="1"  range="1,1,7"     option="int" />
+        <setting id="Update_Time"          type="slider" label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
+    </category> 
+    <category label="30055">
+        <setting id="Enable_Overlay"       type="bool"   label="30054" default="false" />
+        <setting id="Enable_Fillers"       type="bool"   label="30030" default="false"  enabled="false"/>
+    </category> 
+    <category label="30033">
+        <setting id="User_Import"          type="bool"   label="30036" default="false" />
+        <setting id="Import_M3U"           type="file"   label="30034" default="" visible="eq(-1,true)" subsetting="true" source="auto" />
+        <setting id="Import_XMLTV"         type="file"   label="30035" default="" visible="eq(-2,true)" subsetting="true" source="auto" />
+        <setting id="Clear_Import"         type="action" label="30037" default="" visible="eq(-3,true)" subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
+    </category> 
+    <category label="30020">
+        <setting id="Enable_Debugging"     type="bool"   label="30000" default="true" />
+        <setting id=" "                    type="action" label="30046" default="" visible="true" action="RunScript($CWD/config.py, Open_Settings|pvr.iptvsimple)"  option="close" />
+    </category>
+</settings>
