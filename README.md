@@ -2,6 +2,8 @@
 
 ## PseudoTV Live:
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/08d94293d3d8403fb5502c22eddfd32b)](https://app.codacy.com/manual/Lunatixz/PseudoTV_Live?utm_source=github.com&utm_medium=referral&utm_content=PseudoTV/PseudoTV_Live&utm_campaign=Badge_Grade_Settings)
+
 PseudoTV Live acts similar to normal broadcast or cable TV, complete with multiple preset, user-defined channels and advanced channel management.
 
 PseudoTV Live can integrate with all Kodi sources including various Kodi plugins ie. Plex, Netflix, etc.
