@@ -1,0 +1,281 @@
+# Kodi Media Center language file
+# Addon Name: "PseudoTV Live"
+# Addon id: plugin.video.pseudotv.live
+# Addon Provider: Lunatixz
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.pseudotv.live\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Lunatixz Translation Team\n"
+"Language-Team: English (http://www.transifex.com/projects/p/xbmc-addons/language/en/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#30000"
+msgid "Enable Debugging [Log errors]"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Something went wrong, Try again..."
+msgstr ""
+
+msgctxt "#30002"
+msgid "TV Networks"
+msgstr ""
+
+msgctxt "#30003"
+msgid "TV Shows"
+msgstr ""
+
+msgctxt "#30004"
+msgid "TV Genres"
+msgstr ""
+
+msgctxt "#30005"
+msgid "Movie Genres"
+msgstr "
+
+msgctxt "#30006"
+msgid "Mixed Genres"
+msgstr ""
+
+msgctxt "#30007"
+msgid "Movie Studios"
+msgstr ""
+
+msgctxt "#30008"
+msgid "Utilities"
+msgstr ""
+
+msgctxt "#30009"
+msgid "Channels"
+msgstr ""
+
+msgctxt "#30010"
+msgid "Rebuild M3U/XMLTV"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Delete M3U/XMLTV"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Rebuild PVR"
+msgstr ""
+
+msgctxt "#30013"
+msgid "Open Settings"
+msgstr ""
+
+msgctxt "#30014"
+msgid "View Channels"
+msgstr ""
+
+msgctxt "#30015"
+msgid "Clear Channels"
+msgstr ""
+
+msgctxt "#30016"
+msgid "%s file deleted"
+msgstr ""
+
+msgctxt "#30017"
+msgid "%s complete"
+msgstr ""
+
+msgctxt "#30018"
+msgid "Channels"
+msgstr ""
+
+msgctxt "#30019"
+msgid "Enable Automatic PVR Grouping"
+msgstr ""
+
+msgctxt "#30020"
+msgid "Advanced"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Refresh"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Predefined Channels"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Recommended Channels"
+msgstr ""
+
+msgctxt "#30024"
+msgid "Custom Channels"
+msgstr ""
+
+msgctxt "#30025"
+msgid "Options"
+msgstr ""
+
+msgctxt "#30026"
+msgid "Recommended"
+msgstr ""
+
+msgctxt "#30027"
+msgid "Custom"
+msgstr ""
+
+msgctxt "#30028"
+msgid "Change M3U/XMLTV/LOGO Location"
+msgstr ""
+
+msgctxt "#30029"
+msgid "%s is busy, try again later..."
+msgstr ""
+
+msgctxt "#30030"
+msgid "Insert Fillers (Bumpers/Commercials/Trailers/Ratings)"
+msgstr ""
+
+msgctxt "#30031"
+msgid "Unable to locate channel, try clearing PVR cache."
+msgstr ""
+
+msgctxt "#30032"
+msgid "Master Instance"
+msgstr ""
+
+msgctxt "#30033"
+msgid "Imports"
+msgstr ""
+
+msgctxt "#30034"
+msgid "M3U file"
+msgstr ""
+
+msgctxt "#30035"
+msgid "XMLTV file"
+msgstr ""
+
+msgctxt "#30036"
+msgid "Enable Import"
+msgstr ""
+
+msgctxt "#30037"
+msgid "Clear Import"
+msgstr ""
+
+msgctxt "#30038"
+msgid "Pagination Size [Lower == Better Performance]"
+msgstr ""
+
+msgctxt "#30039"
+msgid "Max Guidedata (Days)"
+msgstr ""
+
+msgctxt "#30040"
+msgid "Playback Seek Tolerence (Seconds)"
+msgstr ""
+
+msgctxt "#30041"
+msgid "Parse for Accurate Duration Meta"
+msgstr ""
+
+msgctxt "#30042"
+msgid "Save Accurate Duration to Kodi's Library"
+msgstr ""
+
+msgctxt "#30043"
+msgid "Only use Accurate Duration Meta."
+msgstr ""
+
+msgctxt "#30044"
+msgid "Prefer Color Channel Logos"
+msgstr ""
+
+msgctxt "#30045"
+msgid "Playback Method"
+msgstr ""
+
+msgctxt "#30046"
+msgid "Open Settings (IPTV Simple)"
+msgstr ""
+
+msgctxt "#30047"
+msgid "Last Check Offset (Hours)"
+msgstr ""
+
+msgctxt "#30048"
+msgid "Tweaks"
+msgstr ""
+
+msgctxt "#30049"
+msgid "%s not found, Please Install"
+msgstr ""
+
+msgctxt "#30050"
+msgid "Building"
+msgstr ""
+
+msgctxt "#30051"
+msgid "Updating"
+msgstr ""
+
+msgctxt "#30052"
+msgid "Initializing"
+msgstr ""
+
+msgctxt "#30053"
+msgid "Complete"
+msgstr ""
+
+msgctxt "#30054"
+msgid "Enable Overlay"
+msgstr ""
+
+msgctxt "#30055"
+msgid "Globals"
+msgstr ""
+
+msgctxt "#30056"
+msgid "No Channels Found, Please Configure."
+msgstr ""
+
+msgctxt "#30057"
+msgid "Delete [M3U/XMLTV/Genre] Files?"
+msgstr ""
+
+msgctxt "#30058"
+msgid "Something went wrong, Lets try again..."
+msgstr ""
+
+msgctxt "#30059"
+msgid "Something went wrong, Lets try to fix!"
+msgstr ""
+
+msgctxt "#30060"
+msgid "Play from here"
+msgstr ""
+
+msgctxt "#30061"
+msgid "Play onDemand"
+msgstr ""
+
+msgctxt "#30062"
+msgid "Start Over"
+msgstr ""
+
+msgctxt "#30063"
+msgid "Update"
+msgstr ""
+
+msgctxt "#30064"
+msgid "Build"
+msgstr ""
+
+msgctxt "#30065"
+msgid "Force PVR reload"
+msgstr ""

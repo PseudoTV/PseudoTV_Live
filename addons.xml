@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+<addon id="plugin.video.pseudotv.live" version="0.1.0c" name="PseudoTV Live" provider-name="Lunatixz">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+        <import addon="pvr.iptvsimple" version="6.2.1"/>
+        <import addon="script.module.six" version="1.0.0"/>
+        <import addon="script.module.kodi-six" version="0.1.3.1"/>
+        <import addon="script.module.simplecache" version="1.0.0"/>
+        <import addon="plugin.library.node.editor" version="0.0.1" optional="true" />
+        <import addon="resource.images.studios.white" version="0.0.1" optional="true"/>
+        <import addon="resource.images.studios.coloured" version="0.0.18" optional="true"/>
+        <import addon="resource.images.moviegenreicons.transparent" version="0.0.6" optional="true"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="plugin.py">
+        <provides>video</provides>
+    </extension>
+    <extension point="xbmc.service" library="service.py" start="login"/>
+    <extension point="kodi.context.item">
+        <menu id="kodi.core.main">
+            <item library="context_play.py">
+                <label>30061</label>
+                <visible>String.Contains(ListItem.Writer,"data") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+            </item>
+        </menu>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB"></summary>
+        <description lang="en_GB">PseudoTV Live acts similar to normal broadcast or cable TV, complete with pre-defined and user-defined channels. EPG Provided by Kodi.</description>
+        <platform>all</platform>
+        <license>GNU GENERAL PUBLIC LICENSE. Version 3, June 2007</license>
+        <source>https://github.com/PseudoTV/PseudoTV_Live</source>
+        <forum>https://forum.kodi.tv/showthread.php?tid=355549</forum>
+        <disclaimer lang="en_GB">BETA PROJECT; SUBJECT TO BUGS</disclaimer>
+        <assets>
+            <icon>resources/images/icon.png</icon>
+            <fanart>resources/images/fanart.jpg</fanart>
+            <screenshot>resources/images/screenshot01.png</screenshot>
+            <screenshot>resources/images/screenshot02.png</screenshot>
+            <screenshot>resources/images/screenshot03.png</screenshot>
+            <screenshot>resources/images/screenshot04.png</screenshot>
+        </assets>
+    </extension>
+</addon>
+
+<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.0" provider-name="Lunatixz">
+    <extension point="xbmc.addon.repository" name="PseudoTV Repository">
+        <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml</info>
+        <checksum>https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml.md5</checksum>
+        <datadir zip="true">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/zips</datadir>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <description lang="en_GB">PseudoTV Live acts similar to normal broadcast or cable TV, complete with pre-defined and user-defined channels. EPG Provided by Kodi.</description>
+        <platform>all</platform>
+        <source>https://github.com/Lunatixz/KODI_Addons/tree/master/repository.pseudotv</source>
+        <assets>
+            <icon>icon.png</icon>
+            <fanart>fanart.jpg</fanart>
+        </assets>
+    </extension>
+</addon>
+</addons>
