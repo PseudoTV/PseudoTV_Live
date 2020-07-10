@@ -26,7 +26,7 @@
 import os, sys, fnmatch
 import xml.etree.ElementTree
 from zipfile import ZipFile
-from shutil import copyfile
+from shutil import copyfile, rmtree
 
 CHKPATH    = 'C:/GitHub/addon-check/'
 GITPATH    = 'C:/GitHub/PseudoTV_Live/'
@@ -66,6 +66,10 @@ class Generator(object):
     
     def _clean_addons(self):
         for root, dirnames, filenames in os.walk(GITPATH):
+            for dirname in dirnames:
+                if dirname == '__pycache__':
+                    print("removing: " + dirname)
+                    rmtree(os.path.join(root, dirname))
             for filename in filenames:
                 if filename.endswith(DELETE_EXT):
                     print("removing: " + filename)

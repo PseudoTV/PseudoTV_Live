@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+	<defaultcontrol>5</defaultcontrol>
+  <animation type="WindowOpen" reversible="false">
+    <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
+    <effect type="fade" delay="160" end="100" time="240" />
+  </animation>
+	<controls>
+		<control type="group">
+			<top>90</top>
+			<centerleft>50%</centerleft>
+			<width>1820</width>
+      <animation type="Visible" reversible="false">
+        <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
+        <effect type="fade" delay="160" end="100" time="240" />
+      </animation>
+      <control type="image">
+        <left>-2000</left>
+        <top>-2000</top>
+        <width>6000</width>
+        <height>6000</height>
+        <animation effect="fade" time="300">VisibleChange</animation>
+        <animation effect="fade" start="0" end="100" time="300">WindowOpen</animation>
+        <animation effect="fade" start="100" end="0" time="200">WindowClose</animation>
+        <texture colordiffuse="C2FFFFFF">colors/black.png</texture>
+      </control>
+      <control type="button">
+        <left>-2000</left>
+        <top>-2000</top>
+        <width>6000</width>
+        <height>6000</height>
+        <texturefocus />
+        <texturenofocus />
+        <onclick>Action(close)</onclick>
+      </control>
+      <control type="group">
+        <width>1820</width>
+        <height>900</height>
+        <control type="image">
+          <left>0</left>
+          <top>0</top>
+          <right>0</right>
+          <bottom>0</bottom>
+          <texture colordiffuse="dialog_tint">colors/white.png</texture>
+        </control>
+        <control type="image">
+          <left>0</left>
+          <top>0</top>
+          <right>0</right>
+          <height>70</height>
+          <texture colordiffuse="button_focus" border="2">colors/white70.png</texture>
+        </control>
+        <control type="label" id="">
+          <left>40</left>
+          <top>0</top>
+          <right>100</right>
+          <height>70</height>
+          <font>font32_title</font>
+				  <label>[B]$INFO[System.AddonTitle(plugin.video.pseudotv.live),, - ]$LOCALIZE[19029] $LOCALIZE[10507][/B]</label>
+          <aligny>center</aligny>
+          <shadowcolor>black</shadowcolor>
+        </control>
+        <control type="button" id="22002">
+          <description>button overlay to avoid closing in dialog area</description>
+          <left>0</left>
+          <top>0</top>
+          <right>0</right>
+          <bottom>0</bottom>
+          <texturefocus />
+          <texturenofocus />
+          <onclick>noop</onclick>
+        </control>
+        <control type="radiobutton">
+          <right>10</right>
+          <top>11</top>
+          <width>48</width>
+          <height>48</height>
+          <radiowidth>48</radiowidth>
+          <radioheight>48</radioheight>
+          <texturefocus />
+          <texturenofocus />
+          <label></label>
+          <textureradioofffocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioofffocus>
+          <textureradiooffnofocus colordiffuse="EEFFFFFF">special://xbmc/media/vendor_icon.png</textureradiooffnofocus>
+          <textureradioonfocus colordiffuse="EEFFFFFF">dialogs/close.png</textureradioonfocus>
+          <textureradioonnofocus colordiffuse="EEFFFFFF">special://xbmc/media/vendor_icon.png</textureradioonnofocus>
+          <onclick>Action(close)</onclick>
+          <visible>!Skin.HasSetting(touchmode)</visible>
+        </control>
+        <control type="button">
+          <right>10</right>
+          <top>11</top>
+          <width>48</width>
+          <height>48</height>
+          <texturefocus>dialogs/close.png</texturefocus>
+          <texturenofocus>dialogs/close.png</texturenofocus>
+          <onclick>Action(close)</onclick>
+          <visible>Skin.HasSetting(touchmode)</visible>
+        </control>
+      </control>
+      
+      
+			<control type="grouplist" id="3">
+				<description>Left Side</description>
+				<left>29</left>
+				<top>80</top>
+				<width>400</width>
+				<height>596</height>
+				<itemgap>-25</itemgap>
+				<orientation>vertical</orientation>
+				<onleft>9000</onleft>
+				<onright>5</onright>
+				<onup>20</onup>
+				<ondown>20</ondown>
+        <control type="group" id="3">
+          <control type="button" id="10">
+            <description>Logo Backgorund</description>
+            <height>390</height>
+            <width>390</width>
+            <textoffsetx>20</textoffsetx>
+            <align>center</align>
+            <aligny>center</aligny>
+            <font>font25_title</font>
+            <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+          </control>
+          <control type="image" id="11">
+            <description>Logo Image</description>
+            <left>30</left>
+            <top>30</top>
+            <height>320</height>
+            <width>320</width>
+            <align>center</align>
+            <aligny>center</aligny>
+            <aspectratio>keep</aspectratio>
+            <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
+          </control>
+        </control>
+			</control>
+      
+      
+			<control type="image">
+				<left>410</left>
+				<top>80</top>
+				<width>1100</width>
+				<height>740</height>
+				<texture border="40">buttons/dialogbutton-nofo.png</texture>
+			</control>
+      <control type="image" id="4">
+        <description>Spinner</description>
+				<left>410</left>
+				<top>352</top>
+				<width>1100</width>
+				<height>128</height>
+        <align>center</align>
+        <aligny>center</aligny>
+        <aspectratio>keep</aspectratio>
+        <texture>spinner.gif</texture>
+      </control>
+			<control type="list" id="5">
+				<description>Channel List</description>
+				<left>429</left>
+				<top>100</top>
+				<width>1060</width>
+				<height>700</height>
+				<pagecontrol>60</pagecontrol>
+				<onleft>3</onleft>
+				<onright>60</onright>
+				<onup>5</onup>
+				<ondown>5</ondown>
+        <itemlayout width="1060" height="63">
+          <control type="image">
+            <left>80</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <texture border="63"></texture>
+            <bordersize>63</bordersize>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>left</align>
+            <font>font12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label</info>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>right</align>
+            <font>font12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label2</info>
+          </control>
+        </itemlayout>
+        <focusedlayout width="1060" height="63">
+          <control type="image">
+            <left>120</left>
+            <width>1060</width>
+            <height>63</height>
+            <colordiffuse>button_focus</colordiffuse>
+            <texture border="63">white.png</texture>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>left</align>
+            <font>font12</font>
+            <textcolor>button_focus</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label</info>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>right</align>
+            <font>fontt12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label2</info>
+          </control>
+        </focusedlayout>
+			</control>
+      
+
+			<control type="textbox" id="6">
+				<description>description area</description>
+				<left>50</left>
+				<top>815</top>
+				<right>50</right>
+				<height>70</height>
+				<font>font12</font>
+				<align>justify</align>
+				<textcolor>button_focus</textcolor>
+				<autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+			</control>
+			<control type="grouplist" id="9000">
+        <description>buttons right</description>
+				<left>1510</left>
+				<top>92</top>
+				<orientation>vertical</orientation>
+				<width>300</width>
+				<height>300</height>
+				<itemgap>-10</itemgap>
+				<onleft>5</onleft>
+				<onright>3</onright>
+        <control type="button" id="">
+          <width>300</width>
+          <height>100</height>
+          <label></label>
+          <font>font25_title</font>
+          <textoffsetx>20</textoffsetx>
+          <onclick></onclick>
+          <wrapmultiline>false</wrapmultiline>
+          <align>center</align>
+          <texturefocus border="40" colordiffuse="button_focus">buttons/dialogbutton-fo.png</texturefocus>
+          <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+          <visible>true</visible>
+        </control>
+        <control type="button" id="">
+          <width>300</width>
+          <height>100</height>
+          <label></label>
+          <font>font25_title</font>
+          <textoffsetx>20</textoffsetx>
+          <onclick></onclick>
+          <wrapmultiline>false</wrapmultiline>
+          <align>center</align>
+          <texturefocus border="40" colordiffuse="button_focus">buttons/dialogbutton-fo.png</texturefocus>
+          <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+          <visible>true</visible>
+        </control>
+        <control type="button" id="">
+          <width>300</width>
+          <height>100</height>
+          <label></label>
+          <font>font25_title</font>
+          <textoffsetx>20</textoffsetx>
+          <onclick></onclick>
+          <wrapmultiline>false</wrapmultiline>
+          <align>center</align>
+          <texturefocus border="40" colordiffuse="button_focus">buttons/dialogbutton-fo.png</texturefocus>
+          <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+          <visible>true</visible>
+        </control>
+			</control>
+			<control type="scrollbar" id="60">
+				<left>1489</left>
+				<top>100</top>
+				<width>12</width>
+				<height>700</height>
+				<orientation>vertical</orientation>
+				<onleft>5</onleft>
+				<onright>9000</onright>
+				<animation effect="fade" start="0" end="100" delay="300" time="320">WindowOpen</animation>
+				<animation effect="fade" start="100" end="0" time="150">WindowClose</animation>
+			</control>
+		</control>
+	</controls>
+</window>

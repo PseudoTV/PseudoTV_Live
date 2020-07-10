@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """ 
+MODIFIED FROM
 xmltv.py - Python interface to XMLTV format, based on XMLTV.pm
 
 Copyright (C) 2001 James Oakley <jfunk@funktronics.ca>
@@ -35,10 +35,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 
-from globals import *
-
-from resources.lib.FileAccess import FileAccess
-from xml.etree.ElementTree import ElementTree, Element, SubElement, tostring
+from resources.lib.globals import *
 
 # The Python-XMLTV version
 VERSION = "1.4.4"
@@ -142,7 +139,10 @@ def read_channels(fp=None, tree=None):
         tree = et.parse(fp)
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
-        channel['icon'] = [{'src':elem.findall('icon')[0].get('src')}] #temp fix
+        try:
+            channel['icon'] = [{'src':elem.findall('icon')[0].get('src')}]
+        except:
+            channel['icon'] = ''  #temp fix
         channels.append(channel)
     return channels
 

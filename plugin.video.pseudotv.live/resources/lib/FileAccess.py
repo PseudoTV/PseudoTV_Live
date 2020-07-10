@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals import *
+from resources.lib.globals import *
 
 VFS_AVAILABLE = True
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
@@ -28,7 +28,7 @@ class FileAccess:
         fle = 0
         log("FileAccess: trying to open " + filename)
         try: return VFSFile(filename, mode)
-        except UnicodeDecodeError: return FileAccess.open(ascii(filename), mode, encoding)
+        except UnicodeDecodeError: return FileAccess.open(filename, mode, encoding)
         return fle
 
 
@@ -53,7 +53,7 @@ class FileAccess:
         try:
             return xbmcvfs.exists(filename)
         except UnicodeDecodeError:
-            return FileAccess.exists(ascii(filename))
+            return os.path.exists(xbmc.translatePath(filename))
 
         return False
 
@@ -137,14 +137,12 @@ class FileAccess:
             return True
 
         success = xbmcvfs.mkdir(path)
-
         if success == False:
             if path == os.path.dirname(xbmc.translatePath(path)):
                 return False
 
             if FileAccess._makedirs(os.path.dirname(xbmc.translatePath(path))):
                 return xbmcvfs.mkdir(path)
-
         return xbmcvfs.exists(path)
 
 
@@ -168,6 +166,7 @@ class VFSFile:
         try: 
             data = self.currentFile.read(bytes)
         except: 
+            log("VFSFile: Exception read, trying readBytes")
             data = self.currentFile.readBytes(bytes)
         return data
         
@@ -180,23 +179,6 @@ class VFSFile:
         if isinstance(data,bytes):
             data = data.decode("utf-8", 'backslashreplace')
         return self.currentFile.write(data)
-        # try: 
-        # except:
-            # # if isinstance(data,bytes):
-                # # data = data.decode("utf-8")
-            # # else:
-            # data = data.decode("utf-8")
-            # data = bytearray(data, "utf-8")
-            # data = bytes(data)
-            # return self.currentFile.write(data)
-                    
-        # write(bytearray(data.encode('utf-8')))
-                                        
-        # if isinstance(data,bytes):
-            # data = data.decode("utf-8") 
-        # elif isinstance(data,bytearray):
-            # data = bytearray(data, "utf-8")
-        # return self.currentFile.write(data)
         
         
     def close(self):

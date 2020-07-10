@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals import *
-from resources.lib.FileAccess import FileAccess
-from resources.lib.parsers import MP4Parser
-from resources.lib.parsers import AVIParser
-from resources.lib.parsers import MKVParser
-from resources.lib.parsers import FLVParser
-from resources.lib.parsers import TSParser
-from resources.lib.parsers import STRMParser
+from resources.lib.globals    import *
+from resources.lib.fileaccess import FileAccess
+from resources.lib.parsers    import MP4Parser
+from resources.lib.parsers    import AVIParser
+from resources.lib.parsers    import MKVParser
+from resources.lib.parsers    import FLVParser
+from resources.lib.parsers    import TSParser
+from resources.lib.parsers    import STRMParser
 
 
 class VideoParser:

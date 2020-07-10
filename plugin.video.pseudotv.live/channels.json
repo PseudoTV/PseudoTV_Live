@@ -1,11 +1,14 @@
 {
 	"channels": [{
+		"number": 1,
+		"id": "",
+		"type": "",
 		"name": "",
-		"number": 0.0,
-		"path": [],
 		"logo": "",
-		"genre": [],
+		"radio": "False",
+		"path": [],
+		"groups": [],
 		"rules": [],
-		"type": ""
+		"xmltv": ""
 	}]
 }

@@ -17,13 +17,13 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals import *
+from resources.lib.globals import *
 from plugin  import Plugin
 
 class Context:
     def __init__(self, sysARG, liz):
         log('Context: __init__, sysARG = ' + str(sysARG))
         with busy_dialog():
-            Plugin(sysARG).play(liz,isPlaylist=False)
+            Plugin(sysARG).contextPlay(liz,isPlaylist=False)
         
-if __name__ == '__main__': Context(sys.argv,xbmc.getInfoLabel('ListItem.Writer'))
+if __name__ == '__main__': Context(sys.argv,liz=xbmc.getInfoLabel('ListItem.Writer'))

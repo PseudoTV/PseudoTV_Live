@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals import *
+from resources.lib.globals import *
 
 def listTitle(list):
      return [item.title() for item in list]
@@ -478,3 +478,28 @@ class HandleFilter(BaseRule):
             channelList.fileListFilter = self.storedFilterValue
         return channeldata  
         
+        
+        
+        
+        
+        
+        
+            # def loadRules(self, channelID):
+        # ruleList  = []
+        # listrules = RulesList()
+        # try:
+            # rulecount = int(getSetting('Channel_%s_rulecount'%(channelID)))
+            # for i in range(rulecount):
+                # ruleid = int(getSetting('Channel_%s_rule_%s_id'%(channelID,i + 1)))
+
+                # for rule in listrules.ruleList:
+                    # if rule.getId() == ruleid:
+                        # ruleList.append(rule.copy())
+
+                        # for x in range(rule.getOptionCount()):
+                            # ruleList[-1].optionValues[x] = getSetting('Channel_%s_rule_%s_opt_%s'%(channelID,i + 1,x + 1))
+                        # break
+        # except: ruleList = []
+        # return ruleList
+        
+                

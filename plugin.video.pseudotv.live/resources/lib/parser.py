@@ -21,18 +21,20 @@
 
 # -*- coding: utf-8 -*-
 
-import xmltv
-
-from globals import *
-from resources.lib import VideoParser
-from resources.lib.FileAccess import FileAccess
-
-xmltv.locale = 'UTF-8'
+from resources.lib             import xmltv
+from resources.lib.globals     import *
+from resources.lib.fileaccess  import FileAccess
+from resources.lib.videoparser import VideoParser
+ 
+xmltv.locale      = 'UTF-8'
 xmltv.date_format = DTFORMAT
+LINE_ITEM         = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
 
 class Channels:
     def __init__(self):
-        self.channels = []#self.getChannels()
+        self.jsonRPC     = JSONRPC()
+        self.cache       = self.jsonRPC.cache
+        self.channelList = (self.load() or self.getTemplate(ADDON_VERSION))
         
         
     def reset(self):
@@ -40,32 +42,66 @@ class Channels:
         self.__init__()
         return True
 
+
+    def getChannels(self):
+        return sorted(self.channelList.get('channels',[]), key=lambda k: k['number'])
+        
         
     def add(self, item):
         log('channels: add, item = %s'%(item))
-
-
-    def getChannels(self, channels=CHANNELFLE):
-        log('channels: getChannels')
-        if not FileAccess.exists(channels): channels = CHANNELFLE_DEFAULT
-        return json.load(channels)
-
+        channelList = self.channelList['channels']
+        if not item['path']: return False
+        for channel in channelList:
+            if item["number"] == channel["number"]:
+                log('channels: Updating channel %s settings'%(item["number"]))
+                channel.update(item)
+                return True
+        log('channels: Adding channel %s settings'%(item["number"]))
+        channelList.append(item)
+        self.channelList['channels'] = channelList
+        return True
         
+        
+    @use_cache(28)
+    def getTemplate(self, version):
+        log('channels: getTemplate')
+        return self.load(CHANNELFLE_DEFAULT)
+        
+       
+    def load(self, file=CHANNELFLE):
+        log('channels: load file = %s'%(file))
+        if not FileAccess.exists(file): file = CHANNELFLE_DEFAULT
+        fle  = FileAccess.open(file, 'r')
+        data = loadJSON(fle.read())
+        fle.close()
+        return data
+        
+
     def save(self):
-        if not FileAccess.makedirs(os.path.dirname(CHANNELFLE)): 
-            return False
+        fle = FileAccess.open(CHANNELFLE, 'w')
+        log('channels: save, saving to %s'%(CHANNELFLE))
+        fle.write(dumpJSON(self.channelList, sortkey=False))
+        fle.close()
+        
+        
+    def delete(self):
+        log('channels: delete')
+        if FileAccess.delete(CHANNELFLE):
+            notificationDialog(LANGUAGE(30016)%(LANGUAGE(30024)))
 
 
 class XMLTV:
     def __init__(self):
-        self.newChannels = []
+        self.cache       = SimpleCache()
+        self.xmltvTMP    = []
         self.maxDays     = getSettingInt('Max_Days')
         self.xmltvList   = {'data'       : self.getData(),
                             'channels'   : self.cleanSelf(self.getChannels(),'id'),
                             'programmes' : self.cleanSelf(self.getProgrammes(),'channel')}
         self.xmltvList['endtimes'] = self.getEndtimes()
-        self.oldChannels = self.xmltvList['channels'].copy()
-        
+        self.extImport      = getSettingBool('User_Import')
+        self.extImportXMLTV = getSetting('Import_XMLTV')
+
         
     def reset(self):
         log('xmltv: reset')
@@ -78,7 +114,7 @@ class XMLTV:
         self.xmltvList['programmes'].extend(self.getProgrammes(file))
         return True
         
-
+        
     def getChannels(self, file=XMLTVFLE):
         log('xmltv: getChannels, file = %s'%file)
         try: 
@@ -105,31 +141,38 @@ class XMLTV:
             return self.resetData()
 
 
-    def buildGenres(self): #build list of all genre combinations. 
+    @use_cache(28)
+    def getGenres(self):  #build list of all genre combinations. 
+        log('xmltv: getGenres')
+        epggenres = {}
+        xml   = FileAccess.open(GENREFLE_DEFAULT, "r")
+        dom   = parse(xml)
+        lines = dom.getElementsByTagName('genre')
+        xml.close()
+        for line in lines: 
+            items = line.childNodes[0].data.split(' / ')
+            for item in items: 
+                epggenres[item] = line.attributes['genreId'].value
+        return epggenres
+        
+        
+    def buildGenres(self):
         log('xmltv: buildGenres')
         programmes = self.xmltvList['programmes']
         genres = []
         # [genres.append(' / '.join(genre[0] for genre in program['category'])) for program in programmes]
         [genres.extend(genre for genre in program['category']) for program in programmes]
         try:
-            epggenres = {}
-            xml   = FileAccess.open(GENREFLE_DEFAULT, "r")
-            dom   = parse(xml)
-            lines = dom.getElementsByTagName('genre')
-            for line in lines: 
-                items = line.childNodes[0].data.split(' / ')
-                for item in items: epggenres[item] = line.attributes['genreId'].value
-            xml.close()
-            
-            #todo faster method?
+            epggenres = self.getGenres()
             doc  = Document()
             root = doc.createElement('genres')
             doc.appendChild(root)
             
             name = doc.createElement('name')
-            name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))           
+            name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))
             root.appendChild(name)
             
+            #todo faster method?
             # def sort():
                 # for key in matches: yield {key:epggenres[key]}
                 
@@ -152,7 +195,7 @@ class XMLTV:
 
     def getEndtimes(self): # get "Endtime" channels last stopDate in programmes
         endtime    = {}
-        now        = rollbackTime(getLocalTime())
+        now        = roundToHalfHour(getLocalTime())
         channels   = self.xmltvList['channels']
         programmes = self.xmltvList['programmes']
         
@@ -183,13 +226,12 @@ class XMLTV:
                      'display-name' : [(item['name'], LANG)],
                      'icon'         : [{'src':item['logo']}]})
         log('xmltv: addChannel = %s'%(citem))
-        
+        self.xmltvTMP.append(item['id'])
         channelIDX = self.findChannelIDX(citem, channels)
         if channelIDX is None: 
             channels.append(citem)
         else: 
             channels[channelIDX] = citem # update existing channel meta
-        self.newChannels.append(citem)
         self.xmltvList['channels'] = channels
         return True
 
@@ -198,16 +240,18 @@ class XMLTV:
         programmes = self.xmltvList['programmes']
         pitem      = {'channel'     : id,
                       'new'         : item['new'],
-                      'credits'     : {'director': [str(item['director'])], 'writer': [dumpJSON(item['writer'])]}, #Hijacked director = dbid, writer = listitem dict.
+                      'credits'     : {'director': [str(item['director'])], 'writer': ['\n\n\n\n\n\n\n\n\n\n\n\n%s'%(dumpJSON(item['writer']))]}, #Hijacked director = dbid, writer = listitem dict.
                       'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                       'title'       : [(self.cleanString(item['title']), LANG)],
                       'sub-title'   : [(self.cleanString(item['sub-title']), LANG)],
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
                       'star-rating' : [{'value': self.cleanStar(item['stars'])}],
-                      'date'        : datetime.datetime.fromtimestamp(float(item['start'])).strftime('%Y%m%d'),
-                      'stop'        : datetime.datetime.fromtimestamp(float(item['stop'])).strftime(xmltv.date_format),
-                      'start'       : datetime.datetime.fromtimestamp(float(item['start'])).strftime(xmltv.date_format),
+                      'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(xmltv.date_format)),
+                      'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(xmltv.date_format)),
                       'icon'        : [{'src': item['thumb']}]}
+
+        # if item['date']: #todo fix
+            # pitem['date'] = (datetime.datetime.strptime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d'),
             
         rating = self.cleanMPAA(item['rating'])
         if rating != 'NA' and rating.startswith('TV-'): 
@@ -269,10 +313,9 @@ class XMLTV:
 
 
     def cleanSelf(self, items, key='id'): # remove imports (Non PseudoTV Live)
+        log('xmltv: cleanSelf, key = %s'%(key))
         slugName = slugify(ADDON_NAME)
-        tmpitems = [item for item in items if item[key].endswith('@%s'%(slugName))]
-        log('xmltv: cleanSelf, before = %s, after = %s, key = %s'%(len(items),len(tmpitems),key))
-        return tmpitems
+        return [item for item in items if item[key].endswith('@%s'%(slugName))]
         
         
     def cleanProgrammes(self, programmes=None): # remove expired content
@@ -287,14 +330,18 @@ class XMLTV:
         return tmpProgrammes
 
 
-    def cleanChannels(self, channels=None): # remove missing and non PseudoTV Live channels from xmltvList
-        if channels is None: channels = self.xmltvList['channels']
-        # diffChannels = diffDICT(self.newChannels,self.oldChannels)
-        # if len(diffChannels) > 0 and not assertDICT(diffChannels, channels):
-            # [self.removeChannel(diff['id']) for diff in diffChannels if (self.findChannelIDX(diff['id'],self.oldChannels) is not None and self.findChannelIDX(diff['id'],self.newChannels) is None)]
-        log('xmltv: cleanChannels, before = %s, after = %s'%(len(channels),len(self.xmltvList['channels'])))
+    def cleanChannels(self): # remove missing channels from xmltvList
+        log('xmltv: cleanChannels')
+        # if not self.xmltvTMP: return
+        # channels = self.xmltvList['channels'].copy()
+        # print(channels, self.xmltvTMP)
+        # for item in self.xmltvTMP:
+            # for idx, channel in enumerate(channels):
+                # if channel['id'] == item:
+                    # channels.pop(idx)
+        # [self.removeChannel(id) for id in channels]
+                                
         
-
     def removeChannel(self, id): # remove single channel and all programmes from xmltvList
         channels   = self.xmltvList['channels']
         programmes = self.xmltvList['programmes']
@@ -313,19 +360,21 @@ class XMLTV:
         
     def save(self, reset=True):
         log('xmltv: save')
-        # self.cleanChannels()
+        self.cleanChannels()
         
         if reset: 
             data = self.resetData()
         else:     
             data = self.xmltvList['data']
             
-        if EXT_IMPORT: 
-            self.importXMLTV(EXT_IMPORT_XMLTV)
+        if self.extImport: 
+            self.importXMLTV(self.extImportXMLTV)
         
         writer = xmltv.Writer(encoding=xmltv.locale, date=data['date'],
-                              source_info_url=data['source-info-url'], source_info_name=data['source-info-name'],
-                              generator_info_url=data['generator-info-url'], generator_info_name=data['generator-info-name'])
+                              source_info_url=data['source-info-url'], 
+                              source_info_name=data['source-info-name'],
+                              generator_info_url=data['generator-info-url'], 
+                              generator_info_name=data['generator-info-name'])
                
         channels = self.xmltvList['channels']
         for channel in channels: writer.addChannel(channel)
@@ -346,10 +395,11 @@ class XMLTV:
 
 class M3U:
     def __init__(self):
-        self.m3uNEW  = []
+        self.m3uTMP  = []
         self.m3uList = ['#EXTM3U tvg-shift="%s" x-tvg-url=""'%(self.getShift())]
         self.m3uList.extend(self.cleanSelf(self.load()))
-        self.m3uOLD  = self.m3uList.copy()
+        self.extImport    = getSettingBool('User_Import')
+        self.extImportM3U = getSetting('Import_M3U')
 
 
     def getShift(self):
@@ -375,109 +425,150 @@ class M3U:
     def load(self, file=M3UFLE):
         log('m3u: load, file = %s'%file)
         fle = FileAccess.open(file, 'r')
-        m3uListTMP = (fle.read()).split('\n')
+        m3uListTMP = (fle.readlines())
         fle.close()
         return ['%s\n%s'%(line,m3uListTMP[idx+1]) for idx, line in enumerate(m3uListTMP) if line.startswith('#EXTINF:')]
 
 
     def save(self):
         log('m3u: save')
-        # if not FileAccess.makedirs(os.path.dirname(M3UFLE)): 
-            # return False
-            
-        # self.cleanChannels()
-        if EXT_IMPORT: 
-            self.importM3U(EXT_IMPORT_M3U)
+        self.cleanChannels()
+        if self.extImport: 
+            self.importM3U(self.extImportM3U)
         fle = FileAccess.open(M3UFLE, 'w')
         log('m3u: save, saving to %s'%(M3UFLE))
         fle.write('\n'.join([str(item) for item in self.m3uList]))
         fle.close()
         return True
-
-
-    def add(self, item):
-        log('m3u: add item = %s'%(item))
-        channelIDX = self.findChannelIDX(item['id'])
-        citem = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s",%s\n%s'%(item['number'],item['id'],item['name'],item['logo'],';'.join(item['group']),item['label'],item['url'])
-        if channelIDX is not None: 
-            self.m3uList[channelIDX] = citem # update existing channel
-        else:
-            self.m3uList.append(citem)
-            self.m3uNEW.append(citem)
-        return True
         
 
-    def findChannelIDX(self, id, lst=None, return_line=False):
-        if lst is None: lst = self.m3uList
-        for idx, line in enumerate(lst):
-            if line.startswith('#EXTINF:'):
-                match = re.compile('tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
-                if not match: continue
-                if match.group(1) == id:
-                    log('m3u: findChannelIDX, match = %s, idx = %s'%(line, idx))
-                    if return_line: return line
-                    return idx
+    def add(self, item, radio=False):
+        log('m3u: add item = %s'%(item))
+        self.m3uTMP.append(item['id'])
+        citem = LINE_ITEM%(item['number'],item['id'],item['name'],item['logo'],';'.join(item['group']),str(radio).lower(),item['label'],item['url'])
+        channelIDX = self.findChannelIDX(item['id'])
+        if channelIDX is not None: self.removeChannel(id=item['id'])
+        
+        # if channelIDX is None:
+            # self.m3uList.append(citem)
+        # else:  
+            # self.m3uList[channelIDX] = citem # update existing channel
+        self.m3uList.append(citem)
+        return True
+        
+        
+    def findChannelNumber(self, line):
+        if line.startswith('#EXTINF:'):
+            match = re.compile('tvg-chno=\"(.*?)\"', re.IGNORECASE).search(line)
+            if match: 
+                log('m3u: findChannelNumber, found %s'%(match.group(1)))
+                return match.group(1)
         return None
         
         
-    def removeChannel(self, id, line=None):
-        if line is None: line = self.findChannelIDX(id,return_line=True)
+    def findChannelID(self, line):
+        if line.startswith('#EXTINF:'):
+            match = re.compile('tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
+            if match: 
+                log('m3u: findChannelID, found %s'%(match.group(1)))
+                return match.group(1)
+        return None
+
+
+    def findChannelIDX(self, id='', channels=None, return_line=False):
+        if channels is None: channels = self.m3uList
+        for idx, line in enumerate(channels):
+            lineID = self.findChannelID(line)
+            if not lineID: continue
+            if lineID == id:
+                log('m3u: findChannelIDX, match = %s, idx = %s'%(line, idx))
+                if return_line: return line
+                return idx
+        return None
+        
+        
+    def removeChannel(self, line=None, id=''):
+        if line is None: line = self.findChannelIDX(id, return_line=True)
         log('m3u: removeChannel, removing %s'%(line))
         self.m3uList.remove(line)
         return True
 
 
     def cleanSelf(self, items): # remove imports (Non PseudoTV Live)
+        log('m3u: cleanSelf')
         slugName = slugify(ADDON_NAME)
-        tmpitems = []
         for line in items:
-            if line.startswith('#EXTINF:'):
-                match = re.compile('tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
-                if not match: continue
-                id = match.group(1)
-                if id.endswith('@%s'%(slugName)):
-                    tmpitems.append(line)
-        log('m3u: cleanSelf, before = %s, after = %s'%(len(items),len(tmpitems)))
-        return tmpitems
+            lineID = self.findChannelID(line)
+            if not lineID: continue
+            if lineID.endswith('@%s'%(slugName)):
+                yield line
 
 
-    def cleanChannels(self): # remove abandoned channels
+    def cleanChannels(self): # remove abandoned channels, better method?
         log('m3u: cleanChannels')
-        # channels = self.m3uList
-        # diffChannels = diffLST(self.m3uNEW,self.m3uOLD)
-        # if len(diffChannels) > 0 and not assertLST(diffChannels, channels):
-            # [self.removeChannel(diff['id']) for diff in diffChannels if (self.findChannel(diff['id'],self.m3uOLD) is not None and self.findChannel(diff['id'],self.m3uNEW) is None)]
-        # log('m3u: cleanChannels, before = %s, after = %s'%(len(channels),len(self.m3uList)))
+        if not self.m3uTMP: return
+        channels = self.m3uList.copy()
+        channels.pop(0)
+        for id in self.m3uTMP:
+            line = self.findChannelIDX(id, channels, return_line=True)
+            if line: channels.remove(line)
+        [self.removeChannel(line) for line in channels]
+                
         
-
     def delete(self):
         log('m3u: delete')
         if FileAccess.delete(M3UFLE): notificationDialog(LANGUAGE(30016)%('M3U'))
 
 
 class JSONRPC:
-    def __init__(self):
-        self.cache = SimpleCache()
-        self.pageLimit     = getSettingInt('Page_Limit')
-        self.useColor      = getSettingBool('Use_Color_Logos')
-        self.videoParser   = VideoParser.VideoParser()
-        self.resourcePacks = self.buildResources()
+    def __init__(self, myWorker=None):
+        self.cache         = SimpleCache()
+        self.queue         = myWorker
+        self.useColor      = USE_COLOR
+        self.videoParser   = VideoParser()
+        self.resourcePacks = self.buildLogoResources()
         FileAccess.makedirs(LOGO_LOC)
 
 
-    def getPVRChannels(self):
-        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"alltv","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext"]}, "id": 1}')
-        return sendJSON(json_query).get('result',{}).get('channels',[])
+    def cacheJSON(self, command, life=datetime.timedelta(minutes=15)):
+        cacheName = '%s.cacheJSON.%s'%(ADDON_ID,command)
+        cacheResponse = self.cache.get(cacheName)
+        if cacheResponse is None:
+            cacheResponse = sendJSON(command)
+            self.cache.set(cacheName, cacheResponse, checksum=len(cacheResponse), expiration=life)
+        return cacheResponse
 
-
-    def getActivePlayer(self):
+        
+    def getActivePlayer(self, return_item=False):
         json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
         json_response = (sendJSON(json_query))
-        try: id = json_response['result'][0]['playerid']
+        item = json_response.get('result',[])[0]
+        try: id = item['playerid']
         except: id = 1
-        log("JSONRPC: getActivePlayer, id = " + str(id)) 
+        log("JSONRPC: getActivePlayer, id = %s"%(id))
+        if return_item: return item
         return id
         
+        
+    def getActivePlaylist(self):
+        json_query = ('{"jsonrpc":"2.0","method":"Playlist.GetPlaylists","params":{},"id":1}')
+        json_response = (sendJSON(json_query)).get('result',[])[0]
+        ptype = self.getActivePlayer(return_item=True).get('type','video')
+        try: 
+            for type in json_response:
+                if type['type'] == ptype:
+                    id = type["playlistid"]
+                    break
+        except: id = 1
+        log("JSONRPC: getActivePlaylist, id = %s"%(id))
+        return id
+        
+        
+    def getPVRChannels(self, radio=False):
+        type = 'allradio' if radio else 'alltv'
+        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext"]}, "id": 1}'%(type))
+        return sendJSON(json_query).get('result',{}).get('channels',[])
+
 
     def matchPVRPath(self, channelid=None):
         if channelid is None: 
@@ -507,12 +598,13 @@ class JSONRPC:
             return ''
         
 
-    def matchPVRChannel(self, chname, id): # Convert PseudoTV Live channelID into a Kodi channelID for playback
-        channels = self.getPVRChannels()
+    def matchPVRChannel(self, chname, id, radio=False): # Convert PseudoTV Live channelID into a Kodi channelID for playback
+        channels = self.getPVRChannels(radio)
         for item in channels:
-            writer = loadJSON(item.get('broadcastnow',{}).get('writer',''))
+            writer = item.get('broadcastnow',{}).get('writer','')
             if not writer: continue #filter other PVR backends; currently NO API support.
             try: 
+                writer = loadJSON(writer)
                 if writer['data']['id'] == id:
                     log('matchPVRChannel, match found chname = %s, id = %s'%(chname,id))
                     return item
@@ -520,37 +612,28 @@ class JSONRPC:
         return None
         
         
-    def getPVRposition(self, chname, id, isPlaylist=False): # Current PVR Position data
+    def getPVRposition(self, chname, id, radio=False, isPlaylist=False): # Current PVR Position data
         log('JSONRPC: getPVRposition, chname = %s, id = %s, isPlaylist = %s'%(chname,id,isPlaylist))
-        channelItem = self.matchPVRChannel(chname, id)
+        channelItem = self.matchPVRChannel(chname, id, radio)
         if not channelItem: return {}
         if isPlaylist:
             channelItem['broadcastnext'] = []
             json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}'%(channelItem['channelid']))
             json_response = (sendJSON(json_query)).get('result',{}).get('broadcasts',[])
-            
             for idx, item in enumerate(json_response):
-                if item['progresspercentage'] == 100.0: continue
-                elif item['progresspercentage'] > 0.0: 
+                if item['progresspercentage'] == 100: continue
+                elif item['progresspercentage'] > 0: 
                     broadcastnow = channelItem['broadcastnow']
                     channelItem.pop('broadcastnow')
                     item.update(broadcastnow) 
                     channelItem['broadcastnow'] = item
-                elif item['progresspercentage'] == 0.0: 
+                elif item['progresspercentage'] == 0: 
                     channelItem['broadcastnext'].append(item)
+            log('JSONRPC: getPVRposition, found broadcastnext = %s'%(len(channelItem['broadcastnext'])))
         else: 
             broadcastnext = channelItem['broadcastnext']
             channelItem['broadcastnext'] = [broadcastnext]
         return channelItem
-
-
-    def cacheJSON(self, command, life=datetime.timedelta(minutes=15)):
-        cacheName = '%s.cacheJSON.%s'%(ADDON_ID,command)
-        cacheResponse = self.cache.get(cacheName)
-        if cacheResponse is None:
-            cacheResponse = sendJSON(command)
-            self.cache.set(cacheName, cacheResponse, checksum=len(cacheResponse), expiration=life)
-        return cacheResponse
 
 
     def fillTVShows(self):
@@ -561,6 +644,22 @@ class JSONRPC:
         for item in json_response: tvshows.append({'label':item['label'],'item':item,'thumb':item['thumbnail']})
         log('jsonrpc, fillTVShows, found = %s'%(len(tvshows)))
         return tvshows
+
+
+    def fillMusicInfo(self, sortbycount=True):
+        genres = []
+        MusicGenreList = []
+        if not hasMusic(): return MusicGenreList
+        json_query = ('{"jsonrpc":"2.0","method":"AudioLibrary.GetSongs","params":{"properties":["genre"]},"id":1}')
+        json_response = self.cacheJSON(json_query).get('result',{}).get('songs',[])
+        [genres.extend(re.split(';|/|,',genre)) for song in json_response for genre in song.get('genre',[])]
+        genres = collections.Counter([genre for genre in genres if not genre.isdigit()])
+        if sortbycount: genres.most_common()
+        values = sorted(genres.items())
+        [MusicGenreList.append(key) for key, value in values]
+        MusicGenreList.sort(key=lambda x: x.lower())
+        log('jsonrpc, fillMusicInfo, found genres = %s'%(MusicGenreList))
+        return MusicGenreList
 
 
     def getTVInfo(self, sortbycount=False):
@@ -685,10 +784,8 @@ class JSONRPC:
         return StudioList, MovieGenreList
 
 
-    def requestList(self, id, path, media='video', page={}, sort={}, filter={}, limits={}):
-        if not page: page = self.pageLimit
-        if not sort and path.startswith('videodb://movies'): 
-            sort = {"method": "random"}
+    def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
+        if not sort and path.startswith('videodb://movies'): sort = {"method": "random"}
             
         limits = self.autoPagination(id, path, limits)
         params                      = {}
@@ -709,6 +806,7 @@ class JSONRPC:
             key = 'filedetails'
         else: 
             key = 'files'
+            
         results = json_response.get('result',{})
         items   = results.get(key,[])
         limits  = results.get('limits',params['limits'])
@@ -718,6 +816,11 @@ class JSONRPC:
             log('jsonrpc, requestList resetting page to 0')
             limits = {"end": 0, "start": 0, "total": 0}
         self.autoPagination(id, path, limits)
+        
+        if len(items) == 0 and limits.get('start',0) > 0 and limits.get('total',0) > 0:
+            log("jsonrpc: requestList, trying again at start page 0")
+            return self.requestList(id, path, media, page, sort, filter, limits)
+        
         log("jsonrpc: requestList return, items size = %s"%len(items))
         return items
         
@@ -752,39 +855,47 @@ class JSONRPC:
 
     def setDuration(self, media, dbid, dur):
         log('setDuration, media = %s, dbid = %s, dur = %s'%(media, dbid, dur))
-        # todo create thread queue, use join
-        # if media == 'movie': sendJSON('{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))
-        # elif media == 'episode': sendJSON('{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))
+        if media == 'movie': 
+            self.queue.add((sendJSON,('{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))))
+        elif media == 'episode': 
+            self.queue.add((sendJSON,('{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))))
+     
+    
+    def buildBCTresources(self, packs=None):
+        log('jsonrpc, buildBCTresources')
+        dirs, files = [[],[]]
+        resourceMap = {}
+        if packs is None: packs = GLOBAL_RESOURCE_PACK
+        for type, path in packs.items():
+            if path.startswith('resource://'):
+                dirs, files = self.getResourcesFolders(path,self.getPluginMeta(path).get('version',''))
+            resourceMap[type] = {'path':path,'files':files,'dirs':dirs}
+        return resourceMap
         
             
-    def buildResources(self):
-        log('jsonrpc, buildResources')
+    def buildLogoResources(self):
+        log('jsonrpc, buildLogoResources')
         logos     = []
+        radios    = ["resource://resource.images.musicgenreicons.text"]
         genres    = ["resource://resource.images.moviegenreicons.transparent"]
         studios   = ["resource://resource.images.studios.white/", "resource://resource.images.studios.coloured/"]
         if self.useColor: studios.reverse()
-        [logos.append({'type':['TV Genres','MOVIE Genres','MIXED Genres'],'path':genre,'files': self.getFolderFiles(genre)[1]}) for genre  in genres]
-        [logos.append({'type':['TV Networks','MOVIE Studios'],'path':studio,'files': self.getFolderFiles(studio)[1]}) for studio in studios]
-        logos.append( {'type':['TV Shows'],'path':'','files': list(self.fillTVShows())})
-        log('jsonrpc, buildResources return')
+        [logos.append({'type':['MUSIC Genres'],'path':radio,'files': self.getResourcesFolders(radio, self.getPluginMeta(radio).get('version',''))[1]}) for radio in radios]
+        [logos.append({'type':['TV Genres','MOVIE Genres','MIXED Genres','Custom'],'path':genre,'files': self.getResourcesFolders(genre, self.getPluginMeta(genre).get('version',''))[1]}) for genre  in genres]
+        [logos.append({'type':['TV Networks','MOVIE Studios','Custom'],'path':studio,'files': self.getResourcesFolders(studio, self.getPluginMeta(studio).get('version',''))[1]}) for studio in studios]
+        logos.append( {'type':['TV Shows'],'path':'','files': self.fillTVShows()})
+        log('jsonrpc, buildLogoResources return')
         return logos
 
 
     @use_cache(1)
-    def getPluginMeta(plugin):
-        log('getPluginMeta: plugin = %s'%(plugin))
-        if '?' in plugin: plugin = plugin.split('?')[0]
-        if plugin[0:9] == 'plugin://':
-            plugin = plugin.replace("plugin://","")
-            plugin = splitall(plugin)[0]
-        else: plugin = plugin
-        pluginID = xbmcaddon.Addon(plugin)
-        return {'label':pluginID.getAddonInfo('name'), 'label':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'plot':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
-
-
-    @use_cache(7)
-    def getFolderFiles(self, path):
-        log('jsonrpc, getFolderFiles path = %s'%(path))
+    def getPluginMeta(self, plugin):
+        return getPluginMeta(plugin)
+    
+    
+    @use_cache(28)
+    def getResourcesFolders(self, path, version=None):
+        log('jsonrpc, getResourcesFolders path = %s, version = %s'%(path,version))
         try: 
             return FileAccess.listdir(path)
         except: 
@@ -792,7 +903,7 @@ class JSONRPC:
 
 
     @use_cache(1)
-    def findLogo(self, channelname, channeltype, useColor, featured=False):
+    def findLogo(self, channelname, channeltype, useColor, featured=False, version=ADDON_VERSION):
         log('findLogo')
         for item in self.resourcePacks:
             if channeltype in item['type']:
@@ -802,7 +913,7 @@ class JSONRPC:
                         if channelname.lower() == fileItem.get('label','').lower(): 
                             return self.cacheImage(channelname,fileItem.get('art',{}).get('clearlogo',''),featured)
                     else:
-                        if file.lower() == '%s.png'%(channelname.lower()): 
+                        if file.lower().startswith(channelname.lower()): 
                             return self.cacheImage(channelname,os.path.join(item['path'],file),featured)
         return LOGO
         
@@ -820,11 +931,15 @@ class JSONRPC:
         log('getLogo: channelname = %s, type = %s'%(channelname,type))
         icon = LOGO
         localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
-        if FileAccess.exists(localIcon): return localIcon
-        elif type in ['TV Shows','TV Networks','MOVIE Studios','TV Genres','MOVIE Genres','MIXED Genres']: 
+        if FileAccess.exists(localIcon): 
+            log('getLogo: using local logo = %s'%(localIcon))
+            return localIcon
+        elif type in ['TV Shows','TV Networks','MOVIE Studios','TV Genres','MOVIE Genres','MIXED Genres','MUSIC Genres','Custom']: 
             icon = (self.findLogo(channelname, type, self.useColor, featured) or LOGO)
-        else:
+        log('getLogo: icon = %s'%(icon))
+        if icon in [None,LOGO] and path:
             if isinstance(path, list): path = path[0]
             if path.startswith('plugin://'): icon = self.getPluginMeta(path).get('icon',None)
+        if icon is None: icon = LOGO #last check to make sure a default logo is set; unneeded...
         log('getLogo, channelname = %s, logo = %s'%(channelname,icon))
         return icon

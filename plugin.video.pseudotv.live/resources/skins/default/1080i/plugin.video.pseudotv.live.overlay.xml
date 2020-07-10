@@ -39,10 +39,10 @@
                 <width>100</width>
                 <height>100</height>
                 <aspectratio>keep</aspectratio>
-                <!-- <texture>$INFO[Container(40000).ListItem(1).Thumb]</texture> -->
                 <visible>Player.HasMedia + Player.Playing</visible>
-                <texture fallback="logo.png">$INFO[Window(10000).Property(plugin.video.pseudotv.live.chlogo)]</texture>
+                <texture fallback="logo.png"></texture>
                 <animation effect="fade" end="20" condition="True">conditional</animation>
+                <animation effect="fade" start="0" end="20" time="500" reversible="true">>VisibleChange</animation>
             </control>
         </control>
         <control type="list" id="40000">
@@ -53,3 +53,8 @@
         </control>
     </controls>
 </window>
+
+<!-- <effect type="slide" start="0,-40" end="0,0" time="400" tween="cubic" easing="inout"/> -->
+      <!-- <effect type="fade" start="0" end="100" time="500"/> -->
+      <!-- <effect type="slide" start="0,0" end="0,-40" time="400" tween="cubic" easing="inout"/> -->
+      <!-- <effect type="fade" start="100" end="0" time="200"/> -->

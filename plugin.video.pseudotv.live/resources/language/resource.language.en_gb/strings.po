@@ -61,11 +61,11 @@ msgid "Rebuild M3U/XMLTV"
 msgstr ""
 
 msgctxt "#30011"
-msgid "Delete M3U/XMLTV"
+msgid "Delete [M3U/XMLTV/Genre] Files"
 msgstr ""
 
 msgctxt "#30012"
-msgid "Rebuild PVR"
+msgid "Reconfigure %s for use with %s"
 msgstr ""
 
 msgctxt "#30013"
@@ -105,7 +105,7 @@ msgid "Refresh"
 msgstr ""
 
 msgctxt "#30022"
-msgid "Predefined Channels"
+msgid "Pre-defined Channels"
 msgstr ""
 
 msgctxt "#30023"
@@ -113,7 +113,7 @@ msgid "Recommended Channels"
 msgstr ""
 
 msgctxt "#30024"
-msgid "Custom Channels"
+msgid "User-Defined Channels"
 msgstr ""
 
 msgctxt "#30025"
@@ -125,7 +125,7 @@ msgid "Recommended"
 msgstr ""
 
 msgctxt "#30027"
-msgid "Custom"
+msgid "Channel Manager"
 msgstr ""
 
 msgctxt "#30028"
@@ -177,7 +177,7 @@ msgid "Max Guidedata (Days)"
 msgstr ""
 
 msgctxt "#30040"
-msgid "Playback Seek Tolerence (Seconds)"
+msgid "Playback Seek Tolerance (Seconds)"
 msgstr ""
 
 msgctxt "#30041"
@@ -225,7 +225,7 @@ msgid "Updating"
 msgstr ""
 
 msgctxt "#30052"
-msgid "Initializing"
+msgid "Initializing..."
 msgstr ""
 
 msgctxt "#30053"
@@ -277,7 +277,7 @@ msgid "Build"
 msgstr ""
 
 msgctxt "#30065"
-msgid "Force PVR reload"
+msgid "Force %s to reload"
 msgstr ""
 
 msgctxt "#30066"
@@ -285,23 +285,23 @@ msgid "Resource Packs"
 msgstr ""
 
 msgctxt "#30067"
-msgid "Logo Packs"
+msgid "Logo Pack"
 msgstr ""
 
 msgctxt "#30068"
-msgid "Network Bumpers"
+msgid "Bumpers Pack"
 msgstr ""
 
 msgctxt "#30069"
-msgid "Ratings Bumpers"
+msgid "Ratings Pack"
 msgstr ""
 
 msgctxt "#30070"
-msgid "Commercials"
+msgid "Commercials Pack"
 msgstr ""
 
 msgctxt "#30071"
-msgid "Trailers"
+msgid "Trailers Pack"
 msgstr ""
 
 msgctxt "#30072"
@@ -313,5 +313,113 @@ msgid "Save Channel Changes?"
 msgstr ""
 
 msgctxt "#30074"
-msgid "Reconfigure %s for use with %s"
+msgid "Play from here"
+msgstr ""
+
+msgctxt "#30075"
+msgid "Custom Channel Groups"
+msgstr ""
+
+msgctxt "#30076"
+msgid "Enter Custom Groups\nSeparate by '|' ex. Action|Comedy"
+msgstr ""
+
+msgctxt "#30077"
+msgid "Clear Pre-defined Channels"
+msgstr ""
+
+msgctxt "#30078"
+msgid "Recently Added"
+msgstr ""
+
+msgctxt "#30079"
+msgid "PVR Recordings"
+msgstr ""
+
+msgctxt "#30080"
+msgid "Mixed Other"
+msgstr ""
+
+msgctxt "#30081"
+msgid "View Friendly User-Log"
+msgstr ""
+
+msgctxt "#30082"
+msgid "Select Custom Channel Groups"
+msgstr ""
+
+msgctxt "#30083"
+msgid "Select Content Path"
+msgstr ""
+
+msgctxt "#30084"
+msgid "Enter Channel Name"
+msgstr ""
+
+msgctxt "#30085"
+msgid "Node Editor"
+msgstr ""
+
+msgctxt "#30086"
+msgid "Playlist Editor"
+msgstr ""
+
+msgctxt "#30087"
+msgid "Enter Name"
+msgstr ""
+
+msgctxt "#30088"
+msgid "Browse Path"
+msgstr ""
+
+msgctxt "#30089"
+msgid "Select Groups"
+msgstr ""
+
+msgctxt "#30090"
+msgid "Customize Rules"
+msgstr ""
+
+msgctxt "#30091"
+msgid "Save Changes?"
+msgstr ""
+
+msgctxt "#30092"
+msgid "Clear Settings?"
+msgstr ""
+
+msgctxt "#30093"
+msgid "Clear User-Defined Channels"
+msgstr ""
+
+msgctxt "#30094"
+msgid "Include Specials/Extras"
+msgstr ""
+
+msgctxt "#30095"
+msgid "Include STRM's"
+msgstr ""
+
+msgctxt "#30096"
+msgid "Delete User-Defined Channels?"
+msgstr ""
+
+msgctxt "#30097"
+msgid "Music Genres"
+msgstr ""
+
+msgctxt "#30098"
+msgid "Listen to %s Radio..."
+msgstr ""
+
+msgctxt "#30099"
+msgid "Client Mode"
+msgstr ""
+
+msgctxt "#30100"
+msgid "Running in Client Mode"
+msgstr ""
+
+msgctxt "#30101"
+msgid "Starting Service..."
 msgstr ""

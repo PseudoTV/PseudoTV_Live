@@ -18,22 +18,21 @@
 
 # -*- coding: utf-8 -*-
 
-from globals import *
-from builder import Builder
+from resources.lib.globals import *
+from resources.lib.builder import Builder
 
 class Plugin:
-    def __init__(self, sysARG, myPlayer=None):
+    def __init__(self, sysARG=sys.argv):
         log('__init__, sysARG = ' + str(sysARG))
         self.sysARG = sysARG
         self.CONTENT_TYPE  = 'episodes'
         self.CACHE_ENABLED = False
         self.myBuilder = Builder()
         self.myBuilder.plugin = self
-        if myPlayer is None: self.myPlayer = xbmc.Player()
-        else: self.myPlayer = myPlayer
+        self.myPlayer = MY_PLAYER
         self.playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
         self.maxDays  = getSettingInt('Max_Days')
-        self.seekTol  = getSettingInt('Seek_Tolerence')
+        self.seekTol  = getSettingInt('Seek_Tolerance')
         self.usePlaylist = bool(getSettingInt('Playback_Method'))
         
         
@@ -42,10 +41,12 @@ class Plugin:
         MAIN_MENU = [(LANGUAGE(30008), '', '')]#,#todo
                      # (LANGUAGE(30009), '', '')]
 
-        UTIL_MENU = [(LANGUAGE(30010), '', '', LANGUAGE(30008)),
+        UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30011), '', '', LANGUAGE(30008)),
-                     (LANGUAGE(30012), '', '', LANGUAGE(30008)),
-                     (LANGUAGE(30065), '', '', LANGUAGE(30008)),                     
+                     (LANGUAGE(30096), '', '', LANGUAGE(30096)),
+                     (LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)),
+                     (LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),
+                     (LANGUAGE(30081), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30013), '', '', LANGUAGE(30008))]
 
         CHAN_MENU = [(LANGUAGE(30014), '', '', LANGUAGE(30009)),
@@ -58,20 +59,26 @@ class Plugin:
         [self.addDir(*item) for item in items]
         
         
-    def deleteFiles(self):
+    def deleteFiles(self, channels=True):
         log('utilities, deleteFiles')
-        if yesnoDialog(LANGUAGE(30057)):
-            [func() for func in [self.myBuilder.m3u.delete,self.myBuilder.xmltv.delete,self.myBuilder.xmltv.delete]]
-        
+        msg = 30096 if channels else 30011
+        if yesnoDialog('%s ?'%(LANGUAGE(msg))):
+            if channels: 
+                self.myBuilder.channels.delete()
+            else:
+                [func() for func in [self.myBuilder.m3u.delete,self.myBuilder.xmltv.delete]]
+        return
         
         
     def utilities(self, name):
         log('utilities, name = %s'%name)
         if name   == LANGUAGE(30010): self.myBuilder.buildService(reloadPVR=True)
         elif name == LANGUAGE(30011): self.deleteFiles()
-        elif name == LANGUAGE(30012): configurePVR()
-        elif name == LANGUAGE(30065): brutePVR()
+        elif name == LANGUAGE(30096): self.deleteFiles(channels=True)
+        elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
+        elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
         elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
+        elif name == LANGUAGE(30081): textviewer(getProperty('USER_LOG'),usemono=True)
         else: return
         xbmc.executebuiltin('Action(Back,10025)')
             
@@ -91,81 +98,122 @@ class Plugin:
         for item in items: self.addDir(*item)
 
 
-    def isPlaylistRandom(self):
-        return xbmc.getInfoLabel('Playlist.Random').lower() == 'random' # Disable auto playlist shuffling if it's on
-        
-        
-    def isPlaylistRepeat(self):
-        return xbmc.getInfoLabel('Playlist.IsRepeat').lower() == 'true' # Disable auto playlist repeat if it's on #todo
+    def contextPlay(self, writer, isPlaylist=False):
+        stpos  = 0
+        writer = loadJSON(writer.replace(' /  "',' , "').replace(" /  ",", "))# current item
+        if not writer: 
+            return notificationDialog(LANGUAGE(30001))
+            
+        log('contextPlay, writer = %s, isPlaylist = %s'%(dumpJSON(writer),isPlaylist))
+        self.playlist.clear()
+        xbmc.sleep(100)
+        if not isPlaylist:
+            liz = buildItemListItem(writer)
+            listitems = [liz]
+        else:
+            channelData = writer.get('data',{}) 
+            if not channelData: 
+                return notificationDialog(LANGUAGE(30001))
+            
+            pvritem     = self.myBuilder.jsonRPC.getPVRposition(channelData.get('name',''), channelData.get('id',''), isPlaylist=isPlaylist)
+            nowitem     = pvritem.get('broadcastnow',{})
+            nextitems   = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+            nextitems.insert(0,nowitem)
+            
+            for pos, nextitem in enumerate(nextitems):
+                if loadJSON(nextitem.get('writer',{})).get('file','') == writer.get('file',''):
+                    stpos = pos
+                    break
+            log('contextPlay, writer stpos = %s'%(stpos))
+            listitems = ([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems]) 
+            
+        [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
+        if isPlaylistRandom(): self.playlist.unshuffle()
+        return self.myPlayer.play(self.playlist, startpos=stpos)
 
-
-    def play(self, pvritem, isPlaylist=False):
-        log('play, pvritem = %s, isPlaylist = %s'%(pvritem,isPlaylist))
-        file = loadJSON(pvritem.replace(' /  "',' , "').replace(" /  ",", ")).get('file','') # current item
-        if not file: return
-        log('play, file = %s'%(file))
-        return self.myPlayer.play(file)
-            # liz       = xbmcgui.ListItem()
-            # listitems = [liz]
-            # liz = buildItemListItem(pvritem)
-            # liz.setPath(file)
-            # listitems = [liz]
-            # self.playlist.clear()
-            # xbmc.sleep(100)
-            # [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
-            # if self.isPlaylistRandom(): self.playlist.unshuffle()
-            # return xbmc.Player().play(self.playlist)
-    
         
-    def playChannel(self, name, id, isPlaylist=False, failed=False):
+    def playRadio(self, name, id):
+        log('playRadio, id = %s'%(id))
+        pvritem = self.myBuilder.jsonRPC.getPVRposition(name, id, radio=True)
+        nowitem = pvritem.get('broadcastnow',{}) # current item
+        writer  = loadJSON(nowitem.get('writer',{}))
+        if not writer: 
+            notificationDialog(LANGUAGE(30001))
+            return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
+            
+        json_response = self.myBuilder.jsonRPC.requestList(id, writer.get('data',{}).get('path',''), 'music', page=250)
+        if json_response:
+            setCurrentChannelItem(pvritem)
+            self.playlist.clear()
+            xbmc.sleep(100)
+            listitems = [buildItemListItem(item, mType='music') for item in json_response]
+            [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
+            if isPlaylistRandom(): self.playlist.unshuffle()
+            log('playRadio, Playlist size = %s'%(self.playlist.size()))
+            return self.myPlayer.play(self.playlist)
+        
+        
+    def playChannel(self, name, id, radio=False, isPlaylist=False, failed=False):
         log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found = False
         liz       = xbmcgui.ListItem()
-        listitems = [liz]
-        pvritem   = self.myBuilder.jsonRPC.getPVRposition(name, id, isPlaylist)
+        listitems = [liz] #empty listitem required to pass failed playback.
+        pvritem   = self.myBuilder.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{}) # current item
+        nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
         ruleslist = []#check pre-play channel rules.
         
         if nowitem:
             found = True
             setCurrentChannelItem(pvritem)
-            liz = buildItemListItem(loadJSON(nowitem.get('writer',{})))
+            progress = nowitem['progress']
+            runtime  = nowitem['runtime']
             
-            if nowitem['progress'] >= self.seekTol:
-                liz.setProperty('totaltime', str((nowitem['runtime'] * 60)))
-                liz.setProperty('resumetime', str(nowitem['progress']))
-                liz.setProperty('startoffset', str(nowitem['progress']))
-            listitems = [liz]
+            liz = buildItemListItem(loadJSON(nowitem.get('writer',{})))
+            if (progress > self.seekTol):
+                # near end, avoid loopback; override last listitem and queue next show.
+                if (progress > ((runtime * 60) - 45)): #45sec endtime offset
+                    log('playChannel, progress = %s near end, queue nextitem'%(progress))
+                    liz = buildItemListItem(loadJSON(nextitems[0].get('writer',{})))
+                else:
+                    log('playChannel, progress = %s within seek tolerance setting seek.'%(progress))
+                    liz.setProperty('totaltime'  , str((runtime * 60)))
+                    liz.setProperty('resumetime' , str(progress))
+                    liz.setProperty('startoffset', str(progress))
+                    
+            # remove bct pre-roll from stack://
+            url    = liz.getPath()
+            info   = liz.getVideoInfoTag()
+            writer = loadJSON(info.getWritingCredits())
+            file   = writer.get('originalfile','')
+            if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
+                log('playChannel, playing stack with url = %s'%(url))
+                paths = url.split(' , ')
+                for path in paths:
+                    if file not in path: 
+                        paths.remove(path)
+                    elif file in path: 
+                        break
+                liz.setPath('stack://%s'%(' , '.join(paths)))
                 
+            listitems = [liz]
             if isPlaylist: 
                 self.playlist.clear()
                 xbmc.sleep(100)
-                
-                pvritem['callback'] = self.myBuilder.jsonRPC.matchPVRPath(pvritem.get('channelid',''))
-                nextitems = pvritem.get('broadcastnext',[])[slice(0, self.maxDays)] # list of upcoming items, truncate for speed.
-                lastitem  = nextitems[-1]
-                nextitems.pop(-1)
-                lastwriter = loadJSON(lastitem['writer'])
-                lastwriter['file'] = pvritem['callback'] #create a callback on last playlist element to callback plugin.
-                lastitem['writer'] = dumpJSON(lastwriter)
-                nextitems.append(lastitem)
-                listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems]) 
+                listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])            
                 [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
-                
-                if self.isPlaylistRandom(): self.playlist.unshuffle()
+                if isPlaylistRandom(): self.playlist.unshuffle()
+                log('playChannel, Playlist size = %s'%(self.playlist.size()))
                 return self.myPlayer.play(self.playlist)
-                
+            # else:
+                # listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])  
+                # paths = [lz.getPath() for lz in listitems]
+                # liz.setPath('stack://%s'%(' , '.join(paths)))
+                # listitems = [liz]
+            #todo found == False set fallback to nextitem? with playlist and failed == True?
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
-                
-        # elif not failed:
-            # notificationDialog(LANGUAGE(30058))
-            # return self.playChannel(name, id, isPlaylist, failed=True)
-        # else:
-            # notificationDialog(LANGUAGE(30059))
-            # return brutePVR()
-            
-        
-        
+
+
     def addLink(self, name, channel, path, mode='',icon=ICON, liz=None, total=0):
         if liz is None:
             liz=xbmcgui.ListItem(name)
@@ -193,25 +241,27 @@ class Plugin:
 
     def run(self):  
         params=self.getParams()
-        try:    name=urllib.parse.unquote(params["name"])
-        except: name=None
-        try:    channel=int(params["channel"])
-        except: channel=None
-        try:    url=urllib.parse.unquote(params["url"])
-        except: url=None
-        try:    id=urllib.parse.unquote(params["id"])
-        except: id=None
-        try:    mode=urllib.parse.unquote(params["mode"])
-        except: mode=None
-        log("Channel: "+str(channel))
-        log("Name: "+str(name))
-        log("URL: "+str(url))
-        log("ID: "+str(id))
-        log("Mode: "+str(mode))
+        name    = (urllib.parse.unquote(params.get("name",'')) or None)
+        channel = (params.get("channel",'')                    or None)
+        url     = (params.get("url",'')                        or None)
+        id      = (params.get("id",'')                         or None)
+        radio   = (params.get("radio",'')                      or 'False')
+        mode    = (params.get("mode",'')                       or None)
+        
+        log("Name: %s"   %(name))
+        log("Channel: %s"%(channel))
+        log("URL: %s"    %(url))
+        log("ID: %s"     %(id))
+        log("Radio: %s"  %(radio))
+        log("Mode: %s"   %(mode))
         
         if channel is None:
             if   mode is None: self.buildMenu(name)
-            elif mode == 'play':      self.playChannel(name, id, isPlaylist=self.usePlaylist)
+            elif mode == 'play':      
+                if radio == 'True':
+                    self.playRadio(name, id)
+                else: 
+                    self.playChannel(name, id, isPlaylist=self.usePlaylist)
             elif mode == 'Utilities': self.utilities(name)
             elif mode == 'Channels':  self.channels(name)
 

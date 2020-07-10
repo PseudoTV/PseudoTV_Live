@@ -1,47 +1,62 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
 	<category label="30018">
-        <setting                           type="lsep"   label="30022"            visible="true" />
-        <setting id=" "                    type="bool"   label="30002" default="" visible="false"/>
-        <setting id="Select_TV_Networks"   type="action" label="30002" default="" visible="true" action="RunScript($CWD/config.py, TV_Networks)"        subsetting="true" option="close" />
-        <setting id="Select_TV_Shows"      type="action" label="30003" default="" visible="true" action="RunScript($CWD/config.py, TV_Shows)"           subsetting="true" option="close" />
-        <setting id="Select_TV_Genres"     type="action" label="30004" default="" visible="true" action="RunScript($CWD/config.py, TV_Genres)"          subsetting="true" option="close" />
-        <setting id="Select_MOVIE_Genres"  type="action" label="30005" default="" visible="true" action="RunScript($CWD/config.py, MOVIE_Genres)"       subsetting="true" option="close" />
-        <setting id="Select_MIXED_Genres"  type="action" label="30006" default="" visible="true" action="RunScript($CWD/config.py, MIXED_Genres)"       subsetting="true" option="close" />
-        <setting id="Select_MOVIE_Studios" type="action" label="30007" default="" visible="true" action="RunScript($CWD/config.py, MOVIE_Studios)"      subsetting="true" option="close" />
-        <setting                           type="lsep"   label="30023"            visible="true"/>
-        <setting id="Select_RECOMMENDED"   type="action" label="30026" default="" visible="false" action="RunScript($CWD/config.py, Select_RECOMMENDED)" subsetting="true" option="close" />
-        <setting                           type="lsep"   label="30024"            visible="true" />
-        <setting id="Select_CUSTOM"        type="action" label="30027" default="" visible="false" action="RunScript($CWD/config.py, CUSTOM)"             subsetting="true" option="close" />
+        <setting id="Enable_Client"         type="bool"     label="30099" default="false" />
+        <setting                            type="lsep"     label="30024"            visible="eq(-1,false)"    /> 
+        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="false"    action="RunScript($CWD/manager.py)" subsetting="true" option="close" />
+        <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="false"    action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" subsetting="true" option="close" />
+        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"    action="RunScript($CWD/config.py, Open_Editor)" subsetting="true" option="close" />
+        <setting id="User_Groups"           type="action"   label="30075" default="" visible="false"    aaction="RunScript($CWD/config.py, User_Groups)" subsetting="true" option="close" />
+        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="false"    avisible="eq(-5,false)"    action="RunScript($CWD/config.py, Clear_Userdefined)"   subsetting="true" option="close" />
+        <setting                            type="lsep"     label="30022"            visible="eq(-6,false)"   />
+        <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
+        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="eq(-8,false)"    action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true" option="close" />
+        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="eq(-9,false)"    action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true" option="close" />
+        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="eq(-10,false)"   action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Genres"   type="action"   label="30005" default="" visible="eq(-11,false)"   action="RunScript($CWD/config.py, MOVIE_Genres)"        subsetting="true" option="close" />
+        <setting id="Select_MIXED_Genres"   type="action"   label="30006" default="" visible="eq(-12,false)"   action="RunScript($CWD/config.py, MIXED_Genres)"        subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Studios"  type="action"   label="30007" default="" visible="eq(-13,false)"   action="RunScript($CWD/config.py, MOVIE_Studios)"       subsetting="true" option="close" />
+        <setting id="Select_MIXED_Other"    type="action"   label="30080" default="" visible="eq(-14,false)"   action="RunScript($CWD/config.py, MIXED_Other)"         subsetting="true" option="close"/>
+        <setting id="Select_MUSIC_Genres"   type="action"   label="30097" default="" visible="eq(-15,false)"   action="RunScript($CWD/config.py, MUSIC_Genres)"        subsetting="true" option="close" />
+        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="eq(-16,false)"   action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
+        <setting                            type="lsep"     label="30023"            visible="eq(-17,false)" />
+        <setting id="Select_RECOMMENDED"    type="action"   label="30026" default="" visible="false" action="RunScript($CWD/config.py, Select_RECOMMENDED)"   subsetting="true" option="close"/>
     </category> 
     <category label="30025">
-        <setting id="Enable_Grouping"      type="bool"   label="30019" default="true" />
-        <setting id="Use_Color_Logos"      type="bool"   label="30044" default="false" />
-        <setting id="User_Folder"          type="folder" label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />
+        <setting id="Enable_Grouping"       type="bool"     label="30019" default="true" />
+        <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
+        <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
+        <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />     
     </category> 
     <category label="30048">
-        <setting id="Playback_Method"      type="enum"   label="30045" default="0"  values="PVR Callback|Playlist" />
-        <setting id="Seek_Tolerence"       type="slider" label="30040" default="30" range="0,1,120"   option="int" />
-        <setting                           type="lsep"   visible="true" />
-        <setting id="Parse_Duration"       type="bool"   label="30041" default="false" />
-        <setting id="Store_Duration"       type="bool"   label="30042" default="false"  visible="eq(-1,true)" subsetting="true"/>
-        <setting id="Strict_Duration"      type="bool"   label="30043" default="false"  visible="eq(-2,true)" subsetting="true"/>
-        <setting id="Page_Limit"           type="slider" label="30038" default="24" range="25,25,250" option="int" />
-        <setting id="Max_Days"             type="slider" label="30039" default="1"  range="1,1,7"     option="int" />
-        <setting id="Update_Time"          type="slider" label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
+        <setting id="Playback_Method"      type="enum"     label="30045" default="0"  values="PVR Callback|Playlist" />
+        <setting id="Seek_Tolerance"       type="slider"   label="30040" default="30" range="0,1,300"   option="int" />
+        <setting                           type="lsep"     visible="true" />
+        <setting id="Parse_Duration"       type="bool"     label="30041" default="true" />
+        <setting id="Store_Duration"       type="bool"     label="30042" default="false"  visible="eq(-1,true)" subsetting="true"/>
+        <setting id="Strict_Duration"      type="bool"     label="30043" default="false"  visible="eq(-2,true)" subsetting="true"/>
+        <setting id="Page_Limit"           type="slider"   label="30038" default="25" range="25,25,250" option="int" />
+        <setting id="Max_Days"             type="slider"   label="30039" default="1"  range="1,1,7"     option="int" />
+        <setting id="Update_Time"          type="slider"   label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
     </category> 
     <category label="30055">
-        <setting id="Enable_Overlay"       type="bool"   label="30054" default="false" />
-        <setting id="Enable_Fillers"       type="bool"   label="30030" default="false"  enabled="false"/>
+        <setting id="Enable_Overlay"              type="bool"     label="30054" default="true" />
+        <setting id="Enable_Extras"               type="bool"     label="30094" default="false" />
+        <setting id="Enable_Strms"                type="bool"     label="30095" default="false" />
+        <setting id="Enable_Fillers"              type="bool"     label="30030" default="false"/>
+        <setting id="Select_Resource_Networks"    type="action"   label="30068" default="resource://resource.videos.bumpers.sample"       visible="eq(-1,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_NETWORKS)"    option="close" />
+        <setting id="Select_Resource_Commericals" type="action"   label="30070" default="resource://resource.videos.commericals.sample"   visible="eq(-2,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_COMMERICALS)" option="close" />
+        <setting id="Select_Resource_Trailers"    type="action"   label="30071" default="kodi.library"                                    visible="eq(-3,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_TRAILERS)"    option="close" />
+        <setting id="Select_Resource_Ratings"     type="action"   label="30069" default="resource://resource.videos.ratings.mpaa.classic" visible="eq(-4,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_RATINGS)"     option="close" />
     </category> 
     <category label="30033">
-        <setting id="User_Import"          type="bool"   label="30036" default="false" />
-        <setting id="Import_M3U"           type="file"   label="30034" default="" visible="eq(-1,true)" subsetting="true" source="auto" />
-        <setting id="Import_XMLTV"         type="file"   label="30035" default="" visible="eq(-2,true)" subsetting="true" source="auto" />
-        <setting id="Clear_Import"         type="action" label="30037" default="" visible="eq(-3,true)" subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
+        <setting id="User_Import"          type="bool"     label="30036" default="false" />
+        <setting id="Import_M3U"           type="file"     label="30034" default="" visible="eq(-1,true)" subsetting="true" source="auto" />
+        <setting id="Import_XMLTV"         type="file"     label="30035" default="" visible="eq(-2,true)" subsetting="true" source="auto" />
+        <setting id="Clear_Import"         type="action"   label="30037" default="" visible="eq(-3,true)" subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
     </category> 
     <category label="30020">
-        <setting id="Enable_Debugging"     type="bool"   label="30000" default="true" />
-        <setting id=" "                    type="action" label="30046" default="" visible="true" action="RunScript($CWD/config.py, Open_Settings|pvr.iptvsimple)"  option="close" />
+        <setting id="Enable_Debugging"     type="bool"     label="30000" default="true" />
+        <setting id=" "                    type="action"   label="30046" default="" visible="true" action="RunScript($CWD/config.py, Open_Settings|pvr.iptvsimple)"  option="close" />
     </category>
 </settings>
