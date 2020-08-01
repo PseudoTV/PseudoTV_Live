@@ -33,12 +33,18 @@
     </extension>
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB"></summary>
+        <summary lang="pt"></summary>
+        <summary lang="pt_BR"></summary>
         <description lang="en_GB">PseudoTV Live acts similar to normal broadcast or cable TV, complete with pre-defined and user-defined channels. EPG Provided by Kodi.</description>
+        <description lang="pt">PseudoTV Live atua de maneira semelhante à transmissão normal ou à TV a cabo, completa com canais predefinidos e definidos pelo usuário. EPG Fornecido pelo Kodi.</description>
+        <description lang="pt_BR">PseudoTV Live atua de maneira semelhante à transmissão normal ou à TV a cabo, completa com canais predefinidos e definidos pelo usuário. EPG Fornecido pelo Kodi.</description>
         <platform>all</platform>
         <license>GPL-3.0-or-later</license>
         <source>https://github.com/PseudoTV/PseudoTV_Live</source>
         <forum>https://forum.kodi.tv/showthread.php?tid=355549</forum>
         <disclaimer lang="en_GB">BETA PROJECT; SUBJECT TO BUGS</disclaimer>
+        <disclaimer lang="pt">PROJETO BETA; SUJEITO A ERROS</disclaimer>
+        <disclaimer lang="pt_BR">PROJETO BETA; SUJEITO A ERROS</disclaimer>
         <assets>
             <icon>resources/images/icon.png</icon>
             <fanart>resources/images/fanart.jpg</fanart>
