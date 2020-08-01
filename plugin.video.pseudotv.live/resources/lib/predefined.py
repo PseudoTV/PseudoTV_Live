@@ -27,6 +27,7 @@ class Predefined:
         self.jsonRPC = JSONRPC()
         self.types    = {'TV_Networks'   : self.createNetworkPlaylist,
                          'TV_Genres'     : self.createTVGenrePlaylist,
+                         'PLAYLISTS'     : self.createPlaylist,
                          'MOVIE_Genres'  : self.createMovieGenrePlaylist,
                          'MIXED_Genres'  : self.createGenreMixedPlaylist,
                          'MOVIE_Studios' : self.createStudioPlaylist,
@@ -99,6 +100,8 @@ class Predefined:
     def createShowPlaylist(self, show, method='episode'):
         return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(show),self.specials)
 
+    def createPlaylist(self, name, method='episode'): 
+        return 'special://profile/playlists/video/%s.xsp'%(urllib.parse.quote(name)) 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
         return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.specials)

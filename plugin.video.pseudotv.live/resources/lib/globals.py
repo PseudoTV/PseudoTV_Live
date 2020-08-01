@@ -91,7 +91,7 @@ IMAGE          = 'logo.png' if USE_COLOR else 'wlogo.png'
 LOGO           = os.path.join(IMAGE_LOC,IMAGE)
 LANG           = 'en' #todo
 
-CHAN_TYPES     = ['TV_Shows','TV_Networks','TV_Genres','MOVIE_Genres','MIXED_Genres','MOVIE_Studios','MIXED_Other','MUSIC_Genres'] 
+CHAN_TYPES     = ['TV_Shows','PLAYLISTS', 'TV_Networks','TV_Genres','MOVIE_Genres','MIXED_Genres','MOVIE_Studios','MIXED_Other','MUSIC_Genres']
 OVERLAY_FLE    = "%s.overlay.xml"%(ADDON_ID)
 BCT_TYPES      = ['bumper','commercial','trailer','rating']
 PRE_ROLL       = ['bumper','rating']

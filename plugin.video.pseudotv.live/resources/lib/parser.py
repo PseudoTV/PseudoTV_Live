@@ -645,6 +645,13 @@ class JSONRPC:
         log('jsonrpc, fillTVShows, found = %s'%(len(tvshows)))
         return tvshows
 
+    def fillPlaylist(self): 
+        playlist = [] 
+        json_query = ('{"jsonrpc": "2.0", "method": "Files.GetDirectory", "params": {"directory": "special://profile/playlists/video/", "media": "video"}, "id": 1}') 
+        json_response = (self.cacheJSON(json_query)).get('result',{}).get('files',[]) 
+        for item in json_response: playlist.append({'label':item['label'],'item':item}) 
+        log('jsonrpc, fillPlaylist, found = %s'%(len(playlist))) 
+        return playlist 
 
     def fillMusicInfo(self, sortbycount=True):
         genres = []

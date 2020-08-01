@@ -27,6 +27,7 @@ class Config:
         self.jsonRPC       = JSONRPC()
         self.channels      = Channels()
         self.TV_Shows      = []
+        self.PLAYLISTS     = []
         self.TV_Info       = [[],[]]
         self.MOVIE_Info    = [[],[]]
         self.MUSIC_Info    = []
@@ -64,7 +65,13 @@ class Config:
         shows = [show['label'] for show in self.TV_Shows]
         self.log('getTVShows, found = %s'%(len(shows)))
         return shows
- 
+
+    def getPlaylists(self): 
+        if len(self.PLAYLISTS) == 0: self.PLAYLISTS = self.jsonRPC.fillPlaylist() 
+        self.PLAYLISTS.sort(key=lambda x:x['label']) 
+        shows = [show['label'] for show in self.PLAYLISTS] 
+        self.log('getPlaylists, found = %s'%(len(shows)))
+        return shows
  
     def getTVInfo(self):
         if (len(self.TV_Info[0]) == 0 or len(self.TV_Info[1]) == 0): self.TV_Info = self.jsonRPC.getTVInfo()
@@ -104,6 +111,7 @@ class Config:
         items = {'TV_Shows'     :self.getTVShows(),
                  'TV_Networks'  :self.getTVInfo()[0],
                  'TV_Genres'    :self.getTVInfo()[1],
+                 'PLAYLISTS'    :self.getPlaylists(),
                  'MOVIE_Genres' :self.getMovieInfo()[1],
                  'MIXED_Genres' :self.makeMixedList(self.getTVInfo()[1], self.getMovieInfo()[1]),
                  'MOVIE_Studios':self.getMovieInfo()[0],

@@ -10,16 +10,17 @@
         <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="false"    avisible="eq(-5,false)"    action="RunScript($CWD/config.py, Clear_Userdefined)"   subsetting="true" option="close" />
         <setting                            type="lsep"     label="30022"            visible="eq(-6,false)"   />
         <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
-        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="eq(-8,false)"    action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true" option="close" />
-        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="eq(-9,false)"    action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true" option="close" />
-        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="eq(-10,false)"   action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true" option="close" />
-        <setting id="Select_MOVIE_Genres"   type="action"   label="30005" default="" visible="eq(-11,false)"   action="RunScript($CWD/config.py, MOVIE_Genres)"        subsetting="true" option="close" />
-        <setting id="Select_MIXED_Genres"   type="action"   label="30006" default="" visible="eq(-12,false)"   action="RunScript($CWD/config.py, MIXED_Genres)"        subsetting="true" option="close" />
-        <setting id="Select_MOVIE_Studios"  type="action"   label="30007" default="" visible="eq(-13,false)"   action="RunScript($CWD/config.py, MOVIE_Studios)"       subsetting="true" option="close" />
-        <setting id="Select_MIXED_Other"    type="action"   label="30080" default="" visible="eq(-14,false)"   action="RunScript($CWD/config.py, MIXED_Other)"         subsetting="true" option="close"/>
-        <setting id="Select_MUSIC_Genres"   type="action"   label="30097" default="" visible="eq(-15,false)"   action="RunScript($CWD/config.py, MUSIC_Genres)"        subsetting="true" option="close" />
-        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="eq(-16,false)"   action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
-        <setting                            type="lsep"     label="30023"            visible="eq(-17,false)" />
+        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"   action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true" option="close" />
+        <setting id="Select_PLAYLISTS"      type="action"   label="30102" default="" visible="true"   action="RunScript($CWD/config.py, PLAYLISTS)"           subsetting="true" option="close" />
+        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="true"   action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true" option="close" />
+        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="true"   action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Genres"   type="action"   label="30005" default="" visible="true"   action="RunScript($CWD/config.py, MOVIE_Genres)"        subsetting="true" option="close" />
+        <setting id="Select_MIXED_Genres"   type="action"   label="30006" default="" visible="true"   action="RunScript($CWD/config.py, MIXED_Genres)"        subsetting="true" option="close" />
+        <setting id="Select_MOVIE_Studios"  type="action"   label="30007" default="" visible="true"   action="RunScript($CWD/config.py, MOVIE_Studios)"       subsetting="true" option="close" />
+        <setting id="Select_MIXED_Other"    type="action"   label="30080" default="" visible="true"   action="RunScript($CWD/config.py, MIXED_Other)"         subsetting="true" option="close"/>
+        <setting id="Select_MUSIC_Genres"   type="action"   label="30097" default="" visible="true"   action="RunScript($CWD/config.py, MUSIC_Genres)"        subsetting="true" option="close" />
+        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"   action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
+        <setting                            type="lsep"     label="30023"            visible="true" />
         <setting id="Select_RECOMMENDED"    type="action"   label="30026" default="" visible="false" action="RunScript($CWD/config.py, Select_RECOMMENDED)"   subsetting="true" option="close"/>
     </category> 
     <category label="30025">
