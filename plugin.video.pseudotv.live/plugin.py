@@ -72,7 +72,7 @@ class Plugin:
         
     def utilities(self, name):
         log('utilities, name = %s'%name)
-        if name   == LANGUAGE(30010): self.myBuilder.buildService(reloadPVR=True)
+        if name   == LANGUAGE(30010): self.myBuilder.buildService()
         elif name == LANGUAGE(30011): self.deleteFiles()
         elif name == LANGUAGE(30096): self.deleteFiles(channels=True)
         elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
@@ -153,7 +153,7 @@ class Plugin:
             return self.myPlayer.play(self.playlist)
         
         
-    def playChannel(self, name, id, radio=False, isPlaylist=False, failed=False):
+    def playChannel(self, name, id, isPlaylist=False, failed=False):
         log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found = False
         liz       = xbmcgui.ListItem()
@@ -168,8 +168,8 @@ class Plugin:
             setCurrentChannelItem(pvritem)
             progress = nowitem['progress']
             runtime  = nowitem['runtime']
-            
-            liz = buildItemListItem(loadJSON(nowitem.get('writer',{})))
+            writer   = loadJSON(nowitem.get('writer',{}))
+            liz = buildItemListItem(writer)
             if (progress > self.seekTol):
                 # near end, avoid loopback; override last listitem and queue next show.
                 if (progress > ((runtime * 60) - 45)): #45sec endtime offset
@@ -181,20 +181,18 @@ class Plugin:
                     liz.setProperty('resumetime' , str(progress))
                     liz.setProperty('startoffset', str(progress))
                     
-            # remove bct pre-roll from stack://
-            url    = liz.getPath()
-            info   = liz.getVideoInfoTag()
-            writer = loadJSON(info.getWritingCredits())
-            file   = writer.get('originalfile','')
-            if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
-                log('playChannel, playing stack with url = %s'%(url))
-                paths = url.split(' , ')
-                for path in paths:
-                    if file not in path: 
-                        paths.remove(path)
-                    elif file in path: 
-                        break
-                liz.setPath('stack://%s'%(' , '.join(paths)))
+                    # remove bct pre-roll from stack://
+                    url  = liz.getPath()
+                    file = writer.get('originalfile','')
+                    if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
+                        log('playChannel, playing stack with url = %s'%(url))
+                        paths = url.split(' , ')
+                        for path in paths:
+                            if file not in path: 
+                                paths.remove(path)
+                            elif file in path: 
+                                break
+                        liz.setPath('stack://%s'%(' , '.join(paths)))
                 
             listitems = [liz]
             if isPlaylist: 

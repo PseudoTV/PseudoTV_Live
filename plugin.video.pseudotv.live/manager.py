@@ -147,15 +147,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         pass
             
             
-            
-            
-            
         # self.buildChannelListItems()
             
             
     def getChannels(self):
         log('getChannels')
-        return self.channels.channelList.get('channels',[])
+        return self.channels.channelListuser-defineduser-defineduser-defineduser-defineduser-defineduser-defineduser-defined.get('channels',[])
         
 
     def saveChannels(self):

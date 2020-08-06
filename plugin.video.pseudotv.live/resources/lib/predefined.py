@@ -18,19 +18,20 @@
 
 # -*- coding: utf-8 -*--
 
-from resources.lib.parser  import JSONRPC
-from resources.lib.rules   import *
 from resources.lib.globals import *
+from resources.lib.rules   import *
+from resources.lib.parser  import JSONRPC, Channels
 
 class Predefined:
     def __init__(self): 
-        self.jsonRPC = JSONRPC()
+        self.jsonRPC  = JSONRPC()
+        self.channels = Channels()
         self.types    = {'TV_Networks'   : self.createNetworkPlaylist,
+                         'TV_Shows'      : self.createShowPlaylist,
                          'TV_Genres'     : self.createTVGenrePlaylist,
                          'MOVIE_Genres'  : self.createMovieGenrePlaylist,
-                         'MIXED_Genres'  : self.createGenreMixedPlaylist,
                          'MOVIE_Studios' : self.createStudioPlaylist,
-                         'TV_Shows'      : self.createShowPlaylist,
+                         'MIXED_Genres'  : self.createGenreMixedPlaylist,
                          'MIXED_Other'   : self.createMixedOther,
                          'MUSIC_Genres'  : self.createMusicGenrePlaylist}
                         
@@ -49,25 +50,34 @@ class Predefined:
     
 
     def buildChannelList(self):
-        channels = []
+        citems   = []
+        template = self.channels.getCitem()
+        existing = self.channels.getPredefined()
+        reserved = self.channels.getReserved()
         for type, func in self.types.items():
-            chitems = []
-            items = sorted(getSetting('Setting_%s'%(type)).split('|'))
+            items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
+            chnums   = getPredefinedChannelNumber(type,reserved,len(items))
             log('buildChannelList, building %s, found %s'%(type,items))
-            for item in items:
-                if len(item) == 0: continue
+            for idx, item in enumerate(items):
+                if not item: continue
                 type     = type.replace('_',' ')
                 chpath   = func(item)
                 radio    = type == 'MUSIC Genres'
-                chnumber = random.sample(CHANNEL_RANGE,1)[0]# assign random channel number to dynamic predefined channels
                 chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
                 chname   = self.getChannelSuffix(item, type)
+                chnumber = chnums[idx]
                 chgroups = [type]
-                chitems.append({'name':chname,'number':chnumber,'path':chpath,'logo':chlogo,'type':type,'radio':radio,'groups':chgroups})
-            channels.extend(sorted(chitems, key=lambda k: k['name']))
-        return channels
+                chid     = getChannelID(chname, chpath)
+                citem    = template.copy()
+                citem.update({'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'groups':chgroups})
+                citems.append(citem)
+                
+        difference = sorted(diffDICT(existing,citems), key=lambda k: k['number'])
+        log('buildChannelList, difference %s'%(difference))
+        [self.channels.add(citem) if citem in citems else self.channels.remove(citem) for citem in difference]
+        return self.channels.save()
         
-
+        
     def getChannelSuffix(self, name, type):
         suffix = ''
         if   type == 'TV Genres':    suffix = ' TV'

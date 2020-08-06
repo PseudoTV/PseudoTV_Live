@@ -27,9 +27,7 @@ class Player(xbmc.Player):
         xbmc.Player.__init__(self)
         self.pendingStop        = False
         self.playingChannelItem = {'channelid':-1}
-        self.usePlaylist        = bool(getSettingInt('Playback_Method'))
-        self.overlayEnabled     = getSettingBool('Enable_Overlay')
-        self.playerOverlay      = GUI(OVERLAY_FLE, ADDON_PATH, "default")
+        self.overlayWindow      = GUI(OVERLAY_FLE, ADDON_PATH, "default")
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -41,17 +39,13 @@ class Player(xbmc.Player):
         except: return 0
         
         
-    def getPlayerItem(self):
-        self.log('getPlayerItem')
-        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath"]}, "id": 1}'%(self.myService.myConfig.jsonRPC.getActivePlayer())
-        return sendJSON(json_query).get('result',{}).get('item',{})
-        
-        
-    def getPlaylistItem(self):
-        self.log('getPlaylistItem')
-        json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","file"]},"id":1}'%(self.myService.myConfig.jsonRPC.getActivePlaylist())
-        return sendJSON(json_query).get('result',{}).get('items',{})
-
+    def getPlayerItem(self, playlist=False):
+        self.log('getPlayerItem, playlist = %s'%(playlist))
+        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","file"]},"id":1}'%(self.myService.myConfig.jsonRPC.getActivePlaylist())
+        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath"]}, "id": 1}'%(self.myService.myConfig.jsonRPC.getActivePlayer())
+        result = sendJSON(json_query).get('result',{})
+        return (result.get('item',{}) or result.get('items',{}))
+           
 
     def getPVRTime(self):
         self.log('getPVRTime')
@@ -107,8 +101,12 @@ class Player(xbmc.Player):
         self.log('playAction, lastChannelId = %s, currentChannelId = %s, callback = %s'%(lastChannelId,currentChannelId,currentChannelItem['callback']))
 
 
+    def isPlaylist(self):
+        return bool(getSettingInt('Playback_Method'))
+
+
     def changeAction(self):
-        if self.usePlaylist: 
+        if self.isPlaylist(): 
             self.pendingStop = True
         else:
             self.pendingStop = False
@@ -119,30 +117,32 @@ class Player(xbmc.Player):
         
 
     def stopAction(self):
-        # if self.pendingStop: return
+        # if self.pendingStop: return #playlist triggers false stop at media end, catch and reject call? needs debugging.
         self.log('stopAction')
         setProperty('PseudoTVRunning','False')
         clearCurrentChannelItem()
-        self.closeOverlay()
+        self.toggleOverlay(False)
 
 
-    def isOverlay(self):
+    def overlayOpened(self):
         xbmc.sleep(500) # sleep to catch doModal delay.
         return getProperty('OVERLAY') == 'true'
 
 
-    def startOverlay(self):
-        conditions = [self.overlayEnabled,self.isPlaying(),isPseudoTV()]
-        if (False in conditions) or self.isOverlay(): return
-        self.log('startOverlay')
-        self.playerOverlay.show()
+    def isOverlay(self):
+        return getSettingBool('Enable_Overlay')
+
     
-    
-    def closeOverlay(self):
-        if not self.isOverlay(): return
-        self.log('closeOverlay')
-        self.playerOverlay.close()
-    
+    def toggleOverlay(self, state):
+        if state and not self.overlayOpened():
+            conditions = [self.isOverlay(),self.isPlaying(),isPseudoTV()]
+            if (False in conditions): return
+            self.log("toggleOverlay, show")
+            self.overlayWindow.show()
+        elif not state and self.overlayOpened():
+            self.log("toggleOverlay, close")
+            self.overlayWindow.close()
+
     
 class Monitor(xbmc.Monitor):
     def __init__(self):
@@ -160,23 +160,19 @@ class Monitor(xbmc.Monitor):
             
             
     def onSettingsChanged(self):
-        if not self.pendingChange: return # only trigger when physical settings are opened
+        if not self.pendingChange: return # only trigger when settings dialog opened
         self.log('onSettingsChanged')
-        if self.onChangeThread.isAlive(): self.onChangeThread.cancel() # do not stack threads, create single trigger timer.
+        if self.onChangeThread.isAlive(): self.onChangeThread.cancel()
         self.onChangeThread = threading.Timer(30.0, self.onChange)
         self.onChangeThread.name = "onChangeThread"
         self.onChangeThread.start()
         
         
     def onChange(self):
-        if not self.pendingChange: return # last chance to cancel run.
+        if not self.pendingChange: return # last chance to cancel.
         self.log('onChange')
-        if isBusy(): return self.onSettingsChanged() # delay check. todo build isBusy() to determine scanning or building.
-        channelList   = self.myService.getChannelList() # build new channelList, then test against last one.
-        unchanged, difference = assertDICT(channelList,self.myService.channelList,return_diff=True)
-        if not unchanged: # check if both lists are the same, ie. unchanged
-            self.myService.channelList = channelList
-            self.myService.updateChannels(channelList, update=True) #todo only update changed (difference)?
+        if isBusy(): return self.onSettingsChanged() # delay check, still pending change.
+        self.myService.serverStop = True
         self.setPendingChange(False)
 
 
@@ -199,13 +195,10 @@ class Service:
         self.channelList = self.getChannelList()
         self.jsonRPC     = self.myBuilder.jsonRPC
         self.sysListitem = xbmcgui.ListItem()
-        
-        if CLIENT_MODE: 
-            self.clientService()
-        else: 
-            self.startService()
+        self.serverStop  = False
+        self.startService()
 
-        
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -215,11 +208,16 @@ class Service:
         return sorted(self.myBuilder.createChannelItems(), key=lambda k: k['number'])
         
 
+    def getSeekTol(self):
+        try: return getSettingInt('Seek_Tolerance')
+        except: return 30 #Kodi raises error after sleep. # todo debug
+        
+        
     def chkIdle(self):
-        if xbmc.getGlobalIdleTime() > getSettingInt('Seek_Tolerance'):
-            self.myPlayer.startOverlay()
+        if xbmc.getGlobalIdleTime() > self.getSeekTol():
+            self.myPlayer.toggleOverlay(True)
         else:
-            self.myPlayer.closeOverlay()
+            self.myPlayer.toggleOverlay(False)
 
 
     def chkUpdate(self):
@@ -227,56 +225,57 @@ class Service:
         lastCheck = float(getSetting('Last_Scan') or 0)
         if (time.time() > (lastCheck + UPDATE_OFFSET)):
             clearProperty("USER_LOG")
-            self.updateChannels()
+            self.updateChannels(update=True)
         
         
-    def updateChannels(self, channels=None, reloadPVR=False, update=False):
-        if channels is None: channels = self.channelList
-        self.log('updateChannels, channel count = %s, reloadPVR = %s, update = %s'%(len(channels),reloadPVR,update))
-        self.myBuilder.buildService(channels, reloadPVR, update)
+    def updateChannels(self, update=False):
+        channelList = self.getChannelList() # build new channelList, test against last one.
+        unchanged, difference = assertDICT(channelList,self.channelList,return_diff=True)
+        self.channelList = channelList #todo only update changed (difference)?              
+        self.log('updateChannels, channel count = %s, update = %s'%(len(self.channelList), update))
+        self.myBuilder.buildService(self.channelList, update) 
         setSetting('Last_Scan',str(time.time()))
         
         
     def chkInfo(self):
-        if not getProperty('chkInfo'):
-            return False
+        if not getProperty('chkInfo'): return False
         self.sysListitem = sysListItem()
         return True
           
-          
-    def startService(self):
+
+    def startService(self, silent=False):
         self.log('startService')
-        # notificationDialog(LANGUAGE(30101))
         setBusy(False)
+        self.serverStop = False
         self.myMonitor.setPendingChange(False)
+        checkPVR()
         self.myConfig.startSpooler()
-        self.updateChannels(reloadPVR=True)
+        
+        if not silent: 
+            notificationProgress(LANGUAGE(30052))
+            
+        if self.myConfig.predefined.buildChannelList():
+            self.updateChannels()
+            
         while not self.myMonitor.abortRequested():
             if   self.chkInfo(): continue # aggressive timing.
-            elif self.myMonitor.waitForAbort(self.wait): break
-            if xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: # detect upcoming channel change. 
+            elif self.myMonitor.waitForAbort(self.wait) or self.serverStop: break
+            elif xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: # detect upcoming channel change. 
                 self.log('settings opened')
                 self.myMonitor.setPendingChange(True)
                 self.myMonitor.onSettingsChanged()
                 continue
-            if self.myMonitor.pendingChange:
+            elif self.myMonitor.pendingChange:
                 self.log('pending change')
                 continue
             self.chkIdle()
             self.chkUpdate()
-        self.closeThreads()
-
-                
-    def clientService(self):
-        self.log('clientService')
-        notificationDialog(LANGUAGE(30100))
-        setBusy(False)
-        self.myMonitor.setPendingChange(False)
-        while not self.myMonitor.abortRequested():
-            if self.myMonitor.waitForAbort(self.wait): 
-                break
-            self.chkIdle()
-        self.closeThreads()
+            
+        # restart service after change
+        if self.serverStop:
+            self.startService(silent=True)
+        else:
+            self.closeThreads()
                 
                 
     def closeThreads(self):

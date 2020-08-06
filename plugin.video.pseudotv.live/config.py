@@ -17,8 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from resources.lib.globals import *
-from resources.lib.parser  import JSONRPC, Channels
+from resources.lib.globals    import *
+from resources.lib.parser     import JSONRPC, Channels
+from resources.lib.predefined import Predefined 
 
 class Config:
     def __init__(self, sysARG=sys.argv):
@@ -26,6 +27,7 @@ class Config:
         self.sysARG        = sysARG
         self.jsonRPC       = JSONRPC()
         self.channels      = Channels()
+        self.predefined    = Predefined()
         self.TV_Shows      = []
         self.TV_Info       = [[],[]]
         self.MOVIE_Info    = [[],[]]
@@ -137,6 +139,13 @@ class Config:
         [self.buildConfigSelection(getSetting('Setting_%s'%(param)).split('|'),param) for param in CHAN_TYPES]
     
     
+    def checkPredefinedChannels(self):
+        self.log('checkPredefinedChannels') 
+        chitems = {}
+        chitems[type] =[sorted(getSetting('Setting_%s'%(type)).split('|')) for type in CHAN_TYPES]
+        return chitems
+    
+    
     def buildConfigSelection(self, items, type):
         lens = len(list(filter(lambda x: x != '',items)))
         self.log('buildConfigSelection, type = %s, items = %s'%(type,items))
@@ -203,7 +212,7 @@ class Config:
             notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
             
-        if    param == None:                     
+        if param == None:                     
             return REAL_SETTINGS.openSettings()
         elif  param.startswith('Select_Resource'):
             return self.selectResource(param.split('_')[2])

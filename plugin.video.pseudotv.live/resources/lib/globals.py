@@ -22,7 +22,7 @@ import os, sys, re, platform, subprocess, struct, shutil, traceback, threading
 import datetime, time, _strptime, base64, binascii, random, hashlib, difflib
 import json, codecs, types, collections, six
 
-from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
 from itertools             import repeat, cycle, chain, zip_longest
 from six.moves             import urllib
 from contextlib            import contextmanager
@@ -75,7 +75,6 @@ IMAGE_EXTS     = xbmc.getSupportedMedia('picture')
 DTFORMAT       = '%Y%m%d%H%M%S'
 EPG_HRS        = 10800  # 3hr in seconds, Min. EPG guidedata
 CHANNEL_LIMIT  = 999
-CHANNEL_RANGE  = range(CHANNEL_LIMIT+1,(CHANNEL_LIMIT*4)) # pre-defined channel range. internal use.
 
 ART_PARAMS        = ["thumb","logo","poster","fanart","banner","landscape","clearart","clearlogo"]
 JSON_FILE_ENUM    = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
@@ -91,7 +90,8 @@ IMAGE          = 'logo.png' if USE_COLOR else 'wlogo.png'
 LOGO           = os.path.join(IMAGE_LOC,IMAGE)
 LANG           = 'en' #todo
 
-CHAN_TYPES     = ['TV_Shows','TV_Networks','TV_Genres','MOVIE_Genres','MIXED_Genres','MOVIE_Studios','MIXED_Other','MUSIC_Genres'] 
+CHAN_TYPES     = ['TV_Networks','TV_Shows','TV_Genres','MOVIE_Genres','MOVIE_Studios','MIXED_Genres','MIXED_Other','MUSIC_Genres'] 
+CHANNEL_RANGE  = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
 OVERLAY_FLE    = "%s.overlay.xml"%(ADDON_ID)
 BCT_TYPES      = ['bumper','commercial','trailer','rating']
 PRE_ROLL       = ['bumper','rating']
@@ -118,19 +118,19 @@ def setSetting(key,value):
     log('globals: setSetting, key = %s, value = %s'%(key,value))
     REAL_SETTINGS.setSetting(key,value)
 
-def getSetting(key):
-    # REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+def getSetting(key, reload=False):
+    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
     return REAL_SETTINGS.getSetting(key)
     
-def getSettingBool(key):
-    # REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+def getSettingBool(key, reload=False):
+    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
     try:
         return REAL_SETTINGS.getSettingBool(key)
     except:
         return REAL_SETTINGS.getSetting(key) == "true" 
     
-def getSettingInt(key):
-    # REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+def getSettingInt(key, reload=False):
+    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
     try: 
         return REAL_SETTINGS.getSettingInt(key)
     except:
@@ -148,22 +148,19 @@ MIN_ENTRIES      = int(PAGE_LIMIT//2)
 UPDATE_OFFSET    = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60) * 60) #seconds
 INCLUDE_EXTRAS   = getSettingBool('Enable_Extras') 
 INCLUDE_STRMS    = getSettingBool('Enable_Strms') 
-CLIENT_MODE      = getSettingBool('Enable_Client') 
 GROUP_TYPES      = ['TV Shows','TV Networks','TV Genres','Movie Genres','Mixed Genres','Movie Studios','Mixed','Other','Addons','UPNP','PVR','Action', 'Adult comedy', 'Adventure', 'Animation', 'Based on true life story', 'Biography', 'Comedy', 'Crime', 'Dark Comedy', 'Diaspora', 'Docu-drama', 'Documentary', 'Drama', 'Family', 'Fantasy', 'Heist', 'History', 'Horror', 'Kids', 'Melodrama', 'Murder Mystery', 'Musical', 'Mythology', 'Noir', 'Patriotism', 'Philosophy', 'Politics', 'Relationships', 'Religion', 'Revenge', 'Romance', 'Satire', 'Sci-fi', 'Short Films', 'Slapstick', 'Social', 'Spoof', 'Sports', 'Suspense', 'Terrorism', 'Thriller', 'Tragedy', 'War', 'Western']
 if getSetting('User_Groups'): GROUP_TYPES.extend(getSetting('User_Groups').split('|'))
 GROUP_TYPES.sort()
      
-GLOBAL_RESOURCE_PACK_BUMPERS     = getSetting('Select_Resource_Networks')
-GLOBAL_RESOURCE_PACK_COMMERICALS = getSetting('Select_Resource_Commericals')
-GLOBAL_RESOURCE_PACK_TRAILERS    = getSetting('Select_Resource_Trailers')
-GLOBAL_RESOURCE_PACK_RATINGS     = getSetting('Select_Resource_Ratings')
+GLOBAL_RESOURCE_PACK_BUMPERS     = (getSetting('Resource_Networks')    or "resource://resource.videos.bumpers.sample")
+GLOBAL_RESOURCE_PACK_COMMERICALS = (getSetting('Resource_Commericals') or "")
+GLOBAL_RESOURCE_PACK_TRAILERS    = (getSetting('Resource_Trailers')    or "plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent")
+GLOBAL_RESOURCE_PACK_RATINGS     = (getSetting('Resource_Ratings')     or "resource://resource.videos.ratings.mpaa.classic")
 GLOBAL_RESOURCE_PACK             = {'rating'    :GLOBAL_RESOURCE_PACK_RATINGS,
                                     'bumper'    :GLOBAL_RESOURCE_PACK_BUMPERS,
                                     'commercial':GLOBAL_RESOURCE_PACK_COMMERICALS,
                                     'trailer'   :GLOBAL_RESOURCE_PACK_TRAILERS}
-                     
-                     
-                     
+                
 @contextmanager
 def busy_dialog():
     log('globals: busy_dialog')
@@ -178,6 +175,13 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
         log("globals: notificationDialog Failed! " + str(e), xbmc.LOGERROR)
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         
+def notificationProgress(message, time=4):
+    dia = ProgressBGDialog(message=message)
+    for i in range(time):
+        if MY_MONITOR.waitForAbort(1): break
+        dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia)
+    return ProgressBGDialog(100,control=dia)
+    
 def textviewer(msg, heading=ADDON_NAME, usemono=False):
     xbmcgui.Dialog().textviewer(heading, msg, usemono)
     
@@ -189,9 +193,9 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
         if options is None:
             options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":'.xsp'     , "type":1, "multi":False},
                         {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://profile/playlists/music/" , "mask":'.xsp'     , "type":1, "multi":False},
-                        {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":VIDEO_EXTS, "type":0, "multi":False},
-                        {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":MUSIC_EXTS, "type":0, "multi":False},
-                        {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":IMAGE_EXTS, "type":0, "multi":False},
+                        {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":VIDEO_EXTS , "type":0, "multi":False},
+                        {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":MUSIC_EXTS , "type":0, "multi":False},
+                        {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":IMAGE_EXTS , "type":0, "multi":False},
                         {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""         , "type":0, "multi":False},
@@ -253,8 +257,8 @@ def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
 def log(msg, level=xbmc.LOGDEBUG):
     if not getSettingBool('Enable_Debugging') and level != xbmc.LOGERROR: return
     if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
-    elif level == xbmc.LOGINFO:  setProperty("USER_LOG",'%s\n\n%s'%(msg,getProperty("USER_LOG")))
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,(msg)),level)
+    elif level == xbmc.LOGINFO:  setProperty("USER_LOG",'%s\n\n%s'%(py2_encode(msg),getProperty("USER_LOG")))
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,py2_encode(msg)),level)
     
 def hasPVR():
     return bool(xbmc.getCondVisibility('Pvr.HasTVChannels'))
@@ -279,9 +283,9 @@ def removeDUPS(lst):
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
   
-def dumpJSON(dict1, sortkey=True):
+def dumpJSON(dict1, idnt=4, sortkey=True):
     if isinstance(dict1, basestring): return dict1
-    return (json.dumps(dict1, sort_keys=sortkey))
+    return (json.dumps(dict1, indent=idnt, sort_keys=sortkey))
     
 def loadJSON(string1):
     if   isinstance(string1,dict): return string1
@@ -399,6 +403,12 @@ def escapeDirJSON(path):
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
     return mydir
 
+def getPredefinedChannelNumber(type,blist=[],size=1):
+    multi = (CHAN_TYPES.index(type)+1)
+    start = ((CHANNEL_LIMIT+1)*multi)
+    stop  = (start + CHANNEL_LIMIT)
+    return random.sample(list(set(range(start,stop)).difference(blist)),size)
+    # return random.sample(CHANNEL_RANGE,1)[0]# assign random channel number to dynamic predefined channels
     
 def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     info       = item.copy()

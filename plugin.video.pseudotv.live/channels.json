@@ -1,6 +1,6 @@
 {
 	"channels": [{
-		"number": 1,
+		"number": 0,
 		"id": "",
 		"type": "",
 		"name": "",
@@ -10,5 +10,6 @@
 		"groups": [],
 		"rules": [],
 		"xmltv": ""
-	}]
+	}],
+    "predefined": []
 }

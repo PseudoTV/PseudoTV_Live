@@ -21,8 +21,8 @@
 
 # -*- coding: utf-8 -*-
 
-from resources.lib             import xmltv
 from resources.lib.globals     import *
+from resources.lib             import xmltv
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.videoparser import VideoParser
  
@@ -32,9 +32,9 @@ LINE_ITEM         = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%
 
 class Channels:
     def __init__(self):
-        self.jsonRPC     = JSONRPC()
-        self.cache       = self.jsonRPC.cache
-        self.channelList = (self.load() or self.getTemplate(ADDON_VERSION))
+        self.jsonRPC      = JSONRPC()
+        self.cache        = self.jsonRPC.cache
+        self.channelList  = (self.load() or self.getTemplate(ADDON_VERSION))
         
         
     def reset(self):
@@ -47,26 +47,59 @@ class Channels:
         return sorted(self.channelList.get('channels',[]), key=lambda k: k['number'])
         
         
+    def getPredefined(self):
+        return sorted(self.channelList.get('predefined',[]), key=lambda k: k['number'])
+        
+        
+    def getReserved(self, channelkey='predefined'):
+        return [channel["number"] for channel in self.channelList.get(channelkey,[])]
+        
+        
     def add(self, item):
-        log('channels: add, item = %s'%(item))
-        channelList = self.channelList['channels']
-        if not item['path']: return False
-        for channel in channelList:
-            if item["number"] == channel["number"]:
-                log('channels: Updating channel %s settings'%(item["number"]))
-                channel.update(item)
-                return True
-        log('channels: Adding channel %s settings'%(item["number"]))
-        channelList.append(item)
-        self.channelList['channels'] = channelList
+        channelkey = 'predefined' if item['number'] > CHANNEL_LIMIT else 'channels'
+        log('channels: add, item = %s, channelkey = %s'%(item,channelkey))
+        channels = self.channelList[channelkey]
+        idx = self.findChannelIDX(item, channels)
+        if idx:
+            item["number"] = channels[idx]["number"]
+            log('channels: Updating channel %s, id %s'%(item["number"],item["id"]))
+            channels[idx] = item
+        else:
+            log('channels: Adding channel %s, id %s'%(item["number"],item["id"]))
+            channels.append(item)
+        self.channelList[channelkey] = sorted(channels, key=lambda k: k['number'])
         return True
         
         
+    def remove(self, item):
+        channelkey = 'predefined' if item['number'] > CHANNEL_LIMIT else 'channels'
+        log('channels: removing item = %s, channelkey = %s'%(item,channelkey))
+        channels = self.channelList[channelkey]
+        idx = self.findChannelIDX(item, channels)
+        if idx: channels.pop(idx)
+        self.channelList[channelkey] = channels
+        return True
+        
+        
+    def findChannelIDX(self, item, channels, return_channel=False):
+        for idx, channel in enumerate(channels):
+            if (item["id"] == channel["id"]):
+                log('channels: findChannelIDX, item = %s, found = %s'%(item,channel))
+                if return_channel: return channel
+                return idx
+        return None
+        
+        
     @use_cache(28)
-    def getTemplate(self, version):
+    def getTemplate(self, version=ADDON_VERSION):
         log('channels: getTemplate')
         return self.load(CHANNELFLE_DEFAULT)
         
+        
+    def getCitem(self):
+        log('channels: getCitem')
+        return self.getTemplate(ADDON_VERSION).get('channels',[])[0]
+       
        
     def load(self, file=CHANNELFLE):
         log('channels: load file = %s'%(file))
@@ -82,6 +115,7 @@ class Channels:
         log('channels: save, saving to %s'%(CHANNELFLE))
         fle.write(dumpJSON(self.channelList, sortkey=False))
         fle.close()
+        return True
         
         
     def delete(self):
@@ -120,7 +154,6 @@ class XMLTV:
         try: 
             return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
-            log("xmltv: getChannels, Failed! " + str(e), xbmc.LOGERROR)
             return []
         
         
@@ -129,7 +162,6 @@ class XMLTV:
         try: 
             return self.sortProgrammes(self.cleanProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or []))
         except Exception as e: 
-            log("xmltv: getProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             return []
 
 
@@ -142,7 +174,7 @@ class XMLTV:
 
 
     @use_cache(28)
-    def getGenres(self):  #build list of all genre combinations. 
+    def getGenres(self, version=ADDON_VERSION):  #build list of all genre combinations. 
         log('xmltv: getGenres')
         epggenres = {}
         xml   = FileAccess.open(GENREFLE_DEFAULT, "r")
@@ -163,7 +195,7 @@ class XMLTV:
         # [genres.append(' / '.join(genre[0] for genre in program['category'])) for program in programmes]
         [genres.extend(genre for genre in program['category']) for program in programmes]
         try:
-            epggenres = self.getGenres()
+            epggenres = self.getGenres(ADDON_VERSION)
             doc  = Document()
             root = doc.createElement('genres')
             doc.appendChild(root)
@@ -172,13 +204,8 @@ class XMLTV:
             name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))
             root.appendChild(name)
             
-            #todo faster method?
-            # def sort():
-                # for key in matches: yield {key:epggenres[key]}
-                
-            genres    = list(set(genres))
-            matches   = set(x[0] for x in genres)&set(x for x in epggenres)
-            # matches   = list(sort())
+            genres  = list(set(genres))
+            matches = set(x[0] for x in genres)&set(x for x in epggenres)
             
             for key in matches:
                 gen = doc.createElement('genre')
@@ -442,18 +469,19 @@ class M3U:
         return True
         
 
-    def add(self, item, radio=False):
+    def add(self, item, radio=False, rebuild=True):
         log('m3u: add item = %s'%(item))
         self.m3uTMP.append(item['id'])
         citem = LINE_ITEM%(item['number'],item['id'],item['name'],item['logo'],';'.join(item['group']),str(radio).lower(),item['label'],item['url'])
         channelIDX = self.findChannelIDX(item['id'])
-        if channelIDX is not None: self.removeChannel(id=item['id'])
-        
-        # if channelIDX is None:
-            # self.m3uList.append(citem)
-        # else:  
-            # self.m3uList[channelIDX] = citem # update existing channel
-        self.m3uList.append(citem)
+        if channelIDX is None:
+            self.m3uList.append(citem)
+        else:
+            if rebuild: 
+                self.removeChannel(id=item['id'])
+                self.m3uList.append(citem)
+            else:
+                self.m3uList[channelIDX] = citem # update existing channel
         return True
         
         
@@ -558,9 +586,9 @@ class JSONRPC:
             for type in json_response:
                 if type['type'] == ptype:
                     id = type["playlistid"]
-                    break
+                    log("JSONRPC: getActivePlaylist, id = %s"%(id))
+                    return id
         except: id = 1
-        log("JSONRPC: getActivePlaylist, id = %s"%(id))
         return id
         
         
@@ -654,7 +682,7 @@ class JSONRPC:
         json_response = self.cacheJSON(json_query).get('result',{}).get('songs',[])
         [genres.extend(re.split(';|/|,',genre)) for song in json_response for genre in song.get('genre',[])]
         genres = collections.Counter([genre for genre in genres if not genre.isdigit()])
-        if sortbycount: genres.most_common()
+        if sortbycount: genres.most_common(25)
         values = sorted(genres.items())
         [MusicGenreList.append(key) for key, value in values]
         MusicGenreList.sort(key=lambda x: x.lower())
@@ -825,6 +853,21 @@ class JSONRPC:
         return items
         
         
+    @use_cache(1)
+    def listVFS(self, path, version=None):
+        log('jsonrpc, listVFS path = %s, version = %s'%(path,version))
+        json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":{"directory":"%s","properties":["duration","runtime"]},"id":1}'%(path))
+        json_response = (sendJSON(json_query)).get('result',{}).get('files',[])
+        dirs, files = [[],[]]
+        for item in json_response:
+            file = item['file']
+            if item['filetype'] == 'file':
+                self.parseDuration(file, item)
+                files.append(file)
+            else: dirs.append(file)
+        return dirs, files
+        
+        
     def autoPagination(self, id, path, limits={}):
         cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
         if not limits:
@@ -841,14 +884,21 @@ class JSONRPC:
         cacheName = '%s.parseDuration:.%s'%(ADDON_ID,path)
         duration = self.cache.get(cacheName)
         if duration is None:
-            try: duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"))
+            try:
+                if path.startswith(('plugin://','upnp://')):
+                    duration = int(item.get('runtime','') or item.get('duration','0') or '0')
+                else:
+                    duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"))
             except Exception as e: 
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
             self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=28))
         dbid    = item.get('id',-1)
         runtime = int(item.get('runtime','') or item.get('duration','0') or '0')
-        if STORE_DURATION and (runtime != duration and duration > 0) and dbid > 0: self.setDuration(item['type'], dbid, duration)
+        if STORE_DURATION and (runtime != duration and duration > 0) and dbid > 0:  
+            # if self.saveDuration: 
+            # self.queue.run() #todo debug kodi hanging on exit, threads not shutting down
+            self.setDuration(item['type'], dbid, duration)
         log("jsonrpc, parseDuration, path = %s, duration = %s"%(path,duration))
         return duration
         
@@ -861,15 +911,23 @@ class JSONRPC:
             self.queue.add((sendJSON,('{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))))
      
     
-    def buildBCTresources(self, packs=None):
-        log('jsonrpc, buildBCTresources')
-        dirs, files = [[],[]]
+    def buildResourcePath(self, path, file):
+        if path.startswith('resource://'):
+            path = path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
+        else: 
+            path = os.path.join(path,file)
+        return path
+        
+    
+    def buildBCTresource(self, path):
         resourceMap = {}
-        if packs is None: packs = GLOBAL_RESOURCE_PACK
-        for type, path in packs.items():
-            if path.startswith('resource://'):
-                dirs, files = self.getResourcesFolders(path,self.getPluginMeta(path).get('version',''))
-            resourceMap[type] = {'path':path,'files':files,'dirs':dirs}
+        log('jsonrpc, buildBCTresource, path = %s'%(path))
+        if path.startswith('resource://'):
+            dirs, files = self.getResourcesFolders(path,self.getPluginMeta(path).get('version',''))
+            resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':[self.buildResourcePath(path,file) for file in files]}
+        elif path.startswith('plugin://'):
+            dirs, files = self.listVFS(path,self.getPluginMeta(path).get('version',''))
+            resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':files}
         return resourceMap
         
             

@@ -20,7 +20,6 @@
 
 from resources.lib.globals    import *
 from resources.lib.parser     import M3U, XMLTV, JSONRPC, Channels
-from resources.lib.predefined import Predefined 
 from resources.lib.fileaccess import FileLock
 from resources.lib.queue      import Worker
 
@@ -30,7 +29,6 @@ class Builder:
         self.m3u              = M3U()
         self.xmltv            = XMLTV()
         self.channels         = Channels()
-        self.predefined       = Predefined()
         self.queue            = Worker()
         self.jsonRPC          = JSONRPC(self.queue)
         self.incStrms         = INCLUDE_STRMS  #todo adv. rules
@@ -72,8 +70,9 @@ class Builder:
 
     def createChannelItems(self):
         self.log('createChannelItems')
-        items = sorted(self.channels.getChannels(), key=lambda k: k['number']) # user-defined
-        items.extend(sorted(self.predefined.buildChannelList(), key=lambda k: k['number'])) # pre-defined
+        self.channels.reset()
+        items = self.channels.getChannels()        # user-defined
+        items.extend(self.channels.getPredefined())# pre-defined 
         for idx, item in enumerate(items):
             if not item.get('path',None) or not item.get('name',None): 
                 self.log('createChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
@@ -93,7 +92,6 @@ class Builder:
     def reload(self):
         self.log('reload')
         try:
-            self.channels.reset()
             self.xmltv.reset()
             self.m3u.reset()
             return True
@@ -111,26 +109,25 @@ class Builder:
         return False
         
         
-    def buildService(self, channels=None, reloadPVR=True, update=False):
+    def buildService(self, channels=None, update=False):
         self.log('buildService, update = %s'%(update))
         if isBusy(): 
             return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            
+        
+        if not self.reload(): 
+            return notificationDialog(LANGUAGE(30001))
+                    
         if channels is None: 
             channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
         if not channels: 
             return notificationDialog(LANGUAGE(30056))
             
         setBusy(True)
-        if not self.reload(): 
-            return notificationDialog(LANGUAGE(30001))
-                    
-        # if self.saveDuration: 
-            # self.queue.run() #todo debug kodi hanging on exit, threads not shutting down
         self.fileLock = FileLock()
         self.fileLock.lockFile("MasterLock")
-        msg = LANGUAGE(30051) if update else LANGUAGE(30050)
-        self.dialog = ProgressBGDialog(message=LANGUAGE(30052))
+        msg = LANGUAGE(30051 if update else 30050)
+        self.dialog = ProgressBGDialog(message=msg)
+        
         self.channelCount = len(channels)
         for idx, channel in enumerate(channels):
             self.progress = (idx*100//len(channels))
@@ -138,7 +135,7 @@ class Builder:
             if not cacheResponse: 
                 continue
             
-            self.msg    = '%s, %s'%(msg,channel['name'])
+            self.msg = '%s, %s'%(msg,channel['name'])
             self.buildM3U(channel, channel['radio'])
             self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
             self.buildM3U(channel, channel['radio'])
@@ -150,7 +147,6 @@ class Builder:
         self.fileLock.unlockFile('MasterLock')
         self.fileLock.close()
         self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
-        if reloadPVR: checkPVR()
 
 
     def getFileList(self, channel, radio=False):
@@ -175,13 +171,9 @@ class Builder:
             else:
                 mixed = False
                 path  = [channel['path']] 
-            limit = int(PAGE_LIMIT//len(path))# equally distribute content between multi-paths. 
+            limit = int(PAGE_LIMIT//len(path))# equally distribute content between multi-paths.            
+            media = 'music' if radio else 'video'
             
-            if radio:
-                media = 'music'
-            else: 
-                media = 'video'
-
             if radio:
                 cacheResponse = self.buildRadioList(channel)
             else:         
@@ -221,51 +213,39 @@ class Builder:
         self.log("injectBCTs; channel = %s"%(channel))
         if channel['radio'] == True: 
             return fileList
-            
-        tmpList       = []
-        bctTypes      = ['rating'] #todo check rules for type and pack option
-        bctPacks      = None #todo check adv. rules for pack details
-        resourceMap   = self.jsonRPC.buildBCTresources(bctPacks)
         
-        
-        def buildPath(path, file):
-            return path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
-        
-        
-        def fillSingle(item, matchType, resource, paths, files):
-            for file in files:
-                filename, ext = os.path.splitext(file)
-                if matchType.lower() == filename.lower():
-                    BCTfilepath = buildPath(resource['path'], file)
-                    BCTduration = self.jsonRPC.parseDuration(BCTfilepath)
-                    self.log("injectBCTs; fillSingle matching = %s, BCTfilepath = %s, BCTduration = %s"%(matchType,BCTfilepath,BCTduration))
-                    paths.insert(0,BCTfilepath) # don't add BCTduration to PRE_ROLL.
-                    # item['stop'] += BCTduration  
-                    break
-            
-            
-        def fillRandom(item, matchType, resource, paths, dirs, count=None, time=None):
-            sfiles = []
-            rmap   = [{'path':os.path.join(resource['path'],dir), 'files':self.jsonRPC.getResourcesFolders(os.path.join(resource['path'],dir))[1]} for dir in dirs if matchType.lower() == dir.lower()]
-            if rmap:
-                files = rmap.get('files',[])
-                random.shuffle(files)
-                if count is not None:
-                    sfiles = random.sample(files, count)
-                    for file in sfiles:
-                        BCTfilepath = buildPath(rmap['path'], file)
-                        BCTduration = self.jsonRPC.parseDuration(file)
-                        self.log("injectBCTs; fillRandom matching = %s, BCTfilepath = %s, BCTduration = %s"%(matchType,BCTfilepath,BCTduration))
-                        paths.append(BCTfilepath)
-                        item['stop'] += BCTduration                       
-                # else:
-                    #
-                
+        tmpList     = []
+        resourceMap = {}
+        bctTypes    = {"rating"    :{"min":0,"max":0,"enabled":True  ,"path":GLOBAL_RESOURCE_PACK_RATINGS},
+                       "trailer"   :{"min":0,"max":2,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_TRAILERS},
+                       "bumper"    :{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_BUMPERS},
+                       "commercial":{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_COMMERICALS}}#todo check adv. rules get settings
+
+        for bctType in bctTypes:
+            if not bctTypes[bctType]['enabled']: continue
+            resourceMap[bctType] = self.jsonRPC.buildBCTresource(bctTypes[bctType].get('path'))
+            if bctType in ['bumper','commercial']: # locate folder by channel name.
+                self.log("injectBCTs; finding channel folder %s for %s"%(channel['name'],bctType))
+                resourceMap[bctType] = [self.jsonRPC.buildBCTresource(os.path.join(bctTypes[bctType].get('path'),dir)) for dir in bctTypes[bctType].get('dirs') if channel['name'].lower() == dir.lower()]
+            elif bctTypes == 'trailer':        
+                # integrate channel trailers along with resources
+                trailers = filter(None,list(set([fileitem.get('trailer',None) for fileitem in fileList])))
+                if not trailers: continue
+                trailers = trailers.reverse()
+                trailers.shuffle()
+                self.log("injectBCTs; adding %s local kodi trailers"%(len(trailers)))
+                resourceMap[bctType]['filepaths'].extend(trailers)
+
+        def buildBCT(bctType, path):
+            duration = self.jsonRPC.parseDuration(path)
+            self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
+            if bctType in PRE_ROLL:
+                paths.insert(0,path)
+            else:
+                paths.append(path)
+                item['stop'] += duration               
                                              
         for item in fileList:
-            # type      = item.get('type'  ,'')
-            # studios   = item.get('studio',[])
-            # start     = item['start']
             stop      = item['stop']
             endOnHour = (roundToHour(stop) - stop)
             paths     = [item['file']]
@@ -273,16 +253,23 @@ class Builder:
             stack     =  'stack://%s'
 
             for bctType in bctTypes:
-                resource = resourceMap.get(bctType,{})
-                dirs     = resource.get('dirs',[])
-                files    = resource.get('files',[])
+                if not bctTypes[bctType]['enabled']: continue
+                resource  = resourceMap.get(bctType,{})
+                files     = resource.get('files',[])
+                filepaths = resource.get('filepaths',[])
                 
                 if bctType == 'rating':
                     mpaa = item.get('mpaa'  ,'')
                     if mpaa.startswith('Rated'): mpaa = re.split('Rated ',mpaa)[1]  #todo prop. regex
-                    fillSingle(item, mpaa, resource, paths, files)
+                    for file in files:
+                        filename, ext = os.path.splitext(file)
+                        if mpaa.lower() == filename.lower():
+                            buildBCT(bctType,self.jsonRPC.buildResourcePath(resource['path'],file))
                 else:
-                    fillRandom(item, channel['name'], resource, paths, dirs)
+                    max = bctTypes[bctType].get('max',0)
+                    if max > len(filepaths): max = len(filepaths)
+                    matches = random.sample(filepaths, random.randint(bctTypes[bctType].get('min',0),max))
+                    [buildBCT(bctType, match) for match in matches]
                                     
             if orgPaths != paths:
                 item['originalfile'] = item['file']
