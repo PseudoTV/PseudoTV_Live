@@ -15,10 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-
-# https://bitbucket.org/jfunk/python-xmltv/src/default/README.txt
-# https://github.com/kodi-pvr/pvr.iptvsimple/blob/Matrix/README.md#m3u-format-elements
-
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals import *
@@ -38,7 +34,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.channels      = Channels()
             self.channelLimit  = CHANNEL_LIMIT
             self.newChannel    = self.channels.getTemplate(ADDON_VERSION).get('channels',[])[0]
-            self.channelList   = sorted(self.createChannelList(self.buildArray(), self.getChannels()), key=lambda k: k['number'])
+            self.channelList   = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+            self.channelList.extend(self.channels.getPredefined())
             self.newChannels   = self.channelList.copy()
         self.doModal()
 
@@ -50,23 +47,58 @@ class Manager(xbmcgui.WindowXMLDialog):
     def onInit(self):
         self.log('onInit')
         self.cntrlStates = {}
-        self.chanList    = self.getControl(5)
         self.spinner     = self.getControl(4)
-        self.setVisibility(self.spinner,True)
+        self.chanList    = self.getControl(5)
+        self.itemList    = self.getControl(6)
+        self.togglechanList(True)
+        self.toggleSpinner(self.chanList,True)
         self.fillChanList(self.channelList)
+        
+        
+    def togglechanList(self, state):
+        if state:
+            self.getControl(9001).setLabel('Close')
+            self.getControl(9002).setLabel('')
+            self.getControl(9003).setLabel('')
+            self.setVisibility(self.itemList,False)
+            self.setVisibility(self.chanList,True)
+            self.setFocus(self.chanList)
+        else:
+            self.getControl(9001).setLabel('Save')
+            self.getControl(9002).setLabel('Cancel')
+            self.getControl(9003).setLabel('')
+            self.setVisibility(self.chanList,False)
+            self.setVisibility(self.itemList,True)
+            self.setFocus(self.itemList)
+        
+        
+    def toggleSpinner(self, ctrl, state):
+        self.setVisibility(self.spinner,state)
+        # ctrl.setPageControlVisible(state)
         
         
     def fillChanList(self, channelList):
         self.log('fillChanList')
         self.chanList.addItems(list(PoolHelper().poolList(self.buildChannelListItem,channelList)))
-        self.setVisibility(self.spinner,False)
+        self.toggleSpinner(self.chanList,False)
            
            
     def buildChannelListItem(self, channel):
+        predefined = channel["number"] > CHANNEL_LIMIT
         chColor = 'white'
-        label2  = channel.get("name",'')
-        if not label2: chColor = 'dimgray'
-        label  = '[COLOR=%s][B]%s:[/COLOR][/B]'%(chColor,channel["number"])
+        laColor = 'white'
+        label  = str(channel["number"])
+        label2 = channel["name"]
+        
+        if predefined: 
+            chColor = 'dimgray'
+            laColor = 'dimgray'
+        elif not label2: 
+            chColor = 'dimgray'
+            laColor = 'dimgray'
+        
+        # label  = '[COLOR=%s][B]%s:[/COLOR][/B]'%(chColor,label)
+        # label2 = '[COLOR=%s]%s[/COLOR]'%(laColor,label2)
         type   = (channel['type'] or 'Custom')
         path   = '|'.join(channel.get("path",[]))
         logo   = channel.get("logo",self.jsonRPC.getLogo(channel['name'], type, channel['path'], featured=True))
@@ -74,15 +106,53 @@ class Manager(xbmcgui.WindowXMLDialog):
         return buildMenuListItem(label,label2,logo,path,propItem=prop)
         
 
-    def buildChannelItems(self, channel):
-        self.log('buildChannelItems')
-        try:
-            self.setVisibility(self.chanList,False)
-            print(channel.getLabel2())
-        except: pass
-
-
-
+    def buildChannelItem(self, channel):
+        self.log('buildChannelItem')
+        self.togglechanList(False)
+        
+        LABEL2 = {'name'  : LANGUAGE(30087),
+                  'path'  : LANGUAGE(30088),
+                  'groups': LANGUAGE(30089),
+                  'rules' : LANGUAGE(30090)}
+        channelData = loadJSON(channel.getProperty('writer'))
+        listItems = []
+        for key, value in channelData.items():
+            if key in ["number","type","logo","id","xmltv","radio","page"]: continue # keys to ignore, internal use only.
+            if not value: value = ''
+            elif isinstance(value,list): 
+                if   key == "groups": value = ' / '.join(value)
+                elif key == "path"  : value = '|'.join(value)
+            listItems.append(buildMenuListItem(LABEL2[key],value,channelData.get("logo",LOGO),propItem={'key':key,'value':value}))
+        self.itemList.addItems(listItems)
+        
+        
+    def itemInput(self, channelData):
+        key   = channelData.getProperty('key')
+        value = channelData.getProperty('value')
+        log('Manager: itemInput, value = %s, key = %s'%(value,key))
+        KEY_INPUT = {"type"  : {'func':selectDialog     ,'args':()},# unneeded ATM
+                     "name"  : {'func':inputDialog      ,'args':{'message':LANGUAGE(30087),'default':value}},
+                     "path"  : {'func':browseDialog     ,'args':{'heading':LANGUAGE(30088),'default':value}},
+                     "groups": {'func':selectDialog     ,'args':{'list':GROUP_TYPES,'header':LANGUAGE(30089),'preselect':findItemsIn(GROUP_TYPES,value.split(' / ')),'useDetails':False}},
+                     "rules" : {'func':self.selectRules ,'args':{'channelData':channelData}},
+                     "clear" : {'func':self.clearChannel,'args':{'item':channelData}},
+                     "save"  : {'func':self.addChannel  ,'args':{'item':channelData}}}
+           
+        func = KEY_INPUT[key.lower()]['func']
+        args = KEY_INPUT[key.lower()]['args']# move args to kwargs?
+        if isinstance(args,dict): 
+            retval = func(**args)
+        else: 
+            retval = func()
+        if retval:
+            if key in ['clear']: return retval
+            elif isinstance(retval,list):
+                retval = [args[0][idx] for idx in retval]
+            channelData[key.lower()] = retval
+        channelData['type'] = 'Custom' #todo 
+        return channelData
+        
+   
     def isVisible(self, cntrl):
         try: 
             if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
@@ -132,28 +202,27 @@ class Manager(xbmcgui.WindowXMLDialog):
         actionId = act.getId()
         self.log('onAction: actionId = %s'%(actionId))
         if actionId in ACTION_PREVIOUS_MENU: self.closeManager()
-        pass
         
         
     def onClick(self, controlId):
         self.log('onClick: controlId = %s'%(controlId))
         if   controlId == 0: self.closeManager()
         elif controlId == 5:
-            self.buildChannelItems(self.chanList.getSelectedItem())
+            self.buildChannelItem(self.chanList.getSelectedItem())
+        elif controlId == 6:
+            self.itemInput(self.chanList.getSelectedItem())
+        elif controlId == 9001:
+            label = self.getControl(controlId).getLabel()
+            if   label == 'Close':  self.closeManager()
+            # elif label == 'Save':   self.closeManager()
+            # elif label == 'OK':     self.closeManager()
+            # elif label == 'Cancel': self.closeManager()
     
     
     def onFocus(self, controlId):
         self.log('onFocus: controlId = %s'%(controlId))
         pass
             
-            
-        # self.buildChannelListItems()
-            
-            
-    def getChannels(self):
-        log('getChannels')
-        return self.channels.channelListuser-defineduser-defineduser-defineduser-defineduser-defineduser-defineduser-defined.get('channels',[])
-        
 
     def saveChannels(self):
         log('saveChannels')
@@ -213,75 +282,19 @@ class Manager(xbmcgui.WindowXMLDialog):
             yield item
 
 
-    def buildChannelListItems(self):
-        log('Manager: buildChannelListItems')
-        if isBusy(): 
-            return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-        with busy_dialog():
-            listItems = list(PoolHelper().poolList(self.buildChannelListItem,self.channelList))
-        select = selectDialog(listItems,'%s: %s'%(ADDON_NAME,LANGUAGE(30072)), multi=False)
-        if select >= 0: 
-            self.buildChannelItem(listItems[select])
+    # def buildChannelListItems(self):
+        # log('Manager: buildChannelListItems')
+        # if isBusy(): 
+            # return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        # with busy_dialog():
+            # listItems = list(PoolHelper().poolList(self.buildChannelListItem,self.channelList))
+        # select = selectDialog(listItems,'%s: %s'%(ADDON_NAME,LANGUAGE(30072)), multi=False)
+        # if select >= 0: 
+            # self.buildChannelItem(listItems[select])
             
-        if self.saveChannels():
-            return REAL_SETTINGS.openSettings()
+        # if self.saveChannels():
+            # return REAL_SETTINGS.openSettings()
         
-        
-    def buildChannelItem(self, data):
-        if isBusy(): 
-            return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-        setBusy(True)
-        log('Manager: buildChannelItem')
-        select = 0
-        LABEL2 = {'name'  : LANGUAGE(30087),
-                  'path'  : LANGUAGE(30088),
-                  'groups': LANGUAGE(30089),
-                  'rules' : LANGUAGE(30090)}
-        channelData = loadJSON(data.getProperty('writer'))
-        while select > -1 and not self.myMonitor.abortRequested():
-            listItems = []
-            for key, value in channelData.items():
-                if key in ["number","type","logo","id","xmltv"]: continue # keys to ignore, internal use only.
-                if not value: value = ''
-                elif isinstance(value,list): 
-                    if   key == "groups": value = ' / '.join(value)
-                    elif key == "path"  : value = '|'.join(value)
-                listItems.append(buildMenuListItem('%s'%(value),LABEL2[key],channelData.get("logo",LOGO),propItem={'key':key}))
-            listItems.append(buildMenuListItem(LANGUAGE(30091),'',propItem={'key':'save'}))
-            listItems.append(buildMenuListItem(LANGUAGE(30092),'',propItem={'key':'clear'}))
-            select = selectDialog(listItems,'%s: %s'%(ADDON_NAME,LANGUAGE(30072)), multi=False)
-            if select >= 0: 
-                channelData = self.itemInput(listItems[select].getLabel(), listItems[select].getProperty('key'), channelData) #todo set value
-                if channelData.get('save',False) == True: break
-        setBusy(False)
-        return self.buildChannelListItems()
-        
-        
-    def itemInput(self, value, key, channelData):
-        log('Manager: itemInput, value = %s, key = %s'%(value,key))
-        KEY_INPUT = {"type"  : {'func':selectDialog     ,'args':()},# unneeded ATM
-                     "name"  : {'func':inputDialog      ,'args':{'message':LANGUAGE(30087),'default':value}},
-                     "path"  : {'func':browseDialog     ,'args':{'heading':LANGUAGE(30088),'default':value}},
-                     "groups": {'func':selectDialog     ,'args':{'list':GROUP_TYPES,'header':LANGUAGE(30089),'preselect':findItemsIn(GROUP_TYPES,value.split(' / ')),'useDetails':False}},
-                     "rules" : {'func':self.selectRules ,'args':{'channelData':channelData}},
-                     "clear" : {'func':self.clearChannel,'args':{'item':channelData}},
-                     "save"  : {'func':self.addChannel  ,'args':{'item':channelData}}}
-           
-        func = KEY_INPUT[key.lower()]['func']
-        args = KEY_INPUT[key.lower()]['args']# move args to kwargs?
-        if isinstance(args,dict): 
-            retval = func(**args)
-        else: 
-            retval = func()
-        if retval:
-            if key in ['clear']: return retval
-            elif isinstance(retval,list):
-                retval = [args[0][idx] for idx in retval]
-            channelData[key.lower()] = retval
-        channelData['type'] = 'Custom' #todo 
-        return channelData
-        
-   
     def selectRules(self, channelData):
         log('Manager: selectRules')
         notificationDialog('Coming Soon')

@@ -44,17 +44,27 @@ class Channels:
 
 
     def getChannels(self):
+        log('channels: getChannels')
         return sorted(self.channelList.get('channels',[]), key=lambda k: k['number'])
         
         
     def getPredefined(self):
+        log('channels: getPredefined')
         return sorted(self.channelList.get('predefined',[]), key=lambda k: k['number'])
         
         
-    def getReserved(self, channelkey='predefined'):
+    def getAllChannels(self):
+        log('channels: getAllChannels')
+        channels = self.getChannels()
+        channels.extend(self.getPredefined())
+        return channels
+        
+        
+    def getReservedChannels(self, channelkey='predefined'):
+        log('channels: getReservedChannels, channelkey = %s'%(channelkey))
         return [channel["number"] for channel in self.channelList.get(channelkey,[])]
-        
-        
+
+
     def add(self, item):
         channelkey = 'predefined' if item['number'] > CHANNEL_LIMIT else 'channels'
         log('channels: add, item = %s, channelkey = %s'%(item,channelkey))
@@ -113,7 +123,7 @@ class Channels:
     def save(self):
         fle = FileAccess.open(CHANNELFLE, 'w')
         log('channels: save, saving to %s'%(CHANNELFLE))
-        fle.write(dumpJSON(self.channelList, sortkey=False))
+        fle.write(dumpJSON(self.channelList, idnt=4, sortkey=False))
         fle.close()
         return True
         
@@ -266,7 +276,6 @@ class XMLTV:
     def addProgram(self, id, item):
         programmes = self.xmltvList['programmes']
         pitem      = {'channel'     : id,
-                      'new'         : item['new'],
                       'credits'     : {'director': [str(item['director'])], 'writer': ['\n\n\n\n\n\n\n\n\n\n\n\n%s'%(dumpJSON(item['writer']))]}, #Hijacked director = dbid, writer = listitem dict.
                       'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                       'title'       : [(self.cleanString(item['title']), LANG)],
@@ -280,6 +289,8 @@ class XMLTV:
         # if item['date']: #todo fix
             # pitem['date'] = (datetime.datetime.strptime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d'),
             
+            
+        if item['new']: pitem['new'] = '' #write blank tag, tag == True
         rating = self.cleanMPAA(item['rating'])
         if rating != 'NA' and rating.startswith('TV-'): 
             pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
@@ -398,10 +409,10 @@ class XMLTV:
             self.importXMLTV(self.extImportXMLTV)
         
         writer = xmltv.Writer(encoding=xmltv.locale, date=data['date'],
-                              source_info_url=data['source-info-url'], 
-                              source_info_name=data['source-info-name'],
-                              generator_info_url=data['generator-info-url'], 
-                              generator_info_name=data['generator-info-name'])
+                              source_info_url     = data['source-info-url'], 
+                              source_info_name    = data['source-info-name'],
+                              generator_info_url  = data['generator-info-url'], 
+                              generator_info_name = data['generator-info-name'])
                
         channels = self.xmltvList['channels']
         for channel in channels: writer.addChannel(channel)
@@ -423,7 +434,7 @@ class XMLTV:
 class M3U:
     def __init__(self):
         self.m3uTMP  = []
-        self.m3uList = ['#EXTM3U tvg-shift="%s" x-tvg-url=""'%(self.getShift())]
+        self.m3uList = ['#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="%s"'%(self.getShift(),getuuid())]
         self.m3uList.extend(self.cleanSelf(self.load()))
         self.extImport    = getSettingBool('User_Import')
         self.extImportM3U = getSetting('Import_M3U')
@@ -435,6 +446,12 @@ class M3U:
         # self.now = datetime.datetime.now()
         # min = str(round(self.now.minute) / 60)[:3]
         # return '-%s'%(min)
+
+
+    def setClientID(self, line):
+        log('m3u: setClientID')
+        match = re.compile('x-tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
+        if match: return setSetting('mu3id',match.group(1))
 
 
     def reset(self):
@@ -453,6 +470,7 @@ class M3U:
         log('m3u: load, file = %s'%file)
         fle = FileAccess.open(file, 'r')
         m3uListTMP = (fle.readlines())
+        self.setClientID(m3uListTMP[0])
         fle.close()
         return ['%s\n%s'%(line,m3uListTMP[idx+1]) for idx, line in enumerate(m3uListTMP) if line.startswith('#EXTINF:')]
 
@@ -464,7 +482,7 @@ class M3U:
             self.importM3U(self.extImportM3U)
         fle = FileAccess.open(M3UFLE, 'w')
         log('m3u: save, saving to %s'%(M3UFLE))
-        fle.write('\n'.join([str(item) for item in self.m3uList]))
+        fle.write('\n'.join([item for item in self.m3uList]))
         fle.close()
         return True
         
@@ -556,7 +574,7 @@ class JSONRPC:
         self.videoParser   = VideoParser()
         self.resourcePacks = self.buildLogoResources()
         FileAccess.makedirs(LOGO_LOC)
-
+        
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15)):
         cacheName = '%s.cacheJSON.%s'%(ADDON_ID,command)
@@ -592,6 +610,14 @@ class JSONRPC:
         return id
         
         
+    def getPlayerItem(self, playlist=False):
+        self.log('getPlayerItem, playlist = %s'%(playlist))
+        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","file"]},"id":1}'%(self.getActivePlaylist())
+        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath"]}, "id": 1}'%(self.getActivePlayer())
+        result = sendJSON(json_query).get('result',{})
+        return (result.get('item',{}) or result.get('items',{}))
+           
+
     def getPVRChannels(self, radio=False):
         type = 'allradio' if radio else 'alltv'
         json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext"]}, "id": 1}'%(type))
@@ -630,7 +656,7 @@ class JSONRPC:
         channels = self.getPVRChannels(radio)
         for item in channels:
             writer = item.get('broadcastnow',{}).get('writer','')
-            if not writer: continue #filter other PVR backends; currently NO API support.
+            if not writer: continue #filter other PVR backends
             try: 
                 writer = loadJSON(writer)
                 if writer['data']['id'] == id:
@@ -640,24 +666,30 @@ class JSONRPC:
         return None
         
         
+    def fillPVRbroadcasts(self, channelItem):
+        log('JSONRPC: fillPVRbroadcasts')
+        channelItem['broadcastnext'] = []
+        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}'%(channelItem['channelid']))
+        json_response = (sendJSON(json_query)).get('result',{}).get('broadcasts',[])
+        for idx, item in enumerate(json_response):
+            if item['progresspercentage'] == 100: continue
+            elif item['progresspercentage'] > 0: 
+                broadcastnow = channelItem['broadcastnow']
+                channelItem.pop('broadcastnow')
+                item.update(broadcastnow) 
+                channelItem['broadcastnow'] = item
+            elif item['progresspercentage'] == 0: 
+                channelItem['broadcastnext'].append(item)
+        log('JSONRPC: fillPVRbroadcasts, found broadcastnext = %s'%(len(channelItem['broadcastnext'])))
+        return channelItem
+        
+        
     def getPVRposition(self, chname, id, radio=False, isPlaylist=False): # Current PVR Position data
         log('JSONRPC: getPVRposition, chname = %s, id = %s, isPlaylist = %s'%(chname,id,isPlaylist))
         channelItem = self.matchPVRChannel(chname, id, radio)
         if not channelItem: return {}
         if isPlaylist:
-            channelItem['broadcastnext'] = []
-            json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}'%(channelItem['channelid']))
-            json_response = (sendJSON(json_query)).get('result',{}).get('broadcasts',[])
-            for idx, item in enumerate(json_response):
-                if item['progresspercentage'] == 100: continue
-                elif item['progresspercentage'] > 0: 
-                    broadcastnow = channelItem['broadcastnow']
-                    channelItem.pop('broadcastnow')
-                    item.update(broadcastnow) 
-                    channelItem['broadcastnow'] = item
-                elif item['progresspercentage'] == 0: 
-                    channelItem['broadcastnext'].append(item)
-            log('JSONRPC: getPVRposition, found broadcastnext = %s'%(len(channelItem['broadcastnext'])))
+            channelItem = self.fillPVRbroadcasts(channelItem)
         else: 
             broadcastnext = channelItem['broadcastnext']
             channelItem['broadcastnext'] = [broadcastnext]
@@ -810,7 +842,7 @@ class JSONRPC:
                 else: StudioList.append(tmpStudios[i][0])
         log('jsonrpc, getMovieInfo, studios = %s, genres = %s'%(len(StudioList),len(MovieGenreList)))
         return StudioList, MovieGenreList
-
+        
 
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         if not sort and path.startswith('videodb://movies'): sort = {"method": "random"}
@@ -895,9 +927,7 @@ class JSONRPC:
             self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=28))
         dbid    = item.get('id',-1)
         runtime = int(item.get('runtime','') or item.get('duration','0') or '0')
-        if STORE_DURATION and (runtime != duration and duration > 0) and dbid > 0:  
-            # if self.saveDuration: 
-            # self.queue.run() #todo debug kodi hanging on exit, threads not shutting down
+        if STORE_DURATION and (runtime != duration and duration > 0) and dbid > 0:
             self.setDuration(item['type'], dbid, duration)
         log("jsonrpc, parseDuration, path = %s, duration = %s"%(path,duration))
         return duration
@@ -999,5 +1029,7 @@ class JSONRPC:
             if isinstance(path, list): path = path[0]
             if path.startswith('plugin://'): icon = self.getPluginMeta(path).get('icon',None)
         if icon is None: icon = LOGO #last check to make sure a default logo is set; unneeded...
+        if icon.startswith(ADDON_PATH):
+            icon = icon.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID))
         log('getLogo, channelname = %s, logo = %s'%(channelname,icon))
         return icon

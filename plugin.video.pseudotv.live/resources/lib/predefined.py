@@ -52,23 +52,23 @@ class Predefined:
     def buildChannelList(self):
         citems   = []
         template = self.channels.getCitem()
-        existing = self.channels.getPredefined()
-        reserved = self.channels.getReserved()
+        existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
+        reserved = self.channels.getReservedChannels() # numbers in-use.
         for type, func in self.types.items():
             items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
             chnums   = getPredefinedChannelNumber(type,reserved,len(items))
             log('buildChannelList, building %s, found %s'%(type,items))
             for idx, item in enumerate(items):
                 if not item: continue
+                citem    = template.copy()
+                radio    = type == 'MUSIC_Genres'
                 type     = type.replace('_',' ')
                 chpath   = func(item)
-                radio    = type == 'MUSIC Genres'
                 chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
                 chname   = self.getChannelSuffix(item, type)
                 chnumber = chnums[idx]
                 chgroups = [type]
                 chid     = getChannelID(chname, chpath)
-                citem    = template.copy()
                 citem.update({'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'groups':chgroups})
                 citems.append(citem)
                 

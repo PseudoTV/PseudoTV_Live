@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
 
-class GUI(xbmcgui.WindowXML):
+class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.myPlayer        = MY_PLAYER

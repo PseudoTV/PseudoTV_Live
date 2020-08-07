@@ -71,10 +71,9 @@ class Builder:
     def createChannelItems(self):
         self.log('createChannelItems')
         self.channels.reset()
-        items = self.channels.getChannels()        # user-defined
-        items.extend(self.channels.getPredefined())# pre-defined 
+        items = self.channels.getAllChannels()
         for idx, item in enumerate(items):
-            if not item.get('path',None) or not item.get('name',None): 
+            if not item.get('path',None) or item.get('number',0) == 0: 
                 self.log('createChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
                 continue
                 
@@ -113,14 +112,20 @@ class Builder:
         self.log('buildService, update = %s'%(update))
         if isBusy(): 
             return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-        
+            
         if not self.reload(): 
             return notificationDialog(LANGUAGE(30001))
-                    
+                 
+        if isClient(): 
+            self.log('buildService, returning in client mode')
+            return
+        
         if channels is None: 
             channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
-        if not channels: 
-            return notificationDialog(LANGUAGE(30056))
+        if not channels: return notificationDialog(LANGUAGE(30056))
+            
+        # if self.saveDuration:
+            # self.queue.run()
             
         setBusy(True)
         self.fileLock = FileLock()
@@ -132,14 +137,12 @@ class Builder:
         for idx, channel in enumerate(channels):
             self.progress = (idx*100//len(channels))
             cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
-            if not cacheResponse: 
-                continue
+            if not cacheResponse: continue
             
             self.msg = '%s, %s'%(msg,channel['name'])
             self.buildM3U(channel, channel['radio'])
-            self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
-            self.buildM3U(channel, channel['radio'])
             if isinstance(cacheResponse,list):
+                self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
                 self.buildXMLTV(channel, cacheResponse, channel['radio'])
                 
         self.save()
@@ -210,17 +213,26 @@ class Builder:
         
     
     def injectBCTs(self, channel, fileList):
-        self.log("injectBCTs; channel = %s"%(channel))
         if channel['radio'] == True: 
             return fileList
         
+        def buildBCT(bctType, path):
+            duration = self.jsonRPC.parseDuration(path)
+            self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
+            if bctType in PRE_ROLL:
+                paths.insert(0,path)
+            else:
+                paths.append(path)
+                item['stop'] += duration
+                          
         tmpList     = []
         resourceMap = {}
         bctTypes    = {"rating"    :{"min":0,"max":0,"enabled":True  ,"path":GLOBAL_RESOURCE_PACK_RATINGS},
                        "trailer"   :{"min":0,"max":2,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_TRAILERS},
                        "bumper"    :{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_BUMPERS},
                        "commercial":{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_COMMERICALS}}#todo check adv. rules get settings
-
+        self.log("injectBCTs; channel = %s, configuration = %s, fileList size = %s"%(channel,dumpJSON(bctTypes),len(fileList)))
+        
         for bctType in bctTypes:
             if not bctTypes[bctType]['enabled']: continue
             resourceMap[bctType] = self.jsonRPC.buildBCTresource(bctTypes[bctType].get('path'))
@@ -235,16 +247,7 @@ class Builder:
                 trailers.shuffle()
                 self.log("injectBCTs; adding %s local kodi trailers"%(len(trailers)))
                 resourceMap[bctType]['filepaths'].extend(trailers)
-
-        def buildBCT(bctType, path):
-            duration = self.jsonRPC.parseDuration(path)
-            self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
-            if bctType in PRE_ROLL:
-                paths.insert(0,path)
-            else:
-                paths.append(path)
-                item['stop'] += duration               
-                                             
+                   
         for item in fileList:
             stop      = item['stop']
             endOnHour = (roundToHour(stop) - stop)
@@ -261,9 +264,10 @@ class Builder:
                 if bctType == 'rating':
                     mpaa = item.get('mpaa'  ,'')
                     if mpaa.startswith('Rated'): mpaa = re.split('Rated ',mpaa)[1]  #todo prop. regex
+                    if is3D(item): mpaa += ' (3DSBS)'
                     for file in files:
-                        filename, ext = os.path.splitext(file)
-                        if mpaa.lower() == filename.lower():
+                        rating = os.path.splitext(file)[0]
+                        if rating.lower() == mpaa.lower():
                             buildBCT(bctType,self.jsonRPC.buildResourcePath(resource['path'],file))
                 else:
                     max = bctTypes[bctType].get('max',0)
@@ -331,7 +335,7 @@ class Builder:
             item['stars']       = (file.get('rating','') or '0')
             item['categories']  = (file.get('genre','')  or ['Undefined'])
             item['type']        = file.get('type','video')
-            item['new']         = int(file.get('playcount',0)) == 0
+            item['new']         = int(file.get('playcount','1')) == 0
             item['thumb']       = getThumb(file)
             item['date']        = (file.get('firstaired','') or file.get('premiered','') or file.get('releasedate','') or file.get('originaldate','') or None)
             
@@ -398,11 +402,11 @@ class Builder:
                         seasonval = None
                         label = title
             
-                    if self.dialog is not None and self.msg.startswith(LANGUAGE(30051)):
+                    if self.dialog is not None:
                         self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s: %s'%(self.msg,((len(fileList)*100)//PAGE_LIMIT))+'%')
                     
-                    item['label']  = label
-                    item['plot']   = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or xbmc.getLocalizedString(161))
+                    item['label'] = label
+                    item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or xbmc.getLocalizedString(161))
                  
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])

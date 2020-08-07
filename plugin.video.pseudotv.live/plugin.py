@@ -98,26 +98,34 @@ class Plugin:
         for item in items: self.addDir(*item)
 
 
+    def stripStack(self, file, url):
+        log('stripStack, file = %s, url = %s'%(file,url))
+        paths = url.split(' , ')
+        for path in paths:
+            if file not in path: 
+                paths.remove(path)
+            elif file in path: 
+                break
+        return paths
+
+
     def contextPlay(self, writer, isPlaylist=False):
         stpos  = 0
         writer = loadJSON(writer.replace(' /  "',' , "').replace(" /  ",", "))# current item
-        if not writer: 
+        channelData = writer.get('data',{}) 
+        if not channelData: 
             return notificationDialog(LANGUAGE(30001))
             
-        log('contextPlay, writer = %s, isPlaylist = %s'%(dumpJSON(writer),isPlaylist))
+        pvritem = self.myBuilder.jsonRPC.getPVRposition(channelData.get('name',''), channelData.get('id',''), isPlaylist=isPlaylist)
+        pvritem['isPlaylist'] = isPlaylist
+        setCurrentChannelItem(pvritem)
+        log('contextPlay, writer = %s, pvritem = %s, isPlaylist = %s'%(dumpJSON(writer),pvritem,isPlaylist))
         self.playlist.clear()
         xbmc.sleep(100)
-        if not isPlaylist:
-            liz = buildItemListItem(writer)
-            listitems = [liz]
-        else:
-            channelData = writer.get('data',{}) 
-            if not channelData: 
-                return notificationDialog(LANGUAGE(30001))
-            
-            pvritem     = self.myBuilder.jsonRPC.getPVRposition(channelData.get('name',''), channelData.get('id',''), isPlaylist=isPlaylist)
-            nowitem     = pvritem.get('broadcastnow',{})
-            nextitems   = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+        
+        if isPlaylist:
+            nowitem   = pvritem.get('broadcastnow',{})
+            nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
             nextitems.insert(0,nowitem)
             
             for pos, nextitem in enumerate(nextitems):
@@ -126,6 +134,9 @@ class Plugin:
                     break
             log('contextPlay, writer stpos = %s'%(stpos))
             listitems = ([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems]) 
+        else:
+            liz = buildItemListItem(writer)
+            listitems = [liz]
             
         [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
         if isPlaylistRandom(): self.playlist.unshuffle()
@@ -135,13 +146,14 @@ class Plugin:
     def playRadio(self, name, id):
         log('playRadio, id = %s'%(id))
         pvritem = self.myBuilder.jsonRPC.getPVRposition(name, id, radio=True)
+        pvritem['isPlaylist'] = True
         nowitem = pvritem.get('broadcastnow',{}) # current item
         writer  = loadJSON(nowitem.get('writer',{}))
         if not writer: 
             notificationDialog(LANGUAGE(30001))
             return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
             
-        json_response = self.myBuilder.jsonRPC.requestList(id, writer.get('data',{}).get('path',''), 'music', page=250)
+        json_response = self.myBuilder.jsonRPC.requestList(id, writer.get('data',{}).get('path',''), 'music', page=RADIO_ITEM_LIMIT)
         if json_response:
             setCurrentChannelItem(pvritem)
             self.playlist.clear()
@@ -155,10 +167,11 @@ class Plugin:
         
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
-        found = False
+        found     = False
         liz       = xbmcgui.ListItem()
         listitems = [liz] #empty listitem required to pass failed playback.
         pvritem   = self.myBuilder.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
+        pvritem['isPlaylist'] = isPlaylist
         nowitem   = pvritem.get('broadcastnow',{}) # current item
         nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
         ruleslist = []#check pre-play channel rules.
@@ -171,10 +184,11 @@ class Plugin:
             writer   = loadJSON(nowitem.get('writer',{}))
             liz = buildItemListItem(writer)
             if (progress > self.seekTol):
-                # near end, avoid loopback; override last listitem and queue next show.
-                if (progress > ((runtime * 60) - 45)): #45sec endtime offset
+                # near end, avoid loopback; override nowitem and queue next show.
+                if (progress > ((runtime * 60) - ENDTIME_SEEK_OFFSET)): # endtime offset
                     log('playChannel, progress = %s near end, queue nextitem'%(progress))
                     liz = buildItemListItem(loadJSON(nextitems[0].get('writer',{})))
+                    nextitems.pop(0) #remove first element in nextitems keep playlist order.
                 else:
                     log('playChannel, progress = %s within seek tolerance setting seek.'%(progress))
                     liz.setProperty('totaltime'  , str((runtime * 60)))
@@ -186,13 +200,7 @@ class Plugin:
                     file = writer.get('originalfile','')
                     if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
                         log('playChannel, playing stack with url = %s'%(url))
-                        paths = url.split(' , ')
-                        for path in paths:
-                            if file not in path: 
-                                paths.remove(path)
-                            elif file in path: 
-                                break
-                        liz.setPath('stack://%s'%(' , '.join(paths)))
+                        liz.setPath('stack://%s'%(' , '.join(self.stripStack(file, url))))
                 
             listitems = [liz]
             if isPlaylist: 
@@ -238,21 +246,15 @@ class Plugin:
 
 
     def run(self):  
-        params=self.getParams()
+        params  = self.getParams()
         name    = (urllib.parse.unquote(params.get("name",'')) or None)
         channel = (params.get("channel",'')                    or None)
         url     = (params.get("url",'')                        or None)
         id      = (params.get("id",'')                         or None)
         radio   = (params.get("radio",'')                      or 'False')
         mode    = (params.get("mode",'')                       or None)
-        
-        log("Name: %s"   %(name))
-        log("Channel: %s"%(channel))
-        log("URL: %s"    %(url))
-        log("ID: %s"     %(id))
-        log("Radio: %s"  %(radio))
-        log("Mode: %s"   %(mode))
-        
+        log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
+
         if channel is None:
             if   mode is None: self.buildMenu(name)
             elif mode == 'play':      

@@ -3,7 +3,7 @@
 		"number": 0,
 		"id": "",
 		"type": "",
-		"name": "",
+		"name": "Example",
 		"logo": "",
 		"radio": "False",
 		"path": [],
@@ -11,5 +11,5 @@
 		"rules": [],
 		"xmltv": ""
 	}],
-    "predefined": []
+	"predefined": []
 }

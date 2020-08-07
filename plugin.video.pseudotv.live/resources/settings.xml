@@ -25,7 +25,8 @@
         <setting id="Enable_Grouping"       type="bool"     label="30019" default="true" />
         <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
         <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
-        <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />     
+        <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />           
+        
     </category> 
     <category label="30048">
         <setting id="Playback_Method"      type="enum"     label="30045" default="0"  values="PVR Callback|Playlist" />

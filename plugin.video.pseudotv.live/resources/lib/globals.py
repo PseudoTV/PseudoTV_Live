@@ -20,7 +20,7 @@
 
 import os, sys, re, platform, subprocess, struct, shutil, traceback, threading
 import datetime, time, _strptime, base64, binascii, random, hashlib, difflib
-import json, codecs, types, collections, six
+import json, codecs, types, collections, six, uuid
 
 from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
 from itertools             import repeat, cycle, chain, zip_longest
@@ -57,16 +57,15 @@ LANGUAGE       = REAL_SETTINGS.getLocalizedString
 
 PVR_CLIENT     = 'pvr.iptvsimple'
 USER_LOC       = (REAL_SETTINGS.getSetting('User_Folder') or SETTINGS_LOC)
+LOCK_LOC       = SETTINGS_LOC
 XMLTVFLE       = os.path.join(USER_LOC,'%s.xml'%('pseudotv'))
 M3UFLE         = os.path.join(USER_LOC,'%s.m3u'%('pseudotv'))
 LOGO_LOC       = os.path.join(USER_LOC,'logos')
-LOCK_LOC       = SETTINGS_LOC
+CHANNELFLE     = os.path.join(USER_LOC,'channels.json')
+GENREFLE       = os.path.join(USER_LOC,'genres.xml')
 
-CHANNELFLE     = os.path.join(SETTINGS_LOC,'channels.json')
 CHANNELFLE_DEFAULT = os.path.join(ADDON_PATH,'channels.json')
-
-GENREFLE         = os.path.join(USER_LOC,'genres.xml')
-GENREFLE_DEFAULT = os.path.join(ADDON_PATH,'genres.xml')
+GENREFLE_DEFAULT   = os.path.join(ADDON_PATH,'genres.xml')
 
 VIDEO_EXTS     = xbmc.getSupportedMedia('video')
 MUSIC_EXTS     = xbmc.getSupportedMedia('music')
@@ -75,6 +74,8 @@ IMAGE_EXTS     = xbmc.getSupportedMedia('picture')
 DTFORMAT       = '%Y%m%d%H%M%S'
 EPG_HRS        = 10800  # 3hr in seconds, Min. EPG guidedata
 CHANNEL_LIMIT  = 999
+RADIO_ITEM_LIMIT = 250
+ENDTIME_SEEK_OFFSET = 45 #seconds
 
 ART_PARAMS        = ["thumb","logo","poster","fanart","banner","landscape","clearart","clearlogo"]
 JSON_FILE_ENUM    = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
@@ -175,7 +176,7 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
         log("globals: notificationDialog Failed! " + str(e), xbmc.LOGERROR)
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         
-def notificationProgress(message, time=4):
+def notificationProgress(message, time=2):
     dia = ProgressBGDialog(message=message)
     for i in range(time):
         if MY_MONITOR.waitForAbort(1): break
@@ -255,10 +256,13 @@ def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
     return control
     
 def log(msg, level=xbmc.LOGDEBUG):
+    try: msg = str(msg)
+    except Exception as e: 'log str failed! %s'%(str(e))
     if not getSettingBool('Enable_Debugging') and level != xbmc.LOGERROR: return
     if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
-    elif level == xbmc.LOGINFO:  setProperty("USER_LOG",'%s\n\n%s'%(py2_encode(msg),getProperty("USER_LOG")))
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,py2_encode(msg)),level)
+    elif level == xbmc.LOGINFO:  setProperty("USER_LOG",'%s\n\n%s'%(msg,getProperty("USER_LOG")))
+    try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+    except Exception as e: 'log failed! %s'%(str(e))
     
 def hasPVR():
     return bool(xbmc.getCondVisibility('Pvr.HasTVChannels'))
@@ -283,13 +287,15 @@ def removeDUPS(lst):
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
   
-def dumpJSON(dict1, idnt=4, sortkey=True):
+def dumpJSON(dict1, idnt=None, sortkey=True):
     if isinstance(dict1, basestring): return dict1
     return (json.dumps(dict1, indent=idnt, sort_keys=sortkey))
     
 def loadJSON(string1):
-    if   isinstance(string1,dict): return string1
-    try: return json.loads((string1.strip('\n').strip('\t').strip('\r')), strict=False)
+    if isinstance(string1,dict): return string1
+    try: 
+        string1 = (string1.strip('\n').strip('\t').strip('\r'))
+        return json.loads(string1, strict=False)
     except Exception as e: log("globals: loadJSON failed! %s \n %s"%(e,string1), xbmc.LOGERROR)
     return {}
     
@@ -298,6 +304,24 @@ def sendJSON(command):
     response = loadJSON(xbmc.executeJSONRPC(command))
     log('globals: sendJSON, response = %s'%(response))
     return response
+
+def createuuid():
+    return str(uuid.uuid1())
+
+def setuuid():
+    if getuuid(): return
+    setSetting('uuid',createuuid())
+    
+def getuuid():
+    return getSetting('uuid')
+
+def isClient():
+    setuuid()
+    uuid  = getuuid()
+    m3uID = (getSetting('mu3id') or uuid)
+    state = m3uID != uuid
+    log('globals: isClient = %s, m3uID = %s, uuid = %s'%(state,m3uID,uuid))
+    return state
 
 def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
     listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
@@ -446,8 +470,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     [listitem.addStreamInfo(key, value) for key, values in streamInfo.items() for value in values]
     if playable: listitem.setProperty("IsPlayable","true")
     return listitem
-    
-        
+           
 def isHD(item):
     if 'isHD' in item: return item['isHD']
     elif 'streamdetails' in item: 
@@ -523,9 +546,14 @@ def diffDICT(dict1, dict2):
     
 def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
+
+def cleanLabel(text):
+    text = re.sub('\[COLOR (.+?)\]', '', text)
+    text = re.sub('\[/COLOR\]', '', text)
+    text = text.replace("[B]",'').replace("[/B]",'')
+    return text
     
 def isPseudoTV():
-    #todo improve check
     isPseudoTV = len(getProperty('channel_item')) > 0
     log('globals: isPseudoTV = %s'%(isPseudoTV))
     return isPseudoTV
@@ -533,8 +561,7 @@ def isPseudoTV():
 def setCurrentChannelItem(item):
     setProperty('channel_item',dumpJSON(item))
     
-def getCurrentChannelItem():  
-    xbmc.sleep(500)
+def getCurrentChannelItem():
     return loadJSON(getProperty('channel_item'))
   
 def clearCurrentChannelItem():

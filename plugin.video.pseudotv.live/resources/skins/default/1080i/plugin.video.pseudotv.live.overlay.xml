@@ -34,10 +34,10 @@
             </control>
             <control type="image" id="41004">
                 <description>Channel Bug</description>
-                <left>1695</left>
-                <top>952</top>
-                <width>100</width>
-                <height>100</height>
+                <left>1495</left>
+                <top>852</top>
+                <width>256</width>
+                <height>256</height>
                 <aspectratio>keep</aspectratio>
                 <visible>Player.HasMedia + Player.Playing</visible>
                 <texture fallback="logo.png"></texture>

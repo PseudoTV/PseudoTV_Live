@@ -15,10 +15,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-
-# https://bitbucket.org/jfunk/python-xmltv/src/default/README.txt
-# https://github.com/kodi-pvr/pvr.iptvsimple/blob/Matrix/README.md#m3u-format-elements
-
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals import *
@@ -43,7 +39,7 @@ class Worker:
 
     def run(self):
         log('Worker: run')
-        if self.queueThread.isAlive(): self.queueThread.cancel()
+        if self.queueThread.isAlive(): self.queueThread.join()
         self.queueThread = threading.Timer(0.5, self.runner)
         self.queueThread.name = "queueThread"
         self.queueThread.start()
@@ -53,11 +49,10 @@ class Worker:
         log('Worker: runner')
         self.close = False
         while not self.myMonitor.abortRequested():
+            if self.myMonitor.waitForAbort(wait) or self.close or self.que.empty():
+                log('Worker: runner, stopping/finished')
             func, args = self.que.get()
             log('Worker: runner, executing %s, args =%s'%(func,args))
             func(args)
-            if self.que.empty() or self.close or self.myMonitor.waitForAbort(wait): 
-                log('Worker: runner, stopping')
-                break
             
 if __name__ == '__main__': Worker()
