@@ -41,7 +41,8 @@ class Config:
 
     def startSpooler(self, wait=5.0):
         self.log('startSpooler, wait = %s'%(wait))
-        if self.spoolThread.isAlive(): self.spoolThread.cancel()
+        if self.spoolThread.isAlive(): 
+            self.spoolThread.cancel()
         self.spoolThread = threading.Timer(wait, self.spoolItems)
         self.spoolThread.name = "spoolThread"
         self.spoolThread.start()
@@ -52,7 +53,7 @@ class Config:
             return self.startSpooler(900) # 15mins
         self.log('spoolItems, started')
         setBusy(True)
-        self.checkConfigSelection() # check channel config, fill labels in settings.xml
+        self.checkPredefinedSelection() # check channel config, fill labels in settings.xml
         DBItems = self.getItems() # spool cache
         [self.jsonRPC.getLogo(channel,key.replace('_',' ')) for key, value in DBItems.items() for channel in value] # cache logos
         setBusy(False)
@@ -115,28 +116,48 @@ class Config:
         return items
         
         
-    def buildPredefined(self, param=None):
+    def autoTune(self):
+        self.log('autoTune') 
+        busy = ProgressBGDialog(message=LANGUAGE(30102))
+        for idx, type in enumerate(CHAN_TYPES): 
+            busy = ProgressBGDialog((idx*100//len(CHAN_TYPES)), busy, '%s: %s'%(LANGUAGE(30102),type.replace('_',' ')))
+            self.buildPredefined(type,autoTune=2)
+        ProgressBGDialog(100, busy, LANGUAGE(30102))
+        return self.predefined.buildPredefinedChannels()
+        
+        
+    def buildPredefined(self, param=None, autoTune=None):
         self.log('buildPredefined, param = %s'%(param)) 
         setBusy(True)
-        with busy_dialog():
+        escape = autoTune is not None
+        with busy_dialog(escape):
             type      = param.replace('_',' ')
             items     = self.getItems(param)
+            if not items: return notificationDialog(LANGUAGE(30103)%(type)) 
             pitems    = getSetting('Setting_%s'%(param)).split('|')
             listItems = list(PoolHelper().poolList(self.buildPoolListitem,items,type))
-        select = selectDialog(listItems,'Select %s'%(type),preselect=findItemsIn(listItems,pitems))
+        if autoTune is None:
+            select = selectDialog(listItems,'Select %s'%(type),preselect=findItemsIn(listItems,pitems))
+        else:
+            if autoTune > len(items): autoTune = len(items)
+            select = random.sample(list(set(range(0,len(items)))),autoTune)
         if select is not None:
             sitems = [listItems[idx].getLabel() for idx in select]
-            self.buildConfigSelection(sitems,param)
+            self.setPredefinedSelection(sitems,param)
         setBusy(False)
-        
+
 
     def buildPoolListitem(self, data):
         return buildMenuListItem(data[0],data[1],iconImage=self.jsonRPC.getLogo(data[0],data[1]))
     
     
-    def checkConfigSelection(self):
-        self.log('checkConfigSelection') 
-        [self.buildConfigSelection(getSetting('Setting_%s'%(param)).split('|'),param) for param in CHAN_TYPES]
+    def checkPredefinedSelection(self):
+        self.log('checkPredefinedSelection')
+        if isClient():
+            params = self.channels.getPredefinedSelection()
+            [self.setPredefinedSelection(param,type) for type, param in params.items()]
+        else:
+            [self.setPredefinedSelection(getSetting('Setting_%s'%(param)).split('|'),param) for param in CHAN_TYPES]
     
     
     def checkPredefinedChannels(self):
@@ -146,17 +167,19 @@ class Config:
         return chitems
     
     
-    def buildConfigSelection(self, items, type):
+    def setPredefinedSelection(self, items, type):
+        # set predefined selections.
         lens = len(list(filter(lambda x: x != '',items)))
-        self.log('buildConfigSelection, type = %s, items = %s'%(type,items))
+        self.log('setPredefinedSelection, type = %s, items = %s'%(type,items))
         setSetting('Select_%s'%(type),'(%s) Selected'%(lens))
         setSetting('Setting_%s'%(type),'|'.join(items))
         
         
-    def ClearConfigSelection(self):
-        self.log('ClearConfigSelection') 
+    def clearPredefinedSelection(self):
+        self.log('clearPredefinedSelection')
+        # clear predefined selections for all types.
         if not yesnoDialog('%s?'%(LANGUAGE(30077))): return
-        [self.buildConfigSelection([], type) for type in CHAN_TYPES]
+        [self.setPredefinedSelection([], type) for type in CHAN_TYPES]
         return notificationDialog(LANGUAGE(30053))
 
 
@@ -219,7 +242,7 @@ class Config:
         elif  param == 'Clear_Import':           
             self.clearImport()
         elif  param == 'Clear_Predefined':       
-            self.ClearConfigSelection()
+            self.clearPredefinedSelection()
         elif  param == 'Clear_Userdefined':      
             self.clearUserChannels()
         elif  param == 'User_Groups':

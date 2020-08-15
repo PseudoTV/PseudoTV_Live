@@ -163,12 +163,14 @@ GLOBAL_RESOURCE_PACK             = {'rating'    :GLOBAL_RESOURCE_PACK_RATINGS,
                                     'trailer'   :GLOBAL_RESOURCE_PACK_TRAILERS}
                 
 @contextmanager
-def busy_dialog():
-    log('globals: busy_dialog')
-    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-    try: yield
-    finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
-
+def busy_dialog(escape=False):
+    if not escape:
+        log('globals: busy_dialog')
+        xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+        try: yield
+        finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+    else: yield
+    
 def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=ICON):
     log('globals: notificationDialog: ' + message)
     try: xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
@@ -176,11 +178,11 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
         log("globals: notificationDialog Failed! " + str(e), xbmc.LOGERROR)
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         
-def notificationProgress(message, time=2):
-    dia = ProgressBGDialog(message=message)
+def notificationProgress(message, header=ADDON_NAME, time=4):
+    dia = ProgressBGDialog(message=message,header=header)
     for i in range(time):
         if MY_MONITOR.waitForAbort(1): break
-        dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia)
+        dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia,header=header)
     return ProgressBGDialog(100,control=dia)
     
 def textviewer(msg, heading=ADDON_NAME, usemono=False):
@@ -305,22 +307,21 @@ def sendJSON(command):
     log('globals: sendJSON, response = %s'%(response))
     return response
 
-def createuuid():
-    return str(uuid.uuid1())
-
 def setuuid():
     if getuuid(): return
-    setSetting('uuid',createuuid())
+    setSetting('uuid',str(uuid.uuid1()))
     
 def getuuid():
     return getSetting('uuid')
 
 def isClient():
     setuuid()
-    uuid  = getuuid()
-    m3uID = (getSetting('mu3id') or uuid)
-    state = m3uID != uuid
-    log('globals: isClient = %s, m3uID = %s, uuid = %s'%(state,m3uID,uuid))
+    forced = getSettingBool('Enable_Client')
+    uuid   = getuuid()
+    m3uID  = (getSetting('mu3id') or uuid)
+    state  = m3uID != uuid
+    if forced: state = True
+    log('globals: isClient = %s, forced = %s, m3uID = %s, uuid = %s'%(state,forced,m3uID,uuid))
     return state
 
 def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
@@ -427,13 +428,6 @@ def escapeDirJSON(path):
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
     return mydir
 
-def getPredefinedChannelNumber(type,blist=[],size=1):
-    multi = (CHAN_TYPES.index(type)+1)
-    start = ((CHANNEL_LIMIT+1)*multi)
-    stop  = (start + CHANNEL_LIMIT)
-    return random.sample(list(set(range(start,stop)).difference(blist)),size)
-    # return random.sample(CHANNEL_RANGE,1)[0]# assign random channel number to dynamic predefined channels
-    
 def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     info       = item.copy()
     art        = info.get('art',{})
@@ -547,6 +541,9 @@ def diffDICT(dict1, dict2):
 def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
 
+def fillList(items, limit):
+    for n in range(limit): yield random.choice(items)
+    
 def cleanLabel(text):
     text = re.sub('\[COLOR (.+?)\]', '', text)
     text = re.sub('\[/COLOR\]', '', text)

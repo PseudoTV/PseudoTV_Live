@@ -225,7 +225,7 @@ msgid "Updating"
 msgstr ""
 
 msgctxt "#30052"
-msgid "Initializing..."
+msgid "Initializing%s"
 msgstr ""
 
 msgctxt "#30053"
@@ -422,4 +422,16 @@ msgstr ""
 
 msgctxt "#30101"
 msgid "Starting Service..."
+msgstr ""
+
+msgctxt "#30102"
+msgid "Auto Tuning"
+msgstr ""
+
+msgctxt "#30103"
+msgid "No %s content found..."
+msgstr ""
+
+msgctxt "#30104"
+msgid "Force Client Mode"
 msgstr ""

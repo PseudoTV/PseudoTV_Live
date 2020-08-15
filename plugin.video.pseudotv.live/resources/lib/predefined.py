@@ -48,32 +48,47 @@ class Predefined:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
-
-    def buildChannelList(self):
+    
+    def getAvailableChannelNumbers(self, type, blist, size=1):
+        start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
+        stop  = (start + CHANNEL_LIMIT)
+        return random.sample(list(set(range(start,stop)).difference(blist)),size)
+        
+        
+    def buildPredefinedChannels(self):
+        # save predefined selections to channels.json. update existing (preserve channel numbers), remove missing.
+        def findExising():
+            for eitem in existing:
+                if (eitem['id'] == citem['id'] and eitem['type'] == citem['type']) or (eitem['name'] == citem['name'] and eitem['path'] == citem['path']): 
+                    log('buildPredefinedChannels, Existing found %s'%(eitem))
+                    return eitem
+            return citem
+                    
         citems   = []
         template = self.channels.getCitem()
         existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
         reserved = self.channels.getReservedChannels() # numbers in-use.
         for type, func in self.types.items():
             items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
-            chnums   = getPredefinedChannelNumber(type,reserved,len(items))
-            log('buildChannelList, building %s, found %s'%(type,items))
+            chnums   = self.getAvailableChannelNumbers(type,reserved,len(items))
+            log('buildPredefinedChannels, building %s, found %s'%(type,items))
             for idx, item in enumerate(items):
                 if not item: continue
                 citem    = template.copy()
-                radio    = type == 'MUSIC_Genres'
-                type     = type.replace('_',' ')
-                chpath   = func(item)
-                chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
-                chname   = self.getChannelSuffix(item, type)
                 chnumber = chnums[idx]
-                chgroups = [type]
+                type     = type.replace('_',' ')
+                chname   = self.getChannelSuffix(item, type)
+                chpath   = func(item)
                 chid     = getChannelID(chname, chpath)
-                citem.update({'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'groups':chgroups})
+                radio    = (type == 'MUSIC Genres' or chpath[0].startswith('musicdb://'))
+                chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
+                chgroups = [type]
+                citem    = {'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'groups':chgroups}
+                citem.update(findExising())
                 citems.append(citem)
                 
         difference = sorted(diffDICT(existing,citems), key=lambda k: k['number'])
-        log('buildChannelList, difference %s'%(difference))
+        log('buildPredefinedChannels, difference %s'%(difference))
         [self.channels.add(citem) if citem in citems else self.channels.remove(citem) for citem in difference]
         return self.channels.save()
         
@@ -123,7 +138,7 @@ class Predefined:
 
 
     def createMusicGenrePlaylist(self, genre, method='random'):
-        return 'musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}]},"type":"music"}'%(method,urllib.parse.quote(genre))
+        return 'musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"music"}'%(method,urllib.parse.quote(genre))
 
 
     def createGenreMixedPlaylist(self, genre):

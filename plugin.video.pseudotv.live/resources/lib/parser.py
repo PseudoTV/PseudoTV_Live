@@ -28,13 +28,11 @@ from resources.lib.videoparser import VideoParser
  
 xmltv.locale      = 'UTF-8'
 xmltv.date_format = DTFORMAT
-LINE_ITEM         = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
 
 class Channels:
     def __init__(self):
-        self.jsonRPC      = JSONRPC()
-        self.cache        = self.jsonRPC.cache
-        self.channelList  = (self.load() or self.getTemplate(ADDON_VERSION))
+        self.cache       = SimpleCache()
+        self.channelList = (self.load() or self.getTemplate(ADDON_VERSION))
         
         
     def reset(self):
@@ -65,6 +63,15 @@ class Channels:
         return [channel["number"] for channel in self.channelList.get(channelkey,[])]
 
 
+    def getPredefinedSelection(self):
+        log('channels: getPredefinedSelection')
+        channels = self.getPredefined()
+        items = {}
+        for type in CHAN_TYPES:  items[type] = []
+        for channel in channels: items[channel['type'].replace(' ','_')].append(channel['name'])
+        return items
+            
+            
     def add(self, item):
         channelkey = 'predefined' if item['number'] > CHANNEL_LIMIT else 'channels'
         log('channels: add, item = %s, channelkey = %s'%(item,channelkey))
@@ -120,9 +127,18 @@ class Channels:
         return data
         
 
+    def cleanSelf(self):
+        log('channels: cleanSelf') # remove channel template
+        citem = self.getCitem()
+        if citem in self.channelList.get('channels',[]):
+            self.channelList['channels'].remove(citem)
+            
+
     def save(self):
+        self.cleanSelf()
         fle = FileAccess.open(CHANNELFLE, 'w')
         log('channels: save, saving to %s'%(CHANNELFLE))
+        
         fle.write(dumpJSON(self.channelList, idnt=4, sortkey=False))
         fle.close()
         return True
@@ -136,16 +152,17 @@ class Channels:
 
 class XMLTV:
     def __init__(self):
-        self.cache       = SimpleCache()
-        self.xmltvTMP    = []
-        self.maxDays     = getSettingInt('Max_Days')
-        self.xmltvList   = {'data'       : self.getData(),
-                            'channels'   : self.cleanSelf(self.getChannels(),'id'),
-                            'programmes' : self.cleanSelf(self.getProgrammes(),'channel')}
-        self.xmltvList['endtimes'] = self.getEndtimes()
+        self.cache          = SimpleCache()
+        self.xmltvTMP       = []
+        self.maxDays        = getSettingInt('Max_Days')
         self.extImport      = getSettingBool('User_Import')
         self.extImportXMLTV = getSetting('Import_XMLTV')
 
+        self.xmltvList      = {'data'       : self.getData(),
+                               'channels'   : self.cleanSelf(self.getChannels(),'id'),
+                               'programmes' : self.cleanSelf(self.getProgrammes(),'channel')}
+        self.xmltvList['endtimes'] = self.getEndtimes()
+        
         
     def reset(self):
         log('xmltv: reset')
@@ -434,6 +451,7 @@ class XMLTV:
 class M3U:
     def __init__(self):
         self.m3uTMP  = []
+        self.litem   = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
         self.m3uList = ['#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="%s"'%(self.getShift(),getuuid())]
         self.m3uList.extend(self.cleanSelf(self.load()))
         self.extImport    = getSettingBool('User_Import')
@@ -490,7 +508,7 @@ class M3U:
     def add(self, item, radio=False, rebuild=True):
         log('m3u: add item = %s'%(item))
         self.m3uTMP.append(item['id'])
-        citem = LINE_ITEM%(item['number'],item['id'],item['name'],item['logo'],';'.join(item['group']),str(radio).lower(),item['label'],item['url'])
+        citem = self.litem%(item['number'],item['id'],item['name'],item['logo'],';'.join(item['group']),str(radio).lower(),item['label'],item['url'])
         channelIDX = self.findChannelIDX(item['id'])
         if channelIDX is None:
             self.m3uList.append(citem)
@@ -501,8 +519,8 @@ class M3U:
             else:
                 self.m3uList[channelIDX] = citem # update existing channel
         return True
-        
-        
+
+
     def findChannelNumber(self, line):
         if line.startswith('#EXTINF:'):
             match = re.compile('tvg-chno=\"(.*?)\"', re.IGNORECASE).search(line)
@@ -611,7 +629,7 @@ class JSONRPC:
         
         
     def getPlayerItem(self, playlist=False):
-        self.log('getPlayerItem, playlist = %s'%(playlist))
+        log('JSONRPC: getPlayerItem, playlist = %s'%(playlist))
         if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","file"]},"id":1}'%(self.getActivePlaylist())
         else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath"]}, "id": 1}'%(self.getActivePlayer())
         result = sendJSON(json_query).get('result',{})
@@ -712,7 +730,7 @@ class JSONRPC:
         if not hasMusic(): return MusicGenreList
         json_query = ('{"jsonrpc":"2.0","method":"AudioLibrary.GetSongs","params":{"properties":["genre"]},"id":1}')
         json_response = self.cacheJSON(json_query).get('result',{}).get('songs',[])
-        [genres.extend(re.split(';|/|,',genre)) for song in json_response for genre in song.get('genre',[])]
+        [genres.extend(re.split(';|/|,',genre.strip())) for song in json_response for genre in song.get('genre',[])]
         genres = collections.Counter([genre for genre in genres if not genre.isdigit()])
         if sortbycount: genres.most_common(25)
         values = sorted(genres.items())
@@ -1001,7 +1019,7 @@ class JSONRPC:
                         if channelname.lower() == fileItem.get('label','').lower(): 
                             return self.cacheImage(channelname,fileItem.get('art',{}).get('clearlogo',''),featured)
                     else:
-                        if file.lower().startswith(channelname.lower()): 
+                        if file.lower().startswith(channelname.lower()):
                             return self.cacheImage(channelname,os.path.join(item['path'],file),featured)
         return LOGO
         

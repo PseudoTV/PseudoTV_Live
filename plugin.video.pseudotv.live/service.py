@@ -183,13 +183,23 @@ class Service:
         self.myBuilder     = self.myPlugin.myBuilder
         self.jsonRPC       = self.myBuilder.jsonRPC
         self.sysListitem   = xbmcgui.ListItem()
-        self.channelList   = self.getChannelList()
+        self.channelList   = []
         self.serverStopped = False
         self.startService()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+    
+    def initalizeChannels(self):
+        self.log('initalizeChannels')
+        channelList = []
+        if self.myPredefined.buildPredefinedChannels(): 
+            channelList = self.getChannelList()        
+        if len(list(channelList)) == 0: 
+            if self.myConfig.autoTune(): channelList = self.getChannelList()        
+        return channelList
 
 
     def getChannelList(self):
@@ -217,14 +227,15 @@ class Service:
             self.updateChannels(update=True)
         
         
-    def updateChannels(self, update=False):
+    def updateChannels(self, channels=None, update=False):
         self.log('updateChannels, update = %s'%(update))
-        channelList = self.getChannelList()
-        unchanged, difference = assertDICT(channelList,self.channelList,return_diff=True)
-        self.log('updateChannels, unchanged = %s, difference = %s'%(unchanged,len(difference)))
+        if channels is None: channels = self.getChannelList()
+        self.channelList = channels
+        # unchanged, difference = assertDICT(self.channelList,self.lastChannelList,return_diff=True)
+        # self.log('updateChannels, unchanged = %s, difference = %s'%(unchanged,len(difference)))
         # if unchanged: return
-        self.channelList = channelList
-        self.myBuilder.buildService(self.channelList, update)
+        # self.myBuilder.buildService(self.channelList, update)
+        self.myBuilder.buildService(channels, update)
         setSetting('Last_Scan',str(time.time()))
         
         
@@ -242,12 +253,12 @@ class Service:
         checkPVR()
         
         if not silent: 
-            notificationProgress(LANGUAGE(30052))
-            
-        if self.myPredefined.buildChannelList():
-            self.updateChannels()
-            
+            msg = ': %s'%LANGUAGE(30099) if isClient() else ''
+            notificationProgress(LANGUAGE(30052)%(msg))
+        
+        self.updateChannels(self.initalizeChannels())
         self.myConfig.startSpooler()
+        
         while not self.myMonitor.abortRequested():
             if   self.chkInfo(): continue # aggressive timing.
             elif self.myMonitor.waitForAbort(self.wait) or self.serverStopped: break
@@ -278,6 +289,7 @@ class Service:
                 thread.cancel()
                 thread.join(0.5)
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
+        self.log('closeThreads, exiting %s'%(ADDON_NAME))
 
 
 if __name__ == '__main__': Service()

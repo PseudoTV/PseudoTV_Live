@@ -1,10 +1,15 @@
+v.0.1.4
+Added "Auto Tuning" on initial run or when no channels are selected.
+Added "Force Client Mode" under options. Manually flag PseudoTV instance as client; bypassing automatic detection added to v.0.1.3.
+
 v.0.1.3
 Improved Logo detection.
 Improved Channel loading time.
 Fixed "New" programme flagging.
 Fixed "OnDemand" playback issues.
 Moved channels.json to user-selected folder location to allow for multi-room configurations.
-Added Automatic Client Mode: This feature automatically disables client side m3u/xmltv writing. In Multi-Room environments users can edit channel lineups via any instance of PseudoTV; However, only one instance of PseudoTV is allowed to write m3u/xmltv data inorder to keep lineup/cache congruency.
+Added Automatic Client Mode: automatically disables client side m3u/xmltv updating. In Multi-Room environments users can edit channel lineups from any instance of PseudoTV; However, only one instance of PseudoTV is allowed to write to m3u/xmltv inorder to keep lineup/cache congruency.
+Added "Pre-defined" Channel sync for client instances. Settings on local client will reflect server configurations.
 
 v.0.1.2
 Moved Predefined channels to channels.json config. (Persistent channel numbers).

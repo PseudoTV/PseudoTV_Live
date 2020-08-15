@@ -70,32 +70,29 @@ class Builder:
 
     def createChannelItems(self):
         self.log('createChannelItems')
-        self.channels.reset()
-        items = self.channels.getAllChannels()
-        for idx, item in enumerate(items):
-            if not item.get('path',None) or item.get('number',0) == 0: 
-                self.log('createChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
-                continue
-                
-            item['label']  = item['name'] #todo drop 'label'?
-            item['id']     = (item.get('id','')    or getChannelID(item['name'], item['path'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
-            item['logo']   = (item.get('logo','')  or self.jsonRPC.getLogo(item['name'], item['type'], item['path'], featured=True))
-            item['radio']  = (item.get('radio','') or item['path'][0].startswith('musicdb://'))
-            item['number'] = item.get('number','') or random.sample(CHANNEL_RANGE,1)[0] # use static channel number or produce dynamic value for pre-defined channels.
-            item['url']    = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
-            item['group']  = [ADDON_NAME]
-            if self.grouping: item['group'].extend(item.get('groups',[]))
-            yield item
+        if self.channels.reset():
+            items = self.channels.getAllChannels()
+            for idx, item in enumerate(items):
+                if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
+                    self.log('createChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
+                    continue
+                    
+                item['label']  = item['name']
+                item['number'] = item.get('number','')
+                item['id']     = (item.get('id','')    or getChannelID(item['name'], item['path'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
+                item['logo']   = (item.get('logo','')  or self.jsonRPC.getLogo(item['name'], item['type'], item['path'], featured=True))
+                item['radio']  = (item.get('radio','') or (item['type'] == 'MUSIC Genres' or item['path'][0].startswith('musicdb://')))
+                item['url']    = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
+                item['group']  = [ADDON_NAME]
+                if self.grouping: item['group'].extend(item.get('groups',[]))
+                yield item
 
 
     def reload(self):
         self.log('reload')
-        try:
-            self.xmltv.reset()
-            self.m3u.reset()
-            return True
-        except Exception as e: self.log("reload, Failed! " + str(e), xbmc.LOGERROR)
-        return False
+        self.xmltv.reset()
+        self.m3u.reset()
+        return True
         
         
     def save(self):
@@ -110,46 +107,43 @@ class Builder:
         
     def buildService(self, channels=None, update=False):
         self.log('buildService, update = %s'%(update))
-        if isBusy(): 
-            return notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        if   isBusy(): return
+        elif self.reload():
+            if isClient(): 
+                self.log('buildService, returning in client mode')
+                return
             
-        if not self.reload(): 
-            return notificationDialog(LANGUAGE(30001))
-                 
-        if isClient(): 
-            self.log('buildService, returning in client mode')
-            return
-        
-        if channels is None: 
-            channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
-        if not channels: return notificationDialog(LANGUAGE(30056))
-            
-        # if self.saveDuration:
-            # self.queue.run()
-            
-        setBusy(True)
-        self.fileLock = FileLock()
-        self.fileLock.lockFile("MasterLock")
-        msg = LANGUAGE(30051 if update else 30050)
-        self.dialog = ProgressBGDialog(message=msg)
-        
-        self.channelCount = len(channels)
-        for idx, channel in enumerate(channels):
-            self.progress = (idx*100//len(channels))
-            cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
-            if not cacheResponse: continue
-            
-            self.msg = '%s, %s'%(msg,channel['name'])
-            self.buildM3U(channel, channel['radio'])
-            if isinstance(cacheResponse,list):
-                self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
-                self.buildXMLTV(channel, cacheResponse, channel['radio'])
+            if channels is None: 
+                channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
+            if not channels:
+                return notificationDialog(LANGUAGE(30056))
                 
-        self.save()
-        setBusy(False)
-        self.fileLock.unlockFile('MasterLock')
-        self.fileLock.close()
-        self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
+            # if self.saveDuration:
+                # self.queue.run()
+                
+            setBusy(True)
+            self.fileLock = FileLock()
+            self.fileLock.lockFile("MasterLock")
+            msg = LANGUAGE(30051 if update else 30050)
+            self.dialog = ProgressBGDialog(message=msg)
+            
+            self.channelCount = len(channels)
+            for idx, channel in enumerate(channels):
+                self.msg = channel['name']
+                self.progress = (idx*100//len(channels))
+                cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
+                if not cacheResponse: continue
+                
+                self.buildM3U(channel, channel['radio'])
+                if isinstance(cacheResponse,list):
+                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
+                    self.buildXMLTV(channel, cacheResponse, channel['radio'])
+                    
+            self.save()
+            setBusy(False)
+            self.fileLock.unlockFile('MasterLock')
+            self.fileLock.close()
+            self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
 
 
     def getFileList(self, channel, radio=False):
@@ -187,7 +181,7 @@ class Builder:
                 
                 cacheResponse = list(interleave(*cacheResponse)) # interleave multi-paths, while keeping order.
                 # todo load post json rules.
-            
+            # if len(cacheResponse) < limit: cacheResponse = list(fillList(cacheResponse,(limit-len(cacheResponse))))
             cacheResponse = self.addScheduling(channel, cacheResponse)
             if self.fillBCTs: 
                 cacheResponse = self.injectBCTs(channel, cacheResponse)
@@ -375,7 +369,7 @@ class Builder:
                 if dur > 0:
                     item['duration'] = dur
                     if int(item.get("year","0")) == 1601: 
-                        item['year'] = 0 #default null for kodi rpc?                     
+                        item['year'] = 0 #default null for kodi rpc?
                     mType   = item['type']
                     label   = item['label']
                     title   = (item.get("title",label) or label)

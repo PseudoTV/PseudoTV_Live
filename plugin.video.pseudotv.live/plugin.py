@@ -159,8 +159,9 @@ class Plugin:
             self.playlist.clear()
             xbmc.sleep(100)
             listitems = [buildItemListItem(item, mType='music') for item in json_response]
+            random.shuffle(listitems)
             [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
-            if isPlaylistRandom(): self.playlist.unshuffle()
+            if not isPlaylistRandom(): self.playlist.shuffle()
             log('playRadio, Playlist size = %s'%(self.playlist.size()))
             return self.myPlayer.play(self.playlist)
         
