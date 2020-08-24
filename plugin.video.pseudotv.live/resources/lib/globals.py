@@ -45,75 +45,69 @@ if PY3:
     unicode = str
     
 # Plugin Info
-ADDON_ID       = 'plugin.video.pseudotv.live'
-REAL_SETTINGS  = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME     = REAL_SETTINGS.getAddonInfo('name')
-SETTINGS_LOC   = REAL_SETTINGS.getAddonInfo('profile')
-ADDON_PATH     = REAL_SETTINGS.getAddonInfo('path')
-ADDON_VERSION  = REAL_SETTINGS.getAddonInfo('version')
-ICON           = REAL_SETTINGS.getAddonInfo('icon')
-FANART         = REAL_SETTINGS.getAddonInfo('fanart')
-LANGUAGE       = REAL_SETTINGS.getLocalizedString
+ADDON_ID            = 'plugin.video.pseudotv.live'
+REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
+SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
+ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
+ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
+ICON                = REAL_SETTINGS.getAddonInfo('icon')
+FANART              = REAL_SETTINGS.getAddonInfo('fanart')
+LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
-PVR_CLIENT     = 'pvr.iptvsimple'
-USER_LOC       = (REAL_SETTINGS.getSetting('User_Folder') or SETTINGS_LOC)
-LOCK_LOC       = SETTINGS_LOC
-XMLTVFLE       = os.path.join(USER_LOC,'%s.xml'%('pseudotv'))
-M3UFLE         = os.path.join(USER_LOC,'%s.m3u'%('pseudotv'))
-LOGO_LOC       = os.path.join(USER_LOC,'logos')
-CHANNELFLE     = os.path.join(USER_LOC,'channels.json')
-GENREFLE       = os.path.join(USER_LOC,'genres.xml')
+MY_MONITOR          = xbmc.Monitor()
+MY_PLAYER           = xbmc.Player()
 
-CHANNELFLE_DEFAULT = os.path.join(ADDON_PATH,'channels.json')
-GENREFLE_DEFAULT   = os.path.join(ADDON_PATH,'genres.xml')
+OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
+CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
+GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
+SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
+VIDEO_EXTS          = xbmc.getSupportedMedia('video')
+MUSIC_EXTS          = xbmc.getSupportedMedia('music')
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture')
 
-VIDEO_EXTS     = xbmc.getSupportedMedia('video')
-MUSIC_EXTS     = xbmc.getSupportedMedia('music')
-IMAGE_EXTS     = xbmc.getSupportedMedia('picture')
+IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+COLOR_LOGO          = os.path.join(IMAGE_LOC,'logo.png')
+MONO_LOGO           = os.path.join(IMAGE_LOC,'wlogo.png')
 
-DTFORMAT       = '%Y%m%d%H%M%S'
-EPG_HRS        = 10800  # 3hr in seconds, Min. EPG guidedata
-CHANNEL_LIMIT  = 999
-RADIO_ITEM_LIMIT = 250
-ENDTIME_SEEK_OFFSET = 45 #seconds
+PVR_CLIENT          = 'pvr.iptvsimple'
+LANG                = 'en' #todo
+DTFORMAT            = '%Y%m%d%H%M%S'
+EPG_HRS             = 10800  # 3hr in seconds, Min. EPG guidedata
+RADIO_ITEM_LIMIT    = 250
+CLOCK_SEQ           = 70420
+UPDATE_OFFSET       = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60) * 60) #seconds
 
-ART_PARAMS        = ["thumb","logo","poster","fanart","banner","landscape","clearart","clearlogo"]
-JSON_FILE_ENUM    = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
-JSON_METHOD       = ["none","label","date","size","file","path","drivetype","title","track","time","artist","album","albumtype","genre","country","year","rating","votes","top250","programcount","playlist","episode","season","totalepisodes","watchedepisodes","tvshowstatus","showtitle","tvshowtitle","sorttitle","productioncode","mpaa","studio","dateadded","lastplayed","playcount","listeners","bitrate","random"] 
-JSON_ORDER        = ['ascending','descending']
-JSON_OPERATORS    = ["contains","doesnotcontain","is","isnot","startswith","endswith","greaterthan","lessthan","true","false"]
-JSON_RETURN_TYPES = {'album':str,'albumartist':list,'albumartistid':list,'albumid':int,'albumlabel':str,'album':str,'albumstatus':str,'bitrate':int,'bpm':int,'cast':list,'channels':int,'comment':str,'compilation':bool,'contributors':str,'country':list,'customproperties':dict,'description':str,'disc':int,'disctitle':str,'displaycomposer':str,'displayconductor':str,'displaylyricist':str,'displayorchestra':str,'duration':int,'dynpath':str,'episode':int,'episodeguide':str,'firstaired':str,'id':int,'imdbnumber':str,'isboxset':bool,'lyrics':str,'mediapath':str,'mood':list,'mpaa':str,'musicbrainzartistid':list,'musicbrainztrackid':str,'originaldate':str,'originaltitle':str,'plotoutline':str,'premiered':str,'productioncode':str,'releasedate':str,'album':str,'samplerate':int,'season':int,'set':str,'setid':int,'showlink':list,'showtitle':str,'sorttitle':str,'specialsortepisode':int,'specialsortseason':int,'stu]dio':list,'style':list,'tag':list,'tagline':str,'theme':list,'top250':int,'totaldiscs':int,'track':int,'trailer':str,'tvshowid':int,'type':str,'uniqueid':int,'votes':str,'watchedepisodes':int,'writer':list}
-LISTITEM_TYPES    = {'genre': (str,list),'country': (str,list),'year': int,'episode': int,'season': int,'sortepisode': int,'sortseason': int,'episodeguide': str,'showlink': (str,list),'top250': int,'setid': int,'tracknumber': int,'rating': float,'userrating': int,'playcount': int,'overlay': int,'cast': list,'castandrole': list,'director': (str,list),'mpaa': str,'plot': str,'plotoutline': str,'title': str,'originaltitle': str,'sorttitle': str,'duration': int,'studio': (str,list),'tagline': str,'writer': (str,list),'tvshowtitle': str,'premiered': str,'status': str,'set': str,'setoverview': str,'tag': (str,list),'imdbnumber': str,'code': str,'aired': str,'credits': (str,list),'lastplayed': str,'album': str,'artist': list,'votes': str,'path': str,'trailer': str,'dateadded': str,'mediatype': str,'dbid': int}
+CHANNEL_LIMIT       = 999
+CHAN_TYPES          = ['TV_Networks','TV_Shows','TV_Genres','MOVIE_Genres','MOVIE_Studios','MIXED_Genres','MIXED_Other','MUSIC_Genres','RECOMMENDED_Other'] 
+GROUP_TYPES         = ['TV Shows','TV Networks','TV Genres','Movie Genres','Mixed Genres','Music Genres','Music','Radio','Movie Studios','Mixed','Other','Favorite','Recommended','Addon','Plugin','Directory','Playlist','Smartplaylist','UPNP','PVR']
+CHANNEL_RANGE       = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
+BCT_TYPES           = ['bumper','commercial','trailer','rating']
+PRE_ROLL            = ['bumper','rating']
+POST_ROLL           = ['commercial','trailer']
 
-IMAGE_LOC      = os.path.join(ADDON_PATH,'resources','skins','default','media')
-USE_COLOR      = REAL_SETTINGS.getSetting('Use_Color_Logos') == 'true'
-IMAGE          = 'logo.png' if USE_COLOR else 'wlogo.png'
-LOGO           = os.path.join(IMAGE_LOC,IMAGE)
-LANG           = 'en' #todo
-
-CHAN_TYPES     = ['TV_Networks','TV_Shows','TV_Genres','MOVIE_Genres','MOVIE_Studios','MIXED_Genres','MIXED_Other','MUSIC_Genres'] 
-CHANNEL_RANGE  = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
-OVERLAY_FLE    = "%s.overlay.xml"%(ADDON_ID)
-BCT_TYPES      = ['bumper','commercial','trailer','rating']
-PRE_ROLL       = ['bumper','rating']
-POST_ROLL      = ['commercial','trailer']
+# jsonrpc
+ART_PARAMS          = ["thumb","logo","poster","fanart","banner","landscape","clearart","clearlogo"]
+JSON_FILE_ENUM      = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
+JSON_METHOD         = ["none","label","date","size","file","path","drivetype","title","track","time","artist","album","albumtype","genre","country","year","rating","votes","top250","programcount","playlist","episode","season","totalepisodes","watchedepisodes","tvshowstatus","showtitle","tvshowtitle","sorttitle","productioncode","mpaa","studio","dateadded","lastplayed","playcount","listeners","bitrate","random"] 
+JSON_ORDER          = ['ascending','descending']
+JSON_OPERATORS      = ["contains","doesnotcontain","is","isnot","startswith","endswith","greaterthan","lessthan","true","false"]
+JSON_RETURN_TYPES   = {'album':str,'albumartist':list,'albumartistid':list,'albumid':int,'albumlabel':str,'album':str,'albumstatus':str,'bitrate':int,'bpm':int,'cast':list,'channels':int,'comment':str,'compilation':bool,'contributors':str,'country':list,'customproperties':dict,'description':str,'disc':int,'disctitle':str,'displaycomposer':str,'displayconductor':str,'displaylyricist':str,'displayorchestra':str,'duration':int,'dynpath':str,'episode':int,'episodeguide':str,'firstaired':str,'id':int,'imdbnumber':str,'isboxset':bool,'lyrics':str,'mediapath':str,'mood':list,'mpaa':str,'musicbrainzartistid':list,'musicbrainztrackid':str,'originaldate':str,'originaltitle':str,'plotoutline':str,'premiered':str,'productioncode':str,'releasedate':str,'album':str,'samplerate':int,'season':int,'set':str,'setid':int,'showlink':list,'showtitle':str,'sorttitle':str,'specialsortepisode':int,'specialsortseason':int,'stu]dio':list,'style':list,'tag':list,'tagline':str,'theme':list,'top250':int,'totaldiscs':int,'track':int,'trailer':str,'tvshowid':int,'type':str,'uniqueid':int,'votes':str,'watchedepisodes':int,'writer':list}
+LISTITEM_TYPES      = {'label': (str,list),'genre': (str,list),'country': (str,list),'year': int,'episode': int,'season': int,'sortepisode': int,'sortseason': int,'episodeguide': str,'showlink': (str,list),'top250': int,'setid': int,'tracknumber': int,'rating': float,'userrating': int,'playcount': int,'overlay': int,'cast': list,'castandrole': list,'director': (str,list),'mpaa': str,'plot': str,'plotoutline': str,'title': str,'originaltitle': str,'sorttitle': str,'duration': int,'studio': (str,list),'tagline': str,'writer': (str,list),'tvshowtitle': str,'premiered': str,'status': str,'set': str,'setoverview': str,'tag': (str,list),'imdbnumber': str,'code': str,'aired': str,'credits': (str,list),'lastplayed': str,'album': str,'artist': list,'votes': str,'path': str,'trailer': str,'dateadded': str,'mediatype': str,'dbid': int}
 
 # Maximum is 10 for this
-RULES_PER_PAGE = 7
-RULES_ACTION_START = 1
-RULES_ACTION_JSON = 2
-RULES_ACTION_FINAL_MADE = 32
-RULES_ACTION_FINAL_LOADED = 64
-NOTIFICATION_CHECK_TIME = 5.0
+RULES_PER_PAGE               = 7
+RULES_ACTION_START           = 1
+RULES_ACTION_JSON            = 2
+RULES_ACTION_FINAL_MADE      = 32
+RULES_ACTION_FINAL_LOADED    = 64
+NOTIFICATION_CHECK_TIME      = 5.0
 NOTIFICATION_TIME_BEFORE_END = 90
-NOTIFICATION_DISPLAY_TIME = 8
-CHANNELBUG_CHECK_TIME = 15.0
-MY_MONITOR = xbmc.Monitor()
-MY_PLAYER  = xbmc.Player()
+NOTIFICATION_DISPLAY_TIME    = 8
+CHANNELBUG_CHECK_TIME        = 15.0
 
-
-ACTION_PREVIOUS_MENU = (9, 10, 92, 216, 247, 257, 275, 61467, 61448,)
-
+# Actions
+ACTION_PREVIOUS_MENU         = [9, 10, 92, 216, 247, 257, 275, 61467, 61448, 110]
 
 def setSetting(key,value):
     log('globals: setSetting, key = %s, value = %s'%(key,value))
@@ -135,24 +129,35 @@ def getSettingInt(key, reload=False):
     try: 
         return REAL_SETTINGS.getSettingInt(key)
     except:
-        return int(REAL_SETTINGS.getSetting(key))
+        value = REAL_SETTINGS.getSetting(key)
+        if value.isdigit(): return int(value)
+        else: log('getSettingInt, Failed! key = %s, value = %s'%(key, value)) #track down bug!
+    
+USER_LOC         = (getSetting('User_Folder') or SETTINGS_LOC)
+LOCK_LOC         = USER_LOC
+XMLTVFLE         = os.path.join(USER_LOC,'%s.xml'%('pseudotv'))
+M3UFLE           = os.path.join(USER_LOC,'%s.m3u'%('pseudotv'))
+CHANNELFLE       = os.path.join(USER_LOC,'channels.json')
+GENREFLE         = os.path.join(USER_LOC,'genres.xml')
+CACHE_LOC        = os.path.join(USER_LOC,'cache')
+LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
 
 EXT_IMPORT       = getSettingBool('User_Import')
 STORE_DURATION   = getSettingBool('Store_Duration')
-STRICT_DURATION  = getSettingBool('Strict_Duration')
 MAX_GUIDE_DAYS   = getSettingInt('Max_Days')
 ENABLE_BCTS      = getSettingBool('Enable_Fillers')
-PAGE_LIMIT       = getSettingInt('Page_Limit')
 ACCURATE_DURATION= getSettingBool('Parse_Duration')
 ENABLE_GROUPING  = getSettingBool('Enable_Grouping') 
-MIN_ENTRIES      = int(PAGE_LIMIT//2)
-UPDATE_OFFSET    = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60) * 60) #seconds
 INCLUDE_EXTRAS   = getSettingBool('Enable_Extras') 
 INCLUDE_STRMS    = getSettingBool('Enable_Strms') 
-GROUP_TYPES      = ['TV Shows','TV Networks','TV Genres','Movie Genres','Mixed Genres','Movie Studios','Mixed','Other','Addons','UPNP','PVR','Action', 'Adult comedy', 'Adventure', 'Animation', 'Based on true life story', 'Biography', 'Comedy', 'Crime', 'Dark Comedy', 'Diaspora', 'Docu-drama', 'Documentary', 'Drama', 'Family', 'Fantasy', 'Heist', 'History', 'Horror', 'Kids', 'Melodrama', 'Murder Mystery', 'Musical', 'Mythology', 'Noir', 'Patriotism', 'Philosophy', 'Politics', 'Relationships', 'Religion', 'Revenge', 'Romance', 'Satire', 'Sci-fi', 'Short Films', 'Slapstick', 'Social', 'Spoof', 'Sports', 'Suspense', 'Terrorism', 'Thriller', 'Tragedy', 'War', 'Western']
-if getSetting('User_Groups'): GROUP_TYPES.extend(getSetting('User_Groups').split('|'))
-GROUP_TYPES.sort()
-     
+
+PAGE_LIMIT          = getSettingInt('Page_Limit')
+MIN_ENTRIES         = int(PAGE_LIMIT//2)
+ENDTIME_SEEK_OFFSET = getSettingInt('Seek_Padding')
+
+USE_COLOR        = getSettingBool('Use_Color_Logos')
+LOGO             = COLOR_LOGO if USE_COLOR else MONO_LOGO
+
 GLOBAL_RESOURCE_PACK_BUMPERS     = (getSetting('Resource_Networks')    or "resource://resource.videos.bumpers.sample")
 GLOBAL_RESOURCE_PACK_COMMERICALS = (getSetting('Resource_Commericals') or "")
 GLOBAL_RESOURCE_PACK_TRAILERS    = (getSetting('Resource_Trailers')    or "plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent")
@@ -161,7 +166,7 @@ GLOBAL_RESOURCE_PACK             = {'rating'    :GLOBAL_RESOURCE_PACK_RATINGS,
                                     'bumper'    :GLOBAL_RESOURCE_PACK_BUMPERS,
                                     'commercial':GLOBAL_RESOURCE_PACK_COMMERICALS,
                                     'trailer'   :GLOBAL_RESOURCE_PACK_TRAILERS}
-                
+
 @contextmanager
 def busy_dialog(escape=False):
     if not escape:
@@ -171,7 +176,7 @@ def busy_dialog(escape=False):
         finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
     else: yield
     
-def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=ICON):
+def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=COLOR_LOGO):
     log('globals: notificationDialog: ' + message)
     try: xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
     except Exception as e:
@@ -191,7 +196,7 @@ def textviewer(msg, heading=ADDON_NAME, usemono=False):
 def yesnoDialog(message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0):
     return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, customlabel, autoclose)
 
-def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False):
+def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
     if prompt and not default:
         if options is None:
             options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":'.xsp'     , "type":1, "multi":False},
@@ -202,9 +207,10 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
                         {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""         , "type":0, "multi":False},
-                        {"label":"Resources"       , "label2":"Resource Plugins"              , "default":""                                   , "mask":""         , "type":0, "multi":False}]
-        listitems = [buildMenuListItem(option['label'],option['label2'],LOGO) for option in options]
-        select    = selectDialog(listitems, 'Select Source Type', multi=False)
+                        {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""         , "type":0, "multi":False}]
+        listitems = [buildMenuListItem(option['label'],option['label2'],COLOR_LOGO) for option in options]
+
+        select    = selectDialog(listitems, LANGUAGE(30116), multi=False)
         if select >= 0:
             shares    = options[select]['label'].lower().replace("network","")
             mask      = options[select]['mask']
@@ -212,6 +218,7 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
             multi     = options[select]['multi']
             default   = options[select]['default']
     log('globals: browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
+    if monitor: toggleCHKInfo(True)
     if multi == True:
         # https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
         # type integer - the type of browse dialog.
@@ -226,7 +233,12 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
         # 2	ShowAndGetImage
         # 3	ShowAndGetWriteableDirectory
         retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-    return retval
+    if monitor: toggleCHKInfo(False)
+    if retval:
+        if prompt and retval == default: return None
+        return retval
+    return None
+    
   
 def inputDialog(message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
     # Types:
@@ -237,7 +249,8 @@ def inputDialog(message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0)
     # - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
     # - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
     retval = xbmcgui.Dialog().input(message, default, key, opt, close)
-    return retval
+    if retval: return retval
+    return None
     
 def selectDialog(list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True):
     if multi == True:
@@ -265,7 +278,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     elif level == xbmc.LOGINFO:  setProperty("USER_LOG",'%s\n\n%s'%(msg,getProperty("USER_LOG")))
     try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     except Exception as e: 'log failed! %s'%(str(e))
-    
+
 def hasPVR():
     return bool(xbmc.getCondVisibility('Pvr.HasTVChannels'))
     
@@ -279,10 +292,10 @@ def hasMovie():
     return bool(xbmc.getCondVisibility('Library.HasContent(Movies)'))
 
 def setBusy(state):
-    setProperty("RUNNING",str(state))
+    setProperty("BUSY.RUNNING",str(state))
     
 def isBusy():
-    return (getProperty("RUNNING") == "True")
+    return (getProperty("BUSY.RUNNING") == "True")
     
 def removeDUPS(lst):
     list_of_strings = [dumpJSON(d) for d in lst]
@@ -290,15 +303,18 @@ def removeDUPS(lst):
     return [loadJSON(s) for s in list_of_strings]
   
 def dumpJSON(dict1, idnt=None, sortkey=True):
-    if isinstance(dict1, basestring): return dict1
+    if not dict1: return ''
+    elif isinstance(dict1, basestring): return dict1
     return (json.dumps(dict1, indent=idnt, sort_keys=sortkey))
     
 def loadJSON(string1):
-    if isinstance(string1,dict): return string1
-    try: 
+    if not string1: return {}
+    elif isinstance(string1,dict): return string1
+    elif isinstance(string1,basestring): 
         string1 = (string1.strip('\n').strip('\t').strip('\r'))
-        return json.loads(string1, strict=False)
-    except Exception as e: log("globals: loadJSON failed! %s \n %s"%(e,string1), xbmc.LOGERROR)
+        try: 
+            return json.loads(string1, strict=False)
+        except Exception as e: log("globals: loadJSON failed! %s \n %s"%(e,string1), xbmc.LOGERROR)
     return {}
     
 def sendJSON(command):
@@ -307,26 +323,9 @@ def sendJSON(command):
     log('globals: sendJSON, response = %s'%(response))
     return response
 
-def setuuid():
-    if getuuid(): return
-    setSetting('uuid',str(uuid.uuid1()))
-    
-def getuuid():
-    return getSetting('uuid')
-
-def isClient():
-    setuuid()
-    forced = getSettingBool('Enable_Client')
-    uuid   = getuuid()
-    m3uID  = (getSetting('mu3id') or uuid)
-    state  = m3uID != uuid
-    if forced: state = True
-    log('globals: isClient = %s, forced = %s, m3uID = %s, uuid = %s'%(state,forced,m3uID,uuid))
-    return state
-
 def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
     listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
-    iconImage = (iconImage or LOGO)
+    iconImage = (iconImage or COLOR_LOGO)
     if propItem: listitem.setProperties(propItem)
     if infoItem: listitem.setInfo(mType, infoItem)
     else: listitem.setInfo(mType,   {'mediatype': 'video',
@@ -373,7 +372,7 @@ def checkPVR():
     addon = getPVR()
     check = [addon.getSetting('m3uRefreshMode')         == '1',
              # addon.getSetting('m3uRefreshHour')         == '%s'%(int((UPDATE_OFFSET/60)/60)),
-             addon.getSetting('m3uRefreshIntervalMins') == '10',
+             addon.getSetting('m3uRefreshIntervalMins') == '5',
              addon.getSetting('logoPathType')           == '0',
              addon.getSetting('logoPath')               == LOGO_LOC,
              addon.getSetting('m3uPathType')            == '0',
@@ -392,7 +391,7 @@ def configurePVR(override=False):
         addon = getPVR()
         addon.setSetting('m3uRefreshMode', '1')
         # addon.setSetting('m3uRefreshHour', '%s'%(int((UPDATE_OFFSET/60)/60)))
-        addon.setSetting('m3uRefreshIntervalMins', '10')
+        addon.setSetting('m3uRefreshIntervalMins', '5')
         addon.setSetting('logoFromEpg', '1')
         addon.setSetting('logoPathType', '0')
         addon.setSetting('logoPath',  LOGO_LOC)
@@ -433,6 +432,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     art        = info.get('art',{})
     streamInfo = item.get('streamdetails',{})
     properties = info.get('customproperties',{})
+    properties.update(info.get('data',{}))
     uniqueid   = info.get('uniqueid',{})
     cast       = info.get('cast',[])
     
@@ -446,14 +446,16 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
         tmpInfo = info.copy()
         for key, value in tmpInfo.items():
             ptype = LISTITEM_TYPES.get(key,None)
-            if ptype is None: 
+            if ptype is None:
                 info.pop(key)
                 properties[key] = value
                 continue
             if not isinstance(value, ptype):
-                info.update({key:ptype(value)})
+                info[key] = ptype(value)
+        return info
         
     listitem = xbmcgui.ListItem(offscreen=oscreen)
+    listitem.setLabel(info.get('label',''))
     listitem.setLabel2(info.get('label2',''))
     listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
     listitem.setInfo(type=mType, infoLabels=cleanInfo(info))
@@ -484,15 +486,28 @@ def is3D(item):
         if len(stereomode) > 0: return True
     return False
          
-def getThumb(file):
-    return (file['art'].get('tvshow.landscape','') or 
-            file['art'].get('tvshow.fanart','')    or 
-            file['art'].get('tvshow.poster','')    or
-            file['art'].get('tvshow.thumb','')     or 
-            file['art'].get('landscape','')        or
-            file['art'].get('fanart','')           or 
-            file['art'].get('poster','')           or
-            file['art'].get('thumb','')            or
+def getThumb(item):
+    return (item['art'].get('season.landscape','') or 
+            item['art'].get('tvshow.landscape','') or 
+            item['art'].get('landscape','')        or
+            item.get('landscape','')               or 
+            item['art'].get('season.fanart','')    or 
+            item['art'].get('tvshow.fanart','')    or 
+            item['art'].get('fanart','')           or 
+            item.get('fanart','')                  or 
+            item['art'].get('season.poster','')    or
+            item['art'].get('tvshow.poster','')    or
+            item['art'].get('poster','')           or
+            item.get('poster','')                  or
+            item['art'].get('season.thumb','')     or 
+            item['art'].get('tvshow.thumb','')     or 
+            item['art'].get('thumb','')            or
+            item.get('thumb','')                   or
+            item.get('thumbnail','')               or
+            item['art'].get('folder','')           or
+            item.get('folder','')                  or
+            item['art'].get('icon','')             or
+            item.get('icon','')                    or
             FANART)
 
 def getProperty(key, id=10000):
@@ -502,10 +517,12 @@ def getProperty(key, id=10000):
         if not key.endswith("USER_LOG"):
             if value: log("globals: getProperty, key = " + key + ", value = " + value)
         return value
-    except Exception as e: return ''
-          
+    except Exception as e: log("globals: getProperty, Failed! " + str(e), xbmc.LOGERROR)
+    return ''
+    
 def setProperty(key, value, id=10000):
     key = '%s.%s'%(ADDON_ID,key)
+    if not isinstance(value, basestring): value = str(value)
     if not key.endswith("USER_LOG"):
         log("globals: setProperty, key = " + key + ", value = " + value)
     try: xbmcgui.Window(id).setProperty(key, value)
@@ -513,8 +530,22 @@ def setProperty(key, value, id=10000):
 
 def clearProperty(key, id=10000):
     key = '%s.%s'%(ADDON_ID,key)
+    log("globals: clearProperty, key = %s"%(key))
     xbmcgui.Window(id).clearProperty(key)
 
+def funcExecute(func,args):
+    log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
+    if isinstance(args,dict): 
+        retval = func(**args)
+    elif isinstance(args,tuple): 
+        retval = func(*args)
+    elif args:
+        retval = func(args)
+    else: 
+        retval = func()
+    log("globals: funcExecute, retval = %s"%(retval))
+    return retval
+    
 def assertLST(lst1,lst2): #test if both lists match. 
     assertBool = len(diffLST(lst1,lst2)) == 0
     log('globals: assertLST = %s'%(assertBool))
@@ -541,19 +572,30 @@ def diffDICT(dict1, dict2):
 def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
 
+def removeDupsDICT(list):
+    return [dict(tupleized) for tupleized in set(tuple(item.items()) for item in list)]
+
 def fillList(items, limit):
     for n in range(limit): yield random.choice(items)
     
 def cleanLabel(text):
-    text = re.sub('\[COLOR (.+?)\]', '', text)
+    text = re.sub('\[COLOR=(.+?)\]', '', text)
     text = re.sub('\[/COLOR\]', '', text)
     text = text.replace("[B]",'').replace("[/B]",'')
-    return text
+    text = text.replace("[I]",'').replace("[/I]",'')
+    return text.replace(":",'')
     
 def isPseudoTV():
-    isPseudoTV = len(getProperty('channel_item')) > 0
+    isPseudoTV = hasWriterinString('VideoPlayer') #condition set only while playing
     log('globals: isPseudoTV = %s'%(isPseudoTV))
     return isPseudoTV
+
+def getWriterfromString(type='ListItem'):
+    return loadJSON(xbmc.getInfoLabel('%s.Writer'%(type)).replace(' /  "',' , "').replace(" /  ",", "))
+  
+def hasWriterinString(type='ListItem'):
+    channel = getWriterfromString(type).get('data',{}).get('number',-1)
+    return channel > 0
   
 def setCurrentChannelItem(item):
     setProperty('channel_item',dumpJSON(item))
@@ -564,11 +606,16 @@ def getCurrentChannelItem():
 def clearCurrentChannelItem():
     clearProperty('channel_item')
   
-def getChannelID(name, path):
+def getChannelID(name, path, number=0):
+    if number > CHANNEL_LIMIT: number = 0 #in-order to keep pre-defined ids constant, ignore the dynamic element ie. channel numbers.
     if isinstance(path, list): path = '|'.join(path)
-    tmpid = '%s.%s'%(name, hashlib.md5(path.encode('utf-8')))
+    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode('utf-8')))
     return '%s@%s'%((binascii.hexlify(tmpid.encode("utf-8"))[:32]).decode("utf-8"),slugify(ADDON_NAME))
 
+def getGroups():
+    if getSetting('User_Groups'): GROUP_TYPES.extend(getSetting('User_Groups').split('|'))
+    return sorted(set(GROUP_TYPES))
+     
 def slugify(text):
     non_url_safe = [' ','"', '#', '$', '%', '&', '+',',', '/', ':', ';', '=', '?','@', '[', '\\', ']', '^', '`','{', '|', '}', '~', "'"]
     non_url_safe_regex = re.compile(r'[{}]'.format(''.join(re.escape(x) for x in non_url_safe)))
@@ -588,10 +635,40 @@ def interleave(*args): #interleave multi-lists, while preserving order
     except Exception as e: 
         log("interleave, Failed! %s"%(e), xbmc.LOGERROR)
         yield list(chain.from_iterable(izip_longest(*args)))[0]
-     
-def sysListItem():
-    return sys.listitem
-     
+
+def splitStack(paths): #split stack for indv. files.
+    log('splitStack, paths = %s'%(paths))
+    return paths.replace('stack://','').split(' , ')
+                                      
+def stripStack(file, url): #strip pre-rolls from stack, return file.
+    log('stripStack, file = %s, url = %s'%(file,url))
+    paths = url.split(' , ')
+    for path in paths:
+        if file not in path: paths.remove(path)
+        elif file in path: break
+    return paths
+
+def fillInfoMonitor(type='ListItem'):
+    labelList = getProperty('monitor.labelList').split('|')
+    labelList.insert(0,xbmc.getInfoLabel('%s.Label'%(type)))
+    setProperty('monitor.labelList' ,'|'.join(list(set(labelList))))
+    setProperty('monitor.label'     ,xbmc.getInfoLabel('%s.Label'%(type)))
+    setProperty('monitor.label2'    ,xbmc.getInfoLabel('%s.Label2'%(type)))
+    setProperty('monitor.path'      ,xbmc.getInfoLabel('%s.Path'%(type)))
+    setProperty('monitor.writer'    ,xbmc.getInfoLabel('%s.Writer'%(type)))
+    return True
+    
+def getInfoMonitor():
+    return {'label':getProperty('monitor.label'),'label2':getProperty('monitor.label2'),'path':getProperty('monitor.path'),'writer':getProperty('monitor.writer'),'labelList':getProperty('monitor.labelList').split('|')}
+
+def toggleCHKInfo(state):
+    setProperty('chkInfo',str(state))
+    if state: clearProperty('monitor.labelList')
+    else: clearProperty('chkInfo')
+    
+def isCHKInfo():
+    return getProperty('chkInfo') == "True"
+    
 def isSubtitle():
     return bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
     

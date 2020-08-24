@@ -26,22 +26,26 @@ class Predefined:
     def __init__(self): 
         self.jsonRPC  = JSONRPC()
         self.channels = Channels()
-        self.types    = {'TV_Networks'   : self.createNetworkPlaylist,
-                         'TV_Shows'      : self.createShowPlaylist,
-                         'TV_Genres'     : self.createTVGenrePlaylist,
-                         'MOVIE_Genres'  : self.createMovieGenrePlaylist,
-                         'MOVIE_Studios' : self.createStudioPlaylist,
-                         'MIXED_Genres'  : self.createGenreMixedPlaylist,
-                         'MIXED_Other'   : self.createMixedOther,
-                         'MUSIC_Genres'  : self.createMusicGenrePlaylist}
+        self.types    = {'TV_Networks'       : self.createNetworkPlaylist,
+                         'TV_Shows'          : self.createShowPlaylist,
+                         'TV_Genres'         : self.createTVGenrePlaylist,
+                         'MOVIE_Genres'      : self.createMovieGenrePlaylist,
+                         'MOVIE_Studios'     : self.createStudioPlaylist,
+                         'MIXED_Genres'      : self.createGenreMixedPlaylist,
+                         'MIXED_Other'       : self.createMixedOther,
+                         'RECOMMENDED_Other' : self.createRECOMMENDED,
+                         'MUSIC_Genres'      : self.createMusicGenrePlaylist}
                         
         self.others   = {LANGUAGE(30078) : self.createMixedRecent,
                          LANGUAGE(30079) : self.createPVRRecordings} # home for misc. predefined channel paths. todo seasonal channel
 
-        if INCLUDE_EXTRAS:
-            self.specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
-        else:
-            self.specials = ''
+        # conflict with selection to channels.json feature. paths have to be static for proper id match
+        # if INCLUDE_EXTRAS:
+            # self.specials = ''
+         # else:   
+            # self.specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
+        
+        self.specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
         log('__init__, specials = %s'%(self.specials))
     
     
@@ -65,35 +69,36 @@ class Predefined:
             return citem
                     
         citems   = []
-        template = self.channels.getCitem()
-        existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
-        reserved = self.channels.getReservedChannels() # numbers in-use.
-        for type, func in self.types.items():
-            items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
-            chnums   = self.getAvailableChannelNumbers(type,reserved,len(items))
-            log('buildPredefinedChannels, building %s, found %s'%(type,items))
-            for idx, item in enumerate(items):
-                if not item: continue
-                citem    = template.copy()
-                chnumber = chnums[idx]
-                type     = type.replace('_',' ')
-                chname   = self.getChannelSuffix(item, type)
-                chpath   = func(item)
-                chid     = getChannelID(chname, chpath)
-                radio    = (type == 'MUSIC Genres' or chpath[0].startswith('musicdb://'))
-                chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
-                chgroups = [type]
-                citem    = {'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'groups':chgroups}
-                citem.update(findExising())
-                citems.append(citem)
-                
-        difference = sorted(diffDICT(existing,citems), key=lambda k: k['number'])
-        log('buildPredefinedChannels, difference %s'%(difference))
-        [self.channels.add(citem) if citem in citems else self.channels.remove(citem) for citem in difference]
-        return self.channels.save()
+        if self.channels.reset():
+            template = self.channels.getCitem()
+            existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
+            reserved = self.channels.getReservedChannels() # numbers in-use.
+            for type, func in self.types.items():
+                items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
+                chnums   = self.getAvailableChannelNumbers(type,reserved,len(items))
+                log('buildPredefinedChannels, building %s, found %s'%(type,items))
+                for idx, item in enumerate(items):
+                    if not item: continue
+                    citem    = template.copy()
+                    chnumber = chnums[idx]
+                    type     = type.replace('_',' ')
+                    chname   = self.getChannelPostfix(item, type)
+                    chpath   = func(item)
+                    chid     = getChannelID(chname, chpath, chnumber)
+                    radio    = (type == 'MUSIC Genres' or chpath[0].startswith('musicdb://'))
+                    chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
+                    chgroups = [type]
+                    citem.update({'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'group':chgroups})
+                    citem.update(findExising())
+                    citems.append(citem)
+                    
+            difference = sorted(diffDICT(existing,citems), key=lambda k: k['number'])
+            log('buildPredefinedChannels, difference %s'%(difference))
+            [self.channels.add(citem) if citem in citems else self.channels.remove(citem) for citem in difference]
+            return self.channels.save()
         
         
-    def getChannelSuffix(self, name, type):
+    def getChannelPostfix(self, name, type):
         suffix = ''
         if   type == 'TV Genres':    suffix = ' TV'
         elif type == 'MOVIE Genres': suffix = ' Movies'
@@ -102,6 +107,10 @@ class Predefined:
         
     def createMixedOther(self, type):
         return self.others[type]()
+        
+        
+    def createRECOMMENDED(self,type):
+        return []
         
     
     def createPVRRecordings(self):

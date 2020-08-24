@@ -7,9 +7,10 @@
 		"logo": "",
 		"radio": false,
 		"path": [],
-		"groups": [],
+		"group": [],
 		"rules": [],
-		"xmltv": ""
+		"xmltv": "",
+		"page": {}
 	}],
 	"predefined": []
 }

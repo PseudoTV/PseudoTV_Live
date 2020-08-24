@@ -2,11 +2,11 @@
 <settings>
 	<category label="30018">
         <setting                            type="lsep"     label="30024"            visible="false"    /> 
-        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="false"    action="RunScript($CWD/manager.py)" subsetting="true" option="close" />
-        <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="false"    action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" subsetting="true" option="close" />
-        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"    action="RunScript($CWD/config.py, Open_Editor)" subsetting="true" option="close" />
-        <setting id="User_Groups"           type="action"   label="30075" default="" visible="false"    aaction="RunScript($CWD/config.py, User_Groups)" subsetting="true" option="close" />
-        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="false"    avisible="eq(-5,false)"    action="RunScript($CWD/config.py, Clear_Userdefined)"   subsetting="true" option="close" />
+        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/manager.py)"                    subsetting="true" option="close" />
+        <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="true"      action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" enable="System.HasAddon(plugin.library.node.editor)" subsetting="true" option="close" />
+        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        subsetting="true" option="close" />
+        <setting id="User_Groups"           type="action"   label="30075" default="" visible="true"      action="RunScript($CWD/config.py, User_Groups)"        subsetting="true" option="close" />
+        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="true"      action="RunScript($CWD/config.py, Clear_Userdefined)"  subsetting="true" option="close" />
         <setting                            type="lsep"     label="30022"            visible="true"     />
         <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
         <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"     action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true" option="close" enable="Library.HasContent(TVShows)"/>
@@ -17,16 +17,15 @@
         <setting id="Select_MOVIE_Studios"  type="action"   label="30007" default="" visible="true"     action="RunScript($CWD/config.py, MOVIE_Studios)"       subsetting="true" option="close" enable="Library.HasContent(Movies)"/>
         <setting id="Select_MIXED_Other"    type="action"   label="30080" default="" visible="true"     action="RunScript($CWD/config.py, MIXED_Other)"         subsetting="true" option="close" />
         <setting id="Select_MUSIC_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, MUSIC_Genres)"        subsetting="true" option="close" enable="Library.HasContent(Music)"/>
+        <setting id="Select_RECOMMENDED"    type="action"   label="30026" default="" visible="false"    action="RunScript($CWD/config.py, RECOMMENDED_Other)"   subsetting="true" option="close" />
         <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
-        <setting                            type="lsep"     label="30023"            visible="true)"    />
-        <setting id="Select_RECOMMENDED"    type="action"   label="30026" default="" visible="false" action="RunScript($CWD/config.py, Select_RECOMMENDED)"   subsetting="true" option="close"/>
-    </category> 
+        </category> 
     <category label="30025">
         <setting id="Enable_Grouping"       type="bool"     label="30019" default="true" />
         <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
         <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
         <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />           
-        <setting id="Enable_Client"         type="bool"     label="30104" default="false" />
+        <setting id="Enable_Client"         type="bool"     label="30104" default="false" enable="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" subsetting="true"/>
     </category> 
     <category label="30048">
         <setting id="Playback_Method"      type="enum"     label="30045" default="0"  values="PVR Callback|Playlist" />
@@ -58,5 +57,6 @@
     <category label="30020">
         <setting id="Enable_Debugging"     type="bool"     label="30000" default="true" />
         <setting id=" "                    type="action"   label="30046" default="" visible="true" action="RunScript($CWD/config.py, Open_Settings|pvr.iptvsimple)"  option="close" />
+        <setting id="Seek_Padding"         type="slider"   label="30129" default="15" range="0,1,300"   option="int" />
     </category>
 </settings>

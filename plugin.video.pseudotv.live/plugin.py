@@ -24,16 +24,15 @@ from resources.lib.builder import Builder
 class Plugin:
     def __init__(self, sysARG=sys.argv):
         log('__init__, sysARG = ' + str(sysARG))
-        self.sysARG = sysARG
+        self.sysARG        = sysARG
         self.CONTENT_TYPE  = 'episodes'
-        self.CACHE_ENABLED = False
-        self.myBuilder = Builder()
+        self.CACHE_ENABLED = True
+        self.myBuilder     = Builder()
         self.myBuilder.plugin = self
-        self.myPlayer = MY_PLAYER
-        self.playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-        self.maxDays  = getSettingInt('Max_Days')
-        self.seekTol  = getSettingInt('Seek_Tolerance')
-        self.usePlaylist = bool(getSettingInt('Playback_Method'))
+        self.myPlayer      = MY_PLAYER
+        self.playlist      = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+        self.seekTol       = getSettingInt('Seek_Tolerance')
+        self.usePlaylist   = bool(getSettingInt('Playback_Method'))
         
         
     def buildMenu(self, name=None):
@@ -43,7 +42,7 @@ class Plugin:
 
         UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30011), '', '', LANGUAGE(30008)),
-                     (LANGUAGE(30096), '', '', LANGUAGE(30096)),
+                     (LANGUAGE(30096), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30081), '', '', LANGUAGE(30008)),
@@ -59,22 +58,21 @@ class Plugin:
         [self.addDir(*item) for item in items]
         
         
-    def deleteFiles(self, channels=True):
+    def deleteFiles(self, msg, clean=False):
         log('utilities, deleteFiles')
-        msg = 30096 if channels else 30011
-        if yesnoDialog('%s ?'%(LANGUAGE(msg))):
-            if channels: 
+        if yesnoDialog('%s ?'%(msg)):
+            if clean: 
                 self.myBuilder.channels.delete()
-            else:
-                [func() for func in [self.myBuilder.m3u.delete,self.myBuilder.xmltv.delete]]
+                self.myBuilder.channels.deleteSettings()
+            [func() for func in [self.myBuilder.m3u.delete,self.myBuilder.xmltv.delete]]
         return
-        
-        
+
+            
     def utilities(self, name):
         log('utilities, name = %s'%name)
         if name   == LANGUAGE(30010): self.myBuilder.buildService()
-        elif name == LANGUAGE(30011): self.deleteFiles()
-        elif name == LANGUAGE(30096): self.deleteFiles(channels=True)
+        elif name == LANGUAGE(30011): self.deleteFiles(name)
+        elif name == LANGUAGE(30096): self.deleteFiles(name, clean=True)
         elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
         elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
         elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
@@ -98,20 +96,8 @@ class Plugin:
         for item in items: self.addDir(*item)
 
 
-    def stripStack(self, file, url):
-        log('stripStack, file = %s, url = %s'%(file,url))
-        paths = url.split(' , ')
-        for path in paths:
-            if file not in path: 
-                paths.remove(path)
-            elif file in path: 
-                break
-        return paths
-
-
     def contextPlay(self, writer, isPlaylist=False):
         stpos  = 0
-        writer = loadJSON(writer.replace(' /  "',' , "').replace(" /  ",", "))# current item
         channelData = writer.get('data',{}) 
         if not channelData: 
             return notificationDialog(LANGUAGE(30001))
@@ -169,8 +155,7 @@ class Plugin:
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
-        liz       = xbmcgui.ListItem()
-        listitems = [liz] #empty listitem required to pass failed playback.
+        listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.myBuilder.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
         pvritem['isPlaylist'] = isPlaylist
         nowitem   = pvritem.get('broadcastnow',{}) # current item
@@ -188,26 +173,26 @@ class Plugin:
                 # near end, avoid loopback; override nowitem and queue next show.
                 if (progress > ((runtime * 60) - ENDTIME_SEEK_OFFSET)): # endtime offset
                     log('playChannel, progress = %s near end, queue nextitem'%(progress))
-                    liz = buildItemListItem(loadJSON(nextitems[0].get('writer',{})))
-                    nextitems.pop(0) #remove first element in nextitems keep playlist order.
+                    newItem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
+                    liz = buildItemListItem(loadJSON(newItem.get('writer',{})))
+                    
                 else:
                     log('playChannel, progress = %s within seek tolerance setting seek.'%(progress))
                     liz.setProperty('totaltime'  , str((runtime * 60)))
                     liz.setProperty('resumetime' , str(progress))
                     liz.setProperty('startoffset', str(progress))
-                    
-                    # remove bct pre-roll from stack://
                     url  = liz.getPath()
                     file = writer.get('originalfile','')
                     if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
                         log('playChannel, playing stack with url = %s'%(url))
-                        liz.setPath('stack://%s'%(' , '.join(self.stripStack(file, url))))
+                        #remove pre-roll stack from seek offset video.
+                        liz.setPath('stack://%s'%(' , '.join(stripStack(file, url))))
                 
             listitems = [liz]
             if isPlaylist: 
                 self.playlist.clear()
                 xbmc.sleep(100)
-                listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])            
+                listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])
                 [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
                 if isPlaylistRandom(): self.playlist.unshuffle()
                 log('playChannel, Playlist size = %s'%(self.playlist.size()))
@@ -252,14 +237,14 @@ class Plugin:
         channel = (params.get("channel",'')                    or None)
         url     = (params.get("url",'')                        or None)
         id      = (params.get("id",'')                         or None)
-        radio   = (params.get("radio",'')                      or 'False')
+        radio   = (params.get("radio",'')                      or 'False') == "True"
         mode    = (params.get("mode",'')                       or None)
         log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
 
         if channel is None:
             if   mode is None: self.buildMenu(name)
             elif mode == 'play':      
-                if radio == 'True':
+                if radio:
                     self.playRadio(name, id)
                 else: 
                     self.playChannel(name, id, isPlaylist=self.usePlaylist)

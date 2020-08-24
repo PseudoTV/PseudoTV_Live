@@ -23,12 +23,22 @@
 
 from resources.lib.globals     import *
 from resources.lib             import xmltv
-from resources.lib.fileaccess  import FileAccess
+from resources.lib.fileaccess  import FileAccess, FileLock
 from resources.lib.videoparser import VideoParser
  
 xmltv.locale      = 'UTF-8'
 xmltv.date_format = DTFORMAT
 
+@contextmanager
+def fileLocker():
+    log('parser: fileLocker')
+    fileLock = FileLock()
+    fileLock.lockFile("MasterLock")
+    try: yield
+    finally: 
+        fileLock.unlockFile('MasterLock')
+        fileLock.close()
+    
 class Channels:
     def __init__(self):
         self.cache       = SimpleCache()
@@ -63,22 +73,13 @@ class Channels:
         return [channel["number"] for channel in self.channelList.get(channelkey,[])]
 
 
-    def getPredefinedSelection(self):
-        log('channels: getPredefinedSelection')
-        channels = self.getPredefined()
-        items = {}
-        for type in CHAN_TYPES:  items[type] = []
-        for channel in channels: items[channel['type'].replace(' ','_')].append(channel['name'])
-        return items
-            
-            
     def add(self, item):
         channelkey = 'predefined' if item['number'] > CHANNEL_LIMIT else 'channels'
         log('channels: add, item = %s, channelkey = %s'%(item,channelkey))
         channels = self.channelList[channelkey]
         idx = self.findChannelIDX(item, channels)
-        if idx:
-            item["number"] = channels[idx]["number"]
+        if idx is not None:
+            item["number"] = channels[idx]["number"] # existing id found, reuse channel number.
             log('channels: Updating channel %s, id %s'%(item["number"],item["id"]))
             channels[idx] = item
         else:
@@ -93,7 +94,8 @@ class Channels:
         log('channels: removing item = %s, channelkey = %s'%(item,channelkey))
         channels = self.channelList[channelkey]
         idx = self.findChannelIDX(item, channels)
-        if idx: channels.pop(idx)
+        if idx is not None: 
+            channels.pop(idx)
         self.channelList[channelkey] = channels
         return True
         
@@ -136,11 +138,11 @@ class Channels:
 
     def save(self):
         self.cleanSelf()
-        fle = FileAccess.open(CHANNELFLE, 'w')
-        log('channels: save, saving to %s'%(CHANNELFLE))
-        
-        fle.write(dumpJSON(self.channelList, idnt=4, sortkey=False))
-        fle.close()
+        with fileLocker():
+            fle = FileAccess.open(CHANNELFLE, 'w')
+            log('channels: save, saving to %s'%(CHANNELFLE))
+            fle.write(dumpJSON(self.channelList, idnt=4, sortkey=False))
+            fle.close()
         return True
         
         
@@ -148,6 +150,12 @@ class Channels:
         log('channels: delete')
         if FileAccess.delete(CHANNELFLE):
             notificationDialog(LANGUAGE(30016)%(LANGUAGE(30024)))
+
+
+    def deleteSettings(self):
+        log('channels: deleteSettings')
+        if FileAccess.delete(SETTINGS_FLE):
+            notificationDialog(LANGUAGE(30016)%('SETTINGS'))
 
 
 class XMLTV:
@@ -167,6 +175,7 @@ class XMLTV:
     def reset(self):
         log('xmltv: reset')
         self.__init__()
+        return True
 
 
     def importXMLTV(self, file):
@@ -305,8 +314,7 @@ class XMLTV:
 
         # if item['date']: #todo fix
             # pitem['date'] = (datetime.datetime.strptime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d'),
-            
-            
+
         if item['new']: pitem['new'] = '' #write blank tag, tag == True
         rating = self.cleanMPAA(item['rating'])
         if rating != 'NA' and rating.startswith('TV-'): 
@@ -435,9 +443,10 @@ class XMLTV:
         for channel in channels: writer.addChannel(channel)
         programmes = self.sortProgrammes(removeDUPS(self.xmltvList['programmes']))
         for program in programmes: writer.addProgramme(program)
-        writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
         log('xmltv: save, saving to %s'%(XMLTVFLE))
-        self.buildGenres()
+        with fileLocker():
+            writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
+            self.buildGenres()
         return True
         
 
@@ -449,11 +458,12 @@ class XMLTV:
 
 
 class M3U:
-    def __init__(self):
-        self.m3uTMP  = []
-        self.litem   = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
-        self.m3uList = ['#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="%s"'%(self.getShift(),getuuid())]
-        self.m3uList.extend(self.cleanSelf(self.load()))
+    def __init__(self): 
+        self.cache    = SimpleCache()
+        self.m3uTMP   = []
+        self.litem    = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
+        self.m3uList  = list(self.cleanSelf(self.load()))
+        self.m3uList.insert(0,'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="%s"'%(self.getShift(),self.getUUID()))
         self.extImport    = getSettingBool('User_Import')
         self.extImportM3U = getSetting('Import_M3U')
 
@@ -464,12 +474,6 @@ class M3U:
         # self.now = datetime.datetime.now()
         # min = str(round(self.now.minute) / 60)[:3]
         # return '-%s'%(min)
-
-
-    def setClientID(self, line):
-        log('m3u: setClientID')
-        match = re.compile('x-tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
-        if match: return setSetting('mu3id',match.group(1))
 
 
     def reset(self):
@@ -493,15 +497,56 @@ class M3U:
         return ['%s\n%s'%(line,m3uListTMP[idx+1]) for idx, line in enumerate(m3uListTMP) if line.startswith('#EXTINF:')]
 
 
+    def setClientID(self, line):
+        log('m3u: setClientID')
+        match = re.compile('x-tvg-id=\"(.*?)\"', re.IGNORECASE).search(line)
+        if match: setProperty('mu3id',match.group(1))
+        return
+            
+            
+    def getClientID(self):
+        return getProperty('mu3id')
+
+
+    def genUUID(self):
+        return str(uuid.uuid1(clock_seq=CLOCK_SEQ))
+
+
+    @use_cache(28)
+    def setUUID(self):
+        uuid = self.genUUID()
+        setProperty('uuid',uuid)
+        setSetting('uuid',uuid)
+        return uuid
+        
+            
+    def getUUID(self):
+        uuid = (getSetting('uuid') or getProperty('uuid'))
+        if not uuid: uuid = self.setUUID()
+        return uuid
+        
+
+    def isClient(self):
+        forced = getSettingBool('Enable_Client')
+        uuid   = self.getUUID()
+        m3uID  = (self.getClientID() or uuid)
+        state  = m3uID != uuid
+        if forced: state = True
+        log('globals: isClient = %s, forced = %s, m3uID = %s, uuid = %s'%(state,forced,m3uID,uuid))
+        return state
+
+
     def save(self):
         log('m3u: save')
         self.cleanChannels()
         if self.extImport: 
             self.importM3U(self.extImportM3U)
-        fle = FileAccess.open(M3UFLE, 'w')
-        log('m3u: save, saving to %s'%(M3UFLE))
-        fle.write('\n'.join([item for item in self.m3uList]))
-        fle.close()
+            
+        with fileLocker():
+            fle = FileAccess.open(M3UFLE, 'w')
+            log('m3u: save, saving to %s'%(M3UFLE))
+            fle.write('\n'.join([item for item in self.m3uList]))
+            fle.close()
         return True
         
 
@@ -554,7 +599,7 @@ class M3U:
     def removeChannel(self, line=None, id=''):
         if line is None: line = self.findChannelIDX(id, return_line=True)
         log('m3u: removeChannel, removing %s'%(line))
-        self.m3uList.remove(line)
+        if line is not None: self.m3uList.remove(line)
         return True
 
 
@@ -575,7 +620,7 @@ class M3U:
         channels.pop(0)
         for id in self.m3uTMP:
             line = self.findChannelIDX(id, channels, return_line=True)
-            if line: channels.remove(line)
+            if line is not None: channels.remove(line)
         [self.removeChannel(line) for line in channels]
                 
         
@@ -586,12 +631,12 @@ class M3U:
 
 class JSONRPC:
     def __init__(self, myWorker=None):
-        self.cache         = SimpleCache()
-        self.queue         = myWorker
-        self.useColor      = USE_COLOR
-        self.videoParser   = VideoParser()
-        self.resourcePacks = self.buildLogoResources()
+        self.cache            = SimpleCache()
+        self.queue            = myWorker
+        self.videoParser      = VideoParser()
+        self.resourcePacks    = self.buildLogoResources()
         FileAccess.makedirs(LOGO_LOC)
+        FileAccess.makedirs(CACHE_LOC)
         
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15)):
@@ -709,7 +754,7 @@ class JSONRPC:
         if isPlaylist:
             channelItem = self.fillPVRbroadcasts(channelItem)
         else: 
-            broadcastnext = channelItem['broadcastnext']
+            broadcastnext = channelItem.get('broadcastnext',[])
             channelItem['broadcastnext'] = [broadcastnext]
         return channelItem
 
@@ -901,8 +946,23 @@ class JSONRPC:
         
         log("jsonrpc: requestList return, items size = %s"%len(items))
         return items
+
+
+    @use_cache(1) # check for duration data.
+    def existsVFS(self, path, media='video', accurate=ACCURATE_DURATION):
+        log('jsonrpc, existsVFS path = %s, media = %s'%(path,media))
+        dirs  = []
+        json_response = self.requestList(random.random(), path, media)
+        for item in json_response:
+            file = item.get('file','')
+            fileType = item.get('filetype','file')
+            if fileType == 'file':
+                if self.getDuration(file, item, accurate) > 0: return True
+            else: dirs.append(file)
+        for dir in dirs: return self.existsVFS(dir, media)
+        return False
         
-        
+
     @use_cache(1)
     def listVFS(self, path, version=None):
         log('jsonrpc, listVFS path = %s, version = %s'%(path,version))
@@ -912,7 +972,7 @@ class JSONRPC:
         for item in json_response:
             file = item['file']
             if item['filetype'] == 'file':
-                self.parseDuration(file, item)
+                if self.parseDuration(file, item) == 0: continue
                 files.append(file)
             else: dirs.append(file)
         return dirs, files
@@ -928,6 +988,21 @@ class JSONRPC:
             self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=28))
         log("jsonrpc, %s autoPagination, path = %s, limits = %s"%(msg,path,limits))
         return limits
+
+
+    def getDuration(self, path, item={}, accurate=False):
+        log("jsonrpc, getDuration; accurate = %s, path = %s"%(accurate,path))
+        duration = 0
+        runtime  = int(item.get('runtime','') or item.get('duration','') or '0')
+        if accurate == False or path.startswith(('plugin://','upnp://','pvr://')): return runtime
+        elif path.startswith('stack://'): #handle "stacked" videos:
+            stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
+            for file in stack: duration += self.parseDuration(file, item)
+        else: 
+            duration = self.parseDuration(path, item)
+        if getSettingBool('Strict_Duration') or duration > 0: 
+            return duration
+        return runtime 
         
     
     def parseDuration(self, path, item={}):
@@ -957,8 +1032,17 @@ class JSONRPC:
             self.queue.add((sendJSON,('{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))))
         elif media == 'episode': 
             self.queue.add((sendJSON,('{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur))))
-     
-    
+             
+             
+    @use_cache(28)
+    def getStreamDetails(self, path, media='video'):
+        log("getStreamDetails, path = " + path)
+        json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["streamdetails"]},"id":1}'%((path),media))
+        json_response = sendJSON(json_query).get('result',{}).get('filedetails',{}).get('streamdetails',{})
+        if json_response: return json_response
+        return {}
+
+
     def buildResourcePath(self, path, file):
         if path.startswith('resource://'):
             path = path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
@@ -985,11 +1069,11 @@ class JSONRPC:
         radios    = ["resource://resource.images.musicgenreicons.text"]
         genres    = ["resource://resource.images.moviegenreicons.transparent"]
         studios   = ["resource://resource.images.studios.white/", "resource://resource.images.studios.coloured/"]
-        if self.useColor: studios.reverse()
-        [logos.append({'type':['MUSIC Genres'],'path':radio,'files': self.getResourcesFolders(radio, self.getPluginMeta(radio).get('version',''))[1]}) for radio in radios]
+        if USE_COLOR: studios.reverse()
+        [logos.append({'type':['MUSIC Genres','Custom'],'path':radio,'files': self.getResourcesFolders(radio, self.getPluginMeta(radio).get('version',''))[1]}) for radio in radios]
         [logos.append({'type':['TV Genres','MOVIE Genres','MIXED Genres','Custom'],'path':genre,'files': self.getResourcesFolders(genre, self.getPluginMeta(genre).get('version',''))[1]}) for genre  in genres]
         [logos.append({'type':['TV Networks','MOVIE Studios','Custom'],'path':studio,'files': self.getResourcesFolders(studio, self.getPluginMeta(studio).get('version',''))[1]}) for studio in studios]
-        logos.append( {'type':['TV Shows'],'path':'','files': self.fillTVShows()})
+        logos.append( {'type':['TV Shows','Custom'],'path':'','files': self.fillTVShows()})
         log('jsonrpc, buildLogoResources return')
         return logos
 
@@ -1008,18 +1092,20 @@ class JSONRPC:
             return [],[]
 
 
-    @use_cache(1)
+    @use_cache(7)
     def findLogo(self, channelname, channeltype, useColor, featured=False, version=ADDON_VERSION):
         log('findLogo')
         for item in self.resourcePacks:
             if channeltype in item['type']:
                 for file in item['files']:
                     if isinstance(file, dict):
+                        #jsonrpc item
                         fileItem = file.get('item',{})
                         if channelname.lower() == fileItem.get('label','').lower(): 
                             return self.cacheImage(channelname,fileItem.get('art',{}).get('clearlogo',''),featured)
                     else:
-                        if file.lower().startswith(channelname.lower()):
+                        #resource file
+                        if os.path.splitext(file.lower())[0] == channelname.lower():
                             return self.cacheImage(channelname,os.path.join(item['path'],file),featured)
         return LOGO
         
@@ -1033,17 +1119,19 @@ class JSONRPC:
         return logo
         
         
-    def getLogo(self, channelname, type, path=None, featured=False):
+    def getLogo(self, channelname, type='Custom', path=None, featured=False):
+        # features; in-use by a channel, triggers future local caching.
+        if not channelname: return
         log('getLogo: channelname = %s, type = %s'%(channelname,type))
         icon = LOGO
         localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
         if FileAccess.exists(localIcon): 
             log('getLogo: using local logo = %s'%(localIcon))
             return localIcon
-        elif type in ['TV Shows','TV Networks','MOVIE Studios','TV Genres','MOVIE Genres','MIXED Genres','MUSIC Genres','Custom']: 
-            icon = (self.findLogo(channelname, type, self.useColor, featured) or LOGO)
+        # elif type in ['TV Shows','TV Networks','MOVIE Studios','TV Genres','MOVIE Genres','MIXED Genres','MUSIC Genres','Custom']: 
+        icon = (self.findLogo(channelname, type, USE_COLOR, featured, ADDON_VERSION) or LOGO)
         log('getLogo: icon = %s'%(icon))
-        if icon in [None,LOGO] and path:
+        if icon in [None,ICON,LOGO,COLOR_LOGO,MONO_LOGO] and path:
             if isinstance(path, list): path = path[0]
             if path.startswith('plugin://'): icon = self.getPluginMeta(path).get('icon',None)
         if icon is None: icon = LOGO #last check to make sure a default logo is set; unneeded...

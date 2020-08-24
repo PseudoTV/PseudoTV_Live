@@ -34,7 +34,7 @@ class Player(xbmc.Player):
 
 
     def getPlayerTime(self):
-        try: return self.getTotalTime()
+        try:    return self.getTotalTime()
         except: return 0
 
 
@@ -97,9 +97,11 @@ class Player(xbmc.Player):
 
 
     def changeAction(self):
-        callback = self.playingChannelItem.get('callback','')
-        if self.isPlaylist() or not callback: 
-            self.log('changeAction, ignore playlist')
+        isplaylist = self.isPlaylist()
+        callback   = self.playingChannelItem.get('callback','')
+        if not isplaylist: clearCurrentChannelItem()
+        if isplaylist or not callback: 
+            self.log('changeAction, ignore playlist or missing callback')
             return
         self.log('changeAction, playing = %s'%(callback))
         xbmc.executebuiltin('PlayMedia(%s)'%callback)
@@ -171,7 +173,6 @@ class Monitor(xbmc.Monitor):
 
 class Service:
     def __init__(self):
-        self.wait          = 5 #secs
         self.myMonitor     = Monitor()
         self.myMonitor.myService = self
         self.myPlayer      = Player()
@@ -182,8 +183,7 @@ class Service:
         self.myPlugin      = Plugin(sys.argv)
         self.myBuilder     = self.myPlugin.myBuilder
         self.jsonRPC       = self.myBuilder.jsonRPC
-        self.sysListitem   = xbmcgui.ListItem()
-        self.channelList   = []
+        self.channelList   = self.getChannelList()
         self.serverStopped = False
         self.startService()
 
@@ -196,9 +196,10 @@ class Service:
         self.log('initalizeChannels')
         channelList = []
         if self.myPredefined.buildPredefinedChannels(): 
-            channelList = self.getChannelList()        
-        if len(list(channelList)) == 0: 
-            if self.myConfig.autoTune(): channelList = self.getChannelList()        
+            channelList = self.getChannelList()
+        if len(channelList) == 0: 
+            if self.myConfig.autoTune(): 
+                channelList = self.getChannelList()
         return channelList
 
 
@@ -224,26 +225,27 @@ class Service:
         lastCheck = float(getSetting('Last_Scan') or 0)
         if (time.time() > (lastCheck + UPDATE_OFFSET)):
             clearProperty("USER_LOG")
-            self.updateChannels(update=True)
+            if self.updateChannels(update=True):
+                setSetting('Last_Scan',str(time.time()))
         
         
-    def updateChannels(self, channels=None, update=False):
-        self.log('updateChannels, update = %s'%(update))
-        if channels is None: channels = self.getChannelList()
-        self.channelList = channels
-        # unchanged, difference = assertDICT(self.channelList,self.lastChannelList,return_diff=True)
-        # self.log('updateChannels, unchanged = %s, difference = %s'%(unchanged,len(difference)))
+    def updateChannels(self, channels=[], update=False):
+        self.log('updateChannels, channels = %s, update = %s'%(len(channels), update))
+        if len(channels) == 0: channels = self.getChannelList()
+        unchanged, difference = assertDICT(self.channelList,channels,return_diff=True)
+        self.log('updateChannels, unchanged = %s, difference = %s'%(unchanged,len(difference)))
+        # if not update and unchanged: return
+        # elif update and len(difference) == 0: return
         # if unchanged: return
-        # self.myBuilder.buildService(self.channelList, update)
-        self.myBuilder.buildService(channels, update)
-        setSetting('Last_Scan',str(time.time()))
+        self.channelList = channels
+        if self.myBuilder.buildService(channels, update): return True
+        return False
         
         
     def chkInfo(self):
-        if not getProperty('chkInfo'): return False
-        self.sysListitem = sysListItem()
-        return True
-          
+        if not isCHKInfo() or self.myMonitor.waitForAbort(.1): return False
+        return fillInfoMonitor()
+        
 
     def startService(self, silent=False):
         self.log('startService')
@@ -253,7 +255,7 @@ class Service:
         checkPVR()
         
         if not silent: 
-            msg = ': %s'%LANGUAGE(30099) if isClient() else ''
+            msg = ': %s'%LANGUAGE(30099) if self.myBuilder.m3u.isClient() else ''
             notificationProgress(LANGUAGE(30052)%(msg))
         
         self.updateChannels(self.initalizeChannels())
@@ -261,7 +263,7 @@ class Service:
         
         while not self.myMonitor.abortRequested():
             if   self.chkInfo(): continue # aggressive timing.
-            elif self.myMonitor.waitForAbort(self.wait) or self.serverStopped: break
+            elif self.myMonitor.waitForAbort(2) or self.serverStopped: break
             elif xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: # detect upcoming channel change. 
                 self.log('settings opened')
                 self.myMonitor.setPendingChange(True)

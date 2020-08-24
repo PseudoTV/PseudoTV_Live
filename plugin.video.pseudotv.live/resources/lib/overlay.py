@@ -40,7 +40,6 @@ class Overlay(xbmcgui.WindowXML):
         self.nowitem    = []
         self.nextitems  = []
         self.pvritem    = getCurrentChannelItem()
-        
         self.container  = self.getControl(40000)
         self.container.reset()
         
@@ -65,6 +64,8 @@ class Overlay(xbmcgui.WindowXML):
             ruleslist      = []#check overlay channel rules.
             self.nowitem   = self.pvritem.get('broadcastnow',{}) # current item
             self.nextitems = self.pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+            channeldata = loadJSON(self.nowitem.get('writer',{})).get('data',{})
+            for key, value in channeldata.items(): setProperty('overlay.%s'%(key),str(value))
             self.listitems.append(buildItemListItem(loadJSON(self.nowitem.get('writer',{}))))
             self.listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in self.nextitems]) 
             self.container.addItems(self.listitems)

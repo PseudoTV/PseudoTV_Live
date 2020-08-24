@@ -7,4 +7,10 @@ PseudoTV Live acts similar to normal broadcast or cable TV, complete with multip
 PseudoTV Live can integrate with all Kodi sources including various Kodi plugins ie. Plex, Netflix, etc.
 Create rich, in-depth channels with the added feature to import existing M3U/XMLTV pairs.
 
-[Custom Channel Configuration](https://rawhttps://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/channels.json.githubusercontent.com/PseudoTV/PseudoTV_Live/master/channels.json)
+[Forum](https://forum.kodi.tv/showthread.php?tid=355549)
+
+
+[Discussion](https://forum.kodi.tv/showthread.php?tid=346803)
+
+
+[Channel Configuration Example](https://rawhttps://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/channels.json.githubusercontent.com/PseudoTV/PseudoTV_Live/master/channels.json)

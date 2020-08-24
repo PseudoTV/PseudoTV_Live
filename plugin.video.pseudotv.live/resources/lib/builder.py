@@ -20,7 +20,6 @@
 
 from resources.lib.globals    import *
 from resources.lib.parser     import M3U, XMLTV, JSONRPC, Channels
-from resources.lib.fileaccess import FileLock
 from resources.lib.queue      import Worker
 
 class Builder:
@@ -35,10 +34,9 @@ class Builder:
         self.incExtras        = INCLUDE_EXTRAS #todo adv. rules
         self.maxDays          = MAX_GUIDE_DAYS
         self.fillBCTs         = ENABLE_BCTS
-        self.strictDuration   = STRICT_DURATION
+        self.grouping         = ENABLE_GROUPING
         self.saveDuration     = STORE_DURATION
         self.accurateDuration = ACCURATE_DURATION
-        self.grouping         = ENABLE_GROUPING
         self.now              = getLocalTime()
         self.start            = roundToHalfHour(self.now)
         self.dialog           = None
@@ -78,21 +76,27 @@ class Builder:
                     continue
                     
                 item['label']  = item['name']
-                item['number'] = item.get('number','')
-                item['id']     = (item.get('id','')    or getChannelID(item['name'], item['path'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
+                item['id']     = (item.get('id','')    or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
                 item['logo']   = (item.get('logo','')  or self.jsonRPC.getLogo(item['name'], item['type'], item['path'], featured=True))
                 item['radio']  = (item.get('radio','') or (item['type'] == 'MUSIC Genres' or item['path'][0].startswith('musicdb://')))
                 item['url']    = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
-                item['group']  = [ADDON_NAME]
-                if self.grouping: item['group'].extend(item.get('groups',[]))
+                # if item['xmltv']: self.parseXMLTV(item['id']) #todo opt for url xmltv file with matching id.
+                
+                if not self.grouping:
+                    item['group'] = [ADDON_NAME]
+                else: 
+                    item['group'].append(ADDON_NAME)
                 yield item
 
 
     def reload(self):
         self.log('reload')
-        self.xmltv.reset()
-        self.m3u.reset()
-        return True
+        try:
+            self.xmltv.reset()
+            self.m3u.reset()
+            return True
+        except Exception as e: self.log("reload, Failed! " + str(e), xbmc.LOGERROR)
+        return False
         
         
     def save(self):
@@ -106,26 +110,24 @@ class Builder:
         
         
     def buildService(self, channels=None, update=False):
-        self.log('buildService, update = %s'%(update))
-        if   isBusy(): return
-        elif self.reload():
-            if isClient(): 
+        self.log('buildService, channels = %s, update = %s'%(len(channels), update))
+        if self.reload():
+            if self.m3u.isClient(): 
                 self.log('buildService, returning in client mode')
-                return
+                return False
             
             if channels is None: 
                 channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
             if not channels:
                 return notificationDialog(LANGUAGE(30056))
                 
+            # todo system hanging, look into worker thread.
             # if self.saveDuration:
                 # self.queue.run()
                 
             setBusy(True)
-            self.fileLock = FileLock()
-            self.fileLock.lockFile("MasterLock")
             msg = LANGUAGE(30051 if update else 30050)
-            self.dialog = ProgressBGDialog(message=msg)
+            self.dialog = ProgressBGDialog(message=LANGUAGE(30052)%('...'))
             
             self.channelCount = len(channels)
             for idx, channel in enumerate(channels):
@@ -136,14 +138,15 @@ class Builder:
                 
                 self.buildM3U(channel, channel['radio'])
                 if isinstance(cacheResponse,list):
-                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.msg)
+                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s, %s'%(msg,self.msg))
                     self.buildXMLTV(channel, cacheResponse, channel['radio'])
                     
             self.save()
             setBusy(False)
-            self.fileLock.unlockFile('MasterLock')
-            self.fileLock.close()
             self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
+            self.log('buildService, finished')
+            return True
+        return False
 
 
     def getFileList(self, channel, radio=False):
@@ -179,9 +182,11 @@ class Builder:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(channel['id']),xbmc.LOGINFO)
                     return False
                 
-                cacheResponse = list(interleave(*cacheResponse)) # interleave multi-paths, while keeping order.
                 # todo load post json rules.
-            # if len(cacheResponse) < limit: cacheResponse = list(fillList(cacheResponse,(limit-len(cacheResponse))))
+                cacheResponse = list(interleave(*cacheResponse)) # interleave multi-paths, while keeping order.
+                # cacheResponse = removeDupsDICT(cacheResponse) # remove duplicates, back-to-back duplicates target range.
+                # if len(cacheResponse) < limit: # balance media limits, by filling randomly with duplicates.
+                    # cacheResponse.extend(list(fillList(cacheResponse,(limit-len(cacheResponse)))))
             cacheResponse = self.addScheduling(channel, cacheResponse)
             if self.fillBCTs: 
                 cacheResponse = self.injectBCTs(channel, cacheResponse)
@@ -190,27 +195,13 @@ class Builder:
         except Exception as e: self.log("getFileList, Failed! " + str(e), xbmc.LOGERROR)
         return False
             
-        
-    def getDuration(self, path, item={}, accurate=False):
-        self.log("getDuration; accurate = %s, path = %s"%(accurate,path))
-        duration = 0
-        runtime  = int(item.get('runtime','') or item.get('duration','0') or '0')
-        if accurate == False or path.startswith(('plugin://','upnp://','pvr://')): return runtime
-        elif path.startswith('stack://'): #handle "stacked" videos:
-            stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
-            for file in stack: duration += self.jsonRPC.parseDuration(file, item)
-        else: 
-            duration = self.jsonRPC.parseDuration(path, item)
-        if self.strictDuration or duration > 0: 
-            return duration
-        return runtime 
-        
-    
+
     def injectBCTs(self, channel, fileList):
         if channel['radio'] == True: 
             return fileList
         
         def buildBCT(bctType, path):
+            if path.startswith(('pvr://','upnp://','plugin://')): return # Kodi only handles stacks between local content, bug?
             duration = self.jsonRPC.parseDuration(path)
             self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
             if bctType in PRE_ROLL:
@@ -245,9 +236,14 @@ class Builder:
         for item in fileList:
             stop      = item['stop']
             endOnHour = (roundToHour(stop) - stop)
-            paths     = [item['file']]
-            orgPaths  = paths.copy()
+            file      = item['file']
             stack     =  'stack://%s'
+            if   file.startswith(('pvr://','upnp://','plugin://')): continue # Kodi only handles stacks between local content, bug?
+            elif file.startswith('stack://'):
+                paths = splitStack(file)
+            else:
+                paths = [file]
+            orgPaths  = paths.copy()
 
             for bctType in bctTypes:
                 if not bctTypes[bctType]['enabled']: continue
@@ -365,16 +361,16 @@ class Builder:
                     self.log("buildFileList, id: %s skipping strm!"%(id),xbmc.LOGINFO)
                     continue
                     
-                dur = self.getDuration(file, item, self.accurateDuration)
+                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
                     if int(item.get("year","0")) == 1601: 
                         item['year'] = 0 #default null for kodi rpc?
                     mType   = item['type']
                     label   = item['label']
-                    title   = (item.get("title",label) or label)
-                    tvtitle = item.get("showtitle","")
-                    
+                    title   = (item.get("title",'') or label)
+                    tvtitle = (item.get("showtitle","") or item.get("tvshowtitle",""))
+
                     if tvtitle:
                         # This is a TV show
                         # method  = 'episode' #todo move to rules, ie sort parameter
@@ -384,8 +380,10 @@ class Builder:
                             self.log("buildFileList, id: %s skipping extras!"%(id),xbmc.LOGINFO)
                             continue
                             
-                        if epval > 0: title = title + ' (' + str(seasonval) + 'x' + str(epval).zfill(2) + ')'
-                        item["episodetitle"] = title
+                        if epval > 0: 
+                            item["episodetitle"] = title + ' (' + str(seasonval) + 'x' + str(epval).zfill(2) + ')'
+                        else:
+                            item["episodetitle"] = title
                         label = tvtitle
                         item['tvshowtitle'] = tvtitle
                         
@@ -396,17 +394,25 @@ class Builder:
                         seasonval = None
                         label = title
             
+                    if not label: continue
+                    item['label'] = label
+                    item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or xbmc.getLocalizedString(161))
+            
                     if self.dialog is not None:
                         self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s: %s'%(self.msg,((len(fileList)*100)//PAGE_LIMIT))+'%')
                     
-                    item['label'] = label
-                    item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or xbmc.getLocalizedString(161))
-                 
+                    #unify artwork
+                    item.get('art',{})['icon']  = channel['logo']
+                    # item.get('art',{})['thumb'] = getThumb(item)
+                    
+                    #parsing missing meta
+                    if not item.get('streamdetails',{}).get('video',[]): 
+                        item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
+
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])
                     else: 
                         fileList.append(item)
-            
                 else: 
                     self.log("buildFileList, id: %s skipping no duration meta found!"%(id),xbmc.LOGINFO)
                     

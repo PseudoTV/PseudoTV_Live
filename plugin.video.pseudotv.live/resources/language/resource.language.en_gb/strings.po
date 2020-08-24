@@ -309,7 +309,7 @@ msgid "Channel Manager"
 msgstr ""
 
 msgctxt "#30073"
-msgid "Save Channel Changes?"
+msgid "Save All Channel Changes?"
 msgstr ""
 
 msgctxt "#30074"
@@ -365,19 +365,19 @@ msgid "Playlist Editor"
 msgstr ""
 
 msgctxt "#30087"
-msgid "Enter Name"
+msgid "Channel Name"
 msgstr ""
 
 msgctxt "#30088"
-msgid "Browse Path"
+msgid "Content Path"
 msgstr ""
 
 msgctxt "#30089"
-msgid "Select Groups"
+msgid "Content Group"
 msgstr ""
 
 msgctxt "#30090"
-msgid "Customize Rules"
+msgid "Channel Rules"
 msgstr ""
 
 msgctxt "#30091"
@@ -385,7 +385,7 @@ msgid "Save Changes?"
 msgstr ""
 
 msgctxt "#30092"
-msgid "Clear Settings?"
+msgid "Clear Configurations?"
 msgstr ""
 
 msgctxt "#30093"
@@ -401,7 +401,7 @@ msgid "Include STRM's"
 msgstr ""
 
 msgctxt "#30096"
-msgid "Delete User-Defined Channels?"
+msgid "Clean Start"
 msgstr ""
 
 msgctxt "#30097"
@@ -421,7 +421,7 @@ msgid "Running in Client Mode"
 msgstr ""
 
 msgctxt "#30101"
-msgid "Starting Service..."
+msgid "Starting Service"
 msgstr ""
 
 msgctxt "#30102"
@@ -434,4 +434,120 @@ msgstr ""
 
 msgctxt "#30104"
 msgid "Force Client Mode"
+msgstr ""
+
+msgctxt "#30105"
+msgid "We'll Be Right Back."
+msgstr ""
+
+msgctxt "#30106"
+msgid "Up Next"
+msgstr ""
+
+msgctxt "#30107"
+msgid "You're Watching"
+msgstr ""
+
+msgctxt "#30108"
+msgid "Stay Tuned"
+msgstr ""
+
+msgctxt "#30109"
+msgid "Later Today"
+msgstr ""
+
+msgctxt "#30110"
+msgid "Pre-defined Channels are currently not configurable."
+msgstr ""
+
+msgctxt "#30111"
+msgid "Select Channel Logo"
+msgstr ""
+
+msgctxt "#30112"
+msgid "%s Configuration Invalid"
+msgstr ""
+
+msgctxt "#30113"
+msgid "Path Verified."
+msgstr ""
+
+msgctxt "#30114"
+msgid "Radio Channel"
+msgstr ""
+
+msgctxt "#30115"
+msgid "No Duration Meta found!"
+msgstr ""
+
+msgctxt "#30116"
+msgid "Select Source Type"
+msgstr ""
+
+msgctxt "#30117"
+msgid "Close"
+msgstr ""
+
+msgctxt "#30118"
+msgid "OK"
+msgstr ""
+
+msgctxt "#30119"
+msgid "Save"
+msgstr ""
+
+msgctxt "#30120"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "#30121"
+msgid "Select Channel Name"
+msgstr ""
+
+msgctxt "#30122"
+msgid "Edit Channel %s"
+msgstr ""
+
+msgctxt "#30123"
+msgid "Enter Channel Name"
+msgstr ""
+
+msgctxt "#30124"
+msgid "Select Content Path"
+msgstr ""
+
+msgctxt "#30125"
+msgid "Select Channel Groups"
+msgstr ""
+
+msgctxt "#30126"
+msgid "Create Advanced Channel Rules"
+msgstr ""
+
+msgctxt "#30127"
+msgid "Is this a Radio/Music Channel?"
+msgstr ""
+
+msgctxt "#30128"
+msgid "Clear this Channels Configurations"
+msgstr ""
+
+msgctxt "#30129"
+msgid "Adjust Seek Padding"
+msgstr ""
+
+msgctxt "#30130"
+msgid "Settings"
+msgstr ""
+
+msgctxt "#30131"
+msgid "More Info"
+msgstr ""
+
+msgctxt "#30132"
+msgid "Welcome to %s, No Channels were found!\nAuto Tune sample channels?"
+msgstr ""
+
+msgctxt "#30133"
+msgid "Delete"
 msgstr ""

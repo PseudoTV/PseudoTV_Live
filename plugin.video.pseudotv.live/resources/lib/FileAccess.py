@@ -89,8 +89,8 @@ class FileAccess:
         try:
             if xbmcvfs.rename(path, newpath):
                 return True
-        except:
-            pass
+        except Exception as e: 
+            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
@@ -105,15 +105,15 @@ class FileAccess:
             os.rename(xbmc.translatePath(path), xbmc.translatePath(newpath))
             log("FileAccess: os.rename")
             return True
-        except:
-            pass
+        except Exception as e: 
+            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
         try:
             shutil.move(xbmc.translatePath(path), xbmc.translatePath(newpath))
             log("FileAccess: shutil.move")
             return True
-        except:
-            pass
+        except Exception as e: 
+            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
         log("FileAccess: OSError")
         raise OSError()
@@ -234,8 +234,6 @@ class FileLock:
 
 
     def refreshLocks(self):
-        log("FileLock: refreshLocks")
-
         for item in self.lockedList:
             if self.isExiting:
                 log("FileLock: IsExiting")

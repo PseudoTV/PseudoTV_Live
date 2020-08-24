@@ -20,9 +20,9 @@ from resources.lib.globals import *
 from plugin  import Plugin
 
 class Context:
-    def __init__(self, sysARG, liz):
+    def __init__(self, sysARG, writer):
         log('Context: __init__, sysARG = ' + str(sysARG))
         with busy_dialog():
-            Plugin(sysARG).contextPlay(liz,isPlaylist=True)
+            Plugin(sysARG).contextPlay(writer,isPlaylist=True)
         
-if __name__ == '__main__': Context(sys.argv, liz=xbmc.getInfoLabel('ListItem.Writer'))
+if __name__ == '__main__': Context(sys.argv, writer=getWriterfromString())
