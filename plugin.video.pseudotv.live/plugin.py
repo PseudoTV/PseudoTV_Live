@@ -65,7 +65,7 @@ class Plugin:
                 self.myBuilder.channels.delete()
                 self.myBuilder.channels.deleteSettings()
             [func() for func in [self.myBuilder.m3u.delete,self.myBuilder.xmltv.delete]]
-        return
+        return brutePVR(clean)
 
             
     def utilities(self, name):
@@ -160,15 +160,15 @@ class Plugin:
         pvritem['isPlaylist'] = isPlaylist
         nowitem   = pvritem.get('broadcastnow',{}) # current item
         nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
-        ruleslist = []#check pre-play channel rules.
         
         if nowitem:
             found = True
             setCurrentChannelItem(pvritem)
+            writer   = loadJSON(nowitem.get('writer',{}))
+            nowitem  = self.myBuilder.runActions(RULES_ACTION_PLAYBACK, writer.get('data',{}), nowitem)
             progress = nowitem['progress']
             runtime  = nowitem['runtime']
-            writer   = loadJSON(nowitem.get('writer',{}))
-            liz = buildItemListItem(writer)
+            liz      = buildItemListItem(writer)
             if (progress > self.seekTol):
                 # near end, avoid loopback; override nowitem and queue next show.
                 if (progress > ((runtime * 60) - ENDTIME_SEEK_OFFSET)): # endtime offset

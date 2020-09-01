@@ -23,6 +23,7 @@
 
 from resources.lib.globals     import *
 from resources.lib             import xmltv
+from resources.lib.rules       import RulesList
 from resources.lib.fileaccess  import FileAccess, FileLock
 from resources.lib.videoparser import VideoParser
  
@@ -42,7 +43,9 @@ def fileLocker():
 class Channels:
     def __init__(self):
         self.cache       = SimpleCache()
+        self.rules       = RulesList()
         self.channelList = (self.load() or self.getTemplate(ADDON_VERSION))
+        self.ruleList    = sorted(self.buildRules(), key=lambda k: k['id'])
         
         
     def reset(self):
@@ -156,6 +159,25 @@ class Channels:
         log('channels: deleteSettings')
         if FileAccess.delete(SETTINGS_FLE):
             notificationDialog(LANGUAGE(30016)%('SETTINGS'))
+
+
+    def buildRules(self): #All Available rules 
+        rules = self.rules.ruleList
+        rules.pop(0)
+        for rule in rules:
+            item = {'id':rule.getId(),'name':rule.getTitle(),'description':rule.getDesc(),'options':[],'action':rule.copy()}
+            for opt in range(rule.getOptionCount()):
+                item['options'].insert(opt,{'label':rule.getOptionLabel(opt),'value':rule.getOptionValue(opt)})
+            yield item
+
+
+    def getRules(self, item, channels=None): #Channel rules
+        log('channels: getRules, id = %s'%(item['id']))
+        ruleList = self.ruleList.copy()
+        if channels is None: channels = self.getAllChannels()
+        for channel in channels:
+            if channel['id'] == item['id']:
+                return channel.get('rules',[])
 
 
 class XMLTV:
@@ -459,13 +481,14 @@ class XMLTV:
 
 class M3U:
     def __init__(self): 
-        self.cache    = SimpleCache()
-        self.m3uTMP   = []
-        self.litem    = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
-        self.m3uList  = list(self.cleanSelf(self.load()))
+        self.cache        = SimpleCache()
+        self.m3uTMP       = []
+        self.litem        = '#EXTINF:0 tvg-chno=%s tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s",%s\n%s'
+        self.m3uList      = list(self.cleanSelf(self.load()))
         self.m3uList.insert(0,'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="%s"'%(self.getShift(),self.getUUID()))
         self.extImport    = getSettingBool('User_Import')
         self.extImportM3U = getSetting('Import_M3U')
+        self.client       = self.isClient()
 
 
     def getShift(self):
@@ -515,14 +538,14 @@ class M3U:
     @use_cache(28)
     def setUUID(self):
         uuid = self.genUUID()
-        setProperty('uuid',uuid)
         setSetting('uuid',uuid)
         return uuid
         
             
     def getUUID(self):
-        uuid = (getSetting('uuid') or getProperty('uuid'))
+        uuid = (getProperty('uuid') or getSetting('uuid'))
         if not uuid: uuid = self.setUUID()
+        setProperty('uuid',uuid)
         return uuid
         
 
@@ -533,7 +556,20 @@ class M3U:
         state  = m3uID != uuid
         if forced: state = True
         log('globals: isClient = %s, forced = %s, m3uID = %s, uuid = %s'%(state,forced,m3uID,uuid))
+        if state == True: self.copyNodes()
         return state
+
+
+    def copyNodes(self):
+        types = ['video','music']
+        for type in types: 
+            log('m3u: copyNodes, %s'%(type))
+            dirs, files = FileAccess.listdir(os.path.join(CACHE_LOC,type))
+            for file in files:
+                orgpath  = os.path.join(CACHE_LOC,type,file)
+                copypath = 'special://userdata/library/%s/%s'%(type,file)
+                log('m3u: copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
+                FileAccess.copy(orgpath, copypath)
 
 
     def save(self):
@@ -908,8 +944,6 @@ class JSONRPC:
         
 
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        if not sort and path.startswith('videodb://movies'): sort = {"method": "random"}
-            
         limits = self.autoPagination(id, path, limits)
         params                      = {}
         params['limits']            = {}
@@ -957,7 +991,9 @@ class JSONRPC:
             file = item.get('file','')
             fileType = item.get('filetype','file')
             if fileType == 'file':
-                if self.getDuration(file, item, accurate) > 0: return True
+                if self.getDuration(file, item, accurate) > 0:
+                    #todo test seek for support disable via adv. rule if fails.
+                    return True
             else: dirs.append(file)
         for dir in dirs: return self.existsVFS(dir, media)
         return False
@@ -1123,18 +1159,22 @@ class JSONRPC:
         # features; in-use by a channel, triggers future local caching.
         if not channelname: return
         log('getLogo: channelname = %s, type = %s'%(channelname,type))
-        icon = LOGO
-        localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
-        if FileAccess.exists(localIcon): 
+        icon      = LOGO
+        localIcon = os.path.join(IMAGE_LOC,'%s.png'%(channelname))
+        userIcon  = os.path.join(LOGO_LOC,'%s.png'%(channelname))
+        if FileAccess.exists(userIcon): 
+            log('getLogo: using user logo = %s'%(userIcon))
+            icon = userIcon
+        elif FileAccess.exists(localIcon): 
             log('getLogo: using local logo = %s'%(localIcon))
-            return localIcon
-        # elif type in ['TV Shows','TV Networks','MOVIE Studios','TV Genres','MOVIE Genres','MIXED Genres','MUSIC Genres','Custom']: 
-        icon = (self.findLogo(channelname, type, USE_COLOR, featured, ADDON_VERSION) or LOGO)
+            icon = localIcon
+        else:
+            icon = (self.findLogo(channelname, type, USE_COLOR, featured, ADDON_VERSION) or LOGO)
         log('getLogo: icon = %s'%(icon))
-        if icon in [None,ICON,LOGO,COLOR_LOGO,MONO_LOGO] and path:
+        if icon.endswith(('wlogo.png','logo.png','icon.png')):
             if isinstance(path, list): path = path[0]
-            if path.startswith('plugin://'): icon = self.getPluginMeta(path).get('icon',None)
-        if icon is None: icon = LOGO #last check to make sure a default logo is set; unneeded...
+            elif path is not None:
+                if path.startswith('plugin://'): icon = self.getPluginMeta(path).get('icon',LOGO)
         if icon.startswith(ADDON_PATH):
             icon = icon.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID))
         log('getLogo, channelname = %s, logo = %s'%(channelname,icon))

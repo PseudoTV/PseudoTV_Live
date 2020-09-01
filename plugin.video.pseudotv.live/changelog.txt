@@ -1,36 +1,44 @@
+v.0.2.1
+-Added Changelog dialog after update.
+-Added "Pre-defined" Seasonal Holiday Channel to "Mixed Other". When enabled the channel will automatically appear only during the holiday months and if matching media is found. Supported Seasons (Star Trek Day (September), Halloween (October), Christmas (December), Star Wars Day (May)).
+-Fixed Misc. Channel Manager issues.
+-Added Node/Smartplaylist "caching" for client instances. Nodes and Smartplaylists copy from server to client needed for channel building.
+
 v.0.2.0
-Added "Channel Manager" to settings. Configure "User-Defined" here!
-Misc. Tweaks & Improvements.
-Logo folder moved to "cache/logos"
-Added Seek Padding adjustment to settings.
-Added "Start Clean" option to utilities menu. Removes all files (m3u,xmltv,genres,settings,channels).
-Added "More Info" context menu item.
-Misc. Community Feedback Tweaks & Improvements.
+-Added "Channel Manager" to settings. Configure "User-Defined" here!
+-Added Misc. Tweaks & Improvements.
+-Improved Logo folders, moved to "cache/logos"
+-Added Seek Padding adjustment to settings.
+-Added "Start Clean" option to utilities menu. Removes all files (m3u,xmltv,genres,settings,channels).
+-Added "More Info" context menu item.
+-Added Misc. Community Feedback Tweaks & Improvements.
 
 v.0.1.4
-Removed Static intermission, replaced with Modern alterative. 
-Improved Thumbnail & streamdetail parsing. 
-Added "Auto Tuning" on initial run or when no channels are selected.
-Added "Force Client Mode" under options. Manually flag PseudoTV instance as client; bypassing automatic detection added to v.0.1.3.
+-Removed Static intermission, replaced with Modern alterative. 
+-Improved Thumbnail & streamdetail parsing. 
+-Added "Auto Tuning" on initial run or when no channels are selected.
+-Added "Force Client Mode" under options. Manually flag PseudoTV instance as client; bypassing automatic detection added to v.0.1.3.
 
 v.0.1.3
-Improved Logo detection.
-Improved overall Channel loading time.
-Fixed "New" programme flagging.
-Fixed "OnDemand" playback issues.
-Moved channels.json to user-selected folder location to allow for multi-room configurations.
-Added Automatic Client Mode: automatically disables client side m3u/xmltv updating. In Multi-Room environments users can edit channel lineups from any instance of PseudoTV; However, only one instance of PseudoTV is allowed to write to m3u/xmltv inorder to keep lineup/cache congruency.
-Added "Pre-defined" Channel sync for client instances. Settings on local client will reflect server configurations.
+-Improved Logo detection.
+-Improved overall Channel loading time.
+-Fixed "New" programme flagging.
+-Fixed "OnDemand" playback issues.
+-Moved channels.json to user-selected folder location to allow for multi-room configurations.
+-Added Automatic Client Mode: automatically disables client side m3u/xmltv updating. In Multi-Room environments users can edit channel lineups from any instance of PseudoTV; However, only one instance of PseudoTV is allowed to write to m3u/xmltv inorder to keep lineup/cache congruency.
+-Added "Pre-defined" Channel sync for client instances. Settings on local client will reflect server configurations.
 
 v.0.1.2
-Moved Predefined channels to channels.json config. (Persistent channel numbers).
-BCT (Bumpers, Commercials, Trailers) injection added, currently supports Ratings bumper packs.
-Refactoring background service, Improved channels management.
+-Moved Predefined channels to channels.json config. (Persistent channel numbers).
+-Added BCT (Bumpers, Commercials, Trailers) injection, currently supports Ratings bumper packs.
+-Improved background service.
+-Improved channel management.
 
 v.0.1.1
-Added: "Play from here" to context menu options, starts a channel playlist from the position selected. Moved Files over to new file structure in preparation for second wave beta features.
-Added: Pre-defined music genres for PVR Radio
-Fixed: Misc. Channel building issues, optimized background service. Improved media interleaving. 
+-Added "Play from here" to context menu options, starts a channel playlist from the position selected. Moved Files over to new file structure in preparation for second wave beta features.
+-Added Pre-defined music genres for PVR Radio
+-Fixed Misc. Channel building issues, optimized background service. 
+-Improved media interleaving. 
 
 v.0.1.0
-Initial release
+-Initial release

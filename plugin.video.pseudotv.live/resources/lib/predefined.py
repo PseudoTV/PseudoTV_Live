@@ -37,6 +37,7 @@ class Predefined:
                          'MUSIC_Genres'      : self.createMusicGenrePlaylist}
                         
         self.others   = {LANGUAGE(30078) : self.createMixedRecent,
+                         LANGUAGE(30141) : self.createSeasonal,
                          LANGUAGE(30079) : self.createPVRRecordings} # home for misc. predefined channel paths. todo seasonal channel
 
         # conflict with selection to channels.json feature. paths have to be static for proper id match
@@ -152,3 +153,7 @@ class Predefined:
 
     def createGenreMixedPlaylist(self, genre):
         return [self.createTVGenrePlaylist(genre),self.createMovieGenrePlaylist(genre)]
+        
+        
+    def createSeasonal(self):
+        return ['plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}']

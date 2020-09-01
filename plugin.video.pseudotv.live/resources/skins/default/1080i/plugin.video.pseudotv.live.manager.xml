@@ -114,6 +114,7 @@
           <align>center</align>
           <aligny>center</aligny>
           <font>font25_title</font>
+          <visible>!Control.IsVisible(7)</visible>
           <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
         </control>
         <control type="image" id="11">
@@ -125,7 +126,7 @@
           <align>center</align>
           <aligny>center</aligny>
           <aspectratio>keep</aspectratio>
-          <visible>Control.IsVisible(5)</visible>
+          <visible>Control.IsVisible(5)|Control.IsVisible(7)</visible>
           <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
         </control>
         <control type="image" id="12">
@@ -139,6 +140,17 @@
           <aspectratio>keep</aspectratio>
           <visible>Control.IsVisible(6)</visible>
           <texture fallback="logo.png">$INFO[Container(6).ListItem.Art(icon)]</texture>
+        </control>
+        <control type="label" id="">
+          <left>29</left>
+          <top>375</top>
+          <height>70</height>
+          <width>320</width>
+          <font>font25_title</font>
+				  <label>[B]$INFO[Container(5).ListItem.Property(chname)][/B]</label>
+          <aligny>center</aligny>
+          <align>center</align>
+          <shadowcolor>black</shadowcolor>
         </control>
       </control>
 
@@ -326,6 +338,83 @@
         </focusedlayout>
 			</control>  
       
+      <control type="list" id="7">
+				<description>Rule Items</description>
+				<left>429</left>
+				<top>100</top>
+				<width>1060</width>
+				<height>700</height>
+				<onleft>Control.SetFocus(10)</onleft>
+				<onright>Control.SetFocus(9001)</onright>
+        <itemlayout width="1060" height="63">
+          <control type="image">
+            <left>80</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <texture border="63"></texture>
+            <bordersize>63</bordersize>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>left</align>
+            <font>font12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label</info>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>right</align>
+            <font>font12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label2</info>
+          </control>
+        </itemlayout>
+        <focusedlayout width="1060" height="63">
+          <control type="image">
+            <left>0</left>
+            <width>1060</width>
+            <height>63</height>
+            <colordiffuse>FF12A0C7</colordiffuse>
+            <texture border="63">white.png</texture>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>left</align>
+            <font>font12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label</info>
+          </control>
+          <control type="label">
+            <left>0</left>
+            <top>0</top>
+            <width>1060</width>
+            <height>63</height>
+            <aligny>center</aligny>
+            <align>right</align>
+            <font>fontt12</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <textoffsetx>40</textoffsetx>
+            <info>ListItem.Label2</info>
+          </control>
+        </focusedlayout>
+			</control>  
+      
       <control type="textbox">
         <description>description area</description>
 				<left>429</left>
@@ -354,6 +443,19 @@
         <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
       </control>
       
+      <control type="textbox">
+        <description>description area</description>
+				<left>429</left>
+        <top>820</top>
+        <width>1060</width>
+        <height>70</height>
+        <font>font12</font>
+        <align>justify</align>
+        <label condition="Control.IsVisible(7)">$INFO[Container(7).ListItem.Property(description)]</label>
+        <textcolor>FF12A0C7</textcolor>
+        <visible>Control.IsVisible(7)</visible>
+        <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+      </control>
       
 			<control type="scrollbar" id="50">
 				<left>1489</left>
@@ -364,6 +466,7 @@
         <onright>9001</onright>
         <onleft condition="Control.IsVisible(5)">Control.SetFocus(5)</onleft>
         <onleft condition="Control.IsVisible(6)">Control.SetFocus(6)</onleft>
+        <onleft condition="Control.IsVisible(7)">Control.SetFocus(7)</onleft>
 				<onright>9001</onright>
         <visible>Control.IsVisible(5)</visible>
 				<animation effect="fade" start="0" end="100" delay="300" time="320">WindowOpen</animation>
@@ -421,7 +524,20 @@
           <visible>!String.IsEmpty(Control.GetLabel(9003)) + !String.IsEmpty(Container(5).ListItem.Label2)</visible>
         </control>
 			</control>
-      
+              
+      <control type="label">
+        <description>version label</description>
+				<left>1710</left>
+        <top>820</top>
+        <width>1060</width>
+        <height>70</height>
+        <font>font12</font>
+        <align>justify</align>
+        <label>[B]$INFO[System.AddonVersion(plugin.video.pseudotv.live),v.,][/B]</label>
+        <textcolor>FF696969</textcolor>
+        <autoscroll time="3000" delay="5000" repeat="5000">true</autoscroll>
+      </control>
 		</control>
+
 	</controls>
 </window>

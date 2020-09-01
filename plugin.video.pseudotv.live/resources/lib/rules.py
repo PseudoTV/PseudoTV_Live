@@ -19,9 +19,6 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
 
-def listTitle(list):
-     return [item.title() for item in list]
- 
 class RulesList:
     def __init__(self):
         self.ruleList = [BaseRule(),HandleMethodOrder(),HandleFilter()]
@@ -44,27 +41,27 @@ class RulesList:
 
 class BaseRule:
     def __init__(self):
-        self.name = ""
-        self.description = ""
+        self.name         = ""
+        self.description  = ""
         self.optionLabels = []
         self.optionValues = []
-        self.myId = 0
-        self.actions = 0
-
-
-    def getName(self):
-        return self.name
+        self.myId         = 0
+        self.actions      = 0
 
 
     def getTitle(self):
         return self.name
+        
+        
+    def getDesc(self):
+        return self.description
 
 
     def getOptionCount(self):
         return len(self.optionLabels)
 
 
-    def onAction(self, act, optionindex):
+    def onAction(self, optionindex):
         return ''
 
 
@@ -79,6 +76,12 @@ class BaseRule:
             return self.optionValues[index]
         return ''
 
+
+    def getselectBoxOptions(self, index):
+        if index >= 0 and index < len(self.selectBoxOptions):
+            return self.selectBoxOptions[index]
+        return ''
+    
 
     def getRuleIndex(self, channeldata):
         index = 0
@@ -102,7 +105,7 @@ class BaseRule:
 
 
     def log(self, msg, level = xbmc.LOGDEBUG):
-        log("Rule " + self.getTitle() + ": " + msg, level)
+        log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
     def validate(self):
@@ -116,102 +119,6 @@ class BaseRule:
     def validateTextBox(self, optionindex, length):
         if len(self.optionValues[optionindex]) > length:
             self.optionValues[optionindex] = self.optionValues[optionindex][:length]
-
-
-    def onActionTextBox(self, act, optionindex):
-        action = act.getId()
-        if act.getId() == ACTION_SELECT_ITEM:
-            keyb = xbmc.Keyboard(self.optionValues[optionindex], self.name, False)
-            keyb.doModal()
-
-            if keyb.isConfirmed():
-                self.optionValues[optionindex] = keyb.getText()
-        button = act.getButtonCode()
-
-        # Upper-case values
-        if button >= 0x2f041 and button <= 0x2f05b:
-            self.optionValues[optionindex] += chr(button - 0x2F000)
-
-        # Lower-case values
-        if button >= 0xf041 and button <= 0xf05b:
-            self.optionValues[optionindex] += chr(button - 0xEFE0)
-
-        # Numbers
-        if action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
-            self.optionValues[optionindex] += chr(action - ACTION_NUMBER_0 + 48)
-
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
-        # Delete
-        if button == 0xF02E:
-            self.optionValues[optionindex] = ''
-
-        # Space
-        if button == 0xF020:
-            self.optionValues[optionindex] += ' '
-
-        if xbmc.getCondVisibility("Window.IsVisible(10111)"):
-            log("shutdown window is visible")
-            xbmc.executebuiltin("Dialog.close(10111)")
-
-
-    def onActionDateBox(self, act, optionindex):
-        log("onActionDateBox")
-        if act.getId() == ACTION_SELECT_ITEM:
-            dlg = xbmcgui.Dialog()
-            info = dlg.numeric(1, self.optionLabels[optionindex], self.optionValues[optionindex])
-
-            if info != None:
-                self.optionValues[optionindex] = info
-
-
-    def onActionTimeBox(self, act, optionindex):
-        log("onActionTimeBox")
-        action = act.getId()
-
-        if action == ACTION_SELECT_ITEM:
-            dlg = xbmcgui.Dialog()
-            info = dlg.numeric(2, self.optionLabels[optionindex], self.optionValues[optionindex])
-
-            if info != None:
-                if info[0] == ' ':
-                    info = info[1:]
-
-                if len(info) == 4:
-                    info = "0" + info
-                self.optionValues[optionindex] = info
-        button = act.getButtonCode()
-
-        # Numbers
-        if action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
-            value = action - ACTION_NUMBER_0
-            length = len(self.optionValues[optionindex])
-
-            if length == 0:
-                if value <= 2:
-                    self.optionValues[optionindex] = chr(value + 48)
-            elif length == 1:
-                if int(self.optionValues[optionindex][0]) == 2:
-                    if value < 4:
-                        self.optionValues[optionindex] += chr(value + 48)
-                else:
-                    self.optionValues[optionindex] += chr(value + 48)
-            elif length == 2:
-                if value < 6:
-                    self.optionValues[optionindex] += ":" + chr(value + 48)
-            elif length < 5:
-                self.optionValues[optionindex] += chr(value + 48)
-
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                if len(self.optionValues[optionindex]) == 4:
-                    self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
 
 
     def validateTimeBox(self, optionindex):
@@ -241,88 +148,14 @@ class BaseRule:
             self.optionValues[optionindex] = "00:00"
             return
 
-                
-    def onActionSingleSelect(self, act, optionindex, header=ADDON_NAME, psel=-1):
-        log("onActionSingleSelect")
-        if act.getId() in ACTION_SELECT_ITEM:
-            info = xbmcgui.Dialog().select(header, self.selectBoxOptions[optionindex], preselect=psel)
-            if info > -1: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][info]
-                
-                
-    def onActionBrowse(self, act, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
-        log("onActionBrowse")
-        if act.getId() == ACTION_SELECT_ITEM:
-            info = browseDialog(multi, type, header, shares, mask, useThumbs, treatAsFolder, default, prompt)
-            if len(info) > -1: 
-                self.optionValues[optionindex] = info 
-                     
-                
-    def onActionSelectBox(self, act, optionindex):
-        if act.getId() == ACTION_SELECT_ITEM:
-            optioncount = len(self.selectBoxOptions[optionindex])
-            cursel = -1
-
-            for i in range(optioncount):
-                if self.selectBoxOptions[optionindex][i] == self.optionValues[optionindex]:
-                    cursel = i
-                    break
-
-            cursel += 1
-            if cursel >= optioncount:
-                cursel = 0
-            self.optionValues[optionindex] = self.selectBoxOptions[optionindex][cursel]
-
-
-    def onActionDaysofWeekBox(self, act, optionindex):
-        log("onActionDaysofWeekBox")
-
-        if act.getId() == ACTION_SELECT_ITEM:
-            keyb = xbmc.Keyboard(self.optionValues[optionindex], self.name, False)
-            keyb.doModal()
-
-            if keyb.isConfirmed():
-                self.optionValues[optionindex] = keyb.getText().upper()
-
-        button = act.getButtonCode()
-
-        # Remove the shift key if it's there
-        if button >= 0x2F041 and button <= 0x2F05B:
-            button -= 0x20000
-
-        # Pressed some character
-        if button >= 0xF041 and button <= 0xF05B:
-            button -= 0xF000
-
-            # Check for UMTWHFS
-            if button == 85 or button == 77 or button == 84 or button == 87 or button == 72 or button == 70 or button == 83:
-                # Check to see if it's already in the string
-                loc = self.optionValues[optionindex].find(chr(button))
-
-                if loc != -1:
-                    self.optionValues[optionindex] = self.optionValues[optionindex][:loc] + self.optionValues[optionindex][loc + 1:]
-                else:
-                    self.optionValues[optionindex] += chr(button)
-
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
-
-        if xbmc.getCondVisibility("Window.IsVisible(10111)"):
-            log("shutdown window is visible")
-            xbmc.executebuiltin("Dialog.close(10111)")
-
 
     def validateDaysofWeekBox(self, optionindex):
         log("validateDaysofWeekBox")
         daysofweek = "UMTWHFS"
         newstr = ''
-
         for day in daysofweek:
             loc = self.optionValues[optionindex].find(day)
-
-            if loc != -1:
-                newstr += day
+            if loc != -1: newstr += day
         self.optionValues[optionindex] = newstr
 
 
@@ -338,58 +171,88 @@ class BaseRule:
 
 
     def validateDigitBox(self, optionindex, minimum, maximum, default):
-        if len(self.optionValues[optionindex]) == 0:
-            return
+        if len(self.optionValues[optionindex]) == 0: return
 
         try:
             val = int(self.optionValues[optionindex])
-
             if val >= minimum and val <= maximum:
                 self.optionValues[optionindex] = str(val)
             return
-        except:
-            pass
+        except: pass
         self.optionValues[optionindex] = str(default)
 
+   
+    def onActionToggleBool(self, state):
+        log('onActionToggleBool, state = %s'%(state))
+        self.optionValues[optionindex] = not state
 
-    def onActionDigitBox(self, act, optionindex):
-        action = act.getId()
-        if action == ACTION_SELECT_ITEM:
-            dlg = xbmcgui.Dialog()
-            value = dlg.numeric(0, self.optionLabels[optionindex], self.optionValues[optionindex])
 
-            if value != None:
-                self.optionValues[optionindex] = value
-        button = act.getButtonCode()
+    def onActionTextBox(self, optionindex):
+        value = inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        if value: self.optionValues[optionindex] = value
+        
 
-        # Numbers
-        if action >= ACTION_NUMBER_0 and action <= ACTION_NUMBER_9:
-            self.optionValues[optionindex] += chr(action - ACTION_NUMBER_0 + 48)
+    def onActionDateBox(self, optionindex):
+        log("onActionDateBox")
+        info =  inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        if info != None: self.optionValues[optionindex] = info
 
-        # Backspace
-        if button == 0xF008:
-            if len(self.optionValues[optionindex]) >= 1:
-                self.optionValues[optionindex] = self.optionValues[optionindex][:-1]
 
-        # Delete
-        if button == 0xF02E:
-            self.optionValues[optionindex] = ''
+    def onActionTimeBox(self, optionindex):
+        log("onActionTimeBox")
+        info = inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        if info != None:
+            if info[0] == ' ': info = info[1:]
+            if len(info) == 4: info = "0" + info
+            self.optionValues[optionindex] = info
 
+
+    def onActionSelect(self, optionindex, header=ADDON_NAME, psel=-1, multi=False):
+        log("onActionSelect")
+        select = selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
+        if select is not None: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
-    def onActionSelectDialog(self, act, optionindex, header=ADDON_NAME, psel=-1):
-        if act.getId() == ACTION_SELECT_ITEM:
-            info = xbmcgui.Dialog().select(header, self.selectBoxOptions[optionindex], preselect=psel)
-            if info > -1: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][info]
+          
+    def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
+        log("onActionBrowse")
+        info = browseDialog(yype, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
+        if info is not None: self.optionValues[optionindex] = info 
+                     
                 
-                       
+    def onActionSelectBox(self, optionindex):
+        optioncount = len(self.selectBoxOptions[optionindex])
+        cursel = -1
+
+        for i in range(optioncount):
+            if self.selectBoxOptions[optionindex][i] == self.optionValues[optionindex]:
+                cursel = i
+                break
+
+        cursel += 1
+        if cursel >= optioncount:
+            cursel = 0
+        self.optionValues[optionindex] = self.selectBoxOptions[optionindex][cursel]
+
+
+    def onActionDaysofWeekBox(self, optionindex):
+        log("onActionDaysofWeekBox")
+        value = inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        if value: self.optionValues[optionindex] = value.upper()
+
+
+    def onActionDigitBox(self, optionindex):
+        self.optionValues[optionindex] = inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+
+
 class HandleMethodOrder(BaseRule):
     def __init__(self):
-        self.name = "Limit & Sort Methods"
-        self.optionLabels = ['Limit','Method','Order','Ignore Folders']
-        self.optionValues = ['25', 'Random','Ascending','False']
-        self.myId = 19
-        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
-        self.selectBoxOptions = [PAGE_LIMIT, sorted(listTitle(JSON_METHOD)), sorted(listTitle(JSON_ORDER)), ['True', 'False']]
+        self.myId             = 19
+        self.name             = "Limit & Sort Methods"
+        self.description      = ""
+        self.optionLabels     = ['Limit','Method','Order','Ignore Folders']
+        self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
+        self.actions          = RULES_ACTION_CHANNEL_START | RULES_ACTION_CHANNEL_STOP
+        self.selectBoxOptions = [[n for n in range(25, 275, 25)], sorted(JSON_METHOD), sorted(JSON_ORDER), [True, False]]
 
         
     def copy(self):
@@ -400,43 +263,39 @@ class HandleMethodOrder(BaseRule):
         return self.name
 
 
-    def onAction(self, act, optionindex):
-        if optionindex == 1:
-            focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item.title() == self.optionValues[optionindex].title()][0]
-            self.onActionSelectDialog(act, optionindex, 'Select Sort Method', focus)
-        else:
-            self.onActionSelectBox(act, optionindex)
-        if isinstance(self.optionValues[optionindex], (basestring, unicode)):
-            return self.optionValues[optionindex].title()
+    def onAction(self, optionindex):
+        focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]][0]
+        self.onActionSelect(optionindex, 'Select %s'%(self.optionLabels[optionindex]), focus)
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, channelList, channeldata):
         #"sort": {"order": "ascending", "ignorefolders": "false", "method": "random"}
-        if actionid == RULES_ACTION_START:
+        if actionid == RULES_ACTION_CHANNEL_START:
             self.storedLimitValue = channelList.mediaLimit
-            self.storedSortValue = channelList.fileListSort
-            sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": (self.optionValues[2] == "True")}
+            self.storedSortValue  = channelList.fileListSort
+            sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": (self.optionValues[2])}
             log("Option for HandleMethodOrder is Method = " + self.optionValues[0] + " Order = " + self.optionValues[1]+ " Ignore = " + str(self.optionValues[2]))
             for i in range(len(self.optionValues)):
                 if len(self.optionValues[i]) == 0:
                     return channeldata
-            channelList.mediaLimit =  int(self.optionValues[0])
+            channelList.mediaLimit   = self.optionValues[0]
             channelList.fileListSort = sort
-        elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
-            channelList.mediaLimit  = self.storedLimitValue
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
+            channelList.mediaLimit    = self.storedLimitValue
             channelList.fileListSort  = self.storedSortValue
         return channeldata
 
 
 class HandleFilter(BaseRule):
     def __init__(self):
-        self.name = "Filter Content"
-        self.myId = 20
-        self.actions = RULES_ACTION_START | RULES_ACTION_FINAL_MADE | RULES_ACTION_FINAL_LOADED
+        self.myId             = 20
+        self.name             = "Filter Content"
+        self.description      = ""
+        self.actions          = RULES_ACTION_CHANNEL_START | RULES_ACTION_CHANNEL_STOP
         self.optionLabels     = ['Field','Operator','Value']
-        self.optionValues     = ['Showtitle','Contains','']
-        self.selectBoxOptions = [sorted(listTitle(JSON_FILES)), sorted(listTitle(JSON_OPERATORS))]
+        self.optionValues     = ['showtitle','contains','']
+        self.selectBoxOptions = [sorted(JSON_FILE_ENUM), sorted(JSON_OPERATORS)]
         
 
     def copy(self): 
@@ -447,26 +306,24 @@ class HandleFilter(BaseRule):
         return self.name
         
         
-    def onAction(self, act, optionindex):
+    def onAction(self, optionindex):
         if optionindex == 2:
-            self.onActionTextBox(act, optionindex)
-            self.validate()
+            self.onActionTextBox(optionindex)
         else: 
-            items = [item.title() for item in self.selectBoxOptions[optionindex]]
-            focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item.title() == self.optionValues[optionindex].title()][0]
-            self.onActionSelectDialog(act, optionindex, 'Select Filter %s'%(self.optionLabels[optionindex]), focus)
-        if isinstance(self.optionValues[optionindex], (basestring, unicode)):
-            return self.optionValues[optionindex].title()
+            focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]][0]
+            self.onActionSelect(optionindex, 'Select Filter %s'%(self.optionLabels[optionindex]), focus)
+        self.validate(optionindex)
         return self.optionValues[optionindex]
         
         
-    def validate(self): 
-        self.validateTextBox(0, 240)
+    def validate(self, optionindex):
+        if optionindex == 2:
+            self.validateTextBox(0, 240)
 
 
     def runAction(self, actionid, channelList, channeldata):
         #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
-        if actionid == RULES_ACTION_START: 
+        if actionid == RULES_ACTION_CHANNEL_START: 
             self.storedFilterValue = channelList.fileListFilter
             filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": urllib.quote((self.optionValues[2]))}
             log("Filter for HandleFilter is = " + str(filter))
@@ -474,32 +331,6 @@ class HandleFilter(BaseRule):
                 if len(self.optionValues[i]) == 0:
                     return channeldata
             channelList.fileListFilter = filter
-        elif actionid == RULES_ACTION_FINAL_MADE or actionid == RULES_ACTION_FINAL_LOADED:
+        elif actionid == RULES_ACTION_CHANNEL_STOP:
             channelList.fileListFilter = self.storedFilterValue
-        return channeldata  
-        
-        
-        
-        
-        
-        
-        
-            # def loadRules(self, channelID):
-        # ruleList  = []
-        # listrules = RulesList()
-        # try:
-            # rulecount = int(getSetting('Channel_%s_rulecount'%(channelID)))
-            # for i in range(rulecount):
-                # ruleid = int(getSetting('Channel_%s_rule_%s_id'%(channelID,i + 1)))
-
-                # for rule in listrules.ruleList:
-                    # if rule.getId() == ruleid:
-                        # ruleList.append(rule.copy())
-
-                        # for x in range(rule.getOptionCount()):
-                            # ruleList[-1].optionValues[x] = getSetting('Channel_%s_rule_%s_opt_%s'%(channelID,i + 1,x + 1))
-                        # break
-        # except: ruleList = []
-        # return ruleList
-        
-                
+        return channeldata

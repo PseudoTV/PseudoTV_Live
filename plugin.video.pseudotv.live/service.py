@@ -225,8 +225,7 @@ class Service:
         lastCheck = float(getSetting('Last_Scan') or 0)
         if (time.time() > (lastCheck + UPDATE_OFFSET)):
             clearProperty("USER_LOG")
-            if self.updateChannels(update=True):
-                setSetting('Last_Scan',str(time.time()))
+            self.updateChannels(update=True)
         
         
     def updateChannels(self, channels=[], update=False):
@@ -238,7 +237,9 @@ class Service:
         # elif update and len(difference) == 0: return
         # if unchanged: return
         self.channelList = channels
-        if self.myBuilder.buildService(channels, update): return True
+        if self.myBuilder.buildService(channels, update):
+            setSetting('Last_Scan',str(time.time()))
+            return True
         return False
         
         
@@ -249,13 +250,13 @@ class Service:
 
     def startService(self, silent=False):
         self.log('startService')
-        setBusy(False)
         self.serverStopped = False
+        setBusy(False)
         self.myMonitor.setPendingChange(False)
-        checkPVR()
+        self.myConfig.runInit()
         
         if not silent: 
-            msg = ': %s'%LANGUAGE(30099) if self.myBuilder.m3u.isClient() else ''
+            msg = ': %s'%LANGUAGE(30099) if self.myBuilder.m3u.client else ''
             notificationProgress(LANGUAGE(30052)%(msg))
         
         self.updateChannels(self.initalizeChannels())

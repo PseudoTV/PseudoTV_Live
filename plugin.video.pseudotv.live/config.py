@@ -33,11 +33,27 @@ class Config:
         self.TV_Info       = [[],[]]
         self.MOVIE_Info    = [[],[]]
         self.MUSIC_Info    = []
+        self.InitThread    = threading.Timer(0.5, self.runInit)
         self.spoolThread   = threading.Timer(0.5, self.spoolItems)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+        log('%s: %s'%(self.__class__.__name__,msg),level)
+
+    
+    def runInitThread(self):
+        self.log('runInitThread')
+        if self.InitThread.isAlive(): 
+            self.InitThread.cancel()
+        self.InitThread = threading.Timer(5.0, self.runInit)
+        self.InitThread.name = "InitThread"
+        self.InitThread.start()
+
+
+    def runInit(self):
+        self.log('runInit')
+        chkPVR()
+        chkVersion()
 
 
     def startSpooler(self, wait=5.0):
@@ -80,7 +96,7 @@ class Config:
  
  
     def getMixedMisc(self):
-        return [LANGUAGE(30078),LANGUAGE(30079)]
+        return [LANGUAGE(30078),LANGUAGE(30141),LANGUAGE(30079)]
  
  
     def getMusicGenres(self):
@@ -131,7 +147,7 @@ class Config:
         
         
     def buildPredefined(self, param=None, autoTune=None):
-        self.log('buildPredefined, param = %s'%(param))
+        self.log('buildPredefined, param = %s, autoTune = %s'%(param,autoTune))
         setBusy(True)
         escape = autoTune is not None
         with busy_dialog(escape):
@@ -162,7 +178,7 @@ class Config:
     
     def checkPredefinedSelection(self):
         self.log('checkPredefinedSelection')
-        if self.m3u.isClient():
+        if self.m3u.client:
             params = self.getPredefinedSelection()
             [self.setPredefinedSelection(param,type) for type, param in params.items()]
         else:

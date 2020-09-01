@@ -62,13 +62,15 @@ OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
 CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
+CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 VIDEO_EXTS          = xbmc.getSupportedMedia('video')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture')
 
-IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
-COLOR_LOGO          = os.path.join(IMAGE_LOC,'logo.png')
-MONO_LOGO           = os.path.join(IMAGE_LOC,'wlogo.png')
+IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
+MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
+MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 
 PVR_CLIENT          = 'pvr.iptvsimple'
 LANG                = 'en' #todo
@@ -80,7 +82,7 @@ UPDATE_OFFSET       = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60)
 
 CHANNEL_LIMIT       = 999
 CHAN_TYPES          = ['TV_Networks','TV_Shows','TV_Genres','MOVIE_Genres','MOVIE_Studios','MIXED_Genres','MIXED_Other','MUSIC_Genres','RECOMMENDED_Other'] 
-GROUP_TYPES         = ['TV Shows','TV Networks','TV Genres','Movie Genres','Mixed Genres','Music Genres','Music','Radio','Movie Studios','Mixed','Other','Favorite','Recommended','Addon','Plugin','Directory','Playlist','Smartplaylist','UPNP','PVR']
+GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', 'Mixed Genres', 'Mixed Movies', 'Mixed TV', 'Movie Genres', 'Movie Studios', 'Movies', 'Music', 'Music Genres', 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', 'Recommended', 'Smartplaylist', 'TV', 'TV Genres', 'TV Networks', 'TV Shows', 'UPNP']
 CHANNEL_RANGE       = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
 BCT_TYPES           = ['bumper','commercial','trailer','rating']
 PRE_ROLL            = ['bumper','rating']
@@ -95,16 +97,30 @@ JSON_OPERATORS      = ["contains","doesnotcontain","is","isnot","startswith","en
 JSON_RETURN_TYPES   = {'album':str,'albumartist':list,'albumartistid':list,'albumid':int,'albumlabel':str,'album':str,'albumstatus':str,'bitrate':int,'bpm':int,'cast':list,'channels':int,'comment':str,'compilation':bool,'contributors':str,'country':list,'customproperties':dict,'description':str,'disc':int,'disctitle':str,'displaycomposer':str,'displayconductor':str,'displaylyricist':str,'displayorchestra':str,'duration':int,'dynpath':str,'episode':int,'episodeguide':str,'firstaired':str,'id':int,'imdbnumber':str,'isboxset':bool,'lyrics':str,'mediapath':str,'mood':list,'mpaa':str,'musicbrainzartistid':list,'musicbrainztrackid':str,'originaldate':str,'originaltitle':str,'plotoutline':str,'premiered':str,'productioncode':str,'releasedate':str,'album':str,'samplerate':int,'season':int,'set':str,'setid':int,'showlink':list,'showtitle':str,'sorttitle':str,'specialsortepisode':int,'specialsortseason':int,'stu]dio':list,'style':list,'tag':list,'tagline':str,'theme':list,'top250':int,'totaldiscs':int,'track':int,'trailer':str,'tvshowid':int,'type':str,'uniqueid':int,'votes':str,'watchedepisodes':int,'writer':list}
 LISTITEM_TYPES      = {'label': (str,list),'genre': (str,list),'country': (str,list),'year': int,'episode': int,'season': int,'sortepisode': int,'sortseason': int,'episodeguide': str,'showlink': (str,list),'top250': int,'setid': int,'tracknumber': int,'rating': float,'userrating': int,'playcount': int,'overlay': int,'cast': list,'castandrole': list,'director': (str,list),'mpaa': str,'plot': str,'plotoutline': str,'title': str,'originaltitle': str,'sorttitle': str,'duration': int,'studio': (str,list),'tagline': str,'writer': (str,list),'tvshowtitle': str,'premiered': str,'status': str,'set': str,'setoverview': str,'tag': (str,list),'imdbnumber': str,'code': str,'aired': str,'credits': (str,list),'lastplayed': str,'album': str,'artist': list,'votes': str,'path': str,'trailer': str,'dateadded': str,'mediatype': str,'dbid': int}
 
-# Maximum is 10 for this
-RULES_PER_PAGE               = 7
-RULES_ACTION_START           = 1
-RULES_ACTION_JSON            = 2
-RULES_ACTION_FINAL_MADE      = 32
-RULES_ACTION_FINAL_LOADED    = 64
-NOTIFICATION_CHECK_TIME      = 5.0
-NOTIFICATION_TIME_BEFORE_END = 90
-NOTIFICATION_DISPLAY_TIME    = 8
-CHANNELBUG_CHECK_TIME        = 15.0
+#per channel rule limit
+RULES_PER_PAGE                   = 10
+#builder
+RULES_ACTION_CHANNEL_CREATION    = 1 
+RULES_ACTION_START               = 2
+RULES_ACTION_CHANNEL_START       = 3
+RULES_ACTION_CHANNEL_JSON        = 4
+RULES_ACTION_CHANNEL_ITEM        = 5
+RULES_ACTION_CHANNEL_LIST        = 6
+RULES_ACTION_CHANNEL_STOP        = 7
+RULES_ACTION_CHANNEL_BEFORE_TIME = 8
+RULES_ACTION_CHANNEL_AFTER_TIME  = 9
+RULES_ACTION_STOP                = 10
+#player
+RULES_ACTION_PLAYBACK            = 11
+#overlay
+RULES_ACTION_OVERLAY_START       = 20
+RULES_ACTION_OVERLAY_STOP        = 21
+
+#overlay globals
+NOTIFICATION_CHECK_TIME          = 5.0
+NOTIFICATION_TIME_BEFORE_END     = 90
+NOTIFICATION_DISPLAY_TIME        = 8
+CHANNELBUG_CHECK_TIME            = 15.0
 
 # Actions
 ACTION_PREVIOUS_MENU         = [9, 10, 92, 216, 247, 257, 275, 61467, 61448, 110]
@@ -190,8 +206,11 @@ def notificationProgress(message, header=ADDON_NAME, time=4):
         dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia,header=header)
     return ProgressBGDialog(100,control=dia)
     
+def okDialog(msg, heading=ADDON_NAME):
+    return xbmcgui.Dialog().ok(heading, msg)
+    
 def textviewer(msg, heading=ADDON_NAME, usemono=False):
-    xbmcgui.Dialog().textviewer(heading, msg, usemono)
+    return xbmcgui.Dialog().textviewer(heading, msg, usemono)
     
 def yesnoDialog(message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0):
     return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, customlabel, autoclose)
@@ -211,7 +230,7 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
         listitems = [buildMenuListItem(option['label'],option['label2'],COLOR_LOGO) for option in options]
 
         select    = selectDialog(listitems, LANGUAGE(30116), multi=False)
-        if select >= 0:
+        if select is not None:
             shares    = options[select]['label'].lower().replace("network","")
             mask      = options[select]['mask']
             type      = options[select]['type']
@@ -259,7 +278,8 @@ def selectDialog(list, header=ADDON_NAME, preselect=None, useDetails=True, autoc
     else:
         if preselect is None:  preselect = -1
         select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
-    return select
+    if select is not None: return select
+    return None
 
 def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
     if percent == 0 and control is None:
@@ -301,7 +321,14 @@ def removeDUPS(lst):
     list_of_strings = [dumpJSON(d) for d in lst]
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
-  
+
+def chkVersion():
+    lastVersion = (getSetting('lastVersion') or 'v.0.0.0')
+    if ADDON_VERSION != lastVersion:
+        setSetting('lastVersion',ADDON_VERSION)
+        changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=yellow]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]')
+        textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+    
 def dumpJSON(dict1, idnt=None, sortkey=True):
     if not dict1: return ''
     elif isinstance(dict1, basestring): return dict1
@@ -323,6 +350,10 @@ def sendJSON(command):
     log('globals: sendJSON, response = %s'%(response))
     return response
 
+def getSeason():
+    try: return {'September':'startrek','October':'horror','December':'xmas','May':'starwars'}[datetime.datetime.now().strftime('%B')]
+    except: return 'none'
+        
 def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
     listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
     iconImage = (iconImage or COLOR_LOGO)
@@ -366,8 +397,8 @@ def getPVR():
         xbmc.sleep(1000)
         return xbmcaddon.Addon(PVR_CLIENT)
         
-def checkPVR():
-    log('globals: checkPVR')
+def chkPVR():
+    log('globals: chkPVR')
     #check for min. settings required
     addon = getPVR()
     check = [addon.getSetting('m3uRefreshMode')         == '1',
@@ -429,19 +460,13 @@ def escapeDirJSON(path):
 
 def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     info       = item.copy()
-    art        = info.get('art',{})
-    streamInfo = item.get('streamdetails',{})
-    properties = info.get('customproperties',{})
-    properties.update(info.get('data',{}))
-    uniqueid   = info.get('uniqueid',{})
-    cast       = info.get('cast',[])
-    
-    info.pop('art'             ,{})
-    info.pop('streamdetails'   ,{})
-    info.pop('customproperties',{})
-    info.pop('uniqueid'        ,{})
-    info.pop('cast'            ,[])
-              
+    art        = info.pop('art'             ,{})
+    streamInfo = item.pop('streamdetails'   ,{})
+    properties = info.pop('customproperties',{})
+    properties.update(info.get('data'       ,{}))
+    uniqueid   = info.pop('uniqueid'        ,{})
+    cast       = info.pop('cast'            ,[])
+        
     def cleanInfo(info):
         tmpInfo = info.copy()
         for key, value in tmpInfo.items():
@@ -710,6 +735,9 @@ def findItemsIn(items, values, item_key='getLabel', val_key='', index=True):
     log("globals: findItemsIn, matches = %s"%(matches))
     return matches
 
+def titleLabels(list):
+     return [str(item).title() for item in list]
+ 
 def roundToHalfHour(stime,offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(stime)
     delta = datetime.timedelta(minutes=offset)

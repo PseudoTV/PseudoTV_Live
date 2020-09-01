@@ -40,6 +40,8 @@ class FileAccess:
     @staticmethod
     def copy(orgfilename, newfilename):
         log('FileAccess: copying ' + orgfilename + ' to ' + newfilename)
+        dir, file = os.path.split(newfilename)
+        if not FileAccess.exists(dir): FileAccess.makedirs(dir)
         return xbmcvfs.copy(orgfilename, newfilename)
 
 

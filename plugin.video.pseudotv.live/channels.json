@@ -6,6 +6,7 @@
 		"name": "",
 		"logo": "",
 		"radio": false,
+		"favorite": false,
 		"path": [],
 		"group": [],
 		"rules": [],

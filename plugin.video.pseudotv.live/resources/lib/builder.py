@@ -37,32 +37,34 @@ class Builder:
         self.grouping         = ENABLE_GROUPING
         self.saveDuration     = STORE_DURATION
         self.accurateDuration = ACCURATE_DURATION
+        self.filter           = {}
+        self.sort             = {}
+        self.limits           = {}
+        self.limit            = PAGE_LIMIT
         self.now              = getLocalTime()
         self.start            = roundToHalfHour(self.now)
         self.dialog           = None
         self.progress         = 0
         self.channelCount     = 0
         self.msg              = ''
-    
-    
+        
+        self.bctTypes         = {"rating"    :{"min":0,"max":0,"enabled":True  ,"path":GLOBAL_RESOURCE_PACK_RATINGS},
+                                 "trailer"   :{"min":0,"max":2,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_TRAILERS},
+                                 "bumper"    :{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_BUMPERS},
+                                 "commercial":{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_COMMERICALS}}#todo check adv. rules get settings
+                                 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
-    # Run rules for a channel
-    def runActions(self, action, channelID, parameter):
-        self.log("runActions %s on channel %s"%(action,channelID))
-        self.runningActionChannel = channelID
-        index = 0
-        channelList =  sorted(self.createChannelItems(), key=lambda k: k['number'])
-        ruleList = [item['ruleList'] for item in channelList if channelID == item['id']]
-        for rule in ruleList:
-            if rule.actions & action > 0:
-                self.runningActionId = index
-                parameter = rule.runAction(action, self, parameter)
-            index += 1
-        self.runningActionChannel = 0
-        self.runningActionId = 0
+    def runActions(self, action, channel, parameter=None):
+        self.log("runActions action = %s, channel = %s"%(str(action),str(channel)))
+        if not channel.get('id',''):  return
+        chrules = sorted(self.channels.getRules(channel), key=lambda k: k['id'])
+        for chrule in chrules:
+            ruleInstance = chrule['action']
+            if ruleInstance.actions & action > 0:
+                parameter = ruleInstance.runAction(action, self, parameter)
         return parameter
 
 
@@ -71,6 +73,7 @@ class Builder:
         if self.channels.reset():
             items = self.channels.getAllChannels()
             for idx, item in enumerate(items):
+                # item = self.runActions(RULES_ACTION_CHANNEL_CREATION, item, itemk)
                 if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
                     self.log('createChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
                     continue
@@ -81,10 +84,10 @@ class Builder:
                 item['radio']  = (item.get('radio','') or (item['type'] == 'MUSIC Genres' or item['path'][0].startswith('musicdb://')))
                 item['url']    = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
                 # if item['xmltv']: self.parseXMLTV(item['id']) #todo opt for url xmltv file with matching id.
-                
-                if not self.grouping:
+
+                if not self.grouping: 
                     item['group'] = [ADDON_NAME]
-                else: 
+                else:
                     item['group'].append(ADDON_NAME)
                 yield item
 
@@ -110,9 +113,10 @@ class Builder:
         
         
     def buildService(self, channels=None, update=False):
+        if isBusy(): return
         self.log('buildService, channels = %s, update = %s'%(len(channels), update))
         if self.reload():
-            if self.m3u.isClient(): 
+            if self.m3u.client: 
                 self.log('buildService, returning in client mode')
                 return False
             
@@ -131,11 +135,12 @@ class Builder:
             
             self.channelCount = len(channels)
             for idx, channel in enumerate(channels):
-                self.msg = channel['name']
+                channel       = self.runActions(RULES_ACTION_START, channel, channel)
+                self.msg      = channel['name']
                 self.progress = (idx*100//len(channels))
                 cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
+                cacheResponse = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
                 if not cacheResponse: continue
-                
                 self.buildM3U(channel, channel['radio'])
                 if isinstance(cacheResponse,list):
                     self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s, %s'%(msg,self.msg))
@@ -152,45 +157,47 @@ class Builder:
     def getFileList(self, channel, radio=False):
         self.log('getFileList; channel = %s, radio = %s'%(channel,radio))
         try:
-            self.now   = getLocalTime()
-            self.start = (self.xmltv.xmltvList['endtimes'].get(channel['id'],'') or roundToHalfHour(self.now)) #offset time to start on half hour
+            # global values prior to channel rules
+            self.filter = {}
+            self.sort   = {}#{"order": "ascending", "ignorefolders": "false", "method": "random"}
+            self.limits = {}#adv. rule to force page.
+            self.limit  = PAGE_LIMIT
+            self.now    = getLocalTime()
+            self.start  = (self.xmltv.xmltvList['endtimes'].get(channel['id'],'') or roundToHalfHour(self.now)) #offset time to start on half hour
 
+            self.runActions(RULES_ACTION_CHANNEL_START, channel, Builder)
             if datetime.datetime.fromtimestamp(self.start) >= (datetime.datetime.fromtimestamp(self.now) + datetime.timedelta(days=self.maxDays)): 
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(channel['id'],self.start),xbmc.LOGINFO)
                 return True# prevent over-building
-
-            # global values prior to channel rules
-            filter = {}
-            sort   = {}#{"order": "ascending", "ignorefolders": "false", "method": "random"}
-            limits = {}#adv. rule to force page.
-            # todo load pre json rules.
-            
+                
+            channel = self.runActions(RULES_ACTION_CHANNEL_JSON, channel, channel)
             if isinstance(channel['path'], list): 
                 mixed = True # build 'mixed' channels ie more than one path.
                 path  = channel['path']
             else:
                 mixed = False
                 path  = [channel['path']] 
-            limit = int(PAGE_LIMIT//len(path))# equally distribute content between multi-paths.            
+                
+            limit = int(self.limit//len(path))# equally distribute content between multi-paths.
             media = 'music' if radio else 'video'
-            
             if radio:
                 cacheResponse = self.buildRadioList(channel)
             else:         
-                cacheResponse = [self.buildFileList(channel, file, media, limit, sort, filter, limits) for file in path] # build multi-paths as induvial arrays for easier interleaving.
+                cacheResponse = [self.buildFileList(channel, file, media, limit, self.sort, self.filter, self.limits) for file in path] # build multi-paths as induvial arrays for easier interleaving.
                 if not cacheResponse: 
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(channel['id']),xbmc.LOGINFO)
                     return False
                 
-                # todo load post json rules.
+                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_LIST, channel, cacheResponse)
                 cacheResponse = list(interleave(*cacheResponse)) # interleave multi-paths, while keeping order.
                 # cacheResponse = removeDupsDICT(cacheResponse) # remove duplicates, back-to-back duplicates target range.
                 # if len(cacheResponse) < limit: # balance media limits, by filling randomly with duplicates.
                     # cacheResponse.extend(list(fillList(cacheResponse,(limit-len(cacheResponse)))))
+
             cacheResponse = self.addScheduling(channel, cacheResponse)
             if self.fillBCTs: 
                 cacheResponse = self.injectBCTs(channel, cacheResponse)
-            # todo load finale json rules.
+            self.runActions(RULES_ACTION_CHANNEL_STOP, channel, Builder)
             return sorted((cacheResponse), key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, Failed! " + str(e), xbmc.LOGERROR)
         return False
@@ -212,12 +219,9 @@ class Builder:
                           
         tmpList     = []
         resourceMap = {}
-        bctTypes    = {"rating"    :{"min":0,"max":0,"enabled":True  ,"path":GLOBAL_RESOURCE_PACK_RATINGS},
-                       "trailer"   :{"min":0,"max":2,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_TRAILERS},
-                       "bumper"    :{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_BUMPERS},
-                       "commercial":{"min":0,"max":0,"enabled":False ,"path":GLOBAL_RESOURCE_PACK_COMMERICALS}}#todo check adv. rules get settings
         self.log("injectBCTs; channel = %s, configuration = %s, fileList size = %s"%(channel,dumpJSON(bctTypes),len(fileList)))
         
+        bctTypes = self.bctTypes
         for bctType in bctTypes:
             if not bctTypes[bctType]['enabled']: continue
             resourceMap[bctType] = self.jsonRPC.buildBCTresource(bctTypes[bctType].get('path'))
@@ -275,13 +279,15 @@ class Builder:
     def addScheduling(self, channel, fileList):
         self.log("addScheduling; channel = %s"%(channel))
         #todo insert adv. scheduling rules here or move to adv. rules.py
-        tmpList = []
+        tmpList  = []
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BEFORE_TIME, channel, fileList)
         for idx, item in enumerate(fileList):
             item["idx"]   = idx
             item['start'] = self.start
             item['stop']  = self.start + item['duration']
             self.start    = item['stop']
             tmpList.append(item)
+        tmpList = self.runActions(RULES_ACTION_CHANNEL_AFTER_TIME, channel, tmpList)
         return tmpList
             
 
@@ -347,12 +353,20 @@ class Builder:
 
     def buildFileList(self, channel, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(path,limit,sort,filter,limits))
-        id            = channel['id']
+        if path.startswith('videodb://movies'): 
+            if not sort: sort = {"method": "random"}
+        elif path.startswith('plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}'):
+            if not sort: sort = {"method": "episode"}
+            path = path.format(list=getSeason(),limit=250)
+            
+        id = channel['id']
         fileList      = []
         seasoneplist  = []
-        method        =  sort.get("method",'random')
+        method        =  sort.get("method","random")
         json_response = self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
+        
         for item in json_response:
+            item = self.runActions(RULES_ACTION_CHANNEL_ITEM, channel, item)
             file = item.get('file','')
             fileType = item.get('filetype','file')
 
@@ -373,7 +387,6 @@ class Builder:
 
                     if tvtitle:
                         # This is a TV show
-                        # method  = 'episode' #todo move to rules, ie sort parameter
                         seasonval = int(item.get("season","0"))
                         epval     = int(item.get("episode","0"))
                         if not self.incExtras and (seasonval == 0 or epval == 0): 
