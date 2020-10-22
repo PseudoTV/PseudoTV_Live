@@ -18,12 +18,11 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
-from plugin  import Plugin
 
 class Context:
     def __init__(self, sysARG, writer):
         log('Context: __init__, sysARG = ' + str(sysARG))
-        xbmcgui.Dialog().info(buildItemListItem(loadJSON(writer)))
+        xbmcgui.Dialog().info(buildItemListItem(writer))
 
 if __name__ == '__main__': Context(sys.argv,writer=getWriterfromString())
 

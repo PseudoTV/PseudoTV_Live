@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.2.1" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.2.2g" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="pvr.iptvsimple" version="6.2.1"/>
@@ -25,15 +25,15 @@
         <menu id="kodi.core.main">
             <item library="context_info.py">
                 <label>30131</label>
-                <visible>String.Contains(ListItem.Writer,"data") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+                <visible>String.Contains(ListItem.Writer,"item=") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>
-            <item library="context_play.py">
-                <label>30061</label>
-                <visible>String.Contains(ListItem.Writer,"data") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
-            </item>
+            <!-- <item library="context_play.py"> -->
+                <!-- <label>30061</label> -->
+                <!-- <visible>String.Contains(ListItem.Writer,"data") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible> -->
+            <!-- </item> -->
             <item library="context_playlist.py">
                 <label>30074</label>
-                <visible>String.Contains(ListItem.Writer,"data") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+                <visible>String.Contains(ListItem.Writer,"item=") + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>
         </menu>
     </extension>

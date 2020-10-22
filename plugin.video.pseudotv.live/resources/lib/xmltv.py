@@ -34,16 +34,15 @@ PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License along
 with this software; if not, see <http://www.gnu.org/licenses/>.
 """
-
 from resources.lib.globals import *
 
 # The Python-XMLTV version
 VERSION = "1.4.4"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)
+locale = 'utf-8'
 date_format = '%Y%m%d%H%M%S %Z'
 date_format_notz = '%Y%m%d%H%M%S'
-
 
 def set_attrs(d, elem, attrs):
     """
@@ -136,7 +135,9 @@ def read_channels(fp=None, tree=None):
     channels = []
     if fp:
         et = ElementTree()
-        tree = et.parse(fp)
+        # tree = et.parse(fp) 
+        parser = XMLParser(encoding=locale)
+        tree = et.parse(fp, parser=parser)
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
         try:
@@ -156,10 +157,9 @@ def elem_to_programme(elem):
     d = {'start': elem.get('start'),
          'stop': elem.get('stop'),
          'channel': elem.get('channel'),
-         'title': [],
-         'icon': []}
+         'catchup-id': elem.get('catchup-id','')}
 
-    set_attrs(d, elem, ('stop', 'pdc-start', 'vps-start', 'showview',
+    set_attrs(d, elem, ('catchup-id', 'stop', 'pdc-start', 'vps-start', 'showview',
                         'videoplus', 'clumpidx'))
 
     append_text(d, 'title', elem)
@@ -220,7 +220,7 @@ def elem_to_programme(elem):
     psnode = elem.find('previously-shown')
     if psnode is not None:
         psd = {}
-        set_attrs(psd, psnode, ('start', 'channel'))
+        set_attrs(psd, psnode, ('start', 'channel','catchup-id'))
         d['previously-shown'] = psd
 
     set_text(d, 'premiere', elem)
@@ -274,7 +274,9 @@ def read_programmes(fp=None, tree=None):
     """
     if fp:
         et = ElementTree()
-        tree = et.parse(fp)
+        # tree = et.parse(fp) 
+        parser = XMLParser(encoding=locale)
+        tree = et.parse(fp, parser=parser)
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
 
 
@@ -287,8 +289,9 @@ def read_data(fp=None, tree=None):
     """
     if fp:
         et = ElementTree()
-        tree = et.parse(fp)
-
+        # tree = et.parse(fp) 
+        parser = XMLParser(encoding=locale)
+        tree = et.parse(fp, parser=parser)
     d = {}
     set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name',
                         'source-data-url', 'generator-info-name',
@@ -322,7 +325,7 @@ class Writer:
     **All strings passed to this class must be Unicode, except for dictionary
     keys**
     """
-    def __init__(self, encoding="UTF-8", date=None,
+    def __init__(self, encoding=locale, date=None,
                  source_info_url=None, source_info_name=None,
                  generator_info_url=None, generator_info_name=None):
         """
@@ -442,7 +445,7 @@ class Writer:
             else:
                 raise ValueError("'programme' must contain '%s' attribute" % attr)
 
-        for attr in ('stop', 'pdc-start', 'vps-start', 'showview', 'videoplus', 'clumpidx'):
+        for attr in ('catchup-id', 'stop', 'pdc-start', 'vps-start', 'showview', 'videoplus', 'clumpidx'):
             if attr in programme:
                 self.setattr(p, attr, programme[attr])
 
@@ -615,7 +618,7 @@ class Writer:
                 self.settext(u, url, with_lang=False)
         
         
-    def write(self, file, pretty_print=False):
+    def write(self, file, encoding=locale, pretty_print=False):
         """
         write(file, pretty_print=False) -> None
 
@@ -625,4 +628,4 @@ class Writer:
         if pretty_print:
             indent(self.root)
         et = ElementTree(self.root)
-        et.write(file, xml_declaration=True)
+        et.write(file, encoding=encoding, xml_declaration=True)

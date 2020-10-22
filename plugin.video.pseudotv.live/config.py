@@ -17,9 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from resources.lib.globals    import *
-from resources.lib.parser     import JSONRPC, Channels, M3U
-from resources.lib.predefined import Predefined 
+from resources.lib.globals     import *
+from resources.lib.parser      import JSONRPC, Channels, M3U
+from resources.lib.predefined  import Predefined 
+from resources.lib.recommended import Recommended 
 
 class Config:
     def __init__(self, sysARG=sys.argv):
@@ -29,6 +30,7 @@ class Config:
         self.channels      = Channels()
         self.m3u           = M3U()
         self.predefined    = Predefined()
+        self.recommended    = Recommended()
         self.TV_Shows      = []
         self.TV_Info       = [[],[]]
         self.MOVIE_Info    = [[],[]]
@@ -41,7 +43,8 @@ class Config:
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
     
-    def runInitThread(self):
+    def runInitThread(self): 
+        #startup thread, don't let processes (ie prompts) hold up channel building.
         self.log('runInitThread')
         if self.InitThread.isAlive(): 
             self.InitThread.cancel()
@@ -68,15 +71,21 @@ class Config:
     def spoolItems(self):
         if isBusy(): return self.startSpooler(900) # 15mins
         self.log('spoolItems, started')
-        self.checkPredefinedSelection() # check channel config, fill labels in settings.xml
+        self.chkPredefinedSelection() # check channel config, fill labels in settings.xml
+        self.rebuildRecommended() # rebuild recommended list
         DBItems = self.getItems() # spool cache
         [self.jsonRPC.getLogo(channel,key.replace('_',' ')) for key, value in DBItems.items() for channel in value] # cache logos
         self.log('spoolItems, finished')
         return self.startSpooler(3600) # 1hr
            
-                   
+              
+    def rebuildRecommended(self):
+        self.recommended.reset()
+            
+            
     def getTVShows(self):
-        if len(self.TV_Shows) == 0: self.TV_Shows = self.jsonRPC.fillTVShows()
+        if len(self.TV_Shows) == 0: 
+            self.TV_Shows = self.jsonRPC.fillTVShows()
         self.TV_Shows.sort(key=lambda x:x['label'])
         shows = [show['label'] for show in self.TV_Shows]
         self.log('getTVShows, found = %s'%(len(shows)))
@@ -84,13 +93,15 @@ class Config:
  
  
     def getTVInfo(self):
-        if (len(self.TV_Info[0]) == 0 or len(self.TV_Info[1]) == 0): self.TV_Info = self.jsonRPC.getTVInfo()
+        if (len(self.TV_Info[0]) == 0 or len(self.TV_Info[1]) == 0): 
+            self.TV_Info = self.jsonRPC.getTVInfo()
         self.log('getTVInfo, networks = %s, genres = %s'%(len(self.TV_Info[0]),len(self.TV_Info[1])))
         return self.TV_Info
  
  
     def getMovieInfo(self):
-        if (len(self.MOVIE_Info[0]) == 0 or len(self.MOVIE_Info[1]) == 0): self.MOVIE_Info = self.jsonRPC.getMovieInfo()
+        if (len(self.MOVIE_Info[0]) == 0 or len(self.MOVIE_Info[1]) == 0): 
+            self.MOVIE_Info = self.jsonRPC.getMovieInfo()
         self.log('getMovieInfo, studios = %s, genres = %s'%(len(self.MOVIE_Info[0]),len(self.MOVIE_Info[1])))
         return self.MOVIE_Info
  
@@ -100,7 +111,8 @@ class Config:
  
  
     def getMusicGenres(self):
-        if len(self.MUSIC_Info) == 0: self.MUSIC_Info = self.jsonRPC.fillMusicInfo()
+        if len(self.MUSIC_Info) == 0: 
+            self.MUSIC_Info = self.jsonRPC.fillMusicInfo()
         self.log('getMusicGenres, genres = %s'%(len(self.MUSIC_Info)))
         return self.MUSIC_Info
         
@@ -141,7 +153,7 @@ class Config:
         busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30102)))
         for idx, type in enumerate(CHAN_TYPES): 
             busy = ProgressBGDialog((idx*100//len(CHAN_TYPES)), busy, '%s: %s'%(LANGUAGE(30102),type.replace('_',' ')))
-            self.buildPredefined(type,autoTune=2)
+            self.buildPredefined(type,autoTune=3)
         ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30102)))
         return self.predefined.buildPredefinedChannels()
         
@@ -176,19 +188,18 @@ class Config:
         return buildMenuListItem(data[0],data[1],iconImage=self.jsonRPC.getLogo(data[0],data[1]))
     
     
-    def checkPredefinedSelection(self):
-        self.log('checkPredefinedSelection')
-        if self.m3u.client:
-            params = self.getPredefinedSelection()
-            [self.setPredefinedSelection(param,type) for type, param in params.items()]
+    def chkPredefinedSelection(self):
+        self.log('chkPredefinedSelection')
+        if self.channels.isClient:
+            [self.setPredefinedSelection(param,type) for type, param in self.getPredefinedSelection().items()]
         else:
             [self.setPredefinedSelection(getSetting('Setting_%s'%(param)).split('|'),param) for param in CHAN_TYPES]
     
     
     def getPredefinedSelection(self):
         self.log('getPredefinedSelection')
+        items    = {}
         channels = self.channels.getPredefined()
-        items = {}
         for type in CHAN_TYPES:  items[type] = []
         for channel in channels: items[channel['type'].replace(' ','_')].append(channel['name'])
         return items
@@ -234,10 +245,10 @@ class Config:
 
     def clearImport(self):
         self.log('clearImport') 
-        setSetting('Import_M3U',' ')
-        setSetting('Import_XMLTV',' ')
-        setSetting('User_Import','false')
-        return
+        with busy_dialog():
+            [(setSetting('Import_M3U%s'%(n+1),' '),setSetting('Import_XMLTV%s'%(n+1),' ')) for n in range(MAX_IMPORT)]
+            setSetting('User_Import','false')
+        return notificationDialog(LANGUAGE(30053))
         
 
     def openEditor(self, file='temp.xsp', media='video'):

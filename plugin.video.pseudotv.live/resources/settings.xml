@@ -21,11 +21,12 @@
         <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
         </category> 
     <category label="30025">
+        <setting id="Enable_Config"         type="bool"     label="30145" default="false" />    
         <setting id="Enable_Grouping"       type="bool"     label="30019" default="true" />
         <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
         <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
         <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />           
-        <setting id="Enable_Client"         type="bool"     label="30104" default="false" enable="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" subsetting="true"/>
+        <setting id="Enable_Client"         type="bool"     label="30104" default="false" enable="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" subsetting="true"/> 
     </category> 
     <category label="30048">
         <setting id="Playback_Method"      type="enum"     label="30045" default="0"  values="PVR Callback|Playlist" />
@@ -39,10 +40,10 @@
         <setting id="Update_Time"          type="slider"   label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
     </category> 
     <category label="30055">
-        <setting id="Enable_Overlay"              type="bool"     label="30054" default="true" />
-        <setting id="Enable_Extras"               type="bool"     label="30094" default="false" />
-        <setting id="Enable_Strms"                type="bool"     label="30095" default="false" />
-        <setting id="Enable_Fillers"              type="bool"     label="30030" default="false"/> 
+        <setting id="Enable_Overlay"       type="bool"     label="30054" default="true" />
+        <setting id="Enable_Extras"        type="bool"     label="30094" default="false" />
+        <setting id="Enable_Strms"         type="bool"     label="30095" default="false" />
+        <setting id="Enable_Fillers"       type="bool"     label="30030" default="false"/> 
         <setting id="Resource_Ratings"     type="action"   label="30069" default="resource://resource.videos.ratings.mpaa.classic"                    visible="eq(-1,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_RATINGS)"     option="close" />
         <setting id="Resource_Trailers"    type="action"   label="30071" default="plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent"   visible="eq(-2,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_TRAILERS)"    option="close" />     
         <setting id="Resource_Networks"    type="action"   label="30068" default="resource://resource.videos.bumpers.sample"       visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_NETWORKS)"    option="close" />
@@ -50,9 +51,10 @@
        </category> 
     <category label="30033">
         <setting id="User_Import"          type="bool"     label="30036" default="false" />
-        <setting id="Import_M3U"           type="file"     label="30034" default="" visible="eq(-1,true)" subsetting="true" source="auto" />
-        <setting id="Import_XMLTV"         type="file"     label="30035" default="" visible="eq(-2,true)" subsetting="true" source="auto" />
-        <setting id="Clear_Import"         type="action"   label="30037" default="" visible="eq(-3,true)" subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
+        <setting id="Clear_Import"         type="action"   label="30037" default="" visible="eq(-1,true)"  subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
+        <setting                           type="lsep"     /> 
+        <setting id="Import_M3U1"          type="file"     label="30034" default="" visible="eq(-3,true)"  source="video" />
+        <setting id="Import_XMLTV1"        type="file"     label="30035" default="" visible="eq(-4,true)"  source="video" />
     </category> 
     <category label="30020">
         <setting id="Enable_Debugging"     type="bool"     label="30000" default="true" />

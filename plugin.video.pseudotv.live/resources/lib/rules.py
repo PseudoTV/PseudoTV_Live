@@ -21,7 +21,23 @@ from resources.lib.globals import *
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(),HandleMethodOrder(),HandleFilter()]
+        self.ruleList = [BaseRule(),HandleMethodOrder(),HandleFilter(),SeekLock()]
+        self.ritem    = {"id": 0,"name": "","description": "","options": {},"action": ""}
+
+
+    def buildRuleList(self): #Build all Available rules 
+        rules = self.ruleList
+        rules.pop(0)#remove base example.
+        for rule in rules:
+            ritem = self.getRitem()
+            ritem.update({'id':rule.getId(),'name':rule.getTitle(),'description':rule.getDesc(),'options':{},'action':rule.copy()})
+            for opt in range(rule.getOptionCount()):
+                ritem['options'][str(opt)] = {'label':rule.getOptionLabel(opt),'value':rule.getOptionValue(opt)}
+            yield ritem
+
+
+    def getRitem(self):
+        return self.ritem.copy()
 
 
     def getRuleCount(self):
@@ -31,12 +47,9 @@ class RulesList:
     def getRule(self, index):
         while index < 0:
             index += len(self.ruleList)
-
         while index >= len(self.ruleList):
             index -= len(self.ruleList)
-
         return self.ruleList[index]
-
 
 
 class BaseRule:
@@ -182,9 +195,9 @@ class BaseRule:
         self.optionValues[optionindex] = str(default)
 
    
-    def onActionToggleBool(self, state):
-        log('onActionToggleBool, state = %s'%(state))
-        self.optionValues[optionindex] = not state
+    def onActionToggleBool(self, optionindex):
+        log("onActionToggleBool")
+        self.optionValues[optionindex] = not self.optionValues[optionindex]
 
 
     def onActionTextBox(self, optionindex):
@@ -209,6 +222,9 @@ class BaseRule:
 
     def onActionSelect(self, optionindex, header=ADDON_NAME, psel=-1, multi=False):
         log("onActionSelect")
+        if psel < 0:
+            psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
+            if not multi: psel = (psel[0] or -1)
         select = selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
         if select is not None: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
@@ -246,10 +262,10 @@ class BaseRule:
 
 class HandleMethodOrder(BaseRule):
     def __init__(self):
-        self.myId             = 19
-        self.name             = "Limit & Sort Methods"
+        self.myId             = 1
+        self.name             = "Limits & Sort Methods"
         self.description      = ""
-        self.optionLabels     = ['Limit','Method','Order','Ignore Folders']
+        self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
         self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
         self.actions          = RULES_ACTION_CHANNEL_START | RULES_ACTION_CHANNEL_STOP
         self.selectBoxOptions = [[n for n in range(25, 275, 25)], sorted(JSON_METHOD), sorted(JSON_ORDER), [True, False]]
@@ -264,8 +280,10 @@ class HandleMethodOrder(BaseRule):
 
 
     def onAction(self, optionindex):
-        focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]][0]
-        self.onActionSelect(optionindex, 'Select %s'%(self.optionLabels[optionindex]), focus)
+        if optionindex == 3:
+            self.onActionToggleBool(optionindex)
+        else:
+            self.onActionSelect(optionindex, LANGUAGE(30144)%(self.optionLabels[optionindex]))
         return self.optionValues[optionindex]
 
 
@@ -274,10 +292,10 @@ class HandleMethodOrder(BaseRule):
         if actionid == RULES_ACTION_CHANNEL_START:
             self.storedLimitValue = channelList.mediaLimit
             self.storedSortValue  = channelList.fileListSort
-            sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": (self.optionValues[2])}
-            log("Option for HandleMethodOrder is Method = " + self.optionValues[0] + " Order = " + self.optionValues[1]+ " Ignore = " + str(self.optionValues[2]))
-            for i in range(len(self.optionValues)):
-                if len(self.optionValues[i]) == 0:
+            sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": int(self.optionValues[2] == True)}
+            log("HandleMethodOrder sort = %s"%(sort))
+            for value in self.optionValues:
+                if len(value) == 0:
                     return channeldata
             channelList.mediaLimit   = self.optionValues[0]
             channelList.fileListSort = sort
@@ -289,7 +307,7 @@ class HandleMethodOrder(BaseRule):
 
 class HandleFilter(BaseRule):
     def __init__(self):
-        self.myId             = 20
+        self.myId             = 2
         self.name             = "Filter Content"
         self.description      = ""
         self.actions          = RULES_ACTION_CHANNEL_START | RULES_ACTION_CHANNEL_STOP
@@ -310,8 +328,7 @@ class HandleFilter(BaseRule):
         if optionindex == 2:
             self.onActionTextBox(optionindex)
         else: 
-            focus = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]][0]
-            self.onActionSelect(optionindex, 'Select Filter %s'%(self.optionLabels[optionindex]), focus)
+            self.onActionSelect(optionindex, 'Select Filter %s'%(self.optionLabels[optionindex]))
         self.validate(optionindex)
         return self.optionValues[optionindex]
         
@@ -334,3 +351,68 @@ class HandleFilter(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             channelList.fileListFilter = self.storedFilterValue
         return channeldata
+           
+               
+class SeekLock(BaseRule):
+    def __init__(self):
+        self.myId         = 20
+        self.name         = "Disable Seeking"
+        self.description  = ''
+        self.optionLabels = ['Disable Seeking']
+        self.optionValues = [False]
+        self.actions = RULES_ACTION_PLAYBACK
+        self.selectBoxOptions = [[False,True]]
+        
+
+    def copy(self):
+        return SeekLock()
+
+
+    def getTitle(self):
+        if self.optionValues[0]:
+            return 'Seeking Disabled'
+        else: 
+            return 'Seeking Enabled'
+            
+
+    def onAction(self, act, optionindex):
+        self.onActionSelectBox(act, optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, channel, nowitem):
+        if actionid == RULES_ACTION_PLAYBACK:
+            self.log("setting Seek Lock to %s"%(self.optionValues[0]))
+            nowitem['progress'] = 0
+        return nowitem        
+               
+               
+class UPNP(BaseRule):
+    def __init__(self):
+        self.myId         = 24
+        self.name         = "UPNP Lookup"
+        self.description  = ''
+        self.optionLabels = ['UPNP Lookup']
+        self.optionValues = [False]
+        self.actions = RULES_ACTION_CHANNEL_JSON
+        self.selectBoxOptions = [[False,True]]
+        
+
+    def copy(self):
+        return UPNP()
+
+
+    def getTitle(self):
+        return 'UPNP Lookup %s'%({True:'Enabled',False:'Disabled'}[self.optionValues[0]])
+            
+
+    def onAction(self, act, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, channel, Builder):
+        if actionid == RULES_ACTION_CHANNEL_JSON:
+            if channel['path'].startswith('upnp://'):
+                channel['path'] = Builder.jsonRPC.chkUPNP(channel['path'])
+        return channel

@@ -45,7 +45,6 @@ class Plugin:
                      (LANGUAGE(30096), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),
-                     (LANGUAGE(30081), '', '', LANGUAGE(30008)),
                      (LANGUAGE(30013), '', '', LANGUAGE(30008))]
 
         CHAN_MENU = [(LANGUAGE(30014), '', '', LANGUAGE(30009)),
@@ -76,7 +75,6 @@ class Plugin:
         elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
         elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
         elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
-        elif name == LANGUAGE(30081): textviewer(getProperty('USER_LOG'),usemono=True)
         else: return
         xbmc.executebuiltin('Action(Back,10025)')
             
@@ -97,14 +95,13 @@ class Plugin:
 
 
     def contextPlay(self, writer, isPlaylist=False):
-        stpos  = 0
+        stpos = 0
         channelData = writer.get('data',{}) 
         if not channelData: 
             return notificationDialog(LANGUAGE(30001))
             
         pvritem = self.myBuilder.jsonRPC.getPVRposition(channelData.get('name',''), channelData.get('id',''), isPlaylist=isPlaylist)
         pvritem['isPlaylist'] = isPlaylist
-        setCurrentChannelItem(pvritem)
         log('contextPlay, writer = %s, pvritem = %s, isPlaylist = %s'%(dumpJSON(writer),pvritem,isPlaylist))
         self.playlist.clear()
         xbmc.sleep(100)
@@ -113,17 +110,17 @@ class Plugin:
             nowitem   = pvritem.get('broadcastnow',{})
             nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
             nextitems.insert(0,nowitem)
-            
             for pos, nextitem in enumerate(nextitems):
-                if loadJSON(nextitem.get('writer',{})).get('file','') == writer.get('file',''):
+                if getWriter(nextitem.get('writer',{})).get('file','') == writer.get('file',''):
                     stpos = pos
                     break
             log('contextPlay, writer stpos = %s'%(stpos))
-            listitems = ([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems]) 
+            listitems = ([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems]) 
         else:
             liz = buildItemListItem(writer)
             listitems = [liz]
             
+        setCurrentChannelItem(pvritem)
         [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
         if isPlaylistRandom(): self.playlist.unshuffle()
         return self.myPlayer.play(self.playlist, startpos=stpos)
@@ -134,18 +131,18 @@ class Plugin:
         pvritem = self.myBuilder.jsonRPC.getPVRposition(name, id, radio=True)
         pvritem['isPlaylist'] = True
         nowitem = pvritem.get('broadcastnow',{}) # current item
-        writer  = loadJSON(nowitem.get('writer',{}))
+        writer  = getWriter(nowitem.get('writer',{}))
         if not writer: 
             notificationDialog(LANGUAGE(30001))
             return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
             
         json_response = self.myBuilder.jsonRPC.requestList(id, writer.get('data',{}).get('path',''), 'music', page=RADIO_ITEM_LIMIT)
         if json_response:
-            setCurrentChannelItem(pvritem)
             self.playlist.clear()
             xbmc.sleep(100)
             listitems = [buildItemListItem(item, mType='music') for item in json_response]
             random.shuffle(listitems)
+            setCurrentChannelItem(pvritem)
             [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
             if not isPlaylistRandom(): self.playlist.shuffle()
             log('playRadio, Playlist size = %s'%(self.playlist.size()))
@@ -162,9 +159,8 @@ class Plugin:
         nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
         
         if nowitem:
-            found = True
-            setCurrentChannelItem(pvritem)
-            writer   = loadJSON(nowitem.get('writer',{}))
+            found    = True
+            writer   = getWriter(nowitem.get('writer',{}))
             nowitem  = self.myBuilder.runActions(RULES_ACTION_PLAYBACK, writer.get('data',{}), nowitem)
             progress = nowitem['progress']
             runtime  = nowitem['runtime']
@@ -174,7 +170,7 @@ class Plugin:
                 if (progress > ((runtime * 60) - ENDTIME_SEEK_OFFSET)): # endtime offset
                     log('playChannel, progress = %s near end, queue nextitem'%(progress))
                     newItem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
-                    liz = buildItemListItem(loadJSON(newItem.get('writer',{})))
+                    liz = buildItemListItem(getWriter(newItem.get('writer',{})))
                     
                 else:
                     log('playChannel, progress = %s within seek tolerance setting seek.'%(progress))
@@ -189,21 +185,31 @@ class Plugin:
                         liz.setPath('stack://%s'%(' , '.join(stripStack(file, url))))
                 
             listitems = [liz]
+            setCurrentChannelItem(pvritem)
             if isPlaylist: 
                 self.playlist.clear()
                 xbmc.sleep(100)
-                listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])
+                listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems])
                 [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
                 if isPlaylistRandom(): self.playlist.unshuffle()
                 log('playChannel, Playlist size = %s'%(self.playlist.size()))
                 return self.myPlayer.play(self.playlist)
             # else:
-                # listitems.extend([buildItemListItem(loadJSON(nextitem.get('writer',''))) for nextitem in nextitems])  
+                # listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems])  
                 # paths = [lz.getPath() for lz in listitems]
                 # liz.setPath('stack://%s'%(' , '.join(paths)))
                 # listitems = [liz]
             #todo found == False set fallback to nextitem? with playlist and failed == True?
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
+
+
+    def playVOD(self, name, id):
+        path = decodeString(id)
+        log('playVOD, path = %s'%(path))
+        liz = xbmcgui.ListItem(name)
+        liz.setPath(path)
+        liz.setProperty("IsPlayable","true")
+        xbmcplugin.setResolvedUrl(int(self.sysARG[1]), True, liz)
 
 
     def addLink(self, name, channel, path, mode='',icon=ICON, liz=None, total=0):
@@ -241,15 +247,14 @@ class Plugin:
         mode    = (params.get("mode",'')                       or None)
         log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
 
-        if channel is None:
-            if   mode is None: self.buildMenu(name)
-            elif mode == 'play':      
-                if radio:
-                    self.playRadio(name, id)
-                else: 
-                    self.playChannel(name, id, isPlaylist=self.usePlaylist)
-            elif mode == 'Utilities': self.utilities(name)
-            elif mode == 'Channels':  self.channels(name)
+        if   mode is None:  self.buildMenu(name)
+        elif mode == 'vod': self.playVOD(name, id)
+        elif mode == 'play':
+            if radio:
+                self.playRadio(name, id)
+            else: 
+                self.playChannel(name, id, isPlaylist=self.usePlaylist)
+        elif mode == 'Utilities': self.utilities(name)
 
         xbmcplugin.setContent(int(self.sysARG[1])    , self.CONTENT_TYPE)
         xbmcplugin.addSortMethod(int(self.sysARG[1]) , xbmcplugin.SORT_METHOD_UNSORTED)

@@ -19,23 +19,19 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals    import *
-from resources.lib.parser     import M3U, XMLTV, JSONRPC, Channels
-from resources.lib.queue      import Worker
+from resources.lib.parser     import Writer, Channels, JSONRPC
 
 class Builder:
     def __init__(self):
         self.log('__init__')
-        self.m3u              = M3U()
-        self.xmltv            = XMLTV()
+        self.writer           = Writer()
         self.channels         = Channels()
-        self.queue            = Worker()
-        self.jsonRPC          = JSONRPC(self.queue)
+        self.jsonRPC          = JSONRPC()
         self.incStrms         = INCLUDE_STRMS  #todo adv. rules
         self.incExtras        = INCLUDE_EXTRAS #todo adv. rules
         self.maxDays          = MAX_GUIDE_DAYS
         self.fillBCTs         = ENABLE_BCTS
         self.grouping         = ENABLE_GROUPING
-        self.saveDuration     = STORE_DURATION
         self.accurateDuration = ACCURATE_DURATION
         self.filter           = {}
         self.sort             = {}
@@ -58,9 +54,9 @@ class Builder:
     
 
     def runActions(self, action, channel, parameter=None):
-        self.log("runActions action = %s, channel = %s"%(str(action),str(channel)))
-        if not channel.get('id',''):  return
-        chrules = sorted(self.channels.getRules(channel), key=lambda k: k['id'])
+        self.log("runActions action = %s, channel = %s"%(action,channel))
+        if not channel.get('id',''): return parameter
+        chrules = sorted(self.channels.getChannelRules(channel), key=lambda k: k['id'])
         for chrule in chrules:
             ruleInstance = chrule['action']
             if ruleInstance.actions & action > 0:
@@ -92,67 +88,52 @@ class Builder:
                 yield item
 
 
-    def reload(self):
-        self.log('reload')
-        try:
-            self.xmltv.reset()
-            self.m3u.reset()
-            return True
-        except Exception as e: self.log("reload, Failed! " + str(e), xbmc.LOGERROR)
-        return False
-        
-        
-    def save(self):
-        self.log('save')
-        try:
-            self.m3u.save()
-            self.xmltv.save()
-            return True
-        except Exception as e: self.log("save, Failed! " + str(e), xbmc.LOGERROR)
-        return False
-        
-        
     def buildService(self, channels=None, update=False):
         if isBusy(): return
-        self.log('buildService, channels = %s, update = %s'%(len(channels), update))
-        if self.reload():
-            if self.m3u.client: 
-                self.log('buildService, returning in client mode')
-                return False
+        elif self.channels.isClient:
+            self.log('buildService, Client mode enabled; returning!')
+            return False
+        elif not self.writer.reset(): 
+            self.log('buildService, initializing m3u/xmltv parser failed!')
+            return False
             
-            if channels is None: 
-                channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
-            if not channels:
-                return notificationDialog(LANGUAGE(30056))
-                
-            # todo system hanging, look into worker thread.
-            # if self.saveDuration:
-                # self.queue.run()
-                
-            setBusy(True)
-            msg = LANGUAGE(30051 if update else 30050)
-            self.dialog = ProgressBGDialog(message=LANGUAGE(30052)%('...'))
+        self.log('buildService, channels = %s, update = %s'%(len(channels),update))
+        if channels is None: 
+            channels = sorted(self.createChannelItems(), key=lambda k: k['number'])
             
-            self.channelCount = len(channels)
-            for idx, channel in enumerate(channels):
-                channel       = self.runActions(RULES_ACTION_START, channel, channel)
-                self.msg      = channel['name']
-                self.progress = (idx*100//len(channels))
-                cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
-                cacheResponse = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
-                if not cacheResponse: continue
-                self.buildM3U(channel, channel['radio'])
-                if isinstance(cacheResponse,list):
-                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s, %s'%(msg,self.msg))
-                    self.buildXMLTV(channel, cacheResponse, channel['radio'])
-                    
-            self.save()
-            setBusy(False)
-            self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
-            self.log('buildService, finished')
-            return True
-        return False
+        if not channels:
+            notificationDialog(LANGUAGE(30056))
+            return False
 
+        setBusy(True)
+        msg = LANGUAGE(30051 if update else 30050)
+        self.dialog = ProgressBGDialog(message=LANGUAGE(30052)%('...'))
+        
+        self.channelCount = len(channels)
+        if getProperty('PseudoTVRunning') != 'True': # legacy setting to disable/enable support in third-party applications. 
+            setProperty('PseudoTVRunning','True')
+            
+        for idx, channel in enumerate(channels):
+            channel       = self.runActions(RULES_ACTION_START, channel, channel)
+            self.msg      = channel['name']
+            self.progress = (idx*100//len(channels))
+            cacheResponse = self.getFileList(channel, channel['radio']) # {True:'Valid Channel exceed MAX_DAYS',False:'In-Valid Channel',list:'fileList'}
+            cacheResponse = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
+            if not cacheResponse: continue
+            self.writer.addChannel(channel, channel['radio'], not bool(channel['radio']))
+            if isinstance(cacheResponse,list):
+                self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s, %s'%(msg,self.msg))
+                self.writer.addProgrammes(channel, cacheResponse, channel['radio'], not bool(channel['radio']))
+                
+        if not self.writer.save(): 
+            notificationDialog(LANGUAGE(30001))
+        setBusy(False)
+        self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
+        self.log('buildService, finished')
+        if not self.jsonRPC.myPlayer.isPlaying() and getProperty('PseudoTVRunning') == 'True': # legacy setting to disable/enable support in third-party applications. 
+            setProperty('PseudoTVRunning','True')
+        return True
+            
 
     def getFileList(self, channel, radio=False):
         self.log('getFileList; channel = %s, radio = %s'%(channel,radio))
@@ -163,14 +144,14 @@ class Builder:
             self.limits = {}#adv. rule to force page.
             self.limit  = PAGE_LIMIT
             self.now    = getLocalTime()
-            self.start  = (self.xmltv.xmltvList['endtimes'].get(channel['id'],'') or roundToHalfHour(self.now)) #offset time to start on half hour
+            self.start  = (self.writer.endtimes.get(channel['id'],'') or roundToHalfHour(self.now)) #offset time to start on half hour
 
             self.runActions(RULES_ACTION_CHANNEL_START, channel, Builder)
             if datetime.datetime.fromtimestamp(self.start) >= (datetime.datetime.fromtimestamp(self.now) + datetime.timedelta(days=self.maxDays)): 
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(channel['id'],self.start),xbmc.LOGINFO)
                 return True# prevent over-building
                 
-            channel = self.runActions(RULES_ACTION_CHANNEL_JSON, channel, channel)
+            # channel = self.runActions(RULES_ACTION_CHANNEL_JSON, channel, self)
             if isinstance(channel['path'], list): 
                 mixed = True # build 'mixed' channels ie more than one path.
                 path  = channel['path']
@@ -314,43 +295,6 @@ class Builder:
         return [tmpItem.copy() for idx in range(entries)]
         
         
-    def buildXMLTV(self, channelData, fileList, radio=False):
-        self.log("buildXMLTV, channel = %s"%(channelData))
-        self.xmltv.addChannel(channelData)
-        for idx, file in enumerate(fileList):
-            if not file: continue
-           
-            item = {}
-            item['channel']     = channelData['id']
-            item['start']       = file['start']
-            item['stop']        = file['stop']
-            item['title']       = file['label']
-            item['desc']        = file['plot']
-            item['sub-title']   = file.get('episodetitle','')
-            item['rating']      = (file.get('mpaa','')   or 'NA')
-            item['stars']       = (file.get('rating','') or '0')
-            item['categories']  = (file.get('genre','')  or ['Undefined'])
-            item['type']        = file.get('type','video')
-            item['new']         = int(file.get('playcount','1')) == 0
-            item['thumb']       = getThumb(file)
-            item['date']        = (file.get('firstaired','') or file.get('premiered','') or file.get('releasedate','') or file.get('originaldate','') or None)
-            
-            item['episode-num'] = ''
-            if (item['type'] != 'movie' and (file.get("episode",0) > 0)):
-                item['episode-num'] = 'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))
-                
-            # key hijacking
-            item['director']    = str(file.get('id',''))# dbid
-            file['data']        = channelData #channel dict
-            item['writer']      = file # kodi listitem dict.
-            self.xmltv.addProgram(channelData['id'], item)
-            
-            
-    def buildM3U(self, channel, radio=False):
-        self.log("buildM3U, channel = %s"%(channel))
-        self.m3u.add(channel, radio)
-
-
     def buildFileList(self, channel, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(path,limit,sort,filter,limits))
         if path.startswith('videodb://movies'): 
@@ -364,7 +308,7 @@ class Builder:
         seasoneplist  = []
         method        =  sort.get("method","random")
         json_response = self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
-        
+
         for item in json_response:
             item = self.runActions(RULES_ACTION_CHANNEL_ITEM, channel, item)
             file = item.get('file','')
@@ -389,16 +333,16 @@ class Builder:
                         # This is a TV show
                         seasonval = int(item.get("season","0"))
                         epval     = int(item.get("episode","0"))
-                        if not self.incExtras and (seasonval == 0 or epval == 0): 
+                        if not self.incExtras and (seasonval == 0 or epval == 0) and item.get("episode",None) is not None: 
                             self.log("buildFileList, id: %s skipping extras!"%(id),xbmc.LOGINFO)
                             continue
                             
-                        if epval > 0: 
-                            item["episodetitle"] = title + ' (' + str(seasonval) + 'x' + str(epval).zfill(2) + ')'
-                        else:
-                            item["episodetitle"] = title
+                        # if epval > 0: 
+                            # item["episodetitle"] = title + ' (' + str(seasonval) + 'x' + str(epval).zfill(2) + ')'
+                        # else:
                         label = tvtitle
-                        item['tvshowtitle'] = tvtitle
+                        item["tvshowtitle"]  = tvtitle
+                        item["episodetitle"] = title
                         
                     else: # This is a Movie
                         years = int(item.get("year","0"))

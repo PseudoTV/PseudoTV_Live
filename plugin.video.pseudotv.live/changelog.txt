@@ -1,8 +1,20 @@
+v.0.2.2
+-Improved internal meta handling; Default director & writer meta restored.
+-Improved M3U/XMLTV import (now supports http urls).
+-Improved playback handling.
+-Fixed playback issue (during the end of Non-PseudoTV playback, PseudoTV would launch last channel played).
+-Tweaked client detection and Multi-Room sharing.
+-Fixed saving accurate duration data to Kodi's Library.
+-Added IPTV Simple VOD support ("Play OnDemand" context item removed, use "Play Programme").
+-Added initial support for Advanced Channel Rules.
+
 v.0.2.1
 -Added Changelog dialog after update.
 -Added "Pre-defined" Seasonal Holiday Channel to "Mixed Other". When enabled the channel will automatically appear only during the holiday months and if matching media is found. Supported Seasons (Star Trek Day (September), Halloween (October), Christmas (December), Star Wars Day (May)).
 -Fixed Misc. Channel Manager issues.
 -Added Node/Smartplaylist "caching" for client instances. Nodes and Smartplaylists copy from server to client needed for channel building.
+-Added Seek Compatibility Test to Channel Manager (triggered by Plugin/UPNP sources). 
+-Tweaked "Special/Extras" Detection to ignore false positives from Plugin/UPNP sources.
 
 v.0.2.0
 -Added "Channel Manager" to settings. Configure "User-Defined" here!

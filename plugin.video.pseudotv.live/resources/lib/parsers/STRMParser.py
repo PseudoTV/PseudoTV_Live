@@ -23,7 +23,7 @@ class STRMParser:
     def determineLength(self, filename):
         fleName, fleExt = os.path.splitext(filename)
         fleName += '.nfo'
-        log("STRMParser: determineLength, file = %s, nfo = %s"(filename,fleName))
+        log("STRMParser: determineLength, file = %s, nfo = %s"%(filename,fleName))
         duration = 0
         durationinseconds = 0
         

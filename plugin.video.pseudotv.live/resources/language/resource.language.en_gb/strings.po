@@ -153,11 +153,11 @@ msgid "Imports"
 msgstr ""
 
 msgctxt "#30034"
-msgid "M3U file"
+msgid "M3U File/URL"
 msgstr ""
 
 msgctxt "#30035"
-msgid "XMLTV file"
+msgid "XMLTV File/URL"
 msgstr ""
 
 msgctxt "#30036"
@@ -397,7 +397,7 @@ msgid "Include Specials/Extras"
 msgstr ""
 
 msgctxt "#30095"
-msgid "Include STRM's"
+msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30096"
@@ -433,11 +433,11 @@ msgid "No %s content found..."
 msgstr ""
 
 msgctxt "#30104"
-msgid "Force Client Mode"
+msgid "Enable Client Mode"
 msgstr ""
 
 msgctxt "#30105"
-msgid "We'll Be Right Back."
+msgid "We will Be Right Back."
 msgstr ""
 
 msgctxt "#30106"
@@ -445,7 +445,7 @@ msgid "Up Next"
 msgstr ""
 
 msgctxt "#30107"
-msgid "You're Watching"
+msgid "You are Watching"
 msgstr ""
 
 msgctxt "#30108"
@@ -501,7 +501,7 @@ msgid "Cancel"
 msgstr ""
 
 msgctxt "#30121"
-msgid "Select Channel Name"
+msgid "Select Channel %s"
 msgstr ""
 
 msgctxt "#30122"
@@ -578,4 +578,28 @@ msgstr ""
 
 msgctxt "#30141"
 msgid "Seasonal"
+msgstr ""
+
+msgctxt "#30142"
+msgid "Plugin/UPNP Source Detected, Testing Seek Compatibility."
+msgstr ""
+
+msgctxt "#30143"
+msgid "Passed!"
+msgstr ""
+
+msgctxt "#30144"
+msgid "Select %s"
+msgstr ""
+
+msgctxt "#30145"
+msgid "Allow this plugin to automatically configure IPTV Simple PVR Backend?"
+msgstr ""
+
+msgctxt "#30146"
+msgid "Import Set"
+msgstr ""
+
+msgctxt "#30147"
+msgid "%s compatible plugin found!\nWould you like to add channels from [B]%s[/B]?"
 msgstr ""

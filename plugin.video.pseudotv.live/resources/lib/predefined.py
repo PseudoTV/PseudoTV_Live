@@ -39,15 +39,9 @@ class Predefined:
         self.others   = {LANGUAGE(30078) : self.createMixedRecent,
                          LANGUAGE(30141) : self.createSeasonal,
                          LANGUAGE(30079) : self.createPVRRecordings} # home for misc. predefined channel paths. todo seasonal channel
-
-        # conflict with selection to channels.json feature. paths have to be static for proper id match
-        # if INCLUDE_EXTRAS:
-            # self.specials = ''
-         # else:   
-            # self.specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
         
-        self.specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
-        log('__init__, specials = %s'%(self.specials))
+        self.exclude_specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
+        log('__init__, exclude_specials = %s'%(self.exclude_specials))
     
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -69,18 +63,17 @@ class Predefined:
                     return eitem
             return citem
                     
-        citems   = []
+        citems = []
         if self.channels.reset():
-            template = self.channels.getCitem()
             existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
-            reserved = self.channels.getReservedChannels() # numbers in-use.
+            reserved = self.channels.getRSVDchnums() # numbers in-use.
             for type, func in self.types.items():
                 items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
                 chnums   = self.getAvailableChannelNumbers(type,reserved,len(items))
                 log('buildPredefinedChannels, building %s, found %s'%(type,items))
                 for idx, item in enumerate(items):
                     if not item: continue
-                    citem    = template.copy()
+                    citem    = self.channels.getCitem()
                     chnumber = chnums[idx]
                     type     = type.replace('_',' ')
                     chname   = self.getChannelPostfix(item, type)
@@ -110,7 +103,7 @@ class Predefined:
         return self.others[type]()
         
         
-    def createRECOMMENDED(self,type):
+    def createRECOMMENDED(self, type):
         return []
         
     
@@ -128,15 +121,15 @@ class Predefined:
         
         
     def createNetworkPlaylist(self, network, method='episode'):
-        return 'videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(network),self.specials)
+        return 'videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(network),self.exclude_specials)
         
 
     def createShowPlaylist(self, show, method='episode'):
-        return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(show),self.specials)
+        return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(show),self.exclude_specials)
 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
-        return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.specials)
+        return 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.exclude_specials)
 
 
     def createMovieGenrePlaylist(self, genre, method='random'):

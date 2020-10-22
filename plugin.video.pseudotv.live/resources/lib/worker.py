@@ -1,0 +1,55 @@
+#   Copyright (C) 2020 Lunatixz
+#
+#
+# This file is part of PseudoTV Live.
+#
+# PseudoTV Live is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PseudoTV Live is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+
+from resources.lib.globals import *
+
+Msg = collections.namedtuple('Msg', ['event', 'args'])
+
+class BaseWorker(Process):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.queue = Queue()
+        self.myMonitor = MY_MONITOR
+
+
+    def send(self, event, *args):
+        msg = Msg(event, args)
+        self.queue.put(msg)
+
+
+    def dispatch(self, msg):
+        event, args = msg
+        handler = getattr(self, "do_%s" % event, None)
+        if not handler:
+            raise NotImplementedError("Process has no handler for [%s]" % event)
+        handler(*args)
+
+
+    def start(self):
+        log('BaseWorker: starting worker')
+        while not self.myMonitor.abortRequested():
+            if self.myMonitor.waitForAbort(1):
+                log('BaseWorker: worker aborted')
+                break
+            elif self.queue.empty(): 
+                log('BaseWorker: worker finished')
+                break
+            msg = self.queue.get()
+            self.dispatch(msg)
+        log('BaseWorker: worker stopped')
