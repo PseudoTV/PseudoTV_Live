@@ -28,7 +28,8 @@ class STRMParser:
         durationinseconds = 0
         
         try:
-            self.File = xbmcvfs.File(fleName, "r")
+            # self.File = xbmcvfs.File(fleName, "r")
+            self.File = FileAccess.open(filename, "rb", None)
             dom = parse(self.File)
         except:
             log("STRMParser: MKVParser: Unable to open the file %s"%(fleName), xbmc.LOGERROR)
@@ -50,4 +51,5 @@ class STRMParser:
         except Exception as e: log("STRMParser: <duration> not found")
                 
         self.File.close()
+        log("STRMParser: Duration is " + str(duration))
         return duration

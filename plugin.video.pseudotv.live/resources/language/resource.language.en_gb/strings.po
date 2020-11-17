@@ -38,7 +38,7 @@ msgstr ""
 
 msgctxt "#30005"
 msgid "Movie Genres"
-msgstr "
+msgstr ""
 
 msgctxt "#30006"
 msgid "Mixed Genres"
@@ -337,7 +337,7 @@ msgid "PVR Recordings"
 msgstr ""
 
 msgctxt "#30080"
-msgid "Mixed Other"
+msgid "Mixed"
 msgstr ""
 
 msgctxt "#30081"
@@ -401,7 +401,7 @@ msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30096"
-msgid "Clean Start"
+msgid "Clean Start, Delete all channels, files and settings."
 msgstr ""
 
 msgctxt "#30097"
@@ -601,5 +601,29 @@ msgid "Import Set"
 msgstr ""
 
 msgctxt "#30147"
-msgid "%s compatible plugin found!\nWould you like to add channels from [B]%s[/B]?"
+msgid "%s compatible plugin found!\nWould you like to add [B]%s[/B] to your recommended list?"
+msgstr ""
+
+msgctxt "#30148"
+msgid "Detect Compatible Kodi Plugins?"
+msgstr ""
+
+msgctxt "#30149"
+msgid "Ignoring"
+msgstr ""
+
+msgctxt "#30150"
+msgid "Recommended Services"
+msgstr ""
+
+msgctxt "#30151"
+msgid "Importing"
+msgstr ""
+
+msgctxt "#30152"
+msgid "Saving..."
+msgstr ""
+
+msgctxt "#30153"
+msgid "Show OnNext Pop-up"
 msgstr ""

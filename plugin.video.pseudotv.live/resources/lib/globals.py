@@ -18,17 +18,18 @@
 
 # -*- coding: utf-8 -*-
 
-import os, sys, re, platform, subprocess, struct, shutil, traceback, threading
-import datetime, time, _strptime, base64, binascii, random, hashlib, difflib
-import json, codecs, types, collections, six, uuid
+import os, sys, re, struct, shutil, traceback, threading
+import datetime, time, _strptime, base64, binascii, random, hashlib
+import json, codecs, collections, uuid
 
-from kodi_six              import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
-from itertools             import repeat, cycle, chain, zip_longest
-from six.moves             import urllib
-from contextlib            import contextmanager
-from simplecache           import use_cache, SimpleCache
-from xml.dom.minidom       import parse, parseString, Document
-from xml.etree.ElementTree import ElementTree, Element, SubElement, tostring, XMLParser
+from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
+from itertools                 import repeat, cycle, chain, zip_longest
+from six.moves                 import urllib
+from contextlib                import contextmanager
+from simplecache               import use_cache, SimpleCache
+from xml.dom.minidom           import parse, parseString, Document
+from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring, XMLParser
+from resources.lib.fileaccess  import FileAccess
 
 try:
     from multiprocessing import Process, Queue
@@ -87,8 +88,8 @@ CLOCK_SEQ           = 70420
 UPDATE_OFFSET       = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60) * 60) #seconds
 
 CHANNEL_LIMIT       = 999
-CHAN_TYPES          = ['TV_Networks','TV_Shows','TV_Genres','MOVIE_Genres','MOVIE_Studios','MIXED_Genres','MIXED_Other','MUSIC_Genres','RECOMMENDED_Other'] 
-GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', 'Mixed Genres', 'Mixed Movies', 'Mixed TV', 'Movie Genres', 'Movie Studios', 'Movies', 'Music', 'Music Genres', 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', 'Recommended', 'Smartplaylist', 'TV', 'TV Genres', 'TV Networks', 'TV Shows', 'UPNP']
+CHAN_TYPES          = ['TV Networks','TV Shows','TV Genres','Movie Genres','Movie Studios','Mixed Genres','Mixed','Recommended','Music Genres','IPTV']
+GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', 'Mixed Genres', 'Mixed Movies', 'Mixed TV', 'Movie Genres', 'Movie Studios', 'Movies', 'Music', 'Music Genres', 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', 'Recommended', 'Smartplaylist', 'TV', 'TV Genres', 'TV Networks', 'TV Shows', 'UPNP', 'IPTV']
 CHANNEL_RANGE       = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
 BCT_TYPES           = ['bumper','commercial','trailer','rating']
 PRE_ROLL            = ['bumper','rating']
@@ -113,17 +114,16 @@ RULES_ACTION_CHANNEL_JSON        = 4
 RULES_ACTION_CHANNEL_ITEM        = 5
 RULES_ACTION_CHANNEL_LIST        = 6
 RULES_ACTION_CHANNEL_STOP        = 7
-RULES_ACTION_CHANNEL_BEFORE_TIME = 8
-RULES_ACTION_CHANNEL_AFTER_TIME  = 9
+RULES_ACTION_CHANNEL_PRE_TIME    = 8
+RULES_ACTION_CHANNEL_POST_TIME   = 9
 RULES_ACTION_STOP                = 10
 #player
 RULES_ACTION_PLAYBACK            = 11
 #overlay
-RULES_ACTION_OVERLAY_START       = 20
-RULES_ACTION_OVERLAY_STOP        = 21
+RULES_ACTION_OVERLAY             = 20
 
 #overlay globals
-NOTIFICATION_CHECK_TIME          = 5.0
+NOTIFICATION_CHECK_TIME          = 60.0
 NOTIFICATION_TIME_BEFORE_END     = 90
 NOTIFICATION_DISPLAY_TIME        = 8
 CHANNELBUG_CHECK_TIME            = 15.0
@@ -131,44 +131,76 @@ CHANNELBUG_CHECK_TIME            = 15.0
 # Actions
 ACTION_PREVIOUS_MENU         = [9, 10, 92, 216, 247, 257, 275, 61467, 61448, 110]
 
-def setSetting(key,value):
-    log('globals: setSetting, key = %s, value = %s'%(key,value))
-    REAL_SETTINGS.setSetting(key,value)
-
-def getSetting(key, reload=False):
-    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    return REAL_SETTINGS.getSetting(key)
-    
-def getSettingBool(key, reload=False):
-    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    try:
-        return REAL_SETTINGS.getSettingBool(key)
-    except:
-        return REAL_SETTINGS.getSetting(key) == "true" 
-    
-def getSettingInt(key, reload=False):
-    # if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    try: 
-        return REAL_SETTINGS.getSettingInt(key)
-    except:
-        value = REAL_SETTINGS.getSetting(key)
-        if value.isdigit(): return int(value)
-        else: log('getSettingInt, Failed! key = %s, value = %s'%(key, value)) #track down bug!
-    
-USER_LOC         = (getSetting('User_Folder') or SETTINGS_LOC)
+USER_LOC         = (REAL_SETTINGS.getSetting('User_Folder') or SETTINGS_LOC)
 XMLTVFLE         = os.path.join(USER_LOC ,'%s.xml'%('pseudotv'))
 M3UFLE           = os.path.join(USER_LOC ,'%s.m3u'%('pseudotv'))
 CHANNELFLE       = os.path.join(USER_LOC ,'channels.json')
 GENREFLE         = os.path.join(USER_LOC ,'genres.xml')
 CACHE_LOC        = os.path.join(USER_LOC ,'cache')
-LOCK_LOC         = os.path.join(CACHE_LOC,'lock')
 TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
+PLS_LOC          = os.path.join(CACHE_LOC,'playlist')
 
+def log(msg, level=xbmc.LOGDEBUG):
+    try: msg = str(msg)
+    except: pass
+    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
+    if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
+    try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+    except Exception as e: 'log failed! %s'%(e)
+
+def getProperty(key, id=10000):
+    try: 
+        key = '%s.%s'%(ADDON_ID,key)
+        value = xbmcgui.Window(id).getProperty(key)
+        if value: log("globals: getProperty, key = " + key + ", value = " + value)
+        return value
+    except Exception as e: log("globals: getProperty, Failed! " + str(e), xbmc.LOGERROR)
+    return ''
+    
+def setProperty(key, value, id=10000):
+    key = '%s.%s'%(ADDON_ID,key)
+    if not isinstance(value, basestring): value = str(value)
+    log("globals: setProperty, key = " + key + ", value = " + value)
+    try: xbmcgui.Window(id).setProperty(key, value)
+    except Exception as e: log("globals: setProperty, Failed! " + str(e), xbmc.LOGERROR)
+
+def clearProperty(key, id=10000):
+    key = '%s.%s'%(ADDON_ID,key)
+    log("globals: clearProperty, key = %s"%(key))
+    xbmcgui.Window(id).clearProperty(key)
+
+def setSetting(key,value):
+    log('globals: setSetting, key = %s, value = %s'%(key,value))
+    return REAL_SETTINGS.setSetting(key,value)
+
+def getSetting(key, reload=True):
+    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+    value = REAL_SETTINGS.getSetting(key)
+    log('globals: getSetting, key = %s, value = %s'%(key,value))
+    return value
+    
+def getSettingBool(key, reload=True):
+    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+    try:
+        return REAL_SETTINGS.getSettingBool(key)
+    except:
+        return getSetting(key) == "true" 
+    
+def getSettingInt(key, reload=True):
+    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+    try: 
+        return REAL_SETTINGS.getSettingInt(key)
+    except:
+        value = getSetting(key)
+        if '.' in value:
+            return float(value)
+        elif value.isdigit(): 
+            return int(value)
+    
 STORE_DURATION   = getSettingBool('Store_Duration')
 MAX_GUIDE_DAYS   = getSettingInt('Max_Days')
 ENABLE_BCTS      = getSettingBool('Enable_Fillers')
-ACCURATE_DURATION= getSettingBool('Parse_Duration')
 ENABLE_GROUPING  = getSettingBool('Enable_Grouping') 
 INCLUDE_EXTRAS   = getSettingBool('Enable_Extras') 
 INCLUDE_STRMS    = getSettingBool('Enable_Strms') 
@@ -177,7 +209,6 @@ ENABLE_PVRCONFIG = getSettingBool('Enable_Config')
 
 PAGE_LIMIT          = getSettingInt('Page_Limit')
 MIN_ENTRIES         = int(PAGE_LIMIT//2)
-ENDTIME_SEEK_OFFSET = getSettingInt('Seek_Padding')
 
 USE_COLOR        = getSettingBool('Use_Color_Logos')
 LOGO             = COLOR_LOGO if USE_COLOR else MONO_LOGO
@@ -199,7 +230,7 @@ def busy_dialog(escape=False):
         try: yield
         finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
     else: yield
-    
+
 def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=COLOR_LOGO):
     log('globals: notificationDialog: ' + message)
     try: xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
@@ -299,14 +330,6 @@ def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
         else: control.update(percent, header, message)
     return control
     
-def log(msg, level=xbmc.LOGDEBUG):
-    try: msg = str(msg)
-    except: pass
-    if not getSettingBool('Enable_Debugging') and level != xbmc.LOGERROR: return
-    if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
-    try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-    except Exception as e: 'log failed! %s'%(e)
-
 def hasPVR():
     return bool(xbmc.getCondVisibility('Pvr.HasTVChannels'))
     
@@ -330,12 +353,18 @@ def removeDUPS(lst):
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
 
-def chkVersion():
+def chkVersion(cleanStart=False):
     lastVersion = (getSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
         setSetting('lastVersion',ADDON_VERSION)
-        changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]')
-        textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        return True
+        # if cleanStart:
+            # xbmc.executebuiltin('RunPlugin("(plugin://'+ADDON_ID+'/?channel&mode=Utilities&name=Clean%20Start%2c%20Delete%20all%20files%20and%20settings.&url)")')
+    return False
+    
+def showChangelog():
+    changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Important','[B][COLOR=red]-Important:[/COLOR][/B]').replace('-Warning','[B][COLOR=red]-Warning:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]').replace('-Changed','[B][COLOR=yellow]-Changed:[/COLOR][/B]')
+    textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
     
 def dumpJSON(dict1, idnt=None, sortkey=True):
     if not dict1: return ''
@@ -382,7 +411,7 @@ def getPluginMeta(plugin):
         if plugin.startswith(('plugin://','resource://')):
             plugin = plugin.replace("plugin://","").replace("resource://","").strip('/')
         pluginID = xbmcaddon.Addon(plugin)
-        return {'type':pluginID.getAddonInfo('type'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
+        return {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
     except Exception as e: log("globals, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
         
@@ -402,16 +431,19 @@ def getPVR():
     except: # backend disabled?
         togglePVR('true')
         xbmc.sleep(1000)
-        return xbmcaddon.Addon(PVR_CLIENT)
+        try:
+            return xbmcaddon.Addon(PVR_CLIENT)
+        except: return None
         
 def chkPVR():
     log('globals: chkPVR')
     #check for min. settings required
     addon = getPVR()
+    if addon is None: return
     check = [addon.getSetting('catchupEnabled')         == 'true',
              addon.getSetting('m3uRefreshMode')         == '1',
              # addon.getSetting('m3uRefreshHour')         == '%s'%(int((UPDATE_OFFSET/60)/60)),
-             addon.getSetting('m3uRefreshIntervalMins') == '5',
+             addon.getSetting('m3uRefreshIntervalMins') == '15',
              addon.getSetting('logoPathType')           == '0',
              addon.getSetting('logoPath')               == LOGO_LOC,
              addon.getSetting('m3uPathType')            == '0',
@@ -431,7 +463,7 @@ def configurePVR(override=False):
         addon.setSetting('catchupEnabled', 'true')
         addon.setSetting('m3uRefreshMode', '1')
         # addon.setSetting('m3uRefreshHour', '%s'%(int((UPDATE_OFFSET/60)/60)))
-        addon.setSetting('m3uRefreshIntervalMins', '5')
+        addon.setSetting('m3uRefreshIntervalMins', '15')
         addon.setSetting('logoFromEpg', '1')
         addon.setSetting('logoPathType', '0')
         addon.setSetting('logoPath',  LOGO_LOC)
@@ -447,9 +479,6 @@ def configurePVR(override=False):
         addon.setSetting('genresPath', GENREFLE)
     except: return notificationDialog(LANGUAGE(30049)%(PVR_CLIENT))
     return notificationDialog(LANGUAGE(30053))
-    
-def hasSubtitle():
-    return xbmc.getCondVisibility('VideoPlayer.HasSubtitles') == 1
 
 def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'):
     try: return datetime.datetime.strptime(datestring, format)
@@ -473,6 +502,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     streamInfo = item.pop('streamdetails'   ,{})
     properties = info.pop('customproperties',{})
     properties.update(info.get('data'       ,{}))
+
     uniqueid   = info.pop('uniqueid'        ,{})
     cast       = info.pop('cast'            ,[])
         
@@ -487,7 +517,14 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
             if not isinstance(value, ptype):
                 info[key] = ptype(value)
         return info
-        
+            
+    def cleanProp(value):
+        if isinstance(value,dict):
+            return dumpJSON(value)
+        elif isinstance(value,list):
+            return '|'.join(value)
+        return str(value)
+            
     listitem = xbmcgui.ListItem(offscreen=oscreen)
     listitem.setLabel(info.get('label',''))
     listitem.setLabel2(info.get('label2',''))
@@ -496,7 +533,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     listitem.setArt(art)
     listitem.setCast(cast)
     listitem.setUniqueIDs(uniqueid)
-    [listitem.setProperty(key, str(value)) for key, value in properties.items()]
+    [listitem.setProperty(key, cleanProp(value)) for key, value in properties.items()]
     [listitem.addStreamInfo(key, value) for key, values in streamInfo.items() for value in values]
     if playable: listitem.setProperty("IsPlayable","true")
     return listitem
@@ -520,7 +557,7 @@ def is3D(item):
         if len(stereomode) > 0: return True
     return False
          
-def getThumb(item):
+def getThumb(item): #unify thumbnail artwork
     return (item['art'].get('season.landscape','') or 
             item['art'].get('tvshow.landscape','') or 
             item['art'].get('landscape','')        or
@@ -542,28 +579,7 @@ def getThumb(item):
             item.get('folder','')                  or
             item['art'].get('icon','')             or
             item.get('icon','')                    or
-            FANART)
-
-def getProperty(key, id=10000):
-    try: 
-        key = '%s.%s'%(ADDON_ID,key)
-        value = xbmcgui.Window(id).getProperty(key)
-        if value: log("globals: getProperty, key = " + key + ", value = " + value)
-        return value
-    except Exception as e: log("globals: getProperty, Failed! " + str(e), xbmc.LOGERROR)
-    return ''
-    
-def setProperty(key, value, id=10000):
-    key = '%s.%s'%(ADDON_ID,key)
-    if not isinstance(value, basestring): value = str(value)
-    log("globals: setProperty, key = " + key + ", value = " + value)
-    try: xbmcgui.Window(id).setProperty(key, value)
-    except Exception as e: log("globals: setProperty, Failed! " + str(e), xbmc.LOGERROR)
-
-def clearProperty(key, id=10000):
-    key = '%s.%s'%(ADDON_ID,key)
-    log("globals: clearProperty, key = %s"%(key))
-    xbmcgui.Window(id).clearProperty(key)
+            LOGO)
 
 def funcExecute(func,args):
     log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
@@ -755,7 +771,10 @@ def toggleCHKInfo(state):
     
 def isCHKInfo():
     return getProperty('chkInfo') == "True"
-    
+        
+def hasSubtitle():
+    return bool(xbmc.getCondVisibility('VideoPlayer.HasSubtitles'))
+
 def isSubtitle():
     return bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
     
@@ -799,14 +818,14 @@ def findItemsIn(items, values, item_key='getLabel', val_key='', index=True):
 def titleLabels(list):
      return [str(item).title() for item in list]
  
-def roundToHalfHour(stime,offset=30): # round the given time down to the nearest
+def roundTime(stime,offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(stime)
     delta = datetime.timedelta(minutes=offset)
     if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
     else: n = n.replace(minute=0, second=0, microsecond=0)
     return time.mktime(n.timetuple())
 
-def roundToHour(stime,offset=30): # round the given time up to the nearest
+def roundTimeTo(stime,offset=30): # round the given time up to the nearest
     n = datetime.datetime.fromtimestamp(stime)
     n = (n.replace(second=0, microsecond=0, minute=0, hour=n.hour) + datetime.timedelta(hours=n.minute//30))
     return time.mktime(n.timetuple())

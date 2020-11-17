@@ -23,7 +23,8 @@ class MKVParser:
         log("MKVParser: determineLength " + filename)
 
         try:
-            self.File = xbmcvfs.File(filename, "r")
+            # self.File = xbmcvfs.File(filename, "r")
+            self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MKVParser: Unable to open the file")
             log(traceback.format_exc(), xbmc.LOGERROR)
@@ -35,7 +36,7 @@ class MKVParser:
             log('MKVParser: Unable to find the segment info')
             dur = 0
         else:
-            dur = self.parseHeader(size)
+            dur = int(round(self.parseHeader(size)))
 
         log("MKVParser: Duration is " + str(dur))
         return dur

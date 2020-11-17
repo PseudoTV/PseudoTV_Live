@@ -4,141 +4,137 @@
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,false,10000)</onunload> 
     <controls>
-      <control type="group" id="40001">
-        <description>Background Overlay</description>
-        <visible>Player.HasVideo</visible>
-        <posx>0</posx>
-        <posy>0</posy>
-        <control type="image">
-          <description>Background</description>
-          <width>1920</width>
-          <height>1080</height>
-          <aspectratio>keep</aspectratio>
-          <texture>background.gif</texture>
-        </control>
-        <control type="image">
-          <description>Background</description>
-          <width>1920</width>
-          <height>1080</height>
-          <aspectratio>keep</aspectratio>
-          <animation effect="fade" end="45" condition="True">conditional</animation>
-          <texture>background.png</texture>
-        </control>
-        <control type="grouplist">
-          <description>Channel Meta</description>>
-          <posx>768</posx>
-          <posy>351</posy>
-          <width>1080</width>
-          <height>800</height>
-          <itemgap>10</itemgap>
-          <orientation>vertical</orientation>
-          <control type="label"> 
-            <width>384</width>
-            <height>40</height>
-            <font>font37</font>
-            <align>center</align>
-            <aligny>bottom</aligny>
-            <scroll>true</scroll>
-            <textcolor>white</textcolor>
-            <shadowcolor>text_shadow</shadowcolor>
-            <label>$INFO[Window(10000).Property(plugin.video.pseudotv.live.overlay.name),You're Watching ,]</label>
-          </control>
-          <control type="image">
-            <description>Logo</description>
-            <width>384</width>
-            <height>384</height>
-            <aspectratio aligny="center">keep</aspectratio>
-            <texture>$INFO[Window(10000).Property(plugin.video.pseudotv.live.overlay.logo)]</texture>
-          </control>
-          <control type="label">
-            <width>384</width>
-            <height>40</height>
-            <font>font37</font>
-            <align>center</align>
-            <aligny>bottom</aligny>
-            <scroll>false</scroll>
-            <textcolor>white</textcolor>
-            <shadowcolor>text_shadow</shadowcolor>
-            <label>We'll Be Right Back...</label>
-          </control>
-        </control> 
-      </control> 
-      
-      <control type="grouplist" id="40003">
-        <visible>Control.IsVisible(40001)</visible>
-        <description>On Next</description>>
-        <posx>500r</posx>
-        <posy>128</posy>
-        <width>480</width>
-        <height>800</height>
-        <itemgap>20</itemgap>
-        <orientation>vertical</orientation>
-        <control type="label">
-          <width>480</width>
-          <height>40</height>
-          <font>font30_title</font>
-          <align>center</align>
-          <aligny>bottom</aligny>
-          <scroll>false</scroll>
-          <textcolor>white</textcolor>
-          <shadowcolor>text_shadow</shadowcolor>
-          <label>$INFO[Container(40000).ListItem(1).Label,,]</label>
-        </control>
-        <control type="image">
-          <description>Fanart</description>
-          <width>480</width>
-          <height>270</height>
-          <aspectratio aligny="center">keep</aspectratio>
-          <texture>$INFO[Container(40000).ListItem(1).Thumb]</texture>
-          <bordersize>5</bordersize>
-          <bordertexture border="5">white.png</bordertexture>
-        </control>
-        <control type="label"> 
-          <width>480</width>
-          <height>80</height>
-          <font>font36_title</font>
-          <align>center</align>
-          <aligny>bottom</aligny>
-          <scroll>false</scroll>
-          <textcolor>white</textcolor>
-          <shadowcolor>text_shadow</shadowcolor>
-          <label>Coming Up Next</label>
-        </control>
-      </control>
-
+    
       <control type="group" id="40002">
         <description>Player Overlay</description>
         <visible>Player.HasVideo + Player.Playing</visible>
         <posx>0</posx>
         <posy>0</posy>
+        
         <control type="image"> 
           <description>Hide Kodi UI</description>
-          <width>1920</width>
-          <height>1080</height>
+          <width>auto</width>
+          <height>auto</height>
           <texture>white.png</texture>
           <colordiffuse>black</colordiffuse>
         </control>
+        
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
-          <posx>0</posx>
-          <posy>0</posy>
-          <width>1920</width>
-          <height>1080</height>
+          <width>auto</width>
+          <height>auto</height>
         </control>
+        
+        <control type="group" id="41003">
+          <description>On Next</description>
+          <left>1280</left>
+          <top>192</top>
+          <align>right</align>
+          <aligny>center</aligny>
+          <visible>false</visible>
+          <animation effect="slide" start="1920,192" end="1280,192" time="200">VisibleChange</animation>
+          <control type="image"> 
+            <width>768</width>
+            <height>128</height>
+            <texture>white.png</texture>
+            <colordiffuse>dimgray</colordiffuse>
+            <animation effect="fade" end="75" condition="True">conditional</animation>
+          </control>
+          <control type="image"> 
+            <left>12</left>
+            <top>12</top>
+            <width>128</width>
+            <height>96</height>
+            <texture>$INFO[Container(40000).ListItem(1).Thumb]</texture>
+          </control>
+          <control type="grouplist">
+            <left>152</left>
+            <itemgap>2</itemgap>
+            <orientation>vertical</orientation>
+            <control type="label">
+              <width>auto</width>
+              <height>30</height>
+              <font>font12</font>
+              <scroll>false</scroll>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <label>$INFO[Player.TimeRemaining(ss),Coming Up Next in , seconds]</label>
+            </control>
+            <control type="label">
+              <width>auto</width>
+              <height>30</height>
+              <font>font12</font>
+              <scroll>true</scroll>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <label>$INFO[Container(40000).ListItem(1).Label,,]</label>
+            </control>
+            <control type="label">
+              <width>auto</width>
+              <height>30</height>
+              <font>font12</font>
+              <scroll>true</scroll>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <label>$INFO[Container(40000).ListItem(1).episodetitle,,]</label>
+            </control>
+          </control>
+        </control>
+        
+        <control type="image" id="41004">
+          <description>Channel Bug</description>
+          <left>1536</left>
+          <top>888</top>
+          <width>128</width>
+          <height>128</height>
+          <aspectratio>keep</aspectratio>
+          <animation effect="fade" end="25" condition="True">conditional</animation>
+          <animation effect="fade" start="0" end="25" time="4000" reversible="true">VisibleChange</animation>
+        </control>
+        
       </control>
-      
-      <control type="image" id="41004">
-        <description>Channel Bug</description>
-        <left>1495</left>
-        <top>852</top>
-        <width>192</width>
-        <height>192</height>
-        <aspectratio>keep</aspectratio>
-        <texture fallback="logo.png"></texture>
-        <animation effect="fade" end="25" condition="True">conditional</animation>
-        <animation effect="fade" start="0" end="25" time="4000" reversible="true">>VisibleChange</animation>
-      </control>
-      
+
+      <!-- <control type="grouplist" id="40001"> -->
+        <!-- <description>On Next</description>> -->
+        <!-- <posx>500r</posx> -->
+        <!-- <posy>128</posy> -->
+        <!-- <width>480</width> -->
+        <!-- <height>800</height> -->
+        <!-- <itemgap>20</itemgap> -->
+        <!-- <orientation>vertical</orientation> -->
+        <!-- <control type="label"> -->
+          <!-- <width>480</width> -->
+          <!-- <height>40</height> -->
+          <!-- <font>font30_title</font> -->
+          <!-- <align>center</align> -->
+          <!-- <aligny>bottom</aligny> -->
+          <!-- <scroll>false</scroll> -->
+          <!-- <textcolor>white</textcolor> -->
+          <!-- <shadowcolor>text_shadow</shadowcolor> -->
+          <!-- <label>$INFO[Container(40000).ListItem(1).Label,,]</label> -->
+        <!-- </control> -->
+        <!-- <control type="image"> -->
+          <!-- <description>Fanart</description> -->
+          <!-- <width>480</width> -->
+          <!-- <height>270</height> -->
+          <!-- <aspectratio aligny="center">keep</aspectratio> -->
+          <!-- <texture>$INFO[Container(40000).ListItem(1).Thumb]</texture> -->
+          <!-- <bordersize>5</bordersize> -->
+          <!-- <bordertexture border="5">white.png</bordertexture> -->
+        <!-- </control> -->
+        <!-- <control type="label">  -->
+          <!-- <width>480</width> -->
+          <!-- <height>80</height> -->
+          <!-- <font>font36_title</font> -->
+          <!-- <align>center</align> -->
+          <!-- <aligny>bottom</aligny> -->
+          <!-- <scroll>false</scroll> -->
+          <!-- <textcolor>white</textcolor> -->
+          <!-- <shadowcolor>text_shadow</shadowcolor> -->
+          <!-- <label>Coming Up Next</label> -->
+        <!-- </control> -->
+      <!-- </control> -->
+
       <control type="list" id="40000">
         <description>Meta Container</description>
         <itemlayout width="0" height="0">
@@ -148,8 +144,3 @@
       </control>
     </controls>
 </window>
-
-<!-- <effect type="slide" start="0,-40" end="0,0" time="400" tween="cubic" easing="inout"/> -->
-      <!-- <effect type="fade" start="0" end="100" time="500"/> -->
-      <!-- <effect type="slide" start="0,0" end="0,-40" time="400" tween="cubic" easing="inout"/> -->
-      <!-- <effect type="fade" start="100" end="0" time="200"/> -->

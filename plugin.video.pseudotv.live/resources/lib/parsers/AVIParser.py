@@ -17,7 +17,6 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from resources.lib.globals    import *
-from resources.lib.fileaccess import FileAccess
 
 class AVIChunk:
     def __init__(self):
@@ -118,9 +117,9 @@ class AVIParser:
             log("AVIParser: Unable to open the file")
             return 0
 
-        dur = self.readHeader()
+        dur = int(self.readHeader())
         self.File.close()
-        log('Duration: ' + str(dur))
+        log('AVIParser: Duration is ' + str(dur))
         return dur
 
 

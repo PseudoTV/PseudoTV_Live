@@ -1,10 +1,26 @@
+v.0.2.4
+-Fixed Radio programmes.
+-Improved programmes parsing.
+-Improved Overlay performance.
+-Fixed Overlay crashes.
+-Removed "Channel Change" Overlay, no longer needed due to performance enhancements. 
+-Added "OnNext" pop-up to overlay. Global option to enable on all channels under tweaks. Pending release use Advanced Channel rule to disable on individual channels.
+
+v.0.2.3
+-Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
+-Improved M3U/XMLTV imports (now supports urls and m3u playlists containing #KODIPROP).
+-Fixed bug where adding "Predefined" channels was ignored.
+-Added "Recommended Services" Pre-defined channel configurations, currently supports PlutoTV, Channels DVR Plugin.
+-Improved custom IPTV simple genre.xml list.
+-Changed IPTV Simple dependency version to v.7.0.0
+-Tweaked performance with core-code refactoring.
+
 v.0.2.2
--Improved internal meta handling; Default director & writer meta restored.
--Improved M3U/XMLTV import (now supports http urls).
+-Improved Internal meta handling; Default director & writer meta restored.
 -Improved playback handling.
 -Fixed playback issue (during the end of Non-PseudoTV playback, PseudoTV would launch last channel played).
 -Tweaked client detection and Multi-Room sharing.
--Fixed saving accurate duration data to Kodi's Library.
+-Fixed saving accurate duration data to Kodis Library.
 -Added IPTV Simple VOD support ("Play OnDemand" context item removed, use "Play Programme").
 -Added initial support for Advanced Channel Rules.
 

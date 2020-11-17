@@ -16,11 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-from resources.lib.globals import *
+import resources.lib.globals as globals
+import os, shutil, codecs, threading, random
+
+from kodi_six import xbmc, xbmcvfs
 
 VFS_AVAILABLE = True
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
 FILE_LOCK_NAME = "FileLock.dat"
+    
+def log(msg, level=xbmc.LOGDEBUG):
+    globals.log(msg,level)
+
 
 class FileAccess:
     @staticmethod
@@ -204,8 +211,9 @@ class VFSFile:
 class FileLock:
     def __init__(self):
         random.seed()
-        FileAccess.makedirs(LOCK_LOC)
-        self.lockFileName = os.path.join(LOCK_LOC,FILE_LOCK_NAME)
+        if not FileAccess.exists(globals.CACHE_LOC):
+            FileAccess.makedirs(globals.CACHE_LOC)
+        self.lockFileName = os.path.join(globals.CACHE_LOC,FILE_LOCK_NAME)
         self.lockedList = []
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
@@ -330,7 +338,7 @@ class FileLock:
         # timeout should help prevent issues with an old cache.
         for i in range(40):
             # Cycle file names in case one of them is sitting around in the directory
-            self.lockName = os.path.join(LOCK_LOC,"%s.lock"%(random.randint(1, 60000)))
+            self.lockName = os.path.join(globals.CACHE_LOC,"%s.lock"%(random.randint(1, 60000)))
 
             try:
                 FileAccess.rename(self.lockFileName, self.lockName)

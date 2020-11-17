@@ -21,23 +21,19 @@ from resources.lib.globals import *
 
 class RulesList:
     def __init__(self):
-        self.ruleList = [BaseRule(),HandleMethodOrder(),HandleFilter(),SeekLock()]
-        self.ritem    = {"id": 0,"name": "","description": "","options": {},"action": ""}
-
-
-    def buildRuleList(self): #Build all Available rules 
-        rules = self.ruleList
-        rules.pop(0)#remove base example.
-        for rule in rules:
-            ritem = self.getRitem()
-            ritem.update({'id':rule.getId(),'name':rule.getTitle(),'description':rule.getDesc(),'options':{},'action':rule.copy()})
-            for opt in range(rule.getOptionCount()):
-                ritem['options'][str(opt)] = {'label':rule.getOptionLabel(opt),'value':rule.getOptionValue(opt)}
-            yield ritem
+        self.ruleList = [BaseRule(),
+                         HandleMethodOrder(),
+                         HandleFilter(),
+                         SeekLock()]
 
 
     def getRitem(self):
-        return self.ritem.copy()
+        ritem = {"id":0,
+                 "name":"",
+                 "description":"",
+                 "options":{},
+                 "action":""}
+        return ritem.copy()
 
 
     def getRuleCount(self):
@@ -50,6 +46,21 @@ class RulesList:
         while index >= len(self.ruleList):
             index -= len(self.ruleList)
         return self.ruleList[index]
+
+
+    def getRuleTypes(self):
+        return sorted(self.buildRuleTypes(), key=lambda k: k['id'])
+
+
+    def buildRuleTypes(self): #Build all default rule types
+        rules = self.ruleList
+        rbase = rules.pop(0) #remove base example.
+        for rule in rules:
+            ritem = self.getRitem()
+            ritem.update({'id':rule.getId(),'name':rule.getTitle(),'description':rule.getDesc(),'options':{},'action':rule.copy()})
+            for opt in range(rule.getOptionCount()):
+                ritem['options'][str(opt)] = {'label':rule.getOptionLabel(opt),'value':rule.getOptionValue(opt)}
+            yield ritem
 
 
 class BaseRule:
@@ -109,7 +120,7 @@ class BaseRule:
         return self.myId
 
 
-    def runAction(self, actionid, channelList, param):
+    def runAction(self, actionid, Builder, param):
         return param
 
 
@@ -287,21 +298,21 @@ class HandleMethodOrder(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, Builder, channeldata):
         #"sort": {"order": "ascending", "ignorefolders": "false", "method": "random"}
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedLimitValue = channelList.mediaLimit
-            self.storedSortValue  = channelList.fileListSort
+            self.storedLimitValue = Builder.mediaLimit
+            self.storedSortValue  = Builder.fileListSort
             sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": int(self.optionValues[2] == True)}
             log("HandleMethodOrder sort = %s"%(sort))
             for value in self.optionValues:
                 if len(value) == 0:
                     return channeldata
-            channelList.mediaLimit   = self.optionValues[0]
-            channelList.fileListSort = sort
+            Builder.mediaLimit   = self.optionValues[0]
+            Builder.fileListSort = sort
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            channelList.mediaLimit    = self.storedLimitValue
-            channelList.fileListSort  = self.storedSortValue
+            Builder.mediaLimit    = self.storedLimitValue
+            Builder.fileListSort  = self.storedSortValue
         return channeldata
 
 
@@ -338,18 +349,18 @@ class HandleFilter(BaseRule):
             self.validateTextBox(0, 240)
 
 
-    def runAction(self, actionid, channelList, channeldata):
+    def runAction(self, actionid, Builder, channeldata):
         #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
         if actionid == RULES_ACTION_CHANNEL_START: 
-            self.storedFilterValue = channelList.fileListFilter
+            self.storedFilterValue = Builder.fileListFilter
             filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": urllib.quote((self.optionValues[2]))}
             log("Filter for HandleFilter is = " + str(filter))
             for i in range(len(self.optionValues)):
                 if len(self.optionValues[i]) == 0:
                     return channeldata
-            channelList.fileListFilter = filter
+            Builder.fileListFilter = filter
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            channelList.fileListFilter = self.storedFilterValue
+            Builder.fileListFilter = self.storedFilterValue
         return channeldata
            
                
@@ -380,7 +391,7 @@ class SeekLock(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, channel, nowitem):
+    def runAction(self, actionid, Channels, nowitem):
         if actionid == RULES_ACTION_PLAYBACK:
             self.log("setting Seek Lock to %s"%(self.optionValues[0]))
             nowitem['progress'] = 0
@@ -411,7 +422,7 @@ class UPNP(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, channel, Builder):
+    def runAction(self, actionid, Channels, Builder):
         if actionid == RULES_ACTION_CHANNEL_JSON:
             if channel['path'].startswith('upnp://'):
                 channel['path'] = Builder.jsonRPC.chkUPNP(channel['path'])

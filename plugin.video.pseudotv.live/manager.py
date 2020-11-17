@@ -19,7 +19,6 @@
 
 from resources.lib.globals     import *
 from config                    import Config
-from resources.lib.parser      import JSONRPC, Channels
 from resources.lib.rules       import RulesList
 from resources.lib.fileaccess  import FileAccess
 
@@ -29,17 +28,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         if isBusy():
             notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
-        elif getProperty('Config.Running') == "True": return
+        elif getProperty('Config.Running') == "True": 
+            return
+        
         with busy_dialog():
             setBusy(True)
             setProperty('Config.Running','True')
             self.showingList   = True
             self.madeChanges   = False
             self.myMonitor     = MY_MONITOR
-            self.config        = Config()
-            self.jsonRPC       = JSONRPC()
             self.rules         = RulesList()
-            self.channels      = Channels()
+            self.config        = Config()
+            self.jsonRPC       = self.config.jsonRPC
+            self.channels      = self.config.channels
             self.cntrlStates   = {}
             self.channel       = 0
             self.channelLimit  = CHANNEL_LIMIT
@@ -133,7 +134,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def setFocusPOS(self, listitems, chnum=None, ignore=True):
         for idx, listitem in enumerate(listitems):
             chnumber = int(cleanLabel(listitem.getLabel()))
-            if   ignore and chnumber > CHANNEL_LIMIT: continue
+            if  ignore and chnumber > CHANNEL_LIMIT: continue
             elif chnum is not None and chnum == chnumber: return idx
             elif chnum is None and cleanLabel(listitem.getLabel2()): return idx
         return 0
@@ -201,7 +202,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         listItems   = []
         channelProp = dumpJSON(channelData, sortkey=False)
         for key, value in channelData.items():
-            if   key in ["number","type","logo","id","xmltv","page","favorite"]: continue # keys to ignore, internal use only.
+            if   key in ["number","type","logo","id","xmltv","page","favorite","catchup"]: continue # keys to ignore, internal use only.
             elif key == 'rules' and not channelData.get('id',''): continue
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(value)
@@ -347,7 +348,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def validatePath(self, channelData, path, key):
         self.log('validatePath')
         found = False
-        radio = (channelData.get('radio','') or (channelData['type'] == 'MUSIC Genres' or path.startswith('musicdb://')))
+        radio = (channelData.get('radio','') or (channelData['type'] == 'Music Genres' or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
         self.toggleSpinner(self.itemList,True)
         fitem = self.jsonRPC.existsVFS(path, media)
@@ -517,7 +518,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
     def fillRules(self, channelData): # prepare "new" rule list, remove existing.
         chrules  = sorted(self.channels.getChannelRules(channelData, self.newChannels), key=lambda k: k['id'])
-        ruleList = self.channels.ruleList.copy()
+        ruleList = self.channels.rules.copy()
         for rule in ruleList:
             for chrule in chrules:
                 if rule['id'] == chrule['id']: continue
@@ -611,7 +612,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             chnumber = cleanLabel(channelitem.getLabel())
             if chnumber.isdigit(): 
-                self.focusItems['number'] = int(chnumber)
+                try:
+                    self.focusItems['number'] = int(chnumber)
+                except:
+                    self.focusItems['number'] = float(chnumber)
             elif self.focusItems['chanList']['data'].get('number',''):
                 self.focusItems['number'] = self.focusItems['chanList']['data']['number']
             else:

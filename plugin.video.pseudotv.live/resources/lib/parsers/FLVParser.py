@@ -50,7 +50,8 @@ class FLVParser:
         log("FLVParser: determineLength " + filename)
 
         try:
-            self.File = xbmcvfs.File(filename, "r")
+            # self.File = xbmcvfs.File(filename, "r")
+            self.File = FileAccess.open(filename, "rb", None)
         except:
             log("FLVParser: Unable to open the file")
             return
@@ -67,9 +68,9 @@ class FLVParser:
             self.File.close()
             return 0
 
-        dur = self.getDurFromTag(tagheader)
+        dur = int(self.getDurFromTag(tagheader))
         self.File.close()
-        log("FLVParser: Duration: " + str(dur))
+        log("FLVParser: Duration is " + str(dur))
         return dur
 
 

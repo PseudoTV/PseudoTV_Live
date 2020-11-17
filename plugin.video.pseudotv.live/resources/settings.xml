@@ -2,27 +2,29 @@
 <settings>
 	<category label="30018">
         <setting                            type="lsep"     label="30024"            visible="false"    /> 
-        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/manager.py)"                    subsetting="true" option="close" />
+        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/manager.py)"                    subsetting="true"   option="close" />
         <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="true"      action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" enable="System.HasAddon(plugin.library.node.editor)" subsetting="true" option="close" />
-        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        subsetting="true" option="close" />
-        <setting id="User_Groups"           type="action"   label="30075" default="" visible="true"      action="RunScript($CWD/config.py, User_Groups)"        subsetting="true" option="close" />
-        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="true"      action="RunScript($CWD/config.py, Clear_Userdefined)"  subsetting="true" option="close" />
+        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        subsetting="true"   option="close" />
+        <setting id="User_Groups"           type="action"   label="30075" default="" visible="true"      action="RunScript($CWD/config.py, User_Groups)"        subsetting="true"   option="close" />
+        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="true"      action="RunScript($CWD/config.py, Clear_Userdefined)"  subsetting="true"   option="close" />
         <setting                            type="lsep"     label="30022"            visible="true"     />
         <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
-        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"     action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true" option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="true"     action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true" option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="true"     action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true" option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_MOVIE_Genres"   type="action"   label="30005" default="" visible="true"     action="RunScript($CWD/config.py, MOVIE_Genres)"        subsetting="true" option="close" enable="Library.HasContent(Movies)"/>
-        <setting id="Select_MIXED_Genres"   type="action"   label="30006" default="" visible="true"     action="RunScript($CWD/config.py, MIXED_Genres)"        subsetting="true" option="close" enable="Library.HasContent(TVShows) + Library.HasContent(Movies)"/>
-        <setting id="Select_MOVIE_Studios"  type="action"   label="30007" default="" visible="true"     action="RunScript($CWD/config.py, MOVIE_Studios)"       subsetting="true" option="close" enable="Library.HasContent(Movies)"/>
-        <setting id="Select_MIXED_Other"    type="action"   label="30080" default="" visible="true"     action="RunScript($CWD/config.py, MIXED_Other)"         subsetting="true" option="close" />
-        <setting id="Select_MUSIC_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, MUSIC_Genres)"        subsetting="true" option="close" enable="Library.HasContent(Music)"/>
-        <setting id="Select_RECOMMENDED"    type="action"   label="30026" default="" visible="false"    action="RunScript($CWD/config.py, RECOMMENDED_Other)"   subsetting="true" option="close" />
-        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true" option="close" />
+        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"     action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
+        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="true"     action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
+        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="true"     action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
+        <setting id="Select_Movie_Genres"   type="action"   label="30005" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Movies)"/>
+        <setting id="Select_Movie_Studios"  type="action"   label="30007" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Studios)"       subsetting="true"   option="close" enable="Library.HasContent(Movies)"/>
+        <setting id="Select_Mixed_Genres"   type="action"   label="30006" default="" visible="true"     action="RunScript($CWD/config.py, Mixed_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(TVShows) + Library.HasContent(Movies)"/>
+        <setting id="Select_Mixed"          type="action"   label="30080" default="" visible="true"     action="RunScript($CWD/config.py, Mixed)"               subsetting="true"   option="close" />
+        <setting id="Select_Recommended"    type="action"   label="30023" default="" visible="true"     action="RunScript($CWD/config.py, Recommended)"         subsetting="true"   option="close" />
+        <setting id="Select_IPTV"           type="action"   label="30150" default="" visible="true"     action="RunScript($CWD/config.py, IPTV)"                subsetting="true"   option="close" />
+        <setting id="Select_Music_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, Music_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Music)"/>
+        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true"   option="close" />
         </category> 
     <category label="30025">
-        <setting id="Enable_Config"         type="bool"     label="30145" default="false" />    
-        <setting id="Enable_Grouping"       type="bool"     label="30019" default="true" />
+        <setting id="Enable_Recommended"    type="bool"     label="30148" default="true"  />
+        <setting id="Enable_Config"         type="bool"     label="30145" default="false" />
+        <setting id="Enable_Grouping"       type="bool"     label="30019" default="true"  />
         <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
         <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
         <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />           
@@ -41,6 +43,7 @@
     </category> 
     <category label="30055">
         <setting id="Enable_Overlay"       type="bool"     label="30054" default="true" />
+        <setting id="Enable_OnNext"        type="bool"     label="30153" default="true" />
         <setting id="Enable_Extras"        type="bool"     label="30094" default="false" />
         <setting id="Enable_Strms"         type="bool"     label="30095" default="false" />
         <setting id="Enable_Fillers"       type="bool"     label="30030" default="false"/> 
@@ -53,8 +56,8 @@
         <setting id="User_Import"          type="bool"     label="30036" default="false" />
         <setting id="Clear_Import"         type="action"   label="30037" default="" visible="eq(-1,true)"  subsetting="true" action="RunScript($CWD/config.py, Clear_Import)" option="close" />
         <setting                           type="lsep"     /> 
-        <setting id="Import_M3U1"          type="file"     label="30034" default="" visible="eq(-3,true)"  source="video" />
-        <setting id="Import_XMLTV1"        type="file"     label="30035" default="" visible="eq(-4,true)"  source="video" />
+        <setting id="Import_M3U"           type="file"     label="30034" default="" visible="eq(-3,true)"  source="video" />
+        <setting id="Import_XMLTV"         type="file"     label="30035" default="" visible="eq(-4,true)"  source="video" />
     </category> 
     <category label="30020">
         <setting id="Enable_Debugging"     type="bool"     label="30000" default="true" />

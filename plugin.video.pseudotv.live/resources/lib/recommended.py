@@ -18,17 +18,25 @@
 
 # -*- coding: utf-8 -*-
 
-from resources.lib.globals    import *
-from resources.lib.parser     import JSONRPC
+from resources.lib.globals     import *
+from resources.lib.jsonrpc     import JSONRPC
 
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Recommended:
-    def __init__(self):
+    def __init__(self, cache=None):
         self.log('__init__')
-        self.jsonrpc          = JSONRPC()
-        self.recommendedList  = self.getRecommendedList()
-        self.recommendedItems = self.getData()
+        if cache is None:
+            self.cache = SimpleCache()
+        else: 
+            self.cache = cache
+            
+        self.jsonRPC           = JSONRPC(self.cache)
+        self.recommendEnabled  = getSettingBool('Enable_Recommended')
+        self.recommendedList   = self.getRecommendedList()
+        self.importPrompt_busy = False
+        #whitelist - prompt shown, added to import list and/or manager dropdown.
+        #blacklist - plugin ignored for the life of the list.
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -41,11 +49,19 @@ class Recommended:
         return True
 
 
+    def clearRecommendedList(self):
+        self.log('clearRecommendedList')
+        self.recommendedList = {}
+        return self.setRecommendedList()
+
+
     def getRecommendedList(self):
+        self.log('getRecommendedList')
         return loadJSON(getSetting('Recommended_List'))
 
 
     def setRecommendedList(self):
+        self.log('setRecommendedList')
         return setSetting('Recommended_List',dumpJSON(self.recommendedList))
 
 
@@ -58,51 +74,62 @@ class Recommended:
     
     
     def addWhiteList(self, addonid):
+        self.log('addWhiteList')
         whitelist = self.getWhiteList()
         whitelist.append(addonid)
-        self.setRecommendedList()
-        return True
+        self.recommendedList['whitelist'] = whitelist
+        return self.setRecommendedList()
         
         
     def addBlackList(self, addonid):
+        self.log('addBlackList')
         blacklist = self.getBlackList()
         blacklist.append(addonid)
-        self.setRecommendedList()
-        return True
+        self.recommendedList['blacklist'] = blacklist
+        return self.setRecommendedList()
     
     
-    def getAddons(self):
-        response = self.jsonrpc.cacheJSON('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.addon.video","enabled":true},"id":1}')
-        return response.get('result',{}).get('addons',[])
-        
-        
     def buildData(self, addon):
         addonid = addon.get('addonid','')
         blackList = self.getBlackList()
         if not addonid in blackList:
             data = xbmcgui.Window(10000).getProperty(REG_KEY%(addonid))
             if data: 
-                self.log('buildData, found addonid = %s, data = %s'%(addonid,data))
-                return {'id':addonid,'data':loadJSON(data),'meta':getPluginMeta(addonid)}
+                self.log('buildData, found addonid = %s, payload = %s'%(addonid,data))
+                return {'id':addonid,'data':loadJSON(data),'item':getPluginMeta(addonid)}
             
             
     def getData(self):
         self.log('getData')
-        return list(PoolHelper().poolList(self.buildData, self.getAddons()))
+        return list(PoolHelper().poolList(self.buildData, self.jsonRPC.getAddons()))
         
         
     def getDataType(self, type='iptv'):
         self.log('getDataType, type = %s'%(type))
-        return [item for item in self.recommendedItems if item.get('type','').lower() == type.lower()]
+        whiteList = self.getWhiteList()
+        recommendedItems = self.getData()
+        return [item for item in recommendedItems for addonid in whiteList if ((item.get('id','') == addonid) and (item['data'].get('type','').lower() == type.lower()))]
+        
+        
+    def fillRecommended(self):
+        self.log('fillRecommended')
+        whiteList = self.getWhiteList()
+        recommendedItems = self.getData()
+        return [item for item in recommendedItems for addonid in whiteList if ((item.get('id','') == addonid) and (item['data'].get('type','').lower() != 'iptv'))]
         
     
     def importPrompt(self):
         self.log('importPrompt')
-        whiteList = self.getWhiteList()
-        for addon in self.recommendedItems:
-            if not addon['id'] in whiteList:
-                if not yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,addon['meta'].get('name','')))):
-                    return self.addBlackList(addon['id'])
+        if self.importPrompt_busy: return
+        self.importPrompt_busy = True
+        ignoreList = self.getWhiteList()
+        ignoreList.extend(self.getBlackList())
+        recommendedItems = self.getData()
+        for addon in recommendedItems:
+            if not addon['id'] in ignoreList:
+                if not yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,addon['item'].get('name','')))):
+                    self.addBlackList(addon['id'])
                 else:
-                    print(addon)
+                    self.addWhiteList(addon['id'])
+        self.importPrompt_busy = False
         return True

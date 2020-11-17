@@ -18,25 +18,34 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
-from resources.lib.parser      import JSONRPC, Channels, M3U
+from resources.lib.parser      import Channels, M3U
+from resources.lib.jsonrpc     import JSONRPC
 from resources.lib.predefined  import Predefined 
-from resources.lib.recommended import Recommended 
 
 class Config:
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, sysARG=sys.argv, cache=None):
         self.log('__init__, sysARG = ' + str(sysARG))
-        self.sysARG        = sysARG
-        self.jsonRPC       = JSONRPC()
-        self.channels      = Channels()
-        self.m3u           = M3U()
-        self.predefined    = Predefined()
-        self.recommended    = Recommended()
+        self.sysARG    = sysARG
+        if cache is None:
+            self.cache = SimpleCache()
+        else: 
+            self.cache = cache
+            
+        self.jsonRPC       = JSONRPC(self.cache)
+        self.channels      = Channels(self.cache)
+        self.m3u           = M3U(self.cache)
+        self.predefined    = Predefined(self.cache)
+        self.recommended   = self.channels.recommended
+        
         self.TV_Shows      = []
         self.TV_Info       = [[],[]]
         self.MOVIE_Info    = [[],[]]
         self.MUSIC_Info    = []
-        self.InitThread    = threading.Timer(0.5, self.runInit)
-        self.spoolThread   = threading.Timer(0.5, self.spoolItems)
+        self.IPTV_Items    = []
+        self.Recommended_Items = []
+        
+        self.InitThread      = threading.Timer(0.5, self.runInit)
+        self.serviceThread   = threading.Timer(0.5, self.runThread)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -56,33 +65,63 @@ class Config:
     def runInit(self):
         self.log('runInit')
         chkPVR()
-        chkVersion()
+        if chkVersion():
+            showChangelog()
+            
 
 
-    def startSpooler(self, wait=5.0):
-        self.log('startSpooler, wait = %s'%(wait))
-        if self.spoolThread.isAlive(): 
-            self.spoolThread.cancel()
-        self.spoolThread = threading.Timer(wait, self.spoolItems)
-        self.spoolThread.name = "spoolThread"
-        self.spoolThread.start()
+    def startServiceThread(self, wait=5.0):
+        self.log('startServiceThread, wait = %s'%(wait))
+        if self.serviceThread.isAlive(): 
+            self.serviceThread.cancel()
+        self.serviceThread = threading.Timer(wait, self.runThread)
+        self.serviceThread.name = "serviceThread"
+        self.serviceThread.start()
         
                 
-    def spoolItems(self):
-        if isBusy(): return self.startSpooler(900) # 15mins
-        self.log('spoolItems, started')
-        self.chkPredefinedSelection() # check channel config, fill labels in settings.xml
-        self.rebuildRecommended() # rebuild recommended list
-        DBItems = self.getItems() # spool cache
-        [self.jsonRPC.getLogo(channel,key.replace('_',' ')) for key, value in DBItems.items() for channel in value] # cache logos
-        self.log('spoolItems, finished')
-        return self.startSpooler(3600) # 1hr
-           
+    def runThread(self):
+        if isBusy(): return self.startServiceThread(900) # 15mins
+        self.log('runThread, started')
+        self.chkPredefinedSelection() # fill selection text.
+        self.chkRecommendedAddons()   # scan addons for recommended payload
+        DBItems = self.getItems()     # spool cache
+        [self.jsonRPC.getLogo(channel,key) for key, value in DBItems.items() for channel in value] # cache logos
+        self.log('runThread, finished')
+        return self.startServiceThread(3600) # 1hr
+                   
+        
+    def chkRecommendedAddons(self):
+        if self.channels.isClient: return
+        self.log('chkRecommendedAddons')
+        if self.recommended.importPrompt():
+            self.rebuildRecommended()
+        
               
     def rebuildRecommended(self):
+        self.log('rebuildRecommended')
         self.recommended.reset()
             
             
+    def getRecommended(self):
+        self.log('getRecommended')
+        if len(self.Recommended_Items) == 0: 
+            self.Recommended_Items = self.recommended.fillRecommended()
+        self.Recommended_Items.sort(key=lambda x:x['item']['name'])
+        recommended = [recommended['item']['name'] for recommended in self.Recommended_Items]
+        self.log('getRecommended, found = %s'%(len(recommended)))
+        return recommended
+        
+         
+    def getIPTV(self):
+        self.log('getIPTV')
+        if len(self.IPTV_Items) == 0: 
+            self.IPTV_Items = self.recommended.getDataType()
+        self.IPTV_Items.sort(key=lambda x:x['item']['name'])
+        iptv = [item['item']['name'] for item in self.IPTV_Items]
+        self.log('getIPTV, found = %s'%(len(iptv)))
+        return iptv
+        
+        
     def getTVShows(self):
         if len(self.TV_Shows) == 0: 
             self.TV_Shows = self.jsonRPC.fillTVShows()
@@ -117,10 +156,6 @@ class Config:
         return self.MUSIC_Info
         
         
-    def getRecommended(self):
-        return []
-        
- 
     def makeMixedList(self, list1, list2):
         newlist = []
         for item in list1:
@@ -134,15 +169,16 @@ class Config:
         
            
     def getItems(self, param=None):
-        items = {'TV_Shows'     :self.getTVShows(),
-                 'TV_Networks'  :self.getTVInfo()[0],
-                 'TV_Genres'    :self.getTVInfo()[1],
-                 'MOVIE_Genres' :self.getMovieInfo()[1],
-                 'MIXED_Genres' :self.makeMixedList(self.getTVInfo()[1], self.getMovieInfo()[1]),
-                 'MOVIE_Studios':self.getMovieInfo()[0],
-                 'MIXED_Other'  :self.getMixedMisc(),
-                 'MUSIC_Genres' :self.getMusicGenres(),
-                 'RECOMMENDED_Other':self.getRecommended()}
+        items = {'TV Shows'         :self.getTVShows(),
+                 'TV Networks'      :self.getTVInfo()[0],
+                 'TV Genres'        :self.getTVInfo()[1],
+                 'Movie Genres'     :self.getMovieInfo()[1],
+                 'Movie Studios'    :self.getMovieInfo()[0],
+                 'Mixed Genres'     :self.makeMixedList(self.getTVInfo()[1], self.getMovieInfo()[1]),
+                 'Mixed'            :self.getMixedMisc(),
+                 'Music Genres'     :self.getMusicGenres(),
+                 'Recommended'      :self.getRecommended(),
+                 'IPTV'             :self.getIPTV()}
         if param is not None: return items[param]
         return items
         
@@ -151,27 +187,30 @@ class Config:
         self.log('autoTune')
         if not yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)): return False
         busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30102)))
-        for idx, type in enumerate(CHAN_TYPES): 
-            busy = ProgressBGDialog((idx*100//len(CHAN_TYPES)), busy, '%s: %s'%(LANGUAGE(30102),type.replace('_',' ')))
-            self.buildPredefined(type,autoTune=3)
+        types = CHAN_TYPES.copy()
+        types.pop(types.index('IPTV'))
+        for idx, type in enumerate(types): 
+            busy = ProgressBGDialog((idx*100//len(CHAN_TYPES)), busy, '%s: %s'%(LANGUAGE(30102),type))
+            self.selectPredefined(type,autoTune=3)
         ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30102)))
-        return self.predefined.buildPredefinedChannels()
-        
-        
-    def buildPredefined(self, param=None, autoTune=None):
-        self.log('buildPredefined, param = %s, autoTune = %s'%(param,autoTune))
+        return True
+ 
+ 
+    def selectPredefined(self, param=None, autoTune=None):
+        self.log('selectPredefined, param = %s, autoTune = %s'%(param,autoTune))
         setBusy(True)
         escape = autoTune is not None
         with busy_dialog(escape):
-            type      = param.replace('_',' ')
-            items     = self.getItems(param)
+            type  = param.replace('_',' ')
+            items = self.getItems(type)
             if not items: 
                 setBusy(False)
-                if autoTune is None: 
+                if autoTune is None:
+                    self.setPredefinedSelection([],type)
                     notificationDialog(LANGUAGE(30103)%(type))
                 return
                 
-            pitems    = getSetting('Setting_%s'%(param)).split('|')
+            pitems    = list(self.predefined.getChannelbyKey(type,'name')) # existing predefined
             listItems = list(PoolHelper().poolList(self.buildPoolListitem,items,type))
         if autoTune is None:
             select = selectDialog(listItems,'Select %s'%(type),preselect=findItemsIn(listItems,pitems))
@@ -179,48 +218,22 @@ class Config:
             if autoTune > len(items): autoTune = len(items)
             select = random.sample(list(set(range(0,len(items)))),autoTune)
         if select is not None:
-            sitems = [listItems[idx].getLabel() for idx in select]
-            self.setPredefinedSelection(sitems,param)
+            self.predefined.setChannels([listItems[idx].getLabel() for idx in select], type)
+            self.setPredefinedSelection(select,type)
         setBusy(False)
-        
-
-    def buildPoolListitem(self, data):
-        return buildMenuListItem(data[0],data[1],iconImage=self.jsonRPC.getLogo(data[0],data[1]))
-    
-    
-    def chkPredefinedSelection(self):
-        self.log('chkPredefinedSelection')
-        if self.channels.isClient:
-            [self.setPredefinedSelection(param,type) for type, param in self.getPredefinedSelection().items()]
-        else:
-            [self.setPredefinedSelection(getSetting('Setting_%s'%(param)).split('|'),param) for param in CHAN_TYPES]
-    
-    
-    def getPredefinedSelection(self):
-        self.log('getPredefinedSelection')
-        items    = {}
-        channels = self.channels.getPredefined()
-        for type in CHAN_TYPES:  items[type] = []
-        for channel in channels: items[channel['type'].replace(' ','_')].append(channel['name'])
-        return items
 
 
-    def checkPredefinedChannels(self):
-        self.log('checkPredefinedChannels') 
-        chitems = {}
-        chitems[type] =[sorted(getSetting('Setting_%s'%(type)).split('|')) for type in CHAN_TYPES]
-        return chitems
-    
-    
     def setPredefinedSelection(self, items, type):
         # set predefined selections.
-        lens = len(list(filter(lambda x: x != '',items)))
         self.log('setPredefinedSelection, type = %s, items = %s'%(type,items))
-        setSetting('Select_%s'%(type),'(%s) Selected'%(lens))
-        setSetting('Setting_%s'%(type),'|'.join(items))
-        return
+        return setSetting('Select_%s'%(type.replace(' ','_')),'(%s) Selected'%(len(list(filter(lambda x: x != '',items)))))
         
+            
+    def chkPredefinedSelection(self):
+        self.log('chkPredefinedSelection')
+        [self.setPredefinedSelection(list(self.predefined.getChannelbyKey(type,'name')),type) for type in CHAN_TYPES]
         
+            
     def clearPredefinedSelection(self):
         self.log('clearPredefinedSelection')
         # clear predefined selections for all types.
@@ -246,7 +259,8 @@ class Config:
     def clearImport(self):
         self.log('clearImport') 
         with busy_dialog():
-            [(setSetting('Import_M3U%s'%(n+1),' '),setSetting('Import_XMLTV%s'%(n+1),' ')) for n in range(MAX_IMPORT)]
+            setSetting('Import_M3U',' ')
+            setSetting('Import_XMLTV',' ')
             setSetting('User_Import','false')
         return notificationDialog(LANGUAGE(30053))
         
@@ -274,6 +288,11 @@ class Config:
         return REAL_SETTINGS.openSettings()
 
 
+    def buildPoolListitem(self, data):
+        item, type = data
+        return buildMenuListItem(item,type,iconImage=self.jsonRPC.getLogo(item,type))
+
+    
     def run(self): 
         param = self.sysARG[1]
         self.log('run, param = %s'%(param))
@@ -299,7 +318,7 @@ class Config:
             return self.openSettings(param.split('|')[1])
         elif  param.startswith('Open_Plugin'):   
             return self.openPlugin(param.split('|')[1])
-        else: self.buildPredefined(param)
+        else: self.selectPredefined(param)
         return REAL_SETTINGS.openSettings()
             
 if __name__ == '__main__': Config(sys.argv).run()

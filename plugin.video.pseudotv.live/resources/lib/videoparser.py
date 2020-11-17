@@ -17,7 +17,6 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from resources.lib.globals    import *
-from resources.lib.fileaccess import FileAccess
 from resources.lib.parsers    import MP4Parser
 from resources.lib.parsers    import AVIParser
 from resources.lib.parsers    import MKVParser

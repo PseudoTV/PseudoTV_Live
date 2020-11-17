@@ -20,21 +20,28 @@
 
 from resources.lib.globals import *
 from resources.lib.rules   import *
-from resources.lib.parser  import JSONRPC, Channels
+from resources.lib.parser  import Channels
+from resources.lib.jsonrpc import JSONRPC
 
 class Predefined:
-    def __init__(self): 
-        self.jsonRPC  = JSONRPC()
-        self.channels = Channels()
-        self.types    = {'TV_Networks'       : self.createNetworkPlaylist,
-                         'TV_Shows'          : self.createShowPlaylist,
-                         'TV_Genres'         : self.createTVGenrePlaylist,
-                         'MOVIE_Genres'      : self.createMovieGenrePlaylist,
-                         'MOVIE_Studios'     : self.createStudioPlaylist,
-                         'MIXED_Genres'      : self.createGenreMixedPlaylist,
-                         'MIXED_Other'       : self.createMixedOther,
-                         'RECOMMENDED_Other' : self.createRECOMMENDED,
-                         'MUSIC_Genres'      : self.createMusicGenrePlaylist}
+    def __init__(self, cache=None):
+        self.log('__init__')
+        if cache is None:
+            self.cache = SimpleCache()
+        else: 
+            self.cache = cache
+            
+        self.jsonRPC  = JSONRPC(self.cache)
+        self.channels = Channels(self.cache)
+        self.types    = {'TV Networks'       : self.createNetworkPlaylist,
+                         'TV Shows'          : self.createShowPlaylist,
+                         'TV Genres'         : self.createTVGenrePlaylist,
+                         'Movie Genres'      : self.createMovieGenrePlaylist,
+                         'Movie Studios'     : self.createStudioPlaylist,
+                         'Mixed Genres'      : self.createGenreMixedPlaylist,
+                         'Mixed'             : self.createMixedOther,
+                         'Recommended'       : self.createRECOMMENDED,
+                         'Music Genres'      : self.createMusicGenrePlaylist}
                         
         self.others   = {LANGUAGE(30078) : self.createMixedRecent,
                          LANGUAGE(30141) : self.createSeasonal,
@@ -47,56 +54,95 @@ class Predefined:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
+        
+    def getChannelPostfix(self, name, type):
+        suffix = ''
+        if   type == 'TV Genres':    suffix = ' TV'
+        elif type == 'Movie Genres': suffix = ' Movies'
+        return '%s%s'%(name,suffix)
+               
     
-    def getAvailableChannelNumbers(self, type, blist, size=1):
+    def groupChannelTypes(self):
+        self.log('groupChannelTypes')
+        items    = {}
+        channels = self.channels.getPredefined()
+        for type in CHAN_TYPES:  items[type] = []
+        for channel in channels: 
+            if channel.get('type','') in CHAN_TYPES: 
+                items[channel.get('type','')].append(channel)
+        return items
+        
+        
+    def groupImports(self):
+        self.log('groupImports')
+        items  = {'IPTV':[]}
+        imports = self.channels.getImports()
+        for item in imports: items['IPTV'].append(item)
+        return items
+
+
+    def getChannelbyKey(self, type, key='name'):
+        self.log('getChannelbyKey, type = %s, key = %s'%(type,key))
+        if type == 'IPTV':
+            predefined = self.groupImports()
+        else:
+            predefined = self.groupChannelTypes()
+        for channel in predefined[type]: 
+            yield channel.get(key,'')
+    
+    
+    def buildAvailableRange(self, type, blist, size=1):
         start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
         stop  = (start + CHANNEL_LIMIT)
         return random.sample(list(set(range(start,stop)).difference(blist)),size)
         
         
-    def buildPredefinedChannels(self):
-        # save predefined selections to channels.json. update existing (preserve channel numbers), remove missing.
-        def findExising():
-            for eitem in existing:
-                if (eitem['id'] == citem['id'] and eitem['type'] == citem['type']) or (eitem['name'] == citem['name'] and eitem['path'] == citem['path']): 
-                    log('buildPredefinedChannels, Existing found %s'%(eitem))
-                    return eitem
-            return citem
-                    
-        citems = []
+    def findChannel(self, citem, type, channels=None):
+        self.log('findChannel, item = %s, type = %s'%(citem,type))
+        if channels is None:
+            channels = self.groupChannelTypes[type]
+        for idx, item in enumerate(channels):
+            if (item['id'] == citem['id']) or (item['type'].lower() == citem['type'].lower() and item['name'].lower() == citem['name'].lower() and item['path'] == citem['path']):
+                return idx, item
+        return None, {}
+        
+        
+    def setChannels(self, items, type):
+        self.log('setChannels, type = %s, items = %s'%(type,items))
+        # save predefined selections to channels.json. preserve existing channel numbers, remove missing, update existing.
         if self.channels.reset():
-            existing = self.channels.getPredefined() # existing channels, avoid duplicates, aid in removal.
-            reserved = self.channels.getRSVDchnums() # numbers in-use.
-            for type, func in self.types.items():
-                items    = sorted(getSetting('Setting_%s'%(type)).split('|'))
-                chnums   = self.getAvailableChannelNumbers(type,reserved,len(items))
-                log('buildPredefinedChannels, building %s, found %s'%(type,items))
+            if type == 'IPTV':
+                imports = self.channels.recommended.getData()
+                if self.channels.resetImports():
+                    [self.channels.addImport(item['data']) for item in imports for name in items if item['item'].get('name','').lower() == name.lower()]
+            else:
+                existing = self.groupChannelTypes()[type] # existing channels, avoid duplicates, aid in removal.
+                reserved = list(self.getChannelbyKey(type,'number')) # channel numbers in-use.
+                chnums   = self.buildAvailableRange(type,reserved,len(items)) # create sample array of channel numbers in a given field, minus existing numbers.
+                self.log('setChannels, building %s, found %s'%(type,items))
+                
                 for idx, item in enumerate(items):
                     if not item: continue
-                    citem    = self.channels.getCitem()
-                    chnumber = chnums[idx]
-                    type     = type.replace('_',' ')
-                    chname   = self.getChannelPostfix(item, type)
-                    chpath   = func(item)
-                    chid     = getChannelID(chname, chpath, chnumber)
-                    radio    = (type == 'MUSIC Genres' or chpath[0].startswith('musicdb://'))
-                    chlogo   = self.jsonRPC.getLogo(item, type, featured=True)
-                    chgroups = [type]
-                    citem.update({'number':chnumber,'id':chid,'type':type,'name':chname,'path':chpath,'logo':chlogo,'radio':radio,'group':chgroups})
-                    citem.update(findExising())
-                    citems.append(citem)
-                    
-            difference = sorted(diffDICT(existing,citems), key=lambda k: k['number'])
-            log('buildPredefinedChannels, difference %s'%(difference))
-            [self.channels.add(citem) if citem in citems else self.channels.remove(citem) for citem in difference]
+                    citem = self.channels.getCitem() #template 
+                    citem.update({'number' :chnums[idx],
+                                  'name'   :self.getChannelPostfix(item, type),
+                                  'path'   :self.types[type](item),
+                                  'type'   :type,
+                                  'logo'   :self.jsonRPC.getLogo(item, type, featured=True),
+                                  'group'  :[type]})
+                                  
+                    citem['radio']   = (type == 'Music Genres' or 'musicdb://' in citem['path'])
+                    citem['catchup'] = ('vod' if not citem['radio'] else '')
+                    citem['id']      = getChannelID(citem['name'], citem['path'], citem['number'])
+                    match, eitem = self.findChannel(citem, type, existing)
+                    if match is not None:# copy existing static values to dynamic channel
+                        citem['number'] = eitem['number']
+                        citem['rules']  = eitem['rules']
+                        existing.pop(match)
+                    citem['id'] = getChannelID(citem['name'], citem['path'], citem['number']) #id must represent current values.
+                    self.channels.add(citem)
+                [self.channels.remove(eitem) for eitem in existing] # removed abandoned channels
             return self.channels.save()
-        
-        
-    def getChannelPostfix(self, name, type):
-        suffix = ''
-        if   type == 'TV Genres':    suffix = ' TV'
-        elif type == 'MOVIE Genres': suffix = ' Movies'
-        return '%s%s'%(name,suffix)
         
         
     def createMixedOther(self, type):

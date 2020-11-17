@@ -44,14 +44,15 @@ class MP4Parser:
         log("MP4Parser: determineLength " + filename)
 
         try:
-            self.File = xbmcvfs.File(filename, "r")
+            # self.File = xbmcvfs.File(filename, "r")
+            self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MP4Parser: Unable to open the file")
             return
 
         dur = self.readHeader()
         self.File.close()
-        log("MP4Parser: Duration: " + str(dur))
+        log("MP4Parser: Duration is " + str(dur))
         return dur
 
 

@@ -7,12 +7,14 @@
 		"name": "",
 		"logo": "",
 		"radio": false,
+		"catchup": "vod",
 		"favorite": false,
 		"path": [],
 		"group": [],
 		"rules": [],
-		"xmltv": "",
-		"page": {}
+		"page": {},
+		"xmltv": {}
 	}],
-	"predefined": []
+	"predefined": [],
+	"imports": []
 }

@@ -37,7 +37,8 @@ class TSParser:
         self.pid = -1
 
         try:
-            self.File = xbmcvfs.File(filename, "r")
+            # self.File = xbmcvfs.File(filename, "r")
+            self.File = FileAccess.open(filename, "rb", None)
         except:
             log("TSParser: Unable to open the file")
             return
@@ -59,7 +60,7 @@ class TSParser:
             dur = 0
 
         self.File.close()
-        log("TSParser: Duration: " + str(dur))
+        log("TSParser: Duration is " + str(dur))
         return dur
         
 
@@ -97,7 +98,6 @@ class TSParser:
 
     def getFileSize(self):
         size = 0
-
         try:
             pos = self.File.tell()
             self.File.seek(0, 2)
