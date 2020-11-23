@@ -36,28 +36,33 @@ class PVR:
     
     def matchPVRPath(self, channelid=-1):
         self.log('matchPVRPath, channelid = %s'%(channelid))
-        json_response = self.jsonRPC.getDirectory('{"directory":"%s","properties":["file"]}'%('pvr://channels/tv/%s/'%(urllib.parse.quote(ADDON_NAME))),cache=False).get('result',{}).get('files',[]) #get group list
-        if not json_response: 
-            json_response = self.jsonRPC.getDirectory('{"directory":"pvr://channels/tv/All%20channels/","properties":["file"]}',cache=False).get('result',{}).get('files',[]) #get all tv
+        pvrPaths = ['pvr://channels/tv/%s/'%(urllib.parse.quote(ADDON_NAME)),
+                    'pvr://channels/tv/All%20channels/',
+                    'pvr://channels/tv/*']
+                    
+        for path in pvrPaths:
+            json_response = self.jsonRPC.getDirectory('{"directory":"%s","properties":["file"]}'%(path),cache=False).get('result',{}).get('files',[])
+            if json_response: break 
+            
         if json_response:
-            for path in json_response:
-                if channelid == path['id']:
-                    self.log('matchPVRPath, found path = %s'%(path['file']))
-                    return path['file']
+            item = list(filter(lambda k:k.get('id',-1) == channelid, json_response))
+            if item: 
+                self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))
+                return item[0].get('file','')
         self.log('matchPVRPath, path not found \n%s'%(dumpJSON(json_response)))
         return ''
         
          
     def matchPVRChannel(self, chname, id, radio=False): # Convert PseudoTV Live channelID into a Kodi channelID for playback
+        log('matchPVRChannel, chname = %s, id = %s'%(chname,id))
         channels = self.jsonRPC.getPVRChannels(radio)
-        for item in channels:
-            writer = item.get('broadcastnow',{}).get('writer','')
-            if not writer: continue #filter other PVR backends
-            try: 
-                if getWriter(writer)['data']['id'] == id:
-                    log('matchPVRChannel, match found chname = %s, id = %s'%(chname,id))
-                    return item
-            except: continue
+        for channel in channels:
+            for key in ['broadcastnow','broadcastnext']:
+                writer = channel.get(key,{}).get('writer','')
+                if getWriter(writer).get('data',{}).get('id','') == id:
+                    log('matchPVRChannel, match found! writer = %s'%(writer))
+                    return channel
+        log('matchPVRChannel, no match found! \n%s'%(dumpJSON(channels)))
         return None
         
         

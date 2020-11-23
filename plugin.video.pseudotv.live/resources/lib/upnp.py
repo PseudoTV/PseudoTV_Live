@@ -19,7 +19,6 @@
 from resources.lib.globals     import *
 from resources.lib.jsonrpc     import JSONRPC
 
-
 class UPNP:
     def __init__(self, cache=None):
         self.log('__init__')

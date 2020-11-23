@@ -85,18 +85,18 @@ MAX_IMPORT          = 5
 EPG_HRS             = 10800  # 3hr in seconds, Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
-UPDATE_OFFSET       = 3600#int((REAL_SETTINGS.getSettingInt('Update_Time') * 60) * 60) #seconds
+UPDATE_OFFSET       = 900
 
 CHANNEL_LIMIT       = 999
-CHAN_TYPES          = ['TV Networks','TV Shows','TV Genres','Movie Genres','Movie Studios','Mixed Genres','Mixed','Recommended','Music Genres','IPTV']
-GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', 'Mixed Genres', 'Mixed Movies', 'Mixed TV', 'Movie Genres', 'Movie Studios', 'Movies', 'Music', 'Music Genres', 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', 'Recommended', 'Smartplaylist', 'TV', 'TV Genres', 'TV Networks', 'TV Shows', 'UPNP', 'IPTV']
+CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30097),LANGUAGE(30026),LANGUAGE(30033)]
+GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 CHANNEL_RANGE       = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
-BCT_TYPES           = ['bumper','commercial','trailer','rating']
-PRE_ROLL            = ['bumper','rating']
-POST_ROLL           = ['commercial','trailer']
+BCT_TYPES           = ['bumpers','commercials','trailers','ratings']
+PRE_ROLL            = ['bumpers','ratings']
+POST_ROLL           = ['commercials','trailers']
 
 # jsonrpc
-ART_PARAMS          = ["thumb","logo","poster","fanart","banner","landscape","clearart","clearlogo"]
+ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
 JSON_FILE_ENUM      = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
 JSON_METHOD         = ["none","label","date","size","file","path","drivetype","title","track","time","artist","album","albumtype","genre","country","year","rating","votes","top250","programcount","playlist","episode","season","totalepisodes","watchedepisodes","tvshowstatus","showtitle","tvshowtitle","sorttitle","productioncode","mpaa","studio","dateadded","lastplayed","playcount","listeners","bitrate","random"] 
 JSON_ORDER          = ['ascending','descending']
@@ -123,8 +123,9 @@ RULES_ACTION_PLAYBACK            = 11
 RULES_ACTION_OVERLAY             = 20
 
 #overlay globals
-NOTIFICATION_CHECK_TIME          = 60.0
-NOTIFICATION_TIME_BEFORE_END     = 90
+NOTIFICATION_CHECK_TIME          = 15.0
+NOTIFICATION_TIME_REMAINING      = 60
+NOTIFICATION_TIME_BEFORE_END     = 15
 NOTIFICATION_DISPLAY_TIME        = 8
 CHANNELBUG_CHECK_TIME            = 15.0
 
@@ -141,13 +142,27 @@ TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
 PLS_LOC          = os.path.join(CACHE_LOC,'playlist')
 
+PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'30','m3uRefreshHour':'0',
+                    'logoPathType':'0','logoPath':LOGO_LOC,
+                    'm3uPathType':'0','m3uPath':M3UFLE,
+                    'epgPathType':'0','epgPath':XMLTVFLE,
+                    'genresPathType':'0','genresPath':GENREFLE,
+                    'useEpgGenreText':'true', 'logoFromEpg':'1',
+                    'catchupEnabled':'true','allChannelsCatchupMode':'0',
+                    'epgTimeShift':'0','epgTSOverride':'false',
+                    'startNum':'1','numberByOrder':'true',
+                    'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
+ 
 def log(msg, level=xbmc.LOGDEBUG):
     try: msg = str(msg)
     except: pass
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
     if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
     try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-    except Exception as e: 'log failed! %s'%(e)
+    except Exception as e: xbmc.log('log failed! %s'%(e),level)
+
+def print(*msgs):
+    for msg in msgs: log('DEBUG: %s'%(msg))
 
 def getProperty(key, id=10000):
     try: 
@@ -197,30 +212,20 @@ def getSettingInt(key, reload=True):
             return float(value)
         elif value.isdigit(): 
             return int(value)
-    
-STORE_DURATION   = getSettingBool('Store_Duration')
-MAX_GUIDE_DAYS   = getSettingInt('Max_Days')
-ENABLE_BCTS      = getSettingBool('Enable_Fillers')
-ENABLE_GROUPING  = getSettingBool('Enable_Grouping') 
-INCLUDE_EXTRAS   = getSettingBool('Enable_Extras') 
-INCLUDE_STRMS    = getSettingBool('Enable_Strms') 
+
+@contextmanager
+def busy():
+    log('global: busy')
+    setBusy(True)
+    try: yield
+    finally: 
+        setBusy(False)
+
 ENABLE_PVRCONFIG = getSettingBool('Enable_Config') 
 
-
-PAGE_LIMIT          = getSettingInt('Page_Limit')
-MIN_ENTRIES         = int(PAGE_LIMIT//2)
-
-USE_COLOR        = getSettingBool('Use_Color_Logos')
-LOGO             = COLOR_LOGO if USE_COLOR else MONO_LOGO
-
-GLOBAL_RESOURCE_PACK_BUMPERS     = (getSetting('Resource_Networks')    or "resource://resource.videos.bumpers.sample")
-GLOBAL_RESOURCE_PACK_COMMERICALS = (getSetting('Resource_Commericals') or "")
-GLOBAL_RESOURCE_PACK_TRAILERS    = (getSetting('Resource_Trailers')    or "plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent")
-GLOBAL_RESOURCE_PACK_RATINGS     = (getSetting('Resource_Ratings')     or "resource://resource.videos.ratings.mpaa.classic")
-GLOBAL_RESOURCE_PACK             = {'rating'    :GLOBAL_RESOURCE_PACK_RATINGS,
-                                    'bumper'    :GLOBAL_RESOURCE_PACK_BUMPERS,
-                                    'commercial':GLOBAL_RESOURCE_PACK_COMMERICALS,
-                                    'trailer'   :GLOBAL_RESOURCE_PACK_TRAILERS}
+PAGE_LIMIT       = getSettingInt('Page_Limit')
+MIN_ENTRIES      = int(PAGE_LIMIT//2)
+LOGO             = COLOR_LOGO if getSettingInt('Color_Logos') == 1 else MONO_LOGO
 
 @contextmanager
 def busy_dialog(escape=False):
@@ -353,18 +358,23 @@ def removeDUPS(lst):
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
 
+def padLST(lst, targetLen):
+    if len(lst) == 0: return lst
+    lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
+    return lst[:targetLen]
+    
 def chkVersion(cleanStart=False):
     lastVersion = (getSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
         setSetting('lastVersion',ADDON_VERSION)
-        return True
+        return showChangelog()
         # if cleanStart:
             # xbmc.executebuiltin('RunPlugin("(plugin://'+ADDON_ID+'/?channel&mode=Utilities&name=Clean%20Start%2c%20Delete%20all%20files%20and%20settings.&url)")')
     return False
     
 def showChangelog():
     changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Important','[B][COLOR=red]-Important:[/COLOR][/B]').replace('-Warning','[B][COLOR=red]-Warning:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]').replace('-Changed','[B][COLOR=yellow]-Changed:[/COLOR][/B]')
-    textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+    return textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
     
 def dumpJSON(dict1, idnt=None, sortkey=True):
     if not dict1: return ''
@@ -419,11 +429,13 @@ def togglePVR(state='true'):
     return sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,state))
 
 def brutePVR(override=False):
-    if not override:
+    if bool(xbmc.getCondVisibility("Pvr.IsPlayingTv")): return
+    elif not override:
         if not yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
     togglePVR('false')
-    xbmc.sleep(1000)
+    xbmc.sleep(2000)
     togglePVR('true')
+    if override: return True
     return notificationDialog(LANGUAGE(30053))
 
 def getPVR():
@@ -434,50 +446,28 @@ def getPVR():
         try:
             return xbmcaddon.Addon(PVR_CLIENT)
         except: return None
-        
+
 def chkPVR():
     log('globals: chkPVR')
-    #check for min. settings required
+    #check for min. settings' required
     addon = getPVR()
-    if addon is None: return
-    check = [addon.getSetting('catchupEnabled')         == 'true',
-             addon.getSetting('m3uRefreshMode')         == '1',
-             # addon.getSetting('m3uRefreshHour')         == '%s'%(int((UPDATE_OFFSET/60)/60)),
-             addon.getSetting('m3uRefreshIntervalMins') == '15',
-             addon.getSetting('logoPathType')           == '0',
-             addon.getSetting('logoPath')               == LOGO_LOC,
-             addon.getSetting('m3uPathType')            == '0',
-             addon.getSetting('m3uPath')                == M3UFLE,
-             addon.getSetting('epgPathType')            == '0',
-             addon.getSetting('epgPath')                == XMLTVFLE,
-             addon.getSetting('genresPathType')         == '0',
-             addon.getSetting('genresPath')             == GENREFLE]
-    if False in check: configurePVR(ENABLE_PVRCONFIG)
-                 
+    if addon is None: return False
+    for setting, value in PVR_SETTINGS.items():
+        if not addon.getSetting(setting) == value: 
+            return configurePVR(ENABLE_PVRCONFIG)
+    return True
+    
 def configurePVR(override=False):
     log('globals: configurePVR')
     if not override:
         if not yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,))): return
     try:
         addon = getPVR()
-        addon.setSetting('catchupEnabled', 'true')
-        addon.setSetting('m3uRefreshMode', '1')
-        # addon.setSetting('m3uRefreshHour', '%s'%(int((UPDATE_OFFSET/60)/60)))
-        addon.setSetting('m3uRefreshIntervalMins', '15')
-        addon.setSetting('logoFromEpg', '1')
-        addon.setSetting('logoPathType', '0')
-        addon.setSetting('logoPath',  LOGO_LOC)
-        addon.setSetting('m3uPathType', '0')
-        addon.setSetting('m3uPath', M3UFLE)
-        addon.setSetting('epgPathType', '0')
-        addon.setSetting('epgPath', XMLTVFLE)
-        addon.setSetting('epgTimeShift', '0')
-        addon.setSetting('epgTSOverride', 'false')
-        addon.setSetting('startNum', '1')
-        addon.setSetting('useEpgGenreText', 'true')
-        addon.setSetting('genresPathType', '0')
-        addon.setSetting('genresPath', GENREFLE)
+        if addon is None: return False
+        for setting, value in PVR_SETTINGS.items(): 
+            addon.setSetting(setting, value)
     except: return notificationDialog(LANGUAGE(30049)%(PVR_CLIENT))
+    if override: return True
     return notificationDialog(LANGUAGE(30053))
 
 def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'):
@@ -495,7 +485,7 @@ def escapeDirJSON(path):
     mydir = path
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
     return mydir
-
+        
 def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     info       = item.copy()
     art        = info.pop('art'             ,{})
@@ -510,20 +500,20 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
         tmpInfo = info.copy()
         for key, value in tmpInfo.items():
             ptype = LISTITEM_TYPES.get(key,None)
-            if ptype is None:
+            if ptype is None: # key not in json enum, move to custom properties
                 info.pop(key)
                 properties[key] = value
                 continue
             if not isinstance(value, ptype):
+                if isinstance(ptype,tuple):
+                    ptype = ptype[0]
                 info[key] = ptype(value)
         return info
             
-    def cleanProp(value):
-        if isinstance(value,dict):
-            return dumpJSON(value)
-        elif isinstance(value,list):
-            return '|'.join(value)
-        return str(value)
+    def cleanProp(cpvalue):
+        if isinstance(cpvalue,(dict,list)):
+            return dumpJSON(cpvalue)
+        return str(cpvalue)
             
     listitem = xbmcgui.ListItem(offscreen=oscreen)
     listitem.setLabel(info.get('label',''))
@@ -533,8 +523,8 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     listitem.setArt(art)
     listitem.setCast(cast)
     listitem.setUniqueIDs(uniqueid)
-    [listitem.setProperty(key, cleanProp(value)) for key, value in properties.items()]
-    [listitem.addStreamInfo(key, value) for key, values in streamInfo.items() for value in values]
+    [listitem.setProperty(key, cleanProp(pvalue)) for key, pvalue in properties.items()]
+    [listitem.addStreamInfo(key, svalue) for key, svalues in streamInfo.items() for svalue in svalues]
     if playable: listitem.setProperty("IsPlayable","true")
     return listitem
            
@@ -548,7 +538,6 @@ def isHD(item):
             if videowidth >= 1280 and videoheight >= 720: return True  
     return False
 
-    
 def is3D(item):
     if 'is3D' in item: return item['is3D']
     if 'streamdetails' in item: item = item.get('streamdetails',{})
@@ -557,29 +546,16 @@ def is3D(item):
         if len(stereomode) > 0: return True
     return False
          
-def getThumb(item): #unify thumbnail artwork
-    return (item['art'].get('season.landscape','') or 
-            item['art'].get('tvshow.landscape','') or 
-            item['art'].get('landscape','')        or
-            item.get('landscape','')               or 
-            item['art'].get('season.fanart','')    or 
-            item['art'].get('tvshow.fanart','')    or 
-            item['art'].get('fanart','')           or 
-            item.get('fanart','')                  or 
-            item['art'].get('season.poster','')    or
-            item['art'].get('tvshow.poster','')    or
-            item['art'].get('poster','')           or
-            item.get('poster','')                  or
-            item['art'].get('season.thumb','')     or 
-            item['art'].get('tvshow.thumb','')     or 
-            item['art'].get('thumb','')            or
-            item.get('thumb','')                   or
-            item.get('thumbnail','')               or
-            item['art'].get('folder','')           or
-            item.get('folder','')                  or
-            item['art'].get('icon','')             or
-            item.get('icon','')                    or
-            LOGO)
+def getThumb(item,opt=0): #unify thumbnail artwork
+    keys = {0:['landscape','fanart','poster','thumb','thumbnail','folder','icon'],
+            1:['poster','landscape','fanart','thumb','thumbnail','folder','icon']}[opt]
+    for key in keys:
+        art = (item.get('art',{}).get('season.%s'%(key),'') or 
+               item.get('art',{}).get('tvshow.%s'%(key),'') or 
+               item.get('art',{}).get(key,'')               or
+               item.get(key,''))
+        if art: return art
+    return LOGO
 
 def funcExecute(func,args):
     log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
@@ -731,8 +707,8 @@ def interleave(*args): #interleave multi-lists, while preserving order
         log("interleave, Failed! %s"%(e), xbmc.LOGERROR)
         yield list(chain.from_iterable(izip_longest(*args)))[0]
 
-def splitStack(paths): #split stack for indv. files.
-    log('splitStack, paths = %s'%(paths))
+def splitStacks(paths): #split stack for indv. files.
+    log('splitStacks, paths = %s'%(paths))
     return paths.replace('stack://','').split(' , ')
                                       
 def stripStack(file, url): #strip pre-rolls from stack, return file.
@@ -743,9 +719,8 @@ def stripStack(file, url): #strip pre-rolls from stack, return file.
         elif file in path: break
     return paths
     
-def percentDiff(current, previous):
-    if current == previous: return 0
-    try: return (abs(current - previous) / previous) * 100.0
+def percentDiff(org, new):
+    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
     except ZeroDivisionError: return 0
         
 def fillInfoMonitor(type='ListItem'):
@@ -792,26 +767,29 @@ def isPlaylistRandom():
     
 def isPlaylistRepeat():
     return xbmc.getInfoLabel('Playlist.IsRepeat').lower() == 'true' # Disable auto playlist repeat if it's on #todo
+
 def findItemsIn(items, values, item_key='getLabel', val_key='', index=True):
-    log("globals: findItemsIn, values = %s, key = %s, val_key = %s, index = %s"%(values, item_key, val_key, index))
+    log("globals: findItemsIn, values = %s, item_key = %s, val_key = %s, index = %s"%(values, item_key, val_key, index))
     matches = []
-    def match(fidx,fitem,fkey,fvalue):
+    def match(fkey,fvalue):
         if fkey.lower() == fvalue.lower():
-            matches.append(fidx if index else fitem)
+            matches.append(idx if index else item)
         
     if not values: return [-1]
     for idx, item in enumerate(items):
         for value in values:
-            if isinstance(value,dict): value = value.get(val_key,'')
-            if isinstance(item,xbmcgui.ListItem):
-                if   item_key == 'getLabel':  
-                    match(idx,item,item.getLabel() ,value)
+            if isinstance(value,dict): 
+                value = value.get(val_key,'')
+                
+            if isinstance(item,xbmcgui.ListItem): 
+                if item_key == 'getLabel':  
+                    match(item.getLabel() ,value)
                 elif item_key == 'getLabel2': 
-                    match(idx,item,item.getLabel2(),value)
+                    match(item.getLabel2(),value)
             elif isinstance(item,dict):       
-                match(idx,item,item.get(item_key,''),value)
+                match(item.get(item_key,''),value)
             else:                             
-                match(idx,item,item,value)
+                match(item,value)
     log("globals: findItemsIn, matches = %s"%(matches))
     return matches
 
@@ -866,4 +844,4 @@ class PoolHelper:
                 results = [method((item, args)) for item in items]
             elif items: 
                 results = [method(item) for item in items]
-        return filter(None, results)
+        return list(filter(None, results))

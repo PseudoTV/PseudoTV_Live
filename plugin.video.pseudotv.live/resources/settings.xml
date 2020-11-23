@@ -2,46 +2,47 @@
 <settings>
 	<category label="30018">
         <setting                            type="lsep"     label="30024"            visible="false"    /> 
-        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/manager.py)"                    subsetting="true"   option="close" />
-        <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="true"      action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" enable="System.HasAddon(plugin.library.node.editor)" subsetting="true" option="close" />
+        <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/manager.py)"                    enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Open_Plugin"           type="action"   label="30085" default="" visible="true"      action="RunScript($CWD/config.py, Open_Plugin|plugin.library.node.editor)" subsetting="true" option="close" enable="System.HasAddon(plugin.library.node.editor)"/>
         <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        subsetting="true"   option="close" />
         <setting id="User_Groups"           type="action"   label="30075" default="" visible="true"      action="RunScript($CWD/config.py, User_Groups)"        subsetting="true"   option="close" />
         <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="true"      action="RunScript($CWD/config.py, Clear_Userdefined)"  subsetting="true"   option="close" />
         <setting                            type="lsep"     label="30022"            visible="true"     />
         <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
-        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"     action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="true"     action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="true"     action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true"   option="close" enable="Library.HasContent(TVShows)"/>
-        <setting id="Select_Movie_Genres"   type="action"   label="30005" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Movies)"/>
-        <setting id="Select_Movie_Studios"  type="action"   label="30007" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Studios)"       subsetting="true"   option="close" enable="Library.HasContent(Movies)"/>
-        <setting id="Select_Mixed_Genres"   type="action"   label="30006" default="" visible="true"     action="RunScript($CWD/config.py, Mixed_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(TVShows) + Library.HasContent(Movies)"/>
-        <setting id="Select_Mixed"          type="action"   label="30080" default="" visible="true"     action="RunScript($CWD/config.py, Mixed)"               subsetting="true"   option="close" />
-        <setting id="Select_Recommended"    type="action"   label="30023" default="" visible="true"     action="RunScript($CWD/config.py, Recommended)"         subsetting="true"   option="close" />
-        <setting id="Select_IPTV"           type="action"   label="30150" default="" visible="true"     action="RunScript($CWD/config.py, IPTV)"                subsetting="true"   option="close" />
-        <setting id="Select_Music_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, Music_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Music)"/>
+        <setting id="Select_TV_Networks"    type="action"   label="30002" default="" visible="true"     action="RunScript($CWD/config.py, TV_Networks)"         subsetting="true"   option="close" enable="Library.HasContent(TVShows) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_TV_Shows"       type="action"   label="30003" default="" visible="true"     action="RunScript($CWD/config.py, TV_Shows)"            subsetting="true"   option="close" enable="Library.HasContent(TVShows) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_TV_Genres"      type="action"   label="30004" default="" visible="true"     action="RunScript($CWD/config.py, TV_Genres)"           subsetting="true"   option="close" enable="Library.HasContent(TVShows) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Genres),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Movie_Genres"   type="action"   label="30005" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Movies)  + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Genres),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Movie_Studios"  type="action"   label="30007" default="" visible="true"     action="RunScript($CWD/config.py, Movie_Studios)"       subsetting="true"   option="close" enable="Library.HasContent(Movies)  + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Studios),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Mixed_Genres"   type="action"   label="30006" default="" visible="true"     action="RunScript($CWD/config.py, Mixed_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(TVShows) + Library.HasContent(Movies) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed_Genres),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Mixed"          type="action"   label="30080" default="" visible="true"     action="RunScript($CWD/config.py, Mixed)"               subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Music_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, Music_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Music) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Recommended"    type="action"   label="30023" default="" visible="true"     action="RunScript($CWD/config.py, Recommended)"         subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Select_Imports"        type="action"   label="30150" default="" visible="true"     action="RunScript($CWD/config.py, Imports)"             subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true"   option="close" />
+        <setting id="Clear_BlackList"       type="action"   label="30154" default="" visible="true"     action="RunScript($CWD/config.py, Clear_BlackList)"     subsetting="true"   option="close" />
         </category> 
     <category label="30025">
         <setting id="Enable_Recommended"    type="bool"     label="30148" default="true"  />
         <setting id="Enable_Config"         type="bool"     label="30145" default="false" />
         <setting id="Enable_Grouping"       type="bool"     label="30019" default="true"  />
-        <setting id="Use_Color_Logos"       type="bool"     label="30044" default="false" />
+        <setting id="Color_Logos"           type="enum"     label="30044" default="0"  lvalues="30166|30167"/>
+        <setting id="EPG_Artwork"           type="enum"     label="30168" default="0"  lvalues="30169|30170"/>
         <setting id="Select_Resource_Logos" type="action"   label="30067" default="resource.videos.ratings.mpaa.classic" visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_LOGOS)" option="close"/>   
         <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" source="files" />           
         <setting id="Enable_Client"         type="bool"     label="30104" default="false" enable="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" subsetting="true"/> 
     </category> 
     <category label="30048">
-        <setting id="Playback_Method"      type="enum"     label="30045" default="0"  values="PVR Callback|Playlist" />
-        <setting id="Seek_Tolerance"       type="slider"   label="30040" default="30" range="0,1,300"   option="int" />
+        <setting id="Playback_Method"      type="enum"     label="30045" default="0"  lvalues="30162|30163"/>
+        <setting id="Seek_Tolerance"       type="slider"   label="30040" default="55" range="0,5,900"   option="int" />
         <setting                           type="lsep"     visible="true" />
-        <setting id="Parse_Duration"       type="bool"     label="30041" default="true" />
-        <setting id="Store_Duration"       type="bool"     label="30042" default="false"  visible="eq(-1,true)" subsetting="true"/>
-        <setting id="Strict_Duration"      type="bool"     label="30043" default="false"  visible="eq(-2,true)" subsetting="true"/>
+        <setting id="Store_Duration"       type="bool"     label="30042" default="false" />
         <setting id="Page_Limit"           type="slider"   label="30038" default="25" range="25,25,250" option="int" />
-        <setting id="Max_Days"             type="slider"   label="30039" default="1"  range="1,1,7"     option="int" />
+        <setting id="Max_Days"             type="slider"   label="30039" default="3"  range="1,1,7"     option="int" />
         <setting id="Update_Time"          type="slider"   label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
     </category> 
     <category label="30055">
+        <setting id="Duration_Type"        type="enum"     label="30041" default="0"  lvalues="30164|30165"/>
         <setting id="Enable_Overlay"       type="bool"     label="30054" default="true" />
         <setting id="Enable_OnNext"        type="bool"     label="30153" default="true" />
         <setting id="Enable_Extras"        type="bool"     label="30094" default="false" />

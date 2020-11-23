@@ -44,9 +44,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.cntrlStates   = {}
             self.channel       = 0
             self.channelLimit  = CHANNEL_LIMIT
-            self.newChannel    = self.channels.getTemplate(ADDON_VERSION).get('channels',[])[0]
+            self.newChannel    = self.channels.getCitem()
             self.channelList   = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
-            self.channelList.extend(self.channels.getPredefined())
+            self.channelList.extend(self.channels.getPredefinedChannels())
             self.newChannels   = self.channelList.copy()
         self.doModal()
 
@@ -144,7 +144,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('fillChanList')
         self.togglechanList(True,reset=reset)
         self.toggleSpinner(self.chanList,True)
-        listitems = list(PoolHelper().poolList(self.buildChannelListItem,channelList))
+        listitems = (PoolHelper().poolList(self.buildChannelListItem,channelList))
         self.chanList.addItems(listitems)
         if focus is None: 
             self.chanList.selectItem(self.setFocusPOS(listitems))
@@ -294,7 +294,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if not name: return channelData
         logo = channelData.get('logo','')
         if not logo or logo.endswith(('wlogo.png','logo.png','icon.png')):
-            logo = self.jsonRPC.getLogo(name, 'Custom', path, featured=True)
+            logo = self.jsonRPC.getLogo(name, LANGUAGE(30171), path, featured=True)
             if logo.endswith(('wlogo.png','logo.png','icon.png')): 
                 channelData['logo'] = ''
             else: 
@@ -348,7 +348,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def validatePath(self, channelData, path, key):
         self.log('validatePath')
         found = False
-        radio = (channelData.get('radio','') or (channelData['type'] == 'Music Genres' or path.startswith('musicdb://')))
+        radio = (channelData.get('radio','') or (channelData['type'] == LANGUAGE(30097) or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
         self.toggleSpinner(self.itemList,True)
         fitem = self.jsonRPC.existsVFS(path, media)
@@ -378,7 +378,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             return None
         channelData = self.getID(channelData)
         if channelData['number'] <= CHANNEL_LIMIT: 
-            channelData['type'] = 'Custom'
+            channelData['type'] = LANGUAGE(30171) #custom
         if not channelData.get('logo',''):
             channelData = self.getChannelIcon(channelData)
         return channelData
@@ -454,7 +454,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('buildRuleItems')
         print('buildRuleItems',rules)
         self.toggleSpinner(self.ruleList,True)
-        listitems = list(PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
+        listitems = (PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
         if append: listitems.append(self.buildRuleListItem(({'name':'Add Rule','description':'Create New Rule','id':'[B]+[/B]'},channelData)))
         self.toggleSpinner(self.ruleList,False)        
         self.ruleList.reset()
@@ -500,7 +500,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 
         if ruleSelect.get('action',None) is None: return notificationDialog(LANGUAGE(30001))
         ruleInstance  = ruleSelect.get('action',None)
-        valueitems    = list(PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
+        valueitems    = (PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
         listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),channelData.get("logo",''),str(ruleInstance.myId),propItem={'data':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
         self.ruleList.addItems(listitems)
         optionIDX    = selectDialog(listitems,LANGUAGE(30135),multi=False)

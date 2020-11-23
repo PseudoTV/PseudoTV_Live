@@ -1,8 +1,16 @@
 v.0.2.4
+-Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
+-Setting options can disable themselves when unavailable. ex. Predefined channels will appear "greyed out" when either no media is found or PseudoTV is temporarily busy. ie. You can't configure channels while PseudoTV is building channels... vice versa.
+-Refactored Predefined channel aggregation.
+-Improved Channel Logo parsing.
+-Improved Predefined channels parsing and menu load times.
 -Fixed Radio programmes.
 -Improved programmes parsing.
 -Improved Overlay performance.
 -Fixed Overlay crashes.
+-Reworked Duration meta parsing, Check settings!
+-Artwork changes, preference options in settings.
+-Improved Scheduling.
 -Removed "Channel Change" Overlay, no longer needed due to performance enhancements. 
 -Added "OnNext" pop-up to overlay. Global option to enable on all channels under tweaks. Pending release use Advanced Channel rule to disable on individual channels.
 

@@ -61,7 +61,7 @@ msgid "Rebuild M3U/XMLTV"
 msgstr ""
 
 msgctxt "#30011"
-msgid "Delete [M3U/XMLTV/Genre] Files"
+msgid "Delete [M3U/XMLTV/Genre]"
 msgstr ""
 
 msgctxt "#30012"
@@ -193,7 +193,7 @@ msgid "Only use Accurate Duration Meta."
 msgstr ""
 
 msgctxt "#30044"
-msgid "Prefer Color Channel Logos"
+msgid "Channel Logo"
 msgstr ""
 
 msgctxt "#30045"
@@ -401,7 +401,7 @@ msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30096"
-msgid "Clean Start, Delete all channels, files and settings."
+msgid "Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
 msgstr ""
 
 msgctxt "#30097"
@@ -626,4 +626,76 @@ msgstr ""
 
 msgctxt "#30153"
 msgid "Show OnNext Pop-up"
+msgstr ""
+
+msgctxt "#30154"
+msgid "Clear Recommended Blacklist"
+msgstr ""
+
+msgctxt "#30155"
+msgid "TV"
+msgstr ""
+
+msgctxt "#30156"
+msgid "Movies"
+msgstr ""
+
+msgctxt "#30157"
+msgid "Music"
+msgstr ""
+
+msgctxt "#30158"
+msgid "Parsing Kodi Library"
+msgstr ""
+
+msgctxt "#30159"
+msgid "Collecting %s"
+msgstr ""
+
+msgctxt "#30160"
+msgid "Parse Kodi Library"
+msgstr ""
+
+msgctxt "#30161"
+msgid "Unavailable"
+msgstr ""
+
+msgctxt "#30162"
+msgid "PVR Callback"
+msgstr ""
+
+msgctxt "#30163"
+msgid "Playlist"
+msgstr ""
+
+msgctxt "#30164"
+msgid "Prefer Kodi DB"
+msgstr ""
+
+msgctxt "#30165"
+msgid "Prefer File Meta"
+msgstr ""
+
+msgctxt "#30166"
+msgid "Prefer White (Mono)"
+msgstr ""
+
+msgctxt "#30167"
+msgid "Prefer Color"
+msgstr ""
+
+msgctxt "#30168"
+msgid "EPG Artwork"
+msgstr ""
+
+msgctxt "#30169"
+msgid "Prefer Landscape"
+msgstr ""
+
+msgctxt "#30170"
+msgid "Prefer Poster"
+msgstr ""
+
+msgctxt "#30171"
+msgid "Custom"
 msgstr ""

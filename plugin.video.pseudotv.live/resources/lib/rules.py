@@ -48,6 +48,14 @@ class RulesList:
         return self.ruleList[index]
 
 
+    def loadRuleActions(self, rules):
+        actions = self.getRuleTypes()
+        for rule in rules:
+            for action in actions:
+                if rule.get('id') == action.get('id'):
+                    rule['action'] = action['action']
+            
+
     def getRuleTypes(self):
         return sorted(self.buildRuleTypes(), key=lambda k: k['id'])
 
@@ -63,6 +71,33 @@ class RulesList:
             yield ritem
 
 
+    # def addChannelRule(self, citem, ritem):
+        # if channelkey is None:
+            # channels = self.getChannels()
+        # log('ruleList: addChannelRule, id = %s, rule = %s'%(citem['id'],ritem))
+        # rules = self.getChannelRules(citem, channelkey)
+        # idx, rule = self.findChannelRule(citem, ritem, channelkey)
+        # if idx is None:
+            # rules.append(ritem)
+        # else:
+            # rules[idx].update(ritem)
+        # self.channelList['channels']['rules'] = sorted(rules, key=lambda k: k['id'])
+        # return True
+
+
+
+
+    # def findChannelRule(self, citem, ritem):
+        # if channelkey is None:
+            # channels = self.getChannels()
+        # log('Channels: findChannelRule, id = %s, rule = %s'%(citem['id'],ritem))
+        # rules = self.getChannelRules(citem,channels)
+        # for idx, rule in enumerate(rules):
+            # if rule['id'] == ritem['id']:
+                # return idx, rule
+        # return None, {}
+        
+ 
 class BaseRule:
     def __init__(self):
         self.name         = ""

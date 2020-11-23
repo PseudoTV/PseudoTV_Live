@@ -15,6 +15,13 @@
 		"page": {},
 		"xmltv": {}
 	}],
-	"predefined": [],
-	"imports": []
+	"predefined": {
+		"channels": [],
+		"items": {}
+	},
+	"recommended": {
+		"imports": [],
+		"whitelist": [],
+		"blacklist": []
+	}
 }

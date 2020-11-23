@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
-    <!-- <onload>RunScript(script.artistslideshow)</onload> -->
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,false,10000)</onunload> 
     <controls>
@@ -19,6 +18,19 @@
           <colordiffuse>black</colordiffuse>
         </control>
         
+        <control type="image"> 
+          <description>Background Overlay</description>
+          <visible>!Player.Playing</visible>
+          <posx>704</posx>
+          <posy>284</posy>
+          <width>512</width>
+          <height>512</height>
+          <aspectratio>keep</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <texture>$INFO[Container(40000).ListItem(0).Icon]</texture>
+        </control>
+        
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
           <width>auto</width>
@@ -32,13 +44,13 @@
           <align>right</align>
           <aligny>center</aligny>
           <visible>false</visible>
-          <animation effect="slide" start="1920,192" end="1280,192" time="200">VisibleChange</animation>
+          <animation effect="fade" end="75" condition="True">Conditional</animation>
+          <!-- <animation effect="slide" start="1920,192" end="1280,192" time="200" tween="quadratic" reversible="True" condition="True">VisibleChange</animation> -->
           <control type="image"> 
             <width>768</width>
             <height>128</height>
             <texture>white.png</texture>
             <colordiffuse>dimgray</colordiffuse>
-            <animation effect="fade" end="75" condition="True">conditional</animation>
           </control>
           <control type="image"> 
             <left>12</left>
@@ -76,7 +88,7 @@
               <scroll>true</scroll>
               <textcolor>white</textcolor>
               <shadowcolor>text_shadow</shadowcolor>
-              <label>$INFO[Container(40000).ListItem(1).episodetitle,,]</label>
+              <label>$INFO[Container(40000).ListItem(1).Property(episodelabel),,]</label>
             </control>
           </control>
         </control>
@@ -88,52 +100,16 @@
           <width>128</width>
           <height>128</height>
           <aspectratio>keep</aspectratio>
-          <animation effect="fade" end="25" condition="True">conditional</animation>
-          <animation effect="fade" start="0" end="25" time="4000" reversible="true">VisibleChange</animation>
+          <animation effect="fade" end="25" condition="True">Conditional</animation>
+          <!-- <animation effect="fade" start="100" end="25" time="100" condition="Control.IsVisible(41004)">Visible</animation> -->
+          <!-- <animation effect="fade" start="25" end="0" time="100" condition="!Control.IsVisible(41004)">Hidden</animation> -->
+          <!-- <animation effect="zoom" end="150,100" center="auto" time="200" delay="200" condition="True" reversible="True">Conditional</animation> -->
+          <!-- <animation effect="zoom" start="888,1536,0,0" end="888,1536,128,128" time="4000" tween="elastic" reversible="true" >VisibleChange</animation> -->
+          <!-- <animation effect="fade" start="0" end="25" time="4000" reversible="true">VisibleChange</animation> -->
         </control>
         
       </control>
 
-      <!-- <control type="grouplist" id="40001"> -->
-        <!-- <description>On Next</description>> -->
-        <!-- <posx>500r</posx> -->
-        <!-- <posy>128</posy> -->
-        <!-- <width>480</width> -->
-        <!-- <height>800</height> -->
-        <!-- <itemgap>20</itemgap> -->
-        <!-- <orientation>vertical</orientation> -->
-        <!-- <control type="label"> -->
-          <!-- <width>480</width> -->
-          <!-- <height>40</height> -->
-          <!-- <font>font30_title</font> -->
-          <!-- <align>center</align> -->
-          <!-- <aligny>bottom</aligny> -->
-          <!-- <scroll>false</scroll> -->
-          <!-- <textcolor>white</textcolor> -->
-          <!-- <shadowcolor>text_shadow</shadowcolor> -->
-          <!-- <label>$INFO[Container(40000).ListItem(1).Label,,]</label> -->
-        <!-- </control> -->
-        <!-- <control type="image"> -->
-          <!-- <description>Fanart</description> -->
-          <!-- <width>480</width> -->
-          <!-- <height>270</height> -->
-          <!-- <aspectratio aligny="center">keep</aspectratio> -->
-          <!-- <texture>$INFO[Container(40000).ListItem(1).Thumb]</texture> -->
-          <!-- <bordersize>5</bordersize> -->
-          <!-- <bordertexture border="5">white.png</bordertexture> -->
-        <!-- </control> -->
-        <!-- <control type="label">  -->
-          <!-- <width>480</width> -->
-          <!-- <height>80</height> -->
-          <!-- <font>font36_title</font> -->
-          <!-- <align>center</align> -->
-          <!-- <aligny>bottom</aligny> -->
-          <!-- <scroll>false</scroll> -->
-          <!-- <textcolor>white</textcolor> -->
-          <!-- <shadowcolor>text_shadow</shadowcolor> -->
-          <!-- <label>Coming Up Next</label> -->
-        <!-- </control> -->
-      <!-- </control> -->
 
       <control type="list" id="40000">
         <description>Meta Container</description>

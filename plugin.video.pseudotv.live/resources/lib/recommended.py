@@ -19,19 +19,22 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
-from resources.lib.jsonrpc     import JSONRPC
 
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Recommended:
-    def __init__(self, cache=None):
+    def __init__(self, cache=None, config=None):
         self.log('__init__')
         if cache is None:
             self.cache = SimpleCache()
         else: 
             self.cache = cache
-            
-        self.jsonRPC           = JSONRPC(self.cache)
+
+        if config:
+            self.myConfig = config
+            self.channels = self.myConfig.channels
+            self.jsonRPC  = self.myConfig.jsonRPC
+        
         self.recommendEnabled  = getSettingBool('Enable_Recommended')
         self.recommendedList   = self.getRecommendedList()
         self.importPrompt_busy = False
@@ -49,20 +52,14 @@ class Recommended:
         return True
 
 
-    def clearRecommendedList(self):
-        self.log('clearRecommendedList')
-        self.recommendedList = {}
-        return self.setRecommendedList()
-
-
     def getRecommendedList(self):
         self.log('getRecommendedList')
-        return loadJSON(getSetting('Recommended_List'))
+        return self.channels.getRecommended()
 
 
     def setRecommendedList(self):
         self.log('setRecommendedList')
-        return setSetting('Recommended_List',dumpJSON(self.recommendedList))
+        return self.channels.setRecommended(self.recommendedList)
 
 
     def getWhiteList(self):
@@ -74,23 +71,28 @@ class Recommended:
     
     
     def addWhiteList(self, addonid):
-        self.log('addWhiteList')
+        self.log('addWhiteList, addonid = %s'%(addonid))
         whitelist = self.getWhiteList()
         whitelist.append(addonid)
         self.recommendedList['whitelist'] = whitelist
-        return self.setRecommendedList()
+        return True
         
         
     def addBlackList(self, addonid):
-        self.log('addBlackList')
+        self.log('addBlackList, addonid = %s'%(addonid))
         blacklist = self.getBlackList()
         blacklist.append(addonid)
         self.recommendedList['blacklist'] = blacklist
-        return self.setRecommendedList()
+        return True
     
+    
+    def clearBlackList(self):
+        self.recommendedList['blacklist'] = []
+        return self.setRecommendedList()
+        
     
     def buildData(self, addon):
-        addonid = addon.get('addonid','')
+        addonid   = addon.get('addonid','')
         blackList = self.getBlackList()
         if not addonid in blackList:
             data = xbmcgui.Window(10000).getProperty(REG_KEY%(addonid))
@@ -101,7 +103,7 @@ class Recommended:
             
     def getData(self):
         self.log('getData')
-        return list(PoolHelper().poolList(self.buildData, self.jsonRPC.getAddons()))
+        return (PoolHelper().poolList(self.buildData, self.jsonRPC.getAddons()))
         
         
     def getDataType(self, type='iptv'):
@@ -120,16 +122,44 @@ class Recommended:
     
     def importPrompt(self):
         self.log('importPrompt')
-        if self.importPrompt_busy: return
+        if self.importPrompt_busy: return False
         self.importPrompt_busy = True
         ignoreList = self.getWhiteList()
         ignoreList.extend(self.getBlackList())
         recommendedItems = self.getData()
         for addon in recommendedItems:
             if not addon['id'] in ignoreList:
-                if not yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,addon['item'].get('name','')))):
+                if not yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,addon['item'].get('name','')))):                   
                     self.addBlackList(addon['id'])
                 else:
                     self.addWhiteList(addon['id'])
         self.importPrompt_busy = False
-        return True
+        return self.setRecommendedList()
+          
+          
+    def resetImports(self):
+        self.log('resetImports')
+        self.recommendedList['imports'] = []
+        return self.setRecommendedList()
+
+
+    # def findImport(self, eitem, imports=None):
+        # if imports is None:
+            # imports = self.recommendedList['imports']
+        # for idx, item in enumerate(imports):
+            # if eitem.get('id','') == item.get('id',''): 
+                # self.log('findImport, item = %s, found = %s'%(eitem,item))
+                # return idx, item
+        # return None, {}
+        
+
+    # def addImport(self, eitem):
+        # self.log('addImport, item = %s'%(eitem))
+        # imports = self.recommendedList['imports']
+        # idx, item = self.findImport(eitem,imports)
+        # if idx is None:
+            # imports.append(eitem)
+        # else:
+            # imports[idx].update(eitem)
+        # self.recommendedList['imports'] = imports
+        # return self.setRecommendedList()

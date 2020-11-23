@@ -135,7 +135,6 @@ def read_channels(fp=None, tree=None):
     channels = []
     if fp:
         et = ElementTree()
-        # tree = et.parse(fp) 
         parser = XMLParser(encoding=locale)
         tree = et.parse(fp, parser=parser)
     for elem in tree.findall('channel'):
@@ -274,7 +273,6 @@ def read_programmes(fp=None, tree=None):
     """
     if fp:
         et = ElementTree()
-        # tree = et.parse(fp) 
         parser = XMLParser(encoding=locale)
         tree = et.parse(fp, parser=parser)
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
@@ -289,7 +287,6 @@ def read_data(fp=None, tree=None):
     """
     if fp:
         et = ElementTree()
-        # tree = et.parse(fp) 
         parser = XMLParser(encoding=locale)
         tree = et.parse(fp, parser=parser)
     d = {}
