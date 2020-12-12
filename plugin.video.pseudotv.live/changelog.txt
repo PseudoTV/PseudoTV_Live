@@ -1,5 +1,10 @@
+v.0.2.5
+-Warning If you are upgrading versions a XMLTV rebuild is required! Open plugin, select "Utilities" and click "Delete [M3U/XMLTV]".
+-Miscellaneous tweaks & improvements. 
+
 v.0.2.4
 -Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
+-Fixed Channel building bug which effected program start times overlapping with new content.
 -Setting options can disable themselves when unavailable. ex. Predefined channels will appear "greyed out" when either no media is found or PseudoTV is temporarily busy. ie. You can't configure channels while PseudoTV is building channels... vice versa.
 -Refactored Predefined channel aggregation.
 -Improved Channel Logo parsing.
@@ -44,7 +49,7 @@ v.0.2.0
 -Added "Channel Manager" to settings. Configure "User-Defined" here!
 -Added Misc. Tweaks & Improvements.
 -Improved Logo folders, moved to "cache/logos"
--Added Seek Padding adjustment to settings.
+-Added Seek Threshold adjustment to settings.
 -Added "Start Clean" option to utilities menu. Removes all files (m3u,xmltv,genres,settings,channels).
 -Added "More Info" context menu item.
 -Added Misc. Community Feedback Tweaks & Improvements.

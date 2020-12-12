@@ -18,7 +18,6 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
-from resources.lib.filelist    import Filelist
 from resources.lib.worker      import BaseWorker
  
 class Worker(BaseWorker):
@@ -38,8 +37,6 @@ class JSONRPC:
         self.myPlayer      = MY_PLAYER
         self.myMonitor     = MY_MONITOR
         self.myProcess     = Worker()
-        self.fileList      = Filelist(self.cache)
-        self.fileList.jsonRPC = self
         
         self.resourcePacks = self.buildLogoResources()
         self.processThread = threading.Timer(15.0, self.myProcess.start)
@@ -51,7 +48,7 @@ class JSONRPC:
         
     def startProcess(self):
         #thread egg-timer, start on last call.
-        if self.processThread.isAlive():
+        if self.processThread.is_alive():
             self.processThread.cancel()
             self.processThread.join()
         self.processThread = threading.Timer(30.0, self.myProcess.start)
@@ -158,7 +155,7 @@ class JSONRPC:
     # def buildLocalTrailers(self, path=None, items=[]):
         # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
         # if path is None and len(items) > 0:
-            # return [{'label':item.get('label',''),'duration':self.fileList.parseDuration(item.get('trailer','')),'file'}]
+            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer','')),'file'}]
         # list(filter(lambda item:(,item.get('trailer')), validItems))
 # # os.path.splitext(os.path.basename(item.get('file')))[0]
 
@@ -309,7 +306,7 @@ class JSONRPC:
         for item in json_response:
             file = item['file']
             if item['filetype'] == 'file':
-                duration = self.fileList.parseDuration(file, item)
+                duration = self.parseDuration(file, item)
                 if duration == 0: continue
                 files.append({'label':item['label'],'duration':duration,'file':file})
             else: dirs.append(file)
@@ -320,12 +317,12 @@ class JSONRPC:
     def existsVFS(self, path, media='video'):
         self.log('existsVFS path = %s, media = %s'%(path,media))
         dirs  = []
-        json_response = self.fileList.requestList(str(random.random()), path, media)
+        json_response = self.requestList(str(random.random()), path, media)
         for item in json_response:
             file = item.get('file','')
             fileType = item.get('filetype','file')
             if fileType == 'file':
-                dur = self.fileList.getDuration(file, item)
+                dur = self.getDuration(file, item)
                 if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
             else: dirs.append(file)
         for dir in dirs: return self.existsVFS(dir, media)
@@ -458,8 +455,10 @@ class JSONRPC:
         json_response = self.getSongs()
         [genres.extend(re.split(';|/|,',genre.strip())) for song in json_response for genre in song.get('genre',[])]
         genres = collections.Counter([genre for genre in genres if not genre.isdigit()])
-        if sortbycount: genres.most_common(25)
-        values = sorted(genres.items())
+        if sortbycount: 
+            values = sorted(genres.most_common(25))
+        else:
+            values = sorted(genres.items())
         [MusicGenreList.append(key) for key, value in values]
         MusicGenreList.sort(key=lambda x: x.lower())
         self.log('fillMusicInfo, found genres = %s'%(MusicGenreList))
@@ -473,3 +472,168 @@ class JSONRPC:
         for item in json_response: tvshows.append({'label':item['label'],'item':item,'thumb':item.get('art',{}).get('poster','')})
         self.log('fillTVShows, found = %s'%(len(tvshows)))
         return tvshows
+        
+        
+    def getDuration(self, path, item={}, accurate=None):
+        if accurate is None:
+            accurate = getSettingBool('Duration_Type') == 1
+        self.log("getDuration, accurate = %s, path = %s"%(accurate,path))
+        
+        duration = 0
+        runtime  = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        if path.startswith(('plugin://','upnp://','pvr://')): return runtime
+        
+        conditions = [runtime == 0, accurate]
+        if True in conditions:
+            if path.startswith('stack://'): #handle "stacked" videos:
+                stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
+                for file in stack: duration += self.parseDuration(file, item)
+            else: 
+                duration = self.parseDuration(path, item)
+            if duration > 0: runtime = duration
+        self.log("getDuration, path = %s, runtime = %s"%(path,runtime))
+        return runtime 
+        
+        
+    def parseDuration(self, path, item={}, save=None):
+        cacheName = '%s.parseDuration:.%s'%(ADDON_ID,path)
+        duration  = self.cache.get(cacheName)
+        runtime   = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        if duration is None:
+            try:
+                if path.startswith(('http','ftp')):
+                    duration = 0
+                elif path.startswith(('plugin://','upnp://','pvr://')):
+                    duration = runtime
+                else:
+                    duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"))
+            except Exception as e: 
+                log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
+                duration = 0
+            self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=28))
+        
+        dbid    = item.get('id',-1)
+        rundiff = int(percentDiff(runtime,duration))
+        self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s"%(path,runtime,duration,rundiff))
+        conditions = [(dbid > 0),(runtime != duration),(duration > 0),(rundiff <= 45 or rundiff == 100)]
+        if save is None: save = getSettingBool('Store_Duration')
+        if save and (False not in conditions):
+            self.setDuration(item['type'], dbid, duration)
+        if ((rundiff > 45 and rundiff != 100) or rundiff == 0): duration = runtime
+        self.log("parseDuration, returning duration = %s"%(duration))
+        return duration
+        
+        
+    def autoPagination(self, id, path, limits={}):
+        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
+        if not limits:
+            msg = 'get'
+            # limits = self.channels.getPage(id) #todo move page to channels.json
+            limits = (self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0})
+        else:
+            msg = 'set'
+            # self.channels.setPage(id, limits) #todo move page to channels.json
+            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=28))
+        self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
+        return limits
+
+        
+    def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
+        limits = self.autoPagination(id, path, limits)
+        params                      = {}
+        params['limits']            = {}
+        params['directory']         = escapeDirJSON(path)
+        params['media']             = media
+        params['properties']        = JSON_FILE_ENUM
+        params['limits']['start']   = limits.get('end',0)
+        params['limits']['end']     = limits.get('end',0) + page
+        if sort:   params['sort']   = sort
+        if filter: params['filter'] = filter
+        
+        self.log('requestList, id = %s, path = %s, params = %s, page = %s'%(id,path,params,page))
+        json_response = self.getDirectory(dumpJSON(params))
+        if 'filedetails' in json_response: 
+            key = 'filedetails'
+        else: 
+            key = 'files'
+            
+        results = json_response.get('result',{})
+        items   = results.get(key,[])
+        limits  = results.get('limits',params['limits'])
+        self.log('requestList, id = %s, response items = %s, key = %s, limits = %s'%(id,len(items),key,limits))
+        
+        if limits.get('end',0) >= limits.get('total',0): # restart page, exceeding boundaries.
+            self.log('requestList, id = %s, resetting page to 0'%(id))
+            limits = {"end": 0, "start": 0, "total": 0}
+        self.autoPagination(id, path, limits)
+        
+        if len(items) == 0 and limits.get('start',0) > 0 and limits.get('total',0) > 0:
+            self.log("requestList, id = %s, trying again at start page 0"%(id))
+            return self.requestList(id, path, media, page, sort, filter, limits)
+        
+        self.log("requestList, id = %s, return items = %s"%(id,len(items)))
+        return items
+        
+        
+    def matchPVRPath(self, channelid=-1):
+        self.log('matchPVRPath, channelid = %s'%(channelid))
+        pvrPaths = ['pvr://channels/tv/%s/'%(urllib.parse.quote(ADDON_NAME)),
+                    'pvr://channels/tv/All%20channels/',
+                    'pvr://channels/tv/*']
+                    
+        for path in pvrPaths:
+            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}'%(path),cache=False).get('result',{}).get('files',[])
+            if json_response: break 
+            
+        if json_response:
+            item = list(filter(lambda k:k.get('id',-1) == channelid, json_response))
+            if item: 
+                self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))
+                return item[0].get('file','')
+        self.log('matchPVRPath, path not found \n%s'%(dumpJSON(json_response)))
+        return ''
+        
+         
+    def matchPVRChannel(self, chname, id, radio=False): # Convert PseudoTV Live channelID into a Kodi channelID for playback
+        log('matchPVRChannel, chname = %s, id = %s'%(chname,id))
+        channels = self.getPVRChannels(radio)
+        for channel in channels:
+            if channel.get('label') == chname:
+                for key in ['broadcastnow','broadcastnext']:
+                    writer = getWriter(channel.get(key,{}).get('writer',''))
+                    citem  = writer.get('citem',{}) 
+                    print('matchPVRChannel',writer,citem)
+                    if citem.get('id','') == id:
+                        log('matchPVRChannel, match found! id = %s'%(id))
+                        return channel
+        log('matchPVRChannel, no match found! \n%s'%(dumpJSON(channels)))
+        return {}
+        
+        
+    def fillPVRbroadcasts(self, channelItem):
+        self.log('fillPVRbroadcasts')
+        channelItem['broadcastnext'] = []
+        json_response = self.getPVRBroadcasts(channelItem['channelid'])
+        for idx, item in enumerate(json_response):
+            if item['progresspercentage'] == 100: continue
+            elif item['progresspercentage'] > 0: 
+                broadcastnow = channelItem['broadcastnow']
+                channelItem.pop('broadcastnow')
+                item.update(broadcastnow) 
+                channelItem['broadcastnow'] = item
+            elif item['progresspercentage'] == 0: 
+                channelItem['broadcastnext'].append(item)
+        self.log('fillPVRbroadcasts, found broadcastnext = %s'%(len(channelItem['broadcastnext'])))
+        return channelItem
+        
+        
+    def getPVRposition(self, chname, id, radio=False, isPlaylist=False):
+        self.log('getPVRposition, chname = %s, id = %s, isPlaylist = %s'%(chname,id,isPlaylist))
+        channelItem = self.matchPVRChannel(chname, id, radio)
+        channelItem['citem'] = {'name':chname,'id':id,'radio':radio}
+        channelItem['isPlaylist'] = isPlaylist
+        if isPlaylist:
+            channelItem = self.fillPVRbroadcasts(channelItem)
+        else: 
+            channelItem['broadcastnext'] = [channelItem.get('broadcastnext',[])]
+        return channelItem

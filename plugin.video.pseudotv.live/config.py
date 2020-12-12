@@ -49,7 +49,7 @@ class Config:
     
     def startInitThread(self): 
         self.log('startInitThread')
-        if self.InitThread.isAlive(): 
+        if self.InitThread.is_alive(): 
             self.InitThread.cancel()
         self.InitThread = threading.Timer(5.0, self.runInitThread)
         self.InitThread.name = "InitThread"
@@ -71,7 +71,7 @@ class Config:
             
     def startServiceThread(self, wait=5.0):
         self.log('startServiceThread, wait = %s'%(wait))
-        if self.serviceThread.isAlive(): 
+        if self.serviceThread.is_alive(): 
             self.serviceThread.cancel()
         self.serviceThread = threading.Timer(wait, self.runServiceThread)
         self.serviceThread.name = "serviceThread"

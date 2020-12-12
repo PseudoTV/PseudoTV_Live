@@ -6,7 +6,7 @@
     
       <control type="group" id="40002">
         <description>Player Overlay</description>
-        <visible>Player.HasVideo + Player.Playing</visible>
+        <visible>Player.HasVideo + [Player.Playing | Player.Paused]</visible>
         <posx>0</posx>
         <posy>0</posy>
         
@@ -33,8 +33,12 @@
         
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
+          <posx>0</posx>
+          <posy>0</posy>
           <width>auto</width>
           <height>auto</height>
+          <align>center</align>
+          <aligny>center</aligny>
         </control>
         
         <control type="group" id="41003">
@@ -109,8 +113,17 @@
         </control>
         
       </control>
-
-
+      
+      <control type="image" id="41005">
+        <description>Screen Overlay</description>
+        <left>0</left>
+        <top>0</top>
+        <width>auto</width>
+        <height>auto</height>
+        <aspectratio>scale</aspectratio>
+        <texture></texture>
+      </control>
+      
       <control type="list" id="40000">
         <description>Meta Container</description>
         <itemlayout width="0" height="0">

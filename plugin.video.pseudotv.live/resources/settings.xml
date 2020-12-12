@@ -19,8 +19,8 @@
         <setting id="Select_Music_Genres"   type="action"   label="30097" default="" visible="true"     action="RunScript($CWD/config.py, Music_Genres)"        subsetting="true"   option="close" enable="Library.HasContent(Music) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Select_Recommended"    type="action"   label="30023" default="" visible="true"     action="RunScript($CWD/config.py, Recommended)"         subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Select_Imports"        type="action"   label="30150" default="" visible="true"     action="RunScript($CWD/config.py, Imports)"             subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
-        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true"   option="close" />
-        <setting id="Clear_BlackList"       type="action"   label="30154" default="" visible="true"     action="RunScript($CWD/config.py, Clear_BlackList)"     subsetting="true"   option="close" />
+        <setting id="Clear_Predefined"      type="action"   label="30077" default="" visible="true"     action="RunScript($CWD/config.py, Clear_Predefined)"    subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Clear_BlackList"       type="action"   label="30154" default="" visible="true"     action="RunScript($CWD/config.py, Clear_BlackList)"     subsetting="true"   option="close" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         </category> 
     <category label="30025">
         <setting id="Enable_Recommended"    type="bool"     label="30148" default="true"  />
@@ -38,16 +38,17 @@
         <setting                           type="lsep"     visible="true" />
         <setting id="Store_Duration"       type="bool"     label="30042" default="false" />
         <setting id="Page_Limit"           type="slider"   label="30038" default="25" range="25,25,250" option="int" />
-        <setting id="Max_Days"             type="slider"   label="30039" default="3"  range="1,1,7"     option="int" />
+        <setting id="Max_Days"             type="slider"   label="30039" default="1"  range="1,1,7"     option="int" />
         <setting id="Update_Time"          type="slider"   label="30040" default="3"  range="1,1,24"    option="int" visible="false" />
     </category> 
     <category label="30055">
-        <setting id="Duration_Type"        type="enum"     label="30041" default="0"  lvalues="30164|30165"/>
-        <setting id="Enable_Overlay"       type="bool"     label="30054" default="true" />
-        <setting id="Enable_OnNext"        type="bool"     label="30153" default="true" />
+        <setting id="Duration_Type"        type="enum"     label="30041" default="0"     lvalues="30164|30165"/>
+        <setting id="Enable_Overlay"       type="bool"     label="30054" default="true"  />
+        <setting id="Enable_ChannelBug"    type="bool"     label="30175" default="true"  subsetting="true" visible="eq(-1,true)"/>
+        <setting id="Enable_OnNext"        type="bool"     label="30153" default="true"  subsetting="true" visible="eq(-2,true)"/>
         <setting id="Enable_Extras"        type="bool"     label="30094" default="false" />
         <setting id="Enable_Strms"         type="bool"     label="30095" default="false" />
-        <setting id="Enable_Fillers"       type="bool"     label="30030" default="false"/> 
+        <setting id="Enable_Fillers"       type="bool"     label="30030" default="false" enable="false" /> 
         <setting id="Resource_Ratings"     type="action"   label="30069" default="resource://resource.videos.ratings.mpaa.classic"                    visible="eq(-1,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_RATINGS)"     option="close" />
         <setting id="Resource_Trailers"    type="action"   label="30071" default="plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent"   visible="eq(-2,true)" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_TRAILERS)"    option="close" />     
         <setting id="Resource_Networks"    type="action"   label="30068" default="resource://resource.videos.bumpers.sample"       visible="false" subsetting="true" action="RunScript($CWD/config.py, Select_Resource_NETWORKS)"    option="close" />
@@ -63,6 +64,6 @@
     <category label="30020">
         <setting id="Enable_Debugging"     type="bool"     label="30000" default="true" />
         <setting id=" "                    type="action"   label="30046" default="" visible="true" action="RunScript($CWD/config.py, Open_Settings|pvr.iptvsimple)"  option="close" />
-        <setting id="Seek_Padding"         type="slider"   label="30129" default="15" range="0,1,300"   option="int" />
+        <setting id="Seek_Threshold"         type="slider"   label="30129" default="15" range="0,1,300"   option="int" />
     </category>
 </settings>

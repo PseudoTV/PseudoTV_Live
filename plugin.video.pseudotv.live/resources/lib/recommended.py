@@ -74,7 +74,7 @@ class Recommended:
         self.log('addWhiteList, addonid = %s'%(addonid))
         whitelist = self.getWhiteList()
         whitelist.append(addonid)
-        self.recommendedList['whitelist'] = whitelist
+        self.recommendedList['whitelist'] = list(set(whitelist))
         return True
         
         
@@ -82,12 +82,14 @@ class Recommended:
         self.log('addBlackList, addonid = %s'%(addonid))
         blacklist = self.getBlackList()
         blacklist.append(addonid)
-        self.recommendedList['blacklist'] = blacklist
+        self.recommendedList['blacklist'] = list(set(blacklist))
+        setSetting('Clear_BlackList','|'.join(self.recommendedList['blacklist']))
         return True
     
     
     def clearBlackList(self):
         self.recommendedList['blacklist'] = []
+        setSetting('Clear_BlackList','|'.join(self.recommendedList['blacklist']))
         return self.setRecommendedList()
         
     

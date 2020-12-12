@@ -265,7 +265,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def getItem(opt):
             item,key = opt
             return buildMenuListItem(label1=item.get(key,''), iconImage=item.get('icon',COLOR_LOGO))
-        itemList = list(map(getItem, zip(map(loadJSON, getInfoMonitor()),repeat(key))))
+        itemList = list(set(list(map(getItem, zip(map(loadJSON, getInfoMonitor()),repeat(key))))))
         select   = selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
         if select is not None: return itemList[select]
  
@@ -501,7 +501,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if ruleSelect.get('action',None) is None: return notificationDialog(LANGUAGE(30001))
         ruleInstance  = ruleSelect.get('action',None)
         valueitems    = (PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
-        listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),channelData.get("logo",''),str(ruleInstance.myId),propItem={'data':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
+        listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),channelData.get("logo",''),str(ruleInstance.myId),propItem={'citem':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
         self.ruleList.addItems(listitems)
         optionIDX    = selectDialog(listitems,LANGUAGE(30135),multi=False)
         print(ruleSelect)
@@ -606,9 +606,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 label, label2 = self.getLabels(controlId)
                 self.focusItems.update({'label':label,'label2':label2})
                 
-            self.focusItems['chanList']['data'] = loadJSON(channelitem.getProperty('channelData'))
-            self.focusItems['itemList']['data'] = loadJSON(channelListItem.getProperty('channelData'))
-            self.focusItems['ruleList']['data'] = loadJSON(ruleListItem.getProperty('channelData'))
+            self.focusItems['chanList']['citem'] = loadJSON(channelitem.getProperty('channelData'))
+            self.focusItems['itemList']['citem'] = loadJSON(channelListItem.getProperty('channelData'))
+            self.focusItems['ruleList']['citem'] = loadJSON(ruleListItem.getProperty('channelData'))
             
             chnumber = cleanLabel(channelitem.getLabel())
             if chnumber.isdigit(): 
@@ -616,8 +616,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     self.focusItems['number'] = int(chnumber)
                 except:
                     self.focusItems['number'] = float(chnumber)
-            elif self.focusItems['chanList']['data'].get('number',''):
-                self.focusItems['number'] = self.focusItems['chanList']['data']['number']
+            elif self.focusItems['chanList']['citem'].get('number',''):
+                self.focusItems['number'] = self.focusItems['chanList']['citem']['number']
             else:
                 self.focusItems['number'] = channelPOS + 1
             return self.focusItems
@@ -646,9 +646,9 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('onClick: controlId = %s'%(controlId))
         items = self.getFocusVARS(controlId)
         if self.isVisible(self.chanList):
-            channelData = items['chanList']['data'] 
+            channelData = items['chanList']['citem'] 
         else:
-            channelData = items['itemList']['data']
+            channelData = items['itemList']['citem']
             
         if   controlId == 0: self.closeManager()
         elif controlId == 5: self.buildChannelItem(channelData)

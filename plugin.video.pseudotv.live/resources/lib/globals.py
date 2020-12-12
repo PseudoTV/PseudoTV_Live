@@ -85,10 +85,10 @@ MAX_IMPORT          = 5
 EPG_HRS             = 10800  # 3hr in seconds, Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
-UPDATE_OFFSET       = 900
+UPDATE_OFFSET       = 3600
 
 CHANNEL_LIMIT       = 999
-CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30097),LANGUAGE(30026),LANGUAGE(30033)]
+CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 CHANNEL_RANGE       = range((CHANNEL_LIMIT+1),(CHANNEL_LIMIT*len(CHAN_TYPES))) # pre-defined channel range. internal use.
 BCT_TYPES           = ['bumpers','commercials','trailers','ratings']
@@ -119,6 +119,7 @@ RULES_ACTION_CHANNEL_POST_TIME   = 9
 RULES_ACTION_STOP                = 10
 #player
 RULES_ACTION_PLAYBACK            = 11
+RULES_ACTION_PLAYER              = 12
 #overlay
 RULES_ACTION_OVERLAY             = 20
 
@@ -142,7 +143,7 @@ TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
 PLS_LOC          = os.path.join(CACHE_LOC,'playlist')
 
-PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'30','m3uRefreshHour':'0',
+PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':str(int((UPDATE_OFFSET//4)/60)),'m3uRefreshHour':'0',
                     'logoPathType':'0','logoPath':LOGO_LOC,
                     'm3uPathType':'0','m3uPath':M3UFLE,
                     'epgPathType':'0','epgPath':XMLTVFLE,
@@ -150,7 +151,6 @@ PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'30','m3uRefre
                     'useEpgGenreText':'true', 'logoFromEpg':'1',
                     'catchupEnabled':'true','allChannelsCatchupMode':'0',
                     'epgTimeShift':'0','epgTSOverride':'false',
-                    'startNum':'1','numberByOrder':'true',
                     'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
  
 def log(msg, level=xbmc.LOGDEBUG):
@@ -376,19 +376,28 @@ def showChangelog():
     changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Important','[B][COLOR=red]-Important:[/COLOR][/B]').replace('-Warning','[B][COLOR=red]-Warning:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]').replace('-Changed','[B][COLOR=yellow]-Changed:[/COLOR][/B]')
     return textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
     
+def isJSON(item):
+    try: json.loads(item, strict=False)
+    except ValueError as e: 
+        log("globals: isJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+        return False
+    return True
+    
 def dumpJSON(dict1, idnt=None, sortkey=True):
     if not dict1: return ''
     elif isinstance(dict1, basestring): return dict1
     return (json.dumps(dict1, indent=idnt, sort_keys=sortkey))
     
-def loadJSON(string1):
-    if not string1: return {}
-    elif isinstance(string1,dict): return string1
-    elif isinstance(string1,basestring): 
-        string1 = (string1.strip('\n').strip('\t').strip('\r'))
-        try: 
-            return json.loads(string1, strict=False)
-        except Exception as e: log("globals: loadJSON failed! %s \n %s"%(e,string1), xbmc.LOGERROR)
+def loadJSON(item):
+    if isinstance(item,dict):
+        log("globals: loadJSON item already mutable")
+        return item #already mutable 
+    elif isinstance(item,basestring): 
+        if not isJSON(item):  
+            log("globals: loadJSON isJSON failed!")
+            return None #not a valid json, parsing error.
+        try: return json.loads(item, strict=False)
+        except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return {}
     
 def sendJSON(command):
@@ -453,7 +462,7 @@ def chkPVR():
     addon = getPVR()
     if addon is None: return False
     for setting, value in PVR_SETTINGS.items():
-        if not addon.getSetting(setting) == value: 
+        if not str(addon.getSetting(setting)) == str(value): 
             return configurePVR(ENABLE_PVRCONFIG)
     return True
     
@@ -491,7 +500,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     art        = info.pop('art'             ,{})
     streamInfo = item.pop('streamdetails'   ,{})
     properties = info.pop('customproperties',{})
-    properties.update(info.get('data'       ,{}))
+    properties.update(info.get('citem'      ,{}))
 
     uniqueid   = info.pop('uniqueid'        ,{})
     cast       = info.pop('cast'            ,[])
@@ -615,15 +624,16 @@ def isPseudoTV():
     return isPseudoTV
 
 def getWriter(text):
-    writer = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-    if writer: return loadJSON(decodeString(writer.group(1)))
+    if isinstance(text, basestring):
+        writer = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
+        if writer: return loadJSON(decodeString(writer.group(1)))
     return {}
 
 def getWriterfromString(type='ListItem'):
     return getWriter(xbmc.getInfoLabel('%s.Writer'%(type)))
     
 def hasChannelData(type='ListItem'):
-    return getWriterfromString(type).get('data',{}).get('number',-1) > 0
+    return getWriterfromString(type).get('citem',{}).get('number',-1) > 0
   
 def setCurrentChannelItem(item):
     setProperty('channel_item',dumpJSON(item))

@@ -62,7 +62,7 @@ class UPNP:
             # file = item.get('file','')
             # fileType = item.get('filetype','file')
             # if fileType == 'file':
-                # dur = self.fileList.getDuration(file, item)
+                # dur = self.jsonRPC.getDuration(file, item)
                 # if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
             # else: dirs.append(file)
         # for dir in dirs: return self.existsVFS(dir, media)

@@ -61,7 +61,7 @@ msgid "Rebuild M3U/XMLTV"
 msgstr ""
 
 msgctxt "#30011"
-msgid "Delete [M3U/XMLTV/Genre]"
+msgid "Delete [M3U/XMLTV]"
 msgstr ""
 
 msgctxt "#30012"
@@ -245,7 +245,7 @@ msgid "No Channels Found, Please Configure."
 msgstr ""
 
 msgctxt "#30057"
-msgid "Delete [M3U/XMLTV/Genre] Files?"
+msgid "Delete [M3U/XMLTV] Files?"
 msgstr ""
 
 msgctxt "#30058"
@@ -401,7 +401,7 @@ msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30096"
-msgid "Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
+msgid "Clean Start, Delete All User Files [Channels/Settings/M3U/XMLTV]"
 msgstr ""
 
 msgctxt "#30097"
@@ -533,7 +533,7 @@ msgid "Clear this Channels Configurations"
 msgstr ""
 
 msgctxt "#30129"
-msgid "Adjust Seek Padding"
+msgid "Adjust Seek Threshold"
 msgstr ""
 
 msgctxt "#30130"
@@ -698,4 +698,20 @@ msgstr ""
 
 msgctxt "#30171"
 msgid "Custom"
+msgstr ""
+
+msgctxt "#30172"
+msgid "M3U"
+msgstr ""
+
+msgctxt "#30173"
+msgid "XMLTV"
+msgstr ""
+
+msgctxt "#30174"
+msgid "plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}"
+msgstr ""
+
+msgctxt "#30175"
+msgid "Show Channel Bug"
 msgstr ""

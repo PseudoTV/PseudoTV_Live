@@ -21,6 +21,7 @@
 from resources.lib.globals     import *
 from resources.lib.parser      import Writer
 from resources.lib.jsonrpc     import JSONRPC
+from resources.lib.rules       import RulesList
 
 class Builder:
     def __init__(self, cache=None):
@@ -30,13 +31,14 @@ class Builder:
         else: 
             self.cache = cache
             
+        self.rules            = RulesList()
         self.jsonRPC          = JSONRPC(self.cache)
-        self.fileList         = self.jsonRPC.fileList
         self.myPlayer         = self.jsonRPC.myPlayer
         self.myMonitor        = self.jsonRPC.myMonitor
+        
         self.writer           = Writer(self.cache)
-        self.channels         = self.writer.channels
         self.writer.builder   = self
+        self.channels         = self.writer.channels
         
         self.maxDays          = getSettingInt('Max_Days')
         self.incStrms         = getSettingBool('Enable_Strms')
@@ -45,6 +47,7 @@ class Builder:
         self.fillBCTs         = getSettingBool('Enable_Fillers')
         self.accurateDuration = getSettingBool('Duration_Type')
         
+        self.ruleList         = {}
         self.filter           = {}
         self.sort             = {}
         self.limits           = {}
@@ -64,12 +67,25 @@ class Builder:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def runActions(self, action, citem, parameter=None):
+        self.log("runActions action = %s, channel = %s"%(action,citem))
+        if not citem.get('id',''): return parameter
+        ruleList = self.ruleList.get(citem['id'],[])
+        for rule in ruleList:
+            print(rule.name)
+            if action in rule.actions:
+                self.log("runActions performing channel rule: %s"%(rule.name))
+                parameter = rule.runAction(action, self, parameter)
+        return parameter
+        
+
     def buildService(self, channels=None):
-        if isBusy(): return
+        if   isBusy(): return
         elif self.channels.isClient:
             self.log('buildService, Client mode enabled; returning!')
             return False
-        elif not self.writer.reset(): 
+            
+        if not self.writer.reset(): 
             self.log('buildService, initializing m3u/xmltv parser failed!')
             return False
             
@@ -82,13 +98,13 @@ class Builder:
             return False
 
         setBusy(True)
-        # msg = LANGUAGE(30051)(30050)
-        self.dialog = ProgressBGDialog()
-        
-        self.channelCount = len(channels)
         if getProperty('PseudoTVRunning') != 'True': # legacy setting to disable/enable support in third-party applications. 
             setProperty('PseudoTVRunning','True')
             
+        self.dialog       = ProgressBGDialog()
+        self.channelCount = len(channels)
+        self.ruleList     = self.rules.loadRules(channels)
+        
         for idx, channel in enumerate(channels):
             channel       = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName = channel['name']
@@ -100,7 +116,9 @@ class Builder:
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
                     self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.chanName)
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
-            else: self.writer.removeChannel(channel)
+            else: 
+                self.log('buildService, In-Valid Channel (No guidedata)')
+                self.writer.removeChannel(channel)
                 
         if not self.writer.save(): 
             notificationDialog(LANGUAGE(30001))
@@ -151,19 +169,6 @@ class Builder:
                 yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
-    def runActions(self, action, citem, parameter=None):
-        self.log("runActions action = %s, channel = %s"%(action,citem))
-        if not citem.get('id',''): return parameter
-        chrules = citem.get('rules',[])
-        for chrule in chrules:
-            if chrule.get('id',0) == 0: continue
-            ruleInstance = chrule['action']
-            if ruleInstance.actions & action > 0:
-                self.log("runActions performing channel rule: %s"%(chrule['name']))
-                parameter = ruleInstance.runAction(action, self, parameter)
-        return parameter
-
-
     def addScheduling(self, channel, fileList, start):
         self.log("addScheduling; channel = %s, fileList = %s, start = %s"%(channel,len(fileList),start))
         #todo insert adv. scheduling rules here or move to adv. rules.py
@@ -193,7 +198,7 @@ class Builder:
             
             valid  = False
             now    = getLocalTime()
-            start  = (self.writer.endtimes.get(citem['id'],roundTime(now))) #offset time to start on half hour
+            start  = self.writer.getEndtime(citem['id'],roundTime(now)) #offset time to start on half hour
 
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=self.maxDays)): 
@@ -260,7 +265,7 @@ class Builder:
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(channel['id'],path,limit,sort,filter,limits))
         if path.startswith('videodb://movies'): 
             if not sort: sort = {"method": "random"}
-        elif path.startswith('plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}'):
+        elif path.startswith(LANGUAGE(30174)):#seasonal
             if not sort: sort = {"method": "episode"}
             path = path.format(list=getSeason(),limit=250)
             
@@ -268,7 +273,7 @@ class Builder:
         fileList      = []
         seasoneplist  = []
         method        =  sort.get("method","random")
-        json_response = self.fileList.requestList(id, path, media, limit, sort, filter, limits)
+        json_response = self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
 
         for idx, item in enumerate(json_response):
             file     = item.get('file','')
@@ -290,7 +295,7 @@ class Builder:
                     accurateDuration = False
                 else: 
                     accurateDuration = self.accurateDuration
-                dur = self.fileList.getDuration(file, item, accurateDuration)
+                dur = self.jsonRPC.getDuration(file, item, accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
                     if int(item.get("year","0")) == 1601: #default null for kodi rpc?
@@ -414,7 +419,7 @@ class Builder:
         
         # def buildBCT(bctType, path):
             # if path.startswith(('pvr://','upnp://','plugin://')): return # Kodi only handles stacks between local content, bug?
-            # duration = self.fileList.parseDuration(path)
+            # duration = self.jsonRPC.parseDuration(path)
             # self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
             # if bctType in PRE_ROLL:
                 # paths.insert(0,path)

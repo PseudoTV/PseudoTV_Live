@@ -18,6 +18,8 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
+from resources.lib.builder     import Builder
+from resources.lib.rules       import RulesList
 from plugin                    import Plugin
 from config                    import Config
 from resources.lib.overlay     import Overlay
@@ -26,16 +28,32 @@ class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
         self.pendingStop        = False
-        self.pendingSeek        = False
+        # self.pendingSeek        = False
+        self.rules              = RulesList()
         self.lastSubState       = isSubtitle()
-        self.playingChannelItem = {'channelid':-1}
+        self.ruleList           = {}
+        self.playingPVRitem     = {'channelid':-1}
         self.overlayWindow      = Overlay(OVERLAY_FLE, ADDON_PATH, "default")
+        
+        #global
+        self.showOverlay        = getSettingBool('Enable_Overlay')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def runActions(self, action, citem, parameter=None):
+        self.log("runActions action = %s, channel = %s"%(action,citem))
+        if not citem.get('id',''): return parameter
+        ruleList = self.ruleList.get(citem['id'],[])
+        for rule in ruleList:
+            if action in rule.actions:
+                self.log("runActions performing channel rule: %s"%(rule.name))
+                parameter = rule.runAction(action, self, parameter)
+        return parameter
+        
+        
     def getInfoTag(self):
         self.log('getInfoTag')
         if self.isPlayingAudio():
@@ -75,11 +93,11 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         self.pendingStop = True #onAVChange called before onPlayBackEnded,onPlayBackStopped
-        
+
 
     def onPlayBackSeek(self, seek_time, seek_offset):
         self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
-        self.pendingSeek = False
+        # self.pendingSeek = False
         
         
     def onPlayBackStarted(self):
@@ -106,54 +124,58 @@ class Player(xbmc.Player):
         
     def playAction(self):
         if not isPseudoTV(): 
-            self.stopAction()
-            return self.log('playAction, returning not PseudoTV Live')
-        
+            self.log('playAction, returning not PseudoTV Live')
+            return self.stopAction()
+            
         self.toggleSubtitles(False)
         setProperty('PseudoTVRunning','True') # legacy setting to disable/enable support in third-party applications. 
         
-        currentChannelItem = getCurrentChannelItem()
-        currentChannelId   = currentChannelItem.get('channelid',-1)
-        lastChannelId      = self.playingChannelItem.get('channelid',random.random())
-        if not currentChannelItem.get('callback',''):
-            currentChannelItem['callback'] = (self.myService.myPlugin.pvr.matchPVRPath(currentChannelId) or self.myService.jsonRPC.getPlayerItem().get('mediapath',''))
-        
-        if lastChannelId == currentChannelId: 
+        pvritem = getCurrentChannelItem()                
+        if (pvritem.get('citem',{}).get('path','') or None) is None:
+            pvritem.update({'citem':self.myService.channels.findChannel(pvritem.get('citem',{}), self.myService.channels.getAllChannels())[1]})
+
+        if (pvritem.get('callback','') or None) is None:
+            pvritem.update({'callback':(self.myService.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.myService.jsonRPC.getPlayerItem().get('mediapath',''))})
+
+        if pvritem.get('channelid',-1) == self.playingPVRitem.get('channelid',random.random()):
             self.log('playAction, no channel change')
-            self.playingChannelItem.update(currentChannelItem)
         else:   
             self.log('playAction, new channel change')
-            self.playingChannelItem = currentChannelItem
-            self.pendingSeek = currentChannelItem.get('progress',0) > 0
-        setCurrentChannelItem(self.playingChannelItem)
-        self.log('playAction, lastChannelId = %s, currentChannelId = %s, callback = %s'%(lastChannelId,currentChannelId,currentChannelItem['callback']))
-
-
-    def isPlaylist(self):
-        return self.playingChannelItem.get('isPlaylist',False)
-
+            self.ruleList = self.rules.loadRules([pvritem.get('citem',{})])
+            pvritem = self.runActions(RULES_ACTION_PLAYER, (pvritem.get('citem',{})), pvritem)
+            self.pendingSeek = pvritem.get('progress',0) > 0
+            setCurrentChannelItem(pvritem)
+            self.playingPVRitem = pvritem
+            
 
     def changeAction(self):
         if not getCurrentChannelItem(): 
             self.stopAction()
             return self.log('changeAction, ignore not PseudoTV Live')
     
-        isplaylist = self.isPlaylist()
-        callback   = self.playingChannelItem.get('callback','')
-        if not isplaylist: clearCurrentChannelItem()
-        elif (isplaylist or not callback): 
+        isPlaylist = self.isPlaylist()
+        callback   = self.playingPVRitem.get('callback','')
+        if not isPlaylist: clearCurrentChannelItem()
+        elif (isPlaylist or not callback): 
             self.log('changeAction, ignore playlist or missing callback')
             return
+            
         self.log('changeAction, playing = %s'%(callback))
         xbmc.executebuiltin('PlayMedia(%s)'%callback)
+        #means to update pvritem without plugin playback
+        # pvritem = self.myService.jsonRPC.getPVRposition(self.playingPVRitem.get('name'), self.playingPVRitem.get('id'), self.playingPVRitem.get('isPlaylist'))
         
-
+        
     def stopAction(self):
         self.log('stopAction')
-        self.pendingSeek = False
+        # self.pendingSeek = False
         clearCurrentChannelItem()
         self.toggleOverlay(False)
         setProperty('PseudoTVRunning','False')
+
+
+    def isPlaylist(self):
+        return self.playingPVRitem.get('isPlaylist',False)
 
 
     def isOverlay(self):
@@ -163,7 +185,7 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state):
         if state and not self.isOverlay():
-            conditions = [getSettingBool('Enable_Overlay'),
+            conditions = [self.showOverlay,
                           self.isPlaying(),
                           isPseudoTV()]
             if (False in conditions): return
@@ -192,7 +214,7 @@ class Monitor(xbmc.Monitor):
     def onSettingsChanged(self):
         if not self.pendingChange: return # only trigger when settings dialog opened
         self.log('onSettingsChanged, pendingChange = %s'%(self.pendingChange))
-        if self.onChangeThread.isAlive(): 
+        if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
         self.onChangeThread = threading.Timer(15.0, self.onChange)
         self.onChangeThread.name = "onChangeThread"
@@ -210,23 +232,25 @@ class Monitor(xbmc.Monitor):
 
 class Service:
     def __init__(self):
+        self.autoTune      = True
         self.myMonitor     = Monitor()
         self.myMonitor.myService = self
         
         self.myPlayer      = Player()
         self.myPlayer.myService = self
         
+        self.myBuilder     = Builder()
+        self.myBuilder.myService = self
+        self.jsonRPC       = self.myBuilder.jsonRPC
+        self.channels      = self.myBuilder.channels
+        
         self.myConfig      = Config(sys.argv)
         self.myConfig.myService = self
         self.myPredefined  = self.myConfig.predefined
-        self.jsonRPC       = self.myConfig.jsonRPC
-        self.channels      = self.myConfig.channels
         
         self.myPlugin      = Plugin(sys.argv)
-        self.myBuilder     = self.myPlugin.builder
+        self.myPlugin.myService = self
         
-        self.autoTune      = True
-
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -234,11 +258,11 @@ class Service:
 
     def getSeekTol(self):
         try: return getSettingInt('Seek_Tolerance')
-        except: return 30 #Kodi raises error after sleep. # todo debug
+        except: return 55 #Kodi raises error after sleep. # todo debug
         
         
     def getIdleTime(self):
-        try: return (xbmc.getGlobalIdleTime() or 0)
+        try: return (int(xbmc.getGlobalIdleTime()) or 0)
         except: return 0 #Kodi raises error after sleep. # todo debug
     
         
@@ -280,8 +304,8 @@ class Service:
         
         
     def updateChannels(self, channels=None):
-        self.log('updateChannels, channels = %s'%(len(channels)))
         if channels is None: channels = self.myBuilder.getChannelList()
+        self.log('updateChannels, channels = %s'%(len(channels)))
         if channels:
             if self.myBuilder.buildService(channels): 
                 setProperty('Last_Update',str(time.time()))

@@ -39,7 +39,6 @@ class Predefined:
         self.MUSIC_Info        = []
         self.IPTV_Items        = []
         self.Recommended_Items = []
-        self.cItemTemplate     = self.channels.getCitem() #template 
 
         self.pathTypes = {LANGUAGE(30002)  : self.createNetworkPlaylist,
                           LANGUAGE(30003)  : self.createShowPlaylist,
@@ -113,7 +112,7 @@ class Predefined:
         
         
     def createSeasonal(self):
-        return 'plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}'
+        return LANGUAGE(30174)
         
 
     def getfillItems(self, type=None):
@@ -194,13 +193,8 @@ class Predefined:
         return self.MUSIC_Info
         
 
-    def makeMixedList(self, list1, list2):
-        newlist = []
-        for item in list1:
-            for a in list2:
-                if item.lower() == a.lower():
-                    newlist.append(item)
-                    break
+    def makeMixedList(self, genres1, genres2):
+        newlist = [genre1 for genre1 in genres1 for genre2 in genres2 if genre1.lower() == genre2.lower()]
         self.log('makeMixedList, genres = %s'%(','.join(newlist)))
         return newlist
         
@@ -242,8 +236,7 @@ class Predefined:
         
     def findChannel(self, citem, type, channels=None):
         self.log('findChannel, item = %s, type = %s'%(citem,type))
-        if channels is None:
-            channels = self.groupChannelsbyType()[type]
+        if channels is None: channels = self.groupChannelsbyType()[type]
         for idx, item in enumerate(channels):
             if (item['id'] == citem['id']) or (item['type'].lower() == citem['type'].lower() and item['name'].lower() == citem['name'].lower() and item['path'].lower() == citem['path'].lower()):
                 return idx, item
@@ -278,10 +271,9 @@ class Predefined:
 
     def buildImports(self):
         self.log('buildImports')
-        if len(self.IPTV_Items) == 0: 
-            self.IPTV_Items = self.recommended.getDataType()
+        if len(self.IPTV_Items) == 0: self.IPTV_Items = self.recommended.getDataType()
+        setSetting('Clear_BlackList','|'.join(self.recommended.getBlackList()))
         imports = self.getPredefinedItems(LANGUAGE(30033), enabled=True) #current items
-        print(self.IPTV_Items,imports)
         return self.channels.setImports([item['data'] for item in self.IPTV_Items for eimport in imports if ((item.get('data',{}).get('name','').startswith(eimport.get('name'))) and (item['data'].get('type','').lower() == 'iptv'))])
 
 
@@ -299,9 +291,8 @@ class Predefined:
             
             for citem in citems:
                 match, eitem = self.findChannel(citem, type, echannels)
-                if match is not None:
-                    for key in ['rules','number','favorite','page']: #update new citems with existing values.
-                        citem[key] = eitem[key]
+                if match is not None: #update new citems with existing values.
+                    for key in ['rules','number','favorite','page']: citem[key] = eitem[key]
                 else: citem['number'] = next(numbers,0)
                 predefined.append(citem)
         return self.setPredefinedChannels(predefined)
@@ -310,7 +301,7 @@ class Predefined:
     def buildPredefinedChannel(self, data):
         item, type = data
         if type not in self.pathTypes.keys(): return None
-        citem = self.cItemTemplate.copy()
+        citem = self.channels.getCitem()
         del citem['xmltv'] #not needed for predefined channel
         citem.update({'name'   :self.getChannelPostfix(item['name'], type),
                       'path'   :self.pathTypes[type](item['name']),
@@ -340,8 +331,6 @@ class Predefined:
     def enableChannels(self, type, items, selects):
         self.log('enableChannels, type = %s, items = %s, selects = %s'%(type, len(items), selects))
         for idx, item in enumerate(items):
-            if idx in selects:
-                item['enabled'] = True
-            else:
-                item['enabled'] = False
+            if idx in selects: item['enabled'] = True
+            else:              item['enabled'] = False
             yield item
