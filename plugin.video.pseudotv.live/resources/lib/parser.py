@@ -16,29 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # https://github.com/kodi-pvr/pvr.iptvsimple/blob/Matrix/README.md#m3u-format-elements
+# https://raw.githubusercontent.com/XMLTV/xmltv/master/xmltv.dtd
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
 from resources.lib             import xmltv
 from resources.lib.fileaccess  import FileLock
 
-GlobalFileLock = FileLock()
-
-@contextmanager
-def fileLocker():
-    log('parser: fileLocker')
-    GlobalFileLock.lockFile("MasterLock")
-    try: yield
-    finally: 
-        GlobalFileLock.unlockFile('MasterLock')
-        GlobalFileLock.close()
-
-xmltv.locale      = 'utf-8'
-xmltv.date_format = DTFORMAT
-        
 class Writer:
-    def __init__(self, cache=None):
-        log('Writer: __init__')
+    def __init__(self, cache=None, builder=None):
+        self.log('__init__')
         if cache is None:
             self.cache = SimpleCache()
         else: 
@@ -47,48 +34,59 @@ class Writer:
         self.m3u           = M3U(self.cache)
         self.xmltv         = XMLTV(self.cache)
         self.channels      = Channels(self.cache)
-        self.importEnabled = getSettingBool('User_Import')
         
-        try:
+        if builder:
+            self.builder  = builder
             self.dialog   = self.builder.dialog
             self.progress = self.builder.progress
             self.chanName = self.builder.chanName
-        except:
+        else:
             self.dialog   = None
             self.progress = 0
             self.chanName = ''
-        # if self.channels.isClient: self.syncCustom()
-        
+
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+    
         
     def reset(self):
-        log('Writer: reset')
-        if self.xmltv.reset() and self.m3u.reset(): return True
-        return False
+        self.log('reset')
+        if False in [self.xmltv.reset(),
+                     self.m3u.reset(),
+                     self.channels.reset()]: return False
+        return True
+        
+        
+    def isClient(self):
+        return self.channels.isClient
         
         
     def getEndtime(self, id, fallback):
-        log('Writer: getEndtime, id = %s'%(id))
+        self.log('getEndtime, id = %s'%(id))
         return (self.xmltv.getEndtimes().get(id,'') or fallback)
         
         
     def delete(self, full=False):
-        log('Writer: delete')
-        if full: self.deleteSettings()
-        if False in [func() for func in [self.m3u.delete,self.xmltv.delete,self.channels.delete]]:
+        self.log('delete')
+        funcs = [self.m3u.delete,
+                 self.xmltv.delete]
+        if full: funcs.extend([self.channels.delete,self.deleteSettings])
+        if False in [func() for func in funcs]:
             return False
         return True
         
 
     def deleteSettings(self):
-        log('Writer: deleteSettings')
+        self.log('deleteSettings')
         if FileAccess.delete(SETTINGS_FLE):
             return notificationDialog(LANGUAGE(30016)%('SETTINGS'))
         return False
         
         
     def save(self):
-        log('Writer: save')
-        if self.cleanChannels(): 
+        self.log('save')
+        if self.cleanChannels():
             self.importSETS()
             if self.xmltv.save() and self.m3u.save():
                 if self.dialog is not None:
@@ -97,36 +95,50 @@ class Writer:
         return False
         
         
+    def saveChannels(self):
+        self.log('saveChannels')
+        if self.channels.save(): 
+           return self.save()
+        return False
+        
+        
     def importSETS(self):
-        log('Writer: importSETS')
+        self.log('importSETS')
         importLST = self.channels.getImports()
-        if self.importEnabled: 
+        if getSettingBool('User_Import'): 
             importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':getSetting('Import_M3U'),'xmltv':getSetting('Import_XMLTV')})
-        for importItem in importLST:
+        for idx, importItem in enumerate(importLST):
             try:
                 if importItem.get('type','') == 'iptv':
                     if self.dialog is not None:
-                        self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s: %s'%(LANGUAGE(30151),importItem.get('name','')))
-                    self.m3u.importM3U(importItem.get('m3u',''))
+                        self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s %s'%(LANGUAGE(30151),importItem.get('name','')))
+                    idx += 1
+                    self.m3u.importM3U(importItem.get('m3u',''),multiplier=idx)
                     self.xmltv.importXMLTV(importItem.get('xmltv',{}).get('path',''))
-            except Exception as e: log("Writer: importSETS, Failed! " + str(e), xbmc.LOGERROR)
+            except Exception as e: self.log(" importSETS, Failed! " + str(e), xbmc.LOGERROR)
         return True
         
         
-    def addChannel(self, citem, radio=False, catchup=True):
-        log('Writer: addChannel, citem = %s, radio = %s, catchup = %s'%(citem,radio,catchup))
+    def addChannelLineup(self, citem, radio=False, catchup=True):
+        self.log('addChannelLineup, item = %s, radio = %s, catchup = %s'%(citem,radio,catchup))
         self.m3u.addChannel(citem)
         self.xmltv.addChannel(citem)
     
     
     def removeChannel(self, citem):
-        log('Writer: removeChannel, citem = %s'%(citem))
+        self.log('removeChannel, citem = %s'%(citem))
+        self.channels.remove(citem)
+        self.removeChannelLineup(citem)
+        
+        
+    def removeChannelLineup(self, citem):
+        self.log('removeChannelLineup, citem = %s'%(citem))
         self.m3u.removeChannel(citem.get('id',''))
         self.xmltv.removeChannel(citem.get('id',''))
     
-    
+
     def addProgrammes(self, citem, fileList, radio=False, catchup=True):
-        log('Writer: addProgrammes, radio = %s, catchup = %s, programmes = %s, citem = %s'%(radio,catchup,len(fileList),citem))
+        self.log('addProgrammes, radio = %s, catchup = %s, programmes = %s, citem = %s'%(radio,catchup,len(fileList),citem))
         for idx, file in enumerate(fileList):
             item = {}
             item['radio']       = radio
@@ -168,9 +180,18 @@ class Writer:
             self.xmltv.addProgram(citem['id'], item)
             
             
-    def cleanChannels(self): # remove abandoned/missing channels
-        log('Writer: cleanChannels')
-        channels = self.channels.getAllChannels()
+    def clearChannels(self,all=False):
+        channels = self.channels.getChannels()
+        if not all: channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, channels))
+        self.log('cleanChannels, channels = %s'%(len(channels)))
+        for citem in channels: 
+            self.removeChannel(citem)
+        return self.saveChannels()
+        
+            
+    def cleanChannels(self): # remove abandoned/missing channels from m3u/xmltv
+        self.log('cleanChannels')
+        channels = self.channels.getChannels()
         m3u      = self.m3u.getChannels().copy()
         xmltv    = self.xmltv.getChannels().copy()
         
@@ -189,6 +210,91 @@ class Writer:
         [self.m3u.removeChannel(item.get('id',''))   for item in m3u]
         [self.xmltv.removeChannel(item.get('id','')) for item in xmltv]
         return True
+        
+    
+    def recoverChannels(self):
+        self.log('recoverChannels') #rebuild channels.json from m3u.
+        channels = self.channels.getChannels()
+        m3u      = self.m3u.getChannels().copy()
+        if not channels and m3u:
+            self.log('recoverChannels, recovering %s m3u channels'%(m3u))
+            if not yesnoDialog('%s ?'%(LANGUAGE(30178))): return
+            for item in m3u: 
+                citem = self.channels.getCitem()
+                citem.update(item) #todo repair path.
+                self.channels.add(citem)
+            if self.channels.save(): return True
+        return False
+        
+        
+    def buildImports(self, items, imports):
+        self.log('buildImports')
+        self.channels.setImports([item['data'] for item in items for eimport in imports if ((item.get('data',{}).get('name','').startswith(eimport.get('name'))) and (item['data'].get('type','').lower() == 'iptv'))])
+        return self.channels.save()
+        
+        
+    def buildPredefinedChannels(self, libraryItems):  
+        # convert enabled library.json into channels.json items
+        # types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #ignore Imports, use buildImports
+        def findChannel():
+            for idx, eitem in enumerate(echannels):
+                if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
+                    return idx, eitem
+            return None, {}
+                
+        def buildAvailableRange():
+            # create number array for given type, excluding existing channel numbers.
+            start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
+            stop  = (start + CHANNEL_LIMIT)
+            self.log('buildAvailableRange, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
+            # return list(set(range(start,stop)).difference(set(blist))) #set bug with even array in bytes? 
+            return [num for num in range(start,stop) if num not in enumbers]
+            
+        for type in libraryItems.keys():
+            self.log('buildPredefinedChannels, type = %s'%(type))
+            echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels())) # existing channels, avoid duplicates, aid in removal.
+            enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] #existing channel numbers
+            numbers   = iter(buildAvailableRange()) #list of available channel numbers 
+            leftovers = echannels.copy()
+            items     = libraryItems.get(type,[])
+            for item in items:
+                citem = self.channels.getCitem()
+                citem.update({'name'   :getChannelPostfix(item['name'], type),
+                              'path'   :item['path'],
+                              'type'   :item['type'],
+                              'logo'   :item['logo'],
+                              'group'  :[type]})
+                              
+                citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
+                citem['catchup'] = ('vod' if not citem['radio'] else '')
+                match, eitem = findChannel()
+                if match is not None: #update new citems with existing values.
+                    leftovers.remove(eitem)
+                    for key in ['rules','number','favorite','page']: citem[key] = eitem[key]
+                else: 
+                    citem['number'] = next(numbers,0)
+                citem['id'] = getChannelID(citem['name'], citem['path'], citem['number'])
+                self.channels.add(citem)
+            [self.removeChannel(eitem) for eitem in leftovers] #remove channels unselected.
+        return self.saveChannels()
+         
+        
+    def autoPagination(self, id, path, limits={}):
+        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
+        if not limits:
+            msg = 'get'
+            try:    limits = self.channels.getPage(id)
+            except: limits = ''
+            limits = (limits or self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0})
+        else:
+            msg = 'set'
+            try:
+                if self.channels.setPage(id, limits): 
+                    self.channels.save()
+            except: pass
+            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=28))
+        self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
+        return limits
 
         
     def syncCustom(self): #todo sync user created smartplaylists/nodes for multi-room.
@@ -199,7 +305,7 @@ class Writer:
                 for file in files:
                     orgpath  = os.path.join(path,file)
                     copypath = os.path.join(PLS_LOC,type,media,file)
-                    log('parser: copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
+                    self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
                     yield FileAccess.copy(orgpath, copypath)
 
 
@@ -211,7 +317,6 @@ class Channels:
         else: 
             self.cache = cache
 
-        self.channelList = {}
         self.channelList = self.getTemplate(ADDON_VERSION)
         self.channelList.update(self.load())
         self.isClient    = self.chkClient()
@@ -223,12 +328,14 @@ class Channels:
         return True
 
 
-    def getUUID(self):
+    def getUUID(self, channelList=None):
         log('Channels: getUUID')
-        uuid = self.channelList.get('uuid','')
+        if channelList is None: channelList = self.channelList
+        uuid = channelList.get('uuid','')
         if not uuid: 
             uuid = getMYUUID()
-            self.channelList['uuid'] = uuid
+            channelList['uuid'] = uuid
+            self.channelList = channelList
         return uuid
 
 
@@ -242,165 +349,128 @@ class Channels:
         return isClient
 
 
+    def sortChannels(self, channels=None):
+        if channels is None: channels = self.getChannels()
+        return sorted(channels, key=lambda k: k['number'])
+
+
     def getChannels(self):
         log('Channels: getChannels')
-        return sorted(self.channelList.get('channels',[]), key=lambda k: k['number'])
+        return self.sortChannels(self.channelList.get('channels',[]))
 
 
     def getPredefinedChannels(self):
         log('Channels: getPredefinedChannels')
-        return sorted(self.channelList.get('predefined',{}).get('channels',[]), key=lambda k: k['number'])
-        
-
-    def getAllChannels(self):
-        log('Channels: getAllChannels')
-        channels = self.getChannels()
-        channels.extend(self.getPredefinedChannels())
-        return channels
-     
-                 
-    def setPredefinedChannels(self, channels):
-        log('Channels: setPredefinedChannels, channels = %s'%(len(channels)))
-        self.channelList['predefined']['channels'] = sorted(channels, key=lambda k: k['number'])
-        return self.save()
-        
-
-    def getPredefinedItems(self, type):
-        log('Channels: getPredefinedItems, type = %s'%(type))
-        return sorted(self.channelList.get('predefined',{}).get('items',{}).get(type,[]), key=lambda k: k['name'])
-
-        
-    def setPredefinedItems(self, type, items=[]):
-        log('Channels: setPredefinedItems, type = %s, items = %s'%(type,len(items)))
-        self.channelList['predefined']['items'][type] = sorted(items, key=lambda k: k['name'])
-        return self.save()
-        
-        
-    def getRecommended(self):
-        log('Channels: getRecommended')
-        return self.channelList.get('recommended',{})
- 
- 
-    def setRecommended(self, items={}):
-        log('Channels: setRecommended, items = %s'%(len(items)))
-        self.channelList['recommended'] = items
-        return self.save()
- 
- 
-    def getImports(self):
-        log('Channels: getImports')
-        return sorted(self.channelList.get('recommended',{}).get('imports',[]), key=lambda k: k['name'])
-    
-    
-    def setImports(self, imports):
-        log('Channels: setImports, imports = %s'%(imports))
-        self.channelList['recommended']['imports'] = sorted(imports, key=lambda k: k['name'])
-        return self.save()
+        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.channelList.get('channels',[]))))
 
 
     def getPage(self, id):
-        page = {"end": 0, "start": 0, "total": 0}
-        idx, citem = self.findChannel({'id':id}, self.getAllChannels())
-        if idx is not None: page = citem.get('page',page)
-        log('Channels: getPage, id = %s, page = %s'%(id, page))
-        return page
+        idx, citem = self.findChannel({'id':id}, self.getChannels())
+        log('Channels: getPage, id = %s, page = %s'%(id, citem.get('page','')))
+        return citem.get('page','')
 
 
     def setPage(self, id, page={}):
         log('Channels: setPage, id = %s, page = %s'%(id, page))
-        idx, citem = self.findChannel({'id':id}, self.getAllChannels())
+        channels = self.channelList['channels']
+        idx, citem = self.findChannel({'id':id}, channels)
+        if idx is not None: 
+            channels[idx]['page'] = page
+            self.channelList['channels'] = channels
+            return True#todo save here
+        return False
+
+
+    def getImports(self):
+        log('Channels: getImports')
+        return self.channelList.get('imports',[])
+
+
+    def setImports(self, imports):
+        log('Channels: setImports, imports = %s'%(imports))
+        self.channelList['imports'] = imports
+        return True #todo save here
+        
+
+    def add(self, citem):
+        log('Channels: add, id = %s'%(citem['id']))
+        idx, channel = self.findChannel(citem, channels = self.channelList['channels'])
         if idx is not None:
-            if citem['number'] > CHANNEL_LIMIT:
-                channels = self.getPredefinedChannels()
-            else:
-                channels = self.getChannels()
-            idx, citem = self.findChannel(citem, channels)
-            self.channelList[idx]['page'] = page
-            
-            
-    def getChannelRules(self, citem, channels=None):
-        log('Channels: getChannelRules, id = %s'%(citem['id']))
-        if channels is None: channels = self.getChannels()
-        idx, channel = self.findChannel(citem, channels)
-        if idx is not None: return channel.get('rules',[])
-        return []
-            
-            
-    def add(self, citem, channels=None):
-        if channels is None: channels = self.getChannels()
-        log('Channels: add, item = %s'%(citem))
-        idx, channel = self.findChannel(citem, channels)
-        if idx is not None:
-            citem["number"] = channels[idx]["number"] # existing id found, reuse channel number.
+            for key in ['rules','number','favorite','page']: citem[key] = channel[key] # existing id found, reuse channel meta.
             log('Channels: Updating channel %s, id %s'%(citem["number"],citem["id"]))
-            channels[idx] = citem
+            self.channelList['channels'][idx] = citem #can't .update() must replace.
         else:
             log('Channels: Adding channel %s, id %s'%(citem["number"],citem["id"]))
-            channels.append(citem)
-        self.channelList['channels'] = sorted(channels, key=lambda k: k['number'])
+            self.channelList['channels'].append(citem)
         return True
         
         
-    def remove(self, citem, channels=None):
-        if channels is None: channels = self.getChannels()
-        log('Channels: removing item = %s'%(citem))
-        idx, channel = self.findChannel(citem, channels)
-        if idx is not None: channels.pop(idx)
-        self.channelList['channels'] = channels
+    def remove(self, citem):
+        log('Channels: removing id = %s'%(citem['id']))
+        idx, channel = self.findChannel(citem, self.channelList['channels'])
+        if idx is not None: self.channelList['channels'].pop(idx)
         return True
         
         
     def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.getChannels()
+        match = None, {}
+        if channels is None: channels = self.channelList['channels']
         for idx, channel in enumerate(channels):
             if (citem["id"] == channel["id"]):
                 log('Channels: findChannel, item = %s, found = %s'%(citem,channel))
                 return idx, channel
-        return None, {}
+            elif ((citem.get("name") == channel["name"]) and (citem["type"] == channel["type"])):
+                log('Channels: findChannel, possible match found = %s'%(channel)) #todo user prompt?
+                match = idx, channel
+        return match
         
-        
-    # @use_cache(7)
+
+    @use_cache(7)
     def getTemplate(self, version=ADDON_VERSION):
         log('Channels: getTemplate')
-        data = (self.load(CHANNELFLE_DEFAULT) or {})
-        data['uuid'] = self.getUUID()
-        return data
+        channelList = (self.load(CHANNELFLE_DEFAULT) or {})
+        channelList['uuid'] = self.getUUID(channelList)
+        return channelList
 
 
     def getCitem(self):
-        log('Channels: getCitem')
-        return self.getTemplate(ADDON_VERSION).get('channels',[])[0].copy()
+        log('Channels: getCitem') #channel schema
+        citem = self.getTemplate(ADDON_VERSION).get('channels',[])[0].copy()
+        citem['rules'] = []
+        return citem
+        
        
+    def getRitem(self):
+        log('Channels: getRitem') #rule schema
+        return self.getTemplate(ADDON_VERSION).get('channels',[{}])[0].get('rules',[])[0].copy()
+
+
+    def cleanSelf(self, channelList=None):
+        if channelList is None: channelList = self.channelList
+        channels = channelList.get('channels',[])
+        channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
+        log('Channels: cleanSelf, before = %s, after = %s'%(len(channels),len(channelList['channels'])))
+        return channelList
+        
 
     def load(self, file=CHANNELFLE):
         log('Channels: load file = %s'%(file))
         if not FileAccess.exists(file): 
             file = CHANNELFLE_DEFAULT
-        fle  = FileAccess.open(file, 'r')
-        data = (loadJSON(fle.read()) or {})
-        fle.close()
-        return data
+        with fileLocker(FileLock()):
+            fle  = FileAccess.open(file, 'r')
+            data = (loadJSON(fle.read()) or {})
+            fle.close()
+            return data
         
-
-    def cleanSelf(self):
-        channels = self.getChannels()
-        self.channelList['channels'] = [citem for citem in channels if citem['number'] > 0]
         
-
     def save(self):
-        self.cleanSelf()
-        with fileLocker():
+        with fileLocker(FileLock()):
             fle = FileAccess.open(CHANNELFLE, 'w')
             log('Channels: save, saving to %s'%(CHANNELFLE))
-            fle.write(dumpJSON(self.channelList, idnt=4, sortkey=False))
+            fle.write(dumpJSON(self.cleanSelf(self.channelList), idnt=4, sortkey=False))
             fle.close()
-        return True
-        
-        
-    def delete(self):
-        log('Channels: delete')
-        if FileAccess.delete(CHANNELFLE):
-            return notificationDialog(LANGUAGE(30016)%(LANGUAGE(30024)))
+        return self.reset() #force memory/file parity 
 
 
 class XMLTV:
@@ -411,10 +481,9 @@ class XMLTV:
         else: 
             self.cache = cache
             
-        self.maxDays        = getSettingInt('Max_Days')
-        self.xmltvList      = {'data'       : self.loadData(),
-                               'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
-                               'programmes' : self.sortProgrammes(self.cleanSelf(self.loadProgrammes(),'channel'))}
+        self.xmltvList = {'data'       : self.loadData(),
+                          'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
+                          'programmes' : self.sortProgrammes(self.cleanSelf(self.loadProgrammes(),'channel'))}
 
 
     def reset(self):
@@ -428,12 +497,17 @@ class XMLTV:
         return self.xmltvList.get('channels',[])
 
 
+    def getProgrammes(self):
+        log('XMLTV: getProgrammes')
+        return self.xmltvList.get('programmes',[])
+
+
     def importXMLTV(self, file):
         if not file: return False
         log('XMLTV: importXMLTV, file = %s'%file)
         if file.startswith('http'):
             url  = file
-            file = os.path.join(TEMP_LOC,slugify(url),'.xml')
+            file = os.path.join(TEMP_LOC,'%s.xml'%(slugify(url)))
             saveURL(url,file)
         self.xmltvList['channels'].extend(self.loadChannels(file)) #todo collision logic?
         self.xmltvList['programmes'].extend(self.loadProgrammes(file))
@@ -443,7 +517,8 @@ class XMLTV:
     def loadChannels(self, file=XMLTVFLE):
         log('XMLTV: loadChannels, file = %s'%file)
         try:
-            return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
+            with fileLocker(FileLock()):
+                return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             log('XMLTV: loadChannels, failed! %s'%(e))
@@ -453,7 +528,8 @@ class XMLTV:
     def loadProgrammes(self, file=XMLTVFLE):
         log('XMLTV: loadProgrammes, file = %s'%file)
         try: 
-            return self.sortProgrammes(self.cleanProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or []))
+            with fileLocker(FileLock()):
+                return self.sortProgrammes(self.cleanProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or []))
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             log('XMLTV: loadProgrammes, failed! %s'%(e))
@@ -463,7 +539,8 @@ class XMLTV:
     def loadData(self):
         log('XMLTV: loadData')
         try: 
-            return (xmltv.read_data(FileAccess.open(XMLTVFLE, 'r')) or self.resetData())
+            with fileLocker(FileLock()):
+                return (xmltv.read_data(FileAccess.open(XMLTVFLE, 'r')) or self.resetData())
         except Exception as e: 
             log('XMLTV: loadData, failed! %s'%(e))
             return self.resetData()
@@ -479,7 +556,7 @@ class XMLTV:
         xml.close()
         for line in lines: 
             items = line.childNodes[0].data.split(' / ')
-            for item in items: 
+            for item in items:
                 epggenres[item] = line.attributes['genreId'].value
         return epggenres
         
@@ -510,17 +587,20 @@ class XMLTV:
                 gen.appendChild(doc.createTextNode(key))
                 root.appendChild(gen)
             
-            xmlData = FileAccess.open(GENREFLE, "w")
-            xmlData.write(doc.toprettyxml(indent='\t'))
-            xmlData.close()
-        except Exception as e: log("xmltv: buildGenres, Failed! " + str(e), xbmc.LOGERROR)
-        return True
+            with fileLocker(FileLock()):
+                xmlData = FileAccess.open(GENREFLE, "w")
+                xmlData.write(doc.toprettyxml(indent='\t'))
+                xmlData.close()
+            return True
+        except Exception as e: 
+            log("xmltv: buildGenres, Failed! " + str(e), xbmc.LOGERROR)
+            return False
 
 
-    def getEndtimes(self, channels=None, programmes=None): # get "Endtime" channels last stopDate in programmes
-        endtime = {}
-        if channels is None:    channels   = self.sortChannels(self.xmltvList['channels'])
-        if programmes is None:  programmes = self.sortProgrammes(self.xmltvList['programmes'])
+    def getEndtimes(self): 
+        endtime    = {} # get "Endtime" channels last stopDate in programmes
+        channels   = self.sortChannels(self.xmltvList['channels'])
+        programmes = self.sortProgrammes(self.xmltvList['programmes'])
         log('XMLTV: getEndtimes, channels = %s, programmes = %s'%(len(channels), len(programmes)))
         for channel in channels:
             try: 
@@ -536,36 +616,37 @@ class XMLTV:
          
     def resetData(self):
         log('XMLTV: resetData')
-        return {'date'                : datetime.datetime.fromtimestamp(float(time.time())).strftime(xmltv.date_format),
+        return {'date'                : datetime.datetime.fromtimestamp(float(time.time())).strftime(DTFORMAT),
                 'generator-info-name' : self.cleanString('%s Guidedata'%(ADDON_NAME)),
                 'generator-info-url'  : self.cleanString(ADDON_ID),
                 'source-info-name'    : self.cleanString(ADDON_NAME),
                 'source-info-url'     : self.cleanString(ADDON_ID)}
 
 
-    def addChannel(self, item):
-        channels = self.xmltvList['channels'].copy()
+    def addChannel(self, item, update=False):
         citem    = ({'id'           : item['id'],
                      'display-name' : [(self.cleanString(item['name']), LANG)],
                      'icon'         : [{'src':item['logo']}]})
-        log('XMLTV: addChannel = %s'%(citem))
-        idx, channel = self.findChannel(citem, channels)
-        if idx is None: channels.append(citem)
-        else: channels[idx] = citem # update existing channel meta
-        self.xmltvList['channels'] = channels
+        log('XMLTV: addChannel, update = %s, citem = %s'%(update,citem))
+        idx, channel = self.findChannel(citem, self.xmltvList['channels'])
+        if idx is None: self.xmltvList['channels'].append(citem)
+        else:
+            if update:
+                self.xmltvList['channels'][idx].update(citem) # update existing channel meta
+            else:
+                self.xmltvList['channels'][idx] = citem       # replace existing channel meta
         return True
 
 
     def addProgram(self, id, item):
-        programmes = self.xmltvList['programmes'].copy()
         pitem      = {'channel'     : id,
                       'credits'     : {'writer':['%s [COLOR item="%s"][/COLOR]'%(self.cleanString(item['writer']),encodeString(dumpJSON(item['fitem'])))]},
                       'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                       'title'       : [(self.cleanString(item['title']), LANG)],
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
                       'star-rating' : [{'value': self.cleanStar(item['stars'])}],
-                      'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(xmltv.date_format)),
-                      'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(xmltv.date_format)),
+                      'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
+                      'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
                       'icon'        : [{'src': item['thumb']}],
                       'length'      : {'units': 'seconds', 'length': str(item['length'])}}
 
@@ -585,7 +666,7 @@ class XMLTV:
             pitem['new'] = '' #write blank tag, tag == True
         
         rating = self.cleanMPAA(item.get('rating',''))
-        if rating != 'NA' and rating.startswith('TV-'): 
+        if rating != 'NA' and rating.startswith('TV'): 
             pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
         elif rating != 'NA' :  
             pitem['rating'] = [{'system': 'MPAA', 'value': rating}]
@@ -610,8 +691,7 @@ class XMLTV:
            # 'premiere': (u'Not really. Just testing', u'en'),
             
         log('XMLTV: addProgram = %s'%(pitem))
-        programmes.append(pitem)
-        self.xmltvList['programmes'] = programmes
+        self.xmltvList['programmes'].append(pitem)
         return True
 
 
@@ -620,13 +700,13 @@ class XMLTV:
 
 
     def cleanMPAA(self, str1):
-        #todo regex, detect other region rating strings
+        #todo regex, detect other region rating formats
         try: return str1.split('Rated ')[1]
         except: return str1
 
 
     def cleanString(self, text):
-        if text == ',' or not text: text = LANGUAGE(30161)
+        if text == ',' or not text: text = LANGUAGE(30161) #"Unavailable"
         return re.sub(u'[^\n\r\t\x20-\x7f]+',u'',text)
         
         
@@ -645,7 +725,7 @@ class XMLTV:
         return programmes
 
 
-    def cleanSelf(self, items, key='id'): # remove imports (Non PseudoTV Live)
+    def cleanSelf(self, items, key='id'): # remove imports (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         log('XMLTV: cleanSelf, key = %s'%(key))
         return list(filter(lambda item:item.get(key,'').endswith('@%s'%(slugify(ADDON_NAME))), items))
         
@@ -654,7 +734,7 @@ class XMLTV:
         now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(hours=3) #allow some old programmes to avoid empty cells.
         if programmes is None: programmes = self.xmltvList['programmes']
         try: 
-            tmpProgrammes = [program for program in programmes if strpTime(program['stop'],xmltv.date_format) > now]
+            tmpProgrammes = [program for program in programmes if strpTime(program['stop'],DTFORMAT) > now]
         except Exception as e: 
             log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
@@ -686,29 +766,30 @@ class XMLTV:
         else:     
             data = self.xmltvList['data']
             
-        writer = xmltv.Writer(encoding=xmltv.locale, date=data['date'],
-                              source_info_url     = data['source-info-url'], 
-                              source_info_name    = data['source-info-name'],
-                              generator_info_url  = data['generator-info-url'], 
-                              generator_info_name = data['generator-info-name'])
-               
-        channels = self.sortChannels(self.xmltvList['channels'])
-        for channel in channels: writer.addChannel(channel)
+        with fileLocker(FileLock()):
+            writer = xmltv.Writer(encoding=DEFAULT_ENCODING, 
+                                  date                = data['date'],
+                                  source_info_url     = data['source-info-url'], 
+                                  source_info_name    = data['source-info-name'],
+                                  generator_info_url  = data['generator-info-url'], 
+                                  generator_info_name = data['generator-info-name'])
+                   
+            channels = self.sortChannels(self.xmltvList['channels'])
+            for channel in channels: writer.addChannel(channel)
 
-        programmes = self.sortProgrammes(self.xmltvList['programmes'])
-        for program in programmes: writer.addProgramme(program)
-        
-        with fileLocker():
+            programmes = self.sortProgrammes(self.xmltvList['programmes'])
+            for program in programmes: writer.addProgramme(program)
+            
             log('XMLTV: save, saving to %s'%(XMLTVFLE))
             writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
             self.buildGenres()
-        return self.reset()
+        return self.reset() #force clean and memory/file parity 
         
 
     def delete(self):
         log('XMLTV: delete')
-        if FileAccess.delete(XMLTVFLE):
-            FileAccess.delete(GENREFLE)
+        if FileAccess.delete(XMLTVFLE): #xmltv.xml
+            FileAccess.delete(GENREFLE) #genre.xml
             return notificationDialog(LANGUAGE(30016)%('XMLTV'))
 
 
@@ -720,8 +801,8 @@ class M3U:
         else: 
             self.cache = cache
             
-        self.m3uList = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
-                        'channels':self.cleanSelf(self.load())}
+        self.m3uList   = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
+                          'channels':self.cleanSelf(self.load())}
         
 
     def getShift(self):
@@ -731,7 +812,12 @@ class M3U:
 
     def getChannels(self):
         log('M3U: getChannels')
-        return sorted(self.m3uList.get('channels',[]), key=lambda k: k['number'])
+        return self.sortChannels(self.m3uList.get('channels',[]))
+        
+        
+    def sortChannels(self, channels=None):
+        if channels is None: channels = self.m3uList['channels']
+        return sorted(channels, key=lambda k: k['number'])
         
 
     def reset(self):
@@ -740,10 +826,26 @@ class M3U:
         return True
 
 
-    def importM3U(self, file):
-        if not file: return False
+    def chkImport(self, channels, multiplier=1):
+        channels = sorted(channels, key=lambda k: k['number'])
+        chmin = ((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
+        chmul = (chmin * multiplier)
+        log('M3U: chkChannels, channels = %s, multiplier = %s, chmin = %s, chmul = %s'%(len(channels),multiplier,chmin,chmul))
+        #check tvg-chno for conflict, use multiplier to modify org chnum.
+        for citem in channels:
+            chnum = citem['number']
+            if chnum <= chmin:
+                citem['number'] = (chmul+chnum)
+            yield citem
+        
+        
+    def importM3U(self, file, multiplier=1):
         log('M3U: importM3U, file = %s'%file)   
-        self.m3uList['channels'].extend(self.load(file)) #todo collision logic?
+        if file.startswith('http'):
+            url  = file
+            file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
+            saveURL(url,file)
+        self.m3uList['channels'].extend(self.chkImport(self.load(file),multiplier))
         return True
         
 
@@ -754,16 +856,17 @@ class M3U:
             file = os.path.join(TEMP_LOC,slugify(url),'.m3u')
             saveURL(url,file)
             
-        fle   = FileAccess.open(file, 'r')
-        lines = (fle.readlines())
-        data  = lines.pop(0)
-        fle.close()
+        with fileLocker(FileLock()):
+            fle   = FileAccess.open(file, 'r')
+            lines = (fle.readlines())
+            data  = lines.pop(0)
+            fle.close()
         
         for idx, line in enumerate(lines):
             if line.startswith('#EXTINF:'):
                 vod   = ''
                 label = ''
-                if 'catchup' in line:
+                if 'catchup' in line: #todo regex to wildcard 'catchup' match group and reduce to single compile
                     line1 = re.compile('#EXTINF:-1 tvg-chno=\"(.*?)\" tvg-id=\"(.*?)\" tvg-name=\"(.*?)\" tvg-logo=\"(.*?)\" group-title=\"(.*?)\" radio=\"(.*?)\" catchup=\"(.*?)\",(.*)', re.IGNORECASE).search(line)
                     if line1: 
                         vod   = line1.group(7)
@@ -774,37 +877,38 @@ class M3U:
                     label = line1.group(7)
                     
                 #todo TypedDict for all dict. lists.
+                #todo collision logic?
                 try:    number = int(line1.group(1))
                 except: number = float(line1.group(1))
                     
-                channel = {'number' :number,
-                           'id'     :line1.group(2),
-                           'name'   :line1.group(3),
-                           'logo'   :line1.group(4),
-                           'group'  :line1.group(5).split(';'),
-                           'radio'  :line1.group(6).lower() == 'true',
-                           'label'  :label,
-                           'catchup':vod,
-                           'props'  :[]}
+                item = {'number' :number,
+                        'id'     :line1.group(2),
+                        'name'   :line1.group(3),
+                        'logo'   :line1.group(4),
+                        'group'  :line1.group(5).split(';'),
+                        'radio'  :line1.group(6).lower() == 'true',
+                        'label'  :label,
+                        'catchup':vod,
+                        'props'  :[]}
                 
                 for nidx in range(idx+1,len(lines)):
                     nline = lines[nidx]
                     if   nline.startswith('#EXTINF:'): break
                     elif nline.startswith('#KODIPROP:'):
                         prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                        if prop: channel['props'].append(prop.group(1))
-                    else: channel['url'] = nline
-                yield channel
+                        if prop: item['props'].append(prop.group(1))
+                    else: item['url'] = nline
+                yield item
                 
 
     def save(self):
         log('M3U: save')
-        with fileLocker():
+        with fileLocker(FileLock()):
             fle = FileAccess.open(M3UFLE, 'w')
             log('M3U: save, saving to %s'%(M3UFLE))
             fle.write('%s\n'%(self.m3uList['data']))
-            channels = self.m3uList['channels']
             citem = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s",%s\n'
+            channels = self.sortChannels(self.m3uList['channels'])
             for channel in channels:
                 if not channel: continue
                 fle.write(citem%(channel['number'],
@@ -819,23 +923,32 @@ class M3U:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['props']])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
-        return self.reset()
+        return self.reset() #force clean and memory/file parity 
         
 
-    def addChannel(self, item, rebuild=True):
-        log('M3U: addChannel, rebuild = %s, item = %s'%(rebuild,item))
-        channels  = self.getChannels()
-        idx, line = self.findChannel(item['id'], channels)
-        if idx is None: channels.append(item)
+    def addChannel(self, item, update=False):
+        citem = item.copy()
+        citem['label'] = (item.get('label','') or item['name'])
+        citem['url']   = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio'])) 
+        if not getSettingBool('Enable_Grouping'): 
+            citem['group'] = [ADDON_NAME]
         else:
-            if rebuild: channels[idx] = item # replace existing channel
-            else: channels[idx].update(item) # update existing channel
-        self.m3uList['channels'] = channels
+            citem['group'].append(ADDON_NAME)
+        item['group'] = list(set(citem['group']))
+        log('M3U: addChannel, update = %s, item = %s'%(update,citem))
+
+        idx, line = self.findChannel(citem['id'], self.m3uList['channels'])
+        if idx is None: self.m3uList['channels'].append(citem)
+        else:
+            if update: 
+                self.m3uList['channels'][idx].update(citem) # update existing channel
+            else: 
+                self.m3uList['channels'][idx] = citem       # replace existing channel
         return True
 
 
     def findChannel(self, id, channels=None):
-        if channels is None: channels = self.getChannels()
+        if channels is None: channels = self.m3uList['channels']
         for idx, line in enumerate(channels):
             if line.get('id','') == id:
                 log('M3U: findChannel, idx = %s, line = %s'%(idx, line))
@@ -852,13 +965,12 @@ class M3U:
         return False
 
 
-    def cleanSelf(self, channels): # remove imports (Non PseudoTV Live)
-        log('M3U: cleanSelf')
+    def cleanSelf(self, channels):
+        log('M3U: cleanSelf') # remove imports (Non PseudoTV Live)
         return list(filter(lambda line:line.get('id','').endswith('@%s'%(slugify(ADDON_NAME))), channels))
         
 
     def delete(self):
         log('M3U: delete')
-        if FileAccess.delete(M3UFLE): 
-            return notificationDialog(LANGUAGE(30016)%('M3U'))
+        if FileAccess.delete(M3UFLE): return notificationDialog(LANGUAGE(30016)%('M3U'))
         return False

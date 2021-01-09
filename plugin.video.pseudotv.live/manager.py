@@ -25,30 +25,33 @@ from resources.lib.fileaccess  import FileAccess
 class Manager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        if isBusy():
+        if isBusy() or getProperty('Config.Running') == "True":
             notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
-        elif getProperty('Config.Running') == "True": 
-            return
         
         with busy_dialog():
             setBusy(True)
             setProperty('Config.Running','True')
-            self.showingList   = True
-            self.madeChanges   = False
-            self.myMonitor     = MY_MONITOR
-            self.rules         = RulesList()
-            self.config        = Config()
-            self.jsonRPC       = self.config.jsonRPC
-            self.channels      = self.config.channels
             self.cntrlStates   = {}
             self.channel       = 0
+            self.showingList   = True
+            self.madeChanges   = False
             self.channelLimit  = CHANNEL_LIMIT
-            self.newChannel    = self.channels.getCitem()
-            self.channelList   = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
-            self.channelList.extend(self.channels.getPredefinedChannels())
-            self.newChannels   = self.channelList.copy()
-        self.doModal()
+            self.myMonitor     = MY_MONITOR
+            self.rules         = RulesList()
+            
+            self.config        = Config()
+            self.jsonRPC       = self.config.jsonRPC
+            self.writer        = self.config.writer
+            self.channels      = self.writer.channels
+            
+            if self.channels.reset():
+                self.newChannel  = self.channels.getCitem()
+                self.channelList = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+                self.channelList.extend(self.channels.getPredefinedChannels())
+                self.newChannels = self.channelList.copy()
+                self.doModal()
+            else: self.closeManager()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -127,7 +130,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         # ctrl.setPageControlVisible(state)
 
 
-    def setDescription(self, stid):
+    def setDescription(self, stid):#todo use control id and label
         setProperty('manager.description',LANGUAGE(stid))
 
 
@@ -202,14 +205,14 @@ class Manager(xbmcgui.WindowXMLDialog):
         listItems   = []
         channelProp = dumpJSON(channelData, sortkey=False)
         for key, value in channelData.items():
-            if   key in ["number","type","logo","id","xmltv","page","favorite","catchup"]: continue # keys to ignore, internal use only.
+            if   key in ["number","type","logo","id","page","favorite","catchup"]: continue # keys to ignore, internal use only.
             elif key == 'rules' and not channelData.get('id',''): continue
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(value)
                 elif key == "path"  :    value = '|'.join(value)
             elif isinstance(value,bool): value = str(value)
             value = (value or '')
-            listItems.append(buildMenuListItem(LABEL[key],value,channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC[key],'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
+            listItems.append(buildMenuListItem(LABEL.get(key,''),value,channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC.get(key,''),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
         listItems.append(buildMenuListItem(LABEL['clear'],'',propItem={'key':'clear','channelData':channelProp,'description':DESC['clear']}))
         self.toggleSpinner(self.itemList,False)
         self.itemList.addItems(listItems)
@@ -262,10 +265,10 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getMontiorList(self, key='label'):
         self.log('getMontiorList')
-        def getItem(opt):
-            item,key = opt
+        def getItem(item):
             return buildMenuListItem(label1=item.get(key,''), iconImage=item.get('icon',COLOR_LOGO))
-        itemList = list(set(list(map(getItem, zip(map(loadJSON, getInfoMonitor()),repeat(key))))))
+        infoList = getInfoMonitor()
+        itemList = [getItem(loadJSON(info)) for info in infoList]
         select   = selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
         if select is not None: return itemList[select]
  
@@ -526,6 +529,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def selectLogo(self, channelData, channelPOS):
+        # todo select from resources, browse resources
         self.log('selectLogo, channelPOS = %s'%(channelPOS))
         if self.isVisible(self.ruleList): return
         retval = browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),shares='files',mask=IMAGE_EXTS,prompt=False)

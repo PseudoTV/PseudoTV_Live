@@ -1,6 +1,11 @@
 v.0.2.5
--Warning If you are upgrading versions a XMLTV rebuild is required! Open plugin, select "Utilities" and click "Delete [M3U/XMLTV]".
+-Notice If you experience issues/errors a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
 -Miscellaneous tweaks & improvements. 
+-Improved Library/Predefined/Logo meta parsing.
+-Added support for 'jpg','gif' channel logos in addition to 'png'. With improvements to logo detection. 
+-Added "year" label to TV shows.
+-Added Silence notifications during playback.
+-Added "tvg-chno" conflict detection to m3u imports.
 
 v.0.2.4
 -Warning If you are upgrading versions a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".

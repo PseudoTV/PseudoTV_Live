@@ -18,17 +18,17 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
-from resources.lib.builder     import Builder
+from resources.lib.overlay     import Overlay
 from resources.lib.rules       import RulesList
+from resources.lib.builder     import Builder
 from plugin                    import Plugin
 from config                    import Config
-from resources.lib.overlay     import Overlay
 
 class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
         self.pendingStop        = False
-        # self.pendingSeek        = False
+        self.pendingSeek        = False
         self.rules              = RulesList()
         self.lastSubState       = isSubtitle()
         self.ruleList           = {}
@@ -45,12 +45,12 @@ class Player(xbmc.Player):
 
     def runActions(self, action, citem, parameter=None):
         self.log("runActions action = %s, channel = %s"%(action,citem))
-        if not citem.get('id',''): return parameter
-        ruleList = self.ruleList.get(citem['id'],[])
-        for rule in ruleList:
-            if action in rule.actions:
-                self.log("runActions performing channel rule: %s"%(rule.name))
-                parameter = rule.runAction(action, self, parameter)
+        if citem.get('id',''):
+            ruleList = self.ruleList.get(citem['id'],[])
+            for rule in ruleList:
+                if action in rule.actions:
+                    self.log("runActions performing channel rule: %s"%(rule.name))
+                    parameter = rule.runAction(action, self, parameter)
         return parameter
         
         
@@ -58,7 +58,8 @@ class Player(xbmc.Player):
         self.log('getInfoTag')
         if self.isPlayingAudio():
             return self.getMusicInfoTag()
-        return self.getVideoInfoTag()
+        else:
+            return self.getVideoInfoTag()
 
 
     def getPlayerTime(self):
@@ -75,18 +76,20 @@ class Player(xbmc.Player):
 
     def toggleSubtitles(self, state):
         self.log('toggleSubtitles, state = ' + str(state))
-        self.showSubtitles(state)
+        if self.isPlaying():
+            self.showSubtitles(state)
         
         
     def setSeekTime(self, seek):
-        self.log('setSeekTime')
-        return self.seekTime(seek)
+        self.log('setSeekTime, seek = %s'%(seek))
+        if self.isPlaying():
+            self.seekTime(seek)
         
         
     def onAVStarted(self):
         self.log('onAVStarted')
-        # if self.pendingSeek: #catched failed seekTime
-            # self.setSeekTime(self.getPVRTime())
+        if self.pendingSeek: #catch failed seekTime
+            self.setSeekTime(self.getPVRTime())
         self.toggleSubtitles(self.lastSubState)
 
 
@@ -132,7 +135,7 @@ class Player(xbmc.Player):
         
         pvritem = getCurrentChannelItem()                
         if (pvritem.get('citem',{}).get('path','') or None) is None:
-            pvritem.update({'citem':self.myService.channels.findChannel(pvritem.get('citem',{}), self.myService.channels.getAllChannels())[1]})
+            pvritem.update({'citem':self.myService.channels.findChannel(pvritem.get('citem',{}), self.myService.channels.getChannels())[1]})
 
         if (pvritem.get('callback','') or None) is None:
             pvritem.update({'callback':(self.myService.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.myService.jsonRPC.getPlayerItem().get('mediapath',''))})
@@ -178,20 +181,12 @@ class Player(xbmc.Player):
         return self.playingPVRitem.get('isPlaylist',False)
 
 
-    def isOverlay(self):
-        xbmc.sleep(500) # sleep to catch doModal delay.
-        return getProperty('OVERLAY') == 'true'
-
-
     def toggleOverlay(self, state):
-        if state and not self.isOverlay():
-            conditions = [self.showOverlay,
-                          self.isPlaying(),
-                          isPseudoTV()]
-            if (False in conditions): return
+        if state and not isOverlay():
+            if not (self.showOverlay & self.isPlaying() & isPseudoTV()): return
             self.log("toggleOverlay, show")
             self.overlayWindow.show()
-        elif not state and self.isOverlay():
+        elif not state and isOverlay():
             self.log("toggleOverlay, close")
             self.overlayWindow.close()
 
@@ -207,32 +202,38 @@ class Monitor(xbmc.Monitor):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def chkPendingChange(self):
+        state = (self.pendingChange | getPropertyBool('pendingChange'))
+        self.log("chkPendingChange, state = %s"%(state))
+        return state
+
+
     def onNotification(self, sender, method, data):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
             
     def onSettingsChanged(self):
-        if not self.pendingChange: return # only trigger when settings dialog opened
-        self.log('onSettingsChanged, pendingChange = %s'%(self.pendingChange))
+        if not self.chkPendingChange(): return # only trigger when settings dialog opened
+        self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
-        self.onChangeThread = threading.Timer(15.0, self.onChange)
+        self.onChangeThread = threading.Timer((float((UPDATE_OFFSET//4)/60)), self.onChange)
         self.onChangeThread.name = "onChangeThread"
         self.onChangeThread.start()
         
         
     def onChange(self):
-        if not self.pendingChange: return # last chance to cancel.
+        if not self.chkPendingChange(): return # last chance to cancel.
         elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
-        self.log('onChange, pendingChange = %s'%(self.pendingChange))
+        self.log('onChange')
         REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
-        self.myService.chkUpdate()
+        self.myService.chkUpdate('0')
         self.pendingChange = False
+        setProperty('pendingChange','false')
 
 
 class Service:
     def __init__(self):
-        self.autoTune      = True
         self.myMonitor     = Monitor()
         self.myMonitor.myService = self
         
@@ -242,92 +243,116 @@ class Service:
         self.myBuilder     = Builder()
         self.myBuilder.myService = self
         self.jsonRPC       = self.myBuilder.jsonRPC
+        self.writer        = self.myBuilder.writer
         self.channels      = self.myBuilder.channels
         
-        self.myConfig      = Config(sys.argv)
-        self.myConfig.myService = self
-        self.myPredefined  = self.myConfig.predefined
-        
-        self.myPlugin      = Plugin(sys.argv)
-        self.myPlugin.myService = self
-        
+        self.myPlugin      = Plugin(sys.argv,service=self)     
+        self.myConfig      = Config(sys.argv,service=self)        
 
+        self.InitThread    = threading.Timer(0.5, self.startInitThread)
+        self.serviceThread = threading.Timer(0.5, self.runServiceThread)
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getSeekTol(self):
-        try: return getSettingInt('Seek_Tolerance')
-        except: return 55 #Kodi raises error after sleep. # todo debug
+    def startInitThread(self): 
+        self.log('startInitThread')
+        if self.InitThread.is_alive(): self.InitThread.cancel()
+        self.InitThread = threading.Timer(0.5, self.runInitThread)
+        self.InitThread.name = "InitThread"
+        self.InitThread.start()
+
+
+    def runInitThread(self):
+        self.log('runInitThread')
+        dirs = [LOGO_LOC,CACHE_LOC,PLS_LOC]
+        [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
+        for func in [chkPVR, chkVersion]: func()            
+            
+            
+    def startServiceThread(self, wait=5.0):
+        self.log('startServiceThread, wait = %s'%(wait))
+        if self.serviceThread.is_alive(): self.serviceThread.cancel()
+        self.serviceThread = threading.Timer(wait, self.runServiceThread)
+        self.serviceThread.name = "serviceThread"
+        self.serviceThread.start()
         
+                
+    def runServiceThread(self):
+        if isBusy(): return self.startServiceThread(float((UPDATE_OFFSET//4)/60))
+        with busy():
+            self.log('runServiceThread, started')
+            for func in [self.chkRecommended, self.chkPredefined, self.chkUpdate]: func()
+            self.log('runServiceThread, finished')
+            return self.startServiceThread(float(UPDATE_OFFSET))
+                   
+        
+    def chkRecommended(self):
+        if self.writer.isClient(): return
+        return self.myConfig.recommended.importPrompt()
+
+            
+    def chkPredefined(self):
+        if self.writer.isClient(): return False
+        return self.myConfig.repairLibraryItems()
+        
+        
+    def chkUpdate(self, lastUpdate=None):
+        if isBusy(): return
+        with busy():
+            if self.writer.isClient(): return False
+            if lastUpdate is None: lastUpdate = (getProperty('Last_Update') or '0')
+            conditions = [self.myMonitor.chkPendingChange(),
+                          not xbmcvfs.exists(M3UFLE),
+                          not xbmcvfs.exists(XMLTVFLE),
+                          (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
+            self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
+            if True in conditions:
+                if not self.myBuilder.getChannels() and not self.myMonitor.chkPendingChange():
+                    if not getPropertyBool('autotuned'):
+                        if self.myConfig.autoTune(): 
+                            return self.chkUpdate('0')
+                    else: return False
+                        # if self.writer.recoverChannels(): 
+                            # return self.chkUpdate('0')
+                return self.updateChannels()
+            return False
+        
+        
+    def updateChannels(self):
+        self.log('updateChannels')
+        if self.myBuilder.buildService(): 
+            setProperty('Last_Update',str(time.time()))
+            return brutePVR(override=True)
+        return False
+                 
         
     def getIdleTime(self):
         try: return (int(xbmc.getGlobalIdleTime()) or 0)
         except: return 0 #Kodi raises error after sleep. # todo debug
     
-        
-    def chkInfo(self):
-        if not isCHKInfo(): return False
-        self.myMonitor.waitForAbort(2) #adjust wait time to catch navigation meta. < 2secs? < 1 users report instability.
-        return fillInfoMonitor()
-
-
+    
     def chkIdle(self):
-        if self.getIdleTime() > self.getSeekTol():
+        if self.getIdleTime() > 15:
             self.myPlayer.toggleOverlay(True)
         else:
             self.myPlayer.toggleOverlay(False)
+ 
+        
+    def chkInfo(self):
+        if not isCHKInfo(): return False
+        self.myMonitor.waitForAbort(1) #adjust wait time to catch navigation meta. < 2secs? < 1 users report instability.
+        return fillInfoMonitor()
 
 
-    def getAutoTune(self):
-        self.log('getAutoTune')
-        if not self.channels.isClient and not isBusy():
-            if self.myConfig.autoTune():
-                return self.myBuilder.getChannelList()
-        return None
-          
-        
-    def chkUpdate(self, lastUpdate='0'):
-        if isBusy(): return False
-        self.log('chkUpdate, lastUpdate = %s'%(lastUpdate))
-        conditions = [self.myMonitor.pendingChange, 
-                      not xbmcvfs.exists(M3UFLE), 
-                      not xbmcvfs.exists(XMLTVFLE),
-                      (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
-        if True in conditions:
-            channels = self.myBuilder.getChannelList()
-            if not channels and self.autoTune:
-                self.autoTune = False
-                channels = self.getAutoTune()
-            return self.updateChannels(channels)
-        return False
-        
-        
-    def updateChannels(self, channels=None):
-        if channels is None: channels = self.myBuilder.getChannelList()
-        self.log('updateChannels, channels = %s'%(len(channels)))
-        if channels:
-            if self.myBuilder.buildService(channels): 
-                setProperty('Last_Update',str(time.time()))
-                return brutePVR(override=True)
-        return False
-                    
-
-    def serviceActions(self):
-        self.chkIdle()
-        self.chkUpdate(lastUpdate=getProperty('Last_Update'))
-        
-
-    def startService(self, silent=False):
-        self.log('startService')
+    def run(self, silent=False):
+        self.log('run')
         setBusy(False)
-        notificationProgress(LANGUAGE(30052)%('...'))
-        initThreads = [self.myConfig.startInitThread,
-                       self.myConfig.startServiceThread]
-                       
-        for initThread in initThreads:
-            initThread()
-            
+        notificationProgress('%s...'%(LANGUAGE(30052)))
+        
+        for initThread in [self.startInitThread, self.startServiceThread]: initThread()
         self.myMonitor.waitForAbort(15)#insurance to ensure threads are active before main service starts. cheaper then another a while loop.
         while not self.myMonitor.abortRequested():
             if self.chkInfo(): continue # aggressive polling.
@@ -337,10 +362,11 @@ class Service:
                 self.myMonitor.pendingChange = True
                 self.myMonitor.onSettingsChanged()
                 continue
-            elif self.myMonitor.pendingChange:
+            elif self.myMonitor.chkPendingChange():
                 self.log('pending change')
                 continue
-            self.serviceActions()
+            self.chkIdle()
+            self.chkUpdate()
         self.closeThreads()
                 
                 
@@ -354,6 +380,3 @@ class Service:
                 thread.join(1.0)
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
         self.log('closeThreads, exiting %s'%(ADDON_NAME))
-
-
-if __name__ == '__main__': Service()

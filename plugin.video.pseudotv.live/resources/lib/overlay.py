@@ -19,8 +19,6 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
 from resources.lib.rules   import RulesList
-from resources.lib.parser  import Channels
-
 
 class Player(xbmc.Player):
     def __init__(self):
@@ -28,8 +26,9 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        if self.overlay.reload() and self.isPlaying():
-            xbmc.executebuiltin("ActivateWindow(fullscreenvideo)")
+        self.overlay.reload()
+        # if self.overlay.reload() and self.isPlaying():
+            # xbmc.executebuiltin("ActivateWindow(fullscreenvideo)")
 
 
     def onAVChange(self):
@@ -83,17 +82,17 @@ class Overlay(xbmcgui.WindowXML):
         return parameter
 
 
-    def onInit(self):
-        self.log('onInit')
-        self.myChannels       = Channels()
-        self.myPlayer         = Player()
-        self.myPlayer.overlay = self
+    def onInit(self, refresh=False):
+        self.log('onInit, refresh = %s'%(refresh))
+        if not refresh:
+            self.myPlayer         = Player()
+            self.myPlayer.overlay = self
         
-        self.onNext = self.getControl(41003)
-        self.onNext.setVisible(False)
+            self.onNext = self.getControl(41003)
+            self.onNext.setVisible(False)
         
-        self.channelbug = self.getControl(41004)
-        self.channelbug.setVisible(False)
+            self.channelbug = self.getControl(41004)
+            self.channelbug.setVisible(False)
         
         self.container   = self.getControl(40000)
         self.container.reset()
@@ -118,7 +117,7 @@ class Overlay(xbmcgui.WindowXML):
 
     def reset(self):
         self.log('reset')
-        self.onInit()
+        self.onInit(refresh=True)
         
 
     def reload(self):

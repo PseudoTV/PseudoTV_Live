@@ -37,12 +37,12 @@ with this software; if not, see <http://www.gnu.org/licenses/>.
 from resources.lib.globals import *
 
 # The Python-XMLTV version
-VERSION = "1.4.4"
+VERSION = "1.4.4_PSEUDOTV"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)
-locale = 'utf-8'
-date_format = '%Y%m%d%H%M%S %Z'
-date_format_notz = '%Y%m%d%H%M%S'
+locale           = DEFAULT_ENCODING          #'utf-8'
+date_format      = DTZFORMAT         #'%Y%m%d%H%M%S %Z'
+date_format_notz = DTFORMAT          #'%Y%m%d%H%M%S'
 
 def set_attrs(d, elem, attrs):
     """

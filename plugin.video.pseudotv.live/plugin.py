@@ -22,7 +22,7 @@ from resources.lib.globals  import *
 from resources.lib.rules    import RulesList
 
 class Plugin:
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = ' + str(sysARG))
         self.sysARG         = sysARG
         self.CONTENT_TYPE   = 'episodes'
@@ -31,13 +31,13 @@ class Plugin:
         self.playlist       = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
         
         self.rules          = RulesList()
-        try:
-            self.jsonRPC    = self.myService.jsonRPC
-            self.myPlayer   = self.myService.myPlayer
-        except:
+        if service is None:
             from resources.lib.jsonrpc import JSONRPC
             self.jsonRPC    = JSONRPC()
             self.myPlayer   = MY_PLAYER
+        else:
+            self.jsonRPC    = service.jsonRPC
+            self.myPlayer   = service.myPlayer
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -49,7 +49,6 @@ class Plugin:
         if not citem.get('id',''): return parameter
         ruleList = self.ruleList.get(citem['id'],[])
         for rule in ruleList:
-            print(rule.name)
             if action in rule.actions:
                 self.log("runActions performing channel rule: %s"%(rule.name))
                 parameter = rule.runAction(action, self, parameter)
@@ -75,10 +74,12 @@ class Plugin:
         
     def deleteFiles(self, msg, full=False):
         self.log('deleteFiles, full = %s'%(full))
-        files = {LANGUAGE(30172):M3UFLE,LANGUAGE(30173):XMLTVFLE,LANGUAGE(30009):CHANNELFLE,LANGUAGE(30130):SETTINGS_FLE}
-        keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130)]
-        if not full: keys = keys[:2]
+        files = {LANGUAGE(30172):M3UFLE,LANGUAGE(30173):XMLTVFLE,LANGUAGE(30009):CHANNELFLE,LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):LIBRARYFLE}
+        keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
+        if not full: keys = keys[:3]
         if yesnoDialog('%s ?'%(msg)): [notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
+        setProperty('pendingChange','true')
+        setProperty('autotuned','false')
         return True
 
             
@@ -206,9 +207,9 @@ class Plugin:
             self.log('playChannel, nowitem = %s'%(nowitem))
             
             if (progress > getSettingInt('Seek_Tolerance')):
-                seekThreshold = int((runtime * 60) - getSettingInt('Seek_Threshold'))
-                self.log('playChannel, progress = %s, seekThreshold = %s'%(progress,seekThreshold))
-                if (progress > seekThreshold):  # near end, avoid callback; override nowitem and queue next show.
+                # seekThreshold = int((runtime * 60) - getSettingInt('Seek_Threshold'))
+                # self.log('playChannel, progress = %s, seekThreshold = %s'%(progress,seekThreshold))
+                if (nowitem['progresspercentage'] >= float(getSettingInt('Seek_Threshold%'))):  # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
                 else: setOffset = True

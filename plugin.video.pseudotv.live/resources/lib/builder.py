@@ -31,19 +31,8 @@ class Builder:
         else: 
             self.cache = cache
             
-        self.rules            = RulesList()
-        self.jsonRPC          = JSONRPC(self.cache)
-        self.myPlayer         = self.jsonRPC.myPlayer
-        self.myMonitor        = self.jsonRPC.myMonitor
-        
-        self.writer           = Writer(self.cache)
-        self.writer.builder   = self
-        self.channels         = self.writer.channels
-        
-        self.maxDays          = getSettingInt('Max_Days')
         self.incStrms         = getSettingBool('Enable_Strms')
-        self.incExtras        = getSettingBool('Enable_Extras')
-        self.grouping         = getSettingBool('Enable_Grouping') 
+        self.incExtras        = getSettingBool('Enable_Extras') 
         self.fillBCTs         = getSettingBool('Enable_Fillers')
         self.accurateDuration = getSettingBool('Duration_Type')
         
@@ -61,8 +50,15 @@ class Builder:
                                  "trailers"   :{"min":1,"max":1,"enabled":True  ,"paths":[getSetting('Resource_Trailers')]},
                                  "bumpers"    :{"min":1,"max":1,"enabled":False ,"paths":[getSetting('Resource_Networks')]},
                                  "commercials":{"min":1,"max":1,"enabled":False ,"paths":[getSetting('Resource_Commericals')]}}#todo check adv. rules get settings
-                                 
-                                 
+
+        self.rules            = RulesList()
+        self.writer           = Writer(self.cache, self)
+        self.channels         = self.writer.channels
+        self.jsonRPC          = JSONRPC(self.cache, self)
+        self.myPlayer         = self.jsonRPC.myPlayer
+        self.myMonitor        = self.jsonRPC.myMonitor
+         
+         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -72,32 +68,35 @@ class Builder:
         if not citem.get('id',''): return parameter
         ruleList = self.ruleList.get(citem['id'],[])
         for rule in ruleList:
-            print(rule.name)
             if action in rule.actions:
                 self.log("runActions performing channel rule: %s"%(rule.name))
                 parameter = rule.runAction(action, self, parameter)
         return parameter
         
 
-    def buildService(self, channels=None):
-        if   isBusy(): return
-        elif self.channels.isClient:
-            self.log('buildService, Client mode enabled; returning!')
-            return False
-            
+    def getChannels(self):
+        self.log('getChannels')
+        if self.writer.reset(): 
+              return self.channels.getChannels()
+        else: return None
+
+
+    def buildService(self):
         if not self.writer.reset(): 
             self.log('buildService, initializing m3u/xmltv parser failed!')
             return False
             
-        if channels is None: 
-            channels = self.getChannelList()
+        if self.writer.isClient():
+            self.log('buildService, Client mode enabled; returning!')
+            return False
+            
+        channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
         self.log('buildService, channels = %s'%(len(channels)))
         
         if not channels:
             notificationDialog(LANGUAGE(30056))
-            return False
+            return None
 
-        setBusy(True)
         if getProperty('PseudoTVRunning') != 'True': # legacy setting to disable/enable support in third-party applications. 
             setProperty('PseudoTVRunning','True')
             
@@ -112,18 +111,17 @@ class Builder:
             cacheResponse = self.getFileList(channel, channel['radio'])
             cacheResponse = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
             if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
-                self.writer.addChannel(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
+                self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
-                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message=self.chanName)
+                    # self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s %s'%(LANGUAGE(30051),self.chanName))
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
-                self.log('buildService, In-Valid Channel (No guidedata)')
-                self.writer.removeChannel(channel)
+                self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
+                self.writer.removeChannelLineup(channel)
                 
         if not self.writer.save(): 
             notificationDialog(LANGUAGE(30001))
             
-        setBusy(False)
         self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
         self.log('buildService, finished')
         if not self.myPlayer.isPlaying() and getProperty('PseudoTVRunning') == 'True': # legacy setting to disable/enable support in third-party applications. 
@@ -131,42 +129,19 @@ class Builder:
         return True
 
 
-    def getChannelList(self):
-        self.log('getChannelList')
-        return sorted(self.verifyChannelItems(), key=lambda k: k['number'])
-        
-
     def verifyChannelItems(self):
-        if self.channels.reset():
-            items = self.channels.getAllChannels()
-            for idx, item in enumerate(items):
-                self.log('verifyChannelItems, %s: %s'%(idx,item))
-                if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
-                    self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
-                    continue
-                    
-                item['label']   = (item.get('label','')   or item['name']) #legacy todo remove 'label'
-                item['id']      = (item.get('id','')      or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
-                item['radio']   = (item.get('radio','')   or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
-                item['catchup'] = (item.get('catchup','') or ('vod' if not item['radio'] else ''))
-                item['url']     = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
-
-                logo = item.get('logo','')
-                if not logo or logo.startswith((ADDON_PATH,IMAGE_LOC,MEDIA_LOC)): #parse for missing logos when none or defaults.
-                    item['logo'] = self.jsonRPC.getLogo(item['name'], item['type'], item['path'], featured=True)
-                else: # look for new local logo else use existing
-                    item['logo'] = (self.jsonRPC.getLocalLogo(item['name'], featured=True) or logo)
-
-                if not self.grouping: 
-                    item['group'] = [ADDON_NAME]
-                else:
-                    item['group'].append(ADDON_NAME)
-                item['group'] = list(set(item['group']))
-
-                # if not item.get('rules',[]): #double check rulelist, not needed! remove?
-                    # item['rules'] = self.channels.getChannelRules(item)
+        items = self.channels.getChannels()
+        for idx, item in enumerate(items):
+            self.log('verifyChannelItems, %s: %s'%(idx,item))
+            if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
+                self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
+                continue
                 
-                yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
+            item['id']      = (item.get('id','')      or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
+            item['radio']   = (item.get('radio','')   or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
+            item['catchup'] = (item.get('catchup','') or ('vod' if not item['radio'] else ''))
+            item['logo']    = (self.jsonRPC.getLogo(item['name'], item['type'], item['path'], item, featured=True))
+            yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
     def addScheduling(self, channel, fileList, start):
@@ -178,7 +153,6 @@ class Builder:
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(channel['id'],idx),xbmc.LOGINFO)
                 continue
-                
             item["idx"]   = idx
             item['start'] = start
             item['stop']  = start + item['duration']
@@ -201,30 +175,28 @@ class Builder:
             start  = self.writer.getEndtime(citem['id'],roundTime(now)) #offset time to start on half hour
 
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
-            if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=self.maxDays)): 
+            if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=getSettingInt('Max_Days'))): 
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],start),xbmc.LOGINFO)
                 return True# prevent over-building
                 
             citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)
             if isinstance(citem['path'], list): 
-                mixed = True # build 'mixed' channels ie more than one path.
-                path  = citem['path']
-            else:
-                mixed = False
-                path  = [citem['path']] 
-                
+                path = citem['path']
+            else: 
+                path = [citem['path']]
+            mixed = len(path) > 1
             media = 'music' if radio else 'video'
             if radio:
                 cacheResponse = self.buildRadio(citem)
             else:         
-                cacheResponse = [self.buildFileList(citem, file, media, self.limit, self.sort, self.filter, self.limits) for file in path] # build multi-paths as induvial arrays for easier interleaving.
+                cacheResponse = [(self.buildFileList(citem, file, media, self.limit, self.sort, self.filter, self.limits)) for file in path] # build multi-paths as induvial arrays for easier interleaving.
                 valid = (list(filter(lambda k:k, cacheResponse))) #check that at least one array contains a filelist
                 if not valid:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
                 cacheResponse = self.runActions(RULES_ACTION_CHANNEL_LIST, citem, cacheResponse)
-                cacheResponse = list(interleave(*cacheResponse)) # interleave multi-paths, while keeping order.
+                cacheResponse = (list(interleave(*cacheResponse))) # interleave multi-paths, while keeping order.
                 
                 # if len(cacheResponse) < limit: # balance media limits, by filling randomly with duplicates.
                     # cacheResponse.extend(list(fillList(cacheResponse,(limit-len(cacheResponse)))))

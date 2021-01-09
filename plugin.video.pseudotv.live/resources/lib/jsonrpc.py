@@ -19,7 +19,10 @@
 
 from resources.lib.globals     import *
 from resources.lib.worker      import BaseWorker
- 
+from resources.lib.resources   import Resources
+from resources.lib.videoparser import VideoParser
+
+
 class Worker(BaseWorker):
     def do_sendJSON(self, param):
         log('Worker: do_sendJSON, param = %s'%(param))
@@ -27,7 +30,7 @@ class Worker(BaseWorker):
      
      
 class JSONRPC:
-    def __init__(self, cache=None):
+    def __init__(self, cache=None, builder=None):
         self.log('__init__')
         if cache is None:
             self.cache = SimpleCache()
@@ -38,7 +41,15 @@ class JSONRPC:
         self.myMonitor     = MY_MONITOR
         self.myProcess     = Worker()
         
-        self.resourcePacks = self.buildLogoResources()
+        if builder is None:
+            from resources.lib.parser import Writer
+            self.writer    = Writer(self.cache)
+        else:
+            self.writer    = builder.writer
+        
+        self.videoParser   = VideoParser()
+        
+        self.resources     = Resources(self.cache, self)
         self.processThread = threading.Timer(15.0, self.myProcess.start)
 
 
@@ -56,7 +67,54 @@ class JSONRPC:
         self.processThread.start()
 
 
-    def cacheJSON(self, command, life=datetime.timedelta(minutes=15)):
+    def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False):
+        return self.resources.getLogo(name,type,path,item,featured)
+        
+        
+    @use_cache(1)
+    def getPluginMeta(self, plugin):
+        return getPluginMeta(plugin)
+
+
+    @use_cache(28)
+    def getListDirectory(self, path, version=ADDON_VERSION):
+        self.log('getListDirectory path = %s, version = %s'%(path,version))
+        try:    return FileAccess.listdir(path)
+        except: return [],[]
+
+
+    @use_cache(1)
+    def listVFS(self, path, version=None):
+        self.log('listVFS path = %s, version = %s'%(path,version))
+        json_response = self.getDirectory('{"directory":"%s","properties":["duration","runtime"]}'%(path),cache=False)
+        dirs, files = [[],[]]
+        for item in json_response:
+            file = item['file']
+            if item['filetype'] == 'file':
+                duration = self.parseDuration(file, item)
+                if duration == 0: continue
+                files.append({'label':item['label'],'duration':duration,'file':file})
+            else: dirs.append(file)
+        return dirs, files
+
+
+    @use_cache(1) # check for duration data.
+    def existsVFS(self, path, media='video'):
+        self.log('existsVFS path = %s, media = %s'%(path,media))
+        dirs  = []
+        json_response = self.requestList(str(random.random()), path, media)
+        for item in json_response:
+            file = item.get('file','')
+            fileType = item.get('filetype','file')
+            if fileType == 'file':
+                dur = self.getDuration(file, item)
+                if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
+            else: dirs.append(file)
+        for dir in dirs: return self.existsVFS(dir, media)
+        return None
+
+
+    def cacheJSON(self, command, life=datetime.timedelta(minutes=29)):
         cacheName = '%s.cacheJSON.%s'%(ADDON_ID,command)
         cacheResponse = self.cache.get(cacheName)
         if not cacheResponse:
@@ -99,8 +157,10 @@ class JSONRPC:
 
     def getAddons(self, params='{"type":"xbmc.addon.video","enabled":true,"properties":["name","version","description","summary","path","author","thumbnail","disclaimer","fanart","dependencies","extrainfo"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":%s,"id":1}'%(params))
-        if cache: return self.cacheJSON(json_query).get('result',{}).get('addons',[])
-        else:     return sendJSON(json_query).get('result',{}).get('addons',[])
+        if cache: 
+            return self.cacheJSON(json_query).get('result',{}).get('addons',[])
+        else:     
+            return sendJSON(json_query).get('result',{}).get('addons',[])
         
         
     def getSongs(self, params='{"properties":["genre"]}', cache=True):
@@ -149,123 +209,6 @@ class JSONRPC:
                  'episode':'{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur)}
         self.myProcess.send('sendJSON', param[media])
 
-
-   
-    
-    # def buildLocalTrailers(self, path=None, items=[]):
-        # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
-        # if path is None and len(items) > 0:
-            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer','')),'file'}]
-        # list(filter(lambda item:(,item.get('trailer')), validItems))
-# # os.path.splitext(os.path.basename(item.get('file')))[0]
-
-     # def buildResourcePath(self, path, file):
-        # if path.startswith('resource://'):
-            # path = path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
-        # else: 
-            # path = os.path.join(path,file)
-        # return path
-        
-    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':files}
-    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':[self.buildResourcePath(path,file) for file in files]}
-        
-        
-    def buildBCTresource(self, path):
-        resourceMap = {}
-        self.log('buildBCTresource, path = %s'%(path))
-        if path.startswith(('resource://','plugin://')): 
-            version = self.getPluginMeta(path).get('version',ADDON_VERSION)
-        else: 
-            version = ADDON_VERSION
-        if path.startswith('resource://'):
-            dirs, files = self.getListDirectory(path,version)
-        else:
-            dirs, files = self.listVFS(path,version)
-        return dirs, files
-        
-            
-    def buildLogoResources(self):
-        self.log('buildLogoResources')
-        logos     = []
-        radios    = ["resource://resource.images.musicgenreicons.text"]
-        genres    = ["resource://resource.images.moviegenreicons.transparent"]
-        studios   = ["resource://resource.images.studios.white/", 
-                     "resource://resource.images.studios.coloured/"]
-        if getSettingInt('Color_Logos') == 1: studios.reverse()
-        [logos.append({'type':[LANGUAGE(30097)],                                                'path':radio ,'files': self.getListDirectory(radio, self.getPluginMeta(radio).get('version',''))[1]})  for radio  in radios]
-        [logos.append({'type':[LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30006),LANGUAGE(30171)],'path':genre ,'files': self.getListDirectory(genre, self.getPluginMeta(genre).get('version',''))[1]})  for genre  in genres]
-        [logos.append({'type':[LANGUAGE(30002),LANGUAGE(30007),LANGUAGE(30171)],                'path':studio,'files': self.getListDirectory(studio,self.getPluginMeta(studio).get('version',''))[1]}) for studio in studios]
-        logos.append( {'type':[LANGUAGE(30003),LANGUAGE(30171)],                                'path':''    ,'files': self.getTVshows()})
-        logos.append( {'type':[LANGUAGE(30026),LANGUAGE(30033),LANGUAGE(30171)],                'path':''    ,'files': self.getAddons()})
-        self.log('buildLogoResources return')
-        return logos
-
-
-    @use_cache(1)
-    def getPluginMeta(self, plugin):
-        return getPluginMeta(plugin)
-
-
-    @use_cache(28)
-    def getListDirectory(self, path, version=ADDON_VERSION):
-        self.log('getListDirectory path = %s, version = %s'%(path,version))
-        try:    return FileAccess.listdir(path)
-        except: return [],[]
-
-
-    @use_cache(7)
-    def findLogo(self, channelname, channeltype, version=ADDON_VERSION):
-        log('findLogo')
-        for item in self.resourcePacks:
-            if channeltype in item['type']:
-                for file in item['files']:
-                    if isinstance(file, dict): #jsonrpc item
-                        if channelname.lower() == (file.get('showtitle','').lower() or file.get('label','').lower() or file.get('name','').lower() or file.get('title','').lower()):
-                            channellogo = (file.get('art',file).get('clearlogo','') or file.get('thumbnail',''))
-                            if channellogo: return channellogo
-                    else: #resource item
-                        if os.path.splitext(file.lower())[0] == channelname.lower():
-                            return os.path.join(item['path'],file)
-        return None
-        
-        
-    def prepareImage(self, channelname, logo, featured):
-        log('prepareImage: channelname = %s, featured = %s'%(channelname,featured))
-        if logo.startswith(ADDON_PATH):
-            logo = logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
-        if featured:
-            localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
-            if logo.startswith('resource://'): return logo #todo parse xbt and extract image?
-            # if FileAccess.copy(logo, localIcon): return localIcon
-        return logo
-        
-        
-    def getLocalLogo(self, channelname, featured):
-        localIcon = os.path.join(IMAGE_LOC,'%s.png'%(channelname))
-        userIcon  = os.path.join(LOGO_LOC ,'%s.png'%(channelname))
-        if FileAccess.exists(userIcon): # check user folder
-            log('getLocalLogo: using user logo = %s'%(userIcon))
-            return self.prepareImage(channelname,userIcon,featured)
-        elif FileAccess.exists(localIcon): # check plugin folder
-            log('getLocalLogo: using local logo = %s'%(localIcon))
-            return self.prepareImage(channelname,localIcon,featured)
-        return None
-        
-        
-    def getLogo(self, channelname, type=LANGUAGE(30171), path=None, featured=False):
-        log('getLogo: channelname = %s, type = %s'%(channelname,type))
-        local = self.getLocalLogo(channelname, featured)
-        if local: return local
-        icon = self.findLogo(channelname, type, ADDON_VERSION)
-        if not icon:
-            if isinstance(path, list) and len(path) > 0: 
-                path = path[0]
-            if path is not None:
-                if path.startswith('plugin://'): 
-                    icon = self.getPluginMeta(path).get('icon',LOGO)
-            icon = (icon or LOGO)
-        return self.prepareImage(channelname,icon,featured)
-        
         
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://','upnp://')): return True
@@ -296,37 +239,6 @@ class JSONRPC:
         self.log('chkSeeking file = %s %s'%(file,msg))
         notificationDialog(msg)
         return playpast
-
-
-    @use_cache(1)
-    def listVFS(self, path, version=None):
-        self.log('listVFS path = %s, version = %s'%(path,version))
-        json_response = self.getDirectory('{"directory":"%s","properties":["duration","runtime"]}'%(path),cache=False)
-        dirs, files = [[],[]]
-        for item in json_response:
-            file = item['file']
-            if item['filetype'] == 'file':
-                duration = self.parseDuration(file, item)
-                if duration == 0: continue
-                files.append({'label':item['label'],'duration':duration,'file':file})
-            else: dirs.append(file)
-        return dirs, files
-
-
-    @use_cache(1) # check for duration data.
-    def existsVFS(self, path, media='video'):
-        self.log('existsVFS path = %s, media = %s'%(path,media))
-        dirs  = []
-        json_response = self.requestList(str(random.random()), path, media)
-        for item in json_response:
-            file = item.get('file','')
-            fileType = item.get('filetype','file')
-            if fileType == 'file':
-                dur = self.getDuration(file, item)
-                if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
-            else: dirs.append(file)
-        for dir in dirs: return self.existsVFS(dir, media)
-        return None
 
         
     def getMovieInfo(self, sortbycount=False):
@@ -395,15 +307,14 @@ class JSONRPC:
                 else: StudioList.append(tmpStudios[i][0])
         self.log('getMovieInfo, studios = %s, genres = %s'%(len(StudioList),len(MovieGenreList)))
         return StudioList, MovieGenreList
-        
-        
+
 
     def getTVInfo(self, sortbycount=False):
         self.log('getTVInfo')
         NetworkList   = []
         ShowGenreList = []
         if not hasTV(): return NetworkList, ShowGenreList
-        
+        #todo group/ignore networks with region marker ex. NBC (US)
         json_response = self.getTVshows()
         for info in json_response:
             networks = info.get('studio','')
@@ -465,11 +376,14 @@ class JSONRPC:
         return MusicGenreList
         
         
-    def fillTVShows(self):
+    def fillTVShows(self, art='poster'):
         tvshows = []
         if not hasTV(): return tvshows
         json_response = self.getTVshows()
-        for item in json_response: tvshows.append({'label':item['label'],'item':item,'thumb':item.get('art',{}).get('poster','')})
+        for item in json_response: 
+            label = getLabel(item)
+            if not label: continue
+            tvshows.append({'label':label,'item':item,'logo':item.get('art',{}).get(art,'')})
         self.log('fillTVShows, found = %s'%(len(tvshows)))
         return tvshows
         
@@ -483,8 +397,7 @@ class JSONRPC:
         runtime  = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
         if path.startswith(('plugin://','upnp://','pvr://')): return runtime
         
-        conditions = [runtime == 0, accurate]
-        if True in conditions:
+        if (runtime == 0 | accurate):
             if path.startswith('stack://'): #handle "stacked" videos:
                 stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
                 for file in stack: duration += self.parseDuration(file, item)
@@ -515,31 +428,16 @@ class JSONRPC:
         dbid    = item.get('id',-1)
         rundiff = int(percentDiff(runtime,duration))
         self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s"%(path,runtime,duration,rundiff))
-        conditions = [(dbid > 0),(runtime != duration),(duration > 0),(rundiff <= 45 or rundiff == 100)]
         if save is None: save = getSettingBool('Store_Duration')
-        if save and (False not in conditions):
+        if save and ((dbid > 0) & (runtime != duration) & (duration > 0) & (rundiff <= 45 or rundiff == 100)):
             self.setDuration(item['type'], dbid, duration)
         if ((rundiff > 45 and rundiff != 100) or rundiff == 0): duration = runtime
         self.log("parseDuration, returning duration = %s"%(duration))
         return duration
-        
-        
-    def autoPagination(self, id, path, limits={}):
-        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
-        if not limits:
-            msg = 'get'
-            # limits = self.channels.getPage(id) #todo move page to channels.json
-            limits = (self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0})
-        else:
-            msg = 'set'
-            # self.channels.setPage(id, limits) #todo move page to channels.json
-            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=28))
-        self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
-        return limits
-
-        
+       
+       
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        limits = self.autoPagination(id, path, limits)
+        limits = self.writer.autoPagination(id, path, limits)
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)
@@ -564,8 +462,8 @@ class JSONRPC:
         
         if limits.get('end',0) >= limits.get('total',0): # restart page, exceeding boundaries.
             self.log('requestList, id = %s, resetting page to 0'%(id))
-            limits = {"end": 0, "start": 0, "total": 0}
-        self.autoPagination(id, path, limits)
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+        self.writer.autoPagination(id, path, limits)
         
         if len(items) == 0 and limits.get('start',0) > 0 and limits.get('total',0) > 0:
             self.log("requestList, id = %s, trying again at start page 0"%(id))
@@ -602,7 +500,6 @@ class JSONRPC:
                 for key in ['broadcastnow','broadcastnext']:
                     writer = getWriter(channel.get(key,{}).get('writer',''))
                     citem  = writer.get('citem',{}) 
-                    print('matchPVRChannel',writer,citem)
                     if citem.get('id','') == id:
                         log('matchPVRChannel, match found! id = %s'%(id))
                         return channel

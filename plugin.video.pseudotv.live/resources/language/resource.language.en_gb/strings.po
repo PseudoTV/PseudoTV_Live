@@ -173,7 +173,7 @@ msgid "Pagination Size [Lower == Better Performance]"
 msgstr ""
 
 msgctxt "#30039"
-msgid "Max Guidedata (Days)"
+msgid "Max Guidedata (Days) [Lower == Fresh Data]"
 msgstr ""
 
 msgctxt "#30040"
@@ -225,7 +225,7 @@ msgid "Updating"
 msgstr ""
 
 msgctxt "#30052"
-msgid "Initializing%s"
+msgid "Initializing"
 msgstr ""
 
 msgctxt "#30053"
@@ -281,27 +281,27 @@ msgid "Force %s to reload"
 msgstr ""
 
 msgctxt "#30066"
-msgid "Resource Packs"
+msgid "Logo"
 msgstr ""
 
 msgctxt "#30067"
-msgid "Logo Pack"
+msgid "Logos"
 msgstr ""
 
 msgctxt "#30068"
-msgid "Bumpers Pack"
+msgid "Bumpers"
 msgstr ""
 
 msgctxt "#30069"
-msgid "Ratings Pack"
+msgid "Ratings"
 msgstr ""
 
 msgctxt "#30070"
-msgid "Commercials Pack"
+msgid "Commercials"
 msgstr ""
 
 msgctxt "#30071"
-msgid "Trailers Pack"
+msgid "Trailers"
 msgstr ""
 
 msgctxt "#30072"
@@ -317,7 +317,7 @@ msgid "Play from here"
 msgstr ""
 
 msgctxt "#30075"
-msgid "Custom Channel Groups"
+msgid "Enter Custom Channel Groups"
 msgstr ""
 
 msgctxt "#30076"
@@ -533,7 +533,7 @@ msgid "Clear this Channels Configurations"
 msgstr ""
 
 msgctxt "#30129"
-msgid "Adjust Seek Threshold"
+msgid "Adjust Seek Threshold (Percent)"
 msgstr ""
 
 msgctxt "#30130"
@@ -649,7 +649,7 @@ msgid "Parsing Kodi Library"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Collecting %s"
+msgid "Collecting"
 msgstr ""
 
 msgctxt "#30160"
@@ -714,4 +714,28 @@ msgstr ""
 
 msgctxt "#30175"
 msgid "Show Channel Bug"
+msgstr ""
+
+msgctxt "#30175"
+msgid "Adding"
+msgstr ""
+
+msgctxt "#30176"
+msgid "Silence Notifications during Playback"
+msgstr ""
+
+msgctxt "#30177"
+msgid "Movie"
+msgstr ""
+
+msgctxt "#30178"
+msgid "No Channels Found, Would you like to recover channels from abandoned files?"
+msgstr ""
+
+msgctxt "#30179"
+msgid "Library"
+msgstr ""
+
+msgctxt "#30180"
+msgid "Resources"
 msgstr ""

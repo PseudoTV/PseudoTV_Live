@@ -24,10 +24,10 @@ Playback Method: 
 
 Seek tolerance (Smart Seeking):
 Adjusting seek tolerance (in seconds) adds a buffer at the beginning of media that is currently selected to play and which includes an offset for a "Pseudo" Live effect. The greater the number the more it ignores the time differential between "live" and "load" times.
-ex. If after a show ends your next show which should start at the beginning starting a few seconds into the future; due to a lag in loading time. Raising the seek tolerance well remedy this...
+ex. If after a show ends your next show which should start at the beginning starting a few seconds into the future; due to a lag in loading time. Raising the seek tolerance well remedy this... 0 disables tolerance.
 
 Seek Threshold(Smart Seeking):
-Adjusting seek threshold(in seconds) adds a buffer at the end of media that is currently selected to play and which includes an offset for a "Pseudo" Live effect. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically.
+Adjusting seek threshold(percentage). threshold to which the current content can be played back before dismissing for the next queue. Ex. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically. 100% disables threshold.
 
 
 #General Information:

@@ -3,24 +3,33 @@
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,true,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,false,10000)</onunload> 
     <controls>
-    
-      <control type="group" id="40002">
-        <description>Player Overlay</description>
-        <visible>Player.HasVideo + [Player.Playing | Player.Paused]</visible>
+      <control type="image"> 
+        <description>Hide Kodi UI</description>
         <posx>0</posx>
         <posy>0</posy>
-        
+        <width>auto</width>
+        <height>auto</height>
+        <texture>white.png</texture>
+        <colordiffuse>black</colordiffuse>
+      </control>
+    
+      <control type="group">
+        <posx>0</posx>
+        <posy>0</posy>
+        <description>Background !Playing</description>
+        <visible>Player.HasVideo + [!Player.Playing | Player.Paused]</visible>
         <control type="image"> 
-          <description>Hide Kodi UI</description>
+          <description>Background Thumb</description>
           <width>auto</width>
           <height>auto</height>
-          <texture>white.png</texture>
-          <colordiffuse>black</colordiffuse>
+          <aspectratio>keep</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <!-- <texture>$INFO[Container(40000).ListItem(0).Thumb]</texture> -->
+          <texture background="true">$INFO[Player.Art(thumb)]</texture>
         </control>
-        
         <control type="image"> 
-          <description>Background Overlay</description>
-          <visible>!Player.Playing</visible>
+          <description>Background Logo</description>
           <posx>704</posx>
           <posy>284</posy>
           <width>512</width>
@@ -30,7 +39,13 @@
           <aligny>center</aligny>
           <texture>$INFO[Container(40000).ListItem(0).Icon]</texture>
         </control>
-        
+      </control>
+      
+      <control type="group" id="40002">
+        <posx>0</posx>
+        <posy>0</posy>
+        <description>Background Playing</description>
+        <visible>Player.HasVideo + [Player.Playing | Player.Paused]</visible>
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
           <posx>0</posx>
@@ -40,7 +55,6 @@
           <align>center</align>
           <aligny>center</aligny>
         </control>
-        
         <control type="group" id="41003">
           <description>On Next</description>
           <left>1280</left>

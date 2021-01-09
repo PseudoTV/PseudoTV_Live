@@ -21,17 +21,17 @@ import os, shutil, codecs, threading, random
 
 from kodi_six import xbmc, xbmcvfs
 
-VFS_AVAILABLE = True
+VFS_AVAILABLE              = True
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
-FILE_LOCK_NAME = "FileLock.dat"
-    
+FILE_LOCK_NAME             = "FileLock.dat"
+DEFAULT_ENCODING           = "utf-8"
+
 def log(msg, level=xbmc.LOGDEBUG):
     globals.log(msg,level)
 
-
 class FileAccess:
     @staticmethod
-    def open(filename, mode, encoding = "utf-8"):
+    def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
         log("FileAccess: trying to open " + filename)
         try: return VFSFile(filename, mode)
@@ -67,7 +67,7 @@ class FileAccess:
 
 
     @staticmethod
-    def openSMB(filename, mode, encoding = "utf-8"):
+    def openSMB(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
@@ -112,14 +112,22 @@ class FileAccess:
             os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
         except Exception as e: 
-            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: os.rename, Failed! %s"%(e), xbmc.LOGERROR)
 
         try:
             log("FileAccess: shutil.move")
             shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
         except Exception as e: 
-            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: shutil.move, Failed! %s"%(e), xbmc.LOGERROR)
+
+        try:
+            log("FileAccess: pathlib.rename")
+            from pathlib  import Path as plib
+            plib(xbmcvfs.translatePath(path)).rename(plib(xbmcvfs.translatePath(newpath)))
+            return True
+        except Exception as e: 
+            log("FileAccess: pathlib.renam, Failed! %s"%(e), xbmc.LOGERROR)
 
         log("FileAccess: OSError")
         raise OSError()
@@ -182,7 +190,7 @@ class VFSFile:
 
     def write(self, data):
         if isinstance(data,bytes):
-            data = data.decode("utf-8", 'backslashreplace')
+            data = data.decode(DEFAULT_ENCODING, 'backslashreplace')
         return self.currentFile.write(data)
         
         
@@ -190,7 +198,7 @@ class VFSFile:
         return self.currentFile.close()
 
 
-    def seek(self, bytes, offset):
+    def seek(self, bytes, offset=1):
         return self.currentFile.seek(bytes, offset)
 
 

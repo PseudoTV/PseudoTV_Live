@@ -11,17 +11,17 @@
 		"favorite": false,
 		"path": [],
 		"group": [],
-		"rules": [],
-		"page": {},
-		"xmltv": {}
+		"rules": [{
+			"id": 0,
+			"name": "",
+			"description": "",
+			"options": {}
+		}],
+		"page": {
+			"end": 0,
+			"start": 0,
+			"total": 0
+		}
 	}],
-	"predefined": {
-		"channels": [],
-		"items": {}
-	},
-	"recommended": {
-		"imports": [],
-		"whitelist": [],
-		"blacklist": []
-	}
+	"imports": []
 }
