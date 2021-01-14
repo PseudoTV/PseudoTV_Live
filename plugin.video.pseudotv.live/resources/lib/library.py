@@ -65,7 +65,7 @@ class Library:
         self.log('load file = %s'%(file))
         if not FileAccess.exists(file): 
             file = LIBRARYFLE_DEFAULT
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()
@@ -73,7 +73,7 @@ class Library:
         
         
     def save(self):
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle = FileAccess.open(LIBRARYFLE, 'w')
             self.log('save, saving to %s'%(LIBRARYFLE))
             fle.write(dumpJSON(self.libraryItems, idnt=4, sortkey=False))
@@ -83,23 +83,21 @@ class Library:
         
     def setPredefinedSelection(self, type, items):
         self.log('setPredefinedSelection, type = %s, items = %s'%(type,items))
+        if len(items) > 0: setPropertyBool('has.Predefined',True)
         return setSetting('Select_%s'%(type.replace(' ','_')),'(%s) Selected'%(len(list(filter(lambda x: x != '',items)))))
        
        
     def getLibraryItems(self, type, enabled=False):
         self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
         items = self.libraryItems.get('library',{}).get(type,[])
-        if enabled: 
-            items = list(filter(lambda k:k.get('enabled',False) == True, items))
-            self.setPredefinedSelection(type,items)#set 'Select_' setting count
+        if enabled: items = list(filter(lambda k:k.get('enabled',False) == True, items))
         return sorted(items, key=lambda k: k['name'])
         
 
     def setLibraryItems(self, type, items):
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         self.libraryItems['library'][type] = sorted(items, key=lambda k:k['name'])
-        self.setPredefinedSelection(type,self.getLibraryItems(type,enabled=True))
-        return True
+        return self.setPredefinedSelection(type,self.getLibraryItems(type,enabled=True))#set 'Select_' setting count
 
 
     def clearLibraryItems(self, type=None):
@@ -116,16 +114,16 @@ class Library:
         return self.save()
         
             
-    def setEnableState(self, type, selects):
+    def setEnableStates(self, type, selects):
         items = self.getLibraryItems(type)
-        self.log('setEnableState, type = %s, items = %s, selects = %s'%(type, len(items), selects))
+        self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
         for idx, item in enumerate(items):
             if idx in selects: 
                 item['enabled'] = True
-            else:
+            else: 
                 item['enabled'] = False
-        if self.setLibraryItems(type,items):
-            return self.save()
+            self.setLibraryItems(type,items)
+        return self.save()
         
 
     def chkLibraryItems(self, type=None):
@@ -140,7 +138,9 @@ class Library:
                 setProperty('has.%s'%(type.replace(' ','_')),'true')
             else: 
                 setProperty('has.%s'%(type.replace(' ','_')),'false')
-        setSetting('Clear_BlackList','|'.join(self.recommended.getBlackList()))
+        blackList = self.recommended.getBlackList()
+        if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
+        setSetting('Clear_BlackList','|'.join(blackList))
         return hasContent
         
  
@@ -252,14 +252,18 @@ class Recommended:
         blacklist = self.getBlackList()
         blacklist.append(addonid)
         self.library.libraryItems['recommended']['blacklist'] = list(set(blacklist))
-        setSetting('Clear_BlackList','|'.join(self.library.libraryItems['recommended']['blacklist']))
+        blackList = self.library.libraryItems['recommended']['blacklist']
+        if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
+        setSetting('Clear_BlackList','|'.join(blackList))
         return True
     
     
     def clearBlackList(self):
         self.library.libraryItems['recommended']['blacklist'] = []
         if self.library.save():
-            setSetting('Clear_BlackList','|'.join(self.getBlackList()))
+            blackList = self.getBlackList()
+            setPropertyBool('has.BlackList',len(blackList) > 0)
+            setSetting('Clear_BlackList','|'.join(blackList))
             return True
         return False
         

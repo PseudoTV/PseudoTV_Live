@@ -357,11 +357,11 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#30085"
-msgid "Node Editor"
+msgid "Create Node"
 msgstr ""
 
 msgctxt "#30086"
-msgid "Playlist Editor"
+msgid "Create SmartPlaylist"
 msgstr ""
 
 msgctxt "#30087"

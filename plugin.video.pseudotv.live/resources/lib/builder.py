@@ -130,6 +130,7 @@ class Builder:
 
 
     def verifyChannelItems(self):
+        #check channel configuration, verify and updates paths, logos.
         items = self.channels.getChannels()
         for idx, item in enumerate(items):
             self.log('verifyChannelItems, %s: %s'%(idx,item))
@@ -137,6 +138,7 @@ class Builder:
                 self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
                 continue
                 
+            if not isinstance(item.get('path',[]),list): item['path'] = [item['path']] #custom channels are not lists, no mixed channels only adv. interleave rule.
             item['id']      = (item.get('id','')      or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
             item['radio']   = (item.get('radio','')   or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
             item['catchup'] = (item.get('catchup','') or ('vod' if not item['radio'] else ''))
@@ -245,7 +247,7 @@ class Builder:
         fileList      = []
         seasoneplist  = []
         method        =  sort.get("method","random")
-        json_response = self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
+        json_response = removeDupsDICT(self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
 
         for idx, item in enumerate(json_response):
             file     = item.get('file','')

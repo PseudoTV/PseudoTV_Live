@@ -78,19 +78,20 @@ class Plugin:
         keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
         if not full: keys = keys[:3]
         if yesnoDialog('%s ?'%(msg)): [notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
-        setProperty('pendingChange','true')
-        setProperty('autotuned','false')
+        setPropertyBool('pendingChange',True)
+        setPropertyBool('autotuned',False)
         return True
 
             
     def utilities(self, name):
         self.log('utilities, name = %s'%name)
-        if name == LANGUAGE(30011):   self.deleteFiles(name)
-        elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
-        elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
-        elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
-        elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
-        else: return
+        with busy():
+            if name == LANGUAGE(30011): self.deleteFiles(name)
+            elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
+            elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
+            elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
+            elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
+            else: return
         xbmc.executebuiltin('Action(Back,10025)')
             
 

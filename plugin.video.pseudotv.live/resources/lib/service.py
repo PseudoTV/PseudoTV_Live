@@ -24,6 +24,8 @@ from resources.lib.builder     import Builder
 from plugin                    import Plugin
 from config                    import Config
 
+LAST_IMPORT_M3U = getSetting('Import_M3U')
+
 class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
@@ -203,9 +205,19 @@ class Monitor(xbmc.Monitor):
 
 
     def chkPendingChange(self):
-        state = (self.pendingChange | getPropertyBool('pendingChange'))
-        self.log("chkPendingChange, state = %s"%(state))
-        return state
+        if   xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: return True
+        elif getSetting('Import_M3U') != LAST_IMPORT_M3U: return True
+        return False
+
+
+    def getPendingChange(self):
+        return (self.pendingChange | getPropertyBool('pendingChange'))
+    
+    
+    def setPendingChange(self, state):
+        self.log('setPendingChange, state = %s'%(state))
+        self.pendingChange = state
+        setPropertyBool('pendingChange',state)
 
 
     def onNotification(self, sender, method, data):
@@ -213,7 +225,7 @@ class Monitor(xbmc.Monitor):
             
             
     def onSettingsChanged(self):
-        if not self.chkPendingChange(): return # only trigger when settings dialog opened
+        if not self.getPendingChange(): return # only trigger when settings dialog opened
         self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
@@ -223,13 +235,13 @@ class Monitor(xbmc.Monitor):
         
         
     def onChange(self):
-        if not self.chkPendingChange(): return # last chance to cancel.
+        if not self.getPendingChange(): return # last chance to cancel.
         elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
         self.log('onChange')
         REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
-        self.myService.chkUpdate('0')
-        self.pendingChange = False
-        setProperty('pendingChange','false')
+        if self.myService.myConfig.buildPredefinedChannels():
+            self.myService.chkUpdate('0')
+        self.setPendingChange(False)
 
 
 class Service:
@@ -267,7 +279,7 @@ class Service:
 
     def runInitThread(self):
         self.log('runInitThread')
-        dirs = [LOGO_LOC,CACHE_LOC,PLS_LOC]
+        dirs = [CACHE_LOC,LOCK_LOC,LOGO_LOC,PLS_LOC,]
         [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
         for func in [chkPVR, chkVersion]: func()            
             
@@ -296,7 +308,7 @@ class Service:
             
     def chkPredefined(self):
         if self.writer.isClient(): return False
-        return self.myConfig.repairLibraryItems()
+        return self.myConfig.buildLibraryItems()
         
         
     def chkUpdate(self, lastUpdate=None):
@@ -304,13 +316,13 @@ class Service:
         with busy():
             if self.writer.isClient(): return False
             if lastUpdate is None: lastUpdate = (getProperty('Last_Update') or '0')
-            conditions = [self.myMonitor.chkPendingChange(),
+            conditions = [self.myMonitor.getPendingChange(),
                           not xbmcvfs.exists(M3UFLE),
                           not xbmcvfs.exists(XMLTVFLE),
                           (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
             self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
             if True in conditions:
-                if not self.myBuilder.getChannels() and not self.myMonitor.chkPendingChange():
+                if not self.myBuilder.getChannels() and not self.myMonitor.getPendingChange():
                     if not getPropertyBool('autotuned'):
                         if self.myConfig.autoTune(): 
                             return self.chkUpdate('0')
@@ -357,12 +369,11 @@ class Service:
         while not self.myMonitor.abortRequested():
             if self.chkInfo(): continue # aggressive polling.
             elif self.myMonitor.waitForAbort(2): break
-            elif xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: # detect settings change. 
+            elif self.myMonitor.chkPendingChange(): # detect settings change. 
                 self.log('settings opened')
-                self.myMonitor.pendingChange = True
-                self.myMonitor.onSettingsChanged()
+                self.myMonitor.setPendingChange(True)
                 continue
-            elif self.myMonitor.chkPendingChange():
+            elif self.myMonitor.getPendingChange():
                 self.log('pending change')
                 continue
             self.chkIdle()

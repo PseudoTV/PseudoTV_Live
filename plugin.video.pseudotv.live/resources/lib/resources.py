@@ -122,10 +122,13 @@ class Resources:
         
     
     def chkMono(self, logo):
-        dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(os.path.abspath(logo))[1]))
-        if FileAccess.exists(dest): return dest
-        return self.monoConvert(logo,dest,bool(getSettingInt('Color_Logos')))
-    
+        try:
+            dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(xbmc.translatePath(logo))[1]))
+            if FileAccess.exists(dest): return dest
+            return self.monoConvert(logo,dest,bool(getSettingInt('Color_Logos')))
+        except Exception as e: self.log("chkMono, failed! " + str(e), xbmc.LOGERROR)
+        return logo
+            
 
     def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False): 
         #featured == channel found in channels.json ie. in-use channel. Switch to handle image procs. and other additional features.
@@ -134,7 +137,7 @@ class Resources:
         local = self.chkLocalLogo(name, featured)#before parse check for user logos.
         if local: return local
         
-        name = cleanChannelPostfix(name,type)
+        name = cleanChannelSuffix(name,type)
         logo = self.findResourceLogo(name, type, ADDON_VERSION)#parse for logo
         if not logo and path: #find fallbacks, parse path, parse listitem
             if isinstance(path, list) and len(path) > 0: path = path[0]

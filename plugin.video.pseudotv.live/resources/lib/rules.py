@@ -31,14 +31,6 @@ class RulesList:
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
-        
-    def getRitem(self):
-        ritem = {"id":0,
-                 "name":"",
-                 "description":"",
-                 "options":{}}
-        return ritem.copy()
-
 
     def loadRules(self, channels):
         ruleList = {}
@@ -52,13 +44,36 @@ class RulesList:
                 for rule in self.ruleList:
                     if rule.myId == chrule['id']:
                         ruleInstance = rule.copy()
-                        options = chrule.get('options',[])
-                        for idx in options:
-                            ruleInstance.optionLabels[int(idx)] = options[idx]['label']
-                            ruleInstance.optionValues[int(idx)] = options[idx]['value']
+                        options = chrule.get('options',{})
+                        for key in options.keys():
+                            ruleInstance.optionLabels[int(key)] = options[key]['label']
+                            ruleInstance.optionValues[int(key)] = options[key]['value']
                         ruleList[chid].append(ruleInstance)
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
+        
+        
+    def buildRuleList(self, channels):
+        ruleList = {}
+        for channel in channels:
+            chid = channel.get('id','')
+            if not chid: continue
+            ruleList[chid] = []
+            chrules = channel.get('rules',[])
+            for rule in self.ruleList:
+                ruleInstance = rule.copy()
+                for chrule in chrules:
+                    if   chrule.get('id',0) == 0: continue
+                    elif ruleInstance.myId == chrule['id']:
+                        options = chrule.get('options',[])
+                        for key in options.keys():
+                            ruleInstance.optionLabels[int(key)] = options[key]['label']
+                            ruleInstance.optionValues[int(key)] = options[key]['value']
+                        break
+                ruleList[chid].append(ruleInstance)
+        self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
+        return ruleList
+        
         
     # def addChannelRule(self, citem, ritem):
         # if channelkey is None:

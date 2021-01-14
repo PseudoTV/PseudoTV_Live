@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
 from resources.lib.library     import Library
+from manager                   import Manager
 
 class Config:
     def __init__(self, sysARG=sys.argv, cache=None, service=None):
@@ -45,15 +46,20 @@ class Config:
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
+
+    def openChannelManager(self):
+        chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", config=self)
+        del chmanager
+
             
     def getLibraryItems(self, type, enabled=False):
-        if self.library.reset():
-            return self.library.getLibraryItems(type, enabled)
+        # if self.library.reset():
+        return self.library.getLibraryItems(type, enabled)
             
             
     def autoTune(self):
         if not yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)): 
-            setProperty('autotuned','true')
+            setPropertyBool('autotuned',True)
             return False
         busy  = ProgressBGDialog(message='%s...'%(LANGUAGE(30102)))
         types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #exclude Imports from autotuning.
@@ -62,7 +68,7 @@ class Config:
             busy = ProgressBGDialog((idx*100//len(types)), busy, '%s %s'%(LANGUAGE(30102),type))
             self.selectPredefined(type,autoTune=AUTOTUNE_ITEMS)
         ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30102)))
-        setProperty('autotuned','true')
+        setPropertyBool('autotuned',True)
         return True
  
  
@@ -73,7 +79,7 @@ class Config:
             items = self.getLibraryItems(type)
             if not items: 
                 if autoTune is None:
-                    clearLibraryItems(type)
+                    self.library.clearLibraryItems(type)
                     notificationDialog(LANGUAGE(30103)%(type))
                 return False
                 
@@ -87,12 +93,13 @@ class Config:
         if select:
             with busy_dialog(escape):
                 selects = findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name')
-                self.library.setEnableState(type,selects)
-                self.buildPredefinedChannels(type)
+                self.library.setEnableStates(type,selects)
+                setPropertyBool('pendingChange',True)
+                # self.buildPredefinedChannels(type)
         return True
 
 
-    def repairLibraryItems(self):
+    def buildLibraryItems(self):
         if self.library.fillLibraryItems():
             self.library.chkLibraryItems()
             return self.buildPredefinedChannels()
@@ -120,9 +127,9 @@ class Config:
             if not yesnoDialog('%s?'%(LANGUAGE(30077))): return
             setBusy(True)
             if self.library.clearLibraryItems():
-                self.buildPredefinedChannels()
-                setProperty('pendingChange','true')
-                setProperty('autotuned','false')
+                # self.buildPredefinedChannels()
+                setPropertyBool('pendingChange',True)
+                setPropertyBool('autotuned',False)
                 setBusy(False)
                 return notificationDialog(LANGUAGE(30053))
         return False
@@ -134,8 +141,8 @@ class Config:
         with busy():
             if not yesnoDialog('%s?'%(LANGUAGE(30093))): return
             if self.writer.clearChannels():
-                setProperty('pendingChange','true')
-                setProperty('autotuned','false')
+                setPropertyBool('pendingChange',True)
+                setPropertyBool('autotuned',False)
                 return notificationDialog(LANGUAGE(30053))
 
 
@@ -162,16 +169,29 @@ class Config:
         return notificationDialog(LANGUAGE(30053))
         
 
-    def openEditor(self, file='temp.xsp', media='video'):
-        self.log('openEditor, file = %s, media = %s'%(file,media)) 
-        return xbmc.executebuiltin("ActivateWindow(smartplaylisteditor,video)")
-        # path='special://profile/playlists/%s/%s'%(media,file)
-        # return xbmc.executebuiltin("ActivateWindow(10136,%s,%s)"%(path,media))
+    def openEditor(self, file='newsmartplaylist://%s/', media='video'):
+        if '%s' in file: file = file%(media)
+        self.log('openEditor, file = %s, media = %s'%(file,media))
+        with busy_dialog():
+            xbmc.executebuiltin("ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media))
+            # com = "ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%('special://videoplaylists/',media)
+            # # com = "ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media)
+            # print('openEditor',com)
+            # xbmc.executebuiltin(com)
+            # xbmc.executebuiltin("ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media))
+        # return xbmc.executebuiltin("Action(Enter)")
 
 
+    def openNode(self, file='', media='video'):
+        # file = 'library://video/network-nbc.xml/'
+        self.log('openNode, file = %s, media = %s'%(file,media))
+        if file: file = '?ltype=%s&path=%s)'%(media,urllib.parse.quote(xbmc.translatePath(file.strip('/').replace('library://','special://userdata/library/'))))
+        xbmc.executebuiltin('RunPlugin(plugin://plugin.library.node.editor%s'%(file))
+        
+       # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
     def openPlugin(self,addonID):
         self.log('openPlugin, addonID = %s'%(addonID)) 
-        return xbmc.executebuiltin('RunAddon(%s, newsmartplaylist://video/)'%addonID)
+        return xbmc.executebuiltin('RunAddon(%s)'%addonID)
 
 
     def openSettings(self,addonID):
@@ -194,6 +214,9 @@ class Config:
             
         if param == None:                     
             return REAL_SETTINGS.openSettings()
+        elif param.startswith('Channel_Manager'):
+            with busy_dialog():
+                return self.openChannelManager()
         elif  param.startswith('Select_Resource'):
             return self.selectResource(param.split('_')[2])
         elif  param == 'Clear_Import':
@@ -208,6 +231,8 @@ class Config:
             self.userGroups()
         elif  param == 'Open_Editor':
             return self.openEditor()
+        elif  param == 'Open_Node':
+            return self.openNode()
         elif  param.startswith('Open_Settings'): 
             return self.openSettings(param.split('|')[1])
         elif  param.startswith('Open_Plugin'):   

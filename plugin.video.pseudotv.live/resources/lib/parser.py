@@ -106,7 +106,7 @@ class Writer:
         self.log('importSETS')
         importLST = self.channels.getImports()
         if getSettingBool('User_Import'): 
-            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':getSetting('Import_M3U'),'xmltv':getSetting('Import_XMLTV')})
+            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':getSetting('Import_M3U'),'xmltv':{'path':getSetting('Import_XMLTV')}})
         for idx, importItem in enumerate(importLST):
             try:
                 if importItem.get('type','') == 'iptv':
@@ -231,8 +231,8 @@ class Writer:
         self.log('buildImports')
         self.channels.setImports([item['data'] for item in items for eimport in imports if ((item.get('data',{}).get('name','').startswith(eimport.get('name'))) and (item['data'].get('type','').lower() == 'iptv'))])
         return self.channels.save()
-        
-        
+
+
     def buildPredefinedChannels(self, libraryItems):  
         # convert enabled library.json into channels.json items
         # types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #ignore Imports, use buildImports
@@ -259,7 +259,7 @@ class Writer:
             items     = libraryItems.get(type,[])
             for item in items:
                 citem = self.channels.getCitem()
-                citem.update({'name'   :getChannelPostfix(item['name'], type),
+                citem.update({'name'   :getChannelSuffix(item['name'], type),
                               'path'   :item['path'],
                               'type'   :item['type'],
                               'logo'   :item['logo'],
@@ -457,7 +457,7 @@ class Channels:
         log('Channels: load file = %s'%(file))
         if not FileAccess.exists(file): 
             file = CHANNELFLE_DEFAULT
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()
@@ -465,7 +465,7 @@ class Channels:
         
         
     def save(self):
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle = FileAccess.open(CHANNELFLE, 'w')
             log('Channels: save, saving to %s'%(CHANNELFLE))
             fle.write(dumpJSON(self.cleanSelf(self.channelList), idnt=4, sortkey=False))
@@ -517,7 +517,7 @@ class XMLTV:
     def loadChannels(self, file=XMLTVFLE):
         log('XMLTV: loadChannels, file = %s'%file)
         try:
-            with fileLocker(FileLock()):
+            with fileLocker():
                 return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -528,7 +528,7 @@ class XMLTV:
     def loadProgrammes(self, file=XMLTVFLE):
         log('XMLTV: loadProgrammes, file = %s'%file)
         try: 
-            with fileLocker(FileLock()):
+            with fileLocker():
                 return self.sortProgrammes(self.cleanProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or []))
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -539,7 +539,7 @@ class XMLTV:
     def loadData(self):
         log('XMLTV: loadData')
         try: 
-            with fileLocker(FileLock()):
+            with fileLocker():
                 return (xmltv.read_data(FileAccess.open(XMLTVFLE, 'r')) or self.resetData())
         except Exception as e: 
             log('XMLTV: loadData, failed! %s'%(e))
@@ -567,7 +567,7 @@ class XMLTV:
             epggenres  = self.getGenres(ADDON_VERSION)
             programmes = self.xmltvList['programmes']
             genres     = []
-            [genres.extend(genre for genre in program['category']) for program in programmes]
+            [genres.extend(genre for genre in program.get('category',[])) for program in programmes]
             
             doc  = Document()
             root = doc.createElement('genres')
@@ -587,7 +587,7 @@ class XMLTV:
                 gen.appendChild(doc.createTextNode(key))
                 root.appendChild(gen)
             
-            with fileLocker(FileLock()):
+            with fileLocker():
                 xmlData = FileAccess.open(GENREFLE, "w")
                 xmlData.write(doc.toprettyxml(indent='\t'))
                 xmlData.close()
@@ -734,7 +734,8 @@ class XMLTV:
         now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(hours=3) #allow some old programmes to avoid empty cells.
         if programmes is None: programmes = self.xmltvList['programmes']
         try: 
-            tmpProgrammes = [program for program in programmes if strpTime(program['stop'],DTFORMAT) > now]
+            try:    tmpProgrammes = [program for program in programmes if strpTime(program['stop'],DTFORMAT)  > now]
+            except: tmpProgrammes = [program for program in programmes if strpTime(program['stop'],DTZFORMAT) > now]
         except Exception as e: 
             log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
@@ -766,7 +767,7 @@ class XMLTV:
         else:     
             data = self.xmltvList['data']
             
-        with fileLocker(FileLock()):
+        with fileLocker():
             writer = xmltv.Writer(encoding=DEFAULT_ENCODING, 
                                   date                = data['date'],
                                   source_info_url     = data['source-info-url'], 
@@ -856,41 +857,43 @@ class M3U:
             file = os.path.join(TEMP_LOC,slugify(url),'.m3u')
             saveURL(url,file)
             
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle   = FileAccess.open(file, 'r')
             lines = (fle.readlines())
             data  = lines.pop(0)
             fle.close()
-        
+            
+        chCount = 0
         for idx, line in enumerate(lines):
             if line.startswith('#EXTINF:'):
-                vod   = ''
-                label = ''
-                if 'catchup' in line: #todo regex to wildcard 'catchup' match group and reduce to single compile
-                    line1 = re.compile('#EXTINF:-1 tvg-chno=\"(.*?)\" tvg-id=\"(.*?)\" tvg-name=\"(.*?)\" tvg-logo=\"(.*?)\" group-title=\"(.*?)\" radio=\"(.*?)\" catchup=\"(.*?)\",(.*)', re.IGNORECASE).search(line)
-                    if line1: 
-                        vod   = line1.group(7)
-                        label = line1.group(8)
-                else:
-                    line1 = re.compile('#EXTINF:-1 tvg-chno=\"(.*?)\" tvg-id=\"(.*?)\" tvg-name=\"(.*?)\" tvg-logo=\"(.*?)\" group-title=\"(.*?)\" radio=\"(.*?)\",(.*)', re.IGNORECASE).search(line)
-                    vod   = ''
-                    label = line1.group(7)
-                    
-                #todo TypedDict for all dict. lists.
-                #todo collision logic?
-                try:    number = int(line1.group(1))
-                except: number = float(line1.group(1))
-                    
-                item = {'number' :number,
-                        'id'     :line1.group(2),
-                        'name'   :line1.group(3),
-                        'logo'   :line1.group(4),
-                        'group'  :line1.group(5).split(';'),
-                        'radio'  :line1.group(6).lower() == 'true',
-                        'label'  :label,
-                        'catchup':vod,
-                        'props'  :[]}
+                chCount += 1
+                match = {'number' :re.compile('tvg-chno=\"(.*?)\"'   , re.IGNORECASE).search(line),
+                         'id'     :re.compile('tvg-id=\"(.*?)\"'     , re.IGNORECASE).search(line),
+                         'name'   :re.compile('tvg-name=\"(.*?)\"'   , re.IGNORECASE).search(line),
+                         'logo'   :re.compile('tvg-logo=\"(.*?)\"'   , re.IGNORECASE).search(line),
+                         'group'  :re.compile('group-title=\"(.*?)\"', re.IGNORECASE).search(line),
+                         'radio'  :re.compile('radio=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                         'catchup':re.compile('catchup=\"(.*?)\"'    , re.IGNORECASE).search(line),
+                         'label'  :re.compile(',(.*)'                , re.IGNORECASE).search(line),
+                         'shift'  :re.compile('tvg-shift=\"(.*?)\"'  , re.IGNORECASE).search(line)}#todo shift timestamp delta to localtime
                 
+                item  = {'number':chCount,
+                         'radio':'false',
+                         'catchup':'',
+                         'group':[],
+                         'props':[]}
+                         
+                for key in match.keys():
+                    if not match[key]: continue
+                    item[key] = match[key].group(1)
+                    if key == 'number':
+                        try:    item[key] = int(item[key])
+                        except: item[key] = float(item[key])
+                    elif key == 'group':
+                        item[key] = item[key].split(';')
+                    elif key == 'radio':
+                        item[key] = item[key].lower() == 'true'
+
                 for nidx in range(idx+1,len(lines)):
                     nline = lines[nidx]
                     if   nline.startswith('#EXTINF:'): break
@@ -898,12 +901,16 @@ class M3U:
                         prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
                         if prop: item['props'].append(prop.group(1))
                     else: item['url'] = nline
+                        
+                item['name']  = (item.get('name','')  or item.get('label',''))
+                item['label'] = (item.get('label','') or item.get('name',''))
+                log('M3U: load, item = %s'%item)
                 yield item
                 
 
     def save(self):
         log('M3U: save')
-        with fileLocker(FileLock()):
+        with fileLocker():
             fle = FileAccess.open(M3UFLE, 'w')
             log('M3U: save, saving to %s'%(M3UFLE))
             fle.write('%s\n'%(self.m3uList['data']))

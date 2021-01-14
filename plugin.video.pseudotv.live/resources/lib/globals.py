@@ -32,7 +32,6 @@ from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring
 from resources.lib.fileaccess  import FileAccess, FileLock
 from operator                  import itemgetter
 
-
 try:
     from multiprocessing import Process, Queue
     Queue() # Queue doesn't raise importError on android, call directly.
@@ -85,7 +84,7 @@ MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 PVR_CLIENT          = 'pvr.iptvsimple'
 LANG                = 'en' #todo
 DTFORMAT            = '%Y%m%d%H%M%S'
-DTZFORMAT           = '%Y%m%d%H%M%S %Z'
+DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
 
 MAX_IMPORT          = 5
@@ -146,11 +145,12 @@ CHANNELFLE       = os.path.join(USER_LOC ,'channels.json')
 LIBRARYFLE       = os.path.join(USER_LOC ,'library.json')
 GENREFLE         = os.path.join(USER_LOC ,'genres.xml')
 CACHE_LOC        = os.path.join(USER_LOC ,'cache')
+LOCK_LOC         = os.path.join(CACHE_LOC,'locks')
 TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
 LOGO_COLOR_LOC   = os.path.join(LOGO_LOC ,'color')
 LOGO_MONO_LOC    = os.path.join(LOGO_LOC ,'mono')
-PLS_LOC          = os.path.join(CACHE_LOC,'playlist')
+PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
 
 PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'5','m3uRefreshHour':'0',
                     'logoPathType':'0','logoPath':LOGO_LOC,
@@ -197,7 +197,10 @@ def clearProperty(key, id=10000):
     xbmcgui.Window(id).clearProperty(key)
 
 def getPropertyBool(key):
-    return getProperty(key) == 'true'
+    return getProperty(key).title() == 'True'
+    
+def setPropertyBool(key, value):
+    return setProperty(key,str(value).title())
 
 def setSetting(key,value):
     log('globals: setSetting, key = %s, value = %s'%(key,value))
@@ -222,7 +225,7 @@ def getSettingInt(key, reload=True):
         return REAL_SETTINGS.getSettingInt(key)
     except:
         value = getSetting(key)
-        if '.' in value:
+        if value.isdecimal():
             return float(value)
         elif value.isdigit(): 
             return int(value)
@@ -232,13 +235,14 @@ MIN_ENTRIES      = int(PAGE_LIMIT//2)
 LOGO             = COLOR_LOGO if bool(getSettingInt('Color_Logos')) else MONO_LOGO
 
 @contextmanager
-def fileLocker(GlobalFileLock):
+def fileLocker():#GlobalFileLock=FileLock()
     log('globals: fileLocker')
-    GlobalFileLock.lockFile("MasterLock")
-    try: yield
-    finally: 
-        GlobalFileLock.unlockFile('MasterLock')
-        GlobalFileLock.close()
+    yield
+    # GlobalFileLock.lockFile("MasterLock")
+    # try: yield
+    # finally: 
+        # GlobalFileLock.unlockFile('MasterLock')
+        # GlobalFileLock.close()
 
 @contextmanager
 def busy():
@@ -280,8 +284,12 @@ def textviewer(msg, heading=ADDON_NAME, usemono=False):
     return xbmcgui.Dialog().textviewer(heading, msg, usemono)
     
 def yesnoDialog(message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0):
-    return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, customlabel, autoclose)
-
+    try:    
+        if customlabel:
+            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, autoclose)
+        else: raise Exception()
+    except: return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
+    
 def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
     if prompt and not default:
         if options is None:
@@ -294,7 +302,7 @@ def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', opt
                         {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""         , "type":0, "multi":False},
                         {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""         , "type":0, "multi":False}]
-        listitems = [buildMenuListItem(option['label'],option['label2'],COLOR_LOGO) for option in options]
+        listitems = [buildMenuListItem(option['label'],option['label2'],iconImage=COLOR_LOGO) for option in options]
 
         select    = selectDialog(listitems, LANGUAGE(30116), multi=False)
         if select is not None:
@@ -643,7 +651,7 @@ def removeDupsDICT(list):
     return [i for n, i in enumerate(list) if i not in list[n + 1:]]
     # return [dict(tupleized) for tupleized in set(tuple(item.items()) for item in list)]
 
-def removeDUPS(lst):
+def removeDUPSLST(lst):
     list_of_strings = [dumpJSON(d) for d in lst]
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
@@ -863,7 +871,7 @@ def pagination(list, end):
     for start in xrange(0, len(list), end):
         yield seq[start:start+end]
 
-def getChannelPostfix(name, type):
+def getChannelSuffix(name, type):
     if name.endswith((LANGUAGE(30155),LANGUAGE(30157),LANGUAGE(30156),LANGUAGE(30177))): return name  
     elif type == LANGUAGE(30004): suffix = LANGUAGE(30155) #TV
     elif type == LANGUAGE(30097): suffix = LANGUAGE(30157) #Music
@@ -871,10 +879,10 @@ def getChannelPostfix(name, type):
     else: return name
     return '%s %s'%(name,suffix)
  
-def cleanChannelPostfix(name, type):
-    if   type == LANGUAGE(30004): name = name.split(' %s'%(LANGUAGE(30155)))[0] #TV
-    elif type == LANGUAGE(30097): name = name.split(' %s'%(LANGUAGE(30157)))[0] #Music
-    elif type == LANGUAGE(30005): name = name.split(' %s'%(LANGUAGE(30156)))[0] #Movie
+def cleanChannelSuffix(name, type):
+    if   type == LANGUAGE(30004): name = name.split(' %s'%LANGUAGE(30155))[0]#TV
+    elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
+    elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
  
 class PoolHelper:

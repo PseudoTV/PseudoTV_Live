@@ -9,6 +9,8 @@
         <posy>0</posy>
         <width>auto</width>
         <height>auto</height>
+        <align>center</align>
+        <aligny>center</aligny>
         <texture>white.png</texture>
         <colordiffuse>black</colordiffuse>
       </control>
@@ -25,8 +27,8 @@
           <aspectratio>keep</aspectratio>
           <align>center</align>
           <aligny>center</aligny>
-          <!-- <texture>$INFO[Container(40000).ListItem(0).Thumb]</texture> -->
-          <texture background="true">$INFO[Player.Art(thumb)]</texture>
+          <texture>$INFO[Container(40000).ListItem(0).Thumb]</texture>
+          <!-- <texture background="true">$INFO[Player.Art(thumb)]</texture> -->
         </control>
         <control type="image"> 
           <description>Background Logo</description>
@@ -54,6 +56,21 @@
           <height>auto</height>
           <align>center</align>
           <aligny>center</aligny>
+        </control>
+        <control type="group" id="41002">
+          <description>Skip/Startover</description>
+          <left>1536</left>
+          <top>888</top>
+          <width>256</width>
+          <height>64</height>
+          <visible>false</visible>
+          <control type="image"> 
+            <visible>false</visible>
+            <width>256</width>
+            <height>64</height>
+            <texture>white.png</texture>
+            <colordiffuse>dimgray</colordiffuse>
+          </control>
         </control>
         <control type="group" id="41003">
           <description>On Next</description>

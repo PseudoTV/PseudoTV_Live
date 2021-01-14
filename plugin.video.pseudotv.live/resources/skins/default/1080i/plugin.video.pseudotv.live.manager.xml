@@ -523,6 +523,20 @@
           <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
           <visible>!String.IsEmpty(Control.GetLabel(9003)) + !String.IsEmpty(Container(5).ListItem.Label2)</visible>
         </control>
+        <control type="button" id="9004">
+          <!-- todo open node/xsp editor using listitem path to detect .xsp or .xml ListItem.FileExtension	 -->
+          <width>300</width>
+          <height>100</height>
+          <label></label>
+          <font>font25_title</font>
+          <textoffsetx>20</textoffsetx>
+          <onclick></onclick>
+          <wrapmultiline>false</wrapmultiline>
+          <align>center</align>
+          <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
+          <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
+          <visible>!String.IsEmpty(Control.GetLabel(9004)) + !String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)</visible>
+        </control>
 			</control>
               
       <control type="label">

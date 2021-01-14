@@ -53,6 +53,14 @@ class FileAccess:
 
 
     @staticmethod
+    def move(orgfilename, newfilename):
+        log('FileAccess: moving ' + orgfilename + ' to ' + newfilename)
+        if xbmcvfs.copy(orgfilename, newfilename):
+            return xbmcvfs.delete(orgfilename)
+        return False
+        
+
+    @staticmethod
     def delete(filename):
         return xbmcvfs.delete(filename)
         
@@ -91,13 +99,13 @@ class FileAccess:
     @staticmethod
     def rename(path, newpath):
         log("FileAccess: rename " + path + " to " + newpath)
-
         try:
             if xbmcvfs.rename(path, newpath):
                 return True
         except Exception as e: 
             log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
+        oempath = newpath
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
                 log("FileAccess: Modifying name")
@@ -106,7 +114,7 @@ class FileAccess:
 
                 if newpath[0:6].lower() == 'smb://':
                     newpath = '\\\\' + newpath[6:]
-
+                    
         try:
             log("FileAccess: os.rename")
             os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
@@ -122,26 +130,24 @@ class FileAccess:
             log("FileAccess: shutil.move, Failed! %s"%(e), xbmc.LOGERROR)
 
         try:
-            log("FileAccess: pathlib.rename")
-            from pathlib  import Path as plib
-            plib(xbmcvfs.translatePath(path)).rename(plib(xbmcvfs.translatePath(newpath)))
-            return True
+            if FileAccess.move(path, oempath):
+                return True
         except Exception as e: 
-            log("FileAccess: pathlib.renam, Failed! %s"%(e), xbmc.LOGERROR)
-
+            log("FileAccess: xbmcvfs move, Failed! %s"%(e), xbmc.LOGERROR)
+            
         log("FileAccess: OSError")
         raise OSError()
 
 
     @staticmethod
     def makedirs(directory):
-        try:
+        try:  
             os.makedirs(xbmcvfs.translatePath(directory))
             return True
         except:
             return FileAccess._makedirs(directory)
-
-
+            
+            
     @staticmethod
     def _makedirs(path):
         if len(path) == 0:
@@ -218,10 +224,9 @@ class VFSFile:
 
 class FileLock:
     def __init__(self):
-        random.seed()
-        if not FileAccess.exists(globals.CACHE_LOC):
-            FileAccess.makedirs(globals.CACHE_LOC)
-        self.lockFileName = os.path.join(globals.CACHE_LOC,FILE_LOCK_NAME)
+        random.seed()        
+        if not FileAccess.exists(globals.CACHE_LOC):  FileAccess.makedirs(globals.CACHE_LOC)
+        self.lockFileName = os.path.join(globals.LOCK_LOC,FILE_LOCK_NAME)
         self.lockedList = []
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
@@ -346,8 +351,8 @@ class FileLock:
         # timeout should help prevent issues with an old cache.
         for i in range(40):
             # Cycle file names in case one of them is sitting around in the directory
-            self.lockName = os.path.join(globals.CACHE_LOC,"%s.lock"%(random.randint(1, 60000)))
-
+            self.lockName = os.path.join(globals.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
+            
             try:
                 FileAccess.rename(self.lockFileName, self.lockName)
                 fle = FileAccess.open(self.lockName, 'r')
