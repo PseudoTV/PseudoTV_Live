@@ -45,6 +45,11 @@ class FileAccess:
 
 
     @staticmethod
+    def translatePath(path):
+        return xbmcvfs.translatePath(path)
+
+
+    @staticmethod
     def copy(orgfilename, newfilename):
         log('FileAccess: copying ' + orgfilename + ' to ' + newfilename)
         dir, file = os.path.split(newfilename)

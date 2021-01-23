@@ -34,6 +34,8 @@ class RulesList:
 
     def loadRules(self, channels):
         ruleList = {}
+        tmpruleList = self.ruleList.copy()
+        tmpruleList.pop(0)
         for channel in channels:
             chid = channel.get('id','')
             if not chid: continue
@@ -41,13 +43,13 @@ class RulesList:
             for chrule in chrules:
                 if chrule.get('id',0) == 0: continue
                 ruleList[chid] = []
-                for rule in self.ruleList:
+                for rule in tmpruleList:
                     if rule.myId == chrule['id']:
                         ruleInstance = rule.copy()
                         options = chrule.get('options',{})
                         for key in options.keys():
-                            ruleInstance.optionLabels[int(key)] = options[key]['label']
-                            ruleInstance.optionValues[int(key)] = options[key]['value']
+                            ruleInstance.optionLabels[int(key)] = options[key].get('label')
+                            ruleInstance.optionValues[int(key)] = options[key].get('value')
                         ruleList[chid].append(ruleInstance)
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
@@ -55,20 +57,22 @@ class RulesList:
         
     def buildRuleList(self, channels):
         ruleList = {}
+        tmpruleList = self.ruleList.copy()
+        tmpruleList.pop(0)
         for channel in channels:
             chid = channel.get('id','')
             if not chid: continue
             ruleList[chid] = []
             chrules = channel.get('rules',[])
-            for rule in self.ruleList:
+            for rule in tmpruleList:
                 ruleInstance = rule.copy()
                 for chrule in chrules:
                     if   chrule.get('id',0) == 0: continue
                     elif ruleInstance.myId == chrule['id']:
                         options = chrule.get('options',[])
                         for key in options.keys():
-                            ruleInstance.optionLabels[int(key)] = options[key]['label']
-                            ruleInstance.optionValues[int(key)] = options[key]['value']
+                            ruleInstance.optionLabels[int(key)] = options[key].get('label')
+                            ruleInstance.optionValues[int(key)] = options[key].get('value')
                         break
                 ruleList[chid].append(ruleInstance)
         self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
@@ -116,10 +120,6 @@ class BaseRule:
         return self.name
         
         
-    def getDesc(self):
-        return self.description
-
-
     def getOptionCount(self):
         return len(self.optionLabels)
 
@@ -327,9 +327,9 @@ class ShowChannelBug(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Showing Chanvnel Bug'
+            return 'Hide Channel Bug'
         else:
-            return 'Hiding Channel Bug'
+            return 'Show Channel Bug'
 
 
     def onAction(self, act, optionindex):
@@ -362,9 +362,9 @@ class ShowOnNext(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Showing OnNext'
+            return 'Hide OnNext'
         else:
-            return 'Hiding OnNext'
+            return 'Show OnNext'
 
 
     def onAction(self, act, optionindex):
@@ -408,9 +408,9 @@ class DisableOverlay(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Overlay Disabled'
+            return 'Enable overlay'
         else:
-            return 'Overlay Enabled'
+            return 'Disable overlay'
 
 
     def onAction(self, act, optionindex):
@@ -443,9 +443,9 @@ class SeekLock(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Seeking Disabled'
+            return 'Disable seek'
         else: 
-            return 'Seeking Enabled'
+            return 'Enabled seek'
             
 
     def onAction(self, act, optionindex):

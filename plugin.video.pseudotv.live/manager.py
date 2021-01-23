@@ -167,8 +167,11 @@ class Manager(xbmcgui.WindowXMLDialog):
         predefined = channelData["number"] > CHANNEL_LIMIT
 
         if predefined: 
-            chColor = 'orange'
             laColor = 'dimgray'
+            if channelData.get('page',{}).get('end',0) == 0 and channelData.get('page',{}).get('total',0) == 0:
+                chColor = 'red'
+            else:
+                chColor = 'orange'
         elif not label2: 
             chColor = 'dimgray'
             laColor = 'dimgray'
@@ -278,8 +281,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         media = 'video' if 'video' in path else 'music'
         if   '.xsp' in path: return self.config.openEditor(path,media)
         elif '.xml' in path: return self.config.openNode(path,media)
-        
-
+       
+   
     def getChannelName(self, retval, channelData):
         self.log('getChannelName')
         if not channelData.get('name',''): 
@@ -460,9 +463,12 @@ class Manager(xbmcgui.WindowXMLDialog):
     def buildRuleItems(self, channelData, append=False):
         self.log('buildRuleItems')
         self.toggleSpinner(self.ruleList,True)
-        ruleInstances = self.rules.buildRuleList([channelData])[channelData['id']]
+        if append:
+            ruleInstances = self.rules.loadRules([channelData]).get(channelData['id'],[]) #load existing rules
+        else:
+            ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #load all rules
         listitems = PoolHelper().poolList(self.buildRuleListItem,ruleInstances,channelData)
-        if append: listitems.append(buildMenuListItem('Add Rule','Create New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
+        if append: listitems.append(buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
         self.toggleSpinner(self.ruleList,False)        
         self.ruleList.reset()
         xbmc.sleep(100)
@@ -471,13 +477,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def buildRuleListItem(self, data):
         ruleInstance, channelData= data
-        rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues}
+        rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues,'title':ruleInstance.getTitle()}
         print(rule)
-        # ritem = self.channels.getRitem()
-        # rule = rule.copy()
-        # if rule.get('action',''): rule.pop('action')
         prop = {'description':rule['description'],'rule':dumpJSON(rule),'channelData':dumpJSON(channelData),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
-        return buildMenuListItem(rule['name'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
+        return buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
 
 
     def selectRules(self, channelData):
@@ -486,6 +489,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         listitems = self.buildRuleItems(channelData, append=True)
         self.toggleruleList(True)
         self.ruleList.addItems(listitems)
+        
+        # select = selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
+        # if select is None: return notificationDialog(LANGUAGE(30001))
+        # print(listitems[select].getLabel())
+        
+        # self.ruleList.addItems(listitems)
         
         # return channelData
         # select = selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
@@ -503,28 +512,37 @@ class Manager(xbmcgui.WindowXMLDialog):
         return channelData['rules']
 
 
-    def selectRuleItems(self, item):
+    def selectRuleItems(self, item):    
         self.log('selectRuleItems')
-        ruleItem     = loadJSON(item['item'].getProperty('rule'))
-        channelData  = loadJSON(item['item'].getProperty('channelData'))
-        channelRules = sorted(self.fillRules(channelData), key=lambda k: k['id'])
+        print(item)
+        ruleItem    = loadJSON(item['item'].getProperty('rule'))
+        channelData = loadJSON(item['item'].getProperty('channelData'))
+        listitems = self.buildRuleItems(channelData)
         
-        ruleSelect = {}
-        for rule in channelRules:
-            if rule['id'] == ruleItem['id']: 
-                ruleSelect = rule
-        print(ruleItem,channelRules,ruleSelect)
+        optionIDX = selectDialog(listitems,LANGUAGE(30135),multi=False)
+        print(ruleSelect)
+        # ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
+        # print(ruleSelect)
+        # self.selectRuleItems(channelData, rules, ruleSelect)
+        
+        
+        # self.ruleList.addItems(listitems)
+        # ruleSelect = {}
+        # for rule in channelRules:
+            # if rule['id'] == ruleItem['id']: 
+                # ruleSelect = rule
+        # print(ruleItem,channelRules,ruleSelect)
                 
-        if ruleSelect.get('action',None) is None: return notificationDialog(LANGUAGE(30001))
-        ruleInstance  = ruleSelect.get('action',None)
-        valueitems    = (PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
-        listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'citem':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
-        self.ruleList.addItems(listitems)
-        optionIDX    = selectDialog(listitems,LANGUAGE(30135),multi=False)
-        print(ruleSelect)
-        ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
-        print(ruleSelect)
-        self.selectRuleItems(channelData, rules, ruleSelect)
+        # if ruleSelect.get('action',None) is None: return notificationDialog(LANGUAGE(30001))
+        # ruleInstance  = ruleSelect.get('action',None)
+        # valueitems    = (PoolHelper().poolList(self.buildRuleListItem,rules,channelData))
+        # listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'citem':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
+        # self.ruleList.addItems(listitems)
+        # optionIDX    = selectDialog(listitems,LANGUAGE(30135),multi=False)
+        # print(ruleSelect)
+        # ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
+        # print(ruleSelect)
+        # self.selectRuleItems(channelData, rules, ruleSelect)
         
             
     def saveRuleList(self, items):
@@ -559,7 +577,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def isVisible(self, cntrl):
         try: 
             if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
-            state = bool(cntrl.isVisible())
+            state = cntrl.isVisible()
         except: state = self.cntrlStates.get(cntrl.getId(),False)
         self.log('isVisible, cntrl = ' + str(cntrl.getId()) + ', state = ' + str(state))
         return state

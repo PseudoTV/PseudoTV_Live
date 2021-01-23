@@ -142,6 +142,7 @@ class Builder:
             item['id']      = (item.get('id','')      or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
             item['radio']   = (item.get('radio','')   or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
             item['catchup'] = (item.get('catchup','') or ('vod' if not item['radio'] else ''))
+            item['group']   = list(set((item.get('group',[]) or [LANGUAGE(30171)])))
             item['logo']    = (self.jsonRPC.getLogo(item['name'], item['type'], item['path'], item, featured=True))
             yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
@@ -247,7 +248,7 @@ class Builder:
         fileList      = []
         seasoneplist  = []
         method        =  sort.get("method","random")
-        json_response = removeDupsDICT(self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
+        json_response = (self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
 
         for idx, item in enumerate(json_response):
             file     = item.get('file','')

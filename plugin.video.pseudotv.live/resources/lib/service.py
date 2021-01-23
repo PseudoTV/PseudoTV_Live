@@ -239,8 +239,8 @@ class Monitor(xbmc.Monitor):
         elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
         self.log('onChange')
         REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
-        if self.myService.myConfig.buildPredefinedChannels():
-            self.myService.chkUpdate('0')
+        # if self.myService.myConfig.buildPredefinedChannels():
+        self.myService.chkUpdate('0')
         self.setPendingChange(False)
 
 
@@ -279,9 +279,7 @@ class Service:
 
     def runInitThread(self):
         self.log('runInitThread')
-        dirs = [CACHE_LOC,LOCK_LOC,LOGO_LOC,PLS_LOC,]
-        [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
-        for func in [chkPVR, chkVersion]: func()            
+        for func in [chkPVR, chkMGR, chkVersion]: func()            
             
             
     def startServiceThread(self, wait=5.0):
@@ -317,8 +315,8 @@ class Service:
             if self.writer.isClient(): return False
             if lastUpdate is None: lastUpdate = (getProperty('Last_Update') or '0')
             conditions = [self.myMonitor.getPendingChange(),
-                          not xbmcvfs.exists(M3UFLE),
-                          not xbmcvfs.exists(XMLTVFLE),
+                          not FileAccess.exists(M3UFLE),
+                          not FileAccess.exists(XMLTVFLE),
                           (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
             self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
             if True in conditions:
@@ -362,10 +360,9 @@ class Service:
     def run(self, silent=False):
         self.log('run')
         setBusy(False)
-        notificationProgress('%s...'%(LANGUAGE(30052)))
-        
+        if notificationProgress('%s...'%(LANGUAGE(30052))): initDirs()
         for initThread in [self.startInitThread, self.startServiceThread]: initThread()
-        self.myMonitor.waitForAbort(15)#insurance to ensure threads are active before main service starts. cheaper then another a while loop.
+        self.myMonitor.waitForAbort(15)#ensure threads are active before main service starts. cheaper then another while loop.
         while not self.myMonitor.abortRequested():
             if self.chkInfo(): continue # aggressive polling.
             elif self.myMonitor.waitForAbort(2): break

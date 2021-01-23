@@ -204,7 +204,7 @@ class Resources:
     def monoConvert(self, logo, dest, useColor=bool(getSettingInt('Color_Logos'))):
         return logo
         # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.
-        # pil_img = Image.open(xbmcvfs.translatePath(logo))
+        # pil_img = Image.open(FileAccess.translatePath(logo))
         # # pil_img = Image.open(FileAccess.open(logo,"r"))
         # def isColor(adjust_color_bias=True):
             # bands = pil_img.getbands()

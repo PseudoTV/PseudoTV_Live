@@ -74,19 +74,22 @@ class Plugin:
         
     def deleteFiles(self, msg, full=False):
         self.log('deleteFiles, full = %s'%(full))
+        setBusy(True)
         files = {LANGUAGE(30172):M3UFLE,LANGUAGE(30173):XMLTVFLE,LANGUAGE(30009):CHANNELFLE,LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):LIBRARYFLE}
         keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
         if not full: keys = keys[:3]
         if yesnoDialog('%s ?'%(msg)): [notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
         setPropertyBool('pendingChange',True)
         setPropertyBool('autotuned',False)
+        if full: return okDialog(LANGUAGE(30183))
+        setBusy(False)
         return True
 
             
     def utilities(self, name):
         self.log('utilities, name = %s'%name)
         with busy():
-            if name == LANGUAGE(30011): self.deleteFiles(name)
+            if   name == LANGUAGE(30011): self.deleteFiles(name)
             elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
             elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
             elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
@@ -190,10 +193,10 @@ class Plugin:
         
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
+        self.playlist.clear()
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
-
         nowitem   = pvritem.get('broadcastnow',{}) # current item
         nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
 
@@ -238,8 +241,6 @@ class Plugin:
             setCurrentChannelItem(pvritem)
             
             if isPlaylist: 
-                self.playlist.clear()
-                xbmc.sleep(100)
                 listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems])
                 [self.playlist.add(lz.getPath(),lz,idx) for idx,lz in enumerate(listitems)]
                 if isPlaylistRandom(): self.playlist.unshuffle()

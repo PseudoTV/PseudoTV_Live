@@ -24,9 +24,10 @@ If you have changes either create a PR containing the changes or an issue with d
 
   <!-- MOVIE / DRAMA -->
   <genre genreId="0x01">General Movie / Drama</genre>
+  <genre genreId="0x01">Movie / Featured Film</genre>
   <genre genreId="0x11">Detective / Thriller</genre>
   <genre genreId="0x21">Adventure / Western / War</genre>
-  <genre genreId="0x3">Science Fiction / Fantasy / Horror</genre>
+  <genre genreId="0x03">Science Fiction / Fantasy / Horror</genre>
   <genre genreId="0x41">Comedy</genre>
   <genre genreId="0x51">Soap / Melodrama / Folkloric</genre>
   <genre genreId="0x61">Romance</genre>
@@ -42,6 +43,8 @@ If you have changes either create a PR containing the changes or an issue with d
 
   <!-- SHOW -->
   <genre genreId="0x03">Show / Game Show</genre>
+  <genre genreId="0x03">Episode / Series</genre>
+  <genre genreId="0x03">Sitcom / Series</genre>
   <genre genreId="0x13">Game Show / Quiz / Contest</genre>
   <genre genreId="0x23">Variety Show</genre>
   <genre genreId="0x33">Talk Show</genre>

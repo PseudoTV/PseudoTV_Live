@@ -58,16 +58,19 @@ class Predefined:
         return []
         
     
-    def createPVRRecordings(self):
+    @staticmethod
+    def createPVRRecordings():
         return ['pvr://recordings/tv/active/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
         
         
-    def createMixedRecent(self):
+    @staticmethod
+    def createMixedRecent():
         return ['videodb://recentlyaddedepisodes/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"episode"}}',
                 'videodb://recentlyaddedmovies/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
         
         
-    def createMusicRecent(self):
+    @staticmethod
+    def createMusicRecent():
         return ['musicdb://recentlyaddedalbums/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
         
         
@@ -85,15 +88,18 @@ class Predefined:
         return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.exclude_specials)]
 
 
-    def createMovieGenrePlaylist(self, genre, method='random'):
+    @staticmethod
+    def createMovieGenrePlaylist(genre, method='random'):
         return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(genre))]
 
 
-    def createStudioPlaylist(self, studio, method='random'):
+    @staticmethod
+    def createStudioPlaylist(studio, method='random'):
         return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"is","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(studio))]
 
 
-    def createMusicGenrePlaylist(self, genre, method='random'):
+    @staticmethod
+    def createMusicGenrePlaylist(genre, method='random'):
         return ['musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"music"}'%(method,urllib.parse.quote(genre))]
 
 
@@ -103,5 +109,6 @@ class Predefined:
         return mixed
         
         
-    def createSeasonal(self):
+    @staticmethod
+    def createSeasonal():
         return [LANGUAGE(30174)]

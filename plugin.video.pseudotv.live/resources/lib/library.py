@@ -20,9 +20,9 @@
 
 from resources.lib.globals     import *
 from resources.lib.predefined  import Predefined 
-from resources.lib.fileaccess  import FileLock
 
 REG_KEY = 'PseudoTV_Recommended.%s'
+GLOBAL_FILELOCK = FileLock()
 
 class Library:
     def __init__(self, cache=None, jsonRPC=None):
@@ -65,7 +65,7 @@ class Library:
         self.log('load file = %s'%(file))
         if not FileAccess.exists(file): 
             file = LIBRARYFLE_DEFAULT
-        with fileLocker():
+        with fileLocker(GLOBAL_FILELOCK):
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()
@@ -73,7 +73,7 @@ class Library:
         
         
     def save(self):
-        with fileLocker():
+        with fileLocker(GLOBAL_FILELOCK):
             fle = FileAccess.open(LIBRARYFLE, 'w')
             self.log('save, saving to %s'%(LIBRARYFLE))
             fle.write(dumpJSON(self.libraryItems, idnt=4, sortkey=False))
@@ -82,7 +82,7 @@ class Library:
 
         
     def setPredefinedSelection(self, type, items):
-        self.log('setPredefinedSelection, type = %s, items = %s'%(type,items))
+        self.log('setPredefinedSelection, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: setPropertyBool('has.Predefined',True)
         return setSetting('Select_%s'%(type.replace(' ','_')),'(%s) Selected'%(len(list(filter(lambda x: x != '',items)))))
        
@@ -141,7 +141,8 @@ class Library:
         blackList = self.recommended.getBlackList()
         if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
         setSetting('Clear_BlackList','|'.join(blackList))
-        return hasContent
+        # return hasContent
+        return True
         
  
     def getMixed(self):
@@ -174,7 +175,7 @@ class Library:
         
     def fillLibraryItems(self):
         #parse library for items, convert to library item, parse for logo and vfs path. save to library.json
-        busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30158)))
+        busy      = ProgressBGDialog(message='%s...'%(LANGUAGE(30158)))
         fillItems = self.getfillItems()
         for prog, type in enumerate(CHAN_TYPES):
             items     = []

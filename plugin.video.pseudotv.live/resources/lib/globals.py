@@ -82,6 +82,7 @@ COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 
 PVR_CLIENT          = 'pvr.iptvsimple'
+PVR_MANAGER         = 'service.iptv.manager'
 LANG                = 'en' #todo
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
@@ -145,13 +146,16 @@ CHANNELFLE       = os.path.join(USER_LOC ,'channels.json')
 LIBRARYFLE       = os.path.join(USER_LOC ,'library.json')
 GENREFLE         = os.path.join(USER_LOC ,'genres.xml')
 CACHE_LOC        = os.path.join(USER_LOC ,'cache')
-LOCK_LOC         = os.path.join(CACHE_LOC,'locks')
+LOCK_LOC         = USER_LOC
 TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
 LOGO_COLOR_LOC   = os.path.join(LOGO_LOC ,'color')
 LOGO_MONO_LOC    = os.path.join(LOGO_LOC ,'mono')
 PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
 
+MGR_SETTINGS     = {'refresh_interval':'1',
+                    'iptv_simple_restart':'false'}
+                    
 PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'5','m3uRefreshHour':'0',
                     'logoPathType':'0','logoPath':LOGO_LOC,
                     'm3uPathType':'0','m3uPath':M3UFLE,
@@ -232,17 +236,16 @@ def getSettingInt(key, reload=True):
 
 PAGE_LIMIT       = getSettingInt('Page_Limit')
 MIN_ENTRIES      = int(PAGE_LIMIT//2)
-LOGO             = COLOR_LOGO if bool(getSettingInt('Color_Logos')) else MONO_LOGO
+LOGO             = (COLOR_LOGO if bool(getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
 
 @contextmanager
-def fileLocker():#GlobalFileLock=FileLock()
+def fileLocker(GlobalFileLock):
     log('globals: fileLocker')
-    yield
-    # GlobalFileLock.lockFile("MasterLock")
-    # try: yield
-    # finally: 
-        # GlobalFileLock.unlockFile('MasterLock')
-        # GlobalFileLock.close()
+    GlobalFileLock.lockFile("MasterLock")
+    try: yield
+    finally: 
+        GlobalFileLock.unlockFile('MasterLock')
+        GlobalFileLock.close()
 
 @contextmanager
 def busy():
@@ -261,6 +264,11 @@ def busy_dialog(escape=False):
         finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
     else: yield
 
+def initDirs():
+    dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,]
+    [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
+    return True
+
 def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=COLOR_LOGO):
     log('globals: notificationDialog: ' + message)
     try: xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
@@ -269,10 +277,11 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
         xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
     return True
      
-def notificationProgress(message, header=ADDON_NAME, time=4):
-    if (getSettingBool('Silent_OnPlayback') & isOverlay() & bool(xbmc.getCondVisibility('Player.Playing'))): return
+def notificationProgress(message, header=ADDON_NAME, func=None, args=None, kwargs={}, time=4):
+    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')): return
     dia = ProgressBGDialog(message=message,header=header)
     for i in range(time):
+        # if func: func(*args, **kwargs)
         if MY_MONITOR.waitForAbort(1): break
         dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia,header=header)
     return ProgressBGDialog(100,control=dia)
@@ -365,16 +374,16 @@ def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
     return control
     
 def hasPVR():
-    return bool(xbmc.getCondVisibility('Pvr.HasTVChannels'))
+    return xbmc.getCondVisibility('Pvr.HasTVChannels')
     
 def hasMusic():
-    return bool(xbmc.getCondVisibility('Library.HasContent(Music)'))
+    return xbmc.getCondVisibility('Library.HasContent(Music)')
     
 def hasTV():
-    return bool(xbmc.getCondVisibility('Library.HasContent(TVShows)'))
+    return xbmc.getCondVisibility('Library.HasContent(TVShows)')
     
 def hasMovie():
-    return bool(xbmc.getCondVisibility('Library.HasContent(Movies)'))
+    return xbmc.getCondVisibility('Library.HasContent(Movies)')
 
 def setBusy(state):
     return setProperty("BUSY.RUNNING",str(state))
@@ -465,7 +474,7 @@ def togglePVR(state='true'):
     return sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,state))
 
 def brutePVR(override=False):
-    if bool(xbmc.getCondVisibility("Pvr.IsPlayingTv")) or bool(xbmc.getCondVisibility("Player.HasMedia")): 
+    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): 
         return
     elif not override:
         if not yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
@@ -475,37 +484,44 @@ def brutePVR(override=False):
     if override: return True
     return notificationDialog(LANGUAGE(30053))
 
-def getPVR():
-    try: return xbmcaddon.Addon(PVR_CLIENT)
+def getPVR(id=PVR_CLIENT):
+    try: return xbmcaddon.Addon(id)
     except: # backend disabled?
         togglePVR('true')
         xbmc.sleep(1000)
         try:
-            return xbmcaddon.Addon(PVR_CLIENT)
+            return xbmcaddon.Addon(id)
         except: return None
 
-def chkPVR():
-    log('globals: chkPVR')
+def chkMGR():
+    return chkPVR(PVR_MANAGER, MGR_SETTINGS)
+
+def chkPVR(id=PVR_CLIENT, values=PVR_SETTINGS):
+    log('globals: chkPVR, id = %s'%(id))
     #check for min. settings' required
-    addon = getPVR()
+    addon = getPVR(id)
     if addon is None: return False
-    for setting, value in PVR_SETTINGS.items():
+    for setting, value in values.items():
         if not str(addon.getSetting(setting)) == str(value): 
-            return configurePVR(getSettingBool('Enable_Config'))
+            return configurePVR(id,values,getSettingBool('Enable_Config'))
     return True
     
-def configurePVR(override=False):
+def configurePVR(id=PVR_CLIENT,values=PVR_SETTINGS,override=False):
     log('globals: configurePVR')
     if not override:
-        if not yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,))): return
+        if not yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name',''),ADDON_NAME,))): return
     try:
-        addon = getPVR()
+        addon = getPVR(id)
         if addon is None: return False
-        for setting, value in PVR_SETTINGS.items(): 
+        for setting, value in values.items(): 
             addon.setSetting(setting, value)
-    except: return notificationDialog(LANGUAGE(30049)%(PVR_CLIENT))
+    except: return notificationDialog(LANGUAGE(30049)%(id))
     if override: return True
     return notificationDialog(LANGUAGE(30053))
+
+def refreshMGR():
+    if getPVR(PVR_MANAGER):
+        xbmc.executebuiltin('RunScript(service.iptv.manager,refresh)')
 
 def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'):
     try: return datetime.datetime.strptime(datestring, format)
@@ -648,8 +664,7 @@ def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
 
 def removeDupsDICT(list):
-    return [i for n, i in enumerate(list) if i not in list[n + 1:]]
-    # return [dict(tupleized) for tupleized in set(tuple(item.items()) for item in list)]
+    return [dict(tupleized) for tupleized in set(tuple(item.items()) for item in list)]
 
 def removeDUPSLST(lst):
     list_of_strings = [dumpJSON(d) for d in lst]
@@ -807,10 +822,10 @@ def isCHKInfo():
     return getProperty('chkInfo') == "True"
         
 def hasSubtitle():
-    return bool(xbmc.getCondVisibility('VideoPlayer.HasSubtitles'))
+    return xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
 
 def isSubtitle():
-    return bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
+    return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
     
 def installAddon(id):
     if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return

@@ -38,7 +38,7 @@ class Config:
         else:
             self.jsonRPC     = service.jsonRPC
             self.writer      = service.writer
-        
+            
         self.library         = Library(self.cache, self.jsonRPC)
         self.recommended     = self.library.recommended
         
@@ -56,7 +56,7 @@ class Config:
         # if self.library.reset():
         return self.library.getLibraryItems(type, enabled)
             
-            
+
     def autoTune(self):
         if not yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)): 
             setPropertyBool('autotuned',True)
@@ -95,15 +95,27 @@ class Config:
                 selects = findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                 self.library.setEnableStates(type,selects)
                 setPropertyBool('pendingChange',True)
-                # self.buildPredefinedChannels(type)
+                self.buildPredefinedChannels(type)
         return True
 
 
+    def recoverPredefined(self): 
+        # #todo if no library enabled, chk channels.json for predefined. prompt to recover and reenable in library.json
+        return True
+        # predefined   = self.channels.getPredefinedChannels()
+        # libraryItems = []
+        # libraryItems.extend([self.getLibraryItems(type,enabled=True) for type in CHAN_TYPES])
+        # if len(predefined) > 0 and len(libraryItems) == 0:
+        # if yesnoDialog
+       
+
     def buildLibraryItems(self):
-        if self.library.fillLibraryItems():
-            self.library.chkLibraryItems()
-            return self.buildPredefinedChannels()
-        return False
+        funcs = [self.recoverPredefined,
+                 self.library.fillLibraryItems,
+                 self.library.chkLibraryItems]
+        for func in funcs:
+            if not func(): return False
+        return self.buildPredefinedChannels()
         
 
     def buildPredefinedChannels(self, type=None):#convert enabled library items into channels.
@@ -163,9 +175,10 @@ class Config:
     def clearImport(self):
         self.log('clearImport') 
         with busy_dialog():
-            setSetting('Import_M3U','')
+            setSetting('Import_M3U'  ,'')
             setSetting('Import_XMLTV','')
-            setSetting('User_Import','false')
+            setSetting('Import_SLUG' ,'')
+            setSetting('User_Import' ,'false')
         return notificationDialog(LANGUAGE(30053))
         
 
@@ -187,16 +200,7 @@ class Config:
         self.log('openNode, file = %s, media = %s'%(file,media))
         if file: file = '?ltype=%s&path=%s)'%(media,urllib.parse.quote(xbmc.translatePath(file.strip('/').replace('library://','special://userdata/library/'))))
         xbmc.executebuiltin('RunPlugin(plugin://plugin.library.node.editor%s'%(file))
-        
-       # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
-    def openPlugin(self,addonID):
-        self.log('openPlugin, addonID = %s'%(addonID)) 
-        return xbmc.executebuiltin('RunAddon(%s)'%addonID)
-
-
-    def openSettings(self,addonID):
-        self.log('openSettings, addonID = %s'%(addonID)) 
-        return xbmcaddon.Addon(id=addonID).openSettings()
+        # # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
 
 
     def selectResource(self, type):
@@ -215,8 +219,7 @@ class Config:
         if param == None:                     
             return REAL_SETTINGS.openSettings()
         elif param.startswith('Channel_Manager'):
-            with busy_dialog():
-                return self.openChannelManager()
+            return self.openChannelManager()
         elif  param.startswith('Select_Resource'):
             return self.selectResource(param.split('_')[2])
         elif  param == 'Clear_Import':
@@ -231,12 +234,6 @@ class Config:
             self.userGroups()
         elif  param == 'Open_Editor':
             return self.openEditor()
-        elif  param == 'Open_Node':
-            return self.openNode()
-        elif  param.startswith('Open_Settings'): 
-            return self.openSettings(param.split('|')[1])
-        elif  param.startswith('Open_Plugin'):   
-            return self.openPlugin(param.split('|')[1])
         else: 
             with busy():
                 self.selectPredefined(param.replace('_',' '))

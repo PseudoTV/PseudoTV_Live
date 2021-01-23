@@ -3,6 +3,9 @@ v.0.2.6
 -Fixed custom m3u/xmltv importing.
 -Tweaked settings menu.
 -Improved library parsing.
+-Improved importing "Recommended Services".
+-Improved custom EPG genre.xml creation.
+
 
 v.0.2.5
 -Notice If you experience issues/errors a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".
