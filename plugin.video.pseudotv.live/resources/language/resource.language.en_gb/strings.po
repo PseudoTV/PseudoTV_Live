@@ -653,7 +653,7 @@ msgid "Collecting"
 msgstr ""
 
 msgctxt "#30160"
-msgid "Parse Kodi Library"
+msgid "Parsing Kodi"
 msgstr ""
 
 msgctxt "#30161"
@@ -741,7 +741,7 @@ msgid "Resources"
 msgstr ""
 
 msgctxt "#30181"
-msgid "IPTV Manager"
+msgid "Open Settings (IPTV Manager)"
 msgstr ""
 
 msgctxt "#30182"

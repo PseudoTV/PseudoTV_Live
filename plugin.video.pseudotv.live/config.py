@@ -50,11 +50,6 @@ class Config:
     def openChannelManager(self):
         chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", config=self)
         del chmanager
-
-            
-    def getLibraryItems(self, type, enabled=False):
-        # if self.library.reset():
-        return self.library.getLibraryItems(type, enabled)
             
 
     def autoTune(self):
@@ -76,15 +71,15 @@ class Config:
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
         escape = autoTune is not None
         with busy_dialog(escape):
-            items = self.getLibraryItems(type)
+            items = self.library.getLibraryItems(type)
             if not items: 
                 if autoTune is None:
-                    self.library.clearLibraryItems(type)
+                    self.library.clearLibraryItems(type) #clear stale meta type
                     notificationDialog(LANGUAGE(30103)%(type))
                 return False
-                
-            pitems = self.getLibraryItems(type,enabled=True) # existing predefined
+            pitems = self.library.getLibraryItems(type,enabled=True) # existing predefined
             listItems = (PoolHelper().poolList(self.library.buildLibraryListitem,items,type))
+        
         if autoTune is None:
             select = selectDialog(listItems,'Select %s'%(type),preselect=findItemsIn(listItems,pitems,val_key='name'))
         else:
@@ -104,7 +99,7 @@ class Config:
         return True
         # predefined   = self.channels.getPredefinedChannels()
         # libraryItems = []
-        # libraryItems.extend([self.getLibraryItems(type,enabled=True) for type in CHAN_TYPES])
+        # libraryItems.extend([self.library.getLibraryItems(type,enabled=True) for type in CHAN_TYPES])
         # if len(predefined) > 0 and len(libraryItems) == 0:
         # if yesnoDialog
        
@@ -124,13 +119,16 @@ class Config:
         else: types = [type]
         for type in types:
             if type == LANGUAGE(30033): self.buildImports()            
-            else: libraryItems[type] = self.getLibraryItems(type, enabled=True)
+            else: libraryItems[type] = self.library.getLibraryItems(type, enabled=True)
         return self.writer.buildPredefinedChannels(libraryItems)
         
         
     def buildImports(self):#convert enabled imports to channel items.
-        return self.writer.buildImports(self.recommended.getRecommendedbyType(type='iptv'), self.getLibraryItems(LANGUAGE(30033), enabled=True))
-        
+        imports  = self.recommended.findbyType(type='iptv')
+        existing = self.library.getLibraryItems(LANGUAGE(30033), enabled=True)
+        items = [item for item in imports for exists in existing if item['name'] == exists['name']]
+        return self.writer.buildImports(items)
+
         
     def clearPredefined(self):
         self.log('clearPredefined')
@@ -189,7 +187,6 @@ class Config:
             xbmc.executebuiltin("ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media))
             # com = "ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%('special://videoplaylists/',media)
             # # com = "ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media)
-            # print('openEditor',com)
             # xbmc.executebuiltin(com)
             # xbmc.executebuiltin("ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media))
         # return xbmc.executebuiltin("Action(Enter)")
@@ -216,8 +213,7 @@ class Config:
             notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
             
-        if param == None:                     
-            return REAL_SETTINGS.openSettings()
+        if param == None: pass #opensettings                    
         elif param.startswith('Channel_Manager'):
             return self.openChannelManager()
         elif  param.startswith('Select_Resource'):

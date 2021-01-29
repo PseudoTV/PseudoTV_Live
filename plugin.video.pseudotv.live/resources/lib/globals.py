@@ -459,12 +459,18 @@ def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=Non
                            'icon' : iconImage})
     return listitem
 
+def splitall(plugin):
+    plugin = [plugin]
+    while not MY_MONITOR.abortRequested():
+        last   = plugin
+        plugin = os.path.split(plugin[0])
+        if not b[0]: break
+    return last[0]
+    
 def getPluginMeta(plugin):
     log('globals: plugin = %s'%(plugin))
     try:
-        if '?' in plugin: plugin = plugin.split('?')[0]
-        if plugin.startswith(('plugin://','resource://')):
-            plugin = plugin.replace("plugin://","").replace("resource://","").strip('/')
+        if plugin.startswith(('plugin://','resource://')): plugin = splitall(plugin)
         pluginID = xbmcaddon.Addon(plugin)
         return {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
     except Exception as e: log("globals, Failed! %s"%(e), xbmc.LOGERROR)

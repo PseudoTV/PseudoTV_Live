@@ -21,7 +21,6 @@ import os, shutil, codecs, threading, random
 
 from kodi_six import xbmc, xbmcvfs
 
-VFS_AVAILABLE              = True
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
 FILE_LOCK_NAME             = "FileLock.dat"
 DEFAULT_ENCODING           = "utf-8"

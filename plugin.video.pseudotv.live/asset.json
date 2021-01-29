@@ -1,0 +1,31 @@
+{
+	"iptv": {
+		"type": "iptv",
+		"name": "",
+		"icon": "",
+		"m3u": {
+			"path": "",
+			"slug": ""
+		},
+		"xmltv": {
+			"path": ""
+		},
+		"id": ""
+	},
+	"vod": [{
+		"type": "vod",
+		"name": "",
+		"description": "",
+		"icon": "",
+		"path": "",
+		"id": ""
+	}],
+	"live": [{
+		"type": "live",
+		"name": "",
+		"description": "",
+		"icon": "",
+		"path": "",
+		"id": ""
+	}]
+}

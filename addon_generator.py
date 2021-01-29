@@ -28,8 +28,8 @@ import xml.etree.ElementTree
 from zipfile import ZipFile
 from shutil import copyfile, rmtree
 
-CHKPATH    = 'C:/GitHub/addon-check/'
-GITPATH    = 'C:/GitHub/PseudoTV_Live/'
+CHKPATH    = 'D:/GitHub/addon-check/'
+GITPATH    = 'D:/GitHub/PseudoTV_Live/'
 ZIPPATH    = os.path.join(GITPATH,'zips','')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
 
@@ -68,8 +68,10 @@ class Generator(object):
         for root, dirnames, filenames in os.walk(GITPATH):
             for dirname in dirnames:
                 if dirname == '__pycache__':
-                    print("removing: " + dirname)
-                    rmtree(os.path.join(root, dirname))
+		    try:
+                        rmtree(os.path.join(root, dirname))
+                        print("removing: " + dirname)
+                    except: pass
             for filename in filenames:
                 if filename.endswith(DELETE_EXT):
                     print("removing: " + filename)

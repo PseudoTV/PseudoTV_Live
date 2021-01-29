@@ -193,7 +193,6 @@ class Plugin:
         
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
-        self.playlist.clear()
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
@@ -209,6 +208,7 @@ class Plugin:
             progress      = nowitem['progress']
             runtime       = nowitem['runtime']
             self.log('playChannel, nowitem = %s'%(nowitem))
+            self.playlist.clear()
             
             if (progress > getSettingInt('Seek_Tolerance')):
                 # seekThreshold = int((runtime * 60) - getSettingInt('Seek_Threshold'))

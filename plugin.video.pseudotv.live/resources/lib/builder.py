@@ -78,12 +78,13 @@ class Builder:
         self.log('getChannels')
         if self.writer.reset(): 
               return self.channels.getChannels()
-        else: return None
+        self.log('getChannels, initializing writer / parser failed!')
+        return None
 
 
     def buildService(self):
         if not self.writer.reset(): 
-            self.log('buildService, initializing m3u/xmltv parser failed!')
+            self.log('buildService, initializing writer / parser failed!')
             return False
             
         if self.writer.isClient():
@@ -105,6 +106,7 @@ class Builder:
         self.ruleList     = self.rules.loadRules(channels)
         
         for idx, channel in enumerate(channels):
+            if self.myMonitor.waitForAbort(0.01): break
             channel       = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName = channel['name']
             self.progress = (idx*100//len(channels))
@@ -268,8 +270,8 @@ class Builder:
 
                 if file.startswith(('plugin://','upnp://','pvr://')):
                     accurateDuration = False
-                else: 
-                    accurateDuration = self.accurateDuration
+                else: accurateDuration = self.accurateDuration
+                self.log("buildFileList, accurateDuration = %s"%(accurateDuration))
                 dur = self.jsonRPC.getDuration(file, item, accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
@@ -347,8 +349,7 @@ class Builder:
                 # if type == 'trailers': #append local trailers to list.
                     # resourceMap[type]['fileList'] = self.jsonRPC.buildLocalTrailers(items=validItems)
                 [resourceMap[type]['fileList'].extend(self.jsonRPC.buildBCTresource(bctPath)) for bctPath in bctPaths]
-                print(type,resourceMap[type]['fileList'])
-                
+
             # tmpFileList = fileList.copy()
             # for idx, item in enumerate(tmpFileList):
                 # file  = item.get('file','')

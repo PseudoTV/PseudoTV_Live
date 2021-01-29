@@ -389,13 +389,13 @@ class JSONRPC:
         
         
     def getDuration(self, path, item={}, accurate=None):
-        if accurate is None:
-            accurate = getSettingBool('Duration_Type') == 1
+        if accurate is None: accurate = getSettingBool('Duration_Type') == 1
         self.log("getDuration, accurate = %s, path = %s"%(accurate,path))
         
         duration = 0
         runtime  = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
-        if path.startswith(('plugin://','upnp://','pvr://')): return runtime
+        if path.startswith(('plugin://','upnp://','pvr://')): 
+            return runtime
         
         if (runtime == 0 | accurate):
             if path.startswith('stack://'): #handle "stacked" videos:

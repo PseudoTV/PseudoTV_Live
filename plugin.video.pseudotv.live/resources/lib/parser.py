@@ -240,13 +240,18 @@ class Writer:
         return False
         
         
-    def buildImports(self, items, imports):
+    def buildImports(self, items):
         self.log('buildImports')
-        self.channels.setImports([item['data'] for item in items for eimport in imports if ((item.get('data',{}).get('name','').startswith(eimport.get('name'))) and (item['data'].get('type','').lower() == 'iptv'))])
+        self.channels.setImports(items)
         return self.channels.save()
 
 
     def buildPredefinedChannels(self, libraryItems):  
+        if (PoolHelper().poolList(self.buildPredefinedChannel,list(libraryItems.keys()),libraryItems)):
+            return self.saveChannels()
+
+
+    def buildPredefinedChannel(self, data):
         # convert enabled library.json into channels.json items
         # types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #ignore Imports, use buildImports
         def findChannel():
@@ -263,34 +268,34 @@ class Writer:
             # return list(set(range(start,stop)).difference(set(blist))) #set bug with even array in bytes? 
             return [num for num in range(start,stop) if num not in enumbers]
             
-        for type in libraryItems.keys():
-            self.log('buildPredefinedChannels, type = %s'%(type))
-            echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels())) # existing channels, avoid duplicates, aid in removal.
-            enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] #existing channel numbers
-            numbers   = iter(buildAvailableRange()) #list of available channel numbers 
-            leftovers = echannels.copy()
-            items     = libraryItems.get(type,[])
-            for item in items:
-                citem = self.channels.getCitem()
-                citem.update({'name'   :getChannelSuffix(item['name'], type),
-                              'path'   :item['path'],
-                              'type'   :item['type'],
-                              'logo'   :item['logo'],
-                              'group'  :[type]})
-                              
-                citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
-                citem['catchup'] = ('vod' if not citem['radio'] else '')
-                match, eitem = findChannel()
-                if match is not None: #update new citems with existing values.
-                    leftovers.remove(eitem)
-                    for key in ['rules','number','favorite','page']: citem[key] = eitem[key]
-                else: 
-                    citem['number'] = next(numbers,0)
-                citem['id'] = getChannelID(citem['name'], citem['path'], citem['number'])
-                self.channels.add(citem)
-            [self.removeChannel(eitem) for eitem in leftovers] #remove channels unselected.
-        return self.saveChannels()
-         
+        type, libraryItems = data
+        self.log('buildPredefinedChannel, type = %s'%(type))
+        echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels())) # existing channels, avoid duplicates, aid in removal.
+        enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] #existing channel numbers
+        numbers   = iter(buildAvailableRange()) #list of available channel numbers 
+        leftovers = echannels.copy()
+        items     = libraryItems.get(type,[])
+        for item in items:
+            citem = self.channels.getCitem()
+            citem.update({'name'   :getChannelSuffix(item['name'], type),
+                          'path'   :item['path'],
+                          'type'   :item['type'],
+                          'logo'   :item['logo'],#todo channels.json no dynamic logo meta, only manager assigned logos.
+                          'group'  :[type]})
+                          
+            citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
+            citem['catchup'] = ('vod' if not citem['radio'] else '')
+            match, eitem = findChannel()
+            if match is not None: #update new citems with existing values.
+                leftovers.remove(eitem)
+                for key in ['rules','number','favorite','page']: citem[key] = eitem[key]
+            else: 
+                citem['number'] = next(numbers,0)
+            citem['id'] = getChannelID(citem['name'], citem['path'], citem['number'])
+            self.channels.add(citem)
+        [self.removeChannel(eitem) for eitem in leftovers] #remove channels unselected
+        return True
+        
         
     def autoPagination(self, id, path, limits={}):
         cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
@@ -714,6 +719,7 @@ class XMLTV:
     @staticmethod
     def cleanMPAA(str1):
         #todo regex, detect other region rating formats
+        # re.compile(':(.*)', re.IGNORECASE).search(str1.split('Rated ')[1])
         try: return str1.split('Rated ')[1]
         except: return str1
 
