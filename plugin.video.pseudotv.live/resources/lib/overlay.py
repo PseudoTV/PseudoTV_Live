@@ -1,4 +1,4 @@
-  # Copyright (C) 2020 Lunatixz
+  # Copyright (C) 2021 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -27,23 +27,19 @@ class Player(xbmc.Player):
         
     def onPlayBackStarted(self):
         self.overlay.reload()
-        # if self.overlay.reload() and self.isPlaying():
-            # xbmc.executebuiltin("ActivateWindow(fullscreenvideo)")
 
 
     def onAVChange(self):
-        self.onPlayBackEnded()
+        self.overlay.cancelOnNext()
         
         
     def onPlayBackStopped(self):
-        self.onPlayBackEnded()
+        self.overlay.cancelOnNext()
         
         
     def onPlayBackEnded(self):
-        self.overlay.onNext.setVisible(False)
-        if self.overlay.onNextToggleThread.is_alive(): 
-            self.overlay.onNextToggleThread.cancel()
-
+        self.overlay.cancelOnNext()
+    
 
 class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
@@ -62,7 +58,6 @@ class Overlay(xbmcgui.WindowXML):
         self.onNextThread       = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
         self.onNextToggleThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextToggle)
         
-        #place global values here before rules.
         self.showChannelBug     = getSettingBool('Enable_ChannelBug')
         self.showOnNext         = getSettingBool('Enable_OnNext')
         
@@ -81,45 +76,75 @@ class Overlay(xbmcgui.WindowXML):
                 parameter = rule.runAction(action, self, parameter)
         return parameter
 
-
+    
     def onInit(self, refresh=False):
         self.log('onInit, refresh = %s'%(refresh))
-        if not refresh:
-            self.myPlayer         = Player()
-            self.myPlayer.overlay = self
+        setProperty('OVERLAY.visible','nope')
         
-            self.onNext = self.getControl(41003)
-            self.onNext.setVisible(False)
+        self.onNext = self.getControl(41003)
+        self.onNext.setVisible(False)
         
-            self.channelbug = self.getControl(41004)
-            self.channelbug.setVisible(False)
+        self.channelbug = self.getControl(41004)
+        self.channelbug.setVisible(False)
         
-        self.container   = self.getControl(40000)
+        self.myPlayer = Player()
+        self.myPlayer.overlay = self
+    
+        setProperty('OVERLAY.visible','okay')
+        self.container = self.getControl(40000)
         self.container.reset()
         
+        # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
         # self.videoWindow = self.getControl(41000)
         # self.videoWindow.setPosition(0, 0)
         # self.videoWindow.setHeight(self.videoWindow.getHeight())
         # self.videoWindow.setWidth(self.videoWindow.getWidth())
         
-        self.listitems   = []
-        self.pvritem     = {}
-        
-        if self.load():
+        if self.load(): 
             if self.showChannelBug:
                 self.bugToggle()
-                
             if self.showOnNext:
                 self.onNextChk()
-        else:
-            self.closeOverlay()
+        else: self.closeOverlay()
+               
 
-
-    def reset(self):
-        self.log('reset')
-        self.onInit(refresh=True)
+    def load(self):
+        self.log('load')
+        try:
+            self.pvritem = getCurrentChannelItem()
+            if not self.pvritem or not isPseudoTV(): 
+                return False
+                
+            self.citem   = self.pvritem.get('citem',{})
+            self.container.reset()
+            
+            self.isPlaylist  = self.pvritem.get('isPlaylist',False)
+            self.channelbug.setImage(self.pvritem.get('icon',LOGO))
         
+            self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
+            self.nextitems   = self.pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+            
+            self.nowwriter   = getWriter(self.pvritem.get('broadcastnow',{}).get('writer',{}))
+            self.nowwriter.get('art',{})['thumb'] = getThumb(self.nowwriter) #unify artwork
+            
+            self.nextwriters = []
+            for nextitem in self.nextitems: 
+                nextitem = getWriter(nextitem.get('writer',{}))
+                nextitem.get('art',{})['thumb'] = getThumb(nextitem) #unify artwork
+                self.nextwriters.append(nextitem)
 
+            self.listitems   = [buildItemListItem(self.nowwriter)]
+            self.listitems.extend([buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
+            self.container.addItems(self.listitems)
+                        
+            self.ruleList    = self.rules.loadRules([self.citem])
+            self.runActions(RULES_ACTION_OVERLAY, self.citem)
+            return True
+        except Exception as e: 
+            self.log("load, Failed! " + str(e), xbmc.LOGERROR)
+            return False
+     
+     
     def reload(self):
         self.log('reload, isPlaylist = %s'%(self.isPlaylist))
         if self.isPlaylist:
@@ -127,39 +152,31 @@ class Overlay(xbmcgui.WindowXML):
         else:
             return self.load()
           
-
-    def load(self):
-        self.log('load')
+          
+    def nextListitem(self):
         try:
-            self.pvritem = getCurrentChannelItem()
-            if not self.pvritem or not isPseudoTV(): return False
+            self.log('nextListitem')
+            self.listitems.pop(0)
             self.container.reset()
-            
-            self.citem       = self.pvritem.get('citem',{})
-            self.isPlaylist  = self.pvritem.get('isPlaylist',False)
-            self.channelbug.setImage(self.pvritem.get('icon',LOGO))
-        
-            self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
-            self.nextitems   = self.pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
-            self.nowwriter   = getWriter(self.pvritem.get('broadcastnow',{}).get('writer',{}))
-      
-            self.ruleList    = self.rules.loadRules([self.citem])
-            self.runActions(RULES_ACTION_OVERLAY, self.citem)
-            
-            self.listitems   = [buildItemListItem(self.nowwriter)]
-            self.listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',{}))) for nextitem in self.nextitems])
             self.container.addItems(self.listitems)
             return True
         except Exception as e: 
-            self.log("load, Failed! " + str(e), xbmc.LOGERROR)
+            self.log("nextListitem, Failed! " + str(e), xbmc.LOGERROR)
             return False
-           
+
 
     def getTimeRemaining(self):
         try:    return (sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('Player.TimeRemaining(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
         except: return 0
 
-
+        
+    def cancelOnNext(self):
+        self.log('cancelOnNext')
+        self.onNext.setVisible(False)
+        if self.onNextToggleThread.is_alive(): 
+            self.onNextToggleThread.cancel()
+        
+        
     def onNextChk(self):
         try:
             if self.onNextThread.is_alive(): 
@@ -174,8 +191,8 @@ class Overlay(xbmcgui.WindowXML):
             
             
     def onNextToggle(self, state=True):
-        self.log('onNextToggle, state = %s'%(state))
         try:
+            self.log('onNextToggle, state = %s'%(state))
             if self.onNextToggleThread.is_alive(): 
                 self.onNextToggleThread.cancel()
             self.onNext.setVisible(state)
@@ -188,8 +205,8 @@ class Overlay(xbmcgui.WindowXML):
             
 
     def bugToggle(self, state=True):
-        self.log('bugToggle, state = %s'%(state))
         try:
+            self.log('bugToggle, state = %s'%(state))
             if self.bugToggleThread.is_alive(): 
                 self.bugToggleThread.cancel()
             self.channelbug.setVisible(state)
@@ -201,18 +218,6 @@ class Overlay(xbmcgui.WindowXML):
         except Exception as e: self.log("bugToggle, Failed! " + str(e), xbmc.LOGERROR)
 
       
-    def nextListitem(self):
-        try:
-            self.log('nextListitem, listitems = %s'%(len(self.listitems)))
-            self.listitems.pop(0)
-            self.container.reset()
-            self.container.addItems(self.listitems)
-            return True
-        except Exception as e: 
-            self.log("nextListitem, Failed! " + str(e), xbmc.LOGERROR)
-            return False
-        
-        
     def closeOverlay(self):
         self.log('closeOverlay')
         threads = [self.bugToggleThread,self.onNextToggleThread,self.onNextThread]

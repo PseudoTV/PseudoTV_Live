@@ -129,7 +129,7 @@ msgid "Channel Manager"
 msgstr ""
 
 msgctxt "#30028"
-msgid "Change M3U/XMLTV/LOGO Location"
+msgid "Centralize file location"
 msgstr ""
 
 msgctxt "#30029"
@@ -137,7 +137,7 @@ msgid "%s is busy, try again later..."
 msgstr ""
 
 msgctxt "#30030"
-msgid "Insert Fillers (Bumpers/Commercials/Trailers/Ratings)"
+msgid "Insert Fillers (not available in PVR Callback mode)"
 msgstr ""
 
 msgctxt "#30031"
@@ -645,15 +645,15 @@ msgid "Music"
 msgstr ""
 
 msgctxt "#30158"
-msgid "Parsing Kodi Library"
+msgid "Parsing Library"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Collecting"
+msgid "Building"
 msgstr ""
 
 msgctxt "#30160"
-msgid "Parsing Kodi"
+msgid "Parsing"
 msgstr ""
 
 msgctxt "#30161"
@@ -754,4 +754,40 @@ msgstr ""
 
 msgctxt "#30184"
 msgid "Filter channels using a common id (Optional)."
+msgstr ""
+
+msgctxt "#30185"
+msgid "Include 3D Media"
+msgstr ""
+
+msgctxt "#30186"
+msgid "Fillers"
+msgstr ""
+
+msgctxt "#30187"
+msgid "Enable Ratings"
+msgstr ""
+
+msgctxt "#30188"
+msgid "Enable Network Bumpers"
+msgstr ""
+
+msgctxt "#30189"
+msgid "Enable Trailers"
+msgstr ""
+
+msgctxt "#30190"
+msgid "Enable Commercials"
+msgstr ""
+
+msgctxt "#30191"
+msgid "Install Resources"
+msgstr ""
+
+msgctxt "#30192"
+msgid "already installed"
+msgstr ""
+
+msgctxt "#30193"
+msgid "Installing"
 msgstr ""

@@ -1,11 +1,15 @@
+v.0.2.7
+-Added Install resources action to filler settings.
+
 v.0.2.6
 -Warning Requires Kodi Matrix Nightly (1/12/21) or greater.
 -Fixed custom m3u/xmltv importing.
 -Tweaked settings menu.
 -Improved library parsing.
+-Improved logo parsing.
 -Improved importing "Recommended Services".
 -Improved custom EPG genre.xml creation.
-
+-Added 3D media Global filter.
 
 v.0.2.5
 -Notice If you experience issues/errors a "Clean Start" is required! Open plugin, select "Utilities" and click "Clean Start".

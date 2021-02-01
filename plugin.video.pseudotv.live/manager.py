@@ -386,7 +386,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         radio = (channelData.get('radio','') or (channelData['type'] == LANGUAGE(30097) or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
         self.toggleSpinner(self.itemList,True)
-        fitem = self.jsonRPC.existsVFS(path, media)
+        fitem = self.jsonRPC.playableVFS(path, media)
         if fitem is not None:
             found = True
             seek  = fitem.get('seek',True)
@@ -617,6 +617,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def closeManager(self):
         self.log('closeManager')
         setProperty('Config.Running','False')
+        # if len(items) > 0: setPropertyBool('has.Userdefined',True)
         setBusy(False)
         self.close()
 

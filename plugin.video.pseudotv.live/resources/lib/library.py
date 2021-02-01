@@ -79,7 +79,7 @@ class Library:
             self.log('save, saving to %s'%(LIBRARYFLE))
             fle.write(dumpJSON(self.libraryItems, idnt=4, sortkey=False))
             fle.close()
-        return self.reset() #force memory/file parity 
+        return self.reset() #force i/o parity 
 
         
     def setPredefinedSelection(self, type, items):
@@ -90,23 +90,24 @@ class Library:
        
     def getLibraryItems(self, type, enabled=False):
         self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
+        def chkEnabled(item):
+            if item.get('enabled',False): return item
+            return None
         items = self.libraryItems.get('library',{}).get(type,[])
-        if enabled: items = list(filter(lambda k:k.get('enabled',False) == True, items))
+        if enabled: items = PoolHelper().poolList(chkEnabled,items)
         return sorted(items, key=lambda k: k['name'])
         
 
     def setLibraryItems(self, type, items):
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
-        self.libraryItems['library'][type] = sorted(items, key=lambda k:k['name'])
+        self.libraryItems['library'][type] = (sorted(items, key=lambda k:k['name']))
         return self.setPredefinedSelection(type,self.getLibraryItems(type,enabled=True))#set 'Select_' setting count
 
 
     def clearLibraryItems(self, type=None):
         log('clearLibraryItems, type = %s'%(type))
-        if type is None:
-            types = CHAN_TYPES
-        else: 
-            types = [type]
+        if type is None: types = CHAN_TYPES
+        else: types = [type]
         for type in types: 
             libraryItems = self.getLibraryItems(type) 
             for item in libraryItems: 
@@ -131,41 +132,50 @@ class Library:
         log('chkLibraryItems, type = %s'%(type))
         hasContent = False
         if type is None: types = CHAN_TYPES.copy()
-        else: types = [type]
-        for type in types:
+        else:            types = [type]
+        
+        def setSettingStates(type):
             libraryItems = self.getLibraryItems(type) #all items, check if they exist to enable settings option.
             if libraryItems and len(libraryItems) > 0:
                 hasContent = True
                 setProperty('has.%s'%(type.replace(' ','_')),'true')
             else: 
                 setProperty('has.%s'%(type.replace(' ','_')),'false')
+                
+        PoolHelper().poolList(setSettingStates,types)
         blackList = self.recommended.getBlackList()
         if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
         setSetting('Clear_BlackList','|'.join(blackList))
-        # return hasContent
         return True
         
  
+    @use_cache(1)
     def getNetworks(self):
         return self.jsonRPC.getTVInfo()[0]
         
         
+    @use_cache(1)
     def getTVGenres(self):
         return self.jsonRPC.getTVInfo()[1]
  
  
+    @use_cache(1)
+    def getTVShows(self):
+        return self.jsonRPC.getTVInfo()[2]
+ 
+ 
+    @use_cache(1)
     def getMovieStudios(self):
         return self.jsonRPC.getMovieInfo()[0]
         
         
+    @use_cache(1)
     def getMovieGenres(self):
         return self.jsonRPC.getMovieInfo()[1]
         
         
     def getMixedGenres(self):
-        TVGenres    = self.getTVGenres()
-        MovieGenres = self.getMovieGenres()
-        return [tv for tv in TVGenres for movie in MovieGenres if tv.lower() == movie.lower()]
+        return [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.lower() == movie.lower()]
         
         
     def getMixed(self):
@@ -176,9 +186,9 @@ class Library:
  
     def getfillItems(self):
         log('getfillItems')
-        busy = ProgressBGDialog(message='%s'%(LANGUAGE(30158)))
+        busy  = ProgressBGDialog(message='%s'%(LANGUAGE(30158)))
         funcs = {LANGUAGE(30002):self.getNetworks,
-                 LANGUAGE(30003):self.jsonRPC.fillTVShows,
+                 LANGUAGE(30003):self.getTVShows,
                  LANGUAGE(30004):self.getTVGenres,
                  LANGUAGE(30005):self.getMovieGenres,
                  LANGUAGE(30007):self.getMovieStudios,
@@ -187,30 +197,42 @@ class Library:
                  LANGUAGE(30097):self.jsonRPC.fillMusicInfo,
                  LANGUAGE(30026):self.recommended.fillRecommended,
                  LANGUAGE(30033):self.recommended.fillImports}
-        for idx, type in enumerate(CHAN_TYPES):
-            busy = ProgressBGDialog(((idx+1)*100//len(CHAN_TYPES)), busy, '%s'%(LANGUAGE(30158)))
-            yield type,funcs[type]()
-        
+               
+        def parseMeta(data):
+            type, busy = data
+            busy = ProgressBGDialog(((CHAN_TYPES.index(type))*100//len(CHAN_TYPES)), busy, '%s'%(LANGUAGE(30158)))
+            return type,funcs[type]()
+        return busy, dict(PoolHelper().poolList(parseMeta,CHAN_TYPES,busy))
+    
         
     def fillLibraryItems(self):
-        #parse library for items, convert to library item, parse for logo and vfs path. save to library.json
-        fillItems = dict(self.getfillItems())
-        busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30159)))
-        for prog, type in enumerate(CHAN_TYPES):
-            if self.myMonitor.waitForAbort(0.01): break
+        #parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
+        busy, fillItems = self.getfillItems()
+        # busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30160)))
+        def setItem(data):
+            type, busy = data
+            prog = CHAN_TYPES.index(type)
+            if self.myMonitor.waitForAbort(0.01):
+                busy = ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30158)))   
+                return None
+                
             items     = []
             fillItem  = fillItems.get(type,[])
-            progress  = (prog*100//len(CHAN_TYPES))
-            busy = ProgressBGDialog(progress, busy, '%s %s'%(LANGUAGE(30159),type))
+            progress  = 99#(prog*100//len(CHAN_TYPES))
+            busy = ProgressBGDialog(progress, busy, '%s %s'%(LANGUAGE(30160),type))
             existing  = self.getLibraryItems(type, enabled=True)
             for idx, item in enumerate(fillItem):
-                if self.myMonitor.waitForAbort(0.01): break
+                if self.myMonitor.waitForAbort(0.01):
+                    busy = ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30158)))   
+                    return None
+                    
                 busy = ProgressBGDialog(progress, busy, '%s %s %s'%(LANGUAGE(30159),type,(idx*100//len(fillItem)))+'%')
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
                     if not name: 
                         log('fillLibraryItems, type = %s no name found item = %s'%(type,item))
                         continue
+                        
                 else: name = item
                 logo = self.jsonRPC.getLogo(name, type)
                 if isinstance(item,dict): logo = (item.get('icon','') or logo)
@@ -222,7 +244,8 @@ class Library:
                 items.append(tmpItem)
                 log('fillLibraryItems, type = %s, tmpItem = %s'%(type,tmpItem))
             log('fillLibraryItems, type = %s, items = %s'%(type,len(items)))
-            self.setLibraryItems(type,items)         
+            self.setLibraryItems(type,items) 
+        PoolHelper().poolList(setItem,CHAN_TYPES,busy)          
         busy = ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30158)))   
         return self.save()
         
@@ -294,19 +317,24 @@ class Recommended:
         
       
     def searchRecommendedAddons(self):
-        self.log('searchRecommendedAddons')
-        return (PoolHelper().poolList(self.searchRecommendedAddon, self.jsonRPC.getAddons()))
+        blackList = self.getBlackList()
+        addonList = list(filter(lambda k:k.get('addonid','') not in blackList, self.jsonRPC.getAddons()))
+        return (PoolHelper().poolList(self.searchRecommendedAddon, addonList))
         
         
     def searchRecommendedAddon(self, addon):
-        addonid   = addon.get('addonid','')
-        blackList = self.getBlackList()
-        if not addonid in blackList:
+        addonid       = addon.get('addonid','')
+        cacheName     = '%s.searchRecommendedAddon.%s'%(ADDON_ID,addonid)
+        cacheResponse = self.cache.get(cacheName)
+        if not cacheResponse:
             data = xbmcgui.Window(10000).getProperty(REG_KEY%(addonid))
             if data:
                 self.log('searchRecommendedAddon, found addonid = %s, payload = %s'%(addonid,data))
-                return {addonid:{'id':addonid,'data':loadJSON(data),'meta':getPluginMeta(addonid)}}
-            
+                cacheResponse = {addonid:{"id":addonid,"data":loadJSON(data),"meta":getPluginMeta(addonid)}}
+                self.cache.set(cacheName, dumpJSON(cacheResponse), checksum=len(dumpJSON(cacheResponse)), expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
+                return cacheResponse
+        else: return loadJSON(cacheResponse)
+
 
     def findbyType(self, type='iptv'):
         self.log('findbyType, type = %s'%(type))
@@ -322,20 +350,18 @@ class Recommended:
 
 
     def fillRecommended(self):
+        tmpLST = []
         whiteList = self.getWhiteList()
         recommendedAddons = self.searchRecommendedAddons()
         items = sorted((item.get(addonid) for item in recommendedAddons for addonid in whiteList if item.get(addonid,{})),key=lambda x:x['id'])
-        items = [item['data'][key] for item in items for key in item['data'].keys() if key != 'iptv']
-        try:
-            items = sorted(items[0],key=lambda x:x.get('name'))
-            items = sorted(items,key=lambda x:x['id'])
-        except: pass #empty list, lazy exception
-        self.log('findRecommended, found = %s'%(len(items)))
-        return items
+        [tmpLST.extend(item['data'][key]) for item in items for key in item['data'].keys() if key != 'iptv']
+        tmpLST = sorted(tmpLST,key=lambda x:x.get('name'))
+        tmpLST = sorted(tmpLST,key=lambda x:x['id'])
+        self.log('findRecommended, found = %s'%(len(tmpLST)))
+        return tmpLST
 
 
     def importPrompt(self):
-        self.log('importPrompt')
         ignoreList = self.getWhiteList()
         ignoreList.extend(self.getBlackList())
         recommendedAddons = self.searchRecommendedAddons()

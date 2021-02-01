@@ -24,6 +24,12 @@ from resources.lib             import xmltv
 
 GLOBAL_FILELOCK = FileLock()
 
+class Vault:
+    def __init__(self):
+        self.m3uList      = {}
+        self.xmltvList    = {}
+        self.channelList  = {}
+        
 class Writer:
     def __init__(self, cache=None, builder=None):
         self.log('__init__')
@@ -31,16 +37,16 @@ class Writer:
             self.cache = SimpleCache()
         else: 
             self.cache = cache
-            
-        self.m3u           = M3U(self.cache)
-        self.xmltv         = XMLTV(self.cache)
-        self.channels      = Channels(self.cache)
+        
+        self.vault        = Vault()
+        self.m3u          = M3U(self.cache, self.vault)
+        self.xmltv        = XMLTV(self.cache ,self.vault)
+        self.channels     = Channels(self.cache, self.vault)
         
         if builder:
-            self.builder  = builder
-            self.dialog   = self.builder.dialog
-            self.progress = self.builder.progress
-            self.chanName = self.builder.chanName
+            self.dialog   = builder.dialog
+            self.progress = builder.progress
+            self.chanName = builder.chanName
         else:
             self.dialog   = None
             self.progress = 0
@@ -162,17 +168,17 @@ class Writer:
             item['desc']        = file['plot']
             item['length']      = file['duration']
             item['sub-title']   = (file.get('episodetitle','') or '')
-            item['rating']      = (file.get('mpaa','')         or 'NA')
+            item['rating']      = cleanMPAA(file.get('mpaa','')or 'NA')
             item['stars']       = (file.get('rating','')       or '0')
             item['categories']  = (file.get('genre','')        or ['Undefined'])
             item['type']        = file.get('type','video')
             item['new']         = int(file.get('playcount','1')) == 0
             item['thumb']       = getThumb(file,getSettingInt('EPG_Artwork'))
             file['art']['thumb']= getThumb(file,{0:1,1:0}[getSettingInt('EPG_Artwork')]) #unify thumbnail artwork, opposite of EPG_Artwork
-            item['date']        = (file.get('firstaired','') or file.get('premiered','') or file.get('releasedate','') or file.get('originaldate','') or None)
+            item['date']        = file.get('premiered','')
             
             if catchup:
-                item['catchup-id'] = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['title']),urllib.parse.quote(encodeString(file.get('file',''))),urllib.parse.quote(citem['id']),str(item['radio']))
+                item['catchup-id'] = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['title']),urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),urllib.parse.quote(citem['id']),str(item['radio']))
             
             if (item['type'] != 'movie' and (file.get("episode",0) > 0)):
                 item['episode-num'] = 'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))
@@ -282,7 +288,7 @@ class Writer:
                           'type'   :item['type'],
                           'logo'   :item['logo'],#todo channels.json no dynamic logo meta, only manager assigned logos.
                           'group'  :[type]})
-                          
+            citem['group']   = list(set(citem['group']))
             citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
             citem['catchup'] = ('vod' if not citem['radio'] else '')
             match, eitem = findChannel()
@@ -306,11 +312,8 @@ class Writer:
             limits = (limits or self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0})
         else:
             msg = 'set'
-            try:
-                if self.channels.setPage(id, limits): 
-                    self.channels.save()
-            except: pass
-            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=28))
+            if self.channels.setPage(id, limits): self.channels.save()
+            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
 
@@ -329,13 +332,16 @@ class Writer:
 
 
 class Channels:
-    def __init__(self, cache=None):
+    def __init__(self, cache=None, vault=None):
         log('Channels: __init__')
         if cache is None:
             self.cache = SimpleCache()
         else: 
             self.cache = cache
 
+        if vault is not None: 
+            self.channelList = vault.channelList
+            
         self.channelList = self.getTemplate(ADDON_VERSION)
         self.channelList.update(self.load())
         self.isClient    = self.chkClient()
@@ -393,11 +399,10 @@ class Channels:
         log('Channels: setPage, id = %s, page = %s'%(id, page))
         channels = self.channelList['channels']
         idx, citem = self.findChannel({'id':id}, channels)
-        if idx is not None: 
-            channels[idx]['page'] = page
-            self.channelList['channels'] = channels
-            return True#todo save here
-        return False
+        if idx is None: return False
+        channels[idx]['page'] = page
+        self.channelList['channels'] = channels
+        return True
 
 
     def getImports(self):
@@ -408,7 +413,7 @@ class Channels:
     def setImports(self, imports):
         log('Channels: setImports, imports = %s'%(imports))
         self.channelList['imports'] = imports
-        return True #todo save here
+        return True
         
 
     def add(self, citem):
@@ -489,20 +494,23 @@ class Channels:
             log('Channels: save, saving to %s'%(CHANNELFLE))
             fle.write(dumpJSON(self.cleanSelf(self.channelList), idnt=4, sortkey=False))
             fle.close()
-        return self.reset() #force memory/file parity 
+        return self.reset() #force i/o parity 
 
 
 class XMLTV:
-    def __init__(self, cache=None):
+    def __init__(self, cache=None, vault=None):
         log('XMLTV: __init__')
         if cache is None:
             self.cache = SimpleCache()
         else: 
             self.cache = cache
             
+        if vault is not None: 
+            self.xmltvList = vault.xmltvList
+            
         self.xmltvList = {'data'       : self.loadData(),
                           'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
-                          'programmes' : self.sortProgrammes(self.cleanSelf(self.loadProgrammes(),'channel'))}
+                          'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
 
 
     def reset(self):
@@ -549,7 +557,7 @@ class XMLTV:
         log('XMLTV: loadProgrammes, file = %s'%file)
         try: 
             with fileLocker(GLOBAL_FILELOCK):
-                return self.sortProgrammes(self.cleanProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or []))
+                return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             log('XMLTV: loadProgrammes, failed! %s'%(e))
@@ -585,7 +593,6 @@ class XMLTV:
                 group.append(genre[0])
             proggenres.append(group)
             
-        # [print(list(genre)) for genre in program.get('category',[]) for program in self.xmltvList['programmes']]
         for genres in proggenres:
             for genre in genres:
                 if epggenres.get(genre,''):#{'Drama': '0x81'}
@@ -623,7 +630,7 @@ class XMLTV:
                 stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']])
                 stopTime = time.mktime(stopDate)
                 endtime[channel['id']] = stopTime
-                log('XMLTV: getEndtimes, channelid = %s, endtime = %s, epoch = %s'%(channel['id'], stopDate, stopTime))
+                log('XMLTV: getEndtimes, channelid = %s, endtime = %s'%(channel['id'], stopTime))
             except Exception as e: 
                 log("XMLTV: getEndtimes, Failed! " + str(e), xbmc.LOGERROR)
                 self.removeChannel(channel['id'])
@@ -675,8 +682,9 @@ class XMLTV:
         if item.get('catchup-id',''):
             pitem['catchup-id'] = item['catchup-id']
             
-        # if item['date']: #todo fix
-            # pitem['date'] = (datetime.datetime.strptime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d'),
+        if item.get('date',''):
+            try: pitem['date'] = (strpTime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d')
+            except: pass
 
         if item.get('new',False): 
             pitem['new'] = '' #write blank tag, tag == True
@@ -755,10 +763,9 @@ class XMLTV:
         
     @staticmethod
     def cleanProgrammes(programmes): # remove expired content
-        try: 
+        try:
             now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(hours=3) #allow some old programmes to avoid empty cells.
-            try:    tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT)  > now]
-            except: tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTZFORMAT) > now]
+            tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT)  > now]
         except Exception as e: 
             log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
@@ -807,7 +814,7 @@ class XMLTV:
             log('XMLTV: save, saving to %s'%(XMLTVFLE))
             writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
             self.buildGenres()
-        return self.reset() #force clean and memory/file parity 
+        return self.reset() #force clean and i/o parity 
         
 
     @staticmethod
@@ -819,12 +826,15 @@ class XMLTV:
             
 
 class M3U:
-    def __init__(self, cache=None):
+    def __init__(self, cache=None, vault=None):
         log('M3U: __init__')
         if cache is None:
             self.cache = SimpleCache()
         else: 
             self.cache = cache
+            
+        if vault is not None: 
+            self.m3uList = vault.m3uList
             
         self.m3uList   = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
                           'channels':self.cleanSelf(self.load())}
@@ -913,12 +923,12 @@ class M3U:
                          'label'  :re.compile(',(.*)'                , re.IGNORECASE).search(line),
                          'shift'  :re.compile('tvg-shift=\"(.*?)\"'  , re.IGNORECASE).search(line)}#todo shift timestamp delta to localtime
                 
-                item  = {'number' :chCount,
-                         'logo'   :LOGO,
-                         'radio'  :'false',
-                         'catchup':'',
-                         'group'  :[],
-                         'props'  :[]}
+                item  = {'number'    :chCount,
+                         'logo'      :LOGO,
+                         'radio'     :'false',
+                         'catchup'   :'',
+                         'group'     :[],
+                         'kodiprops' :[]}
                          
                 for key in match.keys():
                     if not match[key]: continue
@@ -940,7 +950,7 @@ class M3U:
                     if   nline.startswith('#EXTINF:'): break
                     elif nline.startswith('#KODIPROP:'):
                         prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                        if prop: item['props'].append(prop.group(1))
+                        if prop: item['kodiprops'].append(prop.group(1))
                     elif nline.startswith('##'): continue
                     elif not nline: continue
                     else: item['url'] = nline
@@ -967,17 +977,17 @@ class M3U:
                 fle.write(citem%(channel['number'],
                                  channel['id'],
                                  channel['name'],
-                                 channel.get('shift',0),#opt from user imports, not used internally.
+                                 channel.get('shift',0),#opt from user imports, not used internally. #todo shift timestamp
                                  channel['logo'],
                                  ';'.join(channel['group']),
                                  channel['radio'],
                                  channel['catchup'],
                                  channel['label']))
-                if channel.get('props',[]):
-                    fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['props']])))
+                if channel.get('kodiprops',[]):
+                    fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
-        return self.reset() #force clean and memory/file parity 
+        return self.reset() #force clean and i/o parity 
         
 
     def addChannel(self, item, update=False):

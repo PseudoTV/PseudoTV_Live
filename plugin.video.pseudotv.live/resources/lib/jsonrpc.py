@@ -48,7 +48,6 @@ class JSONRPC:
             self.writer    = builder.writer
         
         self.videoParser   = VideoParser()
-        
         self.resources     = Resources(self.cache, self)
         self.processThread = threading.Timer(15.0, self.myProcess.start)
 
@@ -76,42 +75,44 @@ class JSONRPC:
         return getPluginMeta(plugin)
 
 
-    @use_cache(28)
+    @use_cache(getSettingInt('Max_Days'))
     def getListDirectory(self, path, version=ADDON_VERSION):
         self.log('getListDirectory path = %s, version = %s'%(path,version))
         try:    return FileAccess.listdir(path)
         except: return [],[]
 
 
-    @use_cache(1)
-    def listVFS(self, path, version=None):
+    @use_cache(getSettingInt('Max_Days'))
+    def listVFS(self, path, media='video', force=False, version=ADDON_VERSION):
         self.log('listVFS path = %s, version = %s'%(path,version))
-        json_response = self.getDirectory('{"directory":"%s","properties":["duration","runtime"]}'%(path),cache=False)
-        dirs, files = [[],[]]
+        json_response = self.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path,media),cache=False).get('result',{}).get('files',[])
+        files = []
         for item in json_response:
             file = item['file']
             if item['filetype'] == 'file':
-                duration = self.parseDuration(file, item)
-                if duration == 0: continue
-                files.append({'label':item['label'],'duration':duration,'file':file})
-            else: dirs.append(file)
-        return dirs, files
+                dur = self.parseDuration(file, item)
+                if dur == 0 and not force: continue
+                files.append({'label':item['label'],'duration':dur,'path':path,'file':file})#xbmcvfs.translatePath(file)
+            else: files.extend(self.listVFS(file,media,force,version))
+        return files
 
 
-    @use_cache(1) # check for duration data.
-    def existsVFS(self, path, media='video'):
-        self.log('existsVFS path = %s, media = %s'%(path,media))
+    @use_cache(getSettingInt('Max_Days')) # check for duration data.
+    def playableVFS(self, path, media='video', chkSeek=False):
+        self.log('playableVFS, path = %s, media = %s'%(path,media))
         dirs  = []
         json_response = self.requestList(str(random.random()), path, media)
         for item in json_response:
-            file = item.get('file','')
+            file     = item.get('file','')
             fileType = item.get('filetype','file')
             if fileType == 'file':
                 dur = self.getDuration(file, item)
-                if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
+                vfs = {'file':file,'duration':dur}
+                if chkSeek: vfs['seek'] = self.chkSeeking(file, dur)
+                if dur > 0: return vfs
             else: dirs.append(file)
-        for dir in dirs: return self.existsVFS(dir, media)
-        return None
+        for dir in dirs: return self.playableVFS(dir, media)
+        return {}
 
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=29)):
@@ -127,11 +128,8 @@ class JSONRPC:
         json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
         json_response = (sendJSON(json_query))
         item = json_response.get('result',[])
-        if item: 
-            id = item[0].get('playerid',1)
-        else: 
-            self.log("getActivePlayer, Failed! no results")
-            id = 1 #guess
+        if item: id = item[0].get('playerid',1)
+        else:    id = 1 #guess
         self.log("getActivePlayer, id = %s"%(id))
         if return_item: return item
         return id
@@ -157,10 +155,8 @@ class JSONRPC:
 
     def getAddons(self, params='{"type":"xbmc.addon.video","enabled":true,"properties":["name","version","description","summary","path","author","thumbnail","disclaimer","fanart","dependencies","extrainfo"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":%s,"id":1}'%(params))
-        if cache: 
-            return self.cacheJSON(json_query).get('result',{}).get('addons',[])
-        else:     
-            return sendJSON(json_query).get('result',{}).get('addons',[])
+        if cache: return self.cacheJSON(json_query).get('result',{}).get('addons',[])
+        else:     return sendJSON(json_query).get('result',{}).get('addons',[])
         
         
     def getSongs(self, params='{"properties":["genre"]}', cache=True):
@@ -241,151 +237,57 @@ class JSONRPC:
         return playpast
 
         
-    def getMovieInfo(self, sortbycount=False):
+    def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
-        tmpStudios     = []
-        StudioList     = []
-        MovieGenreList = []
-        if not hasMovie(): return StudioList, MovieGenreList
-        
-        json_response = self.getMovies()
+        if not hasMovie(): return [], []
+        StudioList     = collections.Counter()
+        MovieGenreList = collections.Counter()
+        json_response  = self.getMovies()
         for info in json_response:
-            genres = info.get('genre','')
-            if genres:
-                for genre in genres:
-                    found = False
-                    for g in range(len(MovieGenreList)):
-                        itm = MovieGenreList[g]
-                        if sortbycount: itm = itm[0]
-                        if genre.lower() == itm.lower():
-                            found = True
-                            if sortbycount: MovieGenreList[g][1] += 1
-                            break
-                            
-                    if not found:
-                        if sortbycount: MovieGenreList.append([genre.replace('"','').strip(), 1])
-                        else: MovieGenreList.append(genre.replace('"','').strip())
-
-            studios = info.get('studio','')
-            if studios:
-                for studio in studios:
-                    found = False
-                    for i in range(len(tmpStudios)):
-                        if tmpStudios[i][0].lower() == studio.lower():
-                            tmpStudios[i][1] += 1
-                            found = True
-                            break
-                    if found == False and len(studio) > 0: tmpStudios.append([studio, 1])
-
-        maxcount = 0
-        for i in range(len(tmpStudios)):
-            if tmpStudios[i][1] > maxcount: maxcount = tmpStudios[i][1]
-
-        bestmatch = 1
-        lastmatch = 1000
-        counteditems = 0
-
-        for i in range(maxcount, 0, -1):
-            itemcount = 0
-            for j in range(len(tmpStudios)):
-                if tmpStudios[j][1] == i: itemcount += 1
-            if abs(itemcount + counteditems - 8) < abs(lastmatch - 8):
-                bestmatch = i
-                lastmatch = itemcount
-            counteditems += itemcount
-
-        if sortbycount:
-            tmpStudios.sort(key=lambda x: x[1], reverse=True)
-            MovieGenreList.sort(key=lambda x: x[1], reverse=True)
+            StudioList.update([studio for studio in info.get('studio',[])])
+            MovieGenreList.update([genre for genre in info.get('genre' ,[])])
+        if sortbycount: 
+            StudioList     = [x[0] for x in sorted(StudioList.most_common(25))]
+            MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
         else:
-            tmpStudios.sort(key=lambda x: x[0].lower())
-            MovieGenreList.sort(key=lambda x: x.lower())
-
-        for i in range(len(tmpStudios)):
-            if tmpStudios[i][1] >= bestmatch:
-                if sortbycount: StudioList.append([tmpStudios[i][0], tmpStudios[i][1]])
-                else: StudioList.append(tmpStudios[i][0])
+            StudioList     = (sorted(StudioList.keys()))
+            MovieGenreList = (sorted(MovieGenreList.keys()))
         self.log('getMovieInfo, studios = %s, genres = %s'%(len(StudioList),len(MovieGenreList)))
         return StudioList, MovieGenreList
+        
 
-
-    def getTVInfo(self, sortbycount=False):
+    def getTVInfo(self, sortbycount=True, art='poster'):
         self.log('getTVInfo')
-        NetworkList   = []
-        ShowGenreList = []
-        if not hasTV(): return NetworkList, ShowGenreList
-        #todo group/ignore networks with region marker ex. NBC (US)
+        if not hasTV(): return [], [], []
+        NetworkList   = collections.Counter()
+        ShowGenreList = collections.Counter()
+        TVShows       = []
         json_response = self.getTVshows()
         for info in json_response:
-            networks = info.get('studio','')
-            if networks:
-                for network in networks:
-                    found = False
-                    for n in range(len(NetworkList)):
-                        itm = NetworkList[n]
-                        if sortbycount: itm = itm[0]
-                        if network.lower() == itm.lower():
-                            found = True
-                            if sortbycount: NetworkList[n][1] += 1
-                            break
-                            
-                    if found == False:
-                        if sortbycount: NetworkList.append([network, 1])
-                        else: NetworkList.append(network)
-
-            genres = info.get('genre','')
-            if genres:
-                for genre in genres:
-                    found = False
-                    for g in range(len(ShowGenreList)):
-                        itm = ShowGenreList[g]
-                        if sortbycount: itm = itm[0]
-                        if genre.lower() == itm.lower():
-                            found = True
-                            if sortbycount: ShowGenreList[g][1] += 1
-                            break
-                            
-                    if found == False:
-                        if sortbycount: ShowGenreList.append([genre, 1])
-                        else: ShowGenreList.append(genre)
-
-        if sortbycount:
-            NetworkList.sort(key=lambda x: x[1], reverse = True)
-            ShowGenreList.sort(key=lambda x: x[1], reverse = True)
+            TVShows.append({'label':getLabel(info),'item':info,'logo':info.get('art',{}).get(art,'')})
+            NetworkList.update([studio  for studio in info.get('studio',[])])
+            ShowGenreList.update([genre for genre  in info.get('genre' ,[])])
+        if sortbycount: 
+            NetworkList   = [x[0] for x in sorted(NetworkList.most_common(50))]
+            ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
         else:
-            NetworkList.sort(key=lambda x: x.lower())
-            ShowGenreList.sort(key=lambda x: x.lower())
-        self.log('getTVInfo, networks = %s, genres = %s'%(len(NetworkList),len(ShowGenreList)))
-        return NetworkList, ShowGenreList
+            NetworkList   = (sorted(NetworkList.keys()))
+            ShowGenreList = (sorted(ShowGenreList.keys()))
+        TVShows = (sorted(TVShows, key=lambda k: k['label']))
+        self.log('getTVInfo, networks = %s, genres = %s, shows = %s'%(len(NetworkList),len(ShowGenreList),len(TVShows)))
+        return NetworkList, ShowGenreList, TVShows
 
 
     def fillMusicInfo(self, sortbycount=True):
-        genres = []
-        MusicGenreList = []
-        if not hasMusic(): return MusicGenreList
-        json_response = self.getSongs()
-        [genres.extend(re.split(';|/|,',genre.strip())) for song in json_response for genre in song.get('genre',[])]
-        genres = collections.Counter([genre for genre in genres if not genre.isdigit()])
-        if sortbycount: 
-            values = sorted(genres.most_common(25))
-        else:
-            values = sorted(genres.items())
-        [MusicGenreList.append(key) for key, value in values]
-        MusicGenreList.sort(key=lambda x: x.lower())
-        self.log('fillMusicInfo, found genres = %s'%(MusicGenreList))
+        if not hasMusic(): return []
+        MusicGenreList = collections.Counter()
+        json_response  = self.getSongs()
+        for info in json_response:
+            MusicGenreList.update([genre for genre in info.get('genre' ,[])])
+        if sortbycount: MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(25))]
+        else:           MusicGenreList = (sorted(MusicGenreList.keys()))
+        self.log('fillMusicInfo, found genres = %s'%(len(MusicGenreList)))
         return MusicGenreList
-        
-        
-    def fillTVShows(self, art='poster'):
-        tvshows = []
-        if not hasTV(): return tvshows
-        json_response = self.getTVshows()
-        for item in json_response: 
-            label = getLabel(item)
-            if not label: continue
-            tvshows.append({'label':label,'item':item,'logo':item.get('art',{}).get(art,'')})
-        self.log('fillTVShows, found = %s'%(len(tvshows)))
-        return tvshows
         
         
     def getDuration(self, path, item={}, accurate=None):
@@ -401,8 +303,7 @@ class JSONRPC:
             if path.startswith('stack://'): #handle "stacked" videos:
                 stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
                 for file in stack: duration += self.parseDuration(file, item)
-            else: 
-                duration = self.parseDuration(path, item)
+            else: duration = self.parseDuration(path, item)
             if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s"%(path,runtime))
         return runtime 
@@ -412,18 +313,16 @@ class JSONRPC:
         cacheName = '%s.parseDuration:.%s'%(ADDON_ID,path)
         duration  = self.cache.get(cacheName)
         runtime   = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
-        if duration is None:
+        if not duration:
             try:
-                if path.startswith(('http','ftp')):
-                    duration = 0
-                elif path.startswith(('plugin://','upnp://','pvr://')):
+                if path.startswith(('http','ftp','plugin://','upnp://','pvr://')): 
                     duration = runtime
-                else:
+                else: 
                     duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"))
             except Exception as e: 
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
-            self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=28))
+            self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
         
         dbid    = item.get('id',-1)
         rundiff = int(percentDiff(runtime,duration))
@@ -438,6 +337,7 @@ class JSONRPC:
        
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         limits = self.writer.autoPagination(id, path, limits)
+        
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)
@@ -445,15 +345,14 @@ class JSONRPC:
         params['properties']        = JSON_FILE_ENUM
         params['limits']['start']   = limits.get('end',0)
         params['limits']['end']     = limits.get('end',0) + page
+        
         if sort:   params['sort']   = sort
         if filter: params['filter'] = filter
         
         self.log('requestList, id = %s, path = %s, params = %s, page = %s'%(id,path,params,page))
         json_response = self.getDirectory(dumpJSON(params))
-        if 'filedetails' in json_response: 
-            key = 'filedetails'
-        else: 
-            key = 'files'
+        if 'filedetails' in json_response: key = 'filedetails'
+        else:                              key = 'files'
             
         results = json_response.get('result',{})
         items   = results.get(key,[])
@@ -468,7 +367,6 @@ class JSONRPC:
         if len(items) == 0 and limits.get('start',0) > 0 and limits.get('total',0) > 0:
             self.log("requestList, id = %s, trying again at start page 0"%(id))
             return self.requestList(id, path, media, page, sort, filter, limits)
-        
         self.log("requestList, id = %s, return items = %s"%(id,len(items)))
         return items
         
@@ -481,9 +379,7 @@ class JSONRPC:
                     
         for path in pvrPaths:
             json_response = self.getDirectory('{"directory":"%s","properties":["file"]}'%(path),cache=False).get('result',{}).get('files',[])
-            if json_response: break 
-            
-        if json_response:
+            if not json_response: continue
             item = list(filter(lambda k:k.get('id',-1) == channelid, json_response))
             if item: 
                 self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))
@@ -529,8 +425,6 @@ class JSONRPC:
         channelItem = self.matchPVRChannel(chname, id, radio)
         channelItem['citem'] = {'name':chname,'id':id,'radio':radio}
         channelItem['isPlaylist'] = isPlaylist
-        if isPlaylist:
-            channelItem = self.fillPVRbroadcasts(channelItem)
-        else: 
-            channelItem['broadcastnext'] = [channelItem.get('broadcastnext',[])]
+        if isPlaylist: channelItem = self.fillPVRbroadcasts(channelItem)
+        else:          channelItem['broadcastnext'] = [channelItem.get('broadcastnext',[])]
         return channelItem

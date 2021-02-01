@@ -32,6 +32,7 @@ class Builder:
             self.cache = cache
             
         self.incStrms         = getSettingBool('Enable_Strms')
+        self.inc3D            = getSettingBool('Enable_3D')
         self.incExtras        = getSettingBool('Enable_Extras') 
         self.fillBCTs         = getSettingBool('Enable_Fillers')
         self.accurateDuration = getSettingBool('Duration_Type')
@@ -46,15 +47,16 @@ class Builder:
         self.channelCount     = 0
         self.chanName         = ''
         
-        self.bctTypes         = {"ratings"    :{"min":1,"max":1,"enabled":True  ,"paths":[getSetting('Resource_Ratings')]},
-                                 "trailers"   :{"min":1,"max":1,"enabled":True  ,"paths":[getSetting('Resource_Trailers')]},
-                                 "bumpers"    :{"min":1,"max":1,"enabled":False ,"paths":[getSetting('Resource_Networks')]},
-                                 "commercials":{"min":1,"max":1,"enabled":False ,"paths":[getSetting('Resource_Commericals')]}}#todo check adv. rules get settings
-
+        self.bctTypes         = {"ratings"    :{"min":getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":getSettingInt('Fillers_Ratings') > 0    ,"paths":(getSetting('Resource_Ratings')).split(',')},
+                                 "bumpers"    :{"min":getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":getSettingInt('Fillers_Bumpers') > 0    ,"paths":(getSetting('Resource_Networks')).split(',')},
+                                 "commercials":{"min":getSettingInt('Fillers_Commercials'),"max":4,"enabled":getSettingInt('Fillers_Commercials') > 0,"paths":(getSetting('Resource_Commericals')).split(',')},
+                                 "trailers"   :{"min":getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":getSettingInt('Fillers_Trailers') > 0   ,"paths":(getSetting('Resource_Trailers')).split(',')}}#todo check adv. rules get settings
+                                
         self.rules            = RulesList()
         self.writer           = Writer(self.cache, self)
         self.channels         = self.writer.channels
         self.jsonRPC          = JSONRPC(self.cache, self)
+        self.resources        = self.jsonRPC.resources
         self.myPlayer         = self.jsonRPC.myPlayer
         self.myMonitor        = self.jsonRPC.myMonitor
          
@@ -76,19 +78,18 @@ class Builder:
 
     def getChannels(self):
         self.log('getChannels')
-        if self.writer.reset(): 
-              return self.channels.getChannels()
+        if self.writer.reset(): return self.channels.getChannels()
         self.log('getChannels, initializing writer / parser failed!')
         return None
 
 
     def buildService(self):
-        if not self.writer.reset(): 
-            self.log('buildService, initializing writer / parser failed!')
-            return False
-            
         if self.writer.isClient():
             self.log('buildService, Client mode enabled; returning!')
+            return False
+            
+        if not self.writer.reset(): 
+            self.log('buildService, initializing writer / parser failed!')
             return False
             
         channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
@@ -98,15 +99,18 @@ class Builder:
             notificationDialog(LANGUAGE(30056))
             return None
 
-        if getProperty('PseudoTVRunning') != 'True': # legacy setting to disable/enable support in third-party applications. 
-            setProperty('PseudoTVRunning','True')
+        if not getPropertyBool('PseudoTVRunning'): # legacy setting to disable/enable support in third-party applications. 
+            setPropertyBool('PseudoTVRunning',True)
             
         self.dialog       = ProgressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.rules.loadRules(channels)
         
         for idx, channel in enumerate(channels):
-            if self.myMonitor.waitForAbort(0.01): break
+            if self.myMonitor.waitForAbort(0.01):
+                self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
+                return False
+                
             channel       = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName = channel['name']
             self.progress = (idx*100//len(channels))
@@ -126,8 +130,8 @@ class Builder:
             
         self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
         self.log('buildService, finished')
-        if not self.myPlayer.isPlaying() and getProperty('PseudoTVRunning') == 'True': # legacy setting to disable/enable support in third-party applications. 
-            setProperty('PseudoTVRunning','False') 
+        if not self.myPlayer.isPlaying() and getPropertyBool('PseudoTVRunning'): # legacy setting to disable/enable support in third-party applications. 
+            setPropertyBool('PseudoTVRunning',False)
         return True
 
 
@@ -141,11 +145,11 @@ class Builder:
                 continue
                 
             if not isinstance(item.get('path',[]),list): item['path'] = [item['path']] #custom channels are not lists, no mixed channels only adv. interleave rule.
-            item['id']      = (item.get('id','')      or getChannelID(item['name'], item['path'], item['number'])) # internal use only; use provided id for future xmltv pairing, else create unique Pseudo ID.
-            item['radio']   = (item.get('radio','')   or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
-            item['catchup'] = (item.get('catchup','') or ('vod' if not item['radio'] else ''))
-            item['group']   = list(set((item.get('group',[]) or [LANGUAGE(30171)])))
-            item['logo']    = (self.jsonRPC.getLogo(item['name'], item['type'], item['path'], item, featured=True))
+            item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
+            item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
+            item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
+            item['group']   = list(set((item.get('group',[]) or [])))
+            item['logo']    = (self.jsonRPC.getLogo(item['name'], item['type'], item['path'], item, featured=True)) #all logos are dynamic re-parse for changes.
             yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
@@ -170,14 +174,14 @@ class Builder:
         self.log('getFileList; citem = %s, radio = %s'%(citem,radio))
         try:
             # global values prior to channel rules
-            self.filter = {}
-            self.sort   = {}#{"order": "ascending", "ignorefolders": "false", "method": "random"}
-            self.limits = {}#adv. rule to force page.
+            self.filter = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+            self.sort   = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
+            self.limits = {}#{"end":0,"start":0,"total":0}
             self.limit  = PAGE_LIMIT
             
             valid  = False
             now    = getLocalTime()
-            start  = self.writer.getEndtime(citem['id'],roundTime(now)) #offset time to start on half hour
+            start  = self.writer.getEndtime(citem['id'],roundTimeDown(now,offset=59)) #offset time to start top of the hour
 
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=getSettingInt('Max_Days'))): 
@@ -207,7 +211,12 @@ class Builder:
                     # cacheResponse.extend(list(fillList(cacheResponse,(limit-len(cacheResponse)))))
             cacheResponse = list(filter(lambda filelist:filelist, cacheResponse)) #filter empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
-            # if self.fillBCTs: cacheResponse = self.injectBCTs(citem, cacheResponse)
+            
+            ##DEBUG
+            self.fillBCTs = False
+            if self.fillBCTs and not citem.get('radio',False): cacheResponse = self.injectBCTs(citem, cacheResponse)
+            ######
+            
             self.runActions(RULES_ACTION_CHANNEL_STOP, citem)
             return sorted((cacheResponse), key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, Failed! " + str(e), xbmc.LOGERROR)
@@ -263,7 +272,10 @@ class Builder:
                 elif (file.lower().endswith('strm') and not self.incStrms): 
                     self.log("buildFileList, id: %s, IDX = %s skipping strm!"%(id,idx),xbmc.LOGINFO)
                     continue
-                    
+                elif (is3D(item) and not self.inc3D): 
+                    self.log("buildFileList, id: %s, IDX = %s skipping 3D!"%(id,idx),xbmc.LOGINFO)
+                    continue
+
                 #parsing missing meta
                 if not item.get('streamdetails',{}).get('video',[]): 
                     item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
@@ -275,8 +287,8 @@ class Builder:
                 dur = self.jsonRPC.getDuration(file, item, accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
-                    if int(item.get("year","0")) == 1601: #default null for kodi rpc?
-                        item['year'] = 0 
+                    # if int(item.get("year","0")) == 1601: #default null for kodi rpc?
+                        # item['year'] = 0 
                         
                     mType   = item['type']
                     label   = item['label']
@@ -297,9 +309,9 @@ class Builder:
                         item["episodelabel"] = '%s (%sx%s)'%(title,seasonval,str(epval).zfill(2))
                         
                     else: # This is a Movie
-                        year = int(item.get("year","0"))
-                        if year > 0 and '(' not in title: 
-                            title = "%s (%s)"%(title, year)
+                        # year = int(item.get("year","0"))
+                        # if year > 0 and '(' not in title: 
+                            # title = "%s (%s)"%(title, year)
                         item["episodetitle"] = item.get("tagline","")
                         item["episodelabel"] = item.get("tagline","")
                         seasonval = None
@@ -312,8 +324,8 @@ class Builder:
                     if self.dialog is not None:
                         self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s %s'%(self.chanName,((len(fileList)*100)//PAGE_LIMIT))+'%')
 
-                    item.get('art',{})['icon']  = channel['logo']
-                    # item.get('art',{})['thumb'] = getThumb(item) #unify artwork
+                    item.get('art',{})['icon']   = channel['logo']
+                    # item.get('art',{})['thumb']  = getThumb(item) #unify artwork                    # item.get('art',{})['fanart'] = getThumb(item) #unify artwork
                     
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])
@@ -333,131 +345,170 @@ class Builder:
             
         self.log("buildFileList, id: %s returning fileList %s / %s"%(id,len(fileList),limit),xbmc.LOGINFO)
         return fileList
-        
+
+
+    def buildLocalTrailers(self, citem, fileList):
+        self.log("buildLocalTrailers, citem = %s, fileList = %s"%(citem,len(fileList)))
+        def getItem(item):
+            file = item.get('trailer','')
+            if file: return {'label':item['label'],'duration':self.jsonRPC.parseDuration(file, item),'path':'','file':file}
+        return list(filter(None,list(set([getItem(fileItem) for fileItem in fileList]))))
+    
     
     def injectBCTs(self, citem, fileList):
-        self.log("injectBCTs, citem = %s"%(citem))
-        validItems = [item for item in fileList if not item.get('file','').startswith(('pvr://','upnp://','plugin://'))]
-        if not citem.get('radio',False) and len(validItems) > 0:
-            resourceMap = self.bctTypes.copy()
-            for type in resourceMap.keys():
-                bctItems = self.bctTypes.get(type,{})
-                bctPaths = bctItems.get('paths',[])
-                resourceMap[type]['fileList'] = [] #{'label','duration','file'} or (dirs,files)
-                if not bctPaths or bctItems.get('enabled',False): continue
-                
-                # if type == 'trailers': #append local trailers to list.
-                    # resourceMap[type]['fileList'] = self.jsonRPC.buildLocalTrailers(items=validItems)
-                [resourceMap[type]['fileList'].extend(self.jsonRPC.buildBCTresource(bctPath)) for bctPath in bctPaths]
-
-            # tmpFileList = fileList.copy()
-            # for idx, item in enumerate(tmpFileList):
-                # file  = item.get('file','')
-                # paths = [file]
-                # if   file.startswith(('pvr://','upnp://','plugin://')): continue # Kodi only handles stacks between local content, bug?
-                # elif file.startswith('stack://'): paths = splitStacks(file)
+        self.log("injectBCTs, citem = %s, fileList = %s"%(citem,len(fileList)))
+        #bctTypes ex. {"ratings" :{"min":1,"max":1,"enabled":True  ,"paths":[getSetting('Resource_Ratings')]}}
+        if not fileList: return fileList
+        lstop            = 0
+        nfileList        = list()
+        bctItems         = {key:(self.resources.buildResourceType(key, self.bctTypes.get(key,{}).get("paths",[]))) for key in self.bctTypes.keys() if self.bctTypes.get(key,{}).get('enabled',False)}
+        print('bctItems',bctItems)
+        
+        chname           = citem.get('name','')
+        chcats           = citem.get('groups',[])
+        print('chname',chname,'chcats',chcats)
+        
+        if 'ratings' in bctItems:
+            ratings = bctItems.get('ratings',{})
+            print('ratings',ratings)
+        else: ratings = {}
+        
+        if 'bumpers' in bctItems:
+            bumpers = bctItems.get('bumpers',{}).get(chname.lower(),[])
+            bumpers.extend(bctItems.get('bumpers',{}).get('root',[]))
+            print('bumpers',bumpers)
+        else: bumpers = []
+        
+        min_commercials  = self.bctTypes.get('commercials',{}).get('min',0) #0==Disabled,1==Auto
+        max_commercials  = self.bctTypes.get('commercials',{}).get('max',4)
+        auto_commercials = min_commercials == 1
+        if 'commercials' in bctItems:
+            commercials = bctItems.get('commercials',{}).get(chname.lower(),[])
+            commercials.extend(bctItems.get('commercials',{}).get('root',[]))
+            if isinstance(commercials,list) and len(commercials) > 0: random.shuffle(commercials)
+            print('commercials',commercials)
+        else: 
+            commercials = []
+            auto_commercials = False
+                  
+        min_trailers  = self.bctTypes.get('trailers',{}).get('min',0) #0==Disabled,1==Auto
+        max_trailers  = self.bctTypes.get('trailers',{}).get('max',4)
+        auto_trailers = min_trailers == 1
+        if 'trailers' in bctItems:  
+            trailers = []   
+            for chcat in chcats: trailers.extend(bctItems.get('trailers',{}).get(chcat.lower(),[]))
+            trailers.extend(bctItems.get('trailers',{}).get('root',[]))
+            trailers.extend(self.buildLocalTrailers(citem, fileList))
+            if isinstance(trailers,list) and len(trailers) > 0: random.shuffle(trailers)
+            print('trailers',trailers)
+        else: 
+            trailers = []
+            auto_trailers = False
+        
+        for idx,fileItem in enumerate(fileList):
+            file = fileItem.get('file','')
+            fileItem['originalfile'] = file
+            fileItem['start'] = fileItem['start'] if lstop == 0 else lstop
+            fileItem['stop']  = fileItem['start'] + fileItem['duration']
+            
+            if not file.startswith(('pvr://','upnp://','plugin://')): #stacks not compatible
+                if isStack(file): 
+                    paths = splitStacks(file)
+                else: 
+                    paths = [file]
                     
-                # start       = item['start']
-                # stop        = item['stop']
-                # endOnHour   = (roundTimeTo(stop) - stop)
-                # stack       =  'stack://%s'
-                # orgPaths    = paths.copy()
+                oPaths = paths.copy()
+                stop   = fileItem['stop']
+                end    = abs(roundTimeUp(stop) - stop) #auto mode
                 
-                # for bctType in resourceMap.keys():
-                    # bctItems = resourceMap[bctType]
-                    # if not bctItems.get('fileList',[]): continue
-             
-                    # if bctType == 'rating':
-                        # mpaa = item.get('mpaa','')
-                        # if mpaa.startswith('Rated'): mpaa = re.split('Rated ',mpaa)[1]  #todo prop. regex
-                        # if is3D(item): mpaa += ' (3DSBS)'
-                        # for bctItem in bctItems:
-                            
-                            # if bctItem.get('label','').lower() == mpaa.lower():
-                            
-                            
-                            
-                            
-                            # if rating.lower() == mpaa.lower():
-                                # buildBCT(bctType,self.jsonRPC.buildResourcePath(resource['path'],file))
-                    # else:
-                        # max = bctTypes[bctType].get('max',0)
-                        # if max > len(filepaths): max = len(filepaths)
-                        # matches = random.sample(filepaths, random.randint(bctTypes[bctType].get('min',0),max))
-                        # [buildBCT(bctType, match) for match in matches]
-                                        
-                # if orgPaths != paths:
-                    # item['originalfile'] = item['file']
-                    # item['file'] = stack%(' , '.join(paths))
-                # tmpList.append(item)
-        return fileList
-
-        
-        # def buildBCT(bctType, path):
-            # if path.startswith(('pvr://','upnp://','plugin://')): return # Kodi only handles stacks between local content, bug?
-            # duration = self.jsonRPC.parseDuration(path)
-            # self.log("injectBCTs; buildBCT building %s, path = %s, duration = %s"%(bctType,path,duration))
-            # if bctType in PRE_ROLL:
-                # paths.insert(0,path)
-            # else:
-                # paths.append(path)
-                # item['stop'] += duration
-                # items[idx+1]['start'] = item['stop']
-                          
-        # tmpList     = []
-        # resourceMap = {}
-        # self.log("injectBCTs; channel = %s, configuration = %s, fileList size = %s"%(channel,dumpJSON(bctTypes),len(fileList)))
-        
-        # bctTypes = self.bctTypes
-        # for bctType in bctTypes:
-            # if not bctTypes[bctType]['enabled']: continue
-            # resourceMap[bctType] = self.jsonRPC.buildBCTresource(bctTypes[bctType].get('path'))
-            # if bctType in ['bumper','commercial']: # locate folder by channel name.
-                # self.log("injectBCTs; finding channel folder %s for %s"%(channel['name'],bctType))
-                # resourceMap[bctType] = [self.jsonRPC.buildBCTresource(os.path.join(bctTypes[bctType].get('path'),dir)) for dir in bctTypes[bctType].get('dirs') if channel['name'].lower() == dir.lower()]
-            # elif bctTypes == 'trailer':        
-                # # integrate channel trailers along with resources
-                # trailers = filter(None,list(set([fileitem.get('trailer',None) for fileitem in fileList])))
-                # if not trailers: continue
-                # trailers = trailers.reverse()
-                # trailers.shuffle()
-                # self.log("injectBCTs; adding %s local kodi trailers"%(len(trailers)))
-                # resourceMap[bctType]['filepaths'].extend(trailers)
-                   
-        # for idx, item in enumerate(fileList):
-            # stop      = item['stop']
-            # endOnHour = (roundTimeTo(stop) - stop)
-            # file      = item['file']
-            # stack     =  'stack://%s'
-            # if   file.startswith(('pvr://','upnp://','plugin://')): continue # Kodi only handles stacks between local content, bug?
-            # elif file.startswith('stack://'):
-                # paths = splitStacks(file)
-            # else:
-                # paths = [file]
-            # orgPaths  = paths.copy()
-
-            # for bctType in bctTypes:
-                # if not bctTypes[bctType]['enabled']: continue
-                # resource  = resourceMap.get(bctType,{})
-                # files     = resource.get('files',[])
-                # filepaths = resource.get('filepaths',[])
+                print('duration',fileItem['duration'])
+                print('start',datetime.datetime.fromtimestamp(fileItem['start']))
+                print('stop',datetime.datetime.fromtimestamp(stop))
+                print('end',end)
                 
-                # if bctType == 'rating':
-                    # mpaa = item.get('mpaa'  ,'')
-                    # if mpaa.startswith('Rated'): mpaa = re.split('Rated ',mpaa)[1]  #todo prop. regex
-                    # if is3D(item): mpaa += ' (3DSBS)'
-                    # for file in files:
-                        # rating = os.path.splitext(file)[0]
-                        # if rating.lower() == mpaa.lower():
-                            # buildBCT(bctType,self.jsonRPC.buildResourcePath(resource['path'],file))
-                # else:
-                    # max = bctTypes[bctType].get('max',0)
-                    # if max > len(filepaths): max = len(filepaths)
-                    # matches = random.sample(filepaths, random.randint(bctTypes[bctType].get('min',0),max))
-                    # [buildBCT(bctType, match) for match in matches]
-                                    
-            # if orgPaths != paths:
-                # item['originalfile'] = item['file']
-                # item['file'] = stack%(' , '.join(paths))
-            # tmpList.append(item)
-        # return tmpList
+                #ratings (auto&max == 1)
+                mpaa = cleanMPAA(fileItem.get('mpaa',''))
+                if is3D(fileItem): mpaa += ' (3DSBS)'  
+                rating = ratings.get(mpaa.lower(),'')
+                if rating:
+                    paths.insert(0,rating.get('file'))
+                    end -= rating.get('duration')
+                    print('end ratings', end)
+                    print('mpaa',mpaa)  
+                    print('rating',rating) 
+                    
+                #bumpers(auto&max == 1)
+                if bumpers:
+                    bumper = random.choice(bumpers)
+                    paths.insert(0,bumper.get('file'))
+                    end -= bumper.get('duration')
+                    print('end bumper', end)
+                    print('chname',chname)
+                    print('bumper',bumper)
+                    
+                CTItems = set()
+                cnt_commercials = 0
+                cnt_trailers    = 0
+                #commercials
+                if commercials and not auto_commercials:
+                    for cnt in range(min_commercials):
+                        commercial = random.choice(commercials)
+                        CTItems.add(commercial.get('file'))
+                        end -= commercial.get('duration')
+                        print('end commercial', end)
+                        print('commercial',commercial)
+                            
+                #trailers
+                if trailers and not auto_trailers:
+                    for cnt in range(min_trailers):
+                        trailer = random.choice(trailers)
+                        CTItems.add(trailer.get('file'))
+                        end -= trailer.get('duration')
+                        print('end trailer', end)
+                        print('trailer',trailer)
+                        
+                #auto fill POST_ROLL
+                if auto_commercials | auto_trailers:
+                    while end > 0 and not self.myMonitor.abortRequested():
+                        if self.myMonitor.waitForAbort(.01): break
+                        print('autofill while loop',end)
+                        stpos = end
+                        if commercials and auto_commercials and cnt_commercials <= max_commercials:
+                            commercial = random.choice(commercials)
+                            CTItems.add(commercial.get('file'))
+                            end -= commercial.get('duration')
+                            print('end commercial', end)
+                            print('commercial',commercial)
+                        
+                        if trailers and auto_trailers and cnt_trailers <= max_trailers:
+                            trailer = random.choice(trailers)
+                            CTItems.add(trailer.get('file'))
+                            end -= trailer.get('duration')
+                            print('end trailer', end)
+                            print('trailer',trailer)
+                            
+                        if stpos == end: break #empty list
+                        
+                CTItems = list(CTItems)
+                print('CTItems',CTItems)
+                if len(CTItems) > 0:
+                    random.shuffle(CTItems)#shuffle, then random sample for increased diversity. 
+                    paths.extend(random.sample(CTItems, len(CTItems)))
+                    
+                #todo trailers, commercials when "Auto" loop fill till end time close to 0. else fill random min,max count.
+                #trailers, commercials do not match by chname, random.choice from list, for variation users change resource folder in adv. rules.
+                #trailers always incorporate local_trailers from the media in current fileList playlist.
+                
+                print('oPaths',oPaths)
+                print('paths',paths)
+                    
+                if oPaths != paths:
+                    fileItem['file'] = buildStack(paths)
+                    fileItem['stop'] = abs(roundTimeUp(stop) - abs(end))
+                    fileItem['duration'] = (datetime.datetime.fromtimestamp(fileItem['stop']) - datetime.datetime.fromtimestamp(fileItem['start'])).seconds
+                    print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
+                    print('fileItem',fileItem)
+
+            lstop = fileItem['stop']  #new stop time, offset next start time.
+            nfileList.append(fileItem)
+        return nfileList

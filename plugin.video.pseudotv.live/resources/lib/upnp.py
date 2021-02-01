@@ -55,7 +55,7 @@ class UPNP:
         files = self.getUPNP_IDs()
         return path
         # for file in files:            
-        # self.log('existsVFS path = %s, media = %s'%(path,media))
+        # self.log('playableVFS path = %s, media = %s'%(path,media))
         # dirs  = []
         # json_response = self.requestList(str(random.random()), path, media)
         # for item in json_response:
@@ -65,7 +65,7 @@ class UPNP:
                 # dur = self.jsonRPC.getDuration(file, item)
                 # if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
             # else: dirs.append(file)
-        # for dir in dirs: return self.existsVFS(dir, media)
+        # for dir in dirs: return self.playableVFS(dir, media)
         # return None
             # if file.get('label','').lower() == label.lower(): return file.get('file',path)
         # return path

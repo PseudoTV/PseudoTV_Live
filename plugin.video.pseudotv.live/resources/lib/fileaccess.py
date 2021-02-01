@@ -96,12 +96,11 @@ class FileAccess:
         if os.name.lower() == 'nt':
             filename = '\\\\' + filename[6:]
             return FileAccess.exists(filename)
-
         return False
 
 
     @staticmethod
-    def rename(path, newpath):
+    def rename(path, newpath):       
         log("FileAccess: rename " + path + " to " + newpath)
         try:
             if xbmcvfs.rename(path, newpath):
@@ -109,7 +108,6 @@ class FileAccess:
         except Exception as e: 
             log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
-        oempath = newpath
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
                 log("FileAccess: Modifying name")
@@ -118,7 +116,7 @@ class FileAccess:
 
                 if newpath[0:6].lower() == 'smb://':
                     newpath = '\\\\' + newpath[6:]
-                    
+        
         try:
             log("FileAccess: os.rename")
             os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
@@ -133,12 +131,6 @@ class FileAccess:
         except Exception as e: 
             log("FileAccess: shutil.move, Failed! %s"%(e), xbmc.LOGERROR)
 
-        try:
-            if FileAccess.move(path, oempath):
-                return True
-        except Exception as e: 
-            log("FileAccess: xbmcvfs move, Failed! %s"%(e), xbmc.LOGERROR)
-            
         log("FileAccess: OSError")
         raise OSError()
 
@@ -229,7 +221,11 @@ class VFSFile:
 class FileLock:
     def __init__(self):
         random.seed()        
-        if not FileAccess.exists(globals.CACHE_LOC):  FileAccess.makedirs(globals.CACHE_LOC)
+        if not FileAccess.exists(globals.LOCK_LOC): 
+            FileAccess.makedirs(globals.LOCK_LOC)
+        if not FileAccess.exists(FILE_LOCK_NAME):    
+            FileAccess.open(FILE_LOCK_NAME,'a').close()
+            
         self.lockFileName = os.path.join(globals.LOCK_LOC,FILE_LOCK_NAME)
         self.lockedList = []
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
@@ -279,13 +275,13 @@ class FileLock:
         locked = True
         lines = []
 
-        while(locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while not globals.MY_MONITOR.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
 
             if curval > -1:
                 self.releaseLockFile()
                 self.grabSemaphore.release()
-                xbmc.sleep(1000)
+                if globals.MY_MONITOR.waitForAbort(1): break
 
             self.grabSemaphore.acquire()
 
@@ -363,7 +359,7 @@ class FileLock:
                 fle.close()
                 return True
             except:
-                xbmc.sleep(500)
+                globals.MY_MONITOR.waitForAbort(.5)
 
         log("FileLock: Creating lock file")
 

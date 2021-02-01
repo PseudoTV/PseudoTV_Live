@@ -77,11 +77,12 @@ class Config:
                     self.library.clearLibraryItems(type) #clear stale meta type
                     notificationDialog(LANGUAGE(30103)%(type))
                 return False
-            pitems = self.library.getLibraryItems(type,enabled=True) # existing predefined
+            pitems    = self.library.getLibraryItems(type,enabled=True) # existing predefined
             listItems = (PoolHelper().poolList(self.library.buildLibraryListitem,items,type))
-        
+            pselect   = findItemsIn(listItems,pitems,val_key='name')
+            
         if autoTune is None:
-            select = selectDialog(listItems,'Select %s'%(type),preselect=findItemsIn(listItems,pitems,val_key='name'))
+            select = selectDialog(listItems,'Select %s'%(type),preselect=pselect)
         else:
             if autoTune > len(items): autoTune = len(items)
             select = random.sample(list(set(range(0,len(items)))),autoTune)
@@ -195,7 +196,7 @@ class Config:
     def openNode(self, file='', media='video'):
         # file = 'library://video/network-nbc.xml/'
         self.log('openNode, file = %s, media = %s'%(file,media))
-        if file: file = '?ltype=%s&path=%s)'%(media,urllib.parse.quote(xbmc.translatePath(file.strip('/').replace('library://','special://userdata/library/'))))
+        if file: file = '?ltype=%s&path=%s)'%(media,urllib.parse.quote(xbmcvfs.translatePath(file.strip('/').replace('library://','special://userdata/library/'))))
         xbmc.executebuiltin('RunPlugin(plugin://plugin.library.node.editor%s'%(file))
         # # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
 
@@ -205,6 +206,13 @@ class Config:
         notificationDialog('Coming Soon')
         return REAL_SETTINGS.openSettings()
 
+    
+    def installResources(self):
+        params = ['Resource_Logos','Resource_Ratings','Resource_Networks','Resource_Commericals','Resource_Trailers']
+        for param in params:
+            addons = getSetting(param).split(',')
+            for addon in addons: installAddon(addon)
+        return True
     
     def run(self): 
         param = self.sysARG[1]
@@ -230,6 +238,8 @@ class Config:
             self.userGroups()
         elif  param == 'Open_Editor':
             return self.openEditor()
+        elif  param == 'Install_Resources':
+            return self.installResources()
         else: 
             with busy():
                 self.selectPredefined(param.replace('_',' '))

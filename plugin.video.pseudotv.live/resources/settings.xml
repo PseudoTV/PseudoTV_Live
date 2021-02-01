@@ -4,9 +4,9 @@
         <setting                            type="lsep"     label="30024"            visible="false"    /> 
         <setting id="Select_CUSTOM"         type="action"   label="30027" default="" visible="true"      action="RunScript($CWD/config.py, Channel_Manager)"    enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Open_Node"             type="action"   label="30085" default="" visible="false"     action="Addon.RunAddon(plugin.library.node.editor)"    option="close" enable="System.HasAddon(plugin.library.node.editor)"/>
-        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        option="close" />
-        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" visible="true"      action="RunScript($CWD/config.py, Clear_Userdefined)"  option="close" enable="false"/>
-        <setting                            type="lsep"     label="30022"            visible="true"     />
+        <setting id="Open_Editor"           type="action"   label="30086" default="" visible="false"     action="RunScript($CWD/config.py, Open_Editor)"        option="close"/>
+        <setting id="Clear_Userdefined"     type="action"   label="30093" default="" action="RunScript($CWD/config.py, Clear_Userdefined)"  option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Userdefined),true)"                                           enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting                            type="lsep"     label="30022"            visible="true" />
         <setting id=" "                     type="bool"     label="30002" default="" visible="false"/>
         <setting id="Select_TV_Networks"    type="action"   label="30002" default="" action="RunScript($CWD/config.py, TV_Networks)"         option="close" visible="Library.HasContent(TVShows) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true)"                                enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Select_TV_Shows"       type="action"   label="30003" default="" action="RunScript($CWD/config.py, TV_Shows)"            option="close" visible="Library.HasContent(TVShows) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true)"                                   enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
@@ -18,7 +18,7 @@
         <setting id="Select_Music_Genres"   type="action"   label="30097" default="" action="RunScript($CWD/config.py, Music_Genres)"        option="close" visible="Library.HasContent(Music) + String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)"                                 enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Select_Recommended"    type="action"   label="30023" default="" action="RunScript($CWD/config.py, Recommended)"         option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true)"                                                              enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Select_Imports"        type="action"   label="30150" default="" action="RunScript($CWD/config.py, Imports)"             option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true)"                                                                  enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
-        <setting id="Refresh_Manager"       type="action"   label="30182" default="" action="RunScript(service.iptv.manager,refresh)"        subsetting="true"   option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true) + System.HasAddon(service.iptv.manager)"                          enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
+        <setting id="Refresh_Manager"       type="action"   label="30182" default="" action="RunScript(service.iptv.manager,refresh)"        subsetting="true"   option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true) + System.HasAddon(service.iptv.manager)"      enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Clear_Predefined"      type="action"   label="30077" default="" action="RunScript($CWD/config.py, Clear_Predefined)"    option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Predefined),true)"                                                               enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         <setting id="Clear_BlackList"       type="action"   label="30154" default="" action="RunScript($CWD/config.py, Clear_BlackList)"     option="close" visible="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.BlackList),true)"                                                                enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)"/>
         </category> 
@@ -31,13 +31,13 @@
         <setting id="Select_Resource"       type="action"   label="30066" visible="false" action="RunScript($CWD/rselect.py, property=plugin.video.pseudotv.live.resource.logo&amp;type=channellogos)" option="close"/>
         
         <!-- <setting id="folder"                type="folder"   label="30066" value="resources://" source="resources"/> -->
-        <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" enable="false" source="files" />           
+        <setting id="User_Folder"           type="folder"   label="30028" default="special://profile/addon_data/plugin.video.pseudotv.live/" enable="true" source="files" />           
         <setting id="Enable_Client"         type="bool"     label="30104" default="false"  visible="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" enable="!eq(-1,special://profile/addon_data/plugin.video.pseudotv.live/)" subsetting="true"/> 
     </category> 
     <category label="30048">
         <setting id="Playback_Method"      type="enum"     label="30045" default="0"  lvalues="30162|30163"/>
         <setting id="Seek_Tolerance"       type="slider"   label="30040" default="55" range="0,5,900"   option="int" />
-        <setting id="Seek_Threshold%"      type="slider"   label="30129" default="95" range="85,5,100"  option="int" />
+        <setting id="Seek_Threshold%"      type="slider"   label="30129" default="85" range="85,5,100"  option="int" />
         <setting                           type="lsep"     visible="true" />
         <setting id="Store_Duration"       type="bool"     label="30042" default="false" />
         <setting id="Page_Limit"           type="slider"   label="30038" default="25" range="25,25,250" option="int" />
@@ -51,14 +51,21 @@
         <setting id="Enable_OnNext"        type="bool"     label="30153" default="true"  subsetting="true" visible="eq(-2,true)"/>
         <setting id="Enable_Extras"        type="bool"     label="30094" default="false" />
         <setting id="Enable_Strms"         type="bool"     label="30095" default="false" />
-        <setting id="Enable_Fillers"       type="bool"     label="30030" default="false" enable="false" /> 
+        <setting id="Enable_3D"            type="bool"     label="30185" default="false" />
+        <setting id="Enable_Fillers"       type="bool"     label="30030" default="false" enable="String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isPlaylist),true)" /> 
     </category> 
-    <category label="30180">
-        <setting id="Resource_Logos"       type="action"   label="30067" default="resource://resource.images.pseudotv"                              action="RunScript($CWD/config.py, Select_Resource_LOGOS)"       option="close" />
-        <setting id="Resource_Ratings"     type="action"   label="30069" default="resource://resource.videos.ratings.mpaa.classic"                  action="RunScript($CWD/config.py, Select_Resource_RATINGS)"     option="close" />
-        <setting id="Resource_Networks"    type="action"   label="30068" default="resource://resource.videos.bumpers.sample"                        action="RunScript($CWD/config.py, Select_Resource_NETWORKS)"    option="close" />
-        <setting id="Resource_Commericals" type="action"   label="30070" default="resource://resource.videos.commericals.sample"                    action="RunScript($CWD/config.py, Select_Resource_COMMERICALS)" option="close" />                          
-        <setting id="Resource_Trailers"    type="action"   label="30071" default="plugin://plugin.video.imdb.trailers/?action=list3&amp;key=recent" action="RunScript($CWD/config.py, Select_Resource_TRAILERS)"    option="close" />     
+    <category label="30186">
+        <setting id="Fillers_Ratings"      type="enum"     label="30187" default="0" values="Disabled|Auto|1"       /> 
+        <setting id="Fillers_Bumpers"      type="enum"     label="30188" default="0" values="Disabled|Auto|1"       /> 
+        <setting id="Fillers_Commercials"  type="enum"     label="30190" default="0" values="Disabled|Auto|1|2|3|4" /> 
+        <setting id="Fillers_Trailers"     type="enum"     label="30189" default="0" values="Disabled|Auto|1|2|3|4" /> 
+        <setting id=" "                    type="lsep"     label="30180" default=""  visible="true"        /> 
+        <setting id="Resource_Logos"       type="addon"    label="30067" default="resource.images.pseudotv.logos"                        addontype="kodi.resource.images"  multiselect="true" />
+        <setting id="Resource_Ratings"     type="addon"    label="30069" default="resource.videos.ratings.mpaa.classic"                  addontype="kodi.resource.images"  multiselect="true" />
+        <setting id="Resource_Networks"    type="addon"    label="30068" default="resource.videos.bumpers.sample"                        addontype="kodi.resource.images"  multiselect="true" />
+        <setting id="Resource_Commericals" type="addon"    label="30070" default="resource.videos.commercials.sample"                    addontype="kodi.resource.images"  multiselect="true" />
+        <setting id="Resource_Trailers"    type="addon"    label="30071" default="resource.videos.trailers.sample"                       addontype="kodi.resource.images"  multiselect="true" />
+        <setting id="Install_Resources"    type="action"   label="30191" action="RunScript($CWD/config.py, Install_Resources)"           option="close"/>
     </category> 
     <category label="30033">
         <setting id="User_Import"          type="bool"     label="30036" default="false" />

@@ -31,20 +31,21 @@ from xml.dom.minidom           import parse, parseString, Document
 from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring, XMLParser
 from resources.lib.fileaccess  import FileAccess, FileLock
 from operator                  import itemgetter
-
+    
+try:
+    from multiprocessing       import cpu_count
+    from multiprocessing.pool  import ThreadPool 
+    ENABLE_POOL  = True
+    THREAD_CORES = cpu_count()
+except: ENABLE_POOL = False
+    
 try:
     from multiprocessing import Process, Queue
     Queue() # Queue doesn't raise importError on android, call directly.
 except:
     from threading import Thread as Process
-    from queue import Queue
-try:
-    from multiprocessing      import cpu_count
-    from multiprocessing.pool import ThreadPool 
-    ENABLE_POOL = True
-    CORES = cpu_count()
-except: ENABLE_POOL = False
-    
+    from queue     import Queue
+
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 if PY3: 
@@ -89,15 +90,16 @@ DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
 
 MAX_IMPORT          = 5
-EPG_HRS             = 10800  # 3hr in seconds, Min. EPG guidedata
+EPG_HRS             = 10800  # 3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
 UPDATE_OFFSET       = 3600
+UPDATE_WAIT         = 10800 # 3hr in Secs.
 AUTOTUNE_ITEMS      = 3 #auto items per type.
 CHANNEL_LIMIT       = 999
 CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
-BCT_TYPES           = ['bumpers','commercials','trailers','ratings']
+BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
 PRE_ROLL            = ['bumpers','ratings']
 POST_ROLL           = ['commercials','trailers']
 
@@ -130,11 +132,11 @@ RULES_ACTION_PLAYER              = 12
 RULES_ACTION_OVERLAY             = 20
 
 #overlay globals
-NOTIFICATION_CHECK_TIME          = 15.0
-NOTIFICATION_TIME_REMAINING      = 60
-NOTIFICATION_TIME_BEFORE_END     = 15
-NOTIFICATION_DISPLAY_TIME        = 8
-CHANNELBUG_CHECK_TIME            = 15.0
+NOTIFICATION_CHECK_TIME          = 15.0 #seconds
+NOTIFICATION_TIME_REMAINING      = 60 #seconds
+NOTIFICATION_TIME_BEFORE_END     = 15 #seconds
+NOTIFICATION_DISPLAY_TIME        = 30 #seconds
+CHANNELBUG_CHECK_TIME            = 15.0 #seconds
 
 # Actions
 ACTION_PREVIOUS_MENU         = [9, 10, 92, 216, 247, 257, 275, 61467, 61448, 110]
@@ -174,9 +176,6 @@ def log(msg, level=xbmc.LOGDEBUG):
     if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
     try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     except Exception as e: xbmc.log('log failed! %s'%(e),level)
-
-def print(*msgs):
-    for msg in msgs: log('DEBUG: %s'%(msg))
 
 def getProperty(key, id=10000):
     try: 
@@ -234,6 +233,12 @@ def getSettingInt(key, reload=True):
         elif value.isdigit(): 
             return int(value)
 
+def unquote(text):
+    return urllib.parse.unquote(text)
+    
+def quote(text):
+    return urllib.parse.quote(text)
+
 PAGE_LIMIT       = getSettingInt('Page_Limit')
 MIN_ENTRIES      = int(PAGE_LIMIT//2)
 LOGO             = (COLOR_LOGO if bool(getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
@@ -250,6 +255,7 @@ def fileLocker(GlobalFileLock):
 @contextmanager
 def busy():
     log('globals: busy')
+    if isBusy(): yield
     setBusy(True)
     try: yield
     finally: 
@@ -265,7 +271,7 @@ def busy_dialog(escape=False):
     else: yield
 
 def initDirs():
-    dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,]
+    dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,LOCK_LOC]
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
     return True
 
@@ -278,7 +284,6 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
     return True
      
 def notificationProgress(message, header=ADDON_NAME, func=None, args=None, kwargs={}, time=4):
-    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')): return
     dia = ProgressBGDialog(message=message,header=header)
     for i in range(time):
         # if func: func(*args, **kwargs)
@@ -365,13 +370,20 @@ def selectDialog(list, header=ADDON_NAME, preselect=None, useDetails=True, autoc
     return None
 
 def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
-    if percent == 0 and control is None:
+    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')):
+        if control is None: return
+        else: return control.close()
+    if control is None and percent == 0:
         control = xbmcgui.DialogProgressBG()
         control.create(header, message)
     elif control:
         if percent == 100 or control.isFinished(): return control.close()
         else: control.update(percent, header, message)
     return control
+
+def getIdleTime():
+    try: return (int(xbmc.getGlobalIdleTime()) or 0)
+    except: return 0 #Kodi raises error after sleep.
     
 def hasPVR():
     return xbmc.getCondVisibility('Pvr.HasTVChannels')
@@ -411,14 +423,7 @@ def chkVersion(cleanStart=False):
 def showChangelog():
     changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Important','[B][COLOR=red]-Important:[/COLOR][/B]').replace('-Notice','[B][COLOR=orange]-Notice:[/COLOR][/B]').replace('-Warning','[B][COLOR=red]-Warning:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]').replace('-Changed','[B][COLOR=yellow]-Changed:[/COLOR][/B]')
     return textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-    
-def isJSON(item):
-    try: json.loads(item, strict=False)
-    except ValueError as e: 
-        log("globals: isJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
-        return False
-    return True
-    
+
 def dumpJSON(dict1, idnt=None, sortkey=True):
     if not dict1: return ''
     elif isinstance(dict1, basestring): return dict1
@@ -427,11 +432,8 @@ def dumpJSON(dict1, idnt=None, sortkey=True):
 def loadJSON(item):
     if isinstance(item,dict):
         log("globals: loadJSON item already mutable")
-        return item #already mutable 
-    elif isinstance(item,basestring): 
-        if not isJSON(item):  
-            log("globals: loadJSON isJSON failed!")
-            return None #not a valid json, parsing error.
+        return item
+    elif isinstance(item,basestring):
         try: return json.loads(item, strict=False)
         except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return {}
@@ -464,14 +466,14 @@ def splitall(plugin):
     while not MY_MONITOR.abortRequested():
         last   = plugin
         plugin = os.path.split(plugin[0])
-        if not b[0]: break
+        if not plugin[0]: break
     return last[0]
     
 def getPluginMeta(plugin):
     log('globals: plugin = %s'%(plugin))
     try:
         if plugin.startswith(('plugin://','resource://')): plugin = splitall(plugin)
-        pluginID = xbmcaddon.Addon(plugin)
+        pluginID = xbmcaddon.Addon(plugin.strip())
         return {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
     except Exception as e: log("globals, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
@@ -554,7 +556,7 @@ def buildItemListItem(item, mType='video', oscreen=True, playable=True):
 
     uniqueid   = info.pop('uniqueid'        ,{})
     cast       = info.pop('cast'            ,[])
-        
+
     def cleanInfo(info):
         tmpInfo = info.copy()
         for key, value in tmpInfo.items():
@@ -785,17 +787,42 @@ def interleave(*args): #interleave multi-lists, while preserving order
         log("interleave, Failed! %s"%(e), xbmc.LOGERROR)
         yield list(chain.from_iterable(izip_longest(*args)))[0]
 
-def splitStacks(paths): #split stack for indv. files.
-    log('splitStacks, paths = %s'%(paths))
-    return paths.replace('stack://','').split(' , ')
+def isStack(path,file=None):
+    if file is not None: 
+        return path.startswith('stack://%s'%(file))
+    else:
+        return path.startswith('stack://')
+
+def hasStack(path,file=None):
+    if isStack(path,file): return splitStacks(path)
+    return None
+
+def splitStacks(path): #split stack for indv. files.
+    log('splitStacks, path = %s'%(path))
+    return (path.split('stack://')[1]).split(' , ')
                                       
-def stripStack(file, url): #strip pre-rolls from stack, return file.
-    log('stripStack, file = %s, url = %s'%(file,url))
-    paths = url.split(' , ')
-    for path in paths:
-        if file not in path: paths.remove(path)
-        elif file in path: break
+def stripStack(path, file): #strip pre-rolls from stack, return file.
+    log('stripStack, path = %s, file = %s'%(path,file))
+    paths = path.split(' , ')
+    for idx, path in enumerate(paths.copy()):
+        if not path == file: paths.pop(idx)
+        elif path == file: break
     return paths
+    
+def buildStack(paths):
+    stack = 'stack://%s'
+    return stack%(' , '.join(paths))
+    
+def cleanMPAA(mpaa):
+    mpaa = mpaa.lower()
+    if ':' in mpaa: mpaa = re.split(':',mpaa)[1]  #todo prop. regex
+    if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
+    return mpaa.upper()
+        
+def cleanResourcePath(path):
+    if path.startswith('resource://'):
+        return (path.replace('resource://','special://home/addons/'))
+    return path
     
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
@@ -834,8 +861,9 @@ def isSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
     
 def installAddon(id):
-    if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return
+    if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return True
     xbmc.executebuiltin('InstallAddon("%s")'%(id))
+    return notificationDialog('%s %s...'%(LANGUAGE(30193),id))
         
 def getRandomPage(limit,total=50):
     page = random.randrange(0, total, limit)
@@ -876,18 +904,19 @@ def findItemsIn(items, values, item_key='getLabel', val_key='', index=True):
 def titleLabels(list):
      return [str(item).title() for item in list]
  
-def roundTime(stime,offset=30): # round the given time down to the nearest
-    n = datetime.datetime.fromtimestamp(stime)
+def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
+    n = datetime.datetime.fromtimestamp(thetime)
     delta = datetime.timedelta(minutes=offset)
     if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
     else: n = n.replace(minute=0, second=0, microsecond=0)
     return time.mktime(n.timetuple())
-
-def roundTimeTo(stime,offset=30): # round the given time up to the nearest
-    n = datetime.datetime.fromtimestamp(stime)
-    n = (n.replace(second=0, microsecond=0, minute=0, hour=n.hour) + datetime.timedelta(hours=n.minute//30))
+    
+def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
+    n = datetime.datetime.fromtimestamp(thetime)
+    delta = datetime.timedelta(minutes=offset)
+    n = (n + (datetime.datetime.min - n) % delta)
     return time.mktime(n.timetuple())
-
+    
 def pagination(list, end):
     for start in xrange(0, len(list), end):
         yield seq[start:start+end]
@@ -909,26 +938,25 @@ def cleanChannelSuffix(name, type):
 class PoolHelper:
     def __init__(self):
         if ENABLE_POOL: 
-            self.pool = ThreadPool(CORES)
-            log("PoolHelper: CPU CORES = " + str(CORES))
-        else: 
-            log("PoolHelper: ThreadPool Disabled")
+            self.pool = ThreadPool(THREAD_CORES)
+            log("PoolHelper: CPU CORES = " + str(THREAD_CORES))
+        else: log("PoolHelper: ThreadPool Disabled")
         
 
     def runSelf(self, func):
         return func()
         
         
-    def poolList(self, method, items=None, args=None, chunk=25):
+    def poolList(self, method, items=None, args=None, chunk=1):
         log("PoolHelper: poolList")
         results = []
         if ENABLE_POOL:
             if items is None and args is None: 
-                results = self.pool.map(self.runSelf, method)#, chunksize=chunk)
+                results = self.pool.map(self.runSelf, method, chunksize=chunk)
             elif args is not None: 
-                results = self.pool.map(method, zip(items,repeat(args)))
+                results = self.pool.map(method, zip(items,repeat(args)), chunksize=chunk)
             elif items: 
-                results = self.pool.map(method, items)#, chunksize=chunk)
+                results = self.pool.map(method, items, chunksize=chunk)
             self.pool.close()   
             self.pool.join()
         else:

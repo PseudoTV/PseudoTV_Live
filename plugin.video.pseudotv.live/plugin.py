@@ -147,7 +147,6 @@ class Plugin:
                 liz = buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
                 setCurrentChannelItem(pvritem)
-                
                 listitems = [liz]
                 stpos = 0
                 
@@ -189,38 +188,37 @@ class Plugin:
 
         notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
-            
+
         
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
+        # pvritem['callback'] = self.jsonRPC.matchPVRPath(pvritem.get('channelid',-1))
         nowitem   = pvritem.get('broadcastnow',{}) # current item
         nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
 
         if nowitem:
             found         = True
-            setOffset     = False
             citem         = getWriter(nowitem.get('writer',{})).get('citem',{})
             self.ruleList = self.rules.loadRules([citem])
+            setOffset     = False #todo adv. channel rule to disable seek 
             nowitem       = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
             progress      = nowitem['progress']
             runtime       = nowitem['runtime']
-            self.log('playChannel, nowitem = %s'%(nowitem))
+            self.log('playChannel, nowitem = %s\ncitem = %s'%(nowitem,citem))
             self.playlist.clear()
             
             if (progress > getSettingInt('Seek_Tolerance')):
-                # seekThreshold = int((runtime * 60) - getSettingInt('Seek_Threshold'))
-                # self.log('playChannel, progress = %s, seekThreshold = %s'%(progress,seekThreshold))
-                if (nowitem['progresspercentage'] >= float(getSettingInt('Seek_Threshold%'))):  # near end, avoid callback; override nowitem and queue next show.
+                self.log('playChannel, progresspercentage = %s, seekThreshold = %s'%(int(nowitem['progresspercentage']),getSettingInt('Seek_Threshold%')))
+                if ((int(nowitem['progresspercentage']) >= 85) or (int(nowitem['progresspercentage']) >= getSettingInt('Seek_Threshold%'))):  # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
                 else: setOffset = True
                     
             writer = getWriter(nowitem.get('writer',{}))
             liz = buildItemListItem(writer)
-            liz.setProperty('pvritem', dumpJSON(pvritem))
             
             if setOffset:
                 self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((runtime * 60),progress))
@@ -230,13 +228,13 @@ class Plugin:
                 liz.setProperty('resumetime' , str(progress)) #sec
                 liz.setProperty('startoffset', str(progress)) #sec
                 
-                url  = liz.getPath()
-                file = writer.get('originalfile','')
-                if url.startswith('stack://') and not url.startswith('stack://%s'%(file)):
-                    self.log('playChannel, playing stack with url = %s'%(url))
-                    #remove pre-roll stack from seek offset video.
-                    liz.setPath('stack://%s'%(' , '.join(stripStack(file, url))))
+                # url  = liz.getPath()
+                # file = writer.get('originalfile','')
+                # if isStack(url) and not hasStack(url,file):
+                    # self.log('playChannel, playing stack with url = %s'%(url))
+                    # liz.setPath('stack://%s'%(' , '.join(stripStack(url, file))))#remove pre-roll stack from seek offset video.
 
+            liz.setProperty('pvritem', dumpJSON(pvritem))
             listitems = [liz]
             setCurrentChannelItem(pvritem)
             
@@ -246,6 +244,27 @@ class Plugin:
                 if isPlaylistRandom(): self.playlist.unshuffle()
                 self.log('playChannel, Playlist size = %s'%(self.playlist.size()))
                 return self.myPlayer.play(self.playlist)  
+                
+            # if isStack(listitems[0].getPath()):
+                # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quote(listitems[0].getLabel()),quote(encodeString(listitems[0].getPath())),quote(citem['id']),'False')
+                # self.log('playChannel, isStack calling playVOD url = %s'%(url))
+                # listitems[0].setPath(url) #test to see if stacks play better as playmedia.
+                # return self.myPlayer.play(listitems[0].getPath(),listitems[0])
+                
+            # listitems = []
+            # paths = splitStacks(liz.getPath())
+            # paths.append(pvritem['callback'])
+            # listitems[0].setPath('stack://%s'%(' , '.join(url)))
+            
+            # for idx,path in enumerate(paths):
+                # print(idx,path)
+                # lz = liz
+                # lz.setPath(path)
+                # listitems.append(lz)
+                # print(listitems)
+                # self.playlist.add(path,lz,idx)
+            # self.log('playChannel, set callback stack with paths = %s'%(paths))
+            
         else: notificationDialog(LANGUAGE(30001))
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
 
@@ -253,6 +272,9 @@ class Plugin:
     def playVOD(self, name, id):
         path = decodeString(id)
         self.log('playVOD, path = %s'%(path))
+        # if isStack(path):
+            # xbmc.executebuiltin('PlayMedia(%s,resume)'%path)
+        # else:
         liz = xbmcgui.ListItem(name,path=path)
         liz.setProperty("IsPlayable","true")
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), True, liz)
@@ -264,7 +286,7 @@ class Plugin:
 
     def run(self):  
         params  = self.getParams()
-        name    = (urllib.parse.unquote(params.get("name",'')) or None)
+        name    = (unquote(params.get("name",'')) or None)
         channel = (params.get("channel",'')                    or None)
         url     = (params.get("url",'')                        or None)
         id      = (params.get("id",'')                         or None)
