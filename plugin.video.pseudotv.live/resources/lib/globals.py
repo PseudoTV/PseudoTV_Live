@@ -41,8 +41,8 @@ except:
 try:
     from multiprocessing      import cpu_count
     from multiprocessing.pool import ThreadPool 
-    ENABLE_POOL = True
-    CORES = cpu_count()
+    ENABLE_POOL  = True
+    THREAD_CORES = cpu_count()
 except: ENABLE_POOL = False
     
 PY2 = sys.version_info[0] == 2
@@ -175,9 +175,6 @@ def log(msg, level=xbmc.LOGDEBUG):
     try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     except Exception as e: xbmc.log('log failed! %s'%(e),level)
 
-def print(*msgs):
-    for msg in msgs: log('DEBUG: %s'%(msg))
-
 def getProperty(key, id=10000):
     try: 
         key = '%s.%s'%(ADDON_ID,key)
@@ -278,7 +275,6 @@ def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=
     return True
      
 def notificationProgress(message, header=ADDON_NAME, func=None, args=None, kwargs={}, time=4):
-    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')): return
     dia = ProgressBGDialog(message=message,header=header)
     for i in range(time):
         # if func: func(*args, **kwargs)
@@ -365,6 +361,9 @@ def selectDialog(list, header=ADDON_NAME, preselect=None, useDetails=True, autoc
     return None
 
 def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
+    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')):
+        if control is None: return
+        else: return control.close()
     if percent == 0 and control is None:
         control = xbmcgui.DialogProgressBG()
         control.create(header, message)
@@ -909,8 +908,8 @@ def cleanChannelSuffix(name, type):
 class PoolHelper:
     def __init__(self):
         if ENABLE_POOL: 
-            self.pool = ThreadPool(CORES)
-            log("PoolHelper: CPU CORES = " + str(CORES))
+            self.pool = ThreadPool(THREAD_CORES)
+            log("PoolHelper: CPU CORES = " + str(THREAD_CORES))
         else: 
             log("PoolHelper: ThreadPool Disabled")
         

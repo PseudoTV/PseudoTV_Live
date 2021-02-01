@@ -79,7 +79,7 @@ class Library:
             self.log('save, saving to %s'%(LIBRARYFLE))
             fle.write(dumpJSON(self.libraryItems, idnt=4, sortkey=False))
             fle.close()
-        return self.reset() #force memory/file parity 
+        return self.reset() #force i/o parity 
 
         
     def setPredefinedSelection(self, type, items):
@@ -90,8 +90,11 @@ class Library:
        
     def getLibraryItems(self, type, enabled=False):
         self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
+        def chkEnabled(item):
+            if item.get('enabled',False): return item
+            return None
         items = self.libraryItems.get('library',{}).get(type,[])
-        if enabled: items = list(filter(lambda k:k.get('enabled',False) == True, items))
+        if enabled: items = PoolHelper().poolList(chkEnabled,items)
         return sorted(items, key=lambda k: k['name'])
         
 
@@ -103,10 +106,8 @@ class Library:
 
     def clearLibraryItems(self, type=None):
         log('clearLibraryItems, type = %s'%(type))
-        if type is None:
-            types = CHAN_TYPES
-        else: 
-            types = [type]
+        if type is None: types = CHAN_TYPES
+        else: types = [type]
         for type in types: 
             libraryItems = self.getLibraryItems(type) 
             for item in libraryItems: 
@@ -131,18 +132,20 @@ class Library:
         log('chkLibraryItems, type = %s'%(type))
         hasContent = False
         if type is None: types = CHAN_TYPES.copy()
-        else: types = [type]
-        for type in types:
+        else:            types = [type]
+        
+        def setSettingStates(type):
             libraryItems = self.getLibraryItems(type) #all items, check if they exist to enable settings option.
             if libraryItems and len(libraryItems) > 0:
                 hasContent = True
                 setProperty('has.%s'%(type.replace(' ','_')),'true')
             else: 
                 setProperty('has.%s'%(type.replace(' ','_')),'false')
+                
+        PoolHelper().poolList(setSettingStates,types)
         blackList = self.recommended.getBlackList()
         if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
         setSetting('Clear_BlackList','|'.join(blackList))
-        # return hasContent
         return True
         
  
@@ -176,7 +179,7 @@ class Library:
  
     def getfillItems(self):
         log('getfillItems')
-        busy = ProgressBGDialog(message='%s'%(LANGUAGE(30158)))
+        busy  = ProgressBGDialog(message='%s'%(LANGUAGE(30158)))
         funcs = {LANGUAGE(30002):self.getNetworks,
                  LANGUAGE(30003):self.jsonRPC.fillTVShows,
                  LANGUAGE(30004):self.getTVGenres,
@@ -187,21 +190,26 @@ class Library:
                  LANGUAGE(30097):self.jsonRPC.fillMusicInfo,
                  LANGUAGE(30026):self.recommended.fillRecommended,
                  LANGUAGE(30033):self.recommended.fillImports}
-        for idx, type in enumerate(CHAN_TYPES):
-            busy = ProgressBGDialog(((idx+1)*100//len(CHAN_TYPES)), busy, '%s'%(LANGUAGE(30158)))
-            yield type,funcs[type]()
-        
+               
+        def parseMeta(data):
+            type, busy = data
+            busy = ProgressBGDialog(((CHAN_TYPES.index(type))*100//len(CHAN_TYPES)), busy, '%s'%(LANGUAGE(30158)))
+            return type,funcs[type]()
+        return busy, dict(PoolHelper().poolList(parseMeta,CHAN_TYPES,busy))
+    
         
     def fillLibraryItems(self):
         #parse library for items, convert to library item, parse for logo and vfs path. save to library.json
-        fillItems = dict(self.getfillItems())
-        busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30159)))
-        for prog, type in enumerate(CHAN_TYPES):
-            if self.myMonitor.waitForAbort(0.01): break
+        busy, fillItems = self.getfillItems()
+        # busy = ProgressBGDialog(message='%s...'%(LANGUAGE(30160)))
+        def setItem(data):
+            type, busy = data
+            prog = CHAN_TYPES.index(type)
+            if self.myMonitor.waitForAbort(0.01): return None
             items     = []
             fillItem  = fillItems.get(type,[])
-            progress  = (prog*100//len(CHAN_TYPES))
-            busy = ProgressBGDialog(progress, busy, '%s %s'%(LANGUAGE(30159),type))
+            progress  = 99#(prog*100//len(CHAN_TYPES))
+            busy = ProgressBGDialog(progress, busy, '%s %s'%(LANGUAGE(30160),type))
             existing  = self.getLibraryItems(type, enabled=True)
             for idx, item in enumerate(fillItem):
                 if self.myMonitor.waitForAbort(0.01): break
@@ -222,7 +230,8 @@ class Library:
                 items.append(tmpItem)
                 log('fillLibraryItems, type = %s, tmpItem = %s'%(type,tmpItem))
             log('fillLibraryItems, type = %s, items = %s'%(type,len(items)))
-            self.setLibraryItems(type,items)         
+            self.setLibraryItems(type,items) 
+        PoolHelper().poolList(setItem,CHAN_TYPES,busy)          
         busy = ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30158)))   
         return self.save()
         
@@ -295,7 +304,8 @@ class Recommended:
       
     def searchRecommendedAddons(self):
         self.log('searchRecommendedAddons')
-        return (PoolHelper().poolList(self.searchRecommendedAddon, self.jsonRPC.getAddons()))
+        addons = self.jsonRPC.getAddons()
+        return (PoolHelper().poolList(self.searchRecommendedAddon, addons))
         
         
     def searchRecommendedAddon(self, addon):

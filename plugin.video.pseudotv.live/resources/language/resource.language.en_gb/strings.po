@@ -645,15 +645,15 @@ msgid "Music"
 msgstr ""
 
 msgctxt "#30158"
-msgid "Parsing Kodi Library"
+msgid "Parsing Library"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Collecting"
+msgid "Parsing"
 msgstr ""
 
 msgctxt "#30160"
-msgid "Parsing Kodi"
+msgid "Parsing"
 msgstr ""
 
 msgctxt "#30161"

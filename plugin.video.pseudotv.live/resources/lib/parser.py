@@ -489,7 +489,7 @@ class Channels:
             log('Channels: save, saving to %s'%(CHANNELFLE))
             fle.write(dumpJSON(self.cleanSelf(self.channelList), idnt=4, sortkey=False))
             fle.close()
-        return self.reset() #force memory/file parity 
+        return self.reset() #force i/o parity 
 
 
 class XMLTV:
@@ -585,7 +585,6 @@ class XMLTV:
                 group.append(genre[0])
             proggenres.append(group)
             
-        # [print(list(genre)) for genre in program.get('category',[]) for program in self.xmltvList['programmes']]
         for genres in proggenres:
             for genre in genres:
                 if epggenres.get(genre,''):#{'Drama': '0x81'}
@@ -807,7 +806,7 @@ class XMLTV:
             log('XMLTV: save, saving to %s'%(XMLTVFLE))
             writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
             self.buildGenres()
-        return self.reset() #force clean and memory/file parity 
+        return self.reset() #force clean and i/o parity 
         
 
     @staticmethod
@@ -977,7 +976,7 @@ class M3U:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['props']])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
-        return self.reset() #force clean and memory/file parity 
+        return self.reset() #force clean and i/o parity 
         
 
     def addChannel(self, item, update=False):

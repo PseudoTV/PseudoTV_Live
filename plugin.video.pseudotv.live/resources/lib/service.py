@@ -206,7 +206,7 @@ class Monitor(xbmc.Monitor):
 
     def chkPendingChange(self):
         if   xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: return True
-        elif getSetting('Import_M3U') != LAST_IMPORT_M3U: return True
+        elif getSetting('Import_M3U') != LAST_IMPORT_M3U: return True #todo check other settings for change
         return False
 
 
@@ -238,7 +238,7 @@ class Monitor(xbmc.Monitor):
         if not self.getPendingChange(): return # last chance to cancel.
         elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
         self.log('onChange')
-        REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
+        # REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
         # if self.myService.myConfig.buildPredefinedChannels():
         self.myService.chkUpdate('0')
         self.setPendingChange(False)
@@ -317,7 +317,7 @@ class Service:
             conditions = [self.myMonitor.getPendingChange(),
                           not FileAccess.exists(M3UFLE),
                           not FileAccess.exists(XMLTVFLE),
-                          (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
+                          (time.time() > (float(lastUpdate or '0') + EPG_HRS))]
             self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
             if True in conditions:
                 if not self.myBuilder.getChannels() and not self.myMonitor.getPendingChange():
@@ -367,11 +367,9 @@ class Service:
             if self.chkInfo(): continue # aggressive polling.
             elif self.myMonitor.waitForAbort(2): break
             elif self.myMonitor.chkPendingChange(): # detect settings change. 
-                self.log('settings opened')
                 self.myMonitor.setPendingChange(True)
                 continue
             elif self.myMonitor.getPendingChange():
-                self.log('pending change')
                 continue
             self.chkIdle()
             self.chkUpdate()
