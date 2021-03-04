@@ -53,18 +53,19 @@ class Config:
             
 
     def autoTune(self):
-        if not yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)): 
-            setPropertyBool('autotuned',True)
-            return False
-        busy  = ProgressBGDialog(message='%s...'%(LANGUAGE(30102)))
-        types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #exclude Imports from autotuning.
-        for idx, type in enumerate(types):
-            self.log('autoTune, type = %s'%(type))
-            busy = ProgressBGDialog((idx*100//len(types)), busy, '%s %s'%(LANGUAGE(30102),type))
-            self.selectPredefined(type,autoTune=AUTOTUNE_ITEMS)
-        ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30102)))
+        status = False
+        if getPropertyBool('autotuned'): return False
+        if yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)):
+            busy  = ProgressBGDialog(message='%s...'%(LANGUAGE(30102)))
+            types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #exclude Imports from autotuning.
+            for idx, type in enumerate(types):
+                self.log('autoTune, type = %s'%(type))
+                busy = ProgressBGDialog((idx*100//len(types)), busy, '%s %s'%(LANGUAGE(30102),type))
+                self.selectPredefined(type,autoTune=AUTOTUNE_LIMIT)
+            ProgressBGDialog(100, busy, '%s...'%(LANGUAGE(30102)))
+            status = True
         setPropertyBool('autotuned',True)
-        return True
+        return status
  
  
     def selectPredefined(self, type=None, autoTune=None):
@@ -77,6 +78,7 @@ class Config:
                     self.library.clearLibraryItems(type) #clear stale meta type
                     notificationDialog(LANGUAGE(30103)%(type))
                 return False
+                
             pitems    = self.library.getLibraryItems(type,enabled=True) # existing predefined
             listItems = (PoolHelper().poolList(self.library.buildLibraryListitem,items,type))
             pselect   = findItemsIn(listItems,pitems,val_key='name')
@@ -86,12 +88,12 @@ class Config:
         else:
             if autoTune > len(items): autoTune = len(items)
             select = random.sample(list(set(range(0,len(items)))),autoTune)
+            
         if select:
             with busy_dialog(escape):
-                selects = findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name')
-                self.library.setEnableStates(type,selects)
+                self.library.setEnableStates(type,findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name'))
                 setPropertyBool('pendingChange',True)
-                self.buildPredefinedChannels(type)
+                self.buildPredefinedChannels(type) #save changes, #todo slow fucn, try to unify to single call?
         return True
 
 
@@ -208,11 +210,14 @@ class Config:
 
     
     def installResources(self):
+        found  = []
         params = ['Resource_Logos','Resource_Ratings','Resource_Networks','Resource_Commericals','Resource_Trailers']
         for param in params:
             addons = getSetting(param).split(',')
-            for addon in addons: installAddon(addon)
-        return True
+            for addon in addons: found.append(installAddon(addon))
+        if True in found: return True
+        return notificationDialog(LANGUAGE(30192))
+        
     
     def run(self): 
         param = self.sysARG[1]

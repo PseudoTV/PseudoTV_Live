@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2021 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -72,7 +72,7 @@ class Builder:
         for rule in ruleList:
             if action in rule.actions:
                 self.log("runActions performing channel rule: %s"%(rule.name))
-                parameter = rule.runAction(action, self, parameter)
+                return rule.runAction(action, self, parameter)
         return parameter
         
 
@@ -99,8 +99,8 @@ class Builder:
             notificationDialog(LANGUAGE(30056))
             return None
 
-        if not getPropertyBool('PseudoTVRunning'): # legacy setting to disable/enable support in third-party applications. 
-            setPropertyBool('PseudoTVRunning',True)
+        if not isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
+            setLegacyPseudoTV(True)
             
         self.dialog       = ProgressBGDialog()
         self.channelCount = len(channels)
@@ -116,10 +116,10 @@ class Builder:
             self.progress = (idx*100//len(channels))
             cacheResponse = self.getFileList(channel, channel['radio'])
             cacheResponse = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
+            
             if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
                 self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
-                    # self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s %s'%(LANGUAGE(30051),self.chanName))
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
@@ -130,8 +130,9 @@ class Builder:
             
         self.dialog = ProgressBGDialog(100, self.dialog, message=LANGUAGE(30053))
         self.log('buildService, finished')
-        if not self.myPlayer.isPlaying() and getPropertyBool('PseudoTVRunning'): # legacy setting to disable/enable support in third-party applications. 
-            setPropertyBool('PseudoTVRunning',False)
+        
+        if isLegacyPseudoTV() and not self.myPlayer.isPlaying():
+            setLegacyPseudoTV(False)
         return True
 
 
@@ -167,7 +168,8 @@ class Builder:
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
-        return self.runActions(RULES_ACTION_CHANNEL_POST_TIME, channel, tmpList)
+        tmpList = self.runActions(RULES_ACTION_CHANNEL_POST_TIME, channel, tmpList)
+        return tmpList
             
 
     def getFileList(self, citem, radio=False):
@@ -181,7 +183,7 @@ class Builder:
             
             valid  = False
             now    = getLocalTime()
-            start  = self.writer.getEndtime(citem['id'],roundTimeDown(now,offset=59)) #offset time to start top of the hour
+            start  = self.writer.getEndtime(citem['id'],roundTimeDown(now,offset=60)) #offset time to start top of the hour
 
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=getSettingInt('Max_Days'))): 
@@ -205,24 +207,25 @@ class Builder:
                     return False
                 
                 cacheResponse = self.runActions(RULES_ACTION_CHANNEL_LIST, citem, cacheResponse)
-                cacheResponse = (list(interleave(*cacheResponse))) # interleave multi-paths, while keeping order.
+                cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping order.
+                cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
+                self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
                 
-                # if len(cacheResponse) < limit: # balance media limits, by filling randomly with duplicates.
-                    # cacheResponse.extend(list(fillList(cacheResponse,(limit-len(cacheResponse)))))
-            cacheResponse = list(filter(lambda filelist:filelist, cacheResponse)) #filter empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
+                if cacheResponse and len(cacheResponse) < self.limit: # balance media limits, by filling randomly with duplicates to meet EPG_HRS
+                    cacheResponse = self.fillCells(cacheResponse)
+                    
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
-            
             ##DEBUG
             self.fillBCTs = False
             if self.fillBCTs and not citem.get('radio',False): cacheResponse = self.injectBCTs(citem, cacheResponse)
             ######
             
             self.runActions(RULES_ACTION_CHANNEL_STOP, citem)
-            return sorted((cacheResponse), key=lambda k: k['start'])
+            return sorted(cacheResponse, key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, Failed! " + str(e), xbmc.LOGERROR)
         return False
             
-            
+    
     def buildRadio(self, channel):
         self.log("buildRadio; channel = %s"%(channel))
         #todo insert custom radio labels,plots based on genre type?
@@ -232,7 +235,7 @@ class Builder:
         return self.buildFile(channel,type='music')
                 
                 
-    def buildFile(self, channel, duration=10800, type='video', entries=3):
+    def buildFile(self, channel, duration=EPG_HRS, type='video', entries=3):
         self.log("buildFile; channel = %s"%(channel))
         tmpItem  = {'label'       : (channel.get('label','') or channel['name']),
                     'episodetitle': channel.get('episodetitle',''),
@@ -247,6 +250,17 @@ class Builder:
         return [tmpItem.copy() for idx in range(entries)]
         
         
+    def fillCells(self, fileList):
+        self.log("fillCells; fileList = %s"%(len(fileList)))
+        totRuntime = sum([item.get('duration') for item in fileList])
+        iters = cycle(fileList)
+        while not self.myMonitor.abortRequested() and totRuntime < EPG_HRS:
+            item = next(iters).copy()
+            totRuntime += item.get('duration')
+            fileList.append(item)
+        return fileList
+
+
     def buildFileList(self, channel, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(channel['id'],path,limit,sort,filter,limits))
         if path.startswith('videodb://movies'): 

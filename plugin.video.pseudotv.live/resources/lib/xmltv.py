@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2021 Lunatixz
 #
 #
 # This file is part of PseudoTV.
@@ -18,7 +18,7 @@
 
 """ 
 MODIFIED FROM
-xmltv.py - Python interface to XMLTV format, based on XMLTV.pm
+xmltv.py - Python interface to XMLTV format, based on XMLTV.py
 
 Copyright (C) 2001 James Oakley <jfunk@funktronics.ca>
 
@@ -40,7 +40,7 @@ from resources.lib.globals import *
 VERSION = "1.4.4_PSEUDOTV"
 
 # The date format used in XMLTV (the %Z will go away in 0.6)
-locale           = DEFAULT_ENCODING          #'utf-8'
+locale           = DEFAULT_ENCODING  #'utf-8'
 date_format      = DTZFORMAT         #'%Y%m%d%H%M%S %Z'
 date_format_notz = DTFORMAT          #'%Y%m%d%H%M%S'
 
@@ -615,7 +615,7 @@ class Writer:
                 self.settext(u, url, with_lang=False)
         
         
-    def write(self, file, encoding=locale, pretty_print=False):
+    def write(self, file, pretty_print=False):
         """
         write(file, pretty_print=False) -> None
 
@@ -625,4 +625,4 @@ class Writer:
         if pretty_print:
             indent(self.root)
         et = ElementTree(self.root)
-        et.write(file, encoding=encoding, xml_declaration=True)
+        et.write(file, encoding=self.encoding, xml_declaration=True)

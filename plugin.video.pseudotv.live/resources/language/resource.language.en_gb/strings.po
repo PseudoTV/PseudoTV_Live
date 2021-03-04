@@ -785,7 +785,7 @@ msgid "Install Resources"
 msgstr ""
 
 msgctxt "#30192"
-msgid "already installed"
+msgid "All Resources already installed"
 msgstr ""
 
 msgctxt "#30193"

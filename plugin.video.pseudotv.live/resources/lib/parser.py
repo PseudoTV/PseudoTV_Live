@@ -70,8 +70,9 @@ class Writer:
         
         
     def getEndtime(self, id, fallback):
-        self.log('getEndtime, id = %s'%(id))
-        return (self.xmltv.getEndtimes().get(id,'') or fallback)
+        endtime = (self.xmltv.getEndtimes().get(id,'') or fallback)
+        self.log('getEndtime, id = %s, endtime = %s, fallback = %s'%(id,endtime,fallback))
+        return endtime
         
         
     def delete(self, full=False):
@@ -276,11 +277,12 @@ class Writer:
             
         type, libraryItems = data
         self.log('buildPredefinedChannel, type = %s'%(type))
-        echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels())) # existing channels, avoid duplicates, aid in removal.
-        enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] #existing channel numbers
+        echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
+        enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] # existing channel numbers
         numbers   = iter(buildAvailableRange()) #list of available channel numbers 
         leftovers = echannels.copy()
         items     = libraryItems.get(type,[])
+        
         for item in items:
             citem = self.channels.getCitem()
             citem.update({'name'   :getChannelSuffix(item['name'], type),
@@ -291,15 +293,19 @@ class Writer:
             citem['group']   = list(set(citem['group']))
             citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
             citem['catchup'] = ('vod' if not citem['radio'] else '')
+            
             match, eitem = findChannel()
             if match is not None: #update new citems with existing values.
                 leftovers.remove(eitem)
-                for key in ['rules','number','favorite','page']: citem[key] = eitem[key]
+                for key in ['rules','number','favorite','page']: 
+                    citem[key] = eitem[key]
             else: 
                 citem['number'] = next(numbers,0)
-            citem['id'] = getChannelID(citem['name'], citem['path'], citem['number'])
+            citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
             self.channels.add(citem)
-        [self.removeChannel(eitem) for eitem in leftovers] #remove channels unselected
+            
+        for eitem in leftovers:
+            self.removeChannel(eitem) #remove channels unselected
         return True
         
         
@@ -624,13 +630,11 @@ class XMLTV:
         endtime    = {} # get "Endtime" channels last stopDate in programmes
         channels   = self.sortChannels(self.xmltvList['channels'])
         programmes = self.sortProgrammes(self.xmltvList['programmes'])
-        log('XMLTV: getEndtimes, channels = %s, programmes = %s'%(len(channels), len(programmes)))
         for channel in channels:
             try: 
                 stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']])
                 stopTime = time.mktime(stopDate)
                 endtime[channel['id']] = stopTime
-                log('XMLTV: getEndtimes, channelid = %s, endtime = %s'%(channel['id'], stopTime))
             except Exception as e: 
                 log("XMLTV: getEndtimes, Failed! " + str(e), xbmc.LOGERROR)
                 self.removeChannel(channel['id'])
@@ -672,7 +676,7 @@ class XMLTV:
                       'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
                       'icon'        : [{'src': item['thumb']}],
                       'length'      : {'units': 'seconds', 'length': str(item['length'])}}
-
+                      
         if item.get('sub-title',''):
             pitem['sub-title'] = [(self.cleanString(item['sub-title']), LANG)]
 
@@ -735,7 +739,7 @@ class XMLTV:
     @staticmethod
     def cleanString(text):
         if text == ',' or not text: text = LANGUAGE(30161) #"Unavailable"
-        return re.sub(u'[^\n\r\t\x20-\x7f]+',u'',text)
+        return text
         
         
     @staticmethod

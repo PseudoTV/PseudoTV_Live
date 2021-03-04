@@ -93,10 +93,11 @@ MAX_IMPORT          = 5
 EPG_HRS             = 10800  # 3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
-UPDATE_OFFSET       = 3600
-UPDATE_WAIT         = 10800 # 3hr in Secs.
-AUTOTUNE_ITEMS      = 3 #auto items per type.
+UPDATE_OFFSET       = 3600 #1hr in secs.
+UPDATE_WAIT         = 10800.0 # 3hr in Secs.
+AUTOTUNE_LIMIT      = 3 #auto items per type.
 CHANNEL_LIMIT       = 999
+OVERLAY_DELAY       = 15 #secs
 CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
@@ -204,6 +205,12 @@ def getPropertyBool(key):
     
 def setPropertyBool(key, value):
     return setProperty(key,str(value).title())
+
+def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
+    return getPropertyBool('PseudoTVRunning')
+
+def setLegacyPseudoTV(state):
+    return setPropertyBool('PseudoTVRunning',state)
 
 def setSetting(key,value):
     log('globals: setSetting, key = %s, value = %s'%(key,value))
@@ -679,15 +686,17 @@ def removeDUPSLST(lst):
     list_of_strings = set(list_of_strings)
     return [loadJSON(s) for s in list_of_strings]
 
-def fillList(items, limit):
-    for n in range(limit): yield random.choice(items)
-    
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)
     text = re.sub('\[/COLOR\]', '', text)
     text = text.replace("[B]",'').replace("[/B]",'')
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
+
+def hasPVRitem():
+    pvritem = len(getCurrentChannelItem()) > 0
+    log('globals: hasPVRitem = %s'%(pvritem))
+    return pvritem
     
 def isPseudoTV():
     isPseudoTV = hasChannelData('VideoPlayer') #condition set only while playing
@@ -779,8 +788,7 @@ def interleave(*args): #interleave multi-lists, while preserving order
         iters = list(map(iter, args))
         while iters and not MY_MONITOR.abortRequested():
             it = random.choice(iters)
-            try:
-                yield next(it)
+            try: yield next(it)
             except StopIteration:
                 iters.remove(it)
     except Exception as e: 
@@ -861,7 +869,7 @@ def isSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
     
 def installAddon(id):
-    if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return True
+    if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return False
     xbmc.executebuiltin('InstallAddon("%s")'%(id))
     return notificationDialog('%s %s...'%(LANGUAGE(30193),id))
         
@@ -907,8 +915,8 @@ def titleLabels(list):
 def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(thetime)
     delta = datetime.timedelta(minutes=offset)
-    if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
-    else: n = n.replace(minute=0, second=0, microsecond=0)
+    if n.minute < (offset): n = n.replace(minute=0, second=0, microsecond=0)
+    else: n = n.replace(minute=offset, second=0, microsecond=0)
     return time.mktime(n.timetuple())
     
 def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
@@ -934,7 +942,7 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
- 
+
 class PoolHelper:
     def __init__(self):
         if ENABLE_POOL: 

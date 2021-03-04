@@ -59,7 +59,7 @@ class Player(xbmc.Player):
             for rule in ruleList:
                 if action in rule.actions:
                     self.log("runActions performing channel rule: %s"%(rule.name))
-                    parameter = rule.runAction(action, self, parameter)
+                    return rule.runAction(action, self, parameter)
         return parameter
         
         
@@ -152,8 +152,7 @@ class Player(xbmc.Player):
         
         self.lastSubState = isSubtitle()
         self.toggleSubtitles(False)
-        setPropertyBool('PseudoTVRunning',True) # legacy setting to disable/enable support in third-party applications. 
-        
+        setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         pvritem = getCurrentChannelItem()                
         if (pvritem.get('citem',{}).get('path','') or None) is None:
             pvritem.update({'citem':self.myService.channels.findChannel(pvritem.get('citem',{}), self.myService.channels.getChannels())[1]})
@@ -196,7 +195,7 @@ class Player(xbmc.Player):
         self.log('stopAction')
         clearCurrentChannelItem()
         self.toggleOverlay(False)
-        setPropertyBool('PseudoTVRunning',False)
+        setLegacyPseudoTV(False)
 
 
     def isPlaylist(self):
@@ -205,7 +204,7 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state):
         if state and not isOverlay():
-            if not (self.showOverlay & self.isPlaying() & isPseudoTV()): return
+            if not (self.showOverlay & self.isPlaying() & hasPVRitem()): return
             self.log("toggleOverlay, show")
             self.overlayWindow.show()
         elif not state and isOverlay():
@@ -233,7 +232,7 @@ class Monitor(xbmc.Monitor):
         return False
 
 
-    def getPendingChange(self):
+    def isPendingChange(self):
         return (self.pendingChange | getPropertyBool('pendingChange'))
     
     
@@ -249,7 +248,7 @@ class Monitor(xbmc.Monitor):
             
     def onSettingsChanged(self):
         setPropertyBool('isPlaylist',bool(getSettingInt('Playback_Method')))
-        if not self.getPendingChange(): return # only trigger when settings dialog opened
+        if not self.isPendingChange(): return
         self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
@@ -259,11 +258,9 @@ class Monitor(xbmc.Monitor):
         
         
     def onChange(self):
-        if not self.getPendingChange(): return # last chance to cancel.
+        if not self.isPendingChange(): return # last chance to cancel.
         elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
         self.log('onChange')
-        # REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID) #reinit, needed?
-        # if self.myService.myConfig.buildPredefinedChannels():
         self.myService.chkUpdate('0')
         self.setPendingChange(False)
 
@@ -321,7 +318,7 @@ class Service:
             self.log('runServiceThread, started')
             for func in [self.chkRecommended, self.chkPredefined, self.chkUpdate]: func()
             self.log('runServiceThread, finished')
-            return self.startServiceThread(float(UPDATE_WAIT)) #3hr check
+            return self.startServiceThread(UPDATE_WAIT)
                    
         
     def chkRecommended(self):
@@ -333,7 +330,7 @@ class Service:
         
                 
     def chkIdle(self):
-        if getIdleTime() > 15: #15sec. overlay delay...
+        if getIdleTime() > OVERLAY_DELAY: #15sec. overlay delay...
             self.myPlayer.toggleOverlay(True)
         else:
             self.myPlayer.toggleOverlay(False)
@@ -346,25 +343,27 @@ class Service:
 
 
     def chkUpdate(self, lastUpdate=None):
-        if   isBusy(): return
-        elif self.writer.isClient(): return False
+        if isBusy() or self.writer.isClient(): 
+            return False
+            
         with busy():
-            if lastUpdate is None: lastUpdate = (getProperty('Last_Update') or '0')
-            conditions = [self.myMonitor.getPendingChange(),
+            if lastUpdate is None: 
+                lastUpdate = (getProperty('Last_Update') or '0')
+                
+            conditions = [self.myMonitor.isPendingChange(),
                           not FileAccess.exists(M3UFLE),
                           not FileAccess.exists(XMLTVFLE),
-                          (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))] #1hr chkUpdate
+                          (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
             self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
+            
             if True in conditions:
-                if not self.myBuilder.getChannels() and not self.myMonitor.getPendingChange():
-                    if not getPropertyBool('autotuned'):
-                        if self.myConfig.autoTune():   #autotune
-                            return self.chkUpdate('0') #force rebuild after autotune
-                    else: 
-                        self.log('chkUpdate, no channels found & autotuned recently')
-                        return False #skip autotune if performed recently.
-                        # if self.writer.recoverChannels(): 
-                            # return self.chkUpdate('0')
+                if not self.myBuilder.getChannels():
+                    if self.myConfig.autoTune():   #autotune
+                        return self.chkUpdate('0') #force rebuild after autotune
+                    self.log('chkUpdate, no channels found & autotuned recently')
+                    return False #skip autotune if performed recently.
+                    # if self.writer.recoverChannels(): 
+                    # return self.chkUpdate('0')
                 return self.updateChannels()
             return False
         
@@ -391,12 +390,12 @@ class Service:
             if self.myMonitor.chkPendingChange(): # detect settings change. 
                 self.myMonitor.setPendingChange(True)
                 continue
-            elif self.myMonitor.getPendingChange():
+            elif isBusy() or self.myMonitor.isPendingChange():
                 continue
                 
-            if isBusy(): continue
             self.chkRecommended()
             self.chkUpdate()
+            
         self.closeThreads()
                 
                 

@@ -288,21 +288,17 @@ class JSONRPC:
         else:           MusicGenreList = (sorted(MusicGenreList.keys()))
         self.log('fillMusicInfo, found genres = %s'%(len(MusicGenreList)))
         return MusicGenreList
-        
-        
+
+
     def getDuration(self, path, item={}, accurate=None):
         if accurate is None: accurate = getSettingBool('Duration_Type') == 1
         self.log("getDuration, accurate = %s, path = %s"%(accurate,path))
-        
         duration = 0
         runtime  = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
-        if path.startswith(('plugin://','upnp://','pvr://')): 
-            return runtime
-        
         if (runtime == 0 | accurate):
-            if path.startswith('stack://'): #handle "stacked" videos:
-                stack = (path.replace('stack://','').replace(',,',',')).split(' , ') #todo move to regex match
-                for file in stack: duration += self.parseDuration(file, item)
+            if isStack(path): #handle "stacked" videos:
+                paths = splitStacks(path)
+                for file in paths: duration += self.parseDuration(file)
             else: duration = self.parseDuration(path, item)
             if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s"%(path,runtime))
@@ -315,14 +311,11 @@ class JSONRPC:
         runtime   = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
         if not duration:
             try:
-                if path.startswith(('http','ftp','plugin://','upnp://','pvr://')): 
-                    duration = runtime
-                else: 
-                    duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"))
+                duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"),item)
+                self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
             except Exception as e: 
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
-            self.cache.set(cacheName, duration, checksum=duration, expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
         
         dbid    = item.get('id',-1)
         rundiff = int(percentDiff(runtime,duration))
@@ -337,7 +330,6 @@ class JSONRPC:
        
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         limits = self.writer.autoPagination(id, path, limits)
-        
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)

@@ -75,12 +75,11 @@ class Overlay(xbmcgui.WindowXML):
                 self.log("runActions performing channel rule: %s"%(rule.name))
                 parameter = rule.runAction(action, self, parameter)
         return parameter
-
-    
+        
+        
     def onInit(self, refresh=False):
         self.log('onInit, refresh = %s'%(refresh))
         setProperty('OVERLAY.visible','nope')
-        
         self.onNext = self.getControl(41003)
         self.onNext.setVisible(False)
         
@@ -90,7 +89,6 @@ class Overlay(xbmcgui.WindowXML):
         self.myPlayer = Player()
         self.myPlayer.overlay = self
     
-        setProperty('OVERLAY.visible','okay')
         self.container = self.getControl(40000)
         self.container.reset()
         
@@ -101,6 +99,7 @@ class Overlay(xbmcgui.WindowXML):
         # self.videoWindow.setWidth(self.videoWindow.getWidth())
         
         if self.load(): 
+            setProperty('OVERLAY.visible','okay')
             if self.showChannelBug:
                 self.bugToggle()
             if self.showOnNext:
@@ -202,7 +201,7 @@ class Overlay(xbmcgui.WindowXML):
             self.onNextToggleThread.name = "onNextToggleThread"
             self.onNextToggleThread.start()
         except Exception as e: self.log("onNextToggle, Failed! " + str(e), xbmc.LOGERROR)
-            
+        
 
     def bugToggle(self, state=True):
         try:

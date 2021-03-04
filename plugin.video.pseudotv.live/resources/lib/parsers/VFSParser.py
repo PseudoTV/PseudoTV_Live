@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2021 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -19,12 +19,20 @@
 from resources.lib.globals import *
 
 class VFSParser:
+    def __init__(self, fileItem={}):
+        self.log('__init__')
+        self.fileItem = fileItem
+        
+        
+    def walkVFS(self, filename):
+        #todo parse json for item, walk dir.
+        return {}
+         
+         
     def determineLength(self, filename):
-        fleName, fleExt = os.path.splitext(filename)
-        fleName += '.nfo'
-        log("VFSParser: determineLength, file = %s, nfo = %s"%(filename,fleName))
-        duration = 0
-        durationinseconds = 0
-        #todo parse json for item duration.
-        log("VFSParser: Duration is " + str(duration))
+        log("VFSParser: determineLength, file = %s, item = %s"%(filename,self.fileItem))
+        if not self.fileItem: 
+            self.fileItem = self.walkVFS(filename)
+        duration = int(self.fileItem.get('runtime','') or self.fileItem.get('duration','') or (self.fileItem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        log("VFSParser: Duration is %s"%(duration))
         return duration

@@ -27,10 +27,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         if isBusy() or getPropertyBool('Config.Running'):
             notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
+        
             
         with busy_dialog():
             setBusy(True)
             setPropertyBool('Config.Running',True)
+            setLegacyPseudoTV(True)
             self.cntrlStates   = {}
             self.channel       = 0
             self.showingList   = True
@@ -616,7 +618,8 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def closeManager(self):
         self.log('closeManager')
-        setProperty('Config.Running','False')
+        setPropertyBool('Config.Running',False)
+        setLegacyPseudoTV(False)
         # if len(items) > 0: setPropertyBool('has.Userdefined',True)
         setBusy(False)
         self.close()

@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Jason Anderson, Lunatixz
+#   Copyright (C) 2021 Jason Anderson, Lunatixz
 #
 #
 # This file is part of PseudoTV.
@@ -83,7 +83,6 @@ class FileAccess:
         fle = 0
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
-
             try:
                 fle = codecs.open(newname, mode, encoding)
             except:
@@ -166,11 +165,10 @@ class FileAccess:
 class VFSFile:
     def __init__(self, filename, mode):
         log("VFSFile: trying to open " + filename)
-
         if mode == 'w':
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:
-            self.currentFile = xbmcvfs.File(filename)
+            self.currentFile = xbmcvfs.File(filename, 'r')
         log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
 
         if self.currentFile == None:
@@ -214,7 +212,7 @@ class VFSFile:
 
 
     def tell(self):
-        try: return self.currentFile.tell()
+        try:    return self.currentFile.tell()
         except: return self.currentFile.seek(0, 1)
         
 
@@ -223,15 +221,18 @@ class FileLock:
         random.seed()        
         if not FileAccess.exists(globals.LOCK_LOC): 
             FileAccess.makedirs(globals.LOCK_LOC)
+            
         if not FileAccess.exists(FILE_LOCK_NAME):    
             FileAccess.open(FILE_LOCK_NAME,'a').close()
             
+        self.lockedList   = []
+        self.isExiting    = False
         self.lockFileName = os.path.join(globals.LOCK_LOC,FILE_LOCK_NAME)
-        self.lockedList = []
+        
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
         self.refreshLocksTimer.start()
-        self.isExiting = False
+        
         self.grabSemaphore = threading.BoundedSemaphore()
         self.listSemaphore = threading.BoundedSemaphore()
         log("FileLock: instance")
@@ -244,8 +245,7 @@ class FileLock:
             try:
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
-            except:
-                pass
+            except: pass
 
         for item in self.lockedList:
             self.unlockFile(item)
@@ -268,12 +268,12 @@ class FileLock:
 
     def lockFile(self, filename, block = False):
         log("FileLock: lockFile " + filename)
-        curval = -1
+        curval   = -1
         attempts = 0
-        fle = 0
+        fle      = 0
         filename = filename.lower()
-        locked = True
-        lines = []
+        locked   = True
+        lines    = []
 
         while not globals.MY_MONITOR.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
@@ -284,7 +284,6 @@ class FileLock:
                 if globals.MY_MONITOR.waitForAbort(1): break
 
             self.grabSemaphore.acquire()
-
             if self.grabLockFile() == False:
                 self.grabSemaphore.release()
                 return False
@@ -346,43 +345,36 @@ class FileLock:
 
     def grabLockFile(self):
         log("FileLock: grabLockFile")
-
         # Wait a maximum of 20 seconds to grab file-lock file.  This long
         # timeout should help prevent issues with an old cache.
         for i in range(40):
             # Cycle file names in case one of them is sitting around in the directory
             self.lockName = os.path.join(globals.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
-            
             try:
                 FileAccess.rename(self.lockFileName, self.lockName)
                 fle = FileAccess.open(self.lockName, 'r')
                 fle.close()
                 return True
-            except:
-                globals.MY_MONITOR.waitForAbort(.5)
+            except: globals.MY_MONITOR.waitForAbort(.5)
 
         log("FileLock: Creating lock file")
-
         try:
             fle = FileAccess.open(self.lockName, 'w')
             fle.close()
         except:
             log("FileLock: Unable to create a lock file")
             return False
-
         return True
 
 
     def releaseLockFile(self):
         log("FileLock: releaseLockFile")
-
         # Move the file back to the original lock file name
         try:
             FileAccess.rename(self.lockName, self.lockFileName)
         except:
             log("FileLock: Unable to rename the file back to the original name")
             return False
-
         return True
 
 
@@ -391,29 +383,23 @@ class FileLock:
         # Make sure the entry doesn't exist.  This should only be the case
         # when the attempts count times out
         self.removeLockEntry(lines, filename)
-
         if addentry:
             try:
                 lines.append(str(random.randint(1, 60000)) + "," + filename + "\n")
-            except:
-                return False
+            except: return False
 
-        try:
+        try:    
             fle = FileAccess.open(self.lockName, 'w')
-        except:
+        except: 
             log("FileLock: Unable to open the lock file for writing")
             return False
 
         flewrite = ''
-
         for line in lines:
             flewrite += line
 
-        try:
-            fle.write(flewrite)
-        except:
-            log("FileLock: Exception writing to the log file")
-
+        try:    fle.write(flewrite)
+        except: log("FileLock: Exception writing to the log file")
         fle.close()
 
 
@@ -460,10 +446,10 @@ class FileLock:
         filename = filename.lower()
         found = False
         realindex = 0
+        
         # First make sure we actually own the lock
         # Remove it from the list if we do
         self.listSemaphore.acquire()
-
         for i in range(len(self.lockedList)):
             if self.lockedList[realindex] == filename:
                 del self.lockedList[realindex]
@@ -472,13 +458,11 @@ class FileLock:
             realindex += 1
 
         self.listSemaphore.release()
-
         if found == False:
             log("FileLock: Lock not found")
             return False
 
         self.grabSemaphore.acquire()
-
         if self.grabLockFile() == False:
             self.grabSemaphore.release()
             return False

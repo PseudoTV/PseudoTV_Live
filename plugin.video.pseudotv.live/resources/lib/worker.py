@@ -24,13 +24,13 @@ Msg = collections.namedtuple('Msg', ['event', 'args'])
 class BaseWorker(Process):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.queue = Queue()
+        self.myQueue   = Queue()
         self.myMonitor = MY_MONITOR
 
 
     def send(self, event, *args):
         msg = Msg(event, args)
-        self.queue.put(msg)
+        self.myQueue.put(msg)
 
 
     def dispatch(self, msg):
@@ -47,9 +47,9 @@ class BaseWorker(Process):
             if self.myMonitor.waitForAbort(1):
                 log('BaseWorker: worker aborted')
                 break
-            elif self.queue.empty(): 
+            elif self.myQueue.empty(): 
                 log('BaseWorker: worker finished')
                 break
-            msg = self.queue.get()
+            msg = self.myQueue.get()
             self.dispatch(msg)
         log('BaseWorker: worker stopped')

@@ -357,7 +357,7 @@ class Recommended:
         [tmpLST.extend(item['data'][key]) for item in items for key in item['data'].keys() if key != 'iptv']
         tmpLST = sorted(tmpLST,key=lambda x:x.get('name'))
         tmpLST = sorted(tmpLST,key=lambda x:x['id'])
-        self.log('findRecommended, found = %s'%(len(tmpLST)))
+        self.log('fillRecommended, found = %s'%(len(tmpLST)))
         return tmpLST
 
 

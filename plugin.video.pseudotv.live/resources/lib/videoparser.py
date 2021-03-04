@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Jason Anderson, Lunatixz
+#   Copyright (C) 2021 Jason Anderson, Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -36,9 +36,8 @@ class VideoParser:
         self.VFSPath   = ['resource://','plugin://','upnp://','pvr://']
 
 
-    def getVideoLength(self, filename):
+    def getVideoLength(self, filename, fileItem={}):
         log("VideoParser: getVideoLength " + filename)
-
         if len(filename) == 0:
             log("VideoParser: getVideoLength, No file name specified")
             return 0
@@ -63,7 +62,7 @@ class VideoParser:
         elif ext in self.STRMExts:
             self.parser = STRMParser.STRMParser()
         elif filename.startswith(tuple(VFSPath)):
-            self.parser = VFSParser.VFSParser()
+            self.parser = VFSParser.VFSParser(fileItem)
         else:
             log("VideoParser: getVideoLength, No parser found for extension " + ext)
             return 0

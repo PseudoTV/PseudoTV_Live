@@ -1,5 +1,7 @@
 v.0.2.7
--Added Install resources action to filler settings.
+-Added Install resources button to filler settings.
+-Fixed XMLTV Unicode characters.
+-Fixed fill for channels with limited content.
 
 v.0.2.6
 -Warning Requires Kodi Matrix Nightly (1/12/21) or greater.

@@ -21,8 +21,8 @@ from resources.lib.globals import *
 
 class Context:
     def __init__(self, sysARG, writer):
-        log('Context: __init__, sysARG = ' + str(sysARG))
         with busy_dialog():
+            log('Context: __init__, sysARG = ' + str(sysARG))
             xbmcgui.Dialog().info(buildItemListItem(writer))
 
 if __name__ == '__main__': Context(sys.argv,writer=getWriterfromString())
