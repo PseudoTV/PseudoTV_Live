@@ -25,30 +25,32 @@ from resources.lib             import xmltv
 GLOBAL_FILELOCK = FileLock()
 
 class Vault:
-    def __init__(self):
-        self.m3uList      = {}
-        self.xmltvList    = {}
-        self.channelList  = {}
+    #todo convert json to dataclass create class array to handle types. https://pypi.org/project/dataclasses-json/
+    m3uList     = {}
+    xmltvList   = {}
+    channelList = {}
         
 class Writer:
     def __init__(self, cache=None, builder=None):
         self.log('__init__')
         if cache is None:
-            self.cache = SimpleCache()
+            self.cache = Cache()
         else: 
             self.cache = cache
-        
+            
+        self.dialog       = Dialog()
         self.vault        = Vault()
-        self.m3u          = M3U(self.cache, self.vault)
-        self.xmltv        = XMLTV(self.cache ,self.vault)
+        self.m3u          = M3U(self.vault)
+        self.xmltv        = XMLTV(self.vault)
         self.channels     = Channels(self.cache, self.vault)
+        self.pool         = PoolHelper()
         
         if builder:
-            self.dialog   = builder.dialog
-            self.progress = builder.progress
-            self.chanName = builder.chanName
+            self.progDialog = builder.progDialog
+            self.progress   = builder.progress
+            self.chanName   = builder.chanName
         else:
-            self.dialog   = None
+            self.progDialog   = None
             self.progress = 0
             self.chanName = ''
 
@@ -66,7 +68,9 @@ class Writer:
         
         
     def isClient(self):
-        return self.channels.isClient
+        client = self.channels.isClient
+        setPropertyBool('isClient',client)
+        return client
         
         
     def getEndtime(self, id, fallback):
@@ -79,9 +83,10 @@ class Writer:
         self.log('delete')
         funcs = [self.m3u.delete,
                  self.xmltv.delete]
-        if full: funcs.extend([self.channels.delete,self.deleteSettings])
+        if full: funcs.extend([self.channels.delete])
         if False in [func() for func in funcs]:
             return False
+        if full: setRestartRequired(True)
         return True
         
 
@@ -89,7 +94,7 @@ class Writer:
     def deleteSettings():
         self.log('deleteSettings')
         if FileAccess.delete(SETTINGS_FLE):
-            return notificationDialog(LANGUAGE(30016)%('SETTINGS'))
+            return self.dialog.notificationDialog(LANGUAGE(30016)%('SETTINGS'))
         return False
         
         
@@ -98,8 +103,8 @@ class Writer:
         if self.cleanChannels():
             self.importSETS()
             if self.xmltv.save() and self.m3u.save():
-                if self.dialog is not None:
-                    self.dialog = ProgressBGDialog(self.progress, self.dialog, message=LANGUAGE(30152))
+                if self.progDialog is not None:
+                    self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message=LANGUAGE(30152))
                 return True
         return False
         
@@ -114,13 +119,15 @@ class Writer:
     def importSETS(self):
         self.log('importSETS')
         importLST = self.channels.getImports()
-        if getSettingBool('User_Import'): 
+        if getSettingBool('User_Import'):
+            setSetting('Import_M3U'  ,{0:getSetting('Import_M3U_FILE')  ,1:getSetting('Import_M3U_URL')}[getSettingInt('Import_M3U_TYPE')])
+            setSetting('Import_XMLTV',{0:getSetting('Import_XMLTV_FILE'),1:getSetting('Import_XMLTV_URL')}[getSettingInt('Import_XMLTV_TYPE')])
             importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':getSetting('Import_M3U'),'slug':getSetting('Import_SLUG')},'xmltv':{'path':getSetting('Import_XMLTV')}})
         for idx, importItem in enumerate(importLST):
             try:
                 if importItem.get('type','') == 'iptv':
-                    if self.dialog is not None:
-                        self.dialog = ProgressBGDialog(self.progress, self.dialog, message='%s %s'%(LANGUAGE(30151),importItem.get('name','')))
+                    if self.progDialog is not None:
+                        self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                     idx += 1
                     slug   = importItem.get('m3u'  ,{}).get('slug','')
                     m3ufle = importItem.get('m3u'  ,{}).get('path','')
@@ -214,7 +221,6 @@ class Writer:
         channels = self.channels.getChannels()
         m3u      = self.m3u.getChannels().copy()
         xmltv    = self.xmltv.getChannels().copy()
-        
         for channel in channels:
             chid = channel.get('id','')
             if not chid: continue
@@ -232,29 +238,30 @@ class Writer:
         return True
         
     
-    def recoverChannels(self):
-        self.log('recoverChannels') #rebuild channels.json from m3u.
+    def recoverChannelsFromM3U(self, reload=True):
+        self.log('recoverChannelsFromM3U') #rebuild channels.json from m3u.
+        if reload: self.channels.reset()
         channels = self.channels.getChannels()
         m3u      = self.m3u.getChannels().copy()
         if not channels and m3u:
-            self.log('recoverChannels, recovering %s m3u channels'%(m3u))
-            if not yesnoDialog('%s ?'%(LANGUAGE(30178))): return
+            self.log('recoverChannelsFromM3U, recovering %s m3u channels'%(m3u))
+            if not self.dialog.yesnoDialog('%s ?'%(LANGUAGE(30178))): return
             for item in m3u: 
                 citem = self.channels.getCitem()
                 citem.update(item) #todo repair path.
                 self.channels.add(citem)
             if self.channels.save(): return True
         return False
-        
-        
+     
+       
     def buildImports(self, items):
         self.log('buildImports')
         self.channels.setImports(items)
         return self.channels.save()
 
 
-    def buildPredefinedChannels(self, libraryItems):  
-        if (PoolHelper().poolList(self.buildPredefinedChannel,list(libraryItems.keys()),libraryItems)):
+    def buildPredefinedChannels(self, libraryItems):
+        if (self.pool.poolList(self.buildPredefinedChannel,list(libraryItems.keys()),libraryItems)):
             return self.saveChannels()
 
 
@@ -299,27 +306,26 @@ class Writer:
                 leftovers.remove(eitem)
                 for key in ['rules','number','favorite','page']: 
                     citem[key] = eitem[key]
-            else: 
-                citem['number'] = next(numbers,0)
+            else: citem['number'] = next(numbers,0)
             citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
             self.channels.add(citem)
-            
+
         for eitem in leftovers:
             self.removeChannel(eitem) #remove channels unselected
         return True
         
         
     def autoPagination(self, id, path, limits={}):
-        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
+        cacheName = 'autoPagination.%s.%s'%(id,path)
         if not limits:
             msg = 'get'
             try:    limits = self.channels.getPage(id)
             except: limits = ''
-            limits = (limits or self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0})
+            limits = (limits or self.cache.get(cacheName) or {"end": 0, "start": 0, "total": 0}) #access cached limits to restore previous channel position 
         else:
             msg = 'set'
             if self.channels.setPage(id, limits): self.channels.save()
-            self.cache.set(cacheName, limits, checksum=len(limits), expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
+            self.cache.set(cacheName, limits, expiration=datetime.timedelta(days=getSettingInt('Max_Days')))
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
 
@@ -341,13 +347,12 @@ class Channels:
     def __init__(self, cache=None, vault=None):
         log('Channels: __init__')
         if cache is None:
-            self.cache = SimpleCache()
+            self.cache = Cache()
         else: 
             self.cache = cache
 
-        if vault is not None: 
-            self.channelList = vault.channelList
-            
+        if vault is None: vault = Vault()
+        self.channelList = vault.channelList
         self.channelList = self.getTemplate(ADDON_VERSION)
         self.channelList.update(self.load())
         self.isClient    = self.chkClient()
@@ -455,7 +460,7 @@ class Channels:
         return match
         
 
-    @use_cache(7)
+    @cacheit()
     def getTemplate(self, version=ADDON_VERSION):
         log('Channels: getTemplate')
         channelList = (self.load(CHANNELFLE_DEFAULT) or {})
@@ -483,7 +488,7 @@ class Channels:
         
 
     @staticmethod
-    def load(file=CHANNELFLE):
+    def load(file=getUserFilePath(CHANNELFLE)):
         log('Channels: load file = %s'%(file))
         if not FileAccess.exists(file): 
             file = CHANNELFLE_DEFAULT
@@ -491,29 +496,26 @@ class Channels:
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()
+            if file == getUserFilePath(CHANNELFLE):
+                setSetting('Select_Channels','[B]%s[/B] Channels'%(len(data.get('channels',[]))))
             return data
         
         
     def save(self):
         with fileLocker(GLOBAL_FILELOCK):
-            fle = FileAccess.open(CHANNELFLE, 'w')
-            log('Channels: save, saving to %s'%(CHANNELFLE))
+            filePath = getUserFilePath(CHANNELFLE)
+            fle = FileAccess.open(filePath, 'w')
+            log('Channels: save, saving to %s'%(filePath))
             fle.write(dumpJSON(self.cleanSelf(self.channelList), idnt=4, sortkey=False))
             fle.close()
         return self.reset() #force i/o parity 
 
 
 class XMLTV:
-    def __init__(self, cache=None, vault=None):
+    def __init__(self, vault=None):
         log('XMLTV: __init__')
-        if cache is None:
-            self.cache = SimpleCache()
-        else: 
-            self.cache = cache
-            
-        if vault is not None: 
-            self.xmltvList = vault.xmltvList
-            
+        if vault is None: vault = Vault()
+        self.xmltvList = vault.xmltvList
         self.xmltvList = {'data'       : self.loadData(),
                           'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
                           'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
@@ -548,7 +550,7 @@ class XMLTV:
         return True
 
         
-    def loadChannels(self, file=XMLTVFLE):
+    def loadChannels(self, file=getUserFilePath(XMLTVFLE)):
         log('XMLTV: loadChannels, file = %s'%file)
         try:
             with fileLocker(GLOBAL_FILELOCK):
@@ -559,7 +561,7 @@ class XMLTV:
             return []
         
         
-    def loadProgrammes(self, file=XMLTVFLE):
+    def loadProgrammes(self, file=getUserFilePath(XMLTVFLE)):
         log('XMLTV: loadProgrammes, file = %s'%file)
         try: 
             with fileLocker(GLOBAL_FILELOCK):
@@ -574,7 +576,7 @@ class XMLTV:
         log('XMLTV: loadData')
         try: 
             with fileLocker(GLOBAL_FILELOCK):
-                return (xmltv.read_data(FileAccess.open(XMLTVFLE, 'r')) or self.resetData())
+                return (xmltv.read_data(FileAccess.open(getUserFilePath(XMLTVFLE), 'r')) or self.resetData())
         except Exception as e: 
             log('XMLTV: loadData, failed! %s'%(e))
             return self.resetData()
@@ -620,7 +622,7 @@ class XMLTV:
             root.appendChild(gen)
         
         with fileLocker(GLOBAL_FILELOCK):
-            xmlData = FileAccess.open(GENREFLE, "w")
+            xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
             xmlData.write(doc.toprettyxml(indent='\t'))
             xmlData.close()
         return True
@@ -815,8 +817,9 @@ class XMLTV:
             programmes = self.sortProgrammes(self.xmltvList['programmes'])
             for program in programmes: writer.addProgramme(program)
             
-            log('XMLTV: save, saving to %s'%(XMLTVFLE))
-            writer.write(FileAccess.open(XMLTVFLE, "w"), pretty_print=True)
+            filePath = getUserFilePath(XMLTVFLE)
+            log('XMLTV: save, saving to %s'%(filePath))
+            writer.write(FileAccess.open(filePath, "w"), pretty_print=True)
             self.buildGenres()
         return self.reset() #force clean and i/o parity 
         
@@ -824,26 +827,19 @@ class XMLTV:
     @staticmethod
     def delete():
         log('XMLTV: delete')
-        if FileAccess.delete(XMLTVFLE): #xmltv.xml
-            FileAccess.delete(GENREFLE) #genre.xml
-            notificationDialog(LANGUAGE(30016)%('XMLTV'))
+        if FileAccess.delete(getUserFilePath(XMLTVFLE)): #xmltv.xml
+            FileAccess.delete(getUserFilePath(GENREFLE)) #genre.xml
+            Dialog().notificationDialog(LANGUAGE(30016)%('XMLTV'))
             
 
 class M3U:
-    def __init__(self, cache=None, vault=None):
+    def __init__(self, vault=None):
         log('M3U: __init__')
-        if cache is None:
-            self.cache = SimpleCache()
-        else: 
-            self.cache = cache
-            
-        if vault is not None: 
-            self.m3uList = vault.m3uList
-            
-        self.m3uList   = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
-                          'channels':self.cleanSelf(self.load())}
+        if vault is None: vault = Vault()
+        self.m3uList = vault.m3uList
+        self.m3uList = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
+                        'channels':self.cleanSelf(self.load())}
         
-
     def getShift(self):
         log('M3U: getShift')
         return '' # '-%s'%((round(datetime.datetime.now().minute) / 60)[:3])
@@ -854,8 +850,7 @@ class M3U:
         return self.sortChannels(self.m3uList.get('channels',[]))
         
         
-    @staticmethod
-    def sortChannels(channels):
+    def sortChannels(self, channels):
         return sorted(channels, key=lambda k: k['number'])
         
 
@@ -868,25 +863,42 @@ class M3U:
     def chkImport(self, channels, multiplier=1):
         def roundup(x):
             return x if x % 1000 == 0 else x + 1000 - x % 1000
-        channels = sorted(channels, key=lambda k: k['number'])
-        chstart  = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
-        chmin    = int(chstart + (multiplier*1000))
-        chmax    = int(chmin + (CHANNEL_LIMIT))
-        chrange  = list(range(chmin,chmax))
+            
+        def frange(start, stop, step):
+          while not MY_MONITOR.abortRequested() and start < stop:
+            yield float(start)
+            start += decimal.Decimal(step)
+
+        channels  = self.sortChannels(channels)
+        chstart   = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
+        chmin     = int(chstart + (multiplier*1000))
+        chmax     = int(chmin + (CHANNEL_LIMIT))
+        chrange   = list(frange(chmin,chmax,0.1))
+        leftovers = []
         log('M3U: chkImport, channels = %s, multiplier = %s, chstart = %s, chmin = %s, chmax = %s'%(len(channels),multiplier,chstart,chmin,chmax))
-        #check tvg-chno for conflict, use multiplier to modify org chnum.
+        ## check tvg-chno for conflict, use multiplier to modify org chnum.
         for citem in channels:
-            if len(chrange) == 0: #todo handle floats, which will increase import capacity. 
+            if len(chrange) == 0:
                 log('M3U: chkImport, reached max import')
                 break
-            elif citem['number'] <= CHANNEL_LIMIT: 
-                citem['number'] = (chmin+citem['number'])
-                if citem['number'] in chrange: chrange.remove(citem['number'])
-            else:              
-                citem['number'] = chrange.pop(0)
-            yield citem
+            elif citem['number'] < CHANNEL_LIMIT: 
+                newnumber = (chmin+citem['number'])
+                if newnumber in chrange:
+                    chrange.remove(newnumber)
+                    citem['number'] = newnumber
+                    yield citem
+                else: leftovers.append(citem)
+            else: leftovers.append(citem)
         
-    
+        for citem in leftovers:
+            if len(chrange) == 0:
+                log('M3U: chkImport, reached max import')
+                break
+            else:
+                citem['number'] = chrange.pop(0)
+                yield citem
+            
+        
     def importM3U(self, file, slug=None, multiplier=1):
         log('M3U: importM3U, file = %s'%file)
         try:
@@ -895,12 +907,12 @@ class M3U:
                 file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
                 saveURL(url,file)
             self.m3uList['channels'].extend(self.sortChannels(self.cleanSelf(self.chkImport(self.load(file),multiplier),slug)))
-        except Exception as e: self.log("M3U: importM3U, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: log("M3U: importM3U, failed! " + str(e), xbmc.LOGERROR)
         return True
         
 
     @staticmethod
-    def load(file=M3UFLE):
+    def load(file=getUserFilePath(M3UFLE)):
         log('M3U: load, file = %s'%file)
         if file.startswith('http'):
             url  = file
@@ -971,8 +983,9 @@ class M3U:
     def save(self):
         log('M3U: save')
         with fileLocker(GLOBAL_FILELOCK):
-            fle = FileAccess.open(M3UFLE, 'w')
-            log('M3U: save, saving to %s'%(M3UFLE))
+            filePath = getUserFilePath(M3UFLE)
+            fle = FileAccess.open(filePath, 'w')
+            log('M3U: save, saving to %s'%(filePath))
             fle.write('%s\n'%(self.m3uList['data']))
             citem = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-shift="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s",%s\n'
             channels = self.sortChannels(self.m3uList['channels'])
@@ -1034,5 +1047,5 @@ class M3U:
     @staticmethod
     def delete():
         log('M3U: delete')
-        if FileAccess.delete(M3UFLE): return notificationDialog(LANGUAGE(30016)%('M3U'))
+        if FileAccess.delete(getUserFilePath(M3UFLE)): return Dialog().notificationDialog(LANGUAGE(30016)%('M3U'))
         return False

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.2.6j" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.2.7" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
-        <import addon="pvr.iptvsimple" version="7.0.0"/>
+        <import addon="pvr.iptvsimple" version="7.5.0"/>
         <import addon="service.iptv.manager" version="0.2.2"/>
         <import addon="script.module.six" version="1.0.0"/>
         <import addon="script.module.kodi-six" version="0.1.3.1"/>
@@ -15,6 +15,8 @@
         <import addon="resource.images.studios.coloured" version="0.0.18"/>
         <import addon="resource.images.moviegenreicons.transparent" version="0.0.6"/>
         <import addon="resource.images.musicgenreicons.text" version="0.1.0"/>
+        <import addon="resource.images.pseudotv.logos" version="0.0.1" optional="true"/>
+        <import addon="resource.videos.bumpers.pseudotv" version="0.0.1" optional="true"/>
         <import addon="resource.videos.ratings.mpaa.classic" version="0.0.1" optional="true"/>
         <import addon="resource.videos.bumpers.sample" version="0.0.1" optional="true"/>
         <import addon="resource.videos.commercials.sample" version="0.0.1" optional="true"/>

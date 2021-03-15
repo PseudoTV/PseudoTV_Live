@@ -22,6 +22,7 @@ from resources.lib.globals import *
 
 class RulesList:
     def __init__(self):
+        self.pool     = PoolHelper()
         self.ruleList = [BaseRule(),
                          ShowChannelBug(),
                          ShowOnNext(),
@@ -31,26 +32,30 @@ class RulesList:
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
-
-    def loadRules(self, channels):
+        
+    def _loadRule(self, data):
+        channel,tmpruleList = data
         ruleList = {}
+        chid     = channel.get('id','')
+        if not chid: return None
+        chrules  = channel.get('rules',[])
+        for chrule in chrules:
+            if chrule.get('id',0) == 0: return None #template check
+            for rule in tmpruleList:
+                if rule.myId == chrule['id']:
+                    ruleInstance = rule.copy()
+                    options = chrule.get('options',{})
+                    for key in options.keys():
+                        ruleInstance.optionLabels[int(key)] = options[key].get('label')
+                        ruleInstance.optionValues[int(key)] = options[key].get('value')
+                    ruleList.setdefault(chid,[]).append(ruleInstance)
+        return ruleList
+           
+        
+    def loadRules(self, channels):      
         tmpruleList = self.ruleList.copy()
-        tmpruleList.pop(0)
-        for channel in channels:
-            chid = channel.get('id','')
-            if not chid: continue
-            chrules  = channel.get('rules',[])
-            for chrule in chrules:
-                if chrule.get('id',0) == 0: continue
-                ruleList[chid] = []
-                for rule in tmpruleList:
-                    if rule.myId == chrule['id']:
-                        ruleInstance = rule.copy()
-                        options = chrule.get('options',{})
-                        for key in options.keys():
-                            ruleInstance.optionLabels[int(key)] = options[key].get('label')
-                            ruleInstance.optionValues[int(key)] = options[key].get('value')
-                        ruleList[chid].append(ruleInstance)
+        tmpruleList.pop(0) #remove template
+        ruleList = dict(self.pool.poolList(self._loadRule,channels,tmpruleList))
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
         
@@ -108,6 +113,8 @@ class RulesList:
  
 class BaseRule:
     def __init__(self):
+        self.dialog       = Dialog()
+        
         self.myId         = 0
         self.name         = ""
         self.description  = ""
@@ -251,19 +258,19 @@ class BaseRule:
 
 
     def onActionTextBox(self, optionindex):
-        value = inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value
         
 
     def onActionDateBox(self, optionindex):
         log("onActionDateBox")
-        info =  inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info =  self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None: self.optionValues[optionindex] = info
 
 
     def onActionTimeBox(self, optionindex):
         log("onActionTimeBox")
-        info = inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None:
             if info[0] == ' ': info = info[1:]
             if len(info) == 4: info = "0" + info
@@ -275,13 +282,13 @@ class BaseRule:
         if psel < 0:
             psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
             if not multi: psel = (psel[0] or -1)
-        select = selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
+        select = self.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
         if select is not None: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           
     def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
         log("onActionBrowse")
-        info = browseDialog(yype, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
+        info = self.dialog.browseDialog(yype, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
         if info is not None: self.optionValues[optionindex] = info 
                      
                 
@@ -302,12 +309,12 @@ class BaseRule:
 
     def onActionDaysofWeekBox(self, optionindex):
         log("onActionDaysofWeekBox")
-        value = inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value.upper()
 
 
     def onActionDigitBox(self, optionindex):
-        self.optionValues[optionindex] = inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        self.optionValues[optionindex] = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
 
 
 class ShowChannelBug(BaseRule):

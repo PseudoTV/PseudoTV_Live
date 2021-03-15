@@ -15,6 +15,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+# https://github.com/xbmc/xbmc/blob/master/xbmc/input/actions/ActionIDs.h
+# https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
@@ -58,8 +60,10 @@ class Overlay(xbmcgui.WindowXML):
         self.onNextThread       = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
         self.onNextToggleThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextToggle)
         
+        #Globals
         self.showChannelBug     = getSettingBool('Enable_ChannelBug')
         self.showOnNext         = getSettingBool('Enable_OnNext')
+        self.staticOverlay      = getSettingBool("Static_Overlay")
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -79,7 +83,10 @@ class Overlay(xbmcgui.WindowXML):
         
     def onInit(self, refresh=False):
         self.log('onInit, refresh = %s'%(refresh))
-        setProperty('OVERLAY.visible','nope')
+        self.windowProperty = Properties(winID=xbmcgui.getCurrentWindowId())
+        self.windowProperty.setProperty('static_overlay','okay' if self.staticOverlay else 'nope')
+        self.windowProperty.setProperty('overlay_visible','nope')
+        
         self.onNext = self.getControl(41003)
         self.onNext.setVisible(False)
         
@@ -93,13 +100,14 @@ class Overlay(xbmcgui.WindowXML):
         self.container.reset()
         
         # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
+        # https://github.com/xbmc/xbmc/issues/19467
         # self.videoWindow = self.getControl(41000)
         # self.videoWindow.setPosition(0, 0)
         # self.videoWindow.setHeight(self.videoWindow.getHeight())
         # self.videoWindow.setWidth(self.videoWindow.getWidth())
         
         if self.load(): 
-            setProperty('OVERLAY.visible','okay')
+            setProperty('overlay_visible','okay')
             if self.showChannelBug:
                 self.bugToggle()
             if self.showOnNext:
@@ -138,6 +146,7 @@ class Overlay(xbmcgui.WindowXML):
                         
             self.ruleList    = self.rules.loadRules([self.citem])
             self.runActions(RULES_ACTION_OVERLAY, self.citem)
+            self.windowProperty.setProperty('static_overlay','okay' if self.staticOverlay else 'nope')
             return True
         except Exception as e: 
             self.log("load, Failed! " + str(e), xbmc.LOGERROR)
@@ -227,10 +236,10 @@ class Overlay(xbmcgui.WindowXML):
 
 
     def onAction(self, act):
-        self.log('onAction, acttionId = %s'%(act.getId()))
-        self.closeOverlay()
-        
-        
-    def onClick(self, controlId):
-        self.log('onClick, controlId = %s'%(controlId))
+        self.log('onAction, actionid = %s'%(act.getId()))
+        # actionid = act.getId()
+        # if actionid in ACTION_SHOW_INFO:
+            # xbmc.executebuiltin("action(Info)")
+        # elif actionid in ACTION_PREVIOUS_MENU:
+            # xbmc.executebuiltin("action(PreviousMenu)") 
         self.closeOverlay()

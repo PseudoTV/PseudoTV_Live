@@ -1,16 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
     <backgroundcolor>0x00000000</backgroundcolor>
-    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,true,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,false,10000)</onunload> 
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,True,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,False,10000)</onunload> 
     <controls>
       <control type="group">
         <posx>0</posx>
         <posy>0</posy>
         <description>Background !Playing</description>
-        <visible>Player.HasVideo + [!Player.Playing | Player.Paused]</visible>
+        <control type="image"> 
+          <description>Background Image1</description>
+          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+          <posx>0</posx>
+          <posy>0</posy>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <texture>background.gif</texture>
+        </control>
+        <control type="image"> 
+          <description>Background Image2</description>
+          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+          <posx>0</posx>
+          <posy>0</posy>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <texture>blue.png</texture>
+          <animation type="fade" end="50">Visible</animation>
+        </control>
         <control type="image"> 
           <description>Background Thumb</description>
+          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
           <width>auto</width>
           <height>auto</height>
           <aspectratio>keep</aspectratio>
@@ -21,6 +46,7 @@
         </control>
         <control type="image"> 
           <description>Background Logo</description>
+          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
           <posx>704</posx>
           <posy>284</posy>
           <width>512</width>
@@ -30,13 +56,50 @@
           <aligny>center</aligny>
           <texture>$INFO[Container(40000).ListItem(0).Icon]</texture>
         </control>
+        <control type="label">
+          <description>Background Label</description>
+          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+          <posx>704</posx>
+          <posy>300</posy>
+          <width>auto</width>
+          <height>30</height>
+          <font>font12</font>
+          <scroll>true</scroll>
+          <align>center</align>
+          <aligny>center</aligny>
+          <textcolor>white</textcolor>
+          <shadowcolor>text_shadow</shadowcolor>
+          <label>$INFO[Container(40000).ListItem(0).Property(name),,]</label>
+        </control>
+        <control type="image"> 
+          <description>Background Static</description>
+          <visible>String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+          <posx>0</posx>
+          <posy>0</posy>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <texture>static.gif</texture>
+        </control>
       </control>
       
       <control type="group" id="40002">
         <posx>0</posx>
         <posy>0</posy>
         <description>Background Playing</description>
-        <visible>Player.HasVideo + [Player.Playing | Player.Paused]</visible>
+        <visible>Player.HasVideo + Player.Playing</visible>
+        <control type="image"> 
+          <description>Hide Background</description>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <colordiffuse>black</colordiffuse>
+          <texture>white.png</texture>
+        </control>
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
           <posx>0</posx>
@@ -47,20 +110,30 @@
           <aligny>center</aligny>
         </control>
         
-        <control type="group" id="41002">
+        <control type="button" id="41002">
           <description>Skip/Startover</description>
-          <left>1536</left>
-          <top>888</top>
-          <width>256</width>
+          <left>80</left>
+          <top>60</top>
+          <width>auto</width>
           <height>64</height>
-          <!-- <visible>String.isEqual(GetProperty(plugin.video.pseudotv.live.OVERLAY.visible,okay))</visible> -->
-          <control type="image"> 
-            <visible>false</visible>
-            <width>256</width>
-            <height>64</height>
-            <texture>white.png</texture>
-            <colordiffuse>dimgray</colordiffuse>
-          </control>
+          <!-- <visible>String.isEqual(Window.Property(overlay_visible,okay))</visible> -->
+          <visible>false</visible>
+          <!-- <visible>Control.IsVisible(41003)</visible> -->
+          <!-- <colordiffuse>FFFFFFFF</colordiffuse> -->
+          <texturefocus colordiffuse="">startover.png</texturefocus>
+          <texturenofocus colordiffuse="">startover.png</texturenofocus>
+          <label>[B]Start Over?[/B]</label>
+          <font>font_clock</font>
+          <textcolor>FFFFFFFF</textcolor>
+          <shadowcolor>text_shadow</shadowcolor>
+          <!-- <focusedcolor>FFFFFFFF</focusedcolor> -->
+          <!-- <disabledcolor>80FFFFFF</disabledcolor> -->
+          <!-- <invalidcolor>FFFFFFFF</invalidcolor> -->
+          <aspectratio>keep</aspectratio>
+          <textoffsetx>256</textoffsetx>
+          <textoffsety></textoffsety>
+          <pulseonselect>true</pulseonselect>
+          <!-- <onclick>ActivateWindow(MyVideos)</onclick>          -->
         </control>
         
         <control type="group" id="41003">
@@ -69,7 +142,12 @@
           <top>192</top>
           <align>right</align>
           <aligny>center</aligny>
-          <visible>String.isEqual(GetProperty(plugin.video.pseudotv.live.OVERLAY.visible,okay))</visible>
+          <visible>String.isEqual(Window.Property(overlay_visible,okay))</visible>
+          <animation type="Conditional" condition="Control.IsVisible(41003)" reversible="true">
+            <effect type="fade"  end="75"/>
+            <effect type="slide" start="1920,0" time="2000" delay="500"/>
+            <effect type="slide" start="1920,0" time="1000" delay="3000"/>
+          </animation>
           <!-- <animation type="fade" end="75">Visible</animation> -->
           <!-- <animation effect="slide" end="1920,0" tween="cubic" easing="inout" time="2000" reversible="true">WindowOpen</animation> -->
           <!-- <animation effect="slide" end="1920,0" tween="cubic" easing="inout" time="2000" reversible="true">Visible</animation> -->
@@ -133,8 +211,8 @@
           <width>128</width>
           <height>128</height>
           <aspectratio>keep</aspectratio>         
-          <animation type="Conditional" condition="Control.IsVisible(41004)" reversible="True">
-            <effect type="fade" start="0"   end="100"  time="2000" delay="0"/>
+          <animation type="Conditional" condition="Control.IsVisible(41004)" reversible="False">
+            <effect type="fade" start="0"   end="100"  time="2000" delay="500"/>
             <effect type="fade" start="100" end="25"   time="1000" delay="3000"/>
           </animation>
         </control>

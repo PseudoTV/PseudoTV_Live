@@ -100,13 +100,22 @@ class FileAccess:
 
     @staticmethod
     def rename(path, newpath):       
-        log("FileAccess: rename " + path + " to " + newpath)
+        log("FileAccess: rename %s to %s"%(path,newpath))
+        if not FileAccess.exists(path):
+            raise OSError()
+        
         try:
             if xbmcvfs.rename(path, newpath):
                 return True
         except Exception as e: 
             log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
 
+        try:
+            if FileAccess.move(path, newpath):
+                return True
+        except Exception as e: 
+            log("FileAccess: move, Failed! %s"%(e), xbmc.LOGERROR)
+           
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
                 log("FileAccess: Modifying name")
@@ -114,7 +123,10 @@ class FileAccess:
                     path = '\\\\' + path[6:]
 
                 if newpath[0:6].lower() == 'smb://':
-                    newpath = '\\\\' + newpath[6:]
+                    newpath = '\\\\' + newpath[6:]        
+        
+        if not os.path.exist(xbmcvfs.translatePath(path)):
+            raise OSError()
         
         try:
             log("FileAccess: os.rename")
@@ -122,7 +134,7 @@ class FileAccess:
             return True
         except Exception as e: 
             log("FileAccess: os.rename, Failed! %s"%(e), xbmc.LOGERROR)
-
+ 
         try:
             log("FileAccess: shutil.move")
             shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
@@ -134,6 +146,24 @@ class FileAccess:
         raise OSError()
 
 
+    @staticmethod
+    def removedirs(path, force=True):
+        if len(path) == 0: return False
+        elif(xbmcvfs.exists(path)):
+            return True
+        try: 
+            success = xbmcvfs.rmdir(dir, force=force)
+            if success: return True
+            else: raise
+        except: 
+            try: 
+                os.rmdir(xbmcvfs.translatePath(path))
+                if os.path.exists(xbmcvfs.translatePath(path)):
+                    return True
+            except: log("FileAccess: removedirs failed!")
+            return False
+            
+            
     @staticmethod
     def makedirs(directory):
         try:  
@@ -159,7 +189,6 @@ class FileAccess:
             if FileAccess._makedirs(os.path.dirname(xbmcvfs.translatePath(path))):
                 return xbmcvfs.mkdir(path)
         return xbmcvfs.exists(path)
-
 
 
 class VFSFile:
@@ -275,13 +304,14 @@ class FileLock:
         locked   = True
         lines    = []
 
-        while not globals.MY_MONITOR.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
 
             if curval > -1:
                 self.releaseLockFile()
                 self.grabSemaphore.release()
-                if globals.MY_MONITOR.waitForAbort(1): break
+                if globals.MY_MONITOR.waitForAbort(1): 
+                    break
 
             self.grabSemaphore.acquire()
             if self.grabLockFile() == False:
@@ -338,8 +368,9 @@ class FileLock:
 
         if existing == False:
             self.lockedList.append(filename)
-
-        self.grabSemaphore.release()
+            
+        try: self.grabSemaphore.release()
+        except: pass
         return True
 
 
@@ -405,7 +436,6 @@ class FileLock:
 
     def findLockEntry(self, lines, filename):
         log("FileLock: findLockEntry")
-
         # Read the file
         for line in lines:
             # Format is 'random value,filename'
@@ -426,7 +456,6 @@ class FileLock:
             if flenme == filename:
                 log("FileLock: entry exists, val is " + str(setval))
                 return setval
-
         return -1
 
 
@@ -484,7 +513,7 @@ class FileLock:
 
 
     def isFileLocked(self, filename, block = False):
-        log("FileLock: isFileLocked " + filename)
+        log("FileLock: isFileLocked %s"%filename)
         filename = filename.lower()
         self.grabSemaphore.acquire()
 
