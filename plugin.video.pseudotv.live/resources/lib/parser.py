@@ -583,16 +583,16 @@ class XMLTV:
 
 
     def buildGenres(self):
-        log('XMLTV: buildGenres')
+        log('XMLTV: buildGenres') #todo user color selector.
         with fileLocker(GLOBAL_FILELOCK):
             dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
         
         epggenres = {}
         lines = dom.getElementsByTagName('genre')
         for line in lines: 
-            items = line.childNodes[0].data.split(' / ')
+            items = line.childNodes[0].data.split('/')
             for item in items:
-                epggenres[item] = line.attributes['genreId'].value
+                epggenres[item.strip()] = line.attributes['genreId'].value
             
         proggenres = []
         for program in self.xmltvList['programmes']:
@@ -604,7 +604,7 @@ class XMLTV:
         for genres in proggenres:
             for genre in genres:
                 if epggenres.get(genre,''):#{'Drama': '0x81'}
-                    epggenres[(' / ').join(genres)] = epggenres.get(genre,'0x00')
+                    epggenres[('/').join(genres)] = epggenres.get(genre,'0x00')
                     break
                     
         doc  = Document()

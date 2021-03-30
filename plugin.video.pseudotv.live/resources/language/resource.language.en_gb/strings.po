@@ -841,11 +841,11 @@ msgid "Show Static Effect"
 msgstr ""
 
 msgctxt "#30206"
-msgid "Half"
+msgid "Half Cores"
 msgstr ""
 
 msgctxt "#30207"
-msgid "Full"
+msgid "Full Cores"
 msgstr ""
 
 msgctxt "#30208"
@@ -890,4 +890,8 @@ msgstr ""
 
 msgctxt "#30218"
 msgid "[COLOR=red][B]Setting Disabled!! [/B]Running Background Tasks, Try again later...[/COLOR]"
+msgstr ""
+
+msgctxt "#30219"
+msgid "Single Core"
 msgstr ""

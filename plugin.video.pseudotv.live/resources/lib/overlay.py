@@ -84,8 +84,10 @@ class Overlay(xbmcgui.WindowXML):
     def onInit(self, refresh=False):
         self.log('onInit, refresh = %s'%(refresh))
         self.windowProperty = Properties(winID=xbmcgui.getCurrentWindowId())
-        self.windowProperty.setProperty('static_overlay','okay' if self.staticOverlay else 'nope')
         self.windowProperty.setProperty('overlay_visible','nope')
+        
+        self.static = self.getControl(40001)
+        self.static.setVisible(self.staticOverlay)
         
         self.onNext = self.getControl(41003)
         self.onNext.setVisible(False)
@@ -129,7 +131,8 @@ class Overlay(xbmcgui.WindowXML):
             self.channelbug.setImage(self.pvritem.get('icon',LOGO))
         
             self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
-            self.nextitems   = self.pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+            self.nextitems   = self.pvritem.get('broadcastnext',[])
+            del self.nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
             
             self.nowwriter   = getWriter(self.pvritem.get('broadcastnow',{}).get('writer',{}))
             self.nowwriter.get('art',{})['thumb'] = getThumb(self.nowwriter) #unify artwork

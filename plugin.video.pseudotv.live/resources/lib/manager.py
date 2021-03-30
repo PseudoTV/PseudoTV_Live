@@ -28,11 +28,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return REAL_SETTINGS.openSettings()
         
-            
         with busy_dialog():
             setBusy(True)
             setPropertyBool('Config.Running',True)
             setLegacyPseudoTV(True)
+            
             self.cntrlStates   = {}
             self.showingList   = True
             self.madeChanges   = False
@@ -45,6 +45,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.channel       = kwargs.get('channel',1) - 1
             self.config        = kwargs.get('config')
             self.sysARG        = kwargs.get('sysARG')
+            
             self.jsonRPC       = self.config.jsonRPC
             self.writer        = self.config.writer
             self.channels      = self.writer.channels
@@ -83,6 +84,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def buildArray(self):
         self.log('buildArray')
+        ## Create blank array of citem templates. 
         for idx in range(self.channelLimit):
             newChannel = self.newChannel.copy()
             newChannel['number'] = idx + 1
@@ -91,6 +93,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def createChannelList(self, channelArray, channelList):
         self.log('createChannelList')
+        ## Fill blank array with channels from json.
         for item in channelArray:
             for channel in channelList:
                 if item["number"] == channel["number"]:
@@ -100,6 +103,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def fillChanList(self, channelList, reset=False, focus=None):
         self.log('fillChanList')
+        ## Fill chanList listitem for display. *reset draws new control list. *focus list index for channel position.
         self.togglechanList(True,reset=reset)
         self.toggleSpinner(self.chanList,True)
         listitems = (self.pool.poolList(self.buildChannelListItem,channelList))
@@ -145,7 +149,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def toggleSpinner(self, ctrl, state):
         self.setVisibility(self.spinner,state)
-        # getSpinControl() #todo when avil.
+        # getSpinControl() #todo when avail.
         # https://codedocs.xyz/xbmc/xbmc/group__python__xbmcgui__control__list.html#ga9b9ac0cd03a6d14c732050f707943d42
         # ctrl.setPageControlVisible(state)
 
@@ -304,7 +308,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         def getItem(item):
             return buildMenuListItem(label1=item.get(key,''), iconImage=item.get('icon',COLOR_LOGO))
-        infoList = getInfoMonitor()
+        infoList = getInfoMonitor().reverse()
         itemList = [getItem(loadJSON(info)) for info in infoList]
         select   = self.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
         if select is not None: return itemList[select]
@@ -624,7 +628,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('closeManager')
         setPropertyBool('Config.Running',False)
         setLegacyPseudoTV(False)
-        # if len(items) > 0: setPropertyBool('has.Userdefined',True)
         setBusy(False)
         self.close()
 

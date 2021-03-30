@@ -314,7 +314,6 @@ class Service:
         self.myPlugin      = Plugin(sys.argv,service=self)     
         self.myConfig      = Config(sys.argv,service=self)        
 
-        self.InitThread    = threading.Timer(0.5, self.startInitThread)
         self.serviceThread = threading.Timer(0.5, self.runServiceThread)
         
         
@@ -322,21 +321,6 @@ class Service:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def startInitThread(self): 
-        self.log('startInitThread')
-        setBusy(False)
-        self.myMonitor.setPendingChange(False)
-        if self.InitThread.is_alive(): self.InitThread.cancel()
-        self.InitThread = threading.Timer(0.5, self.runInitThread)
-        self.InitThread.name = "InitThread"
-        self.InitThread.start()
-
-
-    def runInitThread(self):
-        self.log('runInitThread')
-        for func in [chkPVR, chkMGR, chkVersion]: func()            
-            
-            
     def startServiceThread(self, wait=5.0):
         self.log('startServiceThread, wait = %s'%(wait))
         if   self.writer.isClient(): return
@@ -350,9 +334,10 @@ class Service:
         if isBusy(): return self.startServiceThread(float((UPDATE_OFFSET//4)/60))
         with busy():
             self.log('runServiceThread, started')
-            for func in [self.chkRecommended, self.chkPredefined, self.chkUpdate]: func()
+            for func in [self.chkRecommended, 
+                         self.chkPredefined]: func()
             self.log('runServiceThread, finished')
-            return self.startServiceThread(UPDATE_WAIT)
+        return self.startServiceThread(UPDATE_WAIT)
                    
         
     def chkRecommended(self):
@@ -415,16 +400,14 @@ class Service:
          
     def run(self, silent=False):
         self.log('run')
-        self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),funcs=[(initDirs,None,None),(self.myConfig.hasBackup,None,None)])
-        for initThread in [self.startInitThread, self.startServiceThread]: initThread()
-        self.myMonitor.waitForAbort(15)#ensure threads are active before main service starts. cheaper then another while loop.
-
-        # self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),
-                                 # funcs=[(initDirs,None,None),
-                                        # (self.myConfig.hasBackup,None,None),
-                                        # (self.startInitThread,None,None),
-                                        # (self.startServiceThread,None,None)])
-        
+        self.myMonitor.waitForAbort(5) #startup delay
+        self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),funcs=[(initDirs,None,None),
+                                                                          (self.myConfig.hasBackup,None,None),
+                                                                          (chkPVR,None,None),
+                                                                          (chkMGR,None,None),
+                                                                          (chkVersion,None,None),
+                                                                          (self.startServiceThread,None,None)],wait=10)
+        self.myMonitor.waitForAbort(15) #service delay
         while not self.myMonitor.abortRequested():
             if   self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
             elif self.myMonitor.waitForAbort(2) or restartRequired(): break
@@ -434,7 +417,6 @@ class Service:
             self.chkUpdate()
             
         self.closeThreads()
-        
         if restartRequired():
             self.log('run, restarting buildService')
             setRestartRequired(False)

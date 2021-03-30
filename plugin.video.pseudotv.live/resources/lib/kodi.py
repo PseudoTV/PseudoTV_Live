@@ -230,8 +230,7 @@ class Dialog:
         else:
             if preselect is None: preselect = -1
             select = self.dialog.select(header, list, autoclose, preselect, useDetails)
-        if select: return select
-        return None
+        return select
       
       
     def inputDialog(self, message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
@@ -249,8 +248,8 @@ class Dialog:
     def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
         if prompt and not default:
             if options is None:
-                options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":'.xsp'             , "type":1, "multi":False},
-                            {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://profile/playlists/music/" , "mask":'.xsp'             , "type":1, "multi":False},
+                options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://videoplaylists/"          , "mask":'.xsp'             , "type":1, "multi":False},
+                            {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://musicplaylists/"          , "mask":'.xsp'             , "type":1, "multi":False},
                             {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":globals.VIDEO_EXTS , "type":0, "multi":False},
                             {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":globals.MUSIC_EXTS , "type":0, "multi":False},
                             {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":globals.IMAGE_EXTS , "type":0, "multi":False},
@@ -311,8 +310,8 @@ class Dialog:
                     if globals.MY_MONITOR.waitForAbort(0.001): break
                     dia = self.progressBGDialog((((idx) * 100)//wait),control=dia,header=header)
                     try: 
-                        if   func[1]:func[0](*func[1])
-                        elif func[2]:func[0](**func[2])
+                        if    func[1]:func[0](*func[1])
+                        elif  func[2]:func[0](**func[2])
                         else: func[0]()
                         self.log('notificationProgress, executing %s(%s,%s)'%(func[0].__name__,func[1],func[2]))
                     except Exception as e: 

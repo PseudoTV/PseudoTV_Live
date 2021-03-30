@@ -135,7 +135,9 @@ class Plugin:
                 setCurrentChannelItem(pvritem)
                 
                 listitems = [liz]
-                nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+                nextitems = pvritem.get('broadcastnext',[])
+                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                
                 listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems])
                 nextitems.insert(0,nowitem)
                 
@@ -197,8 +199,9 @@ class Plugin:
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
         # pvritem['callback'] = self.jsonRPC.matchPVRPath(pvritem.get('channelid',-1))
         nowitem   = pvritem.get('broadcastnow',{}) # current item
-        nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
-
+        nextitems = pvritem.get('broadcastnext',[])
+        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+        
         if nowitem:
             found         = True
             citem         = getWriter(nowitem.get('writer',{})).get('citem',{})

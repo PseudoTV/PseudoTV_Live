@@ -95,7 +95,6 @@ class Resources:
         tmpdict = dict()
         items   = list(self.buildBCTresource(type, resource))
         for item in items:
-            print('item',item)
             folder = os.path.basename(os.path.normpath(item.get('path','')))
             if folder and folder != 'resources': 
                 tmpdict.setdefault(folder.lower(),[]).append(item)
@@ -110,8 +109,9 @@ class Resources:
     def cleanLogoPath(self, logo=''):
         #todo procs. image, alpha, cache, etc...
         if logo is None: return logo
-        if logo.startswith(ADDON_PATH):
-            return logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
+        realPath = xbmc.translatePath('special://home/addons/')
+        if logo.startswith(realPath):
+            return logo.replace(realPath,'special://home/addons/').replace('\\','/')
         return logo
                
                 
@@ -227,7 +227,6 @@ class Resources:
         return logo
             
 
-    @cacheit()
     def monoConvert(self, logo, dest, useColor=bool(getSettingInt('Color_Logos'))):
         return logo
         # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.

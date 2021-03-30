@@ -49,10 +49,12 @@ def cacheit(life=timedelta(days=getSettingInt('Max_Days'))):
 
 
 class Cache:
-    def __init__(self, memory=True):
+    def __init__(self, memory=True, render=True):
         self.log('Cache: __init__')
         self.cache = SimpleCache()
         self.cache.enable_mem_cache = memory
+        self.cachename = '%s'%(globals.ADDON_ID)
+        if render: self.cachename += '.%s'%(globals.ADDON_VERSION)#create unique id with plugin version to force new cache after update.
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -60,14 +62,14 @@ class Cache:
         
         
     def set(self, name, data, checksum="", expiration=timedelta(minutes=15)):
-        if not name.startswith(globals.ADDON_ID): name = '%s.%s'%(globals.ADDON_ID,name)#create unique id
+        if not name.startswith(globals.ADDON_ID): name = '%s.%s'%(self.cachename,name)
         self.log('set, name = %s'%(name))
         if not data is None: self.cache.set(name.lower(), stringify(data), stringify(checksum), expiration)
         return data
         
     
     def get(self, name, checksum=""):
-        if not name.startswith(globals.ADDON_ID): name = '%s.%s'%(globals.ADDON_ID,name)#create unique id
+        if not name.startswith(globals.ADDON_ID): name = '%s.%s'%(self.cachename,name)
         results = serialize(self.cache.get(name.lower(),stringify(checksum)))
         self.log('get, name = %s'%(name))
         return results

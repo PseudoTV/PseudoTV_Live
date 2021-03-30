@@ -83,9 +83,10 @@ class Library:
         
     def setPredefinedSelection(self, type, items, total=0):
         self.log('setPredefinedSelection, type = %s, items = %s'%(type,len(items)))
+        ## set 'Select_' setting count
         if len(items) > 0: setPropertyBool('has.Predefined',True)
-        return setSetting('Select_%s'%(type.replace(' ','_')),'[B]%s[/B]/%s'%(len(items),total))
-       
+        setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(items),total))
+        
        
     def getLibraryItems(self, type, enabled=False):
         self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
@@ -93,7 +94,7 @@ class Library:
             if item.get('enabled',False): return item
             return None
         items = self.libraryItems.get('library',{}).get(type,[])
-        if enabled: items = self.pool.poolList(chkEnabled,items)
+        if enabled: items = self.pool.genList(chkEnabled,items)
         return sorted(items, key=lambda k: k['name'])
         
 
@@ -102,15 +103,16 @@ class Library:
         def chkEnabled(item):
             if item.get('enabled',False): return item
             return None
-        return sorted(self.pool.poolList(chkEnabled,items), key=lambda k: k['name'])
+        return sorted(self.pool.genList(chkEnabled,items), key=lambda k: k['name'])
             
 
     def setLibraryItems(self, type, items):
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         self.libraryItems['library'][type] = sorted(items, key=lambda k:k['name'])
         enabled = self.getLibraryItems(type,enabled=True)
-        return self.setPredefinedSelection(type,enabled,len(items))#set 'Select_' setting count
-
+        self.setPredefinedSelection(type,enabled,len(items))
+        return True
+        
 
     def clearLibraryItems(self, type=None):
         log('clearLibraryItems, type = %s'%(type))
@@ -150,35 +152,30 @@ class Library:
                 setProperty('has.%s'%(type.replace(' ','_')),'true')
             else: 
                 setProperty('has.%s'%(type.replace(' ','_')),'false')
-                
-        self.pool.poolList(setSettingStates,types)
+
+        self.pool.genList(setSettingStates,types)
         blackList = self.recommended.getBlackList()
         if len(blackList) > 0: setPropertyBool('has.BlackList',len(blackList) > 0)
         setSetting('Clear_BlackList','|'.join(blackList))
         return True
         
  
-    @cacheit()
     def getNetworks(self):
         return self.jsonRPC.getTVInfo()[0]
         
         
-    @cacheit()
     def getTVGenres(self):
         return self.jsonRPC.getTVInfo()[1]
  
  
-    @cacheit(life=datetime.timedelta(hours=getSettingInt('Max_Days')))#hours instead of days.
     def getTVShows(self):
         return self.jsonRPC.getTVInfo()[2]
  
  
-    @cacheit()
     def getMovieStudios(self):
         return self.jsonRPC.getMovieInfo()[0]
         
         
-    @cacheit()
     def getMovieGenres(self):
         return self.jsonRPC.getMovieInfo()[1]
         
@@ -202,7 +199,7 @@ class Library:
                  LANGUAGE(30007):self.getMovieStudios,
                  LANGUAGE(30006):self.getMixedGenres,
                  LANGUAGE(30080):self.getMixed,
-                 LANGUAGE(30097):self.jsonRPC.fillMusicInfo,
+                 LANGUAGE(30097):self.jsonRPC.getMusicInfo,
                  LANGUAGE(30026):self.recommended.fillRecommended,
                  LANGUAGE(30033):self.recommended.fillImports}
                
@@ -224,13 +221,13 @@ class Library:
         log('recoverItemsFromChannels') #re-enable library.json items from channels.json
         if not channels: return True
         for type in CHAN_TYPES:
-            if self.myMonitor.waitForAbort(0.001): return True
+            if self.myMonitor.waitForAbort(0.001): return False
             echannels = list(filter(lambda k:k['type'] == type, channels)) # existing channels.
             if not echannels: continue
             selects = []
-            items = self.getLibraryItems(type)
+            items   = self.getLibraryItems(type)
             for idx, item in enumerate(items):
-                if self.myMonitor.waitForAbort(0.001): return None
+                if self.myMonitor.waitForAbort(0.001): return False
                 for channel in channels:
                     if channel.get('name') == item.get('name'):
                         selects.append(idx)

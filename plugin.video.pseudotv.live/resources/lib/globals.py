@@ -59,10 +59,11 @@ CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
 LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'library.json')
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
+GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'groups.xml')
+PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'providers.xml')
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.bak')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.lst')
-
 
 VIDEO_EXTS          = xbmc.getSupportedMedia('video')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music')
@@ -238,6 +239,9 @@ M3UFLE           = '%s.m3u'%('pseudotv')
 CHANNELFLE       = 'channels.json'
 LIBRARYFLE       = 'library.json'
 GENREFLE         = 'genres.xml'
+TVGROUPFLE       = 'tv_groups.xml'
+RADIOGROUPFLE    = 'radio_groups.xml'
+PROVIDERFLE      = 'providers.xml'
 
 CACHE_LOC        = os.path.join(USER_LOC ,'cache')
 PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
@@ -251,11 +255,14 @@ BACKUP_LOC       = os.path.join(SETTINGS_LOC,'backup')
 MGR_SETTINGS     = {'refresh_interval':'1',
                     'iptv_simple_restart':'false'}
                     
-PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'5','m3uRefreshHour':'0',
+PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
                     'logoPathType':'0','logoPath':LOGO_LOC,
                     'm3uPathType':'0','m3uPath':getUserFilePath(M3UFLE),
                     'epgPathType':'0','epgPath':getUserFilePath(XMLTVFLE),
                     'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
+                    'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
+                    'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
+                    'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
                     'useEpgGenreText':'true', 'logoFromEpg':'1',
                     'catchupEnabled':'true','allChannelsCatchupMode':'0',
                     'numberByOrder':'false','startNum':'1',
@@ -290,9 +297,12 @@ def busy_dialog(escape=False):
             xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
         
 def roundupDIV(p, q):
-    d, r = divmod(p, q)
-    if r: d += 1
-    return d
+    try:
+        d, r = divmod(p, q)
+        if r: d += 1
+        return d
+    except ZeroDivisionError: 
+        return 1
     
 def chunks(lst, n):
     for i in range(0, len(lst), n):
@@ -401,14 +411,10 @@ def loadJSON(item):
     return {}
     
 def sendJSON(command):
+    log('globals: sendJSON, command = %s'%(command))
     response = loadJSON(xbmc.executeJSONRPC(command))
-    log('globals: sendJSON, command = %s, response = %s'%(command, response))
     return response
 
-def getSeason():
-    try: return {'September':'startrek','October':'horror','December':'xmas','May':'starwars'}[datetime.datetime.now().strftime('%B')]
-    except: return 'none'
-        
 def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
     listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
     iconImage = (iconImage or COLOR_LOGO)
@@ -479,7 +485,7 @@ def getPVR(id=PVR_CLIENT):
         try: return xbmcaddon.Addon(id)
         except: 
             return None
-
+ 
 def chkMGR():
     return chkPVR(PVR_MANAGER, MGR_SETTINGS)
 

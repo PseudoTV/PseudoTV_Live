@@ -69,33 +69,33 @@ class Config:
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
         setBusy(True)
-        items = self.library.getLibraryItems(type)
-        if not items:
-            self.dialog.notificationDialog(LANGUAGE(30103)%(type))
-            # self.library.clearLibraryItems(type) #clear stale meta type
-            setBusy(False)
-            return False
-        else:
-            escape = autoTune is not None
-            with busy_dialog(escape):
-                pitems    = self.library.getEnabledItems(items) # existing predefined
-                listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-                pselect   = findItemsIn(listItems,pitems,val_key='name')
-                    
-            if autoTune is None:
-                select = self.dialog.selectDialog(listItems,'Select %s'%(type),preselect=pselect)
-            else:
-                if autoTune > len(items): autoTune = len(items)
-                select = random.sample(list(set(range(0,len(items)))),autoTune)
+        escape = autoTune is not None
+        with busy_dialog(escape):
+            items = self.library.getLibraryItems(type)
+            if not items:
+                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                # self.library.clearLibraryItems(type) #clear stale meta type
+                setBusy(False)
+                return False
                 
-            if select:
-                with busy_dialog(escape):
-                    pselect = findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name')
-                    self.library.setEnableStates(type,pselect)
-                    self.buildPredefinedChannels(type) #save changes, #todo slow fucn, try to unify to single call?
+            pitems    = self.library.getEnabledItems(items) # existing predefined
+            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+            pselect   = findItemsIn(listItems,pitems,val_key='name')
+                    
+        if autoTune is None:
+            select = self.dialog.selectDialog(listItems,'Select %s'%(type),preselect=pselect)
+        else:
+            if autoTune > len(items): autoTune = len(items)
+            select = random.sample(list(set(range(0,len(items)))),autoTune)
             
-            setBusy(False)
-            return True
+        if select:
+            with busy_dialog(escape):
+                pselect = findItemsIn(items,[listItems[idx].getLabel() for idx in select],item_key='name')
+                self.library.setEnableStates(type,pselect)
+                self.buildPredefinedChannels(type) #save changes, #todo slow fucn, try to unify to single call?
+        
+        setBusy(False)
+        return True
 
 
     def buildLibraryItems(self):

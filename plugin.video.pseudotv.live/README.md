@@ -208,13 +208,15 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 
 - "One Click" channel playback... Navigate to Kodis PRV & Live TV settings and change selection action.
 
-- You can not skip during playback... unless you are using the "Playlist" playback mode.
-However, you can play any single show from the guide at any time or start playlist playback from any given position in the guide using the available context menu items.
-Play programme == Play single show from the start.
-Play from here == Queues guide content from this position and starts playback.
+- Channel Manager Colors, Dim = Unused, White = User-defined, Orange = Pre-defined, Red = Failed (Channel may not have content / appear in the guide and/or PseudoTV hasn't built the channel yet.)
 
-![Play Programme](https://i.imgur.com/ykLfzu6.png "Play Programme")
-![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
+- You can not skip during playback... unless you are using the "Playlist" playback mode.
+  However, you can play any single show from the guide at any time or start playlist playback from any given position in the guide using the available context menu items.
+  Play programme == Play single show from the start.
+  Play from here == Queues guide content from this position and starts playback.
+
+  ![Play Programme](https://i.imgur.com/ykLfzu6.png "Play Programme")
+  ![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
 
 ------------
 

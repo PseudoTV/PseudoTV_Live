@@ -46,7 +46,7 @@ Msg = namedtuple('Msg', ['event', 'args'])
 class PoolHelper:
     def __init__(self):
         self.procEnabled = ENABLE_POOL
-        self.procCount   = int(globals.roundupDIV(self.CPUcores(), {0:2,1:1}[globals.getSettingInt('CPU_Cores')]))#User Select Full or *Half cores. *default
+        self.procCount   = int(globals.roundupDIV(self.CPUcores(), {0:0,1:2,2:1}[globals.getSettingInt('CPU_Cores#')]))#User Select Full or *Half cores. *default
         self.minQueue    = self.procCount
         self.maxQueue    = int(globals.PAGE_LIMIT * self.procCount) #limit queue size to reasonable value.
         if not self.procEnabled: self.log("multiprocessing Disabled %s"%(THREAD_ERROR))
@@ -135,14 +135,15 @@ class PoolHelper:
         self.log("genList, %s"%(func.__name__))
         try:
             if kwargs:
-                return (partial(func, **kwargs) for item in items)
+                results = (partial(func, **kwargs) for item in items)
             elif args:
-                return (func((item, args)) for item in items)
+                results = (func((item, args)) for item in items)
             else:
-                return (func(item) for item in items)
+                results = (func(item) for item in items)
+            return list(filter(None, results))
         except Exception as e: 
             self.log("genList, Failed! %s"%(e), xbmc.LOGERROR)
-            return None
+            return []
         
         
     def CPUcores(self):

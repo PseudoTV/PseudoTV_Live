@@ -267,6 +267,12 @@ class Builder:
         if path.startswith('videodb://movies'): 
             if not sort: sort = {"method": "random"}
         elif path.startswith(LANGUAGE(30174)):#seasonal
+            def getSeason():
+                try:    return {'September':'startrek',
+                                'October'  :'horror',
+                                'December' :'xmas',
+                                'May'      :'starwars'}[datetime.datetime.now().strftime('%B')]
+                except: return  'none'
             if not sort: sort = {"method": "episode"}
             path = path.format(list=getSeason(),limit=250)
             
@@ -336,7 +342,7 @@ class Builder:
                         label = title
             
                     if not label: continue
-                    item['label'] = label
+                    item['label'] = splitYear(label)[0]
                     item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
                     item.get('art',{})['icon'] = channel['logo']
                     # item.get('art',{})['thumb']  = getThumb(item) #unify artwork                    # item.get('art',{})['fanart'] = getThumb(item) #unify artwork

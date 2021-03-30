@@ -7,12 +7,25 @@
       <control type="group">
         <posx>0</posx>
         <posy>0</posy>
-        <description>Background !Playing</description>
+        <description>Background !Playing (static)</description>
+        <visible>!Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+        <control type="image" id="40001">
+          <description>Background Static</description>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <texture>static.gif</texture>
+        </control>
+      </control>
+      <control type="group">
+        <posx>0</posx>
+        <posy>0</posy>
+        <description>Background !Playing (flat)</description>
+        <visible>!Control.IsVisible(40001) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
         <control type="image"> 
           <description>Background Image1</description>
-          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
-          <posx>0</posx>
-          <posy>0</posy>
           <width>auto</width>
           <height>auto</height>
           <aspectratio>scale</aspectratio>
@@ -22,9 +35,6 @@
         </control>
         <control type="image"> 
           <description>Background Image2</description>
-          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
-          <posx>0</posx>
-          <posy>0</posy>
           <width>auto</width>
           <height>auto</height>
           <aspectratio>scale</aspectratio>
@@ -35,7 +45,6 @@
         </control>
         <control type="image"> 
           <description>Background Thumb</description>
-          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
           <width>auto</width>
           <height>auto</height>
           <aspectratio>keep</aspectratio>
@@ -46,7 +55,6 @@
         </control>
         <control type="image"> 
           <description>Background Logo</description>
-          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
           <posx>704</posx>
           <posy>284</posy>
           <width>512</width>
@@ -58,7 +66,6 @@
         </control>
         <control type="label">
           <description>Background Label</description>
-          <visible>!String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
           <posx>704</posx>
           <posy>300</posy>
           <width>auto</width>
@@ -70,18 +77,6 @@
           <textcolor>white</textcolor>
           <shadowcolor>text_shadow</shadowcolor>
           <label>$INFO[Container(40000).ListItem(0).Property(name),,]</label>
-        </control>
-        <control type="image"> 
-          <description>Background Static</description>
-          <visible>String.isEqual(Window.Property(static_overlay),okay) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
-          <posx>0</posx>
-          <posy>0</posy>
-          <width>auto</width>
-          <height>auto</height>
-          <aspectratio>scale</aspectratio>
-          <align>center</align>
-          <aligny>center</aligny>
-          <texture>static.gif</texture>
         </control>
       </control>
       
