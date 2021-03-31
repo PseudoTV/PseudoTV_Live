@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2020 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -27,11 +27,10 @@ class Plugin:
         self.sysARG         = sysARG
         self.CONTENT_TYPE   = 'episodes'
         self.CACHE_ENABLED  = True
+        self.ruleList       = {}
         self.playlist       = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
         
         self.rules          = RulesList()
-        self.dialog         = Dialog()
-        
         if service is None:
             from resources.lib.jsonrpc import JSONRPC
             self.jsonRPC    = JSONRPC()
@@ -48,7 +47,7 @@ class Plugin:
     def runActions(self, action, citem, parameter=None):
         self.log("runActions action = %s, channel = %s"%(action,citem))
         if not citem.get('id',''): return parameter
-        ruleList = self.rules.loadRules([citem]).get(citem['id'],[])
+        ruleList = self.ruleList.get(citem['id'],[])
         for rule in ruleList:
             if action in rule.actions:
                 self.log("runActions performing channel rule: %s"%(rule.name))
@@ -63,8 +62,8 @@ class Plugin:
         UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),#"Rebuild M3U/XMLTV"
                      (LANGUAGE(30011), '', '', LANGUAGE(30008)),#"Delete [M3U/XMLTV/Genre]"
                      (LANGUAGE(30096), '', '', LANGUAGE(30008)),#"Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
-                     (LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)), #"Reconfigure PVR for use with PTVL"
-                     (LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),#"Force PVR reload"
+                     (LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)), #"Reconfigure PVR for use with PTVL"
+                     (LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),#"Force PVR reload"
                      (LANGUAGE(30013), '', '', LANGUAGE(30008))]#"Open Settings"
 
         if   name is None:            items = MAIN_MENU
@@ -76,12 +75,13 @@ class Plugin:
     def deleteFiles(self, msg, full=False):
         self.log('deleteFiles, full = %s'%(full))
         setBusy(True)
-        files = {LANGUAGE(30172):getUserFilePath(M3UFLE),LANGUAGE(30173):getUserFilePath(XMLTVFLE),LANGUAGE(30009):getUserFilePath(CHANNELFLE),LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):getUserFilePath(LIBRARYFLE)}
+        files = {LANGUAGE(30172):M3UFLE,LANGUAGE(30173):XMLTVFLE,LANGUAGE(30009):CHANNELFLE,LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):LIBRARYFLE}
         keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
         if not full: keys = keys[:3]
-        if self.dialog.yesnoDialog('%s ?'%(msg)): [self.dialog.notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
+        if yesnoDialog('%s ?'%(msg)): [notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
+        setPropertyBool('pendingChange',True)
         setPropertyBool('autotuned',False)
-        if full: return self.dialog.okDialog(LANGUAGE(30183))
+        if full: return okDialog(LANGUAGE(30183))
         setBusy(False)
         return True
 
@@ -91,8 +91,8 @@ class Plugin:
         with busy():
             if   name == LANGUAGE(30011): self.deleteFiles(name)
             elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
-            elif name == LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
-            elif name == LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
+            elif name == LANGUAGE(30012)%(getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
+            elif name == LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
             elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
             else: return
         xbmc.executebuiltin('Action(Back,10025)')
@@ -120,7 +120,7 @@ class Plugin:
      
 
     def contextPlay(self, writer, isPlaylist=False):
-        channelData = writer.get('citem',{})
+        channelData = writer.get('citem',{}) 
         if channelData: 
             stpos   = 0
             pvritem = self.jsonRPC.getPVRposition(channelData.get('name',''), channelData.get('id',''), isPlaylist=isPlaylist)
@@ -135,9 +135,7 @@ class Plugin:
                 setCurrentChannelItem(pvritem)
                 
                 listitems = [liz]
-                nextitems = pvritem.get('broadcastnext',[])
-                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-                
+                nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
                 listitems.extend([buildItemListItem(getWriter(nextitem.get('writer',''))) for nextitem in nextitems])
                 nextitems.insert(0,nowitem)
                 
@@ -157,7 +155,7 @@ class Plugin:
             if isPlaylistRandom(): self.playlist.unshuffle()
             return self.myPlayer.play(self.playlist, startpos=stpos)
 
-        self.dialog.notificationDialog(LANGUAGE(30001))
+        notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
         
         
@@ -188,7 +186,7 @@ class Plugin:
                 self.log('playRadio, Playlist size = %s'%(self.playlist.size()))
                 return self.myPlayer.play(self.playlist)
 
-        self.dialog.notificationDialog(LANGUAGE(30001))
+        notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
 
         
@@ -199,18 +197,18 @@ class Plugin:
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
         # pvritem['callback'] = self.jsonRPC.matchPVRPath(pvritem.get('channelid',-1))
         nowitem   = pvritem.get('broadcastnow',{}) # current item
-        nextitems = pvritem.get('broadcastnext',[])
-        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-        
+        nextitems = pvritem.get('broadcastnext',[])[slice(0, PAGE_LIMIT)] # list of upcoming items, truncate for speed.
+
         if nowitem:
             found         = True
             citem         = getWriter(nowitem.get('writer',{})).get('citem',{})
+            self.ruleList = self.rules.loadRules([citem])
             setOffset     = False #todo adv. channel rule to disable seek 
             nowitem       = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
             progress      = nowitem['progress']
             runtime       = nowitem['runtime']
             self.log('playChannel, nowitem = %s\ncitem = %s'%(nowitem,citem))
-            if isPlaylist: self.playlist.clear()
+            self.playlist.clear()
             
             if (progress > getSettingInt('Seek_Tolerance')):
                 self.log('playChannel, progresspercentage = %s, seekThreshold = %s'%(int(nowitem['progresspercentage']),getSettingInt('Seek_Threshold%')))
@@ -267,9 +265,9 @@ class Plugin:
                 # self.playlist.add(path,lz,idx)
             # self.log('playChannel, set callback stack with paths = %s'%(paths))
             
-        else: self.dialog.notificationDialog(LANGUAGE(30001))
-        return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
-        
+        else: notificationDialog(LANGUAGE(30001))
+        xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
+
 
     def playVOD(self, name, id):
         path = decodeString(id)
@@ -288,7 +286,7 @@ class Plugin:
 
     def run(self):  
         params  = self.getParams()
-        name    = (unquote(params.get("name",''))              or None)
+        name    = (unquote(params.get("name",'')) or None)
         channel = (params.get("channel",'')                    or None)
         url     = (params.get("url",'')                        or None)
         id      = (params.get("id",'')                         or None)
@@ -300,9 +298,9 @@ class Plugin:
         elif mode == 'vod': self.playVOD(name, id)
         elif mode == 'play':
             if radio:
-                return self.playRadio(name, id)
+                self.playRadio(name, id)
             else:
-                return self.playChannel(name, id, isPlaylist=bool(getSettingInt('Playback_Method')))
+                self.playChannel(name, id, isPlaylist=bool(getSettingInt('Playback_Method')))
         elif mode == 'Utilities': self.utilities(name)
 
         xbmcplugin.setContent(int(self.sysARG[1])    , self.CONTENT_TYPE)

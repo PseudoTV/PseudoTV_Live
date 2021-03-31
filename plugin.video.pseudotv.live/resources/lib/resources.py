@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2020 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -27,16 +27,19 @@ except:
     hasPillow = False
 
 class Resources:
-    def __init__(self, jsonRPC=None):
+    def __init__(self, cache=None, jsonRPC=None):
         log('Library: __init__')
+        if cache is None:
+            self.cache = SimpleCache()
+        else: 
+            self.cache = cache
+                
         if jsonRPC is None:
             from resources.lib.jsonrpc import JSONRPC
-            self.jsonRPC  = JSONRPC()
+            self.jsonRPC  = JSONRPC(self.cache)
         else:
             self.jsonRPC  = jsonRPC
             
-        self.cache    = self.jsonRPC.cache
-        self.pool     = PoolHelper()
         self.logoSets = self.buildLogoResources()
         
         
@@ -73,27 +76,23 @@ class Resources:
   
     def buildBCTresource(self, type, path, media='video'):
         self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))
-        if path.startswith(('resource://')):
-            version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
-        else: 
-            version = ADDON_VERSION
-        if type in PRE_ROLL: 
-            force = True
-        else: 
-            force = False
+        if path.startswith(('resource://')): 
+              version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
+        else: version = ADDON_VERSION
+        if type in PRE_ROLL: force = True
+        else: force = False
         return self.jsonRPC.listVFS(cleanResourcePath(path),media,force,version)
 
 
     def buildResourceType(self, type, paths):
-        for resource in paths:
-            yield self.getPlayablePaths(type,resource)
+        return list(self.getPlayablePaths(type,resource) for resource in paths)[0]
         
         
     def getPlayablePaths(self, type, resource):
         self.log('getPlayablePaths, type = %s, resource = %s'%(type,resource))
         if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
         tmpdict = dict()
-        items   = list(self.buildBCTresource(type, resource))
+        items = self.buildBCTresource(type, resource)
         for item in items:
             folder = os.path.basename(os.path.normpath(item.get('path','')))
             if folder and folder != 'resources': 
@@ -109,9 +108,8 @@ class Resources:
     def cleanLogoPath(self, logo=''):
         #todo procs. image, alpha, cache, etc...
         if logo is None: return logo
-        realPath = xbmc.translatePath('special://home/addons/')
-        if logo.startswith(realPath):
-            return logo.replace(realPath,'special://home/addons/').replace('\\','/')
+        if logo.startswith(ADDON_PATH):
+            return logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
         return logo
                
                 
@@ -179,13 +177,11 @@ class Resources:
         log('getLogo: name = %s, type = %s'%(name,type))
         
         #local
-        local = (self.pool.poolList(self.chkLocalLogo,self.getFilePatterns(name)))
+        local = (PoolHelper().poolList(self.chkLocalLogo,self.getFilePatterns(name)))
         if local: return self.cleanLogoPath(local[0])
         
         #resources
-        if ' (' in name: #todo prop regex to fix region in name NBC (US), lazy fix needs re.match
-            name = name.split(' (')[0]
-        rlogo = (self.pool.poolList(self.findResourceLogo,self.logoSets,(name,type)))
+        rlogo = (PoolHelper().poolList(self.findResourceLogo,self.logoSets,(name,type)))
         if rlogo: return self.cleanLogoPath(rlogo[0])
         
         if item is not None:
@@ -203,7 +199,7 @@ class Resources:
     # def buildLocalTrailers(self, path=None, items=[]):
         # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
         # if path is None and len(items) > 0:
-            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer',''),item),'file'}]
+            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer','')),'file'}]
         # list(filter(lambda item:(,item.get('trailer')), validItems))
 # # os.path.splitext(os.path.basename(item.get('file')))[0]
 
@@ -227,6 +223,7 @@ class Resources:
         return logo
             
 
+    @use_cache(7)
     def monoConvert(self, logo, dest, useColor=bool(getSettingInt('Color_Logos'))):
         return logo
         # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.

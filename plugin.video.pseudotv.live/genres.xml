@@ -15,7 +15,6 @@ NOTE: IF YOU MODIFY THIS FILE IT WILL BE OVERWRITTEN NEXT TIME THE ADDON IS STAR
 
 If you have changes either create a PR containing the changes or an issue with details at:
   https://github.com/kodi-pvr/pvr.iptvsimple
-  https://github.com/kodi-pvr/pvr.iptvsimple#using-a-mapping-file-for-genres
 -->
 
 <genres>
@@ -24,8 +23,8 @@ If you have changes either create a PR containing the changes or an issue with d
   <genre genreId="0x00">Undefined</genre>
 
   <!-- MOVIE / DRAMA -->
-  <genre genreId="0x10">General Movie / Drama</genre>
-  <genre genreId="0x10">Movie / Featured Film</genre>
+  <genre genreId="0x01">General Movie / Drama</genre>
+  <genre genreId="0x01">Movie / Featured Film</genre>
   <genre genreId="0x11">Detective / Thriller</genre>
   <genre genreId="0x21">Adventure / Western / War</genre>
   <genre genreId="0x03">Science Fiction / Fantasy / Horror</genre>
@@ -110,34 +109,4 @@ If you have changes either create a PR containing the changes or an issue with d
   <genre genreId="0x59">Social / Spiritual Sciences</genre>
   <genre genreId="0x69">Further Education</genre>
   <genre genreId="0x79">Languages</genre>
-  
-  <!-- LEISURE/HOBBIES -->
-  <mapping genreId="0xA0">Leisure / Hobbies</mapping>
-  <mapping genreId="0xA1">Tourism / Travel</mapping>
-  <mapping genreId="0xA2">Handicraft</mapping>
-  <mapping genreId="0xA3">Motoring</mapping>
-  <mapping genreId="0xA4">Fitness &amp; Health</mapping>
-  <mapping genreId="0xA5">Cooking</mapping>
-  <mapping genreId="0xA6">Advertisement / Shopping</mapping>
-  <mapping genreId="0xA7">Gardening</mapping>
-
-  <!-- SPECIAL -->
-  <mapping genreId="0xB0">Special Characteristics</mapping>
-  <mapping genreId="0xB1">Original Language</mapping>
-  <mapping genreId="0xB2">Black &amp; White</mapping>
-  <mapping genreId="0xB3">Unpublished</mapping>
-  <mapping genreId="0xB4">Live Broadcast</mapping>
-
-  <!-- USERDEFINED -->
-  <mapping genreId="0xF0">Drama</mapping>
-  <mapping genreId="0xF1">Detective / Thriller</mapping>
-  <mapping genreId="0xF2">Adventure / Western / War</mapping>
-  <mapping genreId="0xF3">Science Fiction / Fantasy / Horror</mapping>
-  
-  <!-- below currently ignored by XBMC see http://trac.xbmc.org/ticket/13627 -->
-  <mapping genreId="0xF4">Comedy</mapping>
-  <mapping genreId="0xF5">Soap / Melodrama / Folkloric</mapping>
-  <mapping genreId="0xF6">Romance</mapping>
-  <mapping genreId="0xF7">Serious / ClassicalReligion / Historical</mapping>
-  <mapping genreId="0xF8">Adult</mapping>
 </genres>

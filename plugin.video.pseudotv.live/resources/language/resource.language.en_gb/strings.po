@@ -153,11 +153,11 @@ msgid "Imports"
 msgstr ""
 
 msgctxt "#30034"
-msgid "M3U:"
+msgid "M3U File/URL"
 msgstr ""
 
 msgctxt "#30035"
-msgid "XMLTV:"
+msgid "XMLTV File/URL"
 msgstr ""
 
 msgctxt "#30036"
@@ -357,7 +357,7 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#30085"
-msgid "Open Library (Node) Editor"
+msgid "Create Node"
 msgstr ""
 
 msgctxt "#30086"
@@ -541,7 +541,7 @@ msgid "Settings"
 msgstr ""
 
 msgctxt "#30131"
-msgid "More Info..."
+msgid "More Info"
 msgstr ""
 
 msgctxt "#30132"
@@ -669,15 +669,15 @@ msgid "Playlist"
 msgstr ""
 
 msgctxt "#30164"
-msgid "Prefer Kodi Library"
+msgid "Prefer Kodi DB"
 msgstr ""
 
 msgctxt "#30165"
-msgid "Prefer File Metadata"
+msgid "Prefer File Meta"
 msgstr ""
 
 msgctxt "#30166"
-msgid "Prefer White"
+msgid "Prefer White (Mono)"
 msgstr ""
 
 msgctxt "#30167"
@@ -769,7 +769,7 @@ msgid "Enable Ratings"
 msgstr ""
 
 msgctxt "#30188"
-msgid "Enable Bumpers"
+msgid "Enable Network Bumpers"
 msgstr ""
 
 msgctxt "#30189"
@@ -781,7 +781,7 @@ msgid "Enable Commercials"
 msgstr ""
 
 msgctxt "#30191"
-msgid "Install Missing Resources"
+msgid "Install Resources"
 msgstr ""
 
 msgctxt "#30192"
@@ -790,108 +790,4 @@ msgstr ""
 
 msgctxt "#30193"
 msgid "Installing"
-msgstr ""
-
-msgctxt "#30194"
-msgid "[COLOR=red][B]Warning!! [/B]It's strongly recommend users using Flash/SSD change path to HDD.[/COLOR]"
-msgstr ""
-
-msgctxt "#30195"
-msgid "URL"
-msgstr ""
-
-msgctxt "#30196"
-msgid "FILE"
-msgstr ""
-
-msgctxt "#30197"
-msgid "Select M3U Type"
-msgstr ""
-
-msgctxt "#30198"
-msgid "Select XMLTV Type"
-msgstr ""
-
-msgctxt "#30199"
-msgid "Filling"
-msgstr ""
-
-msgctxt "#30200"
-msgid "Backup Channels"
-msgstr ""
-
-msgctxt "#30201"
-msgid "Recover Channels"
-msgstr ""
-
-msgctxt "#30202"
-msgid "Coming Soon!"
-msgstr ""
-
-msgctxt "#30203"
-msgid "AutoTune"
-msgstr ""
-
-msgctxt "#30204"
-msgid "Exiting"
-msgstr ""
-
-msgctxt "#30205"
-msgid "Show Static Effect"
-msgstr ""
-
-msgctxt "#30206"
-msgid "Half Cores"
-msgstr ""
-
-msgctxt "#30207"
-msgid "Full Cores"
-msgstr ""
-
-msgctxt "#30208"
-msgid "CPU Affinity [Full Recommended on PC]"
-msgstr ""
-
-msgctxt "#30209"
-msgid "Import"
-msgstr ""
-
-msgctxt "#30210"
-msgid "Third-Party M3U/XMLTV Import"
-msgstr ""
-
-msgctxt "#30211"
-msgid "Recover"
-msgstr ""
-
-msgctxt "#30212"
-msgid "Replace existing Backup from"
-msgstr ""
-
-msgctxt "#30213"
-msgid "Replace existing channels with %s\nfrom %s"
-msgstr ""
-
-msgctxt "#30214"
-msgid "Yes to all"
-msgstr ""
-
-msgctxt "#30215"
-msgid "Last Backup"
-msgstr ""
-
-msgctxt "#30216"
-msgid "Recover Channels"
-msgstr ""
-
-msgctxt "#30217"
-msgid "Please Install & Enable %s to continue..."
-msgstr ""
-
-msgctxt "#30218"
-msgid "[COLOR=red][B]Setting Disabled!! [/B]Running Background Tasks, Try again later...[/COLOR]"
-msgstr ""
-
-msgctxt "#30219"
-msgid "Single Core"
 msgstr ""

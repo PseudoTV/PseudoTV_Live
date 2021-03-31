@@ -92,12 +92,15 @@ class Player(xbmc.Player):
     def setSeekTime(self, seek):
         if not self.isPlayingVideo(): return
         self.log('setSeekTime, seek = %s'%(seek))
+        self.pendingSeek = False
+        self.toggleSubtitles(False)
+        xbmc.sleep(100)
         self.seekTime(seek)
+        self.toggleSubtitles(self.lastSubState)
         
         
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        self.lastSubState = isSubtitle()
         self.pendingStart = True
         self.playAction()
         
@@ -105,9 +108,7 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         if self.pendingSeek and not self.pendingStart: #catch failed seekTime
-            log('onAVChange, pendingSeek failed!',xbmc.LOGERROR)
-            # self.setSeekTime(self.getPVRTime()) #onPlayBackSeek slow, false triggers! debug. 
-            # self.toggleSubtitles(False)
+            log('pendingSeek, failed!',xbmc.LOGERROR) # self.setSeekTime(self.getPVRTime())
 
         
     def onAVStarted(self):
@@ -149,6 +150,7 @@ class Player(xbmc.Player):
             self.log('playAction, returning not PseudoTV Live')
             return self.stopAction()
         
+        self.lastSubState = isSubtitle()
         self.toggleSubtitles(False)
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         pvritem = getCurrentChannelItem()                
@@ -162,7 +164,6 @@ class Player(xbmc.Player):
             self.log('playAction, no channel change')
         else:   
             self.log('playAction, new channel change')
-            self.showOverlay = getSettingBool('Enable_Overlay',xbmcaddon.Addon(id=ADDON_ID))
             self.ruleList = self.rules.loadRules([pvritem.get('citem',{})])
             pvritem = self.runActions(RULES_ACTION_PLAYER, (pvritem.get('citem',{})), pvritem)
             self.pendingSeek = int(pvritem.get('progress','0')) > 0
@@ -174,6 +175,7 @@ class Player(xbmc.Player):
     def changeAction(self):
         # means to update pvritem without plugin playback
         # pvritem = self.myService.jsonRPC.getPVRposition(self.playingPVRitem.get('name'), self.playingPVRitem.get('id'), self.playingPVRitem.get('isPlaylist'))
+
         if not getCurrentChannelItem(): 
             self.stopAction()
             return self.log('changeAction, ignore not PseudoTV Live')
@@ -200,7 +202,7 @@ class Player(xbmc.Player):
         return self.playingPVRitem.get('isPlaylist',False)
 
 
-    def toggleOverlay(self, state):                                     
+    def toggleOverlay(self, state):
         if state and not isOverlay():
             if not (self.showOverlay & self.isPlaying() & hasPVRitem()): return
             self.log("toggleOverlay, show")
@@ -214,7 +216,7 @@ class Monitor(xbmc.Monitor):
     def __init__(self):
         xbmc.Monitor.__init__(self)
         self.pendingChange  = False
-        self.lastSettings   = self.chkSettings()
+        self.lastUserM3U    = getSetting('Import_M3U')
         self.onChangeThread = threading.Timer(0.5, self.onChange)
         
         
@@ -222,14 +224,11 @@ class Monitor(xbmc.Monitor):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def onNotification(self, sender, method, data):
-        self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
-            
-            
-    def isSettingsOpened(self):
-        if xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126,10138]:
-            self.onSettingsChanged()
-            return True
+    def chkPendingChange(self):
+        if   xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126]: return True
+        elif getSetting('Import_M3U') != self.lastUserM3U:
+            self.lastUserM3U = getSetting('Import_M3U')
+            return True #todo check other settings for change
         return False
 
 
@@ -243,59 +242,29 @@ class Monitor(xbmc.Monitor):
         setPropertyBool('pendingChange',state)
 
 
+    def onNotification(self, sender, method, data):
+        self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
+            
+            
     def onSettingsChanged(self):
+        setPropertyBool('isPlaylist',bool(getSettingInt('Playback_Method')))
+        if not self.isPendingChange(): return
+        self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
-        self.onChangeThread = threading.Timer(15.0, self.onChange)
+        self.onChangeThread = threading.Timer((float((UPDATE_OFFSET//4)/60)), self.onChange)
         self.onChangeThread.name = "onChangeThread"
         self.onChangeThread.start()
         
         
     def onChange(self):
-        if isBusy(): return self.onSettingsChanged() # delay restart, changes still occurring.
+        if not self.isPendingChange(): return # last chance to cancel.
+        elif isBusy(): return self.onSettingsChanged() # delay restart, still pending change.
         self.log('onChange')
-        if self.hasSettingsChanged():
-            self.setPendingChange(True)
-            
-        
-    def chkSettings(self):
-        self.log('chkSettings')
-        #priority settings that trigger chkUpdate on change.
-        return {'User_Import'         :{'setting':getSetting('User_Import',xbmcaddon.Addon(id=ADDON_ID))         ,'action':None},
-                'Import_M3U_TYPE'     :{'setting':getSetting('Import_M3U_TYPE',xbmcaddon.Addon(id=ADDON_ID))     ,'action':None},
-                'Import_M3U_FILE'     :{'setting':getSetting('Import_M3U_FILE',xbmcaddon.Addon(id=ADDON_ID))     ,'action':None},
-                'Import_M3U_URL'      :{'setting':getSetting('Import_M3U_URL',xbmcaddon.Addon(id=ADDON_ID))      ,'action':None},
-                'Import_SLUG'         :{'setting':getSetting('Import_SLUG',xbmcaddon.Addon(id=ADDON_ID))         ,'action':None},
-                'User_Folder'         :{'setting':getSetting('User_Folder',xbmcaddon.Addon(id=ADDON_ID))         ,'action':moveUser},
-                'Select_Channels'     :{'setting':getSetting('Select_Channels',xbmcaddon.Addon(id=ADDON_ID))     ,'action':None},
-                'Select_TV_Networks'  :{'setting':getSetting('Select_TV_Networks',xbmcaddon.Addon(id=ADDON_ID))  ,'action':None},
-                'Select_TV_Shows'     :{'setting':getSetting('Select_TV_Shows',xbmcaddon.Addon(id=ADDON_ID))     ,'action':None},
-                'Select_TV_Genres'    :{'setting':getSetting('Select_TV_Genres',xbmcaddon.Addon(id=ADDON_ID))    ,'action':None},
-                'Select_Movie_Genres' :{'setting':getSetting('Select_Movie_Genres',xbmcaddon.Addon(id=ADDON_ID)) ,'action':None},
-                'Select_Movie_Studios':{'setting':getSetting('Select_Movie_Studios',xbmcaddon.Addon(id=ADDON_ID)),'action':None},
-                'Select_Mixed_Genres' :{'setting':getSetting('Select_Mixed_Genres',xbmcaddon.Addon(id=ADDON_ID)) ,'action':None},
-                'Select_Mixed'        :{'setting':getSetting('Select_Mixed',xbmcaddon.Addon(id=ADDON_ID))        ,'action':None},
-                'Select_Music_Genres' :{'setting':getSetting('Select_Music_Genres',xbmcaddon.Addon(id=ADDON_ID)) ,'action':None},
-                'Select_Recommended'  :{'setting':getSetting('Select_Recommended',xbmcaddon.Addon(id=ADDON_ID))  ,'action':None},
-                'Select_Imports'      :{'setting':getSetting('Select_Imports',xbmcaddon.Addon(id=ADDON_ID))      ,'action':None}}
-        
-        
-    def hasSettingsChanged(self):
-        currentSettings = self.chkSettings()
-        differences = dict(diffDICT(self.lastSettings,currentSettings))
-        if differences: 
-            self.log('hasSettingsChanged, differences = %s'%(differences))
-            self.lastSettings = currentSettings
-            for key in differences.keys():
-                func = currentSettings[key].get('action',None) 
-                if func:
-                    try: func()
-                    except Exception as e: 
-                        self.log("hasSettingsChanged, Failed! %s"%(e), xbmc.LOGERROR)
-            return True
-        return False
-        
-        
+        self.myService.chkUpdate('0')
+        self.setPendingChange(False)
+
+
 class Service:
     def __init__(self):
         self.myMonitor     = Monitor()
@@ -309,11 +278,11 @@ class Service:
         self.jsonRPC       = self.myBuilder.jsonRPC
         self.writer        = self.myBuilder.writer
         self.channels      = self.myBuilder.channels
-        self.dialog        = self.myBuilder.dialog
         
         self.myPlugin      = Plugin(sys.argv,service=self)     
         self.myConfig      = Config(sys.argv,service=self)        
 
+        self.InitThread    = threading.Timer(0.5, self.startInitThread)
         self.serviceThread = threading.Timer(0.5, self.runServiceThread)
         
         
@@ -321,6 +290,19 @@ class Service:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def startInitThread(self): 
+        self.log('startInitThread')
+        if self.InitThread.is_alive(): self.InitThread.cancel()
+        self.InitThread = threading.Timer(0.5, self.runInitThread)
+        self.InitThread.name = "InitThread"
+        self.InitThread.start()
+
+
+    def runInitThread(self):
+        self.log('runInitThread')
+        for func in [chkPVR, chkMGR, chkVersion]: func()            
+            
+            
     def startServiceThread(self, wait=5.0):
         self.log('startServiceThread, wait = %s'%(wait))
         if   self.writer.isClient(): return
@@ -334,10 +316,9 @@ class Service:
         if isBusy(): return self.startServiceThread(float((UPDATE_OFFSET//4)/60))
         with busy():
             self.log('runServiceThread, started')
-            for func in [self.chkRecommended, 
-                         self.chkPredefined]: func()
+            for func in [self.chkRecommended, self.chkPredefined, self.chkUpdate]: func()
             self.log('runServiceThread, finished')
-        return self.startServiceThread(UPDATE_WAIT)
+            return self.startServiceThread(UPDATE_WAIT)
                    
         
     def chkRecommended(self):
@@ -349,7 +330,7 @@ class Service:
         
                 
     def chkIdle(self):
-        if getIdleTime() > OVERLAY_DELAY:
+        if getIdleTime() > OVERLAY_DELAY: #15sec. overlay delay...
             self.myPlayer.toggleOverlay(True)
         else:
             self.myPlayer.toggleOverlay(False)
@@ -364,35 +345,32 @@ class Service:
     def chkUpdate(self, lastUpdate=None):
         if isBusy() or self.writer.isClient(): 
             return False
-        
-        with busy():
-            self.chkRecommended()
             
+        with busy():
             if lastUpdate is None: 
                 lastUpdate = (getProperty('Last_Update') or '0')
-                 
+                
             conditions = [self.myMonitor.isPendingChange(),
-                          not FileAccess.exists(getUserFilePath(M3UFLE)),
-                          not FileAccess.exists(getUserFilePath(XMLTVFLE)),
+                          not FileAccess.exists(M3UFLE),
+                          not FileAccess.exists(XMLTVFLE),
                           (time.time() > (float(lastUpdate or '0') + UPDATE_OFFSET))]
+            self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
             
             if True in conditions:
-                self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions)) 
-                if self.myMonitor.isPendingChange():
-                    self.myMonitor.setPendingChange(False)
-                    
                 if not self.myBuilder.getChannels():
                     if self.myConfig.autoTune():   #autotune
                         return self.chkUpdate('0') #force rebuild after autotune
                     self.log('chkUpdate, no channels found & autotuned recently')
                     return False #skip autotune if performed recently.
+                    # if self.writer.recoverChannels(): 
+                    # return self.chkUpdate('0')
                 return self.updateChannels()
             return False
         
         
     def updateChannels(self):
-        if self.myBuilder.buildService():
-            self.log('updateChannels, finished buildService')
+        self.log('updateChannels')
+        if self.myBuilder.buildService(): 
             setProperty('Last_Update',str(time.time()))
             return brutePVR(override=True)
         return False
@@ -400,36 +378,34 @@ class Service:
          
     def run(self, silent=False):
         self.log('run')
-        self.myMonitor.waitForAbort(5) #startup delay
-        self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),funcs=[(initDirs,None,None),
-                                                                          (self.myConfig.hasBackup,None,None),
-                                                                          (chkPVR,None,None),
-                                                                          (chkMGR,None,None),
-                                                                          (chkVersion,None,None),
-                                                                          (self.startServiceThread,None,None)],wait=10)
-        self.myMonitor.waitForAbort(15) #service delay
+        setBusy(False)
+        if notificationProgress('%s...'%(LANGUAGE(30052))): initDirs()
+        for initThread in [self.startInitThread, self.startServiceThread]: initThread()
+        self.myMonitor.waitForAbort(15)#ensure threads are active before main service starts. cheaper then another while loop.
         while not self.myMonitor.abortRequested():
-            if   self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
-            elif self.myMonitor.waitForAbort(2) or restartRequired(): break
+            if   self.chkInfo(): continue # aggressive polling required!
+            elif self.myMonitor.waitForAbort(2): break
             self.chkIdle()
             
-            if self.myMonitor.isSettingsOpened() or isBusy(): continue
+            if self.myMonitor.chkPendingChange(): # detect settings change. 
+                self.myMonitor.setPendingChange(True)
+                continue
+            elif isBusy() or self.myMonitor.isPendingChange():
+                continue
+                
+            self.chkRecommended()
             self.chkUpdate()
             
         self.closeThreads()
-        if restartRequired():
-            self.log('run, restarting buildService')
-            setRestartRequired(False)
-            self.myMonitor.waitForAbort(30)
-            self.run()
-            
+                
                 
     def closeThreads(self):
+        self.log('closeThreads')
         for thread in threading.enumerate():
             try: 
                 if thread.name == "MainThread": continue
-                self.log("closeThreads joining thread %s"%(thread.name))
+                log("closeThreads joining thread %s"%(thread.name))
                 thread.cancel()
                 thread.join(1.0)
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
-        self.log('closeThreads finished, exiting %s...'%(ADDON_NAME))
+        self.log('closeThreads, exiting %s'%(ADDON_NAME))

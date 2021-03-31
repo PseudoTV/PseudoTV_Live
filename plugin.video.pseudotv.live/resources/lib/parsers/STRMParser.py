@@ -20,54 +20,36 @@ from resources.lib.globals import *
 from xml.dom.minidom import parse, parseString
 
 class STRMParser:
-    ##<episodedetails>
-    ##  <runtime>25</runtime>
-    ##  <duration>1575</duration>
-    ##  <fileinfo>
-    ##    <streamdetails>
-    ##      <video>
-    ##        <durationinseconds>1575</durationinseconds>
-    ##      </video>
-    ##    </streamdetails>
-    ##  </fileinfo>
-    ##</episodedetails>
-    
     def determineLength(self, filename):
-        duration = 0
         fleName, fleExt = os.path.splitext(filename)
         fleName += '.nfo'
-        if not FileAccess.exists(fleName):
-            log("STRMParser: Unable to locate NFO %s"%(fleName), xbmc.LOGERROR)
-            return duration
-            
         log("STRMParser: determineLength, file = %s, nfo = %s"%(filename,fleName))
+        duration = 0
+        durationinseconds = 0
+        
         try:
-            File = FileAccess.open(fleName, "rb", None)
-            dom = parse(File)
-            File.close()
+            # self.File = xbmcvfs.File(fleName, "r")
+            self.File = FileAccess.open(filename, "rb", None)
+            dom = parse(self.File)
         except:
-            log("STRMParser: Unable to open the file %s"%(fleName), xbmc.LOGERROR)
+            log("STRMParser: MKVParser: Unable to open the file %s"%(fleName), xbmc.LOGERROR)
             return duration
-            
+
         try:                    
             xmldurationinseconds = dom.getElementsByTagName('durationinseconds')[0].toxml()
-            duration = int(xmldurationinseconds.replace('<durationinseconds>','').replace('</durationinseconds>',''))
-        except Exception as e: 
-            log("STRMParser: <durationinseconds> not found")
+            return int(xmldurationinseconds.replace('<durationinseconds>','').replace('</durationinseconds>',''))
+        except Exception as e: log("STRMParser: <durationinseconds> not found")
             
-        if duration == 0:
-            try:
-                xmlruntime = dom.getElementsByTagName('runtime')[0].toxml()
-                duration = int(xmlruntime.replace('<runtime>','').replace('</runtime>','').replace(' min.','')) * 60
-            except Exception as e: 
-                log("STRMParser: <runtime> not found")
-            
-        if duration == 0:    
-            try:
-                xmlruntime = dom.getElementsByTagName('duration')[0].toxml()
-                duration = int(xmlruntime.replace('<duration>','').replace('</duration>','')) * 60
-            except Exception as e: 
-                log("STRMParser: <duration> not found")
+        try:
+            xmlruntime = dom.getElementsByTagName('runtime')[0].toxml()
+            return int(xmlruntime.replace('<runtime>','').replace('</runtime>','').replace(' min.','')) * 60
+        except Exception as e: log("STRMParser: <runtime> not found")
                 
-        log("STRMParser: Duration is %s"%(duration))
+        try:
+            xmlruntime = dom.getElementsByTagName('duration')[0].toxml()
+            return int(xmlruntime.replace('<duration>','').replace('</duration>','')) * 60
+        except Exception as e: log("STRMParser: <duration> not found")
+                
+        self.File.close()
+        log("STRMParser: Duration is " + str(duration))
         return duration

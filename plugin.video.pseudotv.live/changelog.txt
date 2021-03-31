@@ -1,16 +1,7 @@
 v.0.2.7
--Warning It's strongly recommend users using Flash/SSD device change the "centralize file location" to HDD.
--Notice Requires Kodi IPTV Simple v.7.5.0 and greater.
 -Added Install resources button to filler settings.
 -Fixed XMLTV Unicode characters.
--Fixed Fill for channels with limited content.
--Improved M3U channel imports.
--Refactored Settings, Caching, Dialogs and Concurrent/Parallel methods.
--Added CPU affinity setting under "Tweaks". Delegate Half|Full CPU cores during Concurrent/Parallel calls.
--Optimized Memory and I/O usage, limited redundant method calls.
--Added Channel Backup and Recovery added to settings (Experimental).
--Settings layout changed.
--Miscellaneous improvements, visual tweaks and performance boosts.
+-Fixed fill for channels with limited content.
 
 v.0.2.6
 -Warning Requires Kodi Matrix Nightly (1/12/21) or greater.
