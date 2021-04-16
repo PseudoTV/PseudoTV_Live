@@ -23,10 +23,10 @@ class UPNP:
     def __init__(self, cache=None):
         self.log('__init__')
         if cache is None:
-            self.cache = SimpleCache()
+            self.cache = Cache()
         else: 
             self.cache = cache
-        self.jsonRPC = JSONRPC(self.cache)
+        self.jsonRPC = JSONRPC(cache=self.cache)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

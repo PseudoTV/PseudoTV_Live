@@ -30,7 +30,7 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 # Features:
 - Predefined Channels based on your Kodi library content; categorized by: 
-`TV Shows, TV Networks, TV Genre, Movie Genre, Movie Studios, Mixed Genre, Music Genre`
+
 
 - Automatic Channel logos, sourced from Kodi resource packs.
 
@@ -99,7 +99,7 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 1. PVR Callback - This method keeps Kodi believing you are using a Live feed from the PVR backend. Pros| Kodi PVR UI and Widget updates. Near infinite channel playback. Cons| Slower channel content changes. (1-60secs. depending on your system). If "Overlay" is enabled in settings; and active during content change you will be met with a custom background. (Currently static).
 
-1. Playlist - Standard Kodi playlist queue (not to be confused with a smart playlist). Pros| Channel content changes quickly. Cons| Kodi does not treat playback as PVR channel, Playlist queues are finite.
+2. Playlist - Standard Kodi playlist queue (not to be confused with a smart playlist). Pros| Channel content changes quickly. Cons| Kodi does not treat playback as PVR channel, Playlist queues are finite.
 
 ## Seek tolerance (Smart Seeking):
 
@@ -108,12 +108,13 @@ ex. If after a show ends your next show which should start at the beginning star
 
 ## Seek Threshold(Smart Seeking):
 
-Adjusting seek threshold(percentage). threshold to which the current content can be played back before dismissing for the next queue. Ex. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically. 100% disables threshold.
+Adjusting seek threshold(percentage). threshold to which the current content can be played back before dismissing for the next queue. Ex. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically. 100% disables threshold (content played till the end).
 
 ## Parse for Accurate Duration Meta:
+
 1. "Prefer Kodi Library" - Duration meta collected from the values provided by your metadata provider. ie. TVDB, TMDB, etc... Pros: Faster background channel building, Cons: Usually inaccrate, rounded values.
 
-1. "Prefer File Metadata" - Media files are parsed individually for real runtimes. Pros: Accurate EPG guide times, Cons: Slower background channel building. File extensions supported `.avi,.mp4,.m4v,.3gp,.3g2,.f4v,.mov,.mkv,.flv,.ts,.m2ts,.strm`
+2. "Prefer File Metadata" - Media files are parsed individually for real runtimes. Pros: Accurate EPG guide times, Cons: Slower background channel building. File extensions supported `.avi,.mp4,.m4v,.3gp,.3g2,.f4v,.mov,.mkv,.flv,.ts,.m2ts,.strm`
 
 	`.strm` files require matching `.nfo` sharing the same name. ex. `foobar movie,the.strm` & `foobar movie,the.nfo` Supported nfo parameters `runtime,duration,durationinseconds`. *note `runtime,duration` in minutes.
 
@@ -124,6 +125,7 @@ Adjusting seek threshold(percentage). threshold to which the current content can
 - Inorder to reduce parsing times when using "Prefer File Metadata" PseudoTV Live can store the new accurate duration meta to Kodis library, there are no downsides to this process except for extra cpu usage. If you notice performance penalties when enabled, disable it... There is a fallback 28 day cache to avoid unnecessary file parsing. 
 
 ## Imports:
+
 Imports are considered "third-party" and are not treated as "PseudoTV" channels. Channel configurations, channel numbering, onscreen overlays are all disabled. Imports are 1:1 m3u/xmltv imports with the exception of channel numbers which maybe altered as described below.
 
 ### M3U
@@ -152,7 +154,7 @@ For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your
 
 1. https://kodi.wiki/view/MySQL 
 
-1. https://kodi.wiki/view/Path_substitution 
+2. https://kodi.wiki/view/Path_substitution 
 
 After creating channels you will find a folder called "logos" in the same directory selected in settings. Place custom logos here!! They will override logos PseudoTV Live has found for you. The image must be *.png and is case sensitive to the channel name. ex. Channel "Foo Bar" searchs for a matching logo "Foo Bar.png"
 
@@ -183,6 +185,7 @@ Each import is limited to 9999 (assuming each channel is an interger. Sub-Number
 *NOTE: PseudoTV Live automatically applies the optimal settings to IPTV Simple in-order to maximize the user experience.
 
 #### - Kodi PVR & LiveTV Settings:
+
 If you want the exact channel numbers from PseudoTV Live to reflect onscreen, you will have to enable "Use channel order from backend". While in settings "Synchronize channel groups with backend" should also be enabled.
 *NOTE: changes will require users to clear data from the same PVR settings menu
 
@@ -225,7 +228,7 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 
 1. "Recommend Services" which is a full m3u/xmltv import provide by [IPTV Manager](https://github.com/add-ons/service.iptv.manager) or a local generated m3u/xmltv set. *see imports
 
-1. "Recommend Channels" allows VOD content to fully intergrate into PseudoTV Live.
+2. "Recommend Channels" allows VOD content to fully intergrate into PseudoTV Live.
 Inorder for a plugin to announce itself to PseudoTV Live it must run a "Beacon" service. Examples can be found below. 
 
 [Beacon Asset Example](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/asset.json)

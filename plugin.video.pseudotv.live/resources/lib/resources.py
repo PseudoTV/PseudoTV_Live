@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2021 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -27,19 +27,11 @@ except:
     hasPillow = False
 
 class Resources:
-    def __init__(self, cache=None, jsonRPC=None):
-        log('Library: __init__')
-        if cache is None:
-            self.cache = SimpleCache()
-        else: 
-            self.cache = cache
-                
-        if jsonRPC is None:
-            from resources.lib.jsonrpc import JSONRPC
-            self.jsonRPC  = JSONRPC(self.cache)
-        else:
-            self.jsonRPC  = jsonRPC
-            
+    def __init__(self, jsonRPC):
+        self.log('__init__')
+        self.jsonRPC  = jsonRPC
+        self.cache    = self.jsonRPC.cache
+        self.pool     = self.jsonRPC.pool
         self.logoSets = self.buildLogoResources()
         
         
@@ -50,12 +42,12 @@ class Resources:
     def buildLogoResources(self):
         self.log('buildLogoResources')
         logos     = []
-        packs     = (getSetting('Resource_Logos')).split(',')
+        packs     = (SETTINGS.getSetting('Resource_Logos')).split(',')
         radios    = ["resource.images.musicgenreicons.text"]
         genres    = ["resource.images.moviegenreicons.transparent"]
         studios   = ["resource.images.studios.white", 
                      "resource.images.studios.coloured"]
-        if bool(getSettingInt('Color_Logos')): studios.reverse()
+        if bool(SETTINGS.getSettingInt('Color_Logos')): studios.reverse()
         
         [logos.append({'type':[LANGUAGE(30171)],                                                'path':'resource://%s'%(pack)  ,'files': self.getResourceFiles(pack)})   for pack   in packs]
         [logos.append({'type':[LANGUAGE(30097),LANGUAGE(30171)],                                'path':'resource://%s'%(radio) ,'files': self.getResourceFiles(radio)})  for radio  in radios]
@@ -69,30 +61,76 @@ class Resources:
 
     def getResourceFiles(self, resource):
         self.log('getResourceFiles, resource = %s'%(resource))
-        addonMeta = self.jsonRPC.getPluginMeta(resource)
         if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
-        return self.jsonRPC.getListDirectory(resource,addonMeta.get('version',''))[1]
+        return self.jsonRPC.getListDirectory(resource,self.jsonRPC.getPluginMeta(resource).get('version',''))[1]
 
   
+    def getNamePattern(self, chname):
+        return list(set([chname,stripRegion(chname)]))#,stripNumber(chname),stripNumber(stripRegion(chname))]
+        
+        
+    def cleanLogoPath(self, logo=''):
+        if logo is None: return logo
+        realPath = xbmcvfs.translatePath('special://home/addons/')
+        if logo.startswith(realPath):
+            return logo.replace(realPath,'special://home/addons/').replace('\\','/')
+        return logo
+               
+        
+    def chkLocalLogo(self, chname):
+        ## CHK user folder, Plugin folder
+        paths = [LOGO_LOC,IMAGE_LOC] 
+        for path in paths:
+            filePath = os.path.join(path,chname)
+            if FileAccess.exists(filePath): 
+                return self.cleanLogoPath(filePath)
+        return None
+        
+        
+    @cacheit(checksum=ADDON_VERSION,json_data=False)
+    def findResourceLogo(self, name, type, patterns=[]):
+        def chkFile(file):
+            if isinstance(file, dict): #jsonrpc item
+                if name.lower() == (file.get('showtitle','').lower() or file.get('label','').lower() or file.get('name','').lower() or file.get('title','').lower()):
+                    channellogo = (file.get('art',file).get('clearlogo','') or file.get('thumbnail',''))
+                    if channellogo: return channellogo
+            else: #resource item
+                if os.path.splitext(file.lower())[0] == pattern.lower():
+                    return self.cleanLogoPath(os.path.join(item['path'],file))
+                
+        if not patterns: 
+            patterns.append(name)
+        for pattern in patterns:       
+            for item in self.logoSets:
+                if type in item['type']:
+                    results = self.pool.poolList(chkFile,item['files'])
+                    if results and isinstance(results,list): return results[0]
+        return None
+        
+
     def buildBCTresource(self, type, path, media='video'):
         self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))
-        if path.startswith(('resource://')): 
-              version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
-        else: version = ADDON_VERSION
-        if type in PRE_ROLL: force = True
-        else: force = False
+        if path.startswith(('resource://')):
+            version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
+        else: 
+            version = ADDON_VERSION
+        if type in PRE_ROLL: 
+            force = True
+        else: 
+            force = False
         return self.jsonRPC.listVFS(cleanResourcePath(path),media,force,version)
 
 
     def buildResourceType(self, type, paths):
-        return list(self.getPlayablePaths(type,resource) for resource in paths)[0]
+        for resource in paths:
+            yield self.getPlayablePaths(type,resource)
         
         
     def getPlayablePaths(self, type, resource):
         self.log('getPlayablePaths, type = %s, resource = %s'%(type,resource))
         if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
         tmpdict = dict()
-        items = self.buildBCTresource(type, resource)
+        items   = list(self.buildBCTresource(type, resource))
         for item in items:
             folder = os.path.basename(os.path.normpath(item.get('path','')))
             if folder and folder != 'resources': 
@@ -105,13 +143,6 @@ class Resources:
         return tmpdict
 
 
-    def cleanLogoPath(self, logo=''):
-        #todo procs. image, alpha, cache, etc...
-        if logo is None: return logo
-        if logo.startswith(ADDON_PATH):
-            return logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
-        return logo
-               
                 
         # elif logo.startswith('resource://'):
             # path, file = os.path.split(logo)
@@ -147,59 +178,38 @@ class Resources:
                     return self.chkDirectory4Logo(dir,name,patterns)
         return None
 
-        
-    def chkLocalLogo(self, pattern):
-        paths = [IMAGE_LOC, LOGO_LOC]
-        for path in paths:
-            filePath = os.path.join(path,pattern)
-            if FileAccess.exists(filePath): 
-                return self.cleanLogoPath(filePath)
-        return None
-        
-        
-    def findResourceLogo(self, data):
-        item, data = data
-        name, type = data
-        if type in item['type']:
-            for file in item['files']:
-                if isinstance(file, dict): #jsonrpc item
-                    if name.lower() == (file.get('showtitle','').lower() or file.get('label','').lower() or file.get('name','').lower() or file.get('title','').lower()):
-                        channellogo = (file.get('art',file).get('clearlogo','') or file.get('thumbnail',''))
-                        if channellogo: return channellogo
-                else: #resource item
-                    if os.path.splitext(file.lower())[0] == name.lower():
-                        return os.path.join(item['path'],file)
-        return None
-        
-    
+
     def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False): 
         if type == LANGUAGE(30003): name, year = splitYear(name) #TV Show
         log('getLogo: name = %s, type = %s'%(name,type))
-        
-        #local
-        local = (PoolHelper().poolList(self.chkLocalLogo,self.getFilePatterns(name)))
-        if local: return self.cleanLogoPath(local[0])
-        
-        #resources
-        rlogo = (PoolHelper().poolList(self.findResourceLogo,self.logoSets,(name,type)))
-        if rlogo: return self.cleanLogoPath(rlogo[0])
-        
+        ##local
+        local = self.chkLocalLogo(name)
+        if local: return local
+            
+        #fileitem
         if item is not None:
+            #todo check if item art is a default fallback LOGO, COLOR_LOGO, ETC and ignore
             art  = (item.get('art','') or item)
             logo = (art.get('clearlogo','') or art.get('logo','') or art.get('icon',''))
             if logo: return self.cleanLogoPath(logo)
             
+        #plugin meta
         if path is not None:
             if isinstance(path, list) and len(path) > 0: path = path[0]
             if path.startswith('plugin://'): return self.cleanLogoPath(self.jsonRPC.getPluginMeta(path).get('icon',''))
-        # if featured: logo = self.chkMono(logo)
+            #todo parse vfs for logo
+            
+        #resources
+        rlogo = self.findResourceLogo(name,type,self.getNamePattern(name))
+        if rlogo: return rlogo
+            
         return LOGO
         
     
     # def buildLocalTrailers(self, path=None, items=[]):
         # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
         # if path is None and len(items) > 0:
-            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer','')),'file'}]
+            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer',''),item),'file'}]
         # list(filter(lambda item:(,item.get('trailer')), validItems))
 # # os.path.splitext(os.path.basename(item.get('file')))[0]
 
@@ -214,18 +224,17 @@ class Resources:
     # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':[self.buildResourcePath(path,file) for file in files]}
         
 
-    def chkMono(self, logo):
-        try:
-            dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(xbmcvfs.translatePath(logo))[1]))
-            if FileAccess.exists(dest): return dest
-            return self.monoConvert(logo,dest,bool(getSettingInt('Color_Logos')))
-        except Exception as e: self.log("chkMono, failed! " + str(e), xbmc.LOGERROR)
-        return logo
+    # def chkMono(self, logo):
+        # try:
+            # dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(xbmcvfs.translatePath(logo))[1]))
+            # if FileAccess.exists(dest): return dest
+            # return self.monoConvert(logo,dest,bool(SETTINGS.getSettingInt('Color_Logos')))
+        # except Exception as e: self.log("chkMono, failed! " + str(e), xbmc.LOGERROR)
+        # return logo
             
 
-    @use_cache(7)
-    def monoConvert(self, logo, dest, useColor=bool(getSettingInt('Color_Logos'))):
-        return logo
+    # def monoConvert(self, logo, dest, useColor=bool(SETTINGS.getSettingInt('Color_Logos'))):
+        # return logo
         # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.
         # pil_img = Image.open(FileAccess.translatePath(logo))
         # # pil_img = Image.open(FileAccess.open(logo,"r"))

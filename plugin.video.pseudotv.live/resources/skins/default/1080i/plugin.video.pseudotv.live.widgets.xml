@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+    <backgroundcolor>0x00000000</backgroundcolor>
+    <onload>SetProperty(plugin.video.pseudotv.live.WIDGETS,True,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.WIDGETS,False,10000)</onunload> 
+    <controls>
+      <control type="list" id="40000">
+        <description>Meta Container</description>
+        <itemlayout width="0" height="0">
+        </itemlayout>
+        <focusedlayout height="0" width="0">
+        </focusedlayout>
+      </control>
+    </controls>
+</window>

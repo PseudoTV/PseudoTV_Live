@@ -21,13 +21,8 @@
 from resources.lib.globals import *
 
 class Predefined:
-    def __init__(self, cache=None):
+    def __init__(self):
         self.log('__init__')
-        if cache is None:
-            self.cache = SimpleCache()
-        else: 
-            self.cache = cache
-            
         self.pathTypes  = {LANGUAGE(30002): self.createNetworkPlaylist,
                            LANGUAGE(30003): self.createShowPlaylist,
                            LANGUAGE(30004): self.createTVGenrePlaylist,

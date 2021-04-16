@@ -18,33 +18,27 @@
 
 # -*- coding: utf-8 -*-
 
-import os, sys, re, struct, shutil, traceback, threading
+import os, sys, re, struct, shutil, traceback, threading, decimal
 import datetime, time, _strptime, base64, binascii, random, hashlib
-import json, codecs, collections, uuid
+import json, codecs, collections, uuid, subprocess
 
 from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
 from itertools                 import repeat, cycle, chain, zip_longest
 from six.moves                 import urllib
 from contextlib                import contextmanager
-from simplecache               import use_cache, SimpleCache
 from xml.dom.minidom           import parse, parseString, Document
 from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring, XMLParser
 from resources.lib.fileaccess  import FileAccess, FileLock
+from resources.lib.kodi        import Settings, Properties, Dialog
+from resources.lib.cache       import cacheit
 from operator                  import itemgetter
-    
+ 
 try:
-    from multiprocessing       import cpu_count
-    from multiprocessing.pool  import ThreadPool 
-    ENABLE_POOL  = True
-    THREAD_CORES = cpu_count()
-except: ENABLE_POOL = False
-    
-try:
-    from multiprocessing import Process, Queue
-    Queue() # Queue doesn't raise importError on android, call directly.
+    from multiprocessing import Thread, Queue, Empty
+    Queue() # importing Queue does not raise importError on android, call directly.
 except:
-    from threading import Thread as Process
-    from queue     import Queue
+    from threading import Thread
+    from queue     import Queue, Empty
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
@@ -62,16 +56,21 @@ ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
 ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
-
-MY_MONITOR          = xbmc.Monitor()
-MY_PLAYER           = xbmc.Player()
+SETTINGS            = Settings()
+PROPERTIES          = Properties()
 
 OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
+README_FLE          = os.path.join(ADDON_PATH,'readme.md')
+CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
 LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'library.json')
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
+GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'groups.xml')
+PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'providers.xml')
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
-CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
+CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
+CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
+
 VIDEO_EXTS          = xbmc.getSupportedMedia('video')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture')
@@ -94,11 +93,13 @@ EPG_HRS             = 10800  # 3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
 UPDATE_OFFSET       = 3600 #1hr in secs.
-UPDATE_WAIT         = 10800.0 # 3hr in Secs.
+RECOMMENDED_OFFSET  = 900 #15mins in secs.
+PREDEFINED_OFFSET   = 10800 # 3hr in Secs
+UPDATE_WAIT         = 3600 #1hr in secs.
 AUTOTUNE_LIMIT      = 3 #auto items per type.
 CHANNEL_LIMIT       = 999
-OVERLAY_DELAY       = 15 #secs
-CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]
+OVERLAY_DELAY       = 30 #secs
+CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]#Limit is 10
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
 PRE_ROLL            = ['bumpers','ratings']
@@ -140,115 +141,72 @@ NOTIFICATION_DISPLAY_TIME        = 30 #seconds
 CHANNELBUG_CHECK_TIME            = 15.0 #seconds
 
 # Actions
-ACTION_PREVIOUS_MENU         = [9, 10, 92, 216, 247, 257, 275, 61467, 61448, 110]
+ACTION_SHOW_INFO     = [11,24,401]
+ACTION_PREVIOUS_MENU = [10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
 
-USER_LOC         = (REAL_SETTINGS.getSetting('User_Folder') or SETTINGS_LOC)
-XMLTVFLE         = os.path.join(USER_LOC ,'%s.xml'%('pseudotv'))
-M3UFLE           = os.path.join(USER_LOC ,'%s.m3u'%('pseudotv'))
-CHANNELFLE       = os.path.join(USER_LOC ,'channels.json')
-LIBRARYFLE       = os.path.join(USER_LOC ,'library.json')
-GENREFLE         = os.path.join(USER_LOC ,'genres.xml')
-CACHE_LOC        = os.path.join(USER_LOC ,'cache')
-LOCK_LOC         = USER_LOC
-TEMP_LOC         = os.path.join(CACHE_LOC,'temp')
-LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
-LOGO_COLOR_LOC   = os.path.join(LOGO_LOC ,'color')
-LOGO_MONO_LOC    = os.path.join(LOGO_LOC ,'mono')
-PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
-
-MGR_SETTINGS     = {'refresh_interval':'1',
-                    'iptv_simple_restart':'false'}
-                    
-PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'5','m3uRefreshHour':'0',
-                    'logoPathType':'0','logoPath':LOGO_LOC,
-                    'm3uPathType':'0','m3uPath':M3UFLE,
-                    'epgPathType':'0','epgPath':XMLTVFLE,
-                    'genresPathType':'0','genresPath':GENREFLE,
-                    'useEpgGenreText':'true', 'logoFromEpg':'1',
-                    'catchupEnabled':'true','allChannelsCatchupMode':'0',
-                    'numberByOrder':'false','startNum':'1',
-                    'epgTimeShift':'0','epgTSOverride':'false',
-                    'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
- 
 def log(msg, level=xbmc.LOGDEBUG):
-    try: msg = str(msg)
-    except: pass
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if   level == xbmc.LOGERROR: msg = '%s, %s'%((msg),traceback.format_exc())
-    try: xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-    except Exception as e: xbmc.log('log failed! %s'%(e),level)
-
-def getProperty(key, id=10000):
-    try: 
-        key = '%s.%s'%(ADDON_ID,key)
-        value = xbmcgui.Window(id).getProperty(key)
-        if value: log("globals: getProperty, key = " + key + ", value = " + value)
-        return value
-    except Exception as e: log("globals: getProperty, Failed! " + str(e), xbmc.LOGERROR)
-    return ''
-    
-def setProperty(key, value, id=10000):
-    key = '%s.%s'%(ADDON_ID,key)
-    if not isinstance(value, basestring): value = str(value)
-    log("globals: setProperty, key = " + key + ", value = " + value)
-    try: xbmcgui.Window(id).setProperty(key, value)
-    except Exception as e: log("globals: setProperty, Failed! " + str(e), xbmc.LOGERROR)
-    return True
-    
-def clearProperty(key, id=10000):
-    key = '%s.%s'%(ADDON_ID,key)
-    log("globals: clearProperty, key = %s"%(key))
-    xbmcgui.Window(id).clearProperty(key)
-
-def getPropertyBool(key):
-    return getProperty(key).title() == 'True'
-    
-def setPropertyBool(key, value):
-    return setProperty(key,str(value).title())
+    if not isinstance(msg,basestring): msg = str(msg)
+    if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
 def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
-    return getPropertyBool('PseudoTVRunning')
+    return PROPERTIES.getEXTProperty('PseudoTVRunning') == "True"
 
 def setLegacyPseudoTV(state):
-    return setPropertyBool('PseudoTVRunning',state)
+    return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
 
-def setSetting(key,value):
-    log('globals: setSetting, key = %s, value = %s'%(key,value))
-    return REAL_SETTINGS.setSetting(key,value)
-
-def getSetting(key, reload=True):
-    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    value = REAL_SETTINGS.getSetting(key)
-    log('globals: getSetting, key = %s, value = %s'%(key,value))
-    return value
-    
-def getSettingBool(key, reload=True):
-    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    try:
-        return REAL_SETTINGS.getSettingBool(key)
-    except:
-        return getSetting(key) == "true" 
-    
-def getSettingInt(key, reload=True):
-    if reload: REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    try: 
-        return REAL_SETTINGS.getSettingInt(key)
-    except:
-        value = getSetting(key)
-        if value.isdecimal():
-            return float(value)
-        elif value.isdigit(): 
-            return int(value)
-
+def getUserFilePath(file=None):
+    path = SETTINGS.getSettingRefresh('User_Folder')
+    if file: return os.path.join(path,file)
+    else: return path
+  
 def unquote(text):
     return urllib.parse.unquote(text)
     
 def quote(text):
     return urllib.parse.quote(text)
 
-PAGE_LIMIT       = getSettingInt('Page_Limit')
+PAGE_LIMIT       = SETTINGS.getSettingInt('Page_Limit')
 MIN_ENTRIES      = int(PAGE_LIMIT//2)
-LOGO             = (COLOR_LOGO if bool(getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
+LOGO             = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
+
+USER_LOC         = getUserFilePath()
+LOCK_LOC         = USER_LOC
+XMLTVFLE         = '%s.xml'%('pseudotv')
+M3UFLE           = '%s.m3u'%('pseudotv')
+CHANNELFLE       = 'channels.json'
+LIBRARYFLE       = 'library.json'
+GENREFLE         = 'genres.xml'
+TVGROUPFLE       = 'tv_groups.xml'
+RADIOGROUPFLE    = 'radio_groups.xml'
+PROVIDERFLE      = 'providers.xml'
+
+CACHE_LOC        = os.path.join(USER_LOC ,'cache')
+PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
+LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
+LOGO_COLOR_LOC   = os.path.join(LOGO_LOC ,'color')
+LOGO_MONO_LOC    = os.path.join(LOGO_LOC ,'mono')
+
+TEMP_LOC         = os.path.join(SETTINGS_LOC,'temp')
+BACKUP_LOC       = os.path.join(SETTINGS_LOC,'backup')
+
+MGR_SETTINGS     = {'refresh_interval':'1',
+                    'iptv_simple_restart':'false'}
+                    
+PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
+                    'logoPathType':'0','logoPath':LOGO_LOC,
+                    'm3uPathType':'0','m3uPath':getUserFilePath(M3UFLE),
+                    'epgPathType':'0','epgPath':getUserFilePath(XMLTVFLE),
+                    'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
+                    # 'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
+                    # 'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
+                    # 'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
+                    'useEpgGenreText':'true', 'logoFromEpg':'1',
+                    'catchupEnabled':'true','allChannelsCatchupMode':'0',
+                    'numberByOrder':'false','startNum':'1',
+                    'epgTimeShift':'0','epgTSOverride':'false',
+                    'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
 
 @contextmanager
 def fileLocker(GlobalFileLock):
@@ -261,132 +219,47 @@ def fileLocker(GlobalFileLock):
 
 @contextmanager
 def busy():
-    log('globals: busy')
     if isBusy(): yield
-    setBusy(True)
-    try: yield
-    finally: 
-        setBusy(False)
+    else:
+        setBusy(True)
+        try: yield
+        finally: 
+            setBusy(False)
 
 @contextmanager
 def busy_dialog(escape=False):
-    if not escape:
-        log('globals: busy_dialog')
+    if escape: yield
+    else:
         xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
         try: yield
-        finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
-    else: yield
-
+        finally:
+            xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+        
+def roundupDIV(p, q):
+    try:
+        d, r = divmod(p, q)
+        if r: d += 1
+        return d
+    except ZeroDivisionError: 
+        return 1
+    
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+        
 def initDirs():
     dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,LOCK_LOC]
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
     return True
 
-def notificationDialog(message, header=ADDON_NAME, sound=False, time=4000, icon=COLOR_LOGO):
-    log('globals: notificationDialog: ' + message)
-    try: xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
-    except Exception as e:
-        log("globals: notificationDialog Failed! " + str(e), xbmc.LOGERROR)
-        xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
-    return True
-     
-def notificationProgress(message, header=ADDON_NAME, func=None, args=None, kwargs={}, time=4):
-    dia = ProgressBGDialog(message=message,header=header)
-    for i in range(time):
-        # if func: func(*args, **kwargs)
-        if MY_MONITOR.waitForAbort(1): break
-        dia = ProgressBGDialog((((i + 1) * 100)//time),control=dia,header=header)
-    return ProgressBGDialog(100,control=dia)
-    
-def okDialog(msg, heading=ADDON_NAME):
-    return xbmcgui.Dialog().ok(heading, msg)
-    
-def textviewer(msg, heading=ADDON_NAME, usemono=False):
-    return xbmcgui.Dialog().textviewer(heading, msg, usemono)
-    
-def yesnoDialog(message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0):
-    try:    
-        if customlabel:
-            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, autoclose)
-        else: raise Exception()
-    except: return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
-    
-def browseDialog(type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
-    if prompt and not default:
-        if options is None:
-            options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":'.xsp'     , "type":1, "multi":False},
-                        {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://profile/playlists/music/" , "mask":'.xsp'     , "type":1, "multi":False},
-                        {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":VIDEO_EXTS , "type":0, "multi":False},
-                        {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":MUSIC_EXTS , "type":0, "multi":False},
-                        {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":IMAGE_EXTS , "type":0, "multi":False},
-                        {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
-                        {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""         , "type":0, "multi":False},
-                        {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""         , "type":0, "multi":False},
-                        {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""         , "type":0, "multi":False}]
-        listitems = [buildMenuListItem(option['label'],option['label2'],iconImage=COLOR_LOGO) for option in options]
+def moveUser(oldFolder, newFolder):
+    if PROPERTIES.getPropertyBool('isClient'): return
+    # MoveLST = [XMLTVFLE,M3UFLE,CHANNELFLE,LIBRARYFLE,GENREFLE,CACHE_LOC]
+    # for file in MoveLST: if FileAccess.exists()
 
-        select    = selectDialog(listitems, LANGUAGE(30116), multi=False)
-        if select is not None:
-            shares    = options[select]['label'].lower().replace("network","")
-            mask      = options[select]['mask']
-            type      = options[select]['type']
-            multi     = options[select]['multi']
-            default   = options[select]['default']
-    log('globals: browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
-    if monitor: toggleCHKInfo(True)
-    if multi == True:
-        # https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
-        # type integer - the type of browse dialog.
-        # 1	ShowAndGetFile
-        # 2	ShowAndGetImage
-        retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-    else:
-        # https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
-        # type integer - the type of browse dialog.
-        # 0	ShowAndGetDirectory
-        # 1	ShowAndGetFile
-        # 2	ShowAndGetImage
-        # 3	ShowAndGetWriteableDirectory
-        retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-    if monitor: toggleCHKInfo(False)
-    if retval:
-        if prompt and retval == default: return None
-        return retval
-    return None
-      
-def inputDialog(message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
-    # Types:
-    # - xbmcgui.INPUT_ALPHANUM (standard keyboard)
-    # - xbmcgui.INPUT_NUMERIC (format: #)
-    # - xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
-    # - xbmcgui.INPUT_TIME (format: HH:MM)
-    # - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
-    # - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
-    retval = xbmcgui.Dialog().input(message, default, key, opt, close)
-    if retval: return retval
-    return None
-    
-def selectDialog(list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True):
-    if multi == True:
-        if preselect is None: preselect = []
-        select = xbmcgui.Dialog().multiselect(header, list, autoclose, preselect, useDetails)
-    else:
-        if preselect is None:  preselect = -1
-        select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
-    if select is not None: return select
-    return None
-
-def ProgressBGDialog(percent=0, control=None, message='', header=ADDON_NAME):
-    if (getSettingBool('Silent_OnPlayback') & isOverlay() & xbmc.getCondVisibility('Player.Playing')):
-        if control is None: return
-        else: return control.close()
-    if control is None and percent == 0:
-        control = xbmcgui.DialogProgressBG()
-        control.create(header, message)
-    elif control:
-        if percent == 100 or control.isFinished(): return control.close()
-        else: control.update(percent, header, message)
-    return control
+def isSSD():
+    #TODO DETECT SSD/FLASH
+    return (USER_LOC)
 
 def getIdleTime():
     try: return (int(xbmc.getGlobalIdleTime()) or 0)
@@ -405,109 +278,157 @@ def hasMovie():
     return xbmc.getCondVisibility('Library.HasContent(Movies)')
 
 def setBusy(state):
-    return setProperty("BUSY.RUNNING",str(state))
+    return PROPERTIES.setPropertyBool("BUSY.RUNNING",state)
     
 def isBusy():
-    return (getProperty("BUSY.RUNNING") == "True")
+    return PROPERTIES.getPropertyBool("BUSY.RUNNING")
 
 def isOverlay():
-    return getPropertyBool('OVERLAY')
+    return PROPERTIES.getPropertyBool('OVERLAY')
+
+def restartRequired():
+    return PROPERTIES.getPropertyBool('restartRequired')
+    
+def setRestartRequired(state):
+    return PROPERTIES.setPropertyBool('restartRequired',state)
 
 def padLST(lst, targetLen):
     if len(lst) == 0: return lst
     lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
     return lst[:targetLen]
-    
-def chkVersion(cleanStart=False):
-    lastVersion = (getSetting('lastVersion') or 'v.0.0.0')
+
+def hasVersionChanged(cleanStart=False):
+    lastVersion = (SETTINGS.getSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
-        setSetting('lastVersion',ADDON_VERSION)
+        SETTINGS.setSetting('lastVersion',ADDON_VERSION)
         return showChangelog()
         # if cleanStart:
             # xbmc.executebuiltin('RunPlugin("(plugin://'+ADDON_ID+'/?channel&mode=Utilities&name=Clean%20Start%2c%20Delete%20all%20files%20and%20settings.&url)")')
     return False
     
 def showChangelog():
-    changelog = xbmcvfs.File(CHANGELOG_FLE).read().replace('-Added','[B][COLOR=green]-Added:[/COLOR][/B]').replace('-Important','[B][COLOR=red]-Important:[/COLOR][/B]').replace('-Notice','[B][COLOR=orange]-Notice:[/COLOR][/B]').replace('-Warning','[B][COLOR=red]-Warning:[/COLOR][/B]').replace('-Removed','[B][COLOR=red]-Removed:[/COLOR][/B]').replace('-Fixed','[B][COLOR=orange]-Fixed:[/COLOR][/B]').replace('-Improved','[B][COLOR=yellow]-Improved:[/COLOR][/B]').replace('-Tweaked','[B][COLOR=yellow]-Tweaked:[/COLOR][/B]').replace('-Changed','[B][COLOR=yellow]-Changed:[/COLOR][/B]')
-    return textviewer(changelog,heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+    def color(text):
+        text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
+        text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
+        text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
+        text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
+        text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
+        text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
+        text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
+        text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
+        text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
+        text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
+        text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
+        return text
+    with busy_dialog():
+        return Dialog().textviewer(color(xbmcvfs.File(CHANGELOG_FLE).read()),
+               heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
-def dumpJSON(dict1, idnt=None, sortkey=True):
-    if not dict1: return ''
-    elif isinstance(dict1, basestring): return dict1
-    return (json.dumps(dict1, indent=idnt, sort_keys=sortkey))
+def showReadme():
+    def convertMD2TXT(md):
+        markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
+        markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
+        markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!'], markdown.split('\n'))))
+        markdown = (re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(2) if not x.group(2) else '', markdown, flags=re.M))
+        return markdown
+    with busy_dialog():
+        return Dialog().textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()),
+               heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+
+def chkUpdateTime(key, wait, lastUpdate=None):
+    #todo fuzzy logic to determine if run within % tolerance to expedite execution.
+    if lastUpdate is None: lastUpdate = float((PROPERTIES.getProperty(key) or '0'))
+    if (time.time() >= (lastUpdate + wait)): return True
+    return False
+
+def dumpJSON(item, idnt=None, sortkey=True):
+    try: 
+        if not item:
+            return ''
+        elif hasattr(item, 'read'):
+            return json.dump(item, indent=idnt, sort_keys=sortkey)
+        elif not isinstance(item,basestring):
+            return json.dumps(item, indent=idnt, sort_keys=sortkey)
+        elif isinstance(item,basestring):
+            return item
+    except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    return ''
     
 def loadJSON(item):
-    if isinstance(item,dict):
-        log("globals: loadJSON item already mutable")
-        return item
-    elif isinstance(item,basestring):
-        try: return json.loads(item, strict=False)
-        except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
-    return {}
+    try: 
+        if not item:
+            return {}
+        elif hasattr(item, 'read'):
+            return json.load(item)
+        elif isinstance(item,basestring):
+            return json.loads(item)
+        elif isinstance(item,dict):
+            return item
+    except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    return {}#except json.decoder.JSONDecodeError:,ValueError:
     
 def sendJSON(command):
+    log('globals: sendJSON, command = %s'%(command))
     response = loadJSON(xbmc.executeJSONRPC(command))
-    log('globals: sendJSON, command = %s, response = %s'%(command, response))
     return response
-
-def getSeason():
-    try: return {'September':'startrek','October':'horror','December':'xmas','May':'starwars'}[datetime.datetime.now().strftime('%B')]
-    except: return 'none'
-        
-def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=True, mType='video'):
-    listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
-    iconImage = (iconImage or COLOR_LOGO)
-    if propItem: listitem.setProperties(propItem)
-    if infoItem: listitem.setInfo(mType, infoItem)
-    else: listitem.setInfo(mType,   {'mediatype': 'video',
-                                     'Label' : label1,
-                                     'Label2': label2,
-                                     'Title' : label1})
-    if artItem: listitem.setArt(artItem)
-    else: listitem.setArt({'thumb': iconImage,
-                           'icon' : iconImage})
-    return listitem
 
 def splitall(plugin):
     plugin = [plugin]
-    while not MY_MONITOR.abortRequested():
+    while not xbmc.Monitor().abortRequested():
         last   = plugin
         plugin = os.path.split(plugin[0])
         if not plugin[0]: break
     return last[0]
     
 def getPluginMeta(plugin):
-    log('globals: plugin = %s'%(plugin))
+    log('globals: getPluginMeta, plugin = %s'%(plugin))
     try:
-        if plugin.startswith(('plugin://','resource://')): plugin = splitall(plugin)
-        pluginID = xbmcaddon.Addon(plugin.strip())
+        if plugin.startswith(('plugin://','resource://')):
+            plugin =  splitall(plugin.replace('plugin://','').replace('resource://','')).strip()
+        pluginID = xbmcaddon.Addon(plugin)
         return {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
-    except Exception as e: log("globals, Failed! %s"%(e), xbmc.LOGERROR)
+    except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
+      
+def hasPVR(id):
+    return xbmc.getCondVisibility("System.HasPVRAddon") == "true"
+         
+def hasAddon(id):
+    return xbmc.getCondVisibility("System.HasAddon(%s)"%id) == "true"
         
+def addonEnabled(id):
+    return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id) == "true"
+    
+def toggleADDON(id, state='true', reverse=False):
+    # if not hasAddon(id): return log('globals: toggleADDON, id = %s, not installed'%id)
+    log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
+    sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,state))
+    if reverse and state == 'false': xbmc.executebuiltin("AlarmClock(Re-enable,EnableAddon(%s),00:04)"%id)
+    return True
+    
 def togglePVR(state='true'):
-    return sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,state))
+    return toggleADDON(PVR_CLIENT,state)
 
 def brutePVR(override=False):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): 
         return
     elif not override:
-        if not yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
     togglePVR('false')
     xbmc.sleep(2000)
     togglePVR('true')
     if override: return True
-    return notificationDialog(LANGUAGE(30053))
+    return Dialog().notificationDialog(LANGUAGE(30053))
 
 def getPVR(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)
     except: # backend disabled?
         togglePVR('true')
         xbmc.sleep(1000)
-        try:
-            return xbmcaddon.Addon(id)
-        except: return None
-
+        try: return xbmcaddon.Addon(id)
+        except: 
+            return None
+ 
 def chkMGR():
     return chkPVR(PVR_MANAGER, MGR_SETTINGS)
 
@@ -515,24 +436,24 @@ def chkPVR(id=PVR_CLIENT, values=PVR_SETTINGS):
     log('globals: chkPVR, id = %s'%(id))
     #check for min. settings' required
     addon = getPVR(id)
-    if addon is None: return False
+    if addon is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
     for setting, value in values.items():
         if not str(addon.getSetting(setting)) == str(value): 
-            return configurePVR(id,values,getSettingBool('Enable_Config'))
+            return configurePVR(id,values,SETTINGS.getSettingBool('Enable_Config'))
     return True
     
 def configurePVR(id=PVR_CLIENT,values=PVR_SETTINGS,override=False):
     log('globals: configurePVR')
     if not override:
-        if not yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name',''),ADDON_NAME,))): return
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name',''),ADDON_NAME,))): return
     try:
         addon = getPVR(id)
         if addon is None: return False
         for setting, value in values.items(): 
             addon.setSetting(setting, value)
-    except: return notificationDialog(LANGUAGE(30049)%(id))
+    except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
     if override: return True
-    return notificationDialog(LANGUAGE(30053))
+    return Dialog().notificationDialog(LANGUAGE(30053))
 
 def refreshMGR():
     if getPVR(PVR_MANAGER):
@@ -553,7 +474,25 @@ def escapeDirJSON(path):
     mydir = path
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
     return mydir
-        
+
+def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=False, mType='video'):
+    listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
+    iconImage = (iconImage or COLOR_LOGO)
+    if propItem: listitem.setProperties(propItem)
+    if infoItem: listitem.setInfo(mType, infoItem)
+    else: 
+        listitem.setInfo(mType, {'mediatype': 'video',
+                                 'Label' : label1,
+                                 'Label2': label2,
+                                 'Title' : label1})
+                                     
+    if artItem: listitem.setArt(artItem)
+    else: 
+        listitem.setArt({'thumb': iconImage,
+                         'logo' : iconImage,
+                         'icon' : iconImage})
+    return listitem
+ 
 def buildItemListItem(item, mType='video', oscreen=True, playable=True):
     info       = item.copy()
     art        = info.pop('art'             ,{})
@@ -613,7 +552,16 @@ def is3D(item):
         stereomode = (item['video'][0]['stereomode'] or '')
         if len(stereomode) > 0: return True
     return False
-        
+   
+def stripNumber(label):
+    return re.sub(r'\d+','',label)
+    
+def stripRegion(label):
+    match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+    if match:
+        if match.group(1): return match.group(1)
+    return label
+    
 def splitYear(label):
     match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
     if match:
@@ -652,29 +600,23 @@ def funcExecute(func,args):
     log("globals: funcExecute, retval = %s"%(retval))
     return retval
 
-def assertLST(lst1,lst2): #test if both lists match. 
-    assertBool = len(diffLST(lst1,lst2)) == 0
-    log('globals: assertLST = %s'%(assertBool))
-    return assertBool
+def diffLST(old, new): 
+    return list(set(old) - set(new))
     
-def diffLST(lst1, lst2): 
-    difference = (list(set(lst1) - set(lst2)))
-    log('globals: diffLST = %s'%(difference))
-    return difference
+def diffLSTDICT(old,new):
+    return [i for i in old + new if i not in old or i not in new]
     
-def assertDICT(dict1,dict2,return_diff=False): #test if both dicts match.
-    difference = diffDICT(dict1,dict2)
-    assertBool = len(difference) == 0
-    log('globals: assertDICT = %s'%(assertBool))
-    if return_diff: return assertBool, difference
-    return assertBool
-    
-def diffDICT(dict1, dict2): 
-    intersec = [item for item in dict1 if item in dict2]
-    difference = [item for item in chain(dict1,dict2) if item not in intersec]
-    log('globals: diffDICT = %s'%(dumpJSON(difference)))
-    return difference
-    
+def diffDICT(old,new):
+    #(dict(diffDICT(old,new)))
+    intersec = list(set(list(old.keys()) +  list(new.keys())))
+    for inter in intersec:
+        if (hasattr(old.get(inter),'get')):
+            diff = (dict((set(chain(old.get(inter,{}).items(),new.get(inter,{}).items())) - set(old.get(inter,{}).items()))) or None)
+        else:
+            diff = (list((set(chain(old.get(inter,''),new.get(inter,''))) - set(old.get(inter,'')))) or None)
+        if diff: 
+            yield inter,diff
+
 def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
 
@@ -698,10 +640,13 @@ def hasPVRitem():
     log('globals: hasPVRitem = %s'%(pvritem))
     return pvritem
     
-def isPseudoTV():
-    isPseudoTV = hasChannelData('VideoPlayer') #condition set only while playing
+def isPseudoTV(condition='VideoPlayer'):
+    isPseudoTV = hasChannelData(condition) #condition set only while playing
     log('globals: isPseudoTV = %s'%(isPseudoTV))
     return isPseudoTV
+
+def setWriter(writer, fileItem):
+    return '%s [COLOR item="%s"][/COLOR]'%(writer,fileItem)
 
 def getWriter(text):
     if isinstance(text, basestring):
@@ -709,20 +654,20 @@ def getWriter(text):
         if writer: return loadJSON(decodeString(writer.group(1)))
     return {}
 
-def getWriterfromString(type='ListItem'):
-    return getWriter(xbmc.getInfoLabel('%s.Writer'%(type)))
+def getWriterfromString(condition='ListItem'):
+    return getWriter(xbmc.getInfoLabel('%s.Writer'%(condition)))
     
-def hasChannelData(type='ListItem'):
-    return getWriterfromString(type).get('citem',{}).get('number',-1) > 0
+def hasChannelData(condition='ListItem'):
+    return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
   
 def setCurrentChannelItem(item):
-    setProperty('channel_item',dumpJSON(item))
+    PROPERTIES.setPropertyDict('channel_item',item)
     
 def getCurrentChannelItem():
-    return loadJSON(getProperty('channel_item'))
+    return PROPERTIES.getPropertyDict('channel_item')
   
 def clearCurrentChannelItem():
-    clearProperty('channel_item')
+    PROPERTIES.clearProperty('channel_item')
   
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
@@ -738,7 +683,7 @@ def decodeString(base64_bytes):
     return message_bytes.decode(DEFAULT_ENCODING)
 
 def getGroups():
-    if getSetting('User_Groups'): GROUP_TYPES.extend(getSetting('User_Groups').split('|'))
+    if SETTINGS.getSetting('User_Groups'): GROUP_TYPES.extend(SETTINGS.getSetting('User_Groups').split('|'))
     return sorted(set(GROUP_TYPES))
 
 def genUUID(seed=None):
@@ -753,19 +698,19 @@ def getIP():
 
 def setMYUUID():
     uuid = genUUID(seed=getIP())
-    setSetting('MY_UUID',uuid)
+    SETTINGS.setSetting('MY_UUID',uuid)
     return uuid
     
 def getMYUUID():
-    uuid = getSetting('MY_UUID')
+    uuid = SETTINGS.getSetting('MY_UUID')
     if not uuid: return setMYUUID()
     return uuid
         
 def getClient():
-    return getSettingBool('Enable_Client')
+    return (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('Enable_Client'))
     
 def setClient(state):
-    return setSetting('Enable_Client',state)
+    return PROPERTIES.setPropertyBool('Enable_Client',state)
         
 def slugify(text):
     non_url_safe = [' ','"', '#', '$', '%', '&', '+',',', '/', ':', ';', '=', '?','@', '[', '\\', ']', '^', '`','{', '|', '}', '~', "'"]
@@ -786,7 +731,7 @@ def saveURL(url, file):
 def interleave(*args): #interleave multi-lists, while preserving order
     try:
         iters = list(map(iter, args))
-        while iters and not MY_MONITOR.abortRequested():
+        while iters and not xbmc.Monitor().abortRequested():
             it = random.choice(iters)
             try: yield next(it)
             except StopIteration:
@@ -844,23 +789,18 @@ def fillInfoMonitor(type='ListItem'):
             'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
             'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
             'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}    
-    montiorList = list(filter(lambda k:k != '', getInfoMonitor()))
     infoItem = dumpJSON(item)
     if infoItem:
+        montiorList = list(filter(lambda k:k.get('label') != '', getInfoMonitor()))
         montiorList.insert(0,infoItem)
-        setProperty('monitor.montiorList' ,'|'.join(list(set(montiorList))))
+        PROPERTIES.setProperties('monitor.montiorList',list(set(montiorList)))
     return True
     
 def getInfoMonitor():
-    return getProperty('monitor.montiorList').split('|')
+    return PROPERTIES.getProperties('monitor.montiorList')
 
-def toggleCHKInfo(state):
-    setProperty('chkInfo',str(state))
-    if state: clearProperty('monitor.montiorList')
-    else: clearProperty('chkInfo')
-    
 def isCHKInfo():
-    return getProperty('chkInfo') == "True"
+    return PROPERTIES.getProperty('chkInfo') == "True"
         
 def hasSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
@@ -871,7 +811,7 @@ def isSubtitle():
 def installAddon(id):
     if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return False
     xbmc.executebuiltin('InstallAddon("%s")'%(id))
-    return notificationDialog('%s %s...'%(LANGUAGE(30193),id))
+    return Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
         
 def getRandomPage(limit,total=50):
     page = random.randrange(0, total, limit)
@@ -884,40 +824,18 @@ def isPlaylistRandom():
 def isPlaylistRepeat():
     return xbmc.getInfoLabel('Playlist.IsRepeat').lower() == 'true' # Disable auto playlist repeat if it's on #todo
 
-def findItemsIn(items, values, item_key='getLabel', val_key='', index=True):
-    log("globals: findItemsIn, values = %s, item_key = %s, val_key = %s, index = %s"%(values, item_key, val_key, index))
-    matches = []
-    def match(fkey,fvalue):
-        if fkey.lower() == fvalue.lower():
-            matches.append(idx if index else item)
-        
-    if not values: return [-1]
-    for idx, item in enumerate(items):
-        for value in values:
-            if isinstance(value,dict): 
-                value = value.get(val_key,'')
-                
-            if isinstance(item,xbmcgui.ListItem): 
-                if item_key == 'getLabel':  
-                    match(item.getLabel() ,value)
-                elif item_key == 'getLabel2': 
-                    match(item.getLabel2(),value)
-            elif isinstance(item,dict):       
-                match(item.get(item_key,''),value)
-            else:                             
-                match(item,value)
-    log("globals: findItemsIn, matches = %s"%(matches))
-    return matches
-
 def titleLabels(list):
      return [str(item).title() for item in list]
  
 def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(thetime)
     delta = datetime.timedelta(minutes=offset)
-    if n.minute < (offset): n = n.replace(minute=0, second=0, microsecond=0)
-    else: n = n.replace(minute=offset, second=0, microsecond=0)
+    if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
+    else: n = n.replace(minute=0, second=0, microsecond=0)
     return time.mktime(n.timetuple())
+    # if n.minute < (offset): n = n.replace(minute=0, second=0, microsecond=0)
+    # else: n = n.replace(minute=offset, second=0, microsecond=0)
+    # return time.mktime(n.timetuple())
     
 def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
     n = datetime.datetime.fromtimestamp(thetime)
@@ -942,36 +860,3 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
-
-class PoolHelper:
-    def __init__(self):
-        if ENABLE_POOL: 
-            self.pool = ThreadPool(THREAD_CORES)
-            log("PoolHelper: CPU CORES = " + str(THREAD_CORES))
-        else: log("PoolHelper: ThreadPool Disabled")
-        
-
-    def runSelf(self, func):
-        return func()
-        
-        
-    def poolList(self, method, items=None, args=None, chunk=1):
-        log("PoolHelper: poolList")
-        results = []
-        if ENABLE_POOL:
-            if items is None and args is None: 
-                results = self.pool.map(self.runSelf, method, chunksize=chunk)
-            elif args is not None: 
-                results = self.pool.map(method, zip(items,repeat(args)), chunksize=chunk)
-            elif items: 
-                results = self.pool.map(method, items, chunksize=chunk)
-            self.pool.close()   
-            self.pool.join()
-        else:
-            if items is None and args is None: 
-                results = [self.runSelf(func) for func in method]
-            elif args is not None: 
-                results = [method((item, args)) for item in items]
-            elif items: 
-                results = [method(item) for item in items]
-        return list(filter(None, results))

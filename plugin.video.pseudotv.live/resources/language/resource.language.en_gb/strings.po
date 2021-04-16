@@ -97,7 +97,7 @@ msgid "Enable Automatic PVR Grouping"
 msgstr ""
 
 msgctxt "#30020"
-msgid "Advanced"
+msgid "Miscellaneous"
 msgstr ""
 
 msgctxt "#30021"
@@ -153,11 +153,11 @@ msgid "Imports"
 msgstr ""
 
 msgctxt "#30034"
-msgid "M3U File/URL"
+msgid "M3U:"
 msgstr ""
 
 msgctxt "#30035"
-msgid "XMLTV File/URL"
+msgid "XMLTV:"
 msgstr ""
 
 msgctxt "#30036"
@@ -169,11 +169,11 @@ msgid "Clear Import"
 msgstr ""
 
 msgctxt "#30038"
-msgid "Pagination Size [Lower == Better Performance]"
+msgid "Pagination Size"
 msgstr ""
 
 msgctxt "#30039"
-msgid "Max Guidedata (Days) [Lower == Fresh Data]"
+msgid "Max Guidedata (Days)"
 msgstr ""
 
 msgctxt "#30040"
@@ -357,7 +357,7 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#30085"
-msgid "Create Node"
+msgid "Open Library (Node) Editor"
 msgstr ""
 
 msgctxt "#30086"
@@ -429,7 +429,7 @@ msgid "Auto Tuning"
 msgstr ""
 
 msgctxt "#30103"
-msgid "No %s content found..."
+msgid "No %s found..."
 msgstr ""
 
 msgctxt "#30104"
@@ -541,7 +541,7 @@ msgid "Settings"
 msgstr ""
 
 msgctxt "#30131"
-msgid "More Info"
+msgid "More Info..."
 msgstr ""
 
 msgctxt "#30132"
@@ -593,7 +593,7 @@ msgid "Select %s"
 msgstr ""
 
 msgctxt "#30145"
-msgid "Allow this plugin to automatically configure IPTV Simple PVR Backend?"
+msgid "Allow this plugin to automatically configure Third-Party plugin settings?"
 msgstr ""
 
 msgctxt "#30146"
@@ -669,15 +669,15 @@ msgid "Playlist"
 msgstr ""
 
 msgctxt "#30164"
-msgid "Prefer Kodi DB"
+msgid "Prefer Kodi Library"
 msgstr ""
 
 msgctxt "#30165"
-msgid "Prefer File Meta"
+msgid "Prefer File Metadata"
 msgstr ""
 
 msgctxt "#30166"
-msgid "Prefer White (Mono)"
+msgid "Prefer White"
 msgstr ""
 
 msgctxt "#30167"
@@ -769,7 +769,7 @@ msgid "Enable Ratings"
 msgstr ""
 
 msgctxt "#30188"
-msgid "Enable Network Bumpers"
+msgid "Enable Bumpers"
 msgstr ""
 
 msgctxt "#30189"
@@ -781,7 +781,7 @@ msgid "Enable Commercials"
 msgstr ""
 
 msgctxt "#30191"
-msgid "Install Resources"
+msgid "Install Missing Resources"
 msgstr ""
 
 msgctxt "#30192"
@@ -790,4 +790,332 @@ msgstr ""
 
 msgctxt "#30193"
 msgid "Installing"
+msgstr ""
+
+msgctxt "#30194"
+msgid "[COLOR=red][B]Warning!! [/B]It's strongly recommend users using Flash/SSD change path to HDD.[/COLOR]"
+msgstr ""
+
+msgctxt "#30195"
+msgid "URL"
+msgstr ""
+
+msgctxt "#30196"
+msgid "File"
+msgstr ""
+
+msgctxt "#30197"
+msgid "Select M3U Type"
+msgstr ""
+
+msgctxt "#30198"
+msgid "Select XMLTV Type"
+msgstr ""
+
+msgctxt "#30199"
+msgid "Filling"
+msgstr ""
+
+msgctxt "#30200"
+msgid "Backup Channels"
+msgstr ""
+
+msgctxt "#30201"
+msgid "Recover Channels"
+msgstr ""
+
+msgctxt "#30202"
+msgid "Coming Soon!"
+msgstr ""
+
+msgctxt "#30203"
+msgid "AutoTune"
+msgstr ""
+
+msgctxt "#30204"
+msgid "Exiting"
+msgstr ""
+
+msgctxt "#30205"
+msgid "Show Static Effect"
+msgstr ""
+
+msgctxt "#30206"
+msgid "Half Cores"
+msgstr ""
+
+msgctxt "#30207"
+msgid "Full Cores"
+msgstr ""
+
+msgctxt "#30208"
+msgid "CPU Multiprocessing"
+msgstr ""
+
+msgctxt "#30209"
+msgid "Import"
+msgstr ""
+
+msgctxt "#30210"
+msgid "Third-Party M3U/XMLTV Import"
+msgstr ""
+
+msgctxt "#30211"
+msgid "Recover"
+msgstr ""
+
+msgctxt "#30212"
+msgid "Replace existing Backup from"
+msgstr ""
+
+msgctxt "#30213"
+msgid "Replace existing channels with %s\nfrom %s"
+msgstr ""
+
+msgctxt "#30214"
+msgid "Yes to all"
+msgstr ""
+
+msgctxt "#30215"
+msgid "Last Backup"
+msgstr ""
+
+msgctxt "#30216"
+msgid "Recover Channels"
+msgstr ""
+
+msgctxt "#30217"
+msgid "Please Install & Enable %s to continue..."
+msgstr ""
+
+msgctxt "#30218"
+msgid "[COLOR=red][B]Setting Temporarily Disabled![/B][/COLOR]"
+msgstr ""
+
+msgctxt "#30219"
+msgid "Single Core"
+msgstr ""
+
+msgctxt "#30220"
+msgid "Disabled"
+msgstr ""
+
+msgctxt "#30221"
+msgid "Start Over Threshold (Percent)"
+msgstr ""
+
+msgctxt "#30222"
+msgid "Third-Party (Settings)"
+msgstr ""
+
+msgctxt "#30223"
+msgid "Auto"
+msgstr ""
+
+msgctxt "#30224"
+msgid "One Insert"
+msgstr ""
+
+msgctxt "#30225"
+msgid "Two Inserts"
+msgstr ""
+
+msgctxt "#30226"
+msgid "Three Inserts"
+msgstr ""
+
+msgctxt "#30227"
+msgid "Four Inserts"
+msgstr ""
+
+msgctxt "#30228"
+msgid "[COLOR=red][B]Setting Temporarily Disabled![/B][/COLOR] Running background task, Settings will be enabled on completion. Try again later..."
+msgstr ""
+
+msgctxt "#30229"
+msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
+msgstr ""
+
+msgctxt "#30230"
+msgid "If a selection is [COLOR=dimgray]Dim[/COLOR] a background task is running or no content found!\nClose settings to resume background tasks."
+msgstr ""
+
+msgctxt "#30231"
+msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see readme for details."
+msgstr ""
+
+msgctxt "#30232"
+msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [55s Default] *see readme for details."
+msgstr ""
+
+msgctxt "#30233"
+msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [85% Default] / [100% Disables]. *see readme for details."
+msgstr ""
+
+msgctxt "#30234"
+msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see readme for details."
+msgstr ""
+
+msgctxt "#30235"
+msgid "Prefer Kodi Library - Use less accurate runtimes from metadata providers.\nPrefer File Metadata - Parse file for accurate runtimes. *see readme for details."
+msgstr ""
+
+msgctxt "#30236"
+msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
+msgstr ""
+
+msgctxt "#30237"
+msgid "AutoTune from Pre-defined TV Networks collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30238"
+msgid "AutoTune from Pre-defined TV Shows collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30239"
+msgid "AutoTune from Pre-defined TV Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30240"
+msgid "AutoTune from Pre-defined Movie Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30241"
+msgid "AutoTune from Pre-defined Movie Studios collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30242"
+msgid "AutoTune from Pre-defined Mixed TV/Movie Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30243"
+msgid "AutoTune from Pre-defined Mixed Miscellaneous Content collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30244"
+msgid "AutoTune from Pre-defined Music Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#30245"
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#30246"
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#30247"
+msgid "Force refresh IPTV Manager (Optional). IPTV Manager automatically updates hourly."
+msgstr ""
+
+msgctxt "#30248"
+msgid "Clear all Pre-defined selections and remove their channels."
+msgstr ""
+
+msgctxt "#30249"
+msgid "Clear Plugin Blacklist. Blacklisted plugins are ignored in Recommended list."
+msgstr ""
+
+msgctxt "#30250"
+msgid "Import Third-Party M3U/XMLTV sets."
+msgstr ""
+
+msgctxt "#30251"
+msgid "Enable Import"
+msgstr ""
+
+msgctxt "#30252"
+msgid "Select File or Enter URL"
+msgstr ""
+
+msgctxt "#30253"
+msgid "Filter imports by @ID. *see readme for details."
+msgstr ""
+
+msgctxt "#30254"
+msgid "Disable and Clear all import settings."
+msgstr ""
+
+msgctxt "#30255"
+msgid "Disable notification during playback."
+msgstr ""
+
+msgctxt "#30256"
+msgid "Group guidedata by category."
+msgstr ""
+
+msgctxt "#30257"
+msgid "Enter custom guidedata categories, used by the channel manager."
+msgstr ""
+
+msgctxt "#30258"
+msgid "Move critical files to a central location."
+msgstr ""
+
+msgctxt "#30259"
+msgid "Denote this instance of PseudoTV Live as a client. (Multi-room sharing uses Master/Slave Model)."
+msgstr ""
+
+msgctxt "#30260"
+msgid "CPU Pinning, Select the amount of cores used for concurrent/parallel operations.\n[Full ONLY Recommended on PC]"
+msgstr ""
+
+msgctxt "#30261"
+msgid "Pagination Limit, How many entries are requested and parsed per call. [25 Default]\n[Lower == Better Performance]"
+msgstr ""
+
+msgctxt "#30263"
+msgid "Max guidedata to fill during a given query. [1 Day Default]\n[Lower == Fresh Data]"
+msgstr ""
+
+msgctxt "#30264"
+msgid "Include Specials and Extras."
+msgstr ""
+
+msgctxt "#30265"
+msgid "Include .strm files. *see readme for details."
+msgstr ""
+
+msgctxt "#30266"
+msgid "Include 3D content."
+msgstr ""
+
+msgctxt "#30267"
+msgid "Include content fillers (Ratings/Bumpers/Commercials/Trailers). *see readme for details."
+msgstr ""
+
+msgctxt "#30268"
+msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]"
+msgstr ""
+
+msgctxt "#30269"
+msgid "Required for debugging operations."
+msgstr ""
+
+msgctxt "#30270"
+msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#30271"
+msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Manager) for optimal usage.\nOptimal changes will be reinforced automatically."
+msgstr ""
+
+msgctxt "#30272"
+msgid "Select One or More %s"
+msgstr ""
+
+msgctxt "#30273"
+msgid "%s - Readme v.%s"
+msgstr ""
+
+msgctxt "#30274"
+msgid "Show Readme"
+msgstr ""
+
+msgctxt "#30275"
+msgid "Show Changelog"
+msgstr ""
+
+msgctxt "#30276"
+msgid "Documents"
 msgstr ""
