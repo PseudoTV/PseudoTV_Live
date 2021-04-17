@@ -304,6 +304,25 @@ class Config:
         # # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
 
 
+    def sleepTimer(self):
+        self.log('sleepTimer')
+        sec = 0
+        cnx = False
+        inc = int(100/OVERLAY_DELAY)
+        dia = xbmcgui.DialogProgress()
+        dia.create(ADDON_NAME,LANGUAGE(30281))
+        
+        while not self.monitor.abortRequested() and (sec < OVERLAY_DELAY):
+            sec += 1
+            msg = '%s\n%s'%(LANGUAGE(30283)%(ADDON_NAME),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
+            dia.update((inc*sec),msg)
+            if self.monitor.waitForAbort(1) or dia.iscanceled():
+                cnx = True
+                break
+        dia.close()
+        return not bool(cnx)
+
+
     def installResources(self):
         found  = []
         params = ['Resource_Logos','Resource_Ratings','Resource_Networks','Resource_Commericals','Resource_Trailers']

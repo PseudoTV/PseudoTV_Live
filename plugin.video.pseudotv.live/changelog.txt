@@ -3,6 +3,7 @@ v.0.2.8
 -Improved channel loading and surfing performance. Short-term caching (10s) added to increase channel surfing responsiveness.
 -Settings.xml updated to new Matrix format; layout modified.
 -Added Channel Backup and Recovery to settings (Experimental).
+-Added Idle stop playback timer.
 
 v.0.2.7
 -Warning It's strongly recommend users using Flash/SSD device change the "centralize file location" to HDD.

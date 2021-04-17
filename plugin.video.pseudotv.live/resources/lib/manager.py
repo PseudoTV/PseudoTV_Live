@@ -402,7 +402,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if fitem is not None:
             found = True
             seek  = fitem.get('seek',True)
-            #todo set seeklock rule if seek == False
+            #todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
         self.toggleSpinner(self.itemList,False)
         self.log('validatePath, path = %s, found duration = %s'%(path,found))
         if not found: 

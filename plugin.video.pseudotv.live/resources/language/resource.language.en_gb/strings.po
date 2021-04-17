@@ -1119,3 +1119,35 @@ msgstr ""
 msgctxt "#30276"
 msgid "Documents"
 msgstr ""
+
+msgctxt "#30277"
+msgid "3 Hours"
+msgstr ""
+
+msgctxt "#30278"
+msgid "6 Hours"
+msgstr ""
+
+msgctxt "#30279"
+msgid "12 Hours"
+msgstr ""
+
+msgctxt "#30280"
+msgid "24 Hours"
+msgstr ""
+
+msgctxt "#30281"
+msgid "Idle Timer"
+msgstr ""
+
+msgctxt "#30282"
+msgid "Stop Playback when Idle for X Hours"
+msgstr ""
+
+msgctxt "#30283"
+msgid "Are You Still Watching %s?"
+msgstr ""
+
+msgctxt "#30284"
+msgid "Stopping Playback in [B]%s[/B] seconds.\n[B]Cancel[/B] to continue watching."
+msgstr ""

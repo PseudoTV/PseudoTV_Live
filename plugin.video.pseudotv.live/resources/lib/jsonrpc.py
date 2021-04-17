@@ -21,7 +21,9 @@ from resources.lib.globals     import *
 from resources.lib.resources   import Resources
 from resources.lib.videoparser import VideoParser
 
-class JSONRPC:
+class JSONRPC: 
+    #todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions.
+    # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
     def __init__(self, inherited=None):
         self.log('__init__')
         if inherited:
@@ -331,7 +333,7 @@ class JSONRPC:
         self.log("getDuration, accurate = %s, path = %s"%(accurate,path))
         duration = 0
         runtime  = int(item.get('runtime','') or item.get('duration','') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
-        if (runtime == 0 | accurate):
+        if (runtime == 0 or accurate):
             if path.startswith(('plugin://','upnp://','pvr://')): #no additional parsing needed item(runtime) has only meta available.
                 duration = 0
             elif isStack(path): #handle "stacked" videos:

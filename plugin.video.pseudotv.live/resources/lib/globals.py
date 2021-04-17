@@ -320,9 +320,9 @@ def showChangelog():
         text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
         text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
         return text
-    with busy_dialog():
-        return Dialog().textviewer(color(xbmcvfs.File(CHANGELOG_FLE).read()),
-               heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        
+    with busy_dialog(): changelog = color(xbmcvfs.File(CHANGELOG_FLE).read())
+    return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def showReadme():
     def convertMD2TXT(md):
@@ -331,9 +331,9 @@ def showReadme():
         markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!'], markdown.split('\n'))))
         markdown = (re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(2) if not x.group(2) else '', markdown, flags=re.M))
         return markdown
-    with busy_dialog():
-        return Dialog().textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()),
-               heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        
+    with busy_dialog(): readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
+    return Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def chkUpdateTime(key, wait, lastUpdate=None):
     #todo fuzzy logic to determine if run within % tolerance to expedite execution.

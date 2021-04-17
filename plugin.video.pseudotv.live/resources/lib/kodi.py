@@ -468,6 +468,23 @@ class Dialog:
             else: control.update(percent, header, message)
         return control
         
+
+    def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+        if not isinstance(percent,int): percent = int(percent)
+        if control is None and percent == 0:
+            control = xbmcgui.DialogProgress()
+            control.create(header, message)
+        elif control:
+            if percent == 100 or control.isFinished(): 
+                control.close()
+                return True
+            else: control.update(percent, header, message)
+        elif control.iscanceled():
+            control.close()
+            return True
+        return control
+        
+        
 class ListItems:
     def __init__(self):
         pass

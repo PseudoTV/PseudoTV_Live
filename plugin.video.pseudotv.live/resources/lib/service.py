@@ -381,6 +381,7 @@ class Service:
         
     def chkRecommended(self, lastUpdate=None):
         if chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
+            self.log('chkRecommended')
             if self.myConfig.recommended.importPrompt():
                 PROPERTIES.setProperty('Last_Recommended',str(time.time()))
             return True
@@ -389,6 +390,7 @@ class Service:
             
     def chkPredefined(self, lastUpdate=None):
         if chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
+            self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
             if self.myConfig.buildLibraryItems():
                 PROPERTIES.setProperty('Last_Predefined',str(time.time()))
@@ -397,11 +399,25 @@ class Service:
         
                 
     def chkIdle(self):
-        if getIdleTime() > OVERLAY_DELAY:
+        if self.chkSleep(): return
+        elif getIdleTime() > OVERLAY_DELAY:
             self.player.toggleOverlay(True)
         else:
             self.player.toggleOverlay(False)
  
+
+    def chkSleep(self):
+        conditions = [isPseudoTV(),
+                      self.player.isPlaying(),
+                      not xbmc.getCondVisibility('Player.Paused')]
+        if False in conditions: return
+        sleepTime = SETTINGS.getSettingInt('Idle_Timer')
+        if   sleepTime == 0: return
+        elif getIdleTime() > (sleepTime * 10800):
+            if self.myConfig.sleepTimer():
+                self.player.stop()
+                return True
+                
 
     def chkInfo(self):
         if not isCHKInfo(): return False
