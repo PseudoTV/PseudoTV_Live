@@ -117,28 +117,35 @@ class Channels:
         return sorted(channels, key=lambda k: k['number'])
 
   
-    def chkClient(self):
-        isClient = getClient()
-        if not isClient:
-            isClient = self.getUUID() != getMYUUID()
-            if isClient: setClient('true')
-            else: setClient('false')
-        self.log('chkClient, isClient = %s'%(isClient))
-        return isClient
+    def getMYUUID(self):
+        uuid = SETTINGS.getSetting('MY_UUID')
+        if not uuid: 
+            uuid = genUUID(seed=getIP())
+            SETTINGS.setSetting('MY_UUID',uuid)
+        return uuid
 
 
     def getUUID(self, channelList=None):
-        self.log('getUUID')
         if channelList is None: 
             channelList = self.vault.channelList
         uuid = channelList.get('uuid','')
         if not uuid: 
-            uuid = getMYUUID()
+            uuid = self.getMYUUID()
             channelList['uuid'] = uuid
             self.vault.channelList = channelList
         return uuid
+            
+            
+    def chkClient(self):
+        isClient = (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('Enable_Client'))
+        if not isClient:
+            isClient = self.getUUID() != self.getMYUUID()
+            if isClient: PROPERTIES.setPropertyBool('Enable_Client',True)
+            else:        PROPERTIES.setPropertyBool('Enable_Client',False)
+        self.log('chkClient, isClient = %s'%(isClient))
+        return isClient
 
-    
+
     def getChannels(self):
         self.log('getChannels')
         return self.sortChannels(self.withdraw().get('channels',[]))
@@ -156,8 +163,9 @@ class Channels:
 
     def getPage(self, id):
         idx, citem = self.findChannel({'id':id}, self.getChannels())
-        self.log('getPage, id = %s, page = %s'%(id, citem.get('page','')))
-        return citem.get('page','')
+        page = citem.get('page',{"end":0,"start":0,"total":0})
+        self.log('getPage, id = %s, page = %s'%(id, page))
+        return page
 
 
     def setPage(self, id, page={}):
@@ -207,7 +215,7 @@ class Channels:
     def findChannel(self, citem, channels):
         match = None, {}
         for idx, channel in enumerate(channels):
-            if (citem["id"] == channel["id"]):
+            if citem.get("id") == channel.get("id"):
                 self.log('findChannel, item = %s, found = %s'%(citem['id'],channel['id']))
                 return idx, channel
             elif ((citem.get("name") == channel["name"]) and (citem["type"] == channel["type"])):

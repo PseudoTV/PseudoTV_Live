@@ -50,33 +50,15 @@ class JSONRPC:
             from resources.lib.parser import Writer
             self.writer  = Writer(self)
             
-        self.sendQueue   = Queue()
+        self.sendQueue   = Queue(maxsize=(PAGE_LIMIT*5))
         self.videoParser = VideoParser()
         self.resources   = Resources(self)
-        self.queueThread = threading.Timer(30.0, self._sendJSON)
+        self.queueThread = threading.Timer(30.0, self.setDuration)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
-        
-    def sendQueueThread(self):
-        ## Egg Timer, reset on each call.
-        if self.queueThread.is_alive():
-            self.queueThread.cancel()
-            try: self.queueThread.join()
-            except: pass
-        self.queueThread = threading.Timer(30.0, self._sendJSON)
-        self.queueThread.name = "queueThread"
-        self.queueThread.start()
-
-
-    def _sendJSON(self):
-        for params in self.sendQueue.get():
-            if self.monitor.waitForAbort(2): break
-            sendJSON(params)
-        self.sendQueue.task_done()
-
 
     def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False):
         return self.resources.getLogo(name,type,path,item,featured)
@@ -148,8 +130,8 @@ class JSONRPC:
         
     def getPlayerItem(self, playlist=False):
         self.log('getPlayerItem, playlist = %s'%(playlist))
-        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","file"]},"id":1}'%(self.getActivePlaylist())
-        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath"]}, "id": 1}'%(self.getActivePlayer())
+        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}'%(self.getActivePlaylist())
+        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}'%(self.getActivePlayer())
         result = sendJSON(json_query).get('result',{})
         return (result.get('item',{}) or result.get('items',{}))
            
@@ -214,14 +196,31 @@ class JSONRPC:
         return sendJSON(json_query)
     
 
-    def setDuration(self, media, dbid, dur):
-        self.log('setDuration, media = %s, dbid = %s, dur = %s'%(media, dbid, dur))
+    def queDuration(self, media, dbid, dur):
+        self.log('queDuration, media = %s, dbid = %s, dur = %s'%(media, dbid, dur))
         param = {'movie'  :'{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}'%(dbid,dur),
                  'episode':'{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}'%(dbid,dur)}
         self.sendQueue.put(param[media])
         return self.sendQueueThread()
         
         
+    def setDuration(self):
+        self.log('setDuration')
+        with busy():
+            self.pool.poolList(sendJSON,list(filter(None,[que for que in iter(self.sendQueue.get, None)])))
+        
+        
+    def sendQueueThread(self):
+        ## Egg Timer, reset on each call.
+        if self.queueThread.is_alive():
+            self.queueThread.cancel()
+            try: self.queueThread.join()
+            except: pass
+        self.queueThread = threading.Timer(900.0, self.setDuration)
+        self.queueThread.name = "queueThread"
+        self.queueThread.start()
+
+
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://','upnp://')): return True
         #todo test seek for support disable via adv. rule if fails.
@@ -364,7 +363,7 @@ class JSONRPC:
         ## save parsed duration to Kodi database, if enabled.
         if save is None: save = SETTINGS.getSettingBool('Store_Duration')
         if save and runsafe and (item.get('id',-1) > 0):
-            self.setDuration(item['type'], item.get('id',-1), duration)
+            self.queDuration(item['type'], item.get('id',-1), duration)
         if runsafe: runtime = duration
         self.log("parseDuration, returning runtime = %s"%(runtime))
         return runtime
@@ -383,7 +382,7 @@ class JSONRPC:
         if sort:   params['sort']   = sort
         if filter: params['filter'] = filter
         
-        self.log('requestList, id = %s, path = %s, params = %s, page = %s'%(id,path,params,page))
+        self.log('requestList, id = %s, path = %s, page = %s'%(id,path,page))
         results = self.getDirectory(dumpJSON(params), total=limits.get('total'))
         if 'filedetails' in results: key = 'filedetails'
         else:                        key = 'files'

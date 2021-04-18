@@ -32,7 +32,8 @@ from resources.lib.fileaccess  import FileAccess, FileLock
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
 from operator                  import itemgetter
- 
+from collections               import deque
+
 try:
     from multiprocessing import Thread, Queue, Empty
     Queue() # importing Queue does not raise importError on android, call directly.
@@ -157,7 +158,7 @@ def setLegacyPseudoTV(state):
     return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
 
 def getUserFilePath(file=None):
-    path = SETTINGS.getSettingRefresh('User_Folder')
+    path = SETTINGS.getSetting('User_Folder')
     if file: return os.path.join(path,file)
     else: return path
   
@@ -252,10 +253,23 @@ def initDirs():
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
     return True
 
-def moveUser(oldFolder, newFolder):
+def moveUser(oldFolder, newFolder): #todo finish
     if PROPERTIES.getPropertyBool('isClient'): return
-    # MoveLST = [XMLTVFLE,M3UFLE,CHANNELFLE,LIBRARYFLE,GENREFLE,CACHE_LOC]
-    # for file in MoveLST: if FileAccess.exists()
+    log('globals: moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
+    MoveLST = [M3UFLE,XMLTVFLE,CHANNELFLE,LIBRARYFLE,GENREFLE,CACHE_LOC]
+    if not Dialog().yesnoDialog('Centralized file location changed from\n%s to\%s move files?'%(oldFolder,newFolder)): return
+    dia = Dialog().progressDialog(message='Preparing to move files...')
+    for idx, file in enumerate(MoveLST):
+        pnt = int(((idx+1)*100)//len(MoveLST))
+        dia = Dialog().progressDialog(pnt, dia, message='Moving %s...'%(file))
+        oldFilePath = os.path.join(oldFolder,file)
+        newFilePath = os.path.join(newFolder,file)
+        if FileAccess.exists(oldFilePath):
+            if FileAccess.copy(oldFilePath,newFilePath):
+                dia = Dialog().progressDialog(pnt, dia, message='Moving %s complete'%(file))
+                continue
+        dia = Dialog().progressDialog(pnt, dia, message='Moving %s failed!'%(file))
+    return Dialog().notificationDialog(LANGUAGE(30053))
 
 def isSSD():
     #TODO DETECT SSD/FLASH
@@ -289,7 +303,7 @@ def isOverlay():
 def restartRequired():
     return PROPERTIES.getPropertyBool('restartRequired')
     
-def setRestartRequired(state):
+def setRestartRequired(state=True):
     return PROPERTIES.setPropertyBool('restartRequired',state)
 
 def padLST(lst, targetLen):
@@ -338,6 +352,7 @@ def showReadme():
 def chkUpdateTime(key, wait, lastUpdate=None):
     #todo fuzzy logic to determine if run within % tolerance to expedite execution.
     if lastUpdate is None: lastUpdate = float((PROPERTIES.getProperty(key) or '0'))
+    else: lastUpdate = float(lastUpdate)
     if (time.time() >= (lastUpdate + wait)): return True
     return False
 
@@ -635,11 +650,6 @@ def cleanLabel(text):
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
 
-def hasPVRitem():
-    pvritem = len(getCurrentChannelItem()) > 0
-    log('globals: hasPVRitem = %s'%(pvritem))
-    return pvritem
-    
 def isPseudoTV(condition='VideoPlayer'):
     isPseudoTV = hasChannelData(condition) #condition set only while playing
     log('globals: isPseudoTV = %s'%(isPseudoTV))
@@ -649,6 +659,7 @@ def setWriter(writer, fileItem):
     return '%s [COLOR item="%s"][/COLOR]'%(writer,fileItem)
 
 def getWriter(text):
+    if isinstance(text, list): text = text[0]
     if isinstance(text, basestring):
         writer = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
         if writer: return loadJSON(decodeString(writer.group(1)))
@@ -659,16 +670,7 @@ def getWriterfromString(condition='ListItem'):
     
 def hasChannelData(condition='ListItem'):
     return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
-  
-def setCurrentChannelItem(item):
-    PROPERTIES.setPropertyDict('channel_item',item)
-    
-def getCurrentChannelItem():
-    return PROPERTIES.getPropertyDict('channel_item')
-  
-def clearCurrentChannelItem():
-    PROPERTIES.clearProperty('channel_item')
-  
+
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
@@ -696,22 +698,6 @@ def genUUID(seed=None):
 def getIP():
     return (xbmc.getIPAddress() or None)
 
-def setMYUUID():
-    uuid = genUUID(seed=getIP())
-    SETTINGS.setSetting('MY_UUID',uuid)
-    return uuid
-    
-def getMYUUID():
-    uuid = SETTINGS.getSetting('MY_UUID')
-    if not uuid: return setMYUUID()
-    return uuid
-        
-def getClient():
-    return (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('Enable_Client'))
-    
-def setClient(state):
-    return PROPERTIES.setPropertyBool('Enable_Client',state)
-        
 def slugify(text):
     non_url_safe = [' ','"', '#', '$', '%', '&', '+',',', '/', ':', ';', '=', '?','@', '[', '\\', ']', '^', '`','{', '|', '}', '~', "'"]
     non_url_safe_regex = re.compile(r'[{}]'.format(''.join(re.escape(x) for x in non_url_safe)))
@@ -788,16 +774,18 @@ def fillInfoMonitor(type='ListItem'):
             'path'  :xbmc.getInfoLabel('%s.Path'%(type)),
             'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
             'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
-            'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}    
-    infoItem = dumpJSON(item)
-    if infoItem:
-        montiorList = list(filter(lambda k:k.get('label') != '', getInfoMonitor()))
-        montiorList.insert(0,infoItem)
-        PROPERTIES.setProperties('monitor.montiorList',list(set(montiorList)))
+            'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}   
+    if item:
+        montiorList = getInfoMonitor()
+        montiorList.insert(0,dumpJSON(item))
+        setInfoMonitor(montiorList)
     return True
     
+def setInfoMonitor(values):
+    return PROPERTIES.setProperties('monitor.montiorList',list(set(values)))
+    
 def getInfoMonitor():
-    return PROPERTIES.getProperties('monitor.montiorList')
+    return list(filter(lambda d:d != '', PROPERTIES.getProperties('monitor.montiorList')))
 
 def isCHKInfo():
     return PROPERTIES.getProperty('chkInfo') == "True"

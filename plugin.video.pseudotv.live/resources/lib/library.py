@@ -32,6 +32,7 @@ class Library:
             from resources.lib.writer import Writer
             self.writer = Writer()
             
+        self.channels   = self.writer.channels
         self.vault      = self.writer.vault
         self.cache      = self.writer.cache
         self.dialog     = self.writer.dialog
@@ -100,7 +101,6 @@ class Library:
         log('getTemplate')
         return (self.load(LIBRARYFLE_DEFAULT) or {})
 
-
         
     def getLibraryItems(self, type, enabled=False):
         self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
@@ -124,10 +124,15 @@ class Library:
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: PROPERTIES.setPropertyBool('has.Predefined',True)
         self.vault.libraryItems['library'][type] = sorted(items, key=lambda k:k['name'])
-        SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
         return self.save()
         
-       
+        
+    def setSettings(self, type, items):
+        self.log('setSettings, type = %s, items = %s'%(type,len(items)))
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
+        SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
+        
+        
     def clearLibraryItems(self, type=None):
         log('clearLibraryItems, type = %s'%(type))
         def setDisabled(item):
@@ -170,8 +175,9 @@ class Library:
                 PROPERTIES.setProperty('has.%s'%(type.replace(' ','_')),'false')
             
         blackList = self.recommended.getBlackList()
-        if len(blackList) > 0: PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
-        SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
+        if len(blackList) > 0: 
+            PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
+            SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
         return True
         
  
@@ -316,8 +322,9 @@ class Recommended:
         blacklist.append(addonid)
         self.library.vault.libraryItems['recommended']['blacklist'] = list(set(blacklist))
         blackList = self.library.vault.libraryItems['recommended']['blacklist']
-        if len(blackList) > 0: PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
-        SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
+        if len(blackList) > 0: 
+            PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
+            SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
         return True
     
     

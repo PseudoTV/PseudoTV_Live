@@ -160,11 +160,12 @@ class Config:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)
                 
-            if select:
+            if not select is None:
                 with busy_dialog(escape):
                     pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                     self.library.setEnableStates(type,pselect,items)
-                    self.buildPredefinedChannels(type) #save changes, #todo slow fucn, try to unify to single call?
+                    self.buildPredefinedChannels(type)
+                    self.library.setSettings(type, items)
             setBusy(False)
             return True
 
@@ -314,7 +315,7 @@ class Config:
         
         while not self.monitor.abortRequested() and (sec < OVERLAY_DELAY):
             sec += 1
-            msg = '%s\n%s'%(LANGUAGE(30283)%(ADDON_NAME),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
+            msg = '%s\n%s'%(LANGUAGE(30283),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
             dia.update((inc*sec),msg)
             if self.monitor.waitForAbort(1) or dia.iscanceled():
                 cnx = True

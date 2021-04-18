@@ -30,15 +30,16 @@ class Player(xbmc.Player):
     def __init__(self, service):
         self.log('__init__')
         xbmc.Player.__init__(self)
+        self.jsonRPC            = None
         self.myService          = service
+        self.cache              = service.cache
         self.rules              = self.myService.rules
         
         self.pendingStart       = False
         self.pendingSeek        = False
         self.pendingStop        = False
         self.ruleList           = {}
-        self.playingPVRitem     = {'channelid':-1}
-        
+        self.playingPVRitem     = {}
         self.lastSubState       = isSubtitle()
         self.showOverlay        = SETTINGS.getSettingBool('Enable_Overlay')
         self.overlayWindow      = Overlay(OVERLAY_FLE, ADDON_PATH, "default", player=self)
@@ -76,7 +77,13 @@ class Player(xbmc.Player):
         else:
             return self.getVideoInfoTag()
 
+    
+    def getPlayingFile(self):
+        self.log('getPlayingFile')
+        try:    return self.getPlayingFile()
+        except: return ''
 
+        
     def getPlayerTime(self):
         self.log('getPlayerTime')
         try:    return self.getTotalTime()
@@ -87,6 +94,29 @@ class Player(xbmc.Player):
         self.log('getPVRTime')
         try:    return (sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('PVR.EpgEventElapsedTime(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
         except: return 0
+
+
+    def getPlayerItem(self):
+        self.log('getPlayerItem')
+        try:    return self.getPlayingItem() #Kodi v20. todo
+        except: return self.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False))
+        
+
+    def getPVRitem(self):
+        self.log('getPVRitem')
+        return (loadJSON(self.getPlayerItem().get('customproperties',{}).get('pvritem',{})))
+        
+        
+    def getCitem(self):
+        self.log('getCitem')
+        if not self.playingPVRitem: self.playingPVRitem = self.getPVRitem()
+        return self.playingPVRitem.get('citem',{})
+        
+        
+    def getCallback(self):
+        self.log('getCallback')
+        if not self.playingPVRitem: self.playingPVRitem = self.getPVRitem()
+        return 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=self.playingPVRitem.get('uniqueid',-1))
 
 
     def toggleSubtitles(self, state):
@@ -152,14 +182,22 @@ class Player(xbmc.Player):
         
     def playAction(self):
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
-        pvritem = getCurrentChannelItem()
+        pvritem = self.getPVRitem()
+        self.log('playAction, current pvritem = %s\n playingPVRitem = %s'%(pvritem,self.playingPVRitem))
+        
+        if not pvritem.get('callback'):
+            pvritem['callback'] = self.getCallback()
+            self.log('playAction, updating callback to = %s'%(pvritem['callback']))
+
         if pvritem.get('channelid',-1) == self.playingPVRitem.get('channelid',random.random()):
             self.log('playAction, no channel change')
+            self.playingPVRitem = pvritem
         else:   
             self.log('playAction, channel changed')
-            self.playingPVRitem = pvritem 
-            self.ruleList = self.rules.loadRules([pvritem.get('citem',{})])
-            pvritem = self.runActions(RULES_ACTION_PLAYER, (pvritem.get('citem',{})), pvritem)
+            self.playingPVRitem = pvritem
+            citem = self.getCitem()
+            self.ruleList = self.rules.loadRules([citem])
+            pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem)
             
             self.pendingSeek = int(pvritem.get('progress','0')) > 0
             if self.pendingSeek: 
@@ -172,37 +210,36 @@ class Player(xbmc.Player):
             self.log('playAction, returning not PseudoTV Live channel')
             return self.stopAction()
         
-
+        
     def updatePVRItem(self, pvritem=None):
         if pvritem is None: pvritem = self.playingPVRitem
-        return self.myService.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
-        # (self.myService.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.myService.jsonRPC.getPlayerItem().get('mediapath',''))})
+        return self.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
+        # (self.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.jsonRPC.getPlayerItem().get('mediapath',''))})
 
 
     def changeAction(self):
-        if not getCurrentChannelItem(): 
-            self.log('changeAction, returning channel_item not found.')
+        if not self.playingPVRitem: 
+            self.log('changeAction, returning pvritem not found.')
             return self.stopAction()
-    
-        isPlaylist = self.playingPVRitem.get('isPlaylist',False)
-        callback   = self.playingPVRitem.get('callback','')
         
-        if not isPlaylist: 
-            clearCurrentChannelItem()
+        if self.playingPVRitem.get('isPlaylist',False):
+            self.log('changeAction, playing playlist')
+            #todo pop broadcastnext? keep pvritem in sync with playlist pos?
+        else:
+            callback = self.playingPVRitem.get('callback','')
             self.log('changeAction, playing = %s'%(callback))
             xbmc.executebuiltin('PlayMedia(%s)'%callback)
 
-
     def stopAction(self):
         self.log('stopAction')
-        clearCurrentChannelItem()
+        self.playingPVRitem = {}
         self.toggleOverlay(False)
         setLegacyPseudoTV(False)
 
 
-    def toggleOverlay(self, state):                                     
+    def toggleOverlay(self, state):
         if state and not isOverlay():
-            if not (self.showOverlay & self.isPlaying() & hasPVRitem()): return
+            if not (self.showOverlay | self.isPlaying() | isPseudoTV()): return
             self.log("toggleOverlay, show")
             self.overlayWindow.show()
         elif not state and isOverlay():
@@ -217,7 +254,7 @@ class Monitor(xbmc.Monitor):
         self.myService      = service
         self.pendingChange  = False
         self.lastSettings   = {}
-        self.onChangeThread = threading.Timer(15.0, self.onChange)
+        self.onChangeThread = threading.Timer(30.0, self.onChange)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -245,20 +282,21 @@ class Monitor(xbmc.Monitor):
         PROPERTIES.setPropertyBool('pendingChange',state)
 
 
-    def onSettingsChanged(self):
+    def onSettingsChanged(self, wait=30.0):
         ## Egg Timer, reset on each call.
+        self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
             try: self.onChangeThread.join()
             except: pass
-        self.onChangeThread = threading.Timer(15.0, self.onChange)
+        self.onChangeThread = threading.Timer(wait, self.onChange)
         self.onChangeThread.name = "onChangeThread"
         self.onChangeThread.start()
         return True
         
         
     def onChange(self):
-        if isBusy(): return self.onSettingsChanged() # delay restart, changes still occurring.
+        if isBusy() or self.isSettingsOpened(): return self.onSettingsChanged(15.0) # delay restart, changes still occurring.
         self.log('onChange')
         with busy():
             if self.hasSettingsChanged():
@@ -274,64 +312,73 @@ class Monitor(xbmc.Monitor):
     def chkSettings(self):
         self.log('chkSettings')
         self.chkPluginSettings()
+        PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
         #priority settings that trigger chkUpdate on change.
-        return {'User_Import'         :{'setting':SETTINGS.getSettingRefresh('User_Import')              ,'action':None},
-                'Import_M3U_TYPE'     :{'setting':SETTINGS.getSettingRefresh('Import_M3U_TYPE')          ,'action':None},
-                'Import_M3U_FILE'     :{'setting':SETTINGS.getSettingRefresh('Import_M3U_FILE')          ,'action':None},
-                'Import_M3U_URL'      :{'setting':SETTINGS.getSettingRefresh('Import_M3U_URL')           ,'action':None},
-                'Import_SLUG'         :{'setting':SETTINGS.getSettingRefresh('Import_SLUG')              ,'action':None},
-                'User_Folder'         :{'setting':SETTINGS.getSettingRefresh('User_Folder')              ,'action':moveUser},
-                'Select_Channels'     :{'setting':SETTINGS.getSettingRefresh('Select_Channels')     ,'action':None},
-                'Select_TV_Networks'  :{'setting':SETTINGS.getSettingRefresh('Select_TV_Networks')  ,'action':None},
-                'Select_TV_Shows'     :{'setting':SETTINGS.getSettingRefresh('Select_TV_Shows')     ,'action':None},
-                'Select_TV_Genres'    :{'setting':SETTINGS.getSettingRefresh('Select_TV_Genres')    ,'action':None},
-                'Select_Movie_Genres' :{'setting':SETTINGS.getSettingRefresh('Select_Movie_Genres') ,'action':None},
-                'Select_Movie_Studios':{'setting':SETTINGS.getSettingRefresh('Select_Movie_Studios'),'action':None},
-                'Select_Mixed_Genres' :{'setting':SETTINGS.getSettingRefresh('Select_Mixed_Genres') ,'action':None},
-                'Select_Mixed'        :{'setting':SETTINGS.getSettingRefresh('Select_Mixed')        ,'action':None},
-                'Select_Music_Genres' :{'setting':SETTINGS.getSettingRefresh('Select_Music_Genres') ,'action':None},
-                'Select_Recommended'  :{'setting':SETTINGS.getSettingRefresh('Select_Recommended')  ,'action':None},
-                'Select_Imports'      :{'setting':SETTINGS.getSettingRefresh('Select_Imports')      ,'action':None}}
+        return {'User_Import'         :{'setting':SETTINGS.getSetting('User_Import')         ,'action':None},
+                'Enable_Client'       :{'setting':SETTINGS.getSetting('Enable_Client')       ,'action':setRestartRequired},
+                'Import_M3U_TYPE'     :{'setting':SETTINGS.getSetting('Import_M3U_TYPE')     ,'action':None},
+                'Import_M3U_FILE'     :{'setting':SETTINGS.getSetting('Import_M3U_FILE')     ,'action':None},
+                'Import_M3U_URL'      :{'setting':SETTINGS.getSetting('Import_M3U_URL')      ,'action':None},
+                'Import_SLUG'         :{'setting':SETTINGS.getSetting('Import_SLUG')         ,'action':None},
+                'User_Folder'         :{'setting':SETTINGS.getSetting('User_Folder')         ,'action':moveUser},
+                'Select_Channels'     :{'setting':SETTINGS.getSetting('Select_Channels')     ,'action':None},
+                'Select_TV_Networks'  :{'setting':SETTINGS.getSetting('Select_TV_Networks')  ,'action':None},
+                'Select_TV_Shows'     :{'setting':SETTINGS.getSetting('Select_TV_Shows')     ,'action':None},
+                'Select_TV_Genres'    :{'setting':SETTINGS.getSetting('Select_TV_Genres')    ,'action':None},
+                'Select_Movie_Genres' :{'setting':SETTINGS.getSetting('Select_Movie_Genres') ,'action':None},
+                'Select_Movie_Studios':{'setting':SETTINGS.getSetting('Select_Movie_Studios'),'action':None},
+                'Select_Mixed_Genres' :{'setting':SETTINGS.getSetting('Select_Mixed_Genres') ,'action':None},
+                'Select_Mixed'        :{'setting':SETTINGS.getSetting('Select_Mixed')        ,'action':None},
+                'Select_Music_Genres' :{'setting':SETTINGS.getSetting('Select_Music_Genres') ,'action':None},
+                'Select_Recommended'  :{'setting':SETTINGS.getSetting('Select_Recommended')  ,'action':None},
+                'Select_Imports'      :{'setting':SETTINGS.getSetting('Select_Imports')      ,'action':None}}
         
         
-    def hasSettingsChanged(self):
-         #todo copy userfolder to new location
-        if not self.lastSettings: return False
+    def hasSettingsChanged(self): 
+        #todo detect userfolder change, moveuser, add previous value to property?
+        #todo copy userfolder to new location
+        #todo if Enable_Client clear property 'Enable_Client'
         currentSettings = self.chkSettings()
+        if not self.lastSettings:
+            self.lastSettings = currentSettings
+            return False
+            
         differences = dict(diffDICT(self.lastSettings,currentSettings))
         if differences: 
             self.log('hasSettingsChanged, differences = %s'%(differences))
             self.lastSettings = currentSettings
             for key in differences.keys():
-                func = currentSettings[key].get('action',None) 
-                if func:
-                    try: func()
-                    except Exception as e: 
-                        self.log("hasSettingsChanged, Failed! %s"%(e), xbmc.LOGERROR)
+                func   = currentSettings[key].get('action',None)
+                args   = currentSettings[key].get('args'  ,tuple)
+                kwargs = currentSettings[key].get('kwargs',dict)
+                try: func(*args,**kwargs)
+                except Exception as e: 
+                    if func: self.log("hasSettingsChanged, Failed! %s"%(e), xbmc.LOGERROR)
             return True
-        return False
         
         
 class Service:
     def __init__(self):
         self.log('__init__')
-        self.cache         = Cache()
-        self.dialog        = Dialog()   
-        self.pool          = PoolHelper() 
-        self.rules         = RulesList()  
+        self.cache          = Cache()
+        self.dialog         = Dialog()   
+        self.pool           = PoolHelper() 
+        self.rules          = RulesList()  
         
-        self.monitor       = Monitor(service=self)
-        self.player        = Player(service=self)
+        self.monitor        = Monitor(service=self)
+        self.player         = Player(service=self)
         
-        self.myBuilder     = Builder(service=self)
-        self.writer        = self.myBuilder.writer
-        self.channels      = self.myBuilder.writer.channels
-        self.jsonRPC       = self.myBuilder.jsonRPC
+        self.myBuilder      = Builder(service=self)
+        self.writer         = self.myBuilder.writer
+        self.channels       = self.myBuilder.writer.channels
+        self.jsonRPC        = self.myBuilder.jsonRPC
         
-        self.myConfig      = Config(sys.argv,service=self)
+        self.myConfig       = Config(sys.argv,service=self)
         
-        self.startThread   = threading.Timer(1.0, hasVersionChanged)
-        self.serviceThread = threading.Timer(0.5, self.runServiceThread)
+        self.startThread    = threading.Timer(1.0, hasVersionChanged)
+        self.serviceThread  = threading.Timer(0.5, self.runServiceThread)
+        
+        self.player.jsonRPC = self.jsonRPC
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -340,11 +387,11 @@ class Service:
 
     def startServiceThread(self, wait=30.0):
         self.log('startServiceThread, wait = %s'%(wait))
-        if   self.writer.isClient(): return
-        elif self.serviceThread.is_alive(): 
+        if self.serviceThread.is_alive(): 
             self.serviceThread.cancel()
             try: self.serviceThread.join()
             except: pass
+        if self.writer.isClient(): return
         self.serviceThread = threading.Timer(wait, self.runServiceThread)
         self.serviceThread.name = "serviceThread"
         self.serviceThread.start()
@@ -370,37 +417,39 @@ class Service:
 
     def chkBackup(self):
         self.log('chkBackup')
+        if self.writer.isClient(): return
         PROPERTIES.setPropertyBool('has.Backup',self.myConfig.backup.hasBackup())
 
 
     def chkChannels(self):
-        ## re-enable missing library.json items from channels.json
+        if self.writer.isClient(): return
         self.log('chkChannels')
+        ## re-enable missing library.json items from channels.json
         return self.myConfig.recoverItemsFromChannels()
         
         
     def chkRecommended(self, lastUpdate=None):
-        if chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
+        if self.writer.isClient(): return
+        elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
             if self.myConfig.recommended.importPrompt():
                 PROPERTIES.setProperty('Last_Recommended',str(time.time()))
             return True
-        return False
 
             
     def chkPredefined(self, lastUpdate=None):
-        if chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
+        if self.writer.isClient(): return
+        elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
             if self.myConfig.buildLibraryItems():
                 PROPERTIES.setProperty('Last_Predefined',str(time.time()))
             return True
-        return False
         
                 
     def chkIdle(self):
         if self.chkSleep(): return
-        elif getIdleTime() > OVERLAY_DELAY:
+        if getIdleTime() > OVERLAY_DELAY:
             self.player.toggleOverlay(True)
         else:
             self.player.toggleOverlay(False)
@@ -411,7 +460,7 @@ class Service:
                       self.player.isPlaying(),
                       not xbmc.getCondVisibility('Player.Paused')]
         if False in conditions: return
-        sleepTime = SETTINGS.getSettingInt('Idle_Timer')
+        sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
         if   sleepTime == 0: return
         elif getIdleTime() > (sleepTime * 10800):
             if self.myConfig.sleepTimer():
@@ -426,7 +475,7 @@ class Service:
 
 
     def chkUpdate(self, lastUpdate=None):
-        if isBusy() or self.monitor.isSettingsOpened() or self.writer.isClient(): 
+        if (isBusy() | self.monitor.isSettingsOpened() | self.writer.isClient()): 
             return False
         
         with busy():
@@ -460,22 +509,26 @@ class Service:
                 
 
     def initialize(self):
-        setBusy(False) #reset value on 1st run.
+        self.chkVersion
+        if self.writer.isClient(): return False
         with busy():
             self.monitor.lastSettings = self.monitor.chkSettings()
-            funcs = [initDirs,self.chkVersion,self.chkBackup,self.chkChannels]
+            funcs = [initDirs,self.chkBackup,self.chkChannels]
             for func in funcs: func()
             return True
 
          
     def run(self, silent=False):
         self.log('run')
-        self.monitor.waitForAbort(10) # startup delay
+        setBusy(False) #reset value on 1st run.
+        self.monitor.waitForAbort(5) # startup delay
         
         if self.initialize():
-            self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=10)#startup delay
-            self.monitor.waitForAbort(10) # service delay
+            self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=10)
+            self.monitor.waitForAbort(5) # service delay
             self.startServiceThread()
+        else:
+            self.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=10)
         
         while not self.monitor.abortRequested():
             if restartRequired(): break

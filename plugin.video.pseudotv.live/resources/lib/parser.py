@@ -101,7 +101,6 @@ class Writer:
         
     def saveChannels(self):
         self.log('saveChannels')
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
         return self.channels.save()
         
         
@@ -124,9 +123,10 @@ class Writer:
         self.log('importSETS')
         importLST = self.channels.getImports()
         if SETTINGS.getSettingBool('User_Import'):
-            SETTINGS.setSetting('Import_M3U'  ,{0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')])
-            SETTINGS.setSetting('Import_XMLTV',{0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')])
-            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':SETTINGS.getSetting('Import_M3U'),'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':SETTINGS.getSetting('Import_XMLTV')}})
+            Import_M3U_FILE   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
+            Import_XMLTV_FILE = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
+            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_FILE,'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':Import_XMLTV_FILE}})
+        
         for idx, importItem in enumerate(importLST):
             try:
                 if importItem.get('type','') == 'iptv':
@@ -345,14 +345,12 @@ class Writer:
     def autoPagination(self, id, path, limits={}):
         cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
         if not limits:
-            msg = 'get'
-            try:    limits = self.channels.getPage(id)
-            except: limits = ''
-            limits = (limits or self.cache.get(cacheName, json_data=True) or {"end": 0, "start": 0, "total": 0})
+            msg    = 'get'
+            limits = (self.cache.get(cacheName, json_data=True) or self.channels.getPage(id))
         else:
             msg = 'set'
-            if self.channels.setPage(id, limits): self.saveChannels()
-            self.cache.set(cacheName, limits, expiration=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), json_data=True)
+            self.cache.set(cacheName, limits, expiration=datetime.timedelta(days=28), json_data=True)
+            if self.channels.setPage(id, limits): self.saveChannels() #todo test not saving.
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
             

@@ -308,10 +308,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             def getItem(item):
-                return buildMenuListItem(label1=item.get(key,''), iconImage=item.get('icon',COLOR_LOGO))
+                return buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
                 
-            infoList = getInfoMonitor()
-            itemList = [getItem(loadJSON(info)) for info in infoList]
+            infoList = list(map(loadJSON,getInfoMonitor()))
+            itemList = [getItem(info) for info in infoList if info.get('label')]
             select   = self.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
             if select is not None: return itemList[select]
         except Exception as e: self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
@@ -458,10 +458,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
         print('difference',difference)
         [self.channels.add(citem) if citem in self.newChannels else self.channels.remove(citem) for citem in difference]
-        self.channels.save()
-        self.dialog.notificationDialog(LANGUAGE(30053))
+        if self.channels.save():
+            self.dialog.notificationDialog(LANGUAGE(30053))
+            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channelList)))
         self.toggleSpinner(self.chanList,False)
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channelList)))
         self.closeManager()
             
         

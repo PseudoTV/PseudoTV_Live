@@ -438,7 +438,7 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">0</condition>
-								<condition on="property" name="InfoBool"> eq(-2,true)</condition>
+                <condition operator="is" setting="User_Import">true</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -456,7 +456,7 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">1</condition>
-								<condition on="property" name="InfoBool"> eq(-3,true)</condition>
+                <condition operator="is" setting="User_Import">true</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -494,7 +494,7 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">0</condition>
-								<condition on="property" name="InfoBool"> eq(-5,true)</condition>
+                <condition operator="is" setting="User_Import">true</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -512,7 +512,7 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">1</condition>
-								<condition on="property" name="InfoBool"> eq(-6,true)</condition>
+                <condition operator="is" setting="User_Import">true</condition>
 							</and>
 						</dependency>
 					</dependencies>

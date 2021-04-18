@@ -937,7 +937,7 @@ msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
 msgstr ""
 
 msgctxt "#30230"
-msgid "If a selection is [COLOR=dimgray]Dim[/COLOR] a background task is running or no content found!\nClose settings to resume background tasks."
+msgid "If a selection is [COLOR=dimgray]Dim[/COLOR] a background task is running, no content found or system configured as a client!\nClose settings to resume background tasks."
 msgstr ""
 
 msgctxt "#30231"
@@ -1145,7 +1145,7 @@ msgid "Stop Playback when Idle for X Hours"
 msgstr ""
 
 msgctxt "#30283"
-msgid "Are You Still Watching %s?"
+msgid "Are You Still Watching?"
 msgstr ""
 
 msgctxt "#30284"

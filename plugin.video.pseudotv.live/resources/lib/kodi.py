@@ -52,8 +52,8 @@ class Settings:
         if refresh: 
             REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
             self.realSetting = REAL_SETTINGS
-
-         
+    
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -230,6 +230,10 @@ class Properties:
         
     def setPropertyDict(self, key, value):
         return self.setProperty(key, dumpJSON(value))
+        
+        
+    def setPropertyInt(self, key, value):
+        return self.setProperty(key, value)
         
         
     def setProperty(self, key, value):

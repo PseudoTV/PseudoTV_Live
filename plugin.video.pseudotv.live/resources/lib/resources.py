@@ -168,7 +168,7 @@ class Resources:
 
     def parseDirectory(self, path, name, patterns=None):
         if patterns is None: patterns = self.getFilePatterns(name)
-        dirs, files = self.jsonRPC.getListDirectory(path,ADDON_VERSION)
+        dirs, files = self.jsonRPC.getListDirectory(path)
         for pattern in patterns:
             for file in files:
                 if file == pattern:

@@ -122,7 +122,7 @@ class Overlay(xbmcgui.WindowXML):
     def load(self):
         self.log('load')
         try:
-            self.pvritem = getCurrentChannelItem()
+            self.pvritem = self.player.getPVRitem()
             if not self.pvritem or not isPseudoTV(): 
                 return False
                 
