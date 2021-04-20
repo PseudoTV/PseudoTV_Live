@@ -305,8 +305,9 @@ class Monitor(xbmc.Monitor):
             
     def chkPluginSettings(self):
         self.log('chkPluginSettings')
-        for func in [chkPVR, 
-                     chkMGR]: func()
+        for func in [chkPVR, chkMGR]: 
+            func()
+        return True
         
         
     def chkSettings(self):
@@ -341,9 +342,11 @@ class Monitor(xbmc.Monitor):
         currentSettings = self.chkSettings()
         if not self.lastSettings:
             self.lastSettings = currentSettings
+            self.log('hasSettingsChanged, lastSettings not found returning')
             return False
             
         differences = dict(diffDICT(self.lastSettings,currentSettings))
+        print('differences',differences) #debug, force Settings refresh.
         if differences: 
             self.log('hasSettingsChanged, differences = %s'%(differences))
             self.lastSettings = currentSettings
@@ -355,6 +358,10 @@ class Monitor(xbmc.Monitor):
                 except Exception as e: 
                     if func: self.log("hasSettingsChanged, Failed! %s"%(e), xbmc.LOGERROR)
             return True
+            
+        if self.lastSettings != currentSettings:
+            self.log('hasSettingsChanged, lazy pendingChange')
+            return True #temp trigger, fix difference detect...
         
         
 class Service:

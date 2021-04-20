@@ -173,9 +173,9 @@ For example importing two M3Us/services. Import one will start at 10000, the oth
 Each import is limited to 9999 (assuming each channel is an interger. Sub-Numbering, ie. floats ex. 4.1 extend the amount of possible imports) channels per import with a total of 9 total imports allowed.
 
 - Channel Range:
-	- `1-999` User-defined
-	- `1000-9999` Pre-defined
-	- `10000-99999` Imports (Third-party m3u and recommend services)
+-- `1-999` User-defined
+-- `1000-9999` Pre-defined
+-- `10000-99999` Imports (Third-party m3u and recommend services)
 
 ### - EPG Ordering:
 

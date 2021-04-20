@@ -460,7 +460,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         [self.channels.add(citem) if citem in self.newChannels else self.channels.remove(citem) for citem in difference]
         if self.channels.save():
             self.dialog.notificationDialog(LANGUAGE(30053))
-            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channelList)))
+            SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.newChannels)))
+            PROPERTIES.setPropertyBool('pendingChange',True)
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
             

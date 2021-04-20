@@ -163,7 +163,7 @@ class Channels:
 
     def getPage(self, id):
         idx, citem = self.findChannel({'id':id}, self.getChannels())
-        page = citem.get('page',{"end":0,"start":0,"total":0})
+        page = (citem.get('page','') or {"end":0,"start":0,"total":0})
         self.log('getPage, id = %s, page = %s'%(id, page))
         return page
 

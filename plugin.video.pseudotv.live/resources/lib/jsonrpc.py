@@ -370,7 +370,7 @@ class JSONRPC:
        
        
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        limits = self.writer.autoPagination(id, path, limits)
+        limits = self.writer.autoPagination(id, path, limits) #get
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)
@@ -394,7 +394,7 @@ class JSONRPC:
         if limits.get('end',0) >= limits.get('total',0): # restart page, exceeding boundaries.
             self.log('requestList, id = %s, resetting page to 0'%(id))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.writer.autoPagination(id, path, limits)
+        self.writer.autoPagination(id, path, limits) #set
         
         if len(items) == 0 and limits.get('start',0) > 0 and limits.get('total',0) > 0:
             self.log("requestList, id = %s, trying again at start page 0"%(id))

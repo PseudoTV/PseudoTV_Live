@@ -321,7 +321,7 @@ def hasVersionChanged(cleanStart=False):
     return False
     
 def showChangelog():
-    def color(text):
+    def addColor(text):
         text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
         text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
         text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
@@ -335,15 +335,17 @@ def showChangelog():
         text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
         return text
         
-    with busy_dialog(): changelog = color(xbmcvfs.File(CHANGELOG_FLE).read())
+    with busy_dialog(): changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
     return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def showReadme():
     def convertMD2TXT(md):
         markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
         markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-        markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!'], markdown.split('\n'))))
-        markdown = (re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(2) if not x.group(2) else '', markdown, flags=re.M))
+        markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
+        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
+        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
+        markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
         return markdown
         
     with busy_dialog(): readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())

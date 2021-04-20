@@ -82,7 +82,6 @@ class Writer:
               
               
     def getEndtime(self, id, fallback):
-        # if self.xmltv.reload():
         endtime = (self.xmltv.getEndtimes().get(id,'') or fallback)
         self.log('getEndtime, id = %s, endtime = %s, fallback = %s'%(id,endtime,fallback))
         return endtime
@@ -123,9 +122,9 @@ class Writer:
         self.log('importSETS')
         importLST = self.channels.getImports()
         if SETTINGS.getSettingBool('User_Import'):
-            Import_M3U_FILE   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
-            Import_XMLTV_FILE = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
-            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_FILE,'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':Import_XMLTV_FILE}})
+            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
+            Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
+            importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_Path,'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':Import_XMLTV_Path}})
         
         for idx, importItem in enumerate(importLST):
             try:
@@ -381,7 +380,7 @@ class XMLTV:
         self.filelock   = self.writer.GlobalFileLock
         
         if not self.vault.xmltvList:
-            self.vault.xmltvList = self.load()
+            self.reload()
             
             
     def clear(self):
@@ -651,7 +650,7 @@ class XMLTV:
             except: pass
 
         if item.get('new',False): 
-            pitem['new'] = '' #write blank tag, tag == True
+            pitem['new'] = '' #write empty tag, tag == True
         
         rating = self.cleanMPAA(item.get('rating',''))
         if rating != 'NA' and rating.startswith('TV'): 
@@ -732,7 +731,7 @@ class M3U:
         self.filelock   = self.writer.GlobalFileLock
         
         if not self.vault.m3uList:
-            self.vault.m3uList = self.load()
+            self.reload()
             
 
     def clear(self):

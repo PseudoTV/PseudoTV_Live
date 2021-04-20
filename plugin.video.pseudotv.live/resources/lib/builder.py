@@ -112,7 +112,7 @@ class Builder:
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
-                self.log('buildChannel, In-Valid Channel (No guidedata) %s '%(channel['id']))
+                self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
                 self.writer.removeChannelLineup(channel)
             
         self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
@@ -178,10 +178,10 @@ class Builder:
             start  = self.writer.getEndtime(citem['id'],roundTimeDown(now,offset=60)) #offset time to start top of the hour
             self.dirCount = 0
             self.loopback = {}
-            
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
+            
             if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))): 
-                self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],start),xbmc.LOGINFO)
+                self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)),xbmc.LOGINFO)
                 return True# prevent over-building
                 
             citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)
