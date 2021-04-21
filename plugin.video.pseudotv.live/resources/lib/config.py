@@ -85,10 +85,6 @@ class Config:
         PROPERTIES.setPropertyBool('Config.Running',False)
 
 
-    def recoverItemsFromChannels(self):
-        return self.writer.recoverItemsFromChannels()
-        
-        
     def findItemsInLST(self, items, values, item_key='getLabel', val_key='', index=True):
         self.log("findItemsInLST, values = %s, item_key = %s, val_key = %s, index = %s"%(len(values), item_key, val_key, index))
         if not values:
@@ -119,23 +115,30 @@ class Config:
 
 
     def autoTune(self):
-        if PROPERTIES.getPropertyBool('autotuned'): return False #already ran or dismissed by user, check on next reboot.
-        if self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME)):
-            busy   = self.dialog.progressBGDialog()
-            types  = CHAN_TYPES.copy()
-            types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning.
-            
-            for idx, type in enumerate(types):
-                self.log('autoTune, type = %s'%(type))
-                busy = self.dialog.progressBGDialog((idx*100//len(types)), busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
-                self.selectPredefined(type,autoTune=AUTOTUNE_LIMIT)
-                
-            self.dialog.progressBGDialog(100, busy, '%s...'%(LANGUAGE(30053)))
-            PROPERTIES.setPropertyBool('autotuned',True)
-            return True
+        if   PROPERTIES.getPropertyBool('autotuned'): return False #already ran or dismissed by user, check on next reboot.
+        elif self.backup.hasBackup():
+            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211))
+            if   retval == 2: return self.writer.recoverChannelsFromBackup()
+            elif retval != 1:
+                PROPERTIES.setPropertyBool('autotuned',True)
+                return False
         else:
-            PROPERTIES.setPropertyBool('autotuned',True)
-            return False
+            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286))): 
+                PROPERTIES.setPropertyBool('autotuned',True)
+                return False
+       
+        busy   = self.dialog.progressBGDialog()
+        types  = CHAN_TYPES.copy()
+        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning.
+        
+        for idx, type in enumerate(types):
+            self.log('autoTune, type = %s'%(type))
+            busy = self.dialog.progressBGDialog((idx*100//len(types)), busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
+            self.selectPredefined(type,autoTune=AUTOTUNE_LIMIT)
+            
+        self.dialog.progressBGDialog(100, busy, '%s...'%(LANGUAGE(30053)))
+        PROPERTIES.setPropertyBool('autotuned',True)
+        return True
  
  
     def selectPredefined(self, type=None, autoTune=None):
@@ -164,8 +167,9 @@ class Config:
                 with busy_dialog(escape):
                     pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                     self.library.setEnableStates(type,pselect,items)
-                    self.buildPredefinedChannels(type)
+                    self.writer.groupLibraryItems(type)
                     self.library.setSettings(type, items)
+                    self.setPendingChangeTimer()
             setBusy(False)
             return True
 
@@ -174,27 +178,9 @@ class Config:
         self.log('buildLibraryItems')
         if self.library.fillLibraryItems():
             self.library.chkLibraryItems()
-        return self.buildPredefinedChannels()
-        
+        return self.writer.groupLibraryItems()
 
-    def buildPredefinedChannels(self, type=None):
-        ##convert enabled library items into channels.
-        if not type is None: types = [type]
-        else:                types = CHAN_TYPES.copy()
-        self.log('buildPredefinedChannels, types = %s'%(types))
 
-        items = {}
-        for type in types:        
-            if type == LANGUAGE(30033):
-                self.buildImports()    
-            else: 
-                items.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
-        
-        if self.writer.buildPredefinedChannels(items):
-            self.setPendingChangeTimer()
-        return True
-        
-        
     def setPendingChangeTimer(self, wait=30.0):
         self.log('setPendingChangeTimer, wait = %s'%(wait))
         if self.service:
@@ -215,13 +201,6 @@ class Config:
             self.setPendingChangeTimer()
         else:
             PROPERTIES.setPropertyBool('pendingChange',True)
-        
-        
-    def buildImports(self):#convert enabled imports to channel items.
-        imports  = self.recommended.findbyType(type='iptv')
-        existing = self.library.getLibraryItems(LANGUAGE(30033), enabled=True)
-        items = [item for item in imports for exists in existing if item['name'] == exists['name']]
-        return self.writer.buildImports(items)
 
         
     def clearPredefined(self):
@@ -231,7 +210,7 @@ class Config:
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30077))): return False
             if self.library.clearLibraryItems():
                 PROPERTIES.setPropertyBool('autotuned',False)
-                PROPERTIES.setPropertyBool('restartRequired',True)
+                setRestartRequired()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
         
 
@@ -243,7 +222,7 @@ class Config:
                 return False
             if self.writer.clearChannels(all):
                 PROPERTIES.setPropertyBool('autotuned',False)
-                PROPERTIES.setPropertyBool('restartRequired',True)
+                setRestartRequired()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
 
 
@@ -276,7 +255,7 @@ class Config:
             SETTINGS.setSetting('Import_XMLTV_URL' ,'')
             SETTINGS.setSetting('Import_SLUG'      ,'')
             SETTINGS.setSetting('User_Import'      ,'false')
-            PROPERTIES.setPropertyBool('restartRequired',True)
+            setRestartRequired()
             return self.dialog.notificationDialog(LANGUAGE(30053))
         
 
@@ -329,7 +308,7 @@ class Config:
         params = ['Resource_Logos','Resource_Ratings','Resource_Networks','Resource_Commericals','Resource_Trailers']
         for param in params:
             addons = SETTINGS.getSetting(param).split(',')
-            for addon in addons: found.append(installAddon(addon))
+            for addon in addons: found.append(installAddon(addon,manual=True))
         if True in found: return True
         return self.dialog.notificationDialog(LANGUAGE(30192))
         
@@ -386,7 +365,7 @@ class Config:
             self.backup.backupChannels()
         elif  param == 'Recover_Channels':
             ctl = (0,3)
-            self.recoverChannels()
+            self.backup.recoverChannels()
         else:
             ctl = (1,1)
             self.selectPredefined(param.replace('_',' '))

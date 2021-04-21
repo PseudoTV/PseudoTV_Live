@@ -105,11 +105,9 @@ class Writer:
         
     def save(self, exImport=True):
         self.log('save')
-        funcs = [self.m3u,
-                 self.xmltv]
-        if self.cleanChannels():
+        if self.cleanLeftovers():
             if exImport: self.importSETS()
-            if False in [func.save() for func in funcs]:
+            if False in [func.save() for func in [self.m3u, self.xmltv]]:
                 self.dialog.notificationDialog(LANGUAGE(30001))
                 return False
             else:
@@ -163,8 +161,8 @@ class Writer:
         
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
         self.log('removeChannelLineup, citem = %s'%(citem))
-        self.m3u.removeChannel(citem.get('id',''))
-        self.xmltv.removeChannel(citem.get('id',''))
+        self.m3u.removeChannel(citem)
+        self.xmltv.removeChannel(citem)
     
 
     def addProgrammes(self, citem, fileList, radio=False, catchup=True):
@@ -210,44 +208,42 @@ class Writer:
             self.xmltv.addProgram(citem['id'], item)
             
             
-    def clearChannels(self, all=False):
-        channels = self.channels.getChannels()
-        if not all: channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, channels))
-        self.log('cleanChannels, channels = %s'%(len(channels)))
-        for citem in channels: 
-            self.removeChannel(citem)
-        if self.saveChannels():
-            self.save()
-        
-            
-    def cleanChannels(self): # remove abandoned/missing channels from m3u/xmltv
-        self.log('cleanChannels')
-        channels = self.channels.getChannels()
-        m3u      = self.m3u.getChannels().copy()
-        xmltv    = self.xmltv.getChannels().copy()
-        
-        for channel in channels:
-            chid = channel.get('id','')
-            if not chid: continue
-            
-            for idx, item in enumerate(m3u):
-                if chid == item.get('id',''):
-                    m3u.pop(idx)
-                    
-            for idx, item in enumerate(xmltv):
-                if chid == item.get('id',''):
-                    xmltv.pop(idx)
-        
-        for item in m3u:
-            self.m3u.removeChannel(item.get('id',''))
-
-        for item in xmltv: 
-            self.xmltv.removeChannel(item.get('id',''))
+    def cleanLeftovers(self):
+        # find abandoned channels in m3u/xmltv and remove.
+        channels  = self.channels.getChannels()
+        leftovers = channels.copy()
+        [leftovers.remove(channel) for channel in channels for m3u in self.m3u.getChannels() if m3u.get('id') == channel.get('id')]
+        self.log('cleanLeftovers, leftovers = %s'%(len(leftovers)))
+        for leftover in leftovers: self.removeChannelLineup(leftover)
         return True
         
-    
+            
+    def clearChannels(self, all=False): #clear user-defined channels. all includes pre-defined
+        self.log('clearChannels, all = %s'%(all))
+        if all: self.channels.clear()
+        else:
+            channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.channels.getChannels()))
+            for citem in channels: self.removeChannel(citem)
+        if self.saveChannels():
+            return self.save()
+            
+        
+    def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
+        self.log('recoverChannelsFromBackup, file = %s'%(file))
+        oldChannels = self.channels.getChannels().copy()
+        newChannels = self.channels.cleanSelf(self.channels.load(CHANNELFLE_BACKUP))
+        if self.channels.clear():
+            difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
+            self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
+            [self.channels.add(citem) if citem in newChannels else self.channels.remove(citem) for citem in difference] #add new, remove old.
+            return self.channels.save()
+        setRestartRequired()
+        self.log('recoverChannelsFromBackup, finished')
+        return True
+        
+        
     def recoverChannelsFromM3U(self):
-        self.log('recoverChannelsFromM3U') #rebuild channels.json from m3u.
+        self.log('recoverChannelsFromM3U') #rebuild channels.json from m3u. #todo reenable predefined. 
         channels = self.channels.getChannels()
         m3u      = self.m3u.getChannels().copy()
         if not channels and m3u:
@@ -258,6 +254,9 @@ class Writer:
                 citem.update(item) #todo repair path.
                 self.channels.add(citem)
             return self.saveChannels()
+        setRestartRequired()
+        self.log('recoverChannelsFromM3U, finished')
+        return True
      
        
     def recoverItemsFromChannels(self):
@@ -277,24 +276,32 @@ class Writer:
                         selects.append(idx)
                         
             self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
-            if selects: 
-                self.library.setEnableStates(type, selects, items)
+            if selects: self.library.setEnableStates(type, selects, items)
         PROPERTIES.setPropertyBool('pendingChange',True)
         self.log('recoverItemsFromChannels, finished')
         return True
         
-       
-    def buildImports(self, items):
-        self.log('buildImports')
-        self.channels.setImports(items)
-        return self.saveChannels()
+
+    def groupLibraryItems(self, type=None):
+        if not type is None: types = [type]
+        else:                types = CHAN_TYPES
+        self.log('groupLibraryItems, types = %s'%(types))
+        # group enabled libraryItems by type
+        items = {} 
+        for type in types:
+            if type == LANGUAGE(30033):
+              imports  = self.recommended.findbyType(type='iptv')
+              existing = self.library.getLibraryItems(LANGUAGE(30033), enabled=True)
+              self.channels.setImports([item for item in imports for exists in existing if item['name'] == exists['name']])
+            else: #convert enabled imports to channel items.
+                items.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
+        return self.buildPredefinedChannels(items) 
 
 
     def buildPredefinedChannels(self, libraryItems):
         # convert enabled library.json into channels.json items
         # types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #ignore Imports, use buildImports
-    
-        def findChannel():
+        def findChannel(citem):
             for idx, eitem in enumerate(echannels):
                 if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
                     return idx, eitem
@@ -308,6 +315,8 @@ class Writer:
             # return list(set(range(start,stop)).difference(set(blist))) #set bug with even array in bytes? 
             return [num for num in range(start,stop) if num not in enumbers]
                 
+        addLST    = []
+        removeLST = []
         for type, items in libraryItems.items():
             self.log('buildPredefinedChannels, type = %s'%(type))
             echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
@@ -320,23 +329,29 @@ class Writer:
                 citem.update({'name'   :getChannelSuffix(item['name'], type),
                               'path'   :item['path'],
                               'type'   :item['type'],
-                              'logo'   :item['logo'],#todo channels.json no dynamic logo meta, only manager assigned logos.
+                              'logo'   :item['logo'],
                               'group'  :[type]})
                 citem['group']   = list(set(citem['group']))
                 citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
                 citem['catchup'] = ('vod' if not citem['radio'] else '')
                 
-                match, eitem = findChannel()
+                match, eitem = findChannel(citem)
                 if match is not None: #update new citems with existing values.
-                    if eitem in leftovers: leftovers.remove(eitem)
-                    for key in ['rules','number','favorite','page']: 
+                    if eitem in removeLST: 
+                        leftovers.remove(eitem)
+                    for key in ['id','rules','number','favorite','page']: 
                         citem[key] = eitem[key]
-                else: citem['number'] = next(numbers,0)
-                citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
-                self.channels.add(citem)
-
-            for eitem in leftovers:
-                self.removeChannel(eitem) #remove channels unselected
+                else: 
+                    citem['number'] = next(numbers,0)
+                    citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
+                addLST.append(citem)
+            removeLST.extend(leftovers)
+            
+        difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
+        self.log('buildPredefinedChannels, adding = %s'%(len(addLST)))
+        self.log('buildPredefinedChannels, removing = %s'%(len(removeLST)))
+        self.log('buildPredefinedChannels, difference = %s'%(len(difference)))
+        [self.channels.add(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
         self.log('buildPredefinedChannels, finished building')
         return self.saveChannels()
         
@@ -349,7 +364,7 @@ class Writer:
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, expiration=datetime.timedelta(days=28), json_data=True)
-            if self.channels.setPage(id, limits): self.saveChannels() #todo test not saving.
+            if self.channels.setPage(id, limits): self.saveChannels()
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
             
@@ -381,6 +396,8 @@ class XMLTV:
         
         if not self.vault.xmltvList:
             self.reload()
+        else:
+            self.withdraw()
             
             
     def clear(self):
@@ -403,7 +420,8 @@ class XMLTV:
     
     def withdraw(self):
         log('XMLTV: withdraw')
-        return self.vault.get_xmltvList()
+        self.vault.xmltvList = self.vault.get_xmltvList()
+        return True
      
 
     def load(self):
@@ -587,16 +605,17 @@ class XMLTV:
 
     def getEndtimes(self): 
         endtime    = {} # get "Endtime" channels last stopDate in programmes
-        channels   = self.sortChannels(self.vault.xmltvList['channels'])
-        programmes = self.sortProgrammes(self.vault.xmltvList['programmes'])
+        channels   = self.sortChannels(self.vault.xmltvList['channels'].copy())
+        programmes = self.sortProgrammes(self.vault.xmltvList['programmes'].copy())
         for channel in channels:
             try: 
                 stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']])
                 stopTime = time.mktime(stopDate)
                 endtime[channel['id']] = stopTime
             except Exception as e: 
-                log("XMLTV: getEndtimes, Failed! " + str(e), xbmc.LOGERROR)
-                self.removeChannel(channel['id'])
+                log("XMLTV: getEndtimes, Failed! %s"%(e), xbmc.LOGERROR)
+                log('XMLTV: getEndtimes, removing malformed channel %s'%(channel.get('id')))
+                self.removeChannel(channel)
         return endtime
          
          
@@ -609,18 +628,14 @@ class XMLTV:
                 'source-info-url'     : self.cleanString(ADDON_ID)}
 
 
-    def addChannel(self, item, update=False):
+    def addChannel(self, item):
         citem    = ({'id'           : item['id'],
                      'display-name' : [(self.cleanString(item['name']), LANG)],
                      'icon'         : [{'src':item['logo']}]})
-        log('XMLTV: addChannel, update = %s, citem = %s'%(update,citem))
-        idx, channel = self.findChannel(citem, self.vault.xmltvList['channels'])
+        log('XMLTV: addChannel, citem = %s'%(citem))
+        idx, channel = self.findChannel(citem, channels=self.vault.xmltvList['channels'])
         if idx is None: self.vault.xmltvList['channels'].append(citem)
-        else:
-            if update:
-                self.vault.xmltvList['channels'][idx].update(citem) # update existing channel meta
-            else:
-                self.vault.xmltvList['channels'][idx] = citem       # replace existing channel meta
+        else: self.vault.xmltvList['channels'][idx] = citem # replace existing channel meta
         return True
 
 
@@ -682,20 +697,19 @@ class XMLTV:
         return True
 
 
-        
-    def removeChannel(self, id): # remove single channel and all programmes from xmltvList
+    def removeChannel(self, citem): # remove single channel and all programmes from xmltvList
         channels   = self.vault.xmltvList['channels'].copy()
         programmes = self.vault.xmltvList['programmes'].copy()
-        self.vault.xmltvList['channels']   = list(filter(lambda channel:channel.get('id','') != id, channels))
-        self.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel','') != id, programmes))
-        log('XMLTV: removeChannel, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(id,len(channels),len(self.vault.xmltvList['channels']),len(programmes),len(self.vault.xmltvList['programmes'])))
+        self.vault.xmltvList['channels']   = list(filter(lambda channel:channel.get('id') != citem.get('id'), channels))
+        self.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
+        log('XMLTV: removeChannel, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.vault.xmltvList['channels']),len(programmes),len(self.vault.xmltvList['programmes'])))
         return True
         
         
-    @staticmethod
-    def findChannel(item, channels): #find existing channel id in xmltvList
+    def findChannel(self, citem, channels=None): #find existing channel id in xmltvList
+        if channels is None: channels = self.vault.xmltvList['channels']
         for idx, channel in enumerate(channels): 
-            if channel['id'] == item['id']: 
+            if channel.get('id') == citem.get('id'): 
                 return idx, channel
         return None, {}
         
@@ -718,6 +732,7 @@ class XMLTV:
         if text == ',' or not text: text = LANGUAGE(30161) #"Unavailable"
         return text
         
+        
 class M3U:
     def __init__(self, writer=None):
         log('M3U: __init__')
@@ -732,6 +747,8 @@ class M3U:
         
         if not self.vault.m3uList:
             self.reload()
+        else:
+            self.withdraw()
             
 
     def clear(self):
@@ -754,13 +771,15 @@ class M3U:
     
     def withdraw(self):
         log('M3U: withdraw')
-        return self.vault.get_m3uList()
-     
+        self.vault.m3uList = self.vault.get_m3uList()
+        return True
+        
 
     def load(self):
         log('M3U: load')
-        return {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift()),
-                'channels':self.cleanSelf(self.loadM3U())}
+        m3uList = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift())}
+        m3uList.setdefault('channels',[]).extend(self.cleanSelf(self.loadM3U()))
+        return m3uList
         
 
     def loadM3U(self, file=getUserFilePath(M3UFLE)):
@@ -805,11 +824,8 @@ class M3U:
                         try:    item[key] = int(item[key])
                         except: item[key] = float(item[key])
                     elif key == 'group':
-                        item[key] = item[key].split(';')
-                        try: item[key].remove(ADDON_NAME)
-                        except: pass
-                        finally: 
-                            item[key] = list(filter(None,list(set(item[key]))))
+                        item[key] = list(filter(None,list(set(item[key].split(';')))))
+                        if ADDON_NAME in item[key]: item[key].remove(ADDON_NAME)
                     elif key == 'radio':
                         item[key] = item[key].lower() == 'true'
 
@@ -840,7 +856,7 @@ class M3U:
             log('M3U: save, saving to %s'%(filePath))
             fle.write('%s\n'%(self.vault.m3uList['data']))
             citem = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-shift="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s",%s\n'
-            channels = self.sortChannels(self.vault.m3uList['channels'])
+            channels = self.sortChannels(self.vault.m3uList.get('channels',[]))
             for channel in channels:
                 if not channel: continue
                 fle.write(citem%(channel['number'],
@@ -938,33 +954,27 @@ class M3U:
         return self.sortChannels(self.vault.m3uList.get('channels',[]))
         
         
-    def addChannel(self, item, update=False):
-        log('M3U: addChannel, update = %s, item = %s'%(update,item))
-        idx, line = self.findChannel(item['id'])
-        if idx is None: self.vault.m3uList['channels'].append(item)
-        else:
-            if update: 
-                self.vault.m3uList['channels'][idx].update(item) # update existing channel
-            else: 
-                self.vault.m3uList['channels'][idx] = item       # replace existing channel
+    def addChannel(self, item):
+        log('M3U: addChannel, item = %s'%(item))
+        idx, line = self.findChannel(item)
+        if idx is None: self.vault.m3uList.get('channels',[]).append(item)
+        else: self.vault.m3uList.get('channels',[])[idx] = item # replace existing channel
         return True
 
 
-    def findChannel(self, id):
-        channels = self.vault.m3uList['channels']
+    def findChannel(self, citem, channels=None):
+        if channels is None: channels = self.vault.m3uList.get('channels',[])
         for idx, line in enumerate(channels):
-            if line.get('id','') == id:
+            if line.get('id') == citem.get('id'):
                 log('M3U: findChannel, idx = %s, line = %s'%(idx, line))
                 return idx, line
         return None, {}
         
         
-    def removeChannel(self, id=''):
-        idx, line = self.findChannel(id)
+    def removeChannel(self, citem):
+        idx, line = self.findChannel(citem)
         if idx is not None: 
             log('M3U: removeChannel, removing %s'%(line))
-            self.vault.m3uList['channels'].remove(line)
+            self.vault.m3uList['channels'].pop(idx)
             return True
         return False
-        
-        

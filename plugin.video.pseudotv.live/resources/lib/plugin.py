@@ -165,7 +165,7 @@ class Plugin:
                 nextitems.append(lastitem) #insert pvr callback
                 
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,chunksize=1))
             else:
                 liz = buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
@@ -207,7 +207,7 @@ class Plugin:
                 liz = buildItemListItem(nowitem, mType='music')
                 liz.setProperty('pvritem', dumpJSON(pvritem))                
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={mType:'music'}))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={mType:'music'},chunksize=1))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
@@ -284,7 +284,7 @@ class Plugin:
                 lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
                 lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
                 nextitems.append(lastitem) #insert pvr callback
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,chunksize=1))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if isPlaylistRandom(): self.channelPlaylist.unshuffle()
                 self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))

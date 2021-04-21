@@ -60,6 +60,10 @@ class JSONRPC:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def chkLocalLogo(self, chname, type=LANGUAGE(30171)):
+        return self.resources.chkLocalLogo(chname,type)
+        
+
     def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False):
         return self.resources.getLogo(name,type,path,item,featured)
         
@@ -163,7 +167,7 @@ class JSONRPC:
         else:     return sendJSON(json_query).get('result',{}).get('songs',[])
 
 
-    def getTVshows(self, params='{"properties":["title","genre","year","studio","art","file"]}', cache=True):
+    def getTVshows(self, params='{"properties":["title","genre","year","studio","art","file","episode"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetTVShows","params":%s,"id":1}'%(params))
         if cache: return self.cacheJSON(json_query,life=datetime.timedelta(hours=SETTINGS.getSettingInt('Max_Days'))).get('result',{}).get('tvshows',[])
         else:     return sendJSON(json_query).get('result',{}).get('tvshows',[])
@@ -284,24 +288,27 @@ class JSONRPC:
             
         NetworkList   = collections.Counter()
         ShowGenreList = collections.Counter()
-        TVShows       = []
+        TVShows       = collections.Counter()
         json_response = self.getTVshows()
-        
         for info in json_response:
             label = getLabel(info)
-            if not label: continue
-            TVShows.append({'label':label,'item':info,'logo':info.get('art',{}).get(art,'')})
+            if not label: continue 
+            TVShows.update({json.dumps({'label':label,
+                                        'logo':info.get('art',{}).get(art,'')}):info.get('episode',0)})
+                                        
             NetworkList.update([studio  for studio in info.get('studio',[])])
             ShowGenreList.update([genre for genre  in info.get('genre' ,[])])
             
         if sortbycount: 
+            TVShows       = [json.loads(x[0]).get('label') for x in sorted(TVShows.most_common(250))]
             NetworkList   = [x[0] for x in sorted(NetworkList.most_common(50))]
             ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
         else:
+            TVShows       = (sorted([tv.get('label') for tv in map(json.loads,TVShows.keys())]))
+            del TVShows[250:]
             NetworkList   = (sorted(set(list(NetworkList.keys()))))
             del NetworkList[250:]
             ShowGenreList = (sorted(set(list(ShowGenreList.keys()))))
-        TVShows = (sorted(TVShows, key=lambda k: k['label']))
         
         self.log('getTVInfo, networks = %s, genres = %s, shows = %s'%(len(NetworkList),len(ShowGenreList),len(TVShows)))
         return NetworkList, ShowGenreList, TVShows

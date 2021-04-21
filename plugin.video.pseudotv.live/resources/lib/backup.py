@@ -24,24 +24,38 @@ from resources.lib.parser      import Writer
 class Backup:
     def __init__(self, config):
         self.log('__init__')
-        self.writer = config.writer
-        self.dialog = config.dialog
+        self.dialog   = config.dialog
+        self.writer   = config.writer
+        self.channels = config.channels
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
+    def getFileDate(self, file):
+        try:
+            fname = pathlib.Path(file)
+            mtime = datetime.datetime.fromtimestamp(fname.stat().st_mtime)
+            stime = mtime.strftime('%Y-%m-%d %I:%M %p')
+            self.log('getFileDate, modified %s on %s'%(file,stime))
+            return stime
+        except:
+            return LANGUAGE(30285) #Unknown
+        
+        
     def hasBackup(self):
         self.log('hasBackup')
         with busy():
             if not FileAccess.exists(CHANNELFLE_BACKUP):
-                SETTINGS.setSetting('Backup_Channels' ,'')
-                SETTINGS.setSetting('Recover_Channels','')
+                PROPERTIES.setPropertyBool('has.Backup',False)
+                SETTINGS.setSetting('Backup_Channels'  ,'')
+                SETTINGS.setSetting('Recover_Channels' ,'')
                 return False
             else:
+                PROPERTIES.setPropertyBool('has.Backup',True)
                 if not SETTINGS.getSetting('Backup_Channels'):
-                    SETTINGS.setSetting('Backup_Channels' ,'%s: Unknown'%(LANGUAGE(30215)))
+                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
                     SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.load(CHANNELFLE_BACKUP).get('channels',[]))))
                 return True
@@ -57,29 +71,48 @@ class Backup:
                 
         with busy():
             if FileAccess.copy(getUserFilePath(CHANNELFLE),CHANNELFLE_BACKUP):
+                PROPERTIES.setPropertyBool('has.Backup',True)
                 SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p')))
                 SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.load(CHANNELFLE_BACKUP).get('channels',[]))))
-                PROPERTIES.setPropertyBool('has.Backup',self.hasBackup())
                 return self.dialog.notificationDialog(LANGUAGE(30053))
+            else: self.hasBackup()
             return False
         
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
-        """
-        Recover Channel backup, restart service by toggling enabled.
-        """
-        self.log('recoverChannels')
+        self.log('recoverChannels, file = %s'%(file))
         if isBusy(): 
-            return self.dialog.notificationDialog(LANGUAGE(30029))
+            self.dialog.notificationDialog(LANGUAGE(30029))
+            return False
         elif not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
-            
+        
         with busy_dialog():
             setBusy(True)
-            CONFIGFLE = getUserFilePath(CHANNELFLE)
-            if FileAccess.move(CONFIGFLE,CHANNELFLE_RESTORE):
-                if FileAccess.copy(file,CONFIGFLE):
-                    # PROPERTIES.setPropertyBool('restartRequired',True)
-                    toggleADDON(ADDON_ID,'false',reverse=True)
+            self.writer.recoverChannelsFromBackup(file)
             setBusy(False)
-            return True
+        setRestartRequired()
+        return True
+        
+        
+        
+    # def recoverChannels(self, file=CHANNELFLE_BACKUP):
+        # """
+        # Recover Channel backup, restart service by toggling enabled.
+        # """
+        # self.log('recoverChannels')
+        # if isBusy(): 
+            # return self.dialog.notificationDialog(LANGUAGE(30029))
+        # elif not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
+            # return False
+            
+        # with busy_dialog():
+            # setBusy(True)
+            # CONFIGFLE = getUserFilePath(CHANNELFLE)
+            # if FileAccess.move(CONFIGFLE,CHANNELFLE_RESTORE):
+                # if FileAccess.copy(file,CONFIGFLE):
+                    # # PROPERTIES.setPropertyBool('restartRequired',True)
+                    # SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.writer.channels.load(file).get('channels',[]))))
+                    # toggleADDON(ADDON_ID,'false',reverse=True)
+            # setBusy(False)
+            # return True

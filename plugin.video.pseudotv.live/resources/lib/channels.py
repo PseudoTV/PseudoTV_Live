@@ -39,7 +39,9 @@ class Channels:
         
         if not self.vault.channelList: 
             self.reload()
-        
+        else: 
+            self.withdraw()
+            
                 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -66,8 +68,9 @@ class Channels:
     
     def withdraw(self):
         self.log('withdraw')
-        return self.vault.get_channelList()
-     
+        self.vault.channelList = self.vault.get_channelList()
+        return True
+        
 
     def load(self, file=getUserFilePath(CHANNELFLE)):
         self.log('load file = %s'%(file))
@@ -148,12 +151,12 @@ class Channels:
 
     def getChannels(self):
         self.log('getChannels')
-        return self.sortChannels(self.withdraw().get('channels',[]))
+        return self.sortChannels(self.vault.channelList.get('channels',[]))
 
 
     def getPredefinedChannels(self):
         self.log('getPredefinedChannels')
-        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.withdraw().get('channels',[]))))
+        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.vault.channelList.get('channels',[]))))
 
 
     def getPredefinedChannelsByType(self, type):
@@ -162,7 +165,7 @@ class Channels:
 
 
     def getPage(self, id):
-        idx, citem = self.findChannel({'id':id}, self.getChannels())
+        idx, citem = self.findChannel({'id':id})
         page = (citem.get('page','') or {"end":0,"start":0,"total":0})
         self.log('getPage, id = %s, page = %s'%(id, page))
         return page
@@ -170,11 +173,9 @@ class Channels:
 
     def setPage(self, id, page={}):
         self.log('setPage, id = %s, page = %s'%(id, page))
-        channels = self.getChannels()
-        idx, citem = self.findChannel({'id':id}, channels)
+        idx, citem = self.findChannel({'id':id})
         if idx is None: return False
-        channels[idx]['page'] = page
-        self.vault.channelList['channels'] = channels
+        self.vault.channelList['channels'][idx]['page'] = page
         return True
 
 
@@ -183,17 +184,18 @@ class Channels:
         return self.vault.channelList.get('imports',[])
 
 
-    def setImports(self, imports):
+    def setImports(self, imports): #save called by config.
         self.log('setImports, imports = %s'%(imports))
         self.vault.channelList['imports'] = imports
         return True
-        
+
 
     def add(self, citem):
         self.log('add, id = %s'%(citem['id']))
-        idx, channel = self.findChannel(citem, channels = self.getChannels())
+        idx, channel = self.findChannel(citem)
         if idx is not None:
-            for key in ['rules','number','favorite','page']: citem[key] = channel[key] # existing id found, reuse channel meta.
+            for key in ['id','rules','number','favorite','page']: 
+                citem[key] = channel[key] # existing id found, reuse channel meta.
             citem['group'] = list(set(citem.get('group',[])))
             self.log('Updating channel %s, id %s'%(citem["number"],citem["id"]))
             self.vault.channelList['channels'][idx] = citem #can't .update() must replace.
@@ -207,21 +209,18 @@ class Channels:
         
     def remove(self, citem):
         self.log('removing id = %s'%(citem['id']))
-        idx, channel = self.findChannel(citem, self.getChannels())
+        idx, channel = self.findChannel(citem)
         if idx is not None: self.vault.channelList['channels'].pop(idx)
         return True
 
         
-    def findChannel(self, citem, channels):
-        match = None, {}
+    def findChannel(self, citem, channels=None):
+        if channels is None: channels = self.vault.channelList['channels']
         for idx, channel in enumerate(channels):
             if citem.get("id") == channel.get("id"):
                 self.log('findChannel, item = %s, found = %s'%(citem['id'],channel['id']))
                 return idx, channel
-            elif ((citem.get("name") == channel["name"]) and (citem["type"] == channel["type"])):
-                self.log('findChannel, possible match found = %s'%(channel['id']))
-                match = idx, channel
-        return match
+        return None, {}
         
        
     def getRitem(self):

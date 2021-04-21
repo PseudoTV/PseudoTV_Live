@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.2.8f" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.2.8n" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="pvr.iptvsimple" version="7.5.0"/>
@@ -63,7 +63,7 @@
     </extension>
 </addon>
 
-<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.1" provider-name="Lunatixz">
+<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.2" provider-name="Lunatixz">
     <extension point="xbmc.addon.repository" name="PseudoTV Repository">
         <dir>
           <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml</info>

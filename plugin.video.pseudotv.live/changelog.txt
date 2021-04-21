@@ -4,6 +4,11 @@ v.0.2.8
 -Settings.xml updated to new Matrix format; layout modified.
 -Added Channel Backup and Recovery to settings (Experimental).
 -Added Idle stop playback timer.
+-Improved Channel & Library recovery.
+-Added "Recover" option to auto-tune prompt (if backup available).
+-Fixed random removal of channels?
+-Improved Pre-defined TV Shows. List now features only the top 250 by episode count.
+
 
 v.0.2.7
 -Warning It's strongly recommend users using Flash/SSD device change the "centralize file location" to HDD.

@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*-
 
-import os, sys, re, struct, shutil, traceback, threading, decimal
+import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib
 import datetime, time, _strptime, base64, binascii, random, hashlib
 import json, codecs, collections, uuid, subprocess
 
@@ -72,10 +72,9 @@ SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
 
-VIDEO_EXTS          = xbmc.getSupportedMedia('video')
-MUSIC_EXTS          = xbmc.getSupportedMedia('music')
-IMAGE_EXTS          = xbmc.getSupportedMedia('picture')
-LOGO_EXTS           = ['.png','.jpg','.gif']
+VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
+MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
@@ -397,13 +396,15 @@ def splitall(plugin):
         if not plugin[0]: break
     return last[0]
     
-def getPluginMeta(plugin):
-    log('globals: getPluginMeta, plugin = %s'%(plugin))
+def getPluginMeta(id):
     try:
-        if plugin.startswith(('plugin://','resource://')):
-            plugin =  splitall(plugin.replace('plugin://','').replace('resource://','')).strip()
-        pluginID = xbmcaddon.Addon(plugin)
-        return {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
+        if id.startswith(('plugin://','resource://')):
+            id =  splitall(id.replace('plugin://','').replace('resource://','')).strip()
+        if not hasAddon(id): installAddon(id)
+        pluginID = xbmcaddon.Addon(id)
+        meta = {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
+        log('globals: getPluginMeta, plugin meta = %s'%(meta))
+        return meta
     except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
       
@@ -412,6 +413,15 @@ def hasPVR(id):
          
 def hasAddon(id):
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id) == "true"
+    
+def installAddon(id, manual=False):
+    if hasAddon(id):
+        if not addonEnabled(id): toggleADDON(id)
+        return True
+    else:
+        xbmc.executebuiltin('InstallAddon("%s")'%(id))
+        if manual: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
+        return True
         
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id) == "true"
@@ -637,8 +647,8 @@ def diffDICT(old,new):
 def mergeDICT(dict1, dict2):
     return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
 
-def removeDupsDICT(list):
-    return [dict(tupleized) for tupleized in set(tuple(item.items()) for item in list)]
+def removeDupDictFromList(list):
+    return [i for n, i in enumerate(list) if i not in list[n + 1:]]
 
 def removeDUPSLST(lst):
     list_of_strings = [dumpJSON(d) for d in lst]
@@ -797,12 +807,7 @@ def hasSubtitle():
 
 def isSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
-    
-def installAddon(id):
-    if xbmc.getCondVisibility('System.HasAddon("%s")'%(id)) == 1: return False
-    xbmc.executebuiltin('InstallAddon("%s")'%(id))
-    return Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
-        
+ 
 def getRandomPage(limit,total=50):
     page = random.randrange(0, total, limit)
     log('globals: getRandomPage, page = %s'%(page))

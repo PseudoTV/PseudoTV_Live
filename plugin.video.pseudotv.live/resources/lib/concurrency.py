@@ -30,16 +30,17 @@ ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
 ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
+THREAD_ERROR  = ""
     
 try:
-    from multiprocessing.dummy import Pool as ThreadPool
-    # from multiprocessing.pool  import ThreadPool
+    import _multiprocessing # android will raise issue
+    try:    from multiprocessing.dummy import Pool as ThreadPool
+    except: from multiprocessing.pool  import ThreadPool
     ENABLE_POOL  = True
-    THREAD_ERROR = "User Disabled"
 except Exception as e:
     # Android currently does not support multiprocessing (parallelism), use (concurrent) threads.
-    ENABLE_POOL  = False
     THREAD_ERROR = e
+    ENABLE_POOL  = False
 
 try:
     from multiprocessing import Thread, Queue, Empty
@@ -47,7 +48,7 @@ try:
 except:
     from threading import Thread
     from queue     import Queue, Empty
-        
+   
 def roundupDIV(p, q):
     try:
         d, r = divmod(p, q)
@@ -63,19 +64,19 @@ def log(msg, level=xbmc.LOGDEBUG):
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
 class PoolHelper:
-    monitor = xbmc.Monitor()
-    
     def __init__(self):
         self.procSetting = {0:False,1:0,2:2,3:1}[REAL_SETTINGS.getSettingInt('Enable_CPU_CORES')]#User Select Full or *Half cores. *default
-        self.procEnabled = (ENABLE_POOL and self.procSetting != False)
+        self.procEnabled = (ENABLE_POOL and self.procSetting) != False
+        self.procCount   = int(roundupDIV(self.CPUcores(), self.procSetting)) 
+        self.minQueue    = self.procCount
+        self.maxQueue    = int(PAGE_LIMIT * self.procCount) #limit queue size to reasonable value.
+        
         if self.procEnabled:
-            self.procCount = int(roundupDIV(self.CPUcores(), self.procSetting)) 
-            self.minQueue  = self.procCount
-            self.maxQueue  = int(PAGE_LIMIT * self.procCount) #limit queue size to reasonable value.
             self.log("ThreadPool procCount/threadCount = %s, minQueue = %s, maxQueue = %s"%(self.procCount,self.minQueue,self.maxQueue))
         else:
-            if ENABLE_POOL: THREAD_ERROR = "User Disabled"
-            self.log("ThreadPool Disabled %s"%(THREAD_ERROR))
+            if ENABLE_POOL: THREAD_MSG = "User Disabled!"
+            else:           THREAD_MSG = "Multiprocessing not supported!"
+            self.log("ThreadPool %s\n%s"%(THREAD_MSG,THREAD_ERROR))
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -101,7 +102,6 @@ class PoolHelper:
                 pool.join()
             except Exception as e: 
                 self.log("poolList, threadPool Failed! %s"%(e), xbmc.LOGERROR)
-        
         elif self.procSetting != False:
             try:
                 threadCount = self.procCount
@@ -128,6 +128,8 @@ class PoolHelper:
             results = {}
             errors  = {}
             class Worker(Thread):
+                monitor = xbmc.Monitor()
+                
                 def run(self):
                     while not self.monitor.abortRequested() and not errors:
                         try:
@@ -144,8 +146,8 @@ class PoolHelper:
                         except Empty: break
 
             threads = [Worker() for _ in range(threadCount)]
-            [t.start() for t in threads]
-            [t.join()  for t in threads]
+            for t in threads: t.start()
+            for t in threads: t.join()
 
             if errors:
                 if len(errors) > 1: self.log("threadList, multiple errors: %d:\n%s"%(len(errors), errors), xbmc.LOGERROR)

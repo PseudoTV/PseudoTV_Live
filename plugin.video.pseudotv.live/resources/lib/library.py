@@ -43,6 +43,8 @@ class Library:
         
         if not self.vault.libraryItems: 
             self.reload()
+        else:
+            self.withdraw()
             
         self.predefined  = Predefined()
         self.recommended = Recommended(library=self)
@@ -257,9 +259,7 @@ class Library:
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
                     if not name: continue
-                    logo = (item.get('icon','') or item.get('logo',''))
-                    if not logo or logo == LOGO:
-                        logo = self.jsonRPC.getLogo(name, type)
+                    logo = self.jsonRPC.getLogo(name, type, item.get('file',None), item)
                 else: 
                     name = item
                     logo = self.jsonRPC.getLogo(name, type)

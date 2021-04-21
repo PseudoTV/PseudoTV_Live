@@ -346,7 +346,6 @@ class Monitor(xbmc.Monitor):
             return False
             
         differences = dict(diffDICT(self.lastSettings,currentSettings))
-        print('differences',differences) #debug, force Settings refresh.
         if differences: 
             self.log('hasSettingsChanged, differences = %s'%(differences))
             self.lastSettings = currentSettings
@@ -424,15 +423,15 @@ class Service:
 
     def chkBackup(self):
         self.log('chkBackup')
-        if self.writer.isClient(): return
-        PROPERTIES.setPropertyBool('has.Backup',self.myConfig.backup.hasBackup())
+        if self.writer.isClient(): return False
+        return self.myConfig.backup.hasBackup()
 
 
     def chkChannels(self):
         if self.writer.isClient(): return
         self.log('chkChannels')
         ## re-enable missing library.json items from channels.json
-        return self.myConfig.recoverItemsFromChannels()
+        return self.writer.recoverItemsFromChannels()
         
         
     def chkRecommended(self, lastUpdate=None):
@@ -516,11 +515,10 @@ class Service:
                 
 
     def initialize(self):
-        self.chkVersion
         if self.writer.isClient(): return False
         with busy():
             self.monitor.lastSettings = self.monitor.chkSettings()
-            funcs = [initDirs,self.chkBackup,self.chkChannels]
+            funcs = [initDirs,self.chkVersion,self.chkBackup,self.chkChannels]
             for func in funcs: func()
             return True
 

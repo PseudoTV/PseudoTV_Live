@@ -456,8 +456,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.newChannels = self.validateChannels(self.newChannels)
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
-        print('difference',difference)
-        [self.channels.add(citem) if citem in self.newChannels else self.channels.remove(citem) for citem in difference]
+        [self.channels.add(citem) if citem in self.newChannels else self.channels.remove(citem) for citem in difference] #add new, remove old.
         if self.channels.save():
             self.dialog.notificationDialog(LANGUAGE(30053))
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.newChannels)))
@@ -579,7 +578,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         # todo select from resources, browse resources
         self.log('selectLogo, channelPOS = %s'%(channelPOS))
         if self.isVisible(self.ruleList): return
-        retval = self.dialog.browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),shares='files',mask=IMAGE_EXTS,prompt=False)
+        retval = self.dialog.browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
         if retval in [None,'',channelData.get('icon','')]: return
         self.madeChanges = True
         channelData['logo'] = retval

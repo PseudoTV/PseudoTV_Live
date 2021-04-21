@@ -545,7 +545,7 @@ msgid "More Info..."
 msgstr ""
 
 msgctxt "#30132"
-msgid "Welcome to %s!\nNo Channels were found,\nAuto Tune sample channels?"
+msgid "Welcome to %s!\nNo Channels were found...\n%s"
 msgstr ""
 
 msgctxt "#30133"
@@ -1150,4 +1150,16 @@ msgstr ""
 
 msgctxt "#30284"
 msgid "Stopping Playback in [B]%s[/B] seconds.\n[B]Cancel[/B] to continue watching."
+msgstr ""
+
+msgctxt "#30285"
+msgid "Unknown"
+msgstr ""
+
+msgctxt "#30286"
+msgid "AutoTune sample channels?"
+msgstr ""
+
+msgctxt "#30287"
+msgid "Autotune or Recover from last Backup?"
 msgstr ""
