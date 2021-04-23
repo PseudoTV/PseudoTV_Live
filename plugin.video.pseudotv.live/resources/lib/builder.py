@@ -94,6 +94,7 @@ class Builder:
         self.progDialog   = self.dialog.progressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.rules.loadRules(channels)
+        endTimes          = self.writer.getChannelEndtimes()
         
         for idx, channel in enumerate(channels):
             if self.monitor.waitForAbort(0.01):
@@ -104,7 +105,7 @@ class Builder:
             self.chanName   = channel['name']
             self.progress   = int(idx*100//len(channels))
             self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
-            cacheResponse   = self.getFileList(channel, channel['radio'])
+            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'],'') , channel['radio'])
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
             
             if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
@@ -117,7 +118,7 @@ class Builder:
             
         self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
         
-        if not self.writer.save(): 
+        if not self.writer.saveChannelLineup(): 
             self.dialog.notificationDialog(LANGUAGE(30001))
             
         if isLegacyPseudoTV() and not self.player.isPlaying():
@@ -165,7 +166,7 @@ class Builder:
         return tmpList
             
 
-    def getFileList(self, citem, radio=False):
+    def getFileList(self, citem, start, radio=False):
         self.log('getFileList; citem = %s, radio = %s'%(citem,radio))
         try:
             # global values prior to channel rules
@@ -173,10 +174,9 @@ class Builder:
             self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
             self.limits   = {}#{"end":0,"start":0,"total":0}
             self.limit    = PAGE_LIMIT
-            
-            valid  = False
-            now    = getLocalTime()
-            start  = self.writer.getEndtime(citem['id'],roundTimeDown(now,offset=60)) #offset time to start top of the hour
+            valid         = False
+            now           = getLocalTime()
+            start         = (start or roundTimeDown(now,offset=60)) #offset time to start top of the hour
             self.dirCount = 0
             self.loopback = {}
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
@@ -377,6 +377,9 @@ class Builder:
     
     def injectBCTs(self, citem, fileList):
         self.log("injectBCTs, citem = %s, fileList = %s"%(citem,len(fileList)))
+        # todo use zip to inject bcts?
+        # for r, b, f, c, t in zip(ratings, bumpers, filelist, commercials, trailers):
+        
         #bctTypes ex. {"ratings" :{"min":1,"max":1,"enabled":True  ,"paths":[SETTINGS.getSetting('Resource_Ratings')]}}
         if not fileList: return fileList
         lstop            = 0

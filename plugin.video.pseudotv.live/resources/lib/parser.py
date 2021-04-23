@@ -81,31 +81,19 @@ class Writer:
         return client
               
               
-    def getEndtime(self, id, fallback):
-        endtime = (self.xmltv.getEndtimes().get(id,'') or fallback)
-        self.log('getEndtime, id = %s, endtime = %s, fallback = %s'%(id,endtime,fallback))
-        return endtime
+    def getChannelEndtimes(self):
+        self.log('getChannelEndtimes')
+        return self.xmltv.getEndtimes()
 
 
-    def delete(self, full=False):
-        self.log('delete')
-        funcs = [self.m3u.delete,
-                 self.xmltv.delete]
-        if full: funcs.append(self.channels.delete)
-        if False in [func() for func in funcs]:
-            return False
-        if full: setRestartRequired(True)
-        return True
-        
-        
     def saveChannels(self):
         self.log('saveChannels')
         return self.channels.save()
         
         
-    def save(self, exImport=True):
-        self.log('save')
-        if self.cleanLeftovers():
+    def saveChannelLineup(self, exImport=True):
+        self.log('saveChannelLineup')
+        if self.cleanChannelLineup():
             if exImport: self.importSETS()
             if False in [func.save() for func in [self.m3u, self.xmltv]]:
                 self.dialog.notificationDialog(LANGUAGE(30001))
@@ -153,10 +141,10 @@ class Writer:
         self.xmltv.addChannel(item)
     
     
-    def removeChannel(self, citem): #remove channel completely from channels.json and m3u/xmltv
+    def removeChannel(self, citem, lineup=True): #remove channel completely from channels.json and m3u/xmltv
         self.log('removeChannel, citem = %s'%(citem))
         self.channels.remove(citem)
-        self.removeChannelLineup(citem)
+        if lineup: self.removeChannelLineup(citem)
         
         
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
@@ -208,13 +196,13 @@ class Writer:
             self.xmltv.addProgram(citem['id'], item)
             
             
-    def cleanLeftovers(self):
+    def cleanChannelLineup(self):
         # find abandoned channels in m3u/xmltv and remove.
         channels  = self.channels.getChannels()
-        leftovers = channels.copy()
-        [leftovers.remove(channel) for channel in channels for m3u in self.m3u.getChannels() if m3u.get('id') == channel.get('id')]
-        self.log('cleanLeftovers, leftovers = %s'%(len(leftovers)))
-        for leftover in leftovers: self.removeChannelLineup(leftover)
+        abandoned = channels.copy()
+        [abandoned.remove(channel) for channel in channels for m3u in self.m3u.getChannels() if m3u.get('id') == channel.get('id')]
+        self.log('cleanChannelLineup, abandoned = %s'%(len(abandoned)))
+        for leftover in abandoned: self.removeChannelLineup(leftover)
         return True
         
             
@@ -225,7 +213,7 @@ class Writer:
             channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.channels.getChannels()))
             for citem in channels: self.removeChannel(citem)
         if self.saveChannels():
-            return self.save()
+            return self.saveChannelLineup()
             
         
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
@@ -236,7 +224,7 @@ class Writer:
             difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
             [self.channels.add(citem) if citem in newChannels else self.channels.remove(citem) for citem in difference] #add new, remove old.
-            return self.channels.save()
+            self.channels.save()
         setRestartRequired()
         self.log('recoverChannelsFromBackup, finished')
         return True
@@ -614,7 +602,7 @@ class XMLTV:
                 endtime[channel['id']] = stopTime
             except Exception as e: 
                 log("XMLTV: getEndtimes, Failed! %s"%(e), xbmc.LOGERROR)
-                log('XMLTV: getEndtimes, removing malformed channel %s'%(channel.get('id')))
+                log("XMLTV: getEndtimes, removing malformed xmltv channel/programmes %s"%(channel.get('id')))
                 self.removeChannel(channel)
         return endtime
          

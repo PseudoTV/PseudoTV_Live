@@ -214,13 +214,13 @@ class Config:
                 return self.dialog.notificationDialog(LANGUAGE(30053))
         
 
-    def clearUserChannels(self, all=False):
+    def clearUserChannels(self):
         self.log('clearUserChannels')
         if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029))
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): 
                 return False
-            if self.writer.clearChannels(all):
+            if self.writer.clearChannels(all=False):
                 PROPERTIES.setPropertyBool('autotuned',False)
                 setRestartRequired()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
