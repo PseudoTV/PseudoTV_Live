@@ -135,9 +135,9 @@ RULES_ACTION_OVERLAY             = 20
 
 #overlay globals
 NOTIFICATION_CHECK_TIME          = 15.0 #seconds
-NOTIFICATION_TIME_REMAINING      = 60 #seconds
-NOTIFICATION_TIME_BEFORE_END     = 15 #seconds
-NOTIFICATION_DISPLAY_TIME        = 30 #seconds
+NOTIFICATION_TIME_REMAINING      = 600  #seconds
+NOTIFICATION_TIME_BEFORE_END     = 15   #seconds
+NOTIFICATION_DISPLAY_TIME        = 30   #seconds
 CHANNELBUG_CHECK_TIME            = 15.0 #seconds
 
 # Actions
@@ -299,11 +299,25 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
-def restartRequired():
+def isRestartRequired():
     return PROPERTIES.getPropertyBool('restartRequired')
     
 def setRestartRequired(state=True):
     return PROPERTIES.setPropertyBool('restartRequired',state)
+
+def isPendingChange():
+    return PROPERTIES.getPropertyBool('pendingChange')
+    
+def setPendingChange(state=True):
+    return PROPERTIES.setPropertyBool('pendingChange',state)
+    
+def hasAutoTuned():
+    return PROPERTIES.getPropertyBool('autotuned')
+    
+def setAutoTuned(state=True):
+    return PROPERTIES.setPropertyBool('autotuned',state)
+
+
 
 def padLST(lst, targetLen):
     if len(lst) == 0: return lst
@@ -502,66 +516,6 @@ def escapeDirJSON(path):
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
     return mydir
 
-def buildMenuListItem(label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=False, mType='video'):
-    listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
-    iconImage = (iconImage or COLOR_LOGO)
-    if propItem: listitem.setProperties(propItem)
-    if infoItem: listitem.setInfo(mType, infoItem)
-    else: 
-        listitem.setInfo(mType, {'mediatype': 'video',
-                                 'Label' : label1,
-                                 'Label2': label2,
-                                 'Title' : label1})
-                                     
-    if artItem: listitem.setArt(artItem)
-    else: 
-        listitem.setArt({'thumb': iconImage,
-                         'logo' : iconImage,
-                         'icon' : iconImage})
-    return listitem
- 
-def buildItemListItem(item, mType='video', oscreen=True, playable=True):
-    info       = item.copy()
-    art        = info.pop('art'             ,{})
-    streamInfo = item.pop('streamdetails'   ,{})
-    properties = info.pop('customproperties',{})
-    properties.update(info.get('citem'      ,{}))
-
-    uniqueid   = info.pop('uniqueid'        ,{})
-    cast       = info.pop('cast'            ,[])
-
-    def cleanInfo(info):
-        tmpInfo = info.copy()
-        for key, value in tmpInfo.items():
-            ptype = LISTITEM_TYPES.get(key,None)
-            if ptype is None: # key not in json enum, move to custom properties
-                info.pop(key)
-                properties[key] = value
-                continue
-            if not isinstance(value, ptype):
-                if isinstance(ptype,tuple):
-                    ptype = ptype[0]
-                info[key] = ptype(value)
-        return info
-            
-    def cleanProp(cpvalue):
-        if isinstance(cpvalue,(dict,list)):
-            return dumpJSON(cpvalue)
-        return str(cpvalue)
-            
-    listitem = xbmcgui.ListItem(offscreen=oscreen)
-    listitem.setLabel(info.get('label',''))
-    listitem.setLabel2(info.get('label2',''))
-    listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
-    listitem.setInfo(type=mType, infoLabels=cleanInfo(info))
-    listitem.setArt(art)
-    listitem.setCast(cast)
-    listitem.setUniqueIDs(uniqueid)
-    [listitem.setProperty(key, cleanProp(pvalue)) for key, pvalue in properties.items()]
-    [listitem.addStreamInfo(key, svalue) for key, svalues in streamInfo.items() for svalue in svalues]
-    if playable: listitem.setProperty("IsPlayable","true")
-    return listitem
-           
 def isHD(item):
     if 'isHD' in item: return item['isHD']
     elif 'streamdetails' in item: 
@@ -855,3 +809,6 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
+    
+def cleanAbandonedLocks():
+    ... #todo remove .locks

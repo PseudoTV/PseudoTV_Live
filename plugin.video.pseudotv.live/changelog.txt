@@ -1,3 +1,7 @@
+v.0.2.9
+-Fixed "UpNext" display.
+-Fixed ablity to disable "Static" effect overlay.
+
 v.0.2.8
 -Added "Show Readme" and "Show Changelog" to "Miscellaneous" settings tab.
 -Improved channel loading and surfing performance. Short-term caching (10s) added to increase channel surfing responsiveness.
@@ -8,7 +12,6 @@ v.0.2.8
 -Added "Recover" option to auto-tune prompt (if backup available).
 -Fixed random removal of channels?
 -Improved Pre-defined TV Shows. List now features only the top 250 by episode count.
-
 
 v.0.2.7
 -Warning It's strongly recommend users using Flash/SSD device change the "centralize file location" to HDD.

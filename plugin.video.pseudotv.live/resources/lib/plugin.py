@@ -155,7 +155,7 @@ class Plugin:
                        
                 nowitem = nextitems.pop(0)
                 writer  = getWriter(nowitem.get('writer',{}))
-                liz = buildItemListItem(writer)         
+                liz = self.dialog.buildItemListItem(writer)         
                 liz.setProperty('pvritem', dumpJSON(pvritem))       
                 
                 lastitem  = nextitems.pop(-1)
@@ -165,9 +165,9 @@ class Plugin:
                 nextitems.append(lastitem) #insert pvr callback
                 
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,chunksize=1))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
             else:
-                liz = buildItemListItem(writer)
+                liz = self.dialog.buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
                 listitems = [liz]
                 
@@ -204,10 +204,10 @@ class Plugin:
                 lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
                 nextitems.append(lastitem) #insert pvr callback
                 
-                liz = buildItemListItem(nowitem, mType='music')
+                liz = self.dialog.buildItemListItem(nowitem, mType='music')
                 liz.setProperty('pvritem', dumpJSON(pvritem))                
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={mType:'music'},chunksize=1))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={mType:'music'}))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
@@ -256,7 +256,7 @@ class Plugin:
             self.log('playChannel, nowitem = %s\ncitem = %s'%(nowitem,citem))
                 
             writer = getWriter(nowitem.get('writer',{}))
-            liz = buildItemListItem(writer)
+            liz = self.dialog.buildItemListItem(writer)
             
             if self.setOffset:
                 self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((runtime * 60),progress))
@@ -284,7 +284,7 @@ class Plugin:
                 lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
                 lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
                 nextitems.append(lastitem) #insert pvr callback
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,chunksize=1))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if isPlaylistRandom(): self.channelPlaylist.unshuffle()
                 self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
@@ -325,7 +325,7 @@ class Plugin:
     def buildWriterItem(self, writer, mType='video'):
         if writer.get('writer',''):
             writer = getWriter(writer.get('writer',''))
-        return buildItemListItem(writer, mType)
+        return self.dialog.buildItemListItem(writer, mType)
 
 
     def getParams(self):

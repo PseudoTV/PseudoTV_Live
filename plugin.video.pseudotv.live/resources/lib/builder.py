@@ -329,16 +329,16 @@ class Builder:
                         # year = int(item.get("year","0"))
                         # if year > 0 and '(' not in title: 
                             # title = "%s (%s)"%(title, year)
+                        label = title
                         item["episodetitle"] = item.get("tagline","")
                         item["episodelabel"] = item.get("tagline","")
                         seasonval = None
-                        label = title
             
                     if not label: continue
                     item['label'] = splitYear(label)[0]
                     item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
-                    item.get('art',{})['icon'] = channel['logo']
-                    # item.get('art',{})['thumb']  = getThumb(item) #unify artwork                    # item.get('art',{})['fanart'] = getThumb(item) #unify artwork
+                    item.get('art',{})['icon']  = channel['logo']
+                    # item.get('art',{})['thumb'] = getThumb(item) #unify artwork # item.get('art',{})['fanart'] = getThumb(item) #unify artwork
                 
                     chprog = int((len(fileList)*100)//limit)
                     if self.progDialog is not None:

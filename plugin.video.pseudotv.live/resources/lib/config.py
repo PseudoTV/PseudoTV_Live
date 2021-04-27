@@ -120,11 +120,11 @@ class Config:
             retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211))
             if   retval == 2: return self.writer.recoverChannelsFromBackup()
             elif retval != 1:
-                PROPERTIES.setPropertyBool('autotuned',True)
+                setAutoTuned()
                 return False
         else:
             if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286))): 
-                PROPERTIES.setPropertyBool('autotuned',True)
+                setAutoTuned()
                 return False
        
         busy   = self.dialog.progressBGDialog()
@@ -137,7 +137,7 @@ class Config:
             self.selectPredefined(type,autoTune=AUTOTUNE_LIMIT)
             
         self.dialog.progressBGDialog(100, busy, '%s...'%(LANGUAGE(30053)))
-        PROPERTIES.setPropertyBool('autotuned',True)
+        setAutoTuned()
         return True
  
  
@@ -200,7 +200,7 @@ class Config:
         if isBusy():
             self.setPendingChangeTimer()
         else:
-            PROPERTIES.setPropertyBool('pendingChange',True)
+            setPendingChange()
 
         
     def clearPredefined(self):
@@ -209,8 +209,8 @@ class Config:
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30077))): return False
             if self.library.clearLibraryItems():
-                PROPERTIES.setPropertyBool('autotuned',False)
-                setRestartRequired()
+                setAutoTuned(False)
+                setPendingChange()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
         
 
@@ -221,7 +221,7 @@ class Config:
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): 
                 return False
             if self.writer.clearChannels(all=False):
-                PROPERTIES.setPropertyBool('autotuned',False)
+                setAutoTuned(False)
                 setRestartRequired()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
 

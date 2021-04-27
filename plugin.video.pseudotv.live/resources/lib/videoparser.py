@@ -61,7 +61,7 @@ class VideoParser:
             self.parser = TSParser.TSParser()
         elif ext in self.STRMExts:
             self.parser = STRMParser.STRMParser()
-        elif filename.startswith(tuple(VFSPath)):
+        elif filename.startswith(tuple(self.VFSPath)):
             self.parser = VFSParser.VFSParser(fileItem)
         else:
             log("VideoParser: getVideoLength, No parser found for extension " + ext)

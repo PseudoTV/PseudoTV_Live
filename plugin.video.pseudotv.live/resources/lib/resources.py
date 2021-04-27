@@ -116,12 +116,13 @@ class Resources:
                     return results[0]
             
             
-    def findTVLogo(self, chname, art='clearlogo'):
+    @cacheit()
+    def findTVLogo(self, chname):
         self.log('findTVLogo: chname = %s'%(chname))
         def findMatch(item):
             for pattern in patterns:
                 if item.get('label','').lower() == pattern.lower():
-                    return self.cleanLogoPath(item.get('art',{}).get(art,''))
+                    return self.cleanLogoPath(item.get('logo',''))
         
         items    = self.jsonRPC.getTVshows()
         patterns = [chname, splitYear(chname)[0]]
@@ -131,7 +132,7 @@ class Resources:
             return results[0]
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False) #cache long enough for duplicate run-throughs. Should be fresh data, not cached. 
+    @cacheit(expiration=datetime.timedelta(minutes=15)) #cache long enough for concurrent run-throughs. Should be fresh data, not cached. 
     def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False): 
         self.log('getLogo: name = %s, type = %s'%(name,type))
         ##local

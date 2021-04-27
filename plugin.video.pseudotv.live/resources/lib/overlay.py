@@ -28,19 +28,12 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        self.overlay.reload()
-
-
-    def onAVChange(self):
-        self.overlay.cancelOnNext()
-        
-        
-    def onPlayBackStopped(self):
-        self.overlay.cancelOnNext()
+        self.overlay.updateOnNext()
         
         
     def onPlayBackEnded(self):
-        self.overlay.cancelOnNext()
+        self.overlay.channelbug.setVisible(False)
+        self.overlay.onNext.setVisible(False)
     
     
 class Overlay(xbmcgui.WindowXML):
@@ -49,6 +42,7 @@ class Overlay(xbmcgui.WindowXML):
         self.player             = kwargs.get('player')
         self.service            = self.player.myService
         self.rules              = self.service.rules
+        self.dialog             = self.service.dialog
         self.ruleList           = {}
         self.pvritem            = {}
         self.citem              = {}
@@ -59,8 +53,8 @@ class Overlay(xbmcgui.WindowXML):
         self.isPlaylist         = False
         
         self.bugToggleThread    = threading.Timer(CHANNELBUG_CHECK_TIME  , self.bugToggle)
+        self.onNextToggleThread = threading.Timer(CHANNELBUG_CHECK_TIME  , self.onNextToggle)
         self.onNextThread       = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
-        self.onNextToggleThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextToggle)
         
         #Globals
         self.showChannelBug     = SETTINGS.getSettingBool('Enable_ChannelBug')
@@ -81,15 +75,17 @@ class Overlay(xbmcgui.WindowXML):
                 self.log("runActions performing channel rule: %s"%(rule.name))
                 parameter = rule.runAction(action, self, parameter)
         return parameter
-        
-        
+
+
     def onInit(self, refresh=False):
         self.log('onInit, refresh = %s'%(refresh))
-        self.windowProperty = Properties(winID=xbmcgui.getCurrentWindowId())
-        self.windowProperty.setProperty('overlay_visible','nope')
+        self.overlayVisible(False)
         
         self.static = self.getControl(40001)
         self.static.setVisible(self.staticOverlay)
+        
+        self.startOver = self.getControl(41002)
+        self.startOver.setVisible(False)
         
         self.onNext = self.getControl(41003)
         self.onNext.setVisible(False)
@@ -111,7 +107,7 @@ class Overlay(xbmcgui.WindowXML):
         # self.videoWindow.setWidth(self.videoWindow.getWidth())
         
         if self.load(): 
-            self.windowProperty.setProperty('overlay_visible','okay')
+            self.overlayVisible(True)
             if self.showChannelBug:
                 self.bugToggle()
             if self.showOnNext:
@@ -119,9 +115,14 @@ class Overlay(xbmcgui.WindowXML):
         else: self.closeOverlay()
                
 
+    def overlayVisible(self, state=True):
+        self.log('overlayVisible, state = %s'%(state))
+        self.getControl(39999).setVisible(state)
+        
+
     def load(self):
-        self.log('load')
         try:
+            self.log('load')
             self.pvritem = self.player.getPVRitem()
             if not self.pvritem or not isPseudoTV(): 
                 return False
@@ -145,27 +146,20 @@ class Overlay(xbmcgui.WindowXML):
                 nextitem.get('art',{})['thumb'] = getThumb(nextitem) #unify artwork
                 self.nextwriters.append(nextitem)
 
-            self.listitems   = [buildItemListItem(self.nowwriter)]
-            self.listitems.extend([buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
+            self.listitems   = [self.dialog.buildItemListItem(self.nowwriter)]
+            self.listitems.extend([self.dialog.buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
             self.container.addItems(self.listitems)
                         
             self.ruleList    = self.rules.loadRules([self.citem])
             self.runActions(RULES_ACTION_OVERLAY, self.citem)
-            self.windowProperty.setProperty('static_overlay','okay' if self.staticOverlay else 'nope')
+            self.static.setVisible(self.staticOverlay)
+            self.log('load finished')
             return True
         except Exception as e: 
             self.log("load, Failed! " + str(e), xbmc.LOGERROR)
             return False
      
-     
-    def reload(self):
-        self.log('reload, isPlaylist = %s'%(self.isPlaylist))
-        if self.isPlaylist:
-            return self.nextListitem()
-        else:
-            return self.load()
-          
-          
+
     def nextListitem(self):
         try:
             self.log('nextListitem')
@@ -183,13 +177,12 @@ class Overlay(xbmcgui.WindowXML):
         except: return 0
 
         
-    def cancelOnNext(self):
-        self.log('cancelOnNext')
-        self.onNext.setVisible(False)
-        if self.onNextToggleThread.is_alive(): 
-            self.onNextToggleThread.cancel()
-            try: self.onNextToggleThread.join()
-            except: pass
+    def updateOnNext(self):
+        self.log('updateOnNext, isPlaylist = %s'%(self.isPlaylist))
+        if self.isPlaylist:
+            return self.nextListitem()
+        else:
+            return self.load()
         
         
     def onNextChk(self):
@@ -200,7 +193,7 @@ class Overlay(xbmcgui.WindowXML):
                 except: pass
             timeRemaining = int(self.getTimeRemaining())
             if (timeRemaining < NOTIFICATION_TIME_REMAINING and timeRemaining >= NOTIFICATION_TIME_BEFORE_END):
-                if not self.onNext.isVisible(): self.onNextToggle(True)
+                if not self.onNext.isVisible() and self.channelbug.isVisible(): self.onNextToggle(True)
             self.onNextThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
             self.onNextThread.name = "onNextThread"
             self.onNextThread.start()
@@ -215,14 +208,14 @@ class Overlay(xbmcgui.WindowXML):
                 try: self.onNextToggleThread.join()
                 except: pass
             self.onNext.setVisible(state)
-            wait    = {True:float(random.randint(15,30)),False:float(random.randint(15,30))}[state]
+            wait    = {True:float(random.randint(30,60)),False:float(random.randint(60,120))}[state]
             nstate  = not bool(state)
             self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [nstate])
             self.onNextToggleThread.name = "onNextToggleThread"
             self.onNextToggleThread.start()
         except Exception as e: self.log("onNextToggle, Failed! " + str(e), xbmc.LOGERROR)
-        
-
+            
+            
     def bugToggle(self, state=True):
         try:
             self.log('bugToggle, state = %s'%(state))
@@ -231,7 +224,7 @@ class Overlay(xbmcgui.WindowXML):
                 try: self.bugToggleThread.join()
                 except: pass
             self.channelbug.setVisible(state)
-            wait    = {True:float(random.randint(30,60)),False:float(random.randint(600,900))}[state]
+            wait    = {True:float(random.randint(30,60)),False:float(random.randint(300,600))}[state]
             nstate  = not bool(state)
             self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
             self.bugToggleThread.name = "bugToggleThread"
@@ -241,7 +234,7 @@ class Overlay(xbmcgui.WindowXML):
       
     def closeOverlay(self):
         self.log('closeOverlay')
-        threads = [self.bugToggleThread,self.onNextToggleThread,self.onNextThread]
+        threads = [self.bugToggleThread,self.onNextThread]
         for thread_item in threads:
             if thread_item.is_alive(): 
                 thread_item.cancel()

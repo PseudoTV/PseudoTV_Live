@@ -7,8 +7,138 @@
       <control type="group">
         <posx>0</posx>
         <posy>0</posy>
-        <description>Background !Playing (static)</description>
+        <description>Background !Playing</description>
         <visible>!Player.HasVideo + !Player.Playing + !Player.Paused</visible>
+        <control type="group">
+          <description>Background Dynamic</description>
+          <control type="image"> 
+            <width>auto</width>
+            <height>auto</height>
+            <texture>background.gif</texture>
+            <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+          </control>
+          <control type="image"> 
+            <width>auto</width>
+            <height>auto</height>
+            <texture>background.png</texture>
+            <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+            <animation effect="fade" end="50" condition="True">conditional</animation>
+          </control>
+          <control type="label"> 
+            <left>128</left>
+            <top>64</top> 
+            <width>auto</width>
+            <height>auto</height>
+            <font>font36_title</font>
+            <align>left</align>
+            <aligny>center</aligny>
+            <textcolor>white</textcolor>
+            <shadowcolor>text_shadow</shadowcolor>
+            <label>$INFO[System.Time]</label>
+          </control>
+          <control type="label">
+              <left>128</left>
+              <top>64</top> 
+              <width>auto</width>
+              <height>auto</height>
+              <font>font30_title</font>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <label>$INFO[Weather.Temperature]</label>
+              <visible>[Weather.IsFetched]</visible>
+          </control>
+          <control type="image"> 
+            <right>128</right>
+            <top>123</top>
+            <width>256</width>
+            <height>166</height>
+            <animation effect="fade" end="75" condition="True">conditional</animation>
+            <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+            <texture>white.png</texture>
+            <colordiffuse>dimgray</colordiffuse>
+          </control>
+          <control type="image"> 
+            <right>128</right>
+            <top>128</top>
+            <width>256</width>
+            <height>128</height>
+            <aspectratio scalediffuse="false" align="center" aligny="center">keep</aspectratio>
+            <texture border="5">$INFO[Container(40000).ListItem(0).Art(thumb)]</texture>
+            <bordertexture border="5">white.png</bordertexture>
+            <colordiffuse>dimgray</colordiffuse>
+            <bordersize>5</bordersize>
+          </control>
+          <control type="textbox">
+            <right>135</right>
+            <top>256</top>
+            <width>241</width>
+            <height>30</height>
+            <colordiffuse>dimgray</colordiffuse>
+            <font>font10</font>
+            <monofont>Mono26</monofont>
+            <textcolor>white</textcolor>
+            <shadowcolor>text_shadow</shadowcolor>
+            <align>center</align>
+            <aligny>bottom</aligny>
+            <scrolltime>200</scrolltime>
+            <autoscroll delay="3000" time="1000" repeat="10000">true</autoscroll>
+            <animation effect="fade" end="75" condition="True">conditional</animation>
+            <label>Coming Up Next [CR] $INFO[Container(40000).ListItem(0).Label] [CR] $INFO[Container(40000).ListItem(0).Property(episodelabel)]</label>
+          </control>
+          <control type="image"> 
+            <description>Background Logo</description>
+            <centerleft>50%</centerleft>
+            <centertop>50%</centertop> 
+            <width>256</width>
+            <height>256</height>
+            <animation effect="fade" end="75" condition="True">conditional</animation>
+            <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+            <texture>$INFO[Container(40000).ListItem(0).Art(icon)]</texture>
+          </control>
+          <control type="grouplist">
+            <centerleft>50%</centerleft>
+            <top>665</top>
+            <width>1920</width>
+            <height>128</height>
+            <itemgap>5</itemgap>
+            <orientation>vertical</orientation>
+            <control type="label">
+              <centerleft>50%</centerleft>
+              <width>1920</width>
+              <height>25</height>
+              <font>font25_title</font>
+              <scroll>true</scroll>
+              <align>center</align>
+              <aligny>center</aligny>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <animation effect="fade" end="75" condition="True">conditional</animation>
+              <label>$INFO[Container(40000).ListItem(0).Property(name),You're Watching: ,]</label>
+            </control>
+            <control type="label">
+              <centerleft>50%</centerleft>
+              <width>1920</width>
+              <height>25</height>
+              <font>font25_title</font>
+              <scroll>true</scroll>
+              <align>center</align>
+              <aligny>center</aligny>
+              <textcolor>white</textcolor>
+              <shadowcolor>text_shadow</shadowcolor>
+              <animation effect="fade" end="75" condition="True">conditional</animation>
+              <label>Stay tuned for more...</label>
+            </control>
+          </control>
+          <control type="image"> 
+            <right>128</right>
+            <bottom>64</bottom> 
+            <width>128</width>
+            <height>128</height>
+            <animation effect="fade" end="75" condition="True">conditional</animation>
+            <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+            <texture>wlogo.png</texture>
+          </control>
+        </control>
         <control type="image" id="40001">
           <description>Background Static</description>
           <width>auto</width>
@@ -19,68 +149,8 @@
           <texture>static.gif</texture>
         </control>
       </control>
-      <control type="group">
-        <posx>0</posx>
-        <posy>0</posy>
-        <description>Background !Playing (flat)</description>
-        <visible>!Control.IsVisible(40001) + !Player.HasVideo + !Player.Playing + !Player.Paused</visible>
-        <control type="image"> 
-          <description>Background Image1</description>
-          <width>auto</width>
-          <height>auto</height>
-          <aspectratio>scale</aspectratio>
-          <align>center</align>
-          <aligny>center</aligny>
-          <texture>background.gif</texture>
-        </control>
-        <control type="image"> 
-          <description>Background Image2</description>
-          <width>auto</width>
-          <height>auto</height>
-          <aspectratio>scale</aspectratio>
-          <align>center</align>
-          <aligny>center</aligny>
-          <texture>blue.png</texture>
-          <animation type="fade" end="50">Visible</animation>
-        </control>
-        <control type="image"> 
-          <description>Background Thumb</description>
-          <width>auto</width>
-          <height>auto</height>
-          <aspectratio>keep</aspectratio>
-          <align>center</align>
-          <aligny>center</aligny>
-          <texture>$INFO[Container(40000).ListItem(0).Thumb]</texture>
-          <!-- <texture background="true">$INFO[Player.Art(thumb)]</texture> -->
-        </control>
-        <control type="image"> 
-          <description>Background Logo</description>
-          <posx>704</posx>
-          <posy>284</posy>
-          <width>512</width>
-          <height>512</height>
-          <aspectratio>keep</aspectratio>
-          <align>center</align>
-          <aligny>center</aligny>
-          <texture>$INFO[Container(40000).ListItem(0).Icon]</texture>
-        </control>
-        <control type="label">
-          <description>Background Label</description>
-          <posx>704</posx>
-          <posy>300</posy>
-          <width>auto</width>
-          <height>30</height>
-          <font>font12</font>
-          <scroll>true</scroll>
-          <align>center</align>
-          <aligny>center</aligny>
-          <textcolor>white</textcolor>
-          <shadowcolor>text_shadow</shadowcolor>
-          <label>$INFO[Container(40000).ListItem(0).Property(name),,]</label>
-        </control>
-      </control>
       
-      <control type="group" id="40002">
+      <control type="group" id="39999">
         <posx>0</posx>
         <posy>0</posy>
         <description>Background Playing</description>
@@ -104,114 +174,59 @@
           <align>center</align>
           <aligny>center</aligny>
         </control>
-        
-        <control type="button" id="41002">
+                
+        <control type="group">
           <description>Skip/Startover</description>
-          <left>80</left>
-          <top>60</top>
-          <width>auto</width>
-          <height>64</height>
-          <!-- <visible>String.isEqual(Window.Property(overlay_visible,okay))</visible> -->
-          <visible>false</visible>
-          <!-- <visible>Control.IsVisible(41003)</visible> -->
-          <!-- <colordiffuse>FFFFFFFF</colordiffuse> -->
-          <texturefocus colordiffuse="">startover.png</texturefocus>
-          <texturenofocus colordiffuse="">startover.png</texturenofocus>
-          <label>[B]Start Over?[/B]</label>
-          <font>font_clock</font>
-          <textcolor>FFFFFFFF</textcolor>
-          <shadowcolor>text_shadow</shadowcolor>
-          <!-- <focusedcolor>FFFFFFFF</focusedcolor> -->
-          <!-- <disabledcolor>80FFFFFF</disabledcolor> -->
-          <!-- <invalidcolor>FFFFFFFF</invalidcolor> -->
-          <aspectratio>keep</aspectratio>
-          <textoffsetx>256</textoffsetx>
-          <textoffsety></textoffsety>
-          <pulseonselect>true</pulseonselect>
-          <!-- <onclick>ActivateWindow(MyVideos)</onclick>          -->
-        </control>
-        
-        <control type="group" id="41003">
-          <description>On Next</description>
-          <left>1280</left>
-          <top>192</top>
-          <align>right</align>
-          <aligny>center</aligny>
-          <visible>String.isEqual(Window.Property(overlay_visible,okay))</visible>
-          <animation type="Conditional" condition="Control.IsVisible(41003)" reversible="true">
-            <effect type="fade"  end="75"/>
-            <effect type="slide" start="1920,0" time="2000" delay="500"/>
-            <effect type="slide" start="1920,0" time="1000" delay="3000"/>
-          </animation>
-          <!-- <animation type="fade" end="75">Visible</animation> -->
-          <!-- <animation effect="slide" end="1920,0" tween="cubic" easing="inout" time="2000" reversible="true">WindowOpen</animation> -->
-          <!-- <animation effect="slide" end="1920,0" tween="cubic" easing="inout" time="2000" reversible="true">Visible</animation> -->
-          <control type="image"> 
-            <width>768</width>
-            <height>136</height>
-            <texture>white.png</texture>
-            <colordiffuse>dimgray</colordiffuse>
-            <visible>Control.IsVisible(41003)</visible>
-          </control>
-          <control type="grouplist">
-            <left>4</left>
-            <top>4</top>
-            <itemgap>8</itemgap>
-            <orientation>horizontal</orientation>
-            <visible>Control.IsVisible(41003)</visible>
-            <control type="image"> 
-              <width>256</width>
-              <height>128</height>
-              <aspectratio>keep</aspectratio>
-              <texture background="true">$INFO[Container(40000).ListItem(1).Thumb]</texture>
-            </control>
-            <control type="grouplist">
-              <itemgap>4</itemgap>
-              <orientation>vertical</orientation>
-              <control type="label">
-                <width>504</width>
-                <height>30</height>
-                <font>font12</font>
-                <scroll>false</scroll>
-                <textcolor>white</textcolor>
-                <shadowcolor>text_shadow</shadowcolor>
-                <label>$INFO[Player.TimeRemaining(ss),Coming Up Next in ,s]</label>
-              </control>
-              <control type="label">
-                <width>504</width>
-                <height>30</height>
-                <font>font12</font>
-                <scroll>true</scroll>
-                <textcolor>white</textcolor>
-                <shadowcolor>text_shadow</shadowcolor>
-                <label>$INFO[Container(40000).ListItem(1).Label,,]</label>
-              </control>
-              <control type="label">
-                <width>504</width>
-                <height>30</height>
-                <font>font12</font>
-                <scroll>true</scroll>
-                <textcolor>white</textcolor>
-                <shadowcolor>text_shadow</shadowcolor>
-                <label>$INFO[Container(40000).ListItem(1).Property(episodelabel),,]</label>
-              </control>
-            </control>
-          </control>
-        </control>
-        
-        <control type="image" id="41004">
-          <description>Channel Bug</description>
-          <left>1536</left>
+          <left>222</left>
           <top>888</top>
-          <width>128</width>
-          <height>128</height>
-          <aspectratio>keep</aspectratio>         
-          <animation type="Conditional" condition="Control.IsVisible(41004)" reversible="False">
-            <effect type="fade" start="0"   end="100"  time="2000" delay="500"/>
-            <effect type="fade" start="100" end="25"   time="1000" delay="3000"/>
-          </animation>
+          <visible>false</visible>
+          <control type="button" id="41002">
+            <width>auto</width>
+            <height>128</height>
+            <texturefocus colordiffuse="">startover.png</texturefocus>
+            <texturenofocus colordiffuse="">startover.png</texturenofocus>
+            <label>[B]Start Over?[/B]</label>
+            <font>font_clock</font>
+            <textcolor>FFFFFFFF</textcolor>
+            <shadowcolor>text_shadow</shadowcolor>
+            <aspectratio>keep</aspectratio>
+            <textoffsetx>256</textoffsetx>
+            <textoffsety></textoffsety>
+            <pulseonselect>true</pulseonselect>
+          </control>
         </control>
       </control>
+      
+      <control type="textbox" id="41003">
+        <description>UpNext</description>
+        <left>0</left>
+        <top>952</top>
+        <width>1536</width>
+        <height>36</height>
+        <font>font12</font>
+        <textcolor>white</textcolor>
+        <shadowcolor>text_shadow</shadowcolor>
+        <align>right</align>
+        <aligny>bottom</aligny>
+        <scrolltime>600</scrolltime>
+        <autoscroll delay="3000" time="1000" repeat="10000">true</autoscroll>
+        <label>$INFO[Container(40000).ListItem(0).Label,[B]You're Watching:[/B] ,] [CR] $INFO[Container(40000).ListItem(1).Label,[B]Up Next:[/B] ,]</label>
+      </control>
+      
+      <control type="image" id="41004">
+        <description>Channel Bug</description>
+        <left>1556</left>
+        <top>920</top>
+        <width>128</width>
+        <height>128</height>
+        <aspectratio>keep</aspectratio>         
+        <animation type="Conditional" condition="Control.IsVisible(41004)" reversible="False">
+          <effect type="fade" start="0"   end="100"  time="2000" delay="500"/>
+          <effect type="fade" start="100" end="25"   time="1000" delay="3000"/>
+        </animation>
+      </control>
+      
+      
       
       <control type="image" id="41005">
         <description>Screen Overlay</description>

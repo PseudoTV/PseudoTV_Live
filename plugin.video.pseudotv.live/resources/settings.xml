@@ -782,7 +782,7 @@
 				</setting>
 				<setting id="Static_Overlay" type="boolean" label="30205" help="" parent="Enable_Overlay">
 					<level>1</level>
-					<default>true</default>
+					<default>false</default>
 					<dependencies>
 						<dependency type="visible">
 							<condition operator="is" setting="Enable_Overlay">true</condition>

@@ -55,7 +55,8 @@ class Channels:
 
     def reload(self):
         self.log('reload')
-        self.vault.channelList = self.cleanSelf(self.load())
+        self.vault.channelList = self.getTemplate()
+        self.vault.channelList.update(self.cleanSelf(self.load()))
         self.isClient = self.chkClient()
         return self.deposit()
         
@@ -111,7 +112,7 @@ class Channels:
     def cleanSelf(self, channelList):
         channels = channelList.get('channels',[])
         channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
-        self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList['channels'])))
+        self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList.get('channels',[]))))
         return channelList
   
   
@@ -202,8 +203,8 @@ class Channels:
         else:
             citem['group'] = list(set(citem.get('group',[])))
             self.log('Adding channel %s, id %s'%(citem["number"],citem["id"]))
-            self.vault.channelList['channels'].append(citem)
-        self.log('add, total channels = %s'%(len(self.vault.channelList['channels'])))
+            self.vault.channelList.setdefault('channels',[]).append(citem)
+        self.log('add, total channels = %s'%(len(self.vault.channelList.get('channels',[]))))
         return True
         
         
@@ -215,7 +216,7 @@ class Channels:
 
         
     def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.vault.channelList['channels']
+        if channels is None: channels = self.vault.channelList.get('channels',[])
         for idx, channel in enumerate(channels):
             if citem.get("id") == channel.get("id"):
                 self.log('findChannel, item = %s, found = %s'%(citem['id'],channel['id']))
