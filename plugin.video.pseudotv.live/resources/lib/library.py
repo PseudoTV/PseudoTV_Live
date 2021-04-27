@@ -62,7 +62,8 @@ class Library:
 
     def reload(self):
         self.log('reload')
-        self.vault.libraryItems = self.load()
+        self.vault.libraryItems = self.getTemplate()
+        self.vault.libraryItems.update(self.load())
         return self.deposit()
         
         
@@ -122,10 +123,11 @@ class Library:
         # return sorted(filter(lambda k:k.get('enabled',False) == True, items), key=lambda k: k.get('name'))
 
 
-    def setLibraryItems(self, type, items):
+    def setLibraryItems(self, type, items, setSetting=False):
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: PROPERTIES.setPropertyBool('has.Predefined',True)
-        self.vault.libraryItems['library'][type] = sorted(items, key=lambda k:k['name'])
+        self.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
+        if setSetting: self.setSettings(type,items)
         return self.save()
         
         
@@ -145,7 +147,7 @@ class Library:
         else:            types = [type]
         for type in types: 
             libraryItems = self.pool.poolList(setDisabled,self.getLibraryItems(type))
-        return self.setLibraryItems(type,libraryItems)
+        return self.setLibraryItems(type,libraryItems,setSettings=True)
         
         
         
@@ -277,7 +279,7 @@ class Library:
 
     def buildLibraryListitem(self, data):
         if isinstance(data,tuple): data = list(data)
-        return buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
+        return self.dialog.buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
 
 
 class Recommended:
@@ -312,7 +314,7 @@ class Recommended:
         self.log('addWhiteList, addonid = %s'%(addonid))
         whitelist = self.getWhiteList()
         whitelist.append(addonid)
-        self.library.vault.libraryItems['recommended']['whitelist'] = list(set(whitelist))
+        self.library.vault.libraryItems.get('recommended',{})['whitelist'] = list(set(whitelist))
         return True
         
 
@@ -320,8 +322,8 @@ class Recommended:
         self.log('addBlackList, addonid = %s'%(addonid))
         blacklist = self.getBlackList()
         blacklist.append(addonid)
-        self.library.vault.libraryItems['recommended']['blacklist'] = list(set(blacklist))
-        blackList = self.library.vault.libraryItems['recommended']['blacklist']
+        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = list(set(blacklist))
+        blackList = self.library.vault.libraryItems.get('recommended',{})['blacklist']
         if len(blackList) > 0: 
             PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
             SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
@@ -329,7 +331,7 @@ class Recommended:
     
     
     def clearBlackList(self):
-        self.library.vault.libraryItems['recommended']['blacklist'] = []
+        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = []
         if self.library.save():
             blackList = self.getBlackList()
             PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)

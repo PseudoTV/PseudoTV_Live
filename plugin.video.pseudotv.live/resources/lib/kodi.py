@@ -250,11 +250,9 @@ class Dialog:
     pool       = PoolHelper()
     
     def __init__(self):
-        self.onPlayback = self.settings.getSettingBool('Silent_OnPlayback') #unify silent mode amongst dialogs 
-        self.isPlaying  = xbmc.getCondVisibility('Player.Playing')
-        self.isOverlay  = self.properties.getPropertyBool('OVERLAY')
-        
-                 
+        ...
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -266,7 +264,7 @@ class Dialog:
         
         
     @staticmethod
-    def buildItemListItem(item, mType='video', oscreen=True, playable=True):
+    def buildItemListItem(item, mType='video', oscreen=False, playable=True):
         LISTITEM_TYPES = {'label': (str,list),'genre': (str,list),
                           'country': (str,list),'year': int,'episode': int,
                           'season': int,'sortepisode': int,'sortseason': int,
@@ -282,7 +280,7 @@ class Dialog:
                           'mediatype': str,'dbid': int}
 
         info       = item.copy()
-        art        = info.pop('art'             ,{})
+        art        = info.pop('art',{})
         streamInfo = item.pop('streamdetails'   ,{})
         properties = info.pop('customproperties',{})
         properties.update(info.get('citem'      ,{}))
@@ -456,7 +454,7 @@ class Dialog:
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if not isinstance(percent,int): percent = int(percent)
-        if (self.onPlayback & self.isOverlay & self.isPlaying):
+        if (self.settings.getSettingBool('Silent_OnPlayback') & self.properties.getPropertyBool('OVERLAY') & xbmc.getCondVisibility('Player.Playing')):
             if control is None: 
                 return False
             else: 

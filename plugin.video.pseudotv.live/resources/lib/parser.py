@@ -107,7 +107,7 @@ class Writer:
     def importSETS(self):
         self.log('importSETS')
         importLST = self.channels.getImports()
-        if SETTINGS.getSettingBool('User_Import'):
+        if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
             Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
             Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
             importLST.append({'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_Path,'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':Import_XMLTV_Path}})
@@ -186,22 +186,24 @@ class Writer:
             file['citem']       = citem #channel dict (stale data due to xmltv storage)
             item['fitem']       = file # kodi fileitem/listitem dict.
             
-            # streamdetails       = file.get('streamdetails',{})
+            # streamdetails        = file.get('streamdetails',{})
             # if streamdetails:
                 # item['subtitle'] = list(set([sub.get('language','') for sub in streamdetails.get('subtitle',[]) if sub.get('language','')]))
-                # item['audio']    = list(set([aud.get('codec','') for aud in streamdetails.get('audio',[]) if aud.get('codec','')]))
-                # item['language'] = list(set([aud.get('language','') for aud in streamdetails.get('audio',[]) if aud.get('language','')]))
-                # item['video']    = list(set([vid.get('aspect','') for vid in streamdetails.get('video',[]) if vid.get('aspect','')]))
+                # item['audio']    = list(set([aud.get('codec','')    for aud in streamdetails.get('audio',[])    if aud.get('codec','')]))
+                # item['language'] = list(set([aud.get('language','') for aud in streamdetails.get('audio',[])    if aud.get('language','')]))
+                # item['video']    = list(set([vid.get('aspect','')   for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
             
             self.xmltv.addProgram(citem['id'], item)
             
             
     def cleanChannelLineup(self):
         # find abandoned channels in m3u/xmltv and remove.
-        channels  = self.channels.getChannels()
+        channels    = self.channels.getChannels()
+        m3uChannels = self.m3u.getChannels()
+        #Clean M3U of Channels not found in Channels.json
         abandoned = channels.copy()
-        [abandoned.remove(channel) for channel in channels for m3u in self.m3u.getChannels() if m3u.get('id') == channel.get('id')]
-        self.log('cleanChannelLineup, abandoned = %s'%(len(abandoned)))
+        [abandoned.remove(channel) for m3u in m3uChannels for channel in channels if m3u.get('id') == channel.get('id')]
+        self.log('cleanChannelLineup, abandoned from Channels = %s'%(len(abandoned)))
         for leftover in abandoned: self.removeChannelLineup(leftover)
         return True
         
@@ -219,7 +221,7 @@ class Writer:
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannelsFromBackup, file = %s'%(file))
         oldChannels = self.channels.getChannels().copy()
-        newChannels = self.channels.cleanSelf(self.channels.load(CHANNELFLE_BACKUP))
+        newChannels = self.channels.cleanSelf(self.channels.load(CHANNELFLE_BACKUP)).get('channels',[])
         if self.channels.clear():
             difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
@@ -265,7 +267,7 @@ class Writer:
                         
             self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
             if selects: self.library.setEnableStates(type, selects, items)
-        PROPERTIES.setPropertyBool('pendingChange',True)
+        setPendingChange()
         self.log('recoverItemsFromChannels, finished')
         return True
         
@@ -300,7 +302,6 @@ class Writer:
             start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildAvailableRange, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
-            # return list(set(range(start,stop)).difference(set(blist))) #set bug with even array in bytes? 
             return [num for num in range(start,stop) if num not in enumbers]
                 
         addLST    = []
@@ -325,8 +326,7 @@ class Writer:
                 
                 match, eitem = findChannel(citem)
                 if match is not None: #update new citems with existing values.
-                    if eitem in removeLST: 
-                        leftovers.remove(eitem)
+                    if eitem in removeLST: leftovers.remove(eitem)
                     for key in ['id','rules','number','favorite','page']: 
                         citem[key] = eitem[key]
                 else: 
@@ -334,11 +334,8 @@ class Writer:
                     citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
                 addLST.append(citem)
             removeLST.extend(leftovers)
-            
+        # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
         difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
-        self.log('buildPredefinedChannels, adding = %s'%(len(addLST)))
-        self.log('buildPredefinedChannels, removing = %s'%(len(removeLST)))
-        self.log('buildPredefinedChannels, difference = %s'%(len(difference)))
         [self.channels.add(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
         self.log('buildPredefinedChannels, finished building')
         return self.saveChannels()

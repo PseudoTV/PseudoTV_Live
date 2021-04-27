@@ -300,11 +300,11 @@ class JSONRPC:
             ShowGenreList.update([genre for genre  in info.get('genre' ,[])])
             
         if sortbycount: 
-            TVShows       = [json.loads(x[0]).get('label') for x in sorted(TVShows.most_common(250))]
+            TVShows       = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
             NetworkList   = [x[0] for x in sorted(NetworkList.most_common(50))]
             ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
         else:
-            TVShows       = (sorted([tv.get('label') for tv in map(json.loads,TVShows.keys())]))
+            TVShows       = (sorted(map(json.loads,TVShows.keys()), key=lambda k: k['label']))
             del TVShows[250:]
             NetworkList   = (sorted(set(list(NetworkList.keys()))))
             del NetworkList[250:]

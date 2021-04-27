@@ -197,7 +197,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if label2: label2 = '[COLOR=%s]%s[/COLOR]'%(laColor,label2)
         path   = '|'.join(channelData.get("path",[]))
         prop   = {'description':LANGUAGE(30122)%(channelData['number']),'channelData':dumpJSON(channelData, sortkey=False),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
-        return buildMenuListItem(label,label2,iconImage=channelData.get("logo",''),url=path,propItem=prop)
+        return self.dialog.buildMenuListItem(label,label2,iconImage=channelData.get("logo",''),url=path,propItem=prop)
         
 
     def setDescription(self, stid):#todo use control id and label
@@ -243,8 +243,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif key == "path"  :    value = '|'.join(value)
             elif isinstance(value,bool): value = str(value)
             value = (value or '')
-            listItems.append(buildMenuListItem(LABEL.get(key,''),value,url='|'.join(channelData.get("path",[])),iconImage=channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC.get(key,''),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
-        listItems.append(buildMenuListItem(LABEL['clear'],'',propItem={'key':'clear','channelData':channelProp,'description':DESC['clear']}))
+            listItems.append(self.dialog.buildMenuListItem(LABEL.get(key,''),value,url='|'.join(channelData.get("path",[])),iconImage=channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC.get(key,''),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
+        listItems.append(self.dialog.buildMenuListItem(LABEL['clear'],'',propItem={'key':'clear','channelData':channelProp,'description':DESC['clear']}))
         self.toggleSpinner(self.itemList,False)
         self.itemList.addItems(listItems)
         self.itemList.selectItem([idx for idx, liz in enumerate(listItems) if liz.getProperty('key')== selkey][0])
@@ -308,7 +308,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             def getItem(item):
-                return buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
+                return self.dialog.buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
                 
             infoList = list(map(loadJSON,getInfoMonitor()))
             itemList = [getItem(info) for info in infoList if info.get('label')]
@@ -460,7 +460,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if self.channels.save():
             self.dialog.notificationDialog(LANGUAGE(30053))
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.newChannels)))
-            PROPERTIES.setPropertyBool('pendingChange',True)
+            setPendingChange()
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
             
@@ -482,7 +482,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:
             ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #load all rules
         listitems = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
-        if append: listitems.append(buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
+        if append: listitems.append(self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
         self.toggleSpinner(self.ruleList,False)        
         self.ruleList.reset()
         xbmc.sleep(100)
@@ -494,7 +494,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues,'title':ruleInstance.getTitle()}
         print(rule)
         prop = {'description':rule['description'],'rule':dumpJSON(rule),'channelData':dumpJSON(channelData),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
-        return buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
+        return self.dialog.buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
 
 
     def selectRules(self, channelData):
@@ -550,7 +550,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         # if ruleSelect.get('action',None) is None: return self.dialog.notificationDialog(LANGUAGE(30001))
         # ruleInstance  = ruleSelect.get('action',None)
         # valueitems    = (self.pool.poolList(self.buildRuleListItem,rules,channelData))
-        # listitems     = [buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'citem':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
+        # listitems     = [self.dialog.buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'citem':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
         # self.ruleList.addItems(listitems)
         # optionIDX    = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
         # print(ruleSelect)

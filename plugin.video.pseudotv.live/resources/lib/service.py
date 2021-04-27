@@ -27,6 +27,7 @@ from resources.lib.overlay     import Overlay
 
 
 class Player(xbmc.Player):
+    
     def __init__(self, service):
         self.log('__init__')
         xbmc.Player.__init__(self)
@@ -45,7 +46,7 @@ class Player(xbmc.Player):
         self.overlayWindow      = Overlay(OVERLAY_FLE, ADDON_PATH, "default", player=self)
         
         """
-        xbmc.Player() trigger order
+        Player() trigger order
         Player: onPlayBackStarted
         Player: onAVChange
         Player: onAVStarted
@@ -252,7 +253,6 @@ class Monitor(xbmc.Monitor):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
         self.myService      = service
-        self.pendingChange  = False
         self.lastSettings   = {}
         self.onChangeThread = threading.Timer(30.0, self.onChange)
         
@@ -266,20 +266,9 @@ class Monitor(xbmc.Monitor):
             
             
     def isSettingsOpened(self):
-        if xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126,10138]:
+        if xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126,10138,13001]:
             return self.onSettingsChanged()
         return False
-
-
-    def isPendingChange(self):
-        # if isBusy() or self.isSettingsOpened(): return False
-        return (self.pendingChange | PROPERTIES.getPropertyBool('pendingChange'))
-    
-    
-    def setPendingChange(self, state):
-        self.log('setPendingChange, state = %s'%(state))
-        self.pendingChange = state
-        PROPERTIES.setPropertyBool('pendingChange',state)
 
 
     def onSettingsChanged(self, wait=30.0):
@@ -300,7 +289,7 @@ class Monitor(xbmc.Monitor):
         self.log('onChange')
         with busy():
             if self.hasSettingsChanged():
-                self.setPendingChange(True)
+                setPendingChange()
             
             
     def chkPluginSettings(self):
@@ -406,7 +395,7 @@ class Service:
     def runServiceThread(self):
         if isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
         self.log('runServiceThread')
-        self.monitor.setPendingChange(True)
+        setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
                
 
@@ -454,7 +443,9 @@ class Service:
         
                 
     def chkIdle(self):
-        if self.chkSleep(): return
+        if not isPseudoTV(): return
+        elif self.chkSleep(): return
+            
         if getIdleTime() > OVERLAY_DELAY:
             self.player.toggleOverlay(True)
         else:
@@ -485,14 +476,14 @@ class Service:
             return False
         
         with busy():
-            conditions = [self.monitor.isPendingChange(),
+            conditions = [isPendingChange(),
                           chkUpdateTime('Last_Update',UPDATE_OFFSET,lastUpdate),
                           not FileAccess.exists(getUserFilePath(M3UFLE)),
                           not FileAccess.exists(getUserFilePath(XMLTVFLE))]
             
             if True in conditions:
                 self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
-                self.monitor.setPendingChange(False)
+                setPendingChange(False)
                 self.chkPredefined()
                 
                 if self.channels.reload():
@@ -536,21 +527,21 @@ class Service:
             self.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=10)
         
         while not self.monitor.abortRequested():
-            if restartRequired(): break
+            if   isRestartRequired(): break
             elif self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
             elif self.monitor.waitForAbort(2): break
-                
+            
             if self.player.isPlaying():
                 self.chkIdle()
             else:
                 self.chkRecommended()
-                
+                        
             if isBusy(): continue
             elif self.monitor.isSettingsOpened(): continue
             self.chkUpdate()
-            
+                
         self.closeThreads()
-        if restartRequired():
+        if isRestartRequired():
             self.log('run, restarting buildService')
             setRestartRequired(False)
             self.run()

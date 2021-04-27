@@ -102,6 +102,8 @@ class PoolHelper:
                 pool.join()
             except Exception as e: 
                 self.log("poolList, threadPool Failed! %s"%(e), xbmc.LOGERROR)
+                results = self.genList(func, items, args, kwargs)
+                
         elif self.procSetting != False:
             try:
                 threadCount = self.procCount
@@ -109,17 +111,17 @@ class PoolHelper:
                     results = self.threadList(func, items, args, kwargs, threadCount)
             except Exception as e: 
                 self.log("poolList, threadList Failed! %s"%(e), xbmc.LOGERROR)
-                
-        if results: 
-            results = list(filter(None, results))
+                results = self.genList(func, items, args, kwargs)
         else: 
             results = self.genList(func, items, args, kwargs)
+            
+        if results: results = list(filter(None, results))
         self.log("poolList, %s has %s results"%(func.__name__,len(results)))
         return results
         
         
     def threadList(self, func, items=[], args=None, kwargs=None, threadCount=4):
-        if self.procSetting != False:
+        try:
             queue = Queue()
             if threadCount > len(items): threadCount = len(items)
             for idx, item in enumerate(items): queue.put((idx, item))
@@ -136,7 +138,7 @@ class PoolHelper:
                             idx, item = queue.get(block=False)
                             try:
                                 if kwargs and isinstance(kwargs,dict):
-                                    results[idx] = partial(func, **kwargs)
+                                    results[idx] = partial(func, **kwargs)(item)
                                 elif args is not None:
                                     results[idx] = func((item,args))
                                 else:
@@ -156,15 +158,14 @@ class PoolHelper:
                 self.log("threadList, exception on item %s/%s:\n%s"%(item_i, totItems, "\n".join(traceback.format_tb(tb))), xbmc.LOGERROR)
                 raise value
             return (results[idx] for idx in range(len(results)))
-        else:
-            return self.genList(func, items, args, kwargs)
+        except: return []
         
         
     def genList(self, func, items=[], args=None, kwargs=None):
         self.log("genList, %s"%(func.__name__))
         try:
             if kwargs and isinstance(kwargs,dict):
-                results = (partial(func, **kwargs) for item in items)
+                results = (partial(func, **kwargs)(item) for item in items)
             elif args:
                 results = (func((item, args)) for item in items)
             else:
