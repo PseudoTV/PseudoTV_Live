@@ -324,7 +324,6 @@ class Builder:
                         item["tvshowtitle"]  = tvtitle
                         item["episodetitle"] = title
                         item["episodelabel"] = '%s (%sx%s)'%(title,seasonval,str(epval).zfill(2))
-                        item["fulllabel"]    = '%s - %s'%(tvtitle,item["episodelabel"])
                         
                     else: # This is a Movie
                         # year = int(item.get("year","0"))
@@ -333,7 +332,6 @@ class Builder:
                         label = title
                         item["episodetitle"] = item.get("tagline","")
                         item["episodelabel"] = item.get("tagline","")
-                        item["fulllabel"]    = '%s - %s'%(title,item["episodelabel"])
                         seasonval = None
             
                     if not label: continue
