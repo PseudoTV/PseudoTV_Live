@@ -14,15 +14,14 @@
           <control type="image"> 
             <width>auto</width>
             <height>auto</height>
-            <texture>background.gif</texture>
-            <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+            <texture>background.png</texture>
+            <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
           </control>
           <control type="image"> 
             <width>auto</width>
             <height>auto</height>
-            <texture>background.png</texture>
+            <texture>vignette.png</texture>
             <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-            <animation effect="fade" end="50" condition="True">conditional</animation>
           </control>
           <control type="label"> 
             <left>128</left>

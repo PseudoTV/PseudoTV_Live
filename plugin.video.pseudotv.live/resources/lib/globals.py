@@ -80,6 +80,7 @@ IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
+HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
 
 PVR_CLIENT          = 'pvr.iptvsimple'
 PVR_MANAGER         = 'service.iptv.manager'
@@ -107,12 +108,6 @@ POST_ROLL           = ['commercials','trailers']
 
 # jsonrpc
 ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
-JSON_FILE_ENUM      = ["title","artist","albumartist","genre","year","rating","album","track","duration","comment","lyrics","musicbrainztrackid","musicbrainzartistid","musicbrainzalbumid","musicbrainzalbumartistid","playcount","fanart","director","trailer","tagline","plot","plotoutline","originaltitle","lastplayed","writer","studio","mpaa","cast","country","imdbnumber","premiered","productioncode","runtime","set","showlink","streamdetails","top250","votes","firstaired","season","episode","showtitle","thumbnail","file","resume","artistid","albumid","tvshowid","setid","watchedepisodes","disc","tag","art","genreid","displayartist","albumartistid","description","theme","mood","style","albumlabel","sorttitle","episodeguide","uniqueid","dateadded","size","lastmodified","mimetype","specialsortseason","specialsortepisode","sortartist","musicbrainzreleasegroupid","isboxset","totaldiscs","disctitle","releasedate","originaldate","bpm","bitrate","samplerate","channels","datemodified","datenew","customproperties"]
-JSON_METHOD         = ["none","label","date","size","file","path","drivetype","title","track","time","artist","album","albumtype","genre","country","year","rating","votes","top250","programcount","playlist","episode","season","totalepisodes","watchedepisodes","tvshowstatus","showtitle","tvshowtitle","sorttitle","productioncode","mpaa","studio","dateadded","lastplayed","playcount","listeners","bitrate","random"] 
-JSON_ORDER          = ['ascending','descending']
-JSON_OPERATORS      = ["contains","doesnotcontain","is","isnot","startswith","endswith","greaterthan","lessthan","true","false"]
-JSON_RETURN_TYPES   = {'album':str,'albumartist':list,'albumartistid':list,'albumid':int,'albumlabel':str,'album':str,'albumstatus':str,'bitrate':int,'bpm':int,'cast':list,'channels':int,'comment':str,'compilation':bool,'contributors':str,'country':list,'customproperties':dict,'description':str,'disc':int,'disctitle':str,'displaycomposer':str,'displayconductor':str,'displaylyricist':str,'displayorchestra':str,'duration':int,'dynpath':str,'episode':int,'episodeguide':str,'firstaired':str,'id':int,'imdbnumber':str,'isboxset':bool,'lyrics':str,'mediapath':str,'mood':list,'mpaa':str,'musicbrainzartistid':list,'musicbrainztrackid':str,'originaldate':str,'originaltitle':str,'plotoutline':str,'premiered':str,'productioncode':str,'releasedate':str,'album':str,'samplerate':int,'season':int,'set':str,'setid':int,'showlink':list,'showtitle':str,'sorttitle':str,'specialsortepisode':int,'specialsortseason':int,'stu]dio':list,'style':list,'tag':list,'tagline':str,'theme':list,'top250':int,'totaldiscs':int,'track':int,'trailer':str,'tvshowid':int,'type':str,'uniqueid':int,'votes':str,'watchedepisodes':int,'writer':list}
-LISTITEM_TYPES      = {'label': (str,list),'genre': (str,list),'country': (str,list),'year': int,'episode': int,'season': int,'sortepisode': int,'sortseason': int,'episodeguide': str,'showlink': (str,list),'top250': int,'setid': int,'tracknumber': int,'rating': float,'userrating': int,'playcount': int,'overlay': int,'cast': list,'castandrole': list,'director': (str,list),'mpaa': str,'plot': str,'plotoutline': str,'title': str,'originaltitle': str,'sorttitle': str,'duration': int,'studio': (str,list),'tagline': str,'writer': (str,list),'tvshowtitle': str,'premiered': str,'status': str,'set': str,'setoverview': str,'tag': (str,list),'imdbnumber': str,'code': str,'aired': str,'credits': (str,list),'lastplayed': str,'album': str,'artist': list,'votes': str,'path': str,'trailer': str,'dateadded': str,'mediatype': str,'dbid': int}
 
 #per channel rule limit
 RULES_PER_PAGE                   = 10
@@ -201,7 +196,7 @@ PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefre
                     'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
                     # 'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
                     # 'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
-                    # 'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
+                    'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
                     'useEpgGenreText':'true', 'logoFromEpg':'1',
                     'catchupEnabled':'true','allChannelsCatchupMode':'0',
                     'numberByOrder':'false','startNum':'1',
@@ -317,8 +312,6 @@ def hasAutoTuned():
 def setAutoTuned(state=True):
     return PROPERTIES.setPropertyBool('autotuned',state)
 
-
-
 def padLST(lst, targetLen):
     if len(lst) == 0: return lst
     lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
@@ -422,7 +415,7 @@ def getPluginMeta(id):
     except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
       
-def hasPVR(id):
+def hasPVRAddon():
     return xbmc.getCondVisibility("System.HasPVRAddon") == "true"
          
 def hasAddon(id):
@@ -622,7 +615,7 @@ def isPseudoTV(condition='VideoPlayer'):
     return isPseudoTV
 
 def setWriter(writer, fileItem):
-    return '%s [COLOR item="%s"][/COLOR]'%(writer,fileItem)
+    return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(fileItem)))
 
 def getWriter(text):
     if isinstance(text, list): text = text[0]
@@ -690,7 +683,7 @@ def interleave(*args): #interleave multi-lists, while preserving order
                 iters.remove(it)
     except Exception as e: 
         log("interleave, Failed! %s"%(e), xbmc.LOGERROR)
-        yield list(chain.from_iterable(izip_longest(*args)))[0]
+        yield list(chain.from_iterable(zip_longest(*args)))[0]
 
 def isStack(path,file=None):
     if file is not None: 
@@ -793,7 +786,7 @@ def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
     return time.mktime(n.timetuple())
     
 def pagination(list, end):
-    for start in xrange(0, len(list), end):
+    for start in range(0, len(list), end):
         yield seq[start:start+end]
 
 def getChannelSuffix(name, type):

@@ -127,13 +127,12 @@ class Library:
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: PROPERTIES.setPropertyBool('has.Predefined',True)
         self.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
-        if setSetting: self.setSettings(type,items)
+        if setSetting: self.setTypeSettings(type,items)
         return self.save()
         
         
-    def setSettings(self, type, items):
-        self.log('setSettings, type = %s, items = %s'%(type,len(items)))
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
+    def setTypeSettings(self, type, items):
+        self.log('setTypeSettings, type = %s, items = %s'%(type,len(items)))
         SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
         
         
@@ -145,9 +144,9 @@ class Library:
             
         if type is None: types = CHAN_TYPES
         else:            types = [type]
-        for type in types: 
-            libraryItems = self.pool.poolList(setDisabled,self.getLibraryItems(type))
-        return self.setLibraryItems(type,libraryItems,setSettings=True)
+        for type in types:
+            self.setLibraryItems(type,self.pool.poolList(setDisabled,self.getLibraryItems(type)),setSettings=True)
+        return True
         
         
         
@@ -233,31 +232,36 @@ class Library:
         for idx, type in enumerate(CHAN_TYPES):
             if self.monitor.waitForAbort(0.01): break
             prog = int((idx*100)//len(CHAN_TYPES))
-            if prog >= 100: prog == 99
             busy = self.dialog.progressBGDialog(prog, busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30160)))
             results.setdefault(type,[]).extend(funcs[type]())
         busy = self.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
         return results
 
 
-    def fillLibraryItems(self):
+    def fillLibraryItems(self, myService):
         ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
         fillItems = self.getfillItems()
         if not fillItems: return True
-            
+        interrupted = False
         busy = self.dialog.progressBGDialog()
         for pos, type in enumerate(CHAN_TYPES):
+            
+            busy = self.dialog.progressBGDialog(1, busy)
+            if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
+                break
+                
             results  = []
             fillItem = fillItems.get(type,[])
             existing = self.getLibraryItems(type, enabled=True)
             log('fillLibraryItems, type = %s, fillItem = %s, existing = %s'%(type, len(fillItem),len(existing)))
-         
             for idx, item in enumerate(fillItem):
+                if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
+                    interrupted = True
+                    break
+                    
                 fill = int((idx*100)//len(fillItem))
                 prog = int((pos*100)//len(CHAN_TYPES))
-                if prog >= 100: prog == 99
                 busy = self.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
-                
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
                     if not name: continue
@@ -272,9 +276,12 @@ class Library:
                 elif type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
                 else: tmpItem['path'] = self.predefined.pathTypes[type](name)#Predefined
                 results.append(tmpItem)
-            self.setLibraryItems(type,results)
+                
+            if interrupted: break
+            else: self.setLibraryItems(type,results)
+                
         busy = self.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
-        return True
+        return not bool(interrupted)
         
 
     def buildLibraryListitem(self, data):
@@ -389,12 +396,12 @@ class Recommended:
             addon = list(item.keys())[0]
             self.log('importSingles, adding %s'%(addon))
             if not addon in ignoreList:
-                if not self.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,item[addon]['meta'].get('name',''))), autoclose=15000):                   
+                if not self.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,item[addon]['meta'].get('name',''))), autoclose=15000):  
                     self.addBlackList(addon)
-                else: 
+                else:
                     self.addWhiteList(addon)
         return True
-
+        
 
     def importMulti(self, recommendedAddons):
         addons     = []
@@ -408,20 +415,22 @@ class Recommended:
         if len(addons) > 0:
             retval = self.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,', '.join(addons))), customlabel=LANGUAGE(30214), autoclose=15000)
             self.log('importMulti, retval = %s'%(retval))
-            if   retval == 1: self.importSingles(recommendedAddons)
+            if   retval == 1: return self.importSingles(recommendedAddons)
             elif retval == 2: 
                 for item in recommendedAddons:
                     addon = list(item.keys())[0]
                     self.log('importMulti, adding %s'%(addon))
                     self.addWhiteList(addon)
-        return True
-        
-        
+                return True
+            else:
+                return False
+
+
     def importPrompt(self):
         recommendedAddons = self.searchRecommendedAddons()
         if len(recommendedAddons) > 1: 
             changed = self.importMulti(recommendedAddons)
         else: 
             changed = self.importSingles(recommendedAddons)
-        # if changed: self.library.save()
-        return True
+        if changed: self.library.save()
+        return changed

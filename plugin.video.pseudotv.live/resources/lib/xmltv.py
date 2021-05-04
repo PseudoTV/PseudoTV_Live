@@ -575,7 +575,7 @@ class Writer:
                 v = SubElement(sr, 'value')
                 self.settext(v, star_rating['value'], with_lang=False)
                 if 'icon' in star_rating:
-                    self.seticons(sr, rating['icon'])
+                    self.seticons(sr, star_rating['icon'])
 
         # Review
         if 'review' in programme:

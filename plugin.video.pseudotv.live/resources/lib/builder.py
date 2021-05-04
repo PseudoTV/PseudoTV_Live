@@ -75,7 +75,7 @@ class Builder:
         return parameter
         
 
-    def buildService(self):
+    def buildService(self, myService):
         if self.writer.isClient():
             self.log('buildService, Client mode enabled; returning!')
             return False
@@ -97,7 +97,7 @@ class Builder:
         endTimes          = self.writer.getChannelEndtimes()
         
         for idx, channel in enumerate(channels):
-            if self.monitor.waitForAbort(0.01):
+            if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
                 self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
                 return False
                 
@@ -298,7 +298,7 @@ class Builder:
                     continue
 
                 #parsing missing meta
-                if not item.get('streamdetails',{}).get('video',[]): 
+                if not item.get('streamdetails',{}).get('video',[]):
                     item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
                 dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
@@ -454,7 +454,7 @@ class Builder:
                 #ratings (auto&max == 1)
                 mpaa = cleanMPAA(fileItem.get('mpaa',''))
                 if is3D(fileItem): mpaa += ' (3DSBS)'  
-                rating = ratings.get(mpaa.lower(),'')
+                rating = ratings.get(mpaa.lower(), {})
                 if rating:
                     paths.insert(0,rating.get('file'))
                     end -= rating.get('duration')

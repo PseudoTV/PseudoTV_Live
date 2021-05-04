@@ -33,6 +33,11 @@ class RulesList:
         self.rules    = self
         self.jsonRPC  = JSONRPC(self)
 
+        self.JSON_FILE_ENUM = self.jsonRPC.getEnums(id="List.Fields.Files", type='items')
+        self.JSON_METHOD    = self.jsonRPC.getEnums(id="List.Sort", type='method')
+        self.JSON_ORDER     = self.jsonRPC.getEnums(id="List.Sort", type='order')
+        self.JSON_OPERATORS = self.jsonRPC.getEnums(id="List.Filter.Operators")
+
         self.ruleList = [BaseRule(dialog=self.dialog),
                          ShowChannelBug(),
                          ShowOnNext(),
@@ -297,7 +302,7 @@ class BaseRule:
           
     def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
         log("onActionBrowse")
-        info = self.dialog.browseDialog(yype, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
+        info = self.dialog.browseDialog(type, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
         if info is not None: self.optionValues[optionindex] = info 
                      
                 

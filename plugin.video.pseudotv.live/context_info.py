@@ -23,7 +23,7 @@ class Context:
     def __init__(self, sysARG, writer):
         with busy_dialog():
             log('Context: __init__, sysARG = ' + str(sysARG))
-            xbmcgui.Dialog().info(buildItemListItem(writer))
-
+            self.dialog = Dialog()
+            self.dialog.infoDialog(self.dialog.buildItemListItem(writer))
 if __name__ == '__main__': Context(sys.argv,writer=getWriterfromString())
 

@@ -19,7 +19,6 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-
 from resources.lib.globals     import *
 
 class Player(xbmc.Player):

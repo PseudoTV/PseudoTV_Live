@@ -22,7 +22,6 @@ import re, os, subprocess, traceback
 from kodi_six           import xbmc, xbmcaddon
 from itertools          import repeat
 from functools          import partial
-from collections        import namedtuple
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -33,7 +32,7 @@ PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
 THREAD_ERROR  = ""
     
 try:
-    import _multiprocessing # android will raise issue
+    import _multiprocessing # android will raise issue, inherent decency of multiprocessing.
     try:    from multiprocessing.dummy import Pool as ThreadPool
     except: from multiprocessing.pool  import ThreadPool
     ENABLE_POOL  = True
@@ -85,6 +84,7 @@ class PoolHelper:
 
     def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None): # chunksize=None # temp Debug
         results = []
+        failed  = False
         if self.procEnabled:
             try:
                 if chunksize is None:
@@ -102,19 +102,22 @@ class PoolHelper:
                 pool.join()
             except Exception as e: 
                 self.log("poolList, threadPool Failed! %s"%(e), xbmc.LOGERROR)
-                results = self.genList(func, items, args, kwargs)
+                failed = True
                 
         elif self.procSetting != False:
             try:
                 threadCount = self.procCount
                 if len(items) >= self.minQueue and len(items) <= self.maxQueue:
                     results = self.threadList(func, items, args, kwargs, threadCount)
+                else:
+                    results = self.genList(func, items, args, kwargs)
             except Exception as e: 
                 self.log("poolList, threadList Failed! %s"%(e), xbmc.LOGERROR)
-                results = self.genList(func, items, args, kwargs)
+                failed = True
         else: 
             results = self.genList(func, items, args, kwargs)
             
+        if failed and not results: results = self.genList(func, items, args, kwargs)
         if results: results = list(filter(None, results))
         self.log("poolList, %s has %s results"%(func.__name__,len(results)))
         return results
@@ -155,7 +158,7 @@ class PoolHelper:
                 if len(errors) > 1: self.log("threadList, multiple errors: %d:\n%s"%(len(errors), errors), xbmc.LOGERROR)
                 item_i = min(errors.keys())
                 type, value, tb = errors[item_i]
-                self.log("threadList, exception on item %s/%s:\n%s"%(item_i, totItems, "\n".join(traceback.format_tb(tb))), xbmc.LOGERROR)
+                self.log("threadList, exception on item %s:\n%s"%(item_i, "\n".join(traceback.format_tb(tb))), xbmc.LOGERROR)
                 raise value
             return (results[idx] for idx in range(len(results)))
         except: return []

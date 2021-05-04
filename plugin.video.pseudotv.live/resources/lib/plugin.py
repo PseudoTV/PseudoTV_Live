@@ -161,7 +161,7 @@ class Plugin:
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
                 lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,citem.get('name',''),citem.get('id','')) #pvritem.get('callback')
-                lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
+                lastitem['writer'] = setWriter('Unavailable',lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
                 listitems = [liz]
@@ -201,13 +201,13 @@ class Plugin:
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
                 lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=True'%(ADDON_ID,name,id) #pvritem.get('callback')
-                lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
+                lastitem['writer'] = setWriter('Unavailable',lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
                 liz = self.dialog.buildItemListItem(nowitem, mType='music')
                 liz.setProperty('pvritem', dumpJSON(pvritem))                
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={mType:'music'}))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={'mType':'music'}))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
@@ -220,6 +220,8 @@ class Plugin:
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
+        runtime   = 0
+        progress  = 0
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
         if self.currentChannel != id: self.currentChannel = id
@@ -253,12 +255,12 @@ class Plugin:
                 nowitem = nextitems.pop(0)
                 self.log('playChannel, loopback detected advancing queue to nextitem')
             PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
-            self.log('playChannel, nowitem = %s\ncitem = %s'%(nowitem,citem))
                 
             writer = getWriter(nowitem.get('writer',{}))
-            liz = self.dialog.buildItemListItem(writer)
+            liz    = self.dialog.buildItemListItem(writer)
+            self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
             
-            if self.setOffset:
+            if self.setOffset and (runtime > 0 and progress > 0):
                 self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((runtime * 60),progress))
                 pvritem['progress'] = progress
                 pvritem['runtime']  = runtime
@@ -282,7 +284,7 @@ class Plugin:
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
                 lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
-                lastitem['writer'] = setWriter('Unavailable',encodeString(dumpJSON(lastwrite)))
+                lastitem['writer'] = setWriter('Unavailable',lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)

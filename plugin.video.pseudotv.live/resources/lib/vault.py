@@ -91,10 +91,9 @@ class LibraryItem():
     #Library Entry
     def __init__(self): ...
         
-# todo automatic getters
+# todo automatic getters?
 # import json
 # from types import SimpleNamespace
-
 # data = '{"name": "John Smith", "hometown": {"name": "New York", "id": 123}}'
 
 # # Parse JSON into an object with attributes corresponding to dict keys.

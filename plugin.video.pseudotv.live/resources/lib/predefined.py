@@ -70,7 +70,7 @@ class Predefined:
         
         
     def createNetworkPlaylist(self, network, method='episode'):
-        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(network),self.exclude_specials)]
+        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(network),self.exclude_specials)]
         
 
     def createShowPlaylist(self, show, method='episode'):
@@ -80,17 +80,17 @@ class Predefined:
 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
-        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.exclude_specials)]
+        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,urllib.parse.quote(genre),self.exclude_specials)]
 
 
     @staticmethod
     def createMovieGenrePlaylist(genre, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"is","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(genre))]
+        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(genre))]
 
 
     @staticmethod
     def createStudioPlaylist(studio, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"is","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(studio))]
+        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,urllib.parse.quote(studio))]
 
 
     @staticmethod

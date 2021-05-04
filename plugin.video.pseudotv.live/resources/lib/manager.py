@@ -43,21 +43,21 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.pool          = PoolHelper()
             self.dialog        = Dialog()
             
-            self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to Index
+            self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to index
             self.config        = kwargs.get('config')
             self.sysARG        = kwargs.get('sysARG')
             
             self.jsonRPC       = self.config.jsonRPC
             self.channels      = self.config.channels
             
-            try:
-                self.newChannel  = self.channels.getCitem()
-                self.channelList = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
-                self.channelList.extend(self.channels.getPredefinedChannels())
-                self.newChannels = self.channelList.copy()
-                self.doModal()
-            except: 
-                self.closeManager()
+            self.newChannel    = self.channels.getCitem()
+            self.channelList   = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+            self.channelList.extend(self.channels.getPredefinedChannels())
+            self.newChannels   = self.channelList.copy()
+              
+        try:    self.doModal()
+        except: self.closeManager()
+
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -259,9 +259,9 @@ class Manager(xbmcgui.WindowXMLDialog):
         KEY_INPUT = {"name"  : {'func':self.dialog.inputDialog  ,'args':{'message':LANGUAGE(30123),'default':value}},
                      "path"  : {'func':self.dialog.browseDialog ,'args':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
                      "group" : {'func':self.dialog.selectDialog ,'args':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':self.config.findItemsInLST(GROUP_TYPES,value.split(' / ')),'useDetails':False}},
-                     "rules" : {'func':self.selectRules      ,'args':{'channelData':channelData}},
-                     "radio" : {'func':self.toggleBool       ,'args':{'state':channelData.get('radio',False)}},
-                     "clear" : {'func':self.clearChannel     ,'args':{'item':channelData}}}
+                     "rules" : {'func':self.selectRules         ,'args':{'channelData':channelData}},
+                     "radio" : {'func':self.toggleBool          ,'args':{'state':channelData.get('radio',False)}},
+                     "clear" : {'func':self.clearChannel        ,'args':{'item':channelData}}}
            
         func = KEY_INPUT[key.lower()]['func']
         args = KEY_INPUT[key.lower()]['args']
@@ -534,9 +534,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         listitems = self.buildRuleItems(channelData)
         
         optionIDX = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
+        ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
         print(ruleSelect)
-        # ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
-        # print(ruleSelect)
         # self.selectRuleItems(channelData, rules, ruleSelect)
         
         

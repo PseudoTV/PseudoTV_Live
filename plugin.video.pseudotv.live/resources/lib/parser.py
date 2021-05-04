@@ -27,7 +27,7 @@ from resources.lib.library     import Library
 
 class Writer:
     GlobalFileLock = FileLock()
-
+    
     def __init__(self, inherited=None):
         self.log('__init__')
         if inherited:
@@ -64,11 +64,12 @@ class Writer:
             self.jsonRPC      = inherited
         
         self.vault            = Vault()   
-        self.m3u              = M3U(writer=self)
-        self.xmltv            = XMLTV(writer=self)
         self.channels         = Channels(writer=self)
         self.library          = Library(writer=self)
         self.recommended      = self.library.recommended
+        
+        self.m3u              = M3U(writer=self)
+        self.xmltv            = XMLTV(writer=self)
       
       
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -76,33 +77,13 @@ class Writer:
     
         
     def isClient(self):
-        client = self.channels.isClient
-        PROPERTIES.setPropertyBool('isClient',client)
-        return client
+        return self.channels.chkClient()
               
               
     def getChannelEndtimes(self):
         self.log('getChannelEndtimes')
         return self.xmltv.getEndtimes()
 
-
-    def saveChannels(self):
-        self.log('saveChannels')
-        return self.channels.save()
-        
-        
-    def saveChannelLineup(self, exImport=True):
-        self.log('saveChannelLineup')
-        if self.cleanChannelLineup():
-            if exImport: self.importSETS()
-            if False in [func.save() for func in [self.m3u, self.xmltv]]:
-                self.dialog.notificationDialog(LANGUAGE(30001))
-                return False
-            else:
-                if self.progDialog is not None:
-                    self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message=LANGUAGE(30152))
-                return True
-        
 
     def importSETS(self):
         self.log('importSETS')
@@ -127,6 +108,37 @@ class Writer:
         return True
         
         
+    def saveChannels(self):
+        self.log('saveChannels')
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
+        return self.channels.save()
+        
+        
+    def saveChannelLineup(self, exImport=True):
+        self.log('saveChannelLineup')
+        if self.cleanChannelLineup():
+            if exImport: self.importSETS()
+            if False in [func.save() for func in [self.m3u, self.xmltv]]:
+                self.dialog.notificationDialog(LANGUAGE(30001))
+                return False
+            else:
+                if self.progDialog is not None:
+                    self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message=LANGUAGE(30152))
+                return True
+        
+    
+    def removeChannel(self, citem, inclLineup=True): #remove channel completely from channels.json and m3u/xmltv
+        self.log('removeChannel, citem = %s'%(citem))
+        self.channels.remove(citem)
+        if inclLineup: self.removeChannelLineup(citem)
+        
+                
+    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
+        self.log('removeChannelLineup, citem = %s'%(citem))
+        self.m3u.removeChannel(citem)
+        self.xmltv.removeChannel(citem)
+    
+    
     def addChannelLineup(self, citem, radio=False, catchup=True):
         item = citem.copy()
         item['label'] = (item.get('label','') or item['name'])
@@ -139,18 +151,6 @@ class Writer:
         self.log('addChannelLineup, item = %s, radio = %s, catchup = %s'%(item,radio,catchup))
         self.m3u.addChannel(item)
         self.xmltv.addChannel(item)
-    
-    
-    def removeChannel(self, citem, lineup=True): #remove channel completely from channels.json and m3u/xmltv
-        self.log('removeChannel, citem = %s'%(citem))
-        self.channels.remove(citem)
-        if lineup: self.removeChannelLineup(citem)
-        
-        
-    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
-        self.log('removeChannelLineup, citem = %s'%(citem))
-        self.m3u.removeChannel(citem)
-        self.xmltv.removeChannel(citem)
     
 
     def addProgrammes(self, citem, fileList, radio=False, catchup=True):
@@ -177,9 +177,10 @@ class Writer:
             if catchup:
                 item['catchup-id'] = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['title']),urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),urllib.parse.quote(citem['id']),str(item['radio']))
             
-            if (item['type'] != 'movie' and (file.get("episode",0) > 0)):
-                item['episode-num'] = 'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))
-                
+            if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
+                item['episode-num'] = {'xmltv_ns':'%s.%s'%(file.get("season",1)-1,file.get("episode",1)-1),
+                                       'onscreen':'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))}
+
             item['director']    = (','.join(file.get('director',[])))
             item['writer']      = (','.join(file.get('writer',[])))
             
@@ -197,11 +198,20 @@ class Writer:
             
             
     def cleanChannelLineup(self):
-        # find abandoned channels in m3u/xmltv and remove.
-        channels    = self.channels.getChannels()
         m3uChannels = self.m3u.getChannels()
-        #Clean M3U of Channels not found in Channels.json
-        abandoned = channels.copy()
+        xmlChannels = self.xmltv.getChannels()
+        
+        # Clean M3U of Channels with no guidedata.
+        abandoned = m3uChannels.copy() 
+        [abandoned.remove(m3u) for xmltv in xmlChannels for m3u in m3uChannels if xmltv.get('id') == m3u.get('id')]
+        self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
+        for leftover in abandoned: self.removeChannelLineup(leftover)
+        
+        m3uChannels = self.m3u.getChannels()
+        channels    = self.channels.getChannels()
+        
+        # Clean M3U of Channels no longer found in Channels.json
+        abandoned = channels.copy()    
         [abandoned.remove(channel) for m3u in m3uChannels for channel in channels if m3u.get('id') == channel.get('id')]
         self.log('cleanChannelLineup, abandoned from Channels = %s'%(len(abandoned)))
         for leftover in abandoned: self.removeChannelLineup(leftover)
@@ -353,9 +363,8 @@ class Writer:
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
             
-            
-    @staticmethod
-    def syncCustom(): #todo sync user created smartplaylists/nodes for multi-room.
+
+    def syncCustom(self): #todo sync user created smartplaylists/nodes for multi-room.
         for type in ['library','playlists']:
             for media in ['video','music','mixed']:
                 path  = 'special://userdata/%s/%s/'%(type,media)
@@ -528,7 +537,7 @@ class XMLTV:
                 saveURL(url,file)
             self.vault.xmltvList['channels'].extend(self.sortChannels(self.cleanSelf(self.loadChannels(file),'id',slug)))#todo collision logic?
             self.vault.xmltvList['programmes'].extend(self.sortProgrammes(self.cleanSelf(self.loadProgrammes(file),'channel',slug)))
-        except Exception as e: self.log("XMLTV: importXMLTV, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: log("XMLTV: importXMLTV, failed! " + str(e), xbmc.LOGERROR)
         return True
 
 
@@ -597,7 +606,8 @@ class XMLTV:
                 stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']])
                 stopTime = time.mktime(stopDate)
                 endtime[channel['id']] = stopTime
-            except Exception as e: 
+            except ValueError: pass
+            except Exception as e:
                 log("XMLTV: getEndtimes, Failed! %s"%(e), xbmc.LOGERROR)
                 log("XMLTV: getEndtimes, removing malformed xmltv channel/programmes %s"%(channel.get('id')))
                 self.removeChannel(channel)
@@ -626,7 +636,7 @@ class XMLTV:
 
     def addProgram(self, id, item):
         pitem      = {'channel'     : id,
-                      'credits'     : {'writer':[setWriter(self.cleanString(item['writer']),encodeString(dumpJSON(item['fitem'])))]},
+                      'credits'     : {'writer':[setWriter(self.cleanString(item['writer']),item['fitem'])]},
                       'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                       'title'       : [(self.cleanString(item['title']), LANG)],
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
@@ -658,8 +668,9 @@ class XMLTV:
         elif rating != 'NA' :  
             pitem['rating'] = [{'system': 'MPAA', 'value': rating}]
             
-        if item.get('episode-num',''): 
-            pitem['episode-num'] = [(item['episode-num'], 'onscreen')]
+        if item.get('episode-num',{}): 
+            pitem['episode-num'] = [(item['episode-num'].get('xmltv_ns',''), 'xmltv_ns'),
+                                    (item['episode-num'].get('onscreen',''), 'onscreen')]
             
         if item.get('audio',[]):
             pitem['audio'] = {'stereo': item.get('audio',[])[0]}
@@ -677,7 +688,7 @@ class XMLTV:
            # 'country'     : [('USA', LANG)],#todo
            # 'premiere': (u'Not really. Just testing', u'en'),
             
-        log('XMLTV: addProgram = %s'%(pitem))
+        log('XMLTV: addProgram = %s'%(pitem.get('channel')))
         self.vault.xmltvList['programmes'].append(pitem)
         return True
 
@@ -727,6 +738,7 @@ class M3U:
             self.writer = Writer()
             
         self.vault      = self.writer.vault
+        self.dialog     = self.writer.dialog
         self.monitor    = self.writer.monitor
         self.filelock   = self.writer.GlobalFileLock
         
@@ -762,7 +774,7 @@ class M3U:
 
     def load(self):
         log('M3U: load')
-        m3uList = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id=""'%(self.getShift())}
+        m3uList = {'data':'#EXTM3U tvg-shift="%s" x-tvg-url="" x-tvg-id="" catchup-correction=""'%(self.getShift())}
         m3uList.setdefault('channels',[]).extend(self.cleanSelf(self.loadM3U()))
         return m3uList
         
@@ -785,23 +797,29 @@ class M3U:
             line = line.rstrip()
             if line.startswith('#EXTINF:'):
                 chCount += 1
-                match = {'number' :re.compile('tvg-chno=\"(.*?)\"'   , re.IGNORECASE).search(line),
-                         'id'     :re.compile('tvg-id=\"(.*?)\"'     , re.IGNORECASE).search(line),
-                         'name'   :re.compile('tvg-name=\"(.*?)\"'   , re.IGNORECASE).search(line),
-                         'logo'   :re.compile('tvg-logo=\"(.*?)\"'   , re.IGNORECASE).search(line),
-                         'group'  :re.compile('group-title=\"(.*?)\"', re.IGNORECASE).search(line),
-                         'radio'  :re.compile('radio=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                         'catchup':re.compile('catchup=\"(.*?)\"'    , re.IGNORECASE).search(line),
-                         'label'  :re.compile(',(.*)'                , re.IGNORECASE).search(line),
-                         'shift'  :re.compile('tvg-shift=\"(.*?)\"'  , re.IGNORECASE).search(line)}#todo shift timestamp delta to localtime
+                match = {'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                         'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
+                         'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                         'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                         'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
+                         'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
+                         'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
+                         'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                         'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                         'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
+                         'catchup-source'    :re.compile('catchup-source=\"(.*?)\"'     , re.IGNORECASE).search(line),
+                         'catchup-days'      :re.compile('catchup-days=\"(.*?)\"'       , re.IGNORECASE).search(line),
+                         'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line),
+                         'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                         'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                         'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                         'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line)}
                 
-                item  = {'number'    :chCount,
-                         'logo'      :LOGO,
-                         'radio'     :'false',
-                         'catchup'   :'',
-                         'group'     :[],
-                         'kodiprops' :[]}
-                         
+                item  = self.writer.channels.getCitem()
+                item.update({'number' :chCount,
+                             'logo'   :LOGO,
+                             'catchup':''})
+                
                 for key in match.keys():
                     if not match[key]: continue
                     item[key] = match[key].group(1)
@@ -815,14 +833,23 @@ class M3U:
                         item[key] = item[key].lower() == 'true'
 
                 for nidx in range(idx+1,len(lines)):
-                    nline = lines[nidx].rstrip()
-                    if   nline.startswith('#EXTINF:'): break
-                    elif nline.startswith('#KODIPROP:'):
-                        prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                        if prop: item['kodiprops'].append(prop.group(1))
-                    elif nline.startswith('##'): continue
-                    elif not nline: continue
-                    else: item['url'] = nline
+                    try:
+                        nline = lines[nidx].rstrip()
+                        if   nline.startswith('#EXTINF:'): break
+                        # elif nline.startswith('#EXTVLCOPT'):
+                        # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
+                        elif nline.startswith('#EXTGRP'):
+                            group = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
+                            if group: 
+                                item['group'].append(prop.group(1).split(';'))
+                                item['group'] = list(set(item['group']))
+                        elif nline.startswith('#KODIPROP:'):
+                            prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
+                            if prop: item.setdefault('kodiprops',[]).append(prop.group(1))
+                        elif nline.startswith('##'): continue
+                        elif not nline: continue
+                        else: item['url'] = nline
+                    except Exception as e: log('M3U: load, error parsing m3u! %s'%(e))
                         
                 item['name']  = (item.get('name','')  or item.get('label',''))
                 item['label'] = (item.get('label','') or item.get('name',''))
@@ -840,19 +867,30 @@ class M3U:
             fle = FileAccess.open(filePath, 'w')
             log('M3U: save, saving to %s'%(filePath))
             fle.write('%s\n'%(self.vault.m3uList['data']))
-            citem = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-shift="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s",%s\n'
+            keys     = list(self.writer.channels.getCitem().keys())
+            keys.extend(['kodiprops','label'])#add keys to ignore from optional.
+            citem    = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             channels = self.sortChannels(self.vault.m3uList.get('channels',[]))
+            
             for channel in channels:
+                optional = ''
                 if not channel: continue
+                    
+                # write optional m3u parameters.
+                for key, value in channel.items():
+                    if key in keys: continue
+                    elif value: optional += '%s="%s" '%(key,value)
+                        
                 fle.write(citem%(channel['number'],
                                  channel['id'],
                                  channel['name'],
-                                 channel.get('shift',0),#opt from user imports, not used internally. #todo shift timestamp
                                  channel['logo'],
                                  ';'.join(channel['group']),
                                  channel['radio'],
                                  channel['catchup'],
+                                 optional,
                                  channel['label']))
+                                 
                 if channel.get('kodiprops',[]):
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
                 fle.write('%s\n'%(channel['url']))
@@ -941,6 +979,9 @@ class M3U:
         
     def addChannel(self, item):
         log('M3U: addChannel, item = %s'%(item))
+        item['provider']      = ADDON_NAME
+        item['provider-type'] = 'local'
+        item['provider-logo'] = HOST_LOGO
         idx, line = self.findChannel(item)
         if idx is None: self.vault.m3uList.get('channels',[]).append(item)
         else: self.vault.m3uList.get('channels',[])[idx] = item # replace existing channel

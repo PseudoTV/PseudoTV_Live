@@ -22,25 +22,9 @@ NOTE: IF YOU MODIFY THIS FILE IT WILL BE OVERWRITTEN NEXT TIME THE ADDON IS STAR
 -->
 
 <providerMappings>
-  <providerMapping mappedName="Freesat">
-    <name>Freesat</name>
-    <type>satellite</type>
-    <iconPath>https://www.lyngsat.com/logo/corp/ff/freesat_uk.png</iconPath>
-    <country>UK,IE</country>
-    <language>en_GB,en_IE</language>
-  </providerMapping>
-  <providerMapping mappedName="BSkyB">
-    <name>Sky</name>
-    <type>satellite</type>
-    <iconPath>https://www.lyngsat.com/logo/corp/ss/sky_uk.png</iconPath>
-    <country>UK,IE</country>
-    <language>en_GB,en_IE</language>
-  </providerMapping>
-  <providerMapping mappedName="RTÉNL">
-    <name>Saorview</name>
-    <type>aerial</type>
-    <iconPath>https://upload.wikimedia.org/wikipedia/en/thumb/9/92/Saorview_logo.png/320px-Saorview_logo.png</iconPath>
-    <country>IE</country>
-    <language>en_GB,en_IE</language>
+  <providerMapping mappedName="PseudoTV">
+    <name>PseudoTV Live</name>
+    <type>local</type>
+    <iconPath>https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png</iconPath>
   </providerMapping>
 </providerMappings>

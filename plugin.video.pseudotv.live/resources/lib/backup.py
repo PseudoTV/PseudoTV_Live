@@ -46,6 +46,7 @@ class Backup:
         
     def hasBackup(self):
         self.log('hasBackup')
+        if self.writer.isClient(): return False
         with busy():
             if not FileAccess.exists(CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',False)
@@ -112,7 +113,6 @@ class Backup:
             # if FileAccess.move(CONFIGFLE,CHANNELFLE_RESTORE):
                 # if FileAccess.copy(file,CONFIGFLE):
                     # # PROPERTIES.setPropertyBool('restartRequired',True)
-                    # SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.writer.channels.load(file).get('channels',[]))))
                     # toggleADDON(ADDON_ID,'false',reverse=True)
             # setBusy(False)
             # return True

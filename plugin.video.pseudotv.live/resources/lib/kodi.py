@@ -265,58 +265,77 @@ class Dialog:
         
     @staticmethod
     def buildItemListItem(item, mType='video', oscreen=False, playable=True):
-        LISTITEM_TYPES = {'label': (str,list),'genre': (str,list),
-                          'country': (str,list),'year': int,'episode': int,
-                          'season': int,'sortepisode': int,'sortseason': int,
-                          'episodeguide': str,'showlink': (str,list),'top250': int,
-                          'setid': int,'tracknumber': int,'rating': float,'userrating': int,
-                          'playcount': int,'overlay': int,'cast': list,'castandrole': list,
-                          'director': (str,list),'mpaa': str,'plot': str,'plotoutline': str,
-                          'title': str,'originaltitle': str,'sorttitle': str,'duration': int,
-                          'studio': (str,list),'tagline': str,'writer': (str,list),'tvshowtitle': str,
-                          'premiered': str,'status': str,'set': str,'setoverview': str,'tag': (str,list),
-                          'imdbnumber': str,'code': str,'aired': str,'credits': (str,list),'lastplayed': str,
-                          'album': str,'artist': list,'votes': str,'path': str,'trailer': str,'dateadded': str,
-                          'mediatype': str,'dbid': int}
-
+        LISTITEM_TYPES = {'label': (str,list),'genre': (list,str),
+                          'country': (str,list),'year': (int,),'episode': (int,),
+                          'season': (int,),'sortepisode': (int,),'sortseason': (int,),
+                          'episodeguide': (str,),'showlink': (str,list),'top250': (int,),
+                          'setid': (int,),'tracknumber': (int,),'rating': (float,),'userrating': (int,),
+                          'playcount': (int,),'overlay': (int,),'cast': (list,),'castandrole': (list,),
+                          'director': (str,list),'mpaa': (str,),'plot': (str,),'plotoutline': (str,),
+                          'title': (str,),'originaltitle': (str,),'sorttitle': (str,),'duration': (int,),
+                          'studio': (str,list),'tagline': (str,),'writer': (str,list),'tvshowtitle': (str,),
+                          'premiered': (str,),'status': (str,),'set': (str,),'setoverview': (str,),'tag': (list,str),
+                          'imdbnumber': (str,),'code': (str,),'aired': (str,),'credits': (str,list),'lastplayed': (str,),
+                          'album': (str,),'artist': (list,),'votes': (str,),'path': (str,),'trailer': (str,),'dateadded': (str,),
+                          'mediatype': (str,),'dbid': (int,),'track': (int,),'aspect': (float,),'codec': (str,),'language': (str,),
+                          'width': (int,),'height': (int,),'duration': (int,),'channels': (int,),'audio': (list,),'video': (list,),
+                          'subtitle': (list,),'stereomode': (str,),'count': (int,),'size': (int,),'date': (str,)}
+                          
         info       = item.copy()
-        art        = info.pop('art',{})
-        streamInfo = item.pop('streamdetails'   ,{})
-        properties = info.pop('customproperties',{})
-        properties.update(info.get('citem'      ,{}))
+        art        = info.pop('art'                ,{})
+        cast       = info.pop('cast'               ,[])
+        uniqueid   = info.pop('uniqueid'           ,{})
+        streamInfo = info.pop('streamdetails'      ,{})
+        properties = info.pop('customproperties'   ,{})
+        properties['citem']   = info.pop('citem'   ,{})
+        properties['pvritem'] = info.pop('pvritem' ,{})      
 
-        uniqueid   = info.pop('uniqueid'        ,{})
-        cast       = info.pop('cast'            ,[])
-
-        def cleanInfo(info):
-            tmpInfo = info.copy()
+        def cleanInfo(ninfo):
+            tmpInfo = ninfo.copy()
             for key, value in tmpInfo.items():
-                ptype = LISTITEM_TYPES.get(key,None)
-                if ptype is None: # key not in json enum, move to custom properties
-                    info.pop(key)
+                types = LISTITEM_TYPES.get(key,None)
+                if not types:# key not in json enum, move to customproperties
+                    ninfo.pop(key)
                     properties[key] = value
                     continue
-                if not isinstance(value, ptype):
-                    if isinstance(ptype,tuple):
-                        ptype = ptype[0]
-                    info[key] = ptype(value)
-            return info
+                    
+                elif not isinstance(value,types):# convert to schema type
+                    ninfo[key] = types[0](value)
+                    
+                if isinstance(ninfo[key],list):
+                    for n in ninfo[key]:
+                        if isinstance(n,dict):
+                            n = cleanInfo(n)
+                            
+                if isinstance(ninfo[key],dict):
+                    ninfo[key] = cleanInfo(ninfo[key])
+                    
+            return ninfo
                 
-        def cleanProp(cpvalue):
-            if isinstance(cpvalue,(dict,list)):
-                return dumpJSON(cpvalue)
-            return str(cpvalue)
+        def cleanProp(pvalue):
+            if isinstance(pvalue,dict):
+                return dumpJSON(pvalue)
+            elif isinstance(pvalue,list):
+                return '|'.join(pvalue)
+            elif not isinstance(pvalue,str):
+                return str(pvalue)
+            else:
+                return pvalue
                 
         listitem = xbmcgui.ListItem(offscreen=oscreen)
-        listitem.setLabel(info.get('label',''))
-        listitem.setLabel2(info.get('label2',''))
-        listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
+        if info.get('label'):  listitem.setLabel(info.get('label',''))
+        if info.get('label2'): listitem.setLabel2(info.get('label2',''))
+        if info.get('file'):   listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
+        
         listitem.setInfo(type=mType, infoLabels=cleanInfo(info))
         listitem.setArt(art)
         listitem.setCast(cast)
         listitem.setUniqueIDs(uniqueid)
-        [listitem.setProperty(key, cleanProp(pvalue)) for key, pvalue in properties.items()]
-        [listitem.addStreamInfo(key, svalue) for key, svalues in streamInfo.items() for svalue in svalues]
+    
+        for ainfo in streamInfo.get('audio',[]):    listitem.addStreamInfo('audio'   , ainfo)
+        for vinfo in streamInfo.get('video',[]):    listitem.addStreamInfo('video'   , vinfo)
+        for sinfo in streamInfo.get('subtitle',[]): listitem.addStreamInfo('subtitle', sinfo)
+        for key, pvalue in properties.items():      listitem.setProperty(key, cleanProp(pvalue))
         if playable: listitem.setProperty("IsPlayable","true")
         return listitem
              
@@ -486,7 +505,11 @@ class Dialog:
             return True
         return control
         
+   
+    def infoDialog(self, listitem):
+        xbmcgui.Dialog().info(listitem)
         
-class ListItems:
+        
+class ListItems: #TODO move listitem funcs. here.
     def __init__(self):
-        pass
+        ...

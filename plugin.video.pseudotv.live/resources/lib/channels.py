@@ -22,8 +22,6 @@
 from resources.lib.globals     import *
 
 class Channels:
-    isClient = False
-    
     def __init__(self, writer=None):
         self.log('__init__')
         if writer:
@@ -57,7 +55,6 @@ class Channels:
         self.log('reload')
         self.vault.channelList = self.getTemplate()
         self.vault.channelList.update(self.cleanSelf(self.load()))
-        self.isClient = self.chkClient()
         return self.deposit()
         
         
@@ -146,6 +143,7 @@ class Channels:
             isClient = self.getUUID() != self.getMYUUID()
             if isClient: PROPERTIES.setPropertyBool('Enable_Client',True)
             else:        PROPERTIES.setPropertyBool('Enable_Client',False)
+        PROPERTIES.setPropertyBool('isClient',isClient)
         self.log('chkClient, isClient = %s'%(isClient))
         return isClient
 

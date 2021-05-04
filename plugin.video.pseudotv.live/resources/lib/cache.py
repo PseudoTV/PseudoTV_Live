@@ -21,8 +21,12 @@
 import os, json, traceback
 
 from kodi_six               import xbmc, xbmcaddon
-from simplecache            import SimpleCache
 from datetime               import timedelta
+
+try:
+    from simplecache             import SimpleCache
+except:
+    from simplecache.simplecache import SimpleCache #pycharm stub
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -44,7 +48,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
-def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum="", json_data=False):
+def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum=ADDON_VERSION, json_data=False):
     def decorator(func):
         def decorated(*args, **kwargs):
             method_class = args[0]
@@ -64,8 +68,7 @@ class Cache:
     def __init__(self, mem_cache=True, is_json=False):
         self.log('__init__')
         self.cache.enable_mem_cache = mem_cache
-        self.cache.data_is_json     = is_json        
-        self.cachename = '%s'%(ADDON_ID)
+        self.cache.data_is_json     = is_json  
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -73,13 +76,13 @@ class Cache:
         
 
     def set(self, name, data, checksum="", expiration=timedelta(minutes=15), json_data=False):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(self.cachename,name)
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         self.log('set, name = %s'%(name))
         self.cache.set(name.lower(),data,checksum,expiration,json_data)
         return data
         
     
     def get(self, name, checksum="", json_data=False):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(self.cachename,name)
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         self.log('get, name = %s'%(name))
         return self.cache.get(name.lower(),checksum,json_data)

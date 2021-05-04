@@ -168,17 +168,19 @@ class Config:
                     pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                     self.library.setEnableStates(type,pselect,items)
                     self.writer.groupLibraryItems(type)
-                    self.library.setSettings(type, items)
+                    self.library.setTypeSettings(type, items)
                     self.setPendingChangeTimer()
             setBusy(False)
             return True
 
 
-    def buildLibraryItems(self):
+    def buildLibraryItems(self,myService):
         self.log('buildLibraryItems')
-        if self.library.fillLibraryItems():
+        if self.library.fillLibraryItems(myService):
             self.library.chkLibraryItems()
-        return self.writer.groupLibraryItems()
+            return self.writer.groupLibraryItems()
+        else: 
+            return False
 
 
     def setPendingChangeTimer(self, wait=30.0):

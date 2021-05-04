@@ -32,6 +32,7 @@ CHKPATH    = 'D:/GitHub/addon-check/'
 GITPATH    = 'D:/GitHub/PseudoTV_Live/'
 ZIPPATH    = os.path.join(GITPATH,'zips','')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
+DELETE_FOLDERS = ['__pycache__','.idea','Corel Auto-Preserve']
 
 # Compatibility with 3.0, 3.1 and 3.2 not supporting u"" literals
 if sys.version < '3':
@@ -67,8 +68,9 @@ class Generator(object):
     def _clean_addons(self):
         for root, dirnames, filenames in os.walk(GITPATH):
             for dirname in dirnames:
-                if dirname == '__pycache__':
-		    try:
+                if dirname in DELETE_FOLDERS:
+                    try:
+                        print("found: " + dirname)
                         rmtree(os.path.join(root, dirname))
                         print("removing: " + dirname)
                     except: pass
@@ -91,7 +93,7 @@ class Generator(object):
                 # create path
                 _path = os.path.join( addon, "addon.xml" )
                 # split lines for stripping
-                xml_lines = open( _path, "r" ).read().splitlines()
+                xml_lines = open( _path, "r", encoding="utf8").read().splitlines()
                 # new addon
                 addon_xml = ""
                 # loop thru cleaning each line
@@ -118,7 +120,7 @@ class Generator(object):
         # create a new md5 hash
         try:
             import md5
-            m = md5.new( open( os.path.join(GITPATH,"addons.xml"), "r" ).read() ).hexdigest()
+            m = md5.new( open( os.path.join(GITPATH,"addons.xml"), "r" , encoding="utf8").read() ).hexdigest()
         except ImportError:
             import hashlib
             m = hashlib.md5( open( os.path.join(GITPATH,"addons.xml"), "r", encoding="UTF-8" ).read().encode( "UTF-8" ) ).hexdigest()
@@ -133,7 +135,7 @@ class Generator(object):
     def _save_file( self, data, file ):
         try:
             # write data to the file (use b for Python 3)
-            open(os.path.join(GITPATH,file), "wb" ).write( data )
+            open(os.path.join(GITPATH,file), "wb").write( data )
         except Exception as e:
             # oops
             print("An error occurred saving %s file!\n%s" % ( file, e ))
@@ -145,12 +147,12 @@ class Generator(object):
             #not an addon directory
             return
         try:
-            data = open(addon_file, 'r').read()
+            data = open(addon_file, 'r', encoding="utf8").read()
             node = xml.etree.ElementTree.XML(data)
             return(node.get('version'))
         except Exception as e:
             print ('Failed to open %s' % addon_file)
-            print( e.message)
+            print (e)
 
             
     def create_zip_file( self, fpath, addon):

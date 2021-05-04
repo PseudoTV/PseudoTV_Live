@@ -182,9 +182,13 @@ class Player(xbmc.Player):
         
         
     def playAction(self):
-        setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         pvritem = self.getPVRitem()
-        self.log('playAction, current pvritem = %s\n playingPVRitem = %s'%(pvritem,self.playingPVRitem))
+        if not pvritem or not isPseudoTV(): 
+            self.log('playAction, returning missing pvritem or not PseudoTV!')
+            return self.stopAction()
+            
+        self.log('playAction, current pvritem:\n%s\nplaying pvritem:\n%s'%(pvritem,self.playingPVRitem))
+        setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         
         if not pvritem.get('callback'):
             pvritem['callback'] = self.getCallback()
@@ -204,12 +208,7 @@ class Player(xbmc.Player):
             if self.pendingSeek: 
                 self.toggleSubtitles(False)
             self.log('playAction, pendingSeek = %s'%(self.pendingSeek))
-           
-        isPlaylist = self.playingPVRitem.get('isPlaylist',False)
-        self.log('playAction, isPlaylist = %s'%(isPlaylist))
-        if not isPseudoTV() and not isPlaylist:
-            self.log('playAction, returning not PseudoTV Live channel')
-            return self.stopAction()
+        self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
         
         
     def updatePVRItem(self, pvritem=None):
@@ -231,12 +230,16 @@ class Player(xbmc.Player):
             self.log('changeAction, playing = %s'%(callback))
             xbmc.executebuiltin('PlayMedia(%s)'%callback)
 
+
     def stopAction(self):
         self.log('stopAction')
+        if isPseudoTV():
+            self.toggleOverlay(False)
+            if self.playingPVRitem.get('isPlaylist',False):
+                xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.playingPVRitem = {}
-        self.toggleOverlay(False)
         setLegacyPseudoTV(False)
-
+        
 
     def toggleOverlay(self, state):
         if state and not isOverlay():
@@ -301,7 +304,6 @@ class Monitor(xbmc.Monitor):
         
     def chkSettings(self):
         self.log('chkSettings')
-        self.chkPluginSettings()
         PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
         #priority settings that trigger chkUpdate on change.
         return {'User_Import'         :{'setting':SETTINGS.getSetting('User_Import')         ,'action':None},
@@ -336,6 +338,7 @@ class Monitor(xbmc.Monitor):
             
         differences = dict(diffDICT(self.lastSettings,currentSettings))
         if differences: 
+            self.chkPluginSettings()
             self.log('hasSettingsChanged, differences = %s'%(differences))
             self.lastSettings = currentSettings
             for key in differences.keys():
@@ -400,7 +403,7 @@ class Service:
                
 
     def chkVersion(self):
-        ## call in thread so prompt doesn't hold up service.
+        # call in thread so prompt doesn't hold up service.
         if self.startThread.is_alive():
             self.startThread.cancel()
             try: self.startThread.join()
@@ -408,18 +411,14 @@ class Service:
         self.startThread = threading.Timer(1.0, hasVersionChanged)
         self.startThread.name = "startThread"
         self.startThread.start()
-           
-
-    def chkBackup(self):
-        self.log('chkBackup')
-        if self.writer.isClient(): return False
-        return self.myConfig.backup.hasBackup()
 
 
     def chkChannels(self):
         if self.writer.isClient(): return
         self.log('chkChannels')
-        ## re-enable missing library.json items from channels.json
+        # check channels.json for changes
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
+        # re-enable missing library.json items from channels.json
         return self.writer.recoverItemsFromChannels()
         
         
@@ -437,7 +436,7 @@ class Service:
         elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
-            if self.myConfig.buildLibraryItems():
+            if self.myConfig.buildLibraryItems(myService=self):
                 PROPERTIES.setProperty('Last_Predefined',str(time.time()))
             return True
         
@@ -498,7 +497,7 @@ class Service:
         
         
     def updateChannels(self):
-        if self.myBuilder.buildService():
+        if self.myBuilder.buildService(myService=self):
             self.log('updateChannels, finished buildService')
             PROPERTIES.setProperty('Last_Update',str(time.time()))
             return brutePVR(override=True)
@@ -509,7 +508,11 @@ class Service:
         if self.writer.isClient(): return False
         with busy():
             self.monitor.lastSettings = self.monitor.chkSettings()
-            funcs = [initDirs,self.chkVersion,self.chkBackup,self.chkChannels]
+            funcs = [initDirs,
+                     self.chkVersion,
+                     self.monitor.chkPluginSettings,
+                     self.myConfig.backup.hasBackup,
+                     self.chkChannels]
             for func in funcs: func()
             return True
 
@@ -553,7 +556,7 @@ class Service:
                 if thread.name == "MainThread": continue
                 self.log("closeThreads joining thread %s"%(thread.name))
                 thread.cancel()
-                try: thread_item.join(1.0)
+                try: thread.join(1.0)
                 except: pass
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
         self.log('closeThreads finished, exiting %s...'%(ADDON_NAME))
