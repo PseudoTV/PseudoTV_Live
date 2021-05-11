@@ -138,12 +138,11 @@ class Channels:
             
             
     def chkClient(self):
-        isClient = (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('Enable_Client'))
+        isClient = (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('isClient'))
         if not isClient:
             isClient = self.getUUID() != self.getMYUUID()
-            if isClient: PROPERTIES.setPropertyBool('Enable_Client',True)
-            else:        PROPERTIES.setPropertyBool('Enable_Client',False)
-        PROPERTIES.setPropertyBool('isClient',isClient)
+            SETTINGS.setSettingBool('Enable_Client',isClient)
+            PROPERTIES.setPropertyBool('isClient',isClient)
         self.log('chkClient, isClient = %s'%(isClient))
         return isClient
 

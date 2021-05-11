@@ -243,7 +243,7 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state):
         if state and not isOverlay():
-            if not (self.showOverlay | self.isPlaying() | isPseudoTV()): return
+            if not (self.showOverlay & self.isPlaying() & isPseudoTV()): return
             self.log("toggleOverlay, show")
             self.overlayWindow.show()
         elif not state and isOverlay():
@@ -329,7 +329,6 @@ class Monitor(xbmc.Monitor):
     def hasSettingsChanged(self): 
         #todo detect userfolder change, moveuser, add previous value to property?
         #todo copy userfolder to new location
-        #todo if Enable_Client clear property 'Enable_Client'
         currentSettings = self.chkSettings()
         if not self.lastSettings:
             self.lastSettings = currentSettings
@@ -389,7 +388,6 @@ class Service:
             self.serviceThread.cancel()
             try: self.serviceThread.join()
             except: pass
-        if self.writer.isClient(): return
         self.serviceThread = threading.Timer(wait, self.runServiceThread)
         self.serviceThread.name = "serviceThread"
         self.serviceThread.start()
@@ -397,6 +395,7 @@ class Service:
                 
     def runServiceThread(self):
         if isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
+        elif self.writer.isClient(): self.startServiceThread(900.0)
         self.log('runServiceThread')
         setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
@@ -414,16 +413,16 @@ class Service:
 
 
     def chkChannels(self):
-        if self.writer.isClient(): return
         self.log('chkChannels')
         # check channels.json for changes
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
         # re-enable missing library.json items from channels.json
+        if self.writer.isClient(): return
         return self.writer.recoverItemsFromChannels()
         
         
     def chkRecommended(self, lastUpdate=None):
-        if self.writer.isClient(): return
+        if self.writer.isClient(): return False
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
             if self.myConfig.recommended.importPrompt():
@@ -432,7 +431,7 @@ class Service:
 
             
     def chkPredefined(self, lastUpdate=None):
-        if self.writer.isClient(): return
+        if self.writer.isClient(): return False
         elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
@@ -505,9 +504,8 @@ class Service:
                 
 
     def initialize(self):
-        if self.writer.isClient(): return False
+        self.monitor.lastSettings = self.monitor.chkSettings()
         with busy():
-            self.monitor.lastSettings = self.monitor.chkSettings()
             funcs = [initDirs,
                      self.chkVersion,
                      self.monitor.chkPluginSettings,

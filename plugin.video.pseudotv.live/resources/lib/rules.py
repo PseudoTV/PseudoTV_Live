@@ -25,23 +25,23 @@ from resources.lib.jsonrpc     import JSONRPC
 
 class RulesList:
     def __init__(self):
-        self.monitor  = xbmc.Monitor()
-        self.player   = xbmc.Player()
-        self.cache    = Cache()
-        self.dialog   = Dialog()
-        self.pool     = PoolHelper() 
-        self.rules    = self
-        self.jsonRPC  = JSONRPC(self)
+        self.monitor        = xbmc.Monitor()
+        self.player         = xbmc.Player()
+        self.cache          = Cache()
+        self.dialog         = Dialog()
+        self.pool           = PoolHelper() 
+        self.rules          = self
+        self.jsonRPC        = JSONRPC(self)
 
         self.JSON_FILE_ENUM = self.jsonRPC.getEnums(id="List.Fields.Files", type='items')
         self.JSON_METHOD    = self.jsonRPC.getEnums(id="List.Sort", type='method')
         self.JSON_ORDER     = self.jsonRPC.getEnums(id="List.Sort", type='order')
         self.JSON_OPERATORS = self.jsonRPC.getEnums(id="List.Filter.Operators")
 
-        self.ruleList = [BaseRule(dialog=self.dialog),
-                         ShowChannelBug(),
-                         ShowOnNext(),
-                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
+        self.ruleList       = [BaseRule(dialog=self.dialog),
+                               ShowChannelBug(),
+                               ShowOnNext(),
+                               DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -52,8 +52,8 @@ class RulesList:
         channel,tmpruleList = data
         ruleList = {}
         chid     = channel.get('id','')
-        if not chid: return None
         chrules  = channel.get('rules',[])
+        if not chid: return None
         for chrule in chrules:
             if chrule.get('id',0) == 0: return None #template check
             for rule in tmpruleList:

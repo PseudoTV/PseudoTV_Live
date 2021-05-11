@@ -256,8 +256,8 @@ class JSONRPC:
             dbid, dur),
             'episode': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}' % (
             dbid, dur)}
-        self.sendQueue.put(param[media])
-        return self.sendQueueThread()
+        # self.sendQueue.put(param[media]) #todo fix
+        # return self.sendQueueThread()
 
 
     def setDuration(self):

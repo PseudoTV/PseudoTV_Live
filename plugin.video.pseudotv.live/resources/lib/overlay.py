@@ -34,6 +34,7 @@ class Player(xbmc.Player):
         
     def onPlayBackEnded(self):
         self.overlay.log('onPlayBackEnded')
+        self.playingTitle = ""
         self.overlay.updateOnNext()
     
     
@@ -83,7 +84,7 @@ class Overlay(xbmcgui.WindowXML):
             self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
             self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
             
-            self.overlayVisible(False)
+            self.overlayToggle(False)
             self.container = self.getControl(40000)
             
             self.static = self.getControl(40001)
@@ -109,7 +110,7 @@ class Overlay(xbmcgui.WindowXML):
             # self.videoWindow.setWidth(self.videoWindow.getWidth())
             
             if self.load(): 
-                self.overlayVisible(True)
+                self.overlayToggle(True)
                 if self.showChannelBug: self.bugToggle() #start bug timer
                 if self.showOnNext: self.onNextChk()#start onnext timer
             else: 
@@ -119,12 +120,17 @@ class Overlay(xbmcgui.WindowXML):
             self.closeOverlay()
 
 
-    def overlayVisible(self, state=True):
+    def overlayToggle(self, state=True):
         try:
-            self.log('overlayVisible, state = %s'%(state))
+            self.log('overlayToggle, state = %s'%(state))
             self.getControl(39999).setVisible(state)
-        except Exception as e: self.log("overlayVisible, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("overlayToggle, Failed! " + str(e), xbmc.LOGERROR)
         
+
+    def isoverlayVisible(self):
+        try:    return self.getControl(39999).isVisible()
+        except: return False
+
 
     def load(self):
         try:
@@ -178,20 +184,26 @@ class Overlay(xbmcgui.WindowXML):
    
    
     def playerAssert(self):
-        try:    return self.listitems[0].getLabel() == self.myPlayer.playingTitle
+        try:    
+            titleAssert    = self.listitems[0].getLabel() == self.myPlayer.playingTitle
+            remainAssert   = self.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
+            progressAssert = self.getPlayerProgress() >= 75.0
+            return (titleAssert & remainAssert & progressAssert)
         except: return False
         
         
+    def cancelOnNext(self):
+        self.onNext.setVisible(False)
+        if self.onNextToggleThread.is_alive(): 
+            self.onNextToggleThread.cancel()
+            try: self.onNextToggleThread.join()
+            except: pass
+
+
     def updateOnNext(self):
         try:
             self.log('updateOnNext, isPlaylist = %s'%(self.isPlaylist))
-            # disable previous thread
-            self.onNext.setVisible(False)
-            if self.onNextToggleThread.is_alive(): 
-                self.onNextToggleThread.cancel()
-                try: self.onNextToggleThread.join()
-                except: pass
-            # update listitem container
+            self.cancelOnNext()            
             if self.isPlaylist:
                 if len(self.listitems) > 0:
                     self.listitems.pop(0)
@@ -208,9 +220,10 @@ class Overlay(xbmcgui.WindowXML):
                 try: self.onNextChkThread.join()
                 except: pass
             
-            if not self.onNextToggleThread.is_alive():
-                if self.playerAssert() and (self.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING):
-                    self.onNextToggle()
+            if self.onNextToggleThread.is_alive() and not self.isoverlayVisible(): 
+                self.cancelOnNext()
+            elif not self.onNextToggleThread.is_alive() and self.playerAssert():
+                self.onNextToggle()
             
             self.onNextChkThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
             self.onNextChkThread.name = "onNextChkThread"
@@ -225,6 +238,7 @@ class Overlay(xbmcgui.WindowXML):
                 self.onNextToggleThread.cancel()
                 try: self.onNextToggleThread.join()
                 except: pass
+                    
             wait   = {True:float(10),False:float(random.randint(180,300))}[state]
             nstate = not bool(state)
             self.onNext.setVisible(state)

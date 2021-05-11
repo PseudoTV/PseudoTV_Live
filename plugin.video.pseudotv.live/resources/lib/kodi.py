@@ -197,7 +197,7 @@ class Properties:
     def getPropertyInt(self, key):
         value = self.getProperty(key)
         if value.isdigit(): return int(value)
-        return value
+        return -1
 
 
     def getProperty(self, key):
@@ -287,9 +287,10 @@ class Dialog:
         uniqueid   = info.pop('uniqueid'           ,{})
         streamInfo = info.pop('streamdetails'      ,{})
         properties = info.pop('customproperties'   ,{})
-        properties['citem']   = info.pop('citem'   ,{})
-        properties['pvritem'] = info.pop('pvritem' ,{})      
-
+        properties.update(info.get('citem'         ,{}))# write induvial props for keys 
+        properties['citem']   = info.pop('citem'   ,{}) # write dump to single key
+        properties['pvritem'] = info.pop('pvritem' ,{}) # write dump to single key
+        
         def cleanInfo(ninfo):
             tmpInfo = ninfo.copy()
             for key, value in tmpInfo.items():
@@ -473,20 +474,17 @@ class Dialog:
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
         if not isinstance(percent,int): percent = int(percent)
-        if (self.settings.getSettingBool('Silent_OnPlayback') & self.properties.getPropertyBool('OVERLAY') & xbmc.getCondVisibility('Player.Playing')):
-            if control is None: 
-                return False
-            else: 
-                control.close()
-                return True
+        if (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | xbmc.getCondVisibility('Player.Playing'))):
+            if hasattr(control, 'close'): control.close()
+            return
         elif control is None and percent == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
         elif control:
             if percent == 100 or control.isFinished(): 
-                control.close()
+                if hasattr(control, 'close'): control.close()
                 return True
-            else: control.update(percent, header, message)
+            elif hasattr(control, 'update'): control.update(percent, header, message)
         return control
         
 
