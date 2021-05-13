@@ -1167,3 +1167,15 @@ msgstr ""
 msgctxt "#30288"
 msgid "Not Available in Client Mode"
 msgstr ""
+
+msgctxt "#30289"
+msgid "Stay tuned for more..."
+msgstr ""
+
+msgctxt "#30290"
+msgid "You're Watching:"
+msgstr ""
+
+msgctxt "#30291"
+msgid "Up Next:"
+msgstr ""

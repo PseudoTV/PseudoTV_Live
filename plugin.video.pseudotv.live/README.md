@@ -91,6 +91,10 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 [Discovery+](https://forum.kodi.tv/showthread.php?tid=340055)
 
+[Crackle](https://forum.kodi.tv/showthread.php?tid=)
+
+[TubiTV](https://forum.kodi.tv/showthread.php?tid=)
+
 ------------
 
 # Settings:

@@ -105,7 +105,9 @@ class Player(xbmc.Player):
 
     def getPVRitem(self):
         self.log('getPVRitem')
-        return (loadJSON(self.getPlayerItem().get('customproperties',{}).get('pvritem',{})))
+        playerItem = self.getPlayerItem()
+        if isinstance(playerItem,list): playerItem = playerItem[0] #playlists return list
+        return (loadJSON(playerItem.get('customproperties',{}).get('pvritem',{})))
         
         
     def getCitem(self):
@@ -226,8 +228,11 @@ class Player(xbmc.Player):
             self.log('changeAction, playing playlist')
             #todo pop broadcastnext? keep pvritem in sync with playlist pos?
         else:
+            # xbmc.executebuiltin("Action(SkipNext)")
+            # xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             callback = self.playingPVRitem.get('callback','')
             self.log('changeAction, playing = %s'%(callback))
+            # xbmc.executebuiltin("Action(SkipNext)")
             xbmc.executebuiltin('PlayMedia(%s)'%callback)
 
 
@@ -243,14 +248,25 @@ class Player(xbmc.Player):
 
     def toggleOverlay(self, state):
         if state and not isOverlay():
-            if not (self.showOverlay & self.isPlaying() & isPseudoTV()): return
+            conditions = [self.showOverlay,self.isPlaying(),isPseudoTV()]
+            self.log("toggleOverlay, conditions = %s"%(conditions))
+            if False in conditions: return
             self.log("toggleOverlay, show")
             self.overlayWindow.show()
         elif not state and isOverlay():
             self.log("toggleOverlay, close")
             self.overlayWindow.close()
 
-    
+
+    def triggerSleep(self):
+        conditions = [not xbmc.getCondVisibility('Player.Paused'),self.isPlaying(),isPseudoTV()]
+        self.log("triggerSleep, conditions = %s"%(conditions))
+        if False in conditions: return
+        if self.service.myConfig.sleepTimer():
+            self.stop()
+            return True
+        
+
 class Monitor(xbmc.Monitor):
     def __init__(self, service):
         self.log('__init__')
@@ -305,6 +321,8 @@ class Monitor(xbmc.Monitor):
     def chkSettings(self):
         self.log('chkSettings')
         PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
+        PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingBool('Enable_Client'))
+        
         #priority settings that trigger chkUpdate on change.
         return {'User_Import'         :{'setting':SETTINGS.getSetting('User_Import')         ,'action':None},
                 'Enable_Client'       :{'setting':SETTINGS.getSetting('Enable_Client')       ,'action':setRestartRequired},
@@ -395,7 +413,7 @@ class Service:
                 
     def runServiceThread(self):
         if isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
-        elif self.writer.isClient(): self.startServiceThread(900.0)
+        elif isClient(): self.startServiceThread(900.0)
         self.log('runServiceThread')
         setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
@@ -417,21 +435,21 @@ class Service:
         # check channels.json for changes
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
         # re-enable missing library.json items from channels.json
-        if self.writer.isClient(): return
+        if isClient(): return
         return self.writer.recoverItemsFromChannels()
         
         
     def chkRecommended(self, lastUpdate=None):
-        if self.writer.isClient(): return False
+        if   isClient(): return
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
-            if self.myConfig.recommended.importPrompt():
-                PROPERTIES.setProperty('Last_Recommended',str(time.time()))
+            self.myConfig.recommended.importPrompt()
+            PROPERTIES.setProperty('Last_Recommended',str(time.time()))
             return True
 
             
     def chkPredefined(self, lastUpdate=None):
-        if self.writer.isClient(): return False
+        if isClient(): return False
         elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
@@ -441,36 +459,26 @@ class Service:
         
                 
     def chkIdle(self):
-        if not isPseudoTV(): return
-        elif self.chkSleep(): return
-            
-        if getIdleTime() > OVERLAY_DELAY:
+        if not isPseudoTV():  return
+        idleTime  = getIdleTime()
+        sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
+        if sleepTime != 0 and idleTime > (sleepTime * 10800):
+            if self.player.triggerSleep(): return
+        
+        if  idleTime > OVERLAY_DELAY:
             self.player.toggleOverlay(True)
         else:
             self.player.toggleOverlay(False)
- 
 
-    def chkSleep(self):
-        conditions = [isPseudoTV(),
-                      self.player.isPlaying(),
-                      not xbmc.getCondVisibility('Player.Paused')]
-        if False in conditions: return
-        sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
-        if   sleepTime == 0: return
-        elif getIdleTime() > (sleepTime * 10800):
-            if self.myConfig.sleepTimer():
-                self.player.stop()
-                return True
-                
 
     def chkInfo(self):
-        if not isCHKInfo(): return False
+        if not isCHKInfo(): return
         self.monitor.waitForAbort(1) #adjust wait time to catch navigation meta. < 2secs? < 1sec. users report instability.
         return fillInfoMonitor()
 
 
     def chkUpdate(self, lastUpdate=None):
-        if (isBusy() | self.monitor.isSettingsOpened() | self.writer.isClient()): 
+        if (isBusy() | self.monitor.isSettingsOpened() | isClient()): 
             return False
         
         with busy():
@@ -521,15 +529,15 @@ class Service:
         self.monitor.waitForAbort(5) # startup delay
         
         if self.initialize():
-            self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=10)
+            self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=5)
             self.monitor.waitForAbort(5) # service delay
             self.startServiceThread()
         else:
-            self.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=10)
+            self.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
             if   isRestartRequired(): break
-            elif self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
+            elif self.chkInfo():      continue # aggressive polling required (bypass waitForAbort)!
             elif self.monitor.waitForAbort(2): break
             
             if self.player.isPlaying():

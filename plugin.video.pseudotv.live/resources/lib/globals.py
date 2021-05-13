@@ -296,7 +296,10 @@ def isOverlay():
 
 def isRestartRequired():
     return PROPERTIES.getPropertyBool('restartRequired')
-    
+
+def isClient():
+    return PROPERTIES.getPropertyBool('isClient')
+              
 def setRestartRequired(state=True):
     return PROPERTIES.setPropertyBool('restartRequired',state)
 
@@ -359,7 +362,7 @@ def showReadme():
 
 def chkUpdateTime(key, wait, lastUpdate=None):
     #todo fuzzy logic to determine if run within % tolerance to expedite execution.
-    if lastUpdate is None: lastUpdate = float((PROPERTIES.getProperty(key) or '0'))
+    if    lastUpdate is None: lastUpdate = float((PROPERTIES.getProperty(key) or '0'))
     else: lastUpdate = float(lastUpdate)
     if (time.time() >= (lastUpdate + wait)): return True
     return False

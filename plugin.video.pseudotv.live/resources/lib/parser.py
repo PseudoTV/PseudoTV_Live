@@ -76,10 +76,6 @@ class Writer:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
         
-    def isClient(self):
-        return self.channels.chkClient()
-              
-              
     def getChannelEndtimes(self):
         self.log('getChannelEndtimes')
         return self.xmltv.getEndtimes()
@@ -300,7 +296,6 @@ class Writer:
 
     def buildPredefinedChannels(self, libraryItems):
         # convert enabled library.json into channels.json items
-        # types = list(filter(lambda k:k != LANGUAGE(30033), CHAN_TYPES)) #ignore Imports, use buildImports
         def findChannel(citem):
             for idx, eitem in enumerate(echannels):
                 if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
@@ -344,6 +339,7 @@ class Writer:
                     citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
                 addLST.append(citem)
             removeLST.extend(leftovers)
+            
         # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
         difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
         [self.channels.add(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
@@ -354,12 +350,13 @@ class Writer:
     def autoPagination(self, id, path, limits={}):
         cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
         if not limits:
-            msg    = 'get'
-            limits = (self.cache.get(cacheName, json_data=True) or self.channels.getPage(id))
+            msg = 'get'
+            limits = self.channels.getPage(id) #check channels.json first
+            if limits.get('total') == 0: limits = (self.cache.get(cacheName, json_data=True) or limits) #check cache with json fallback
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, expiration=datetime.timedelta(days=28), json_data=True)
-            if self.channels.setPage(id, limits): self.saveChannels()
+            if self.channels.setPage(id, limits): self.channels.save()
         self.log("%s autoPagination, id = %s, path = %s, limits = %s"%(msg,id,path,limits))
         return limits
             

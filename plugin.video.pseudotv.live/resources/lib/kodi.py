@@ -317,7 +317,7 @@ class Dialog:
             if isinstance(pvalue,dict):
                 return dumpJSON(pvalue)
             elif isinstance(pvalue,list):
-                return '|'.join(pvalue)
+                return '|'.join(map(str, pvalue))
             elif not isinstance(pvalue,str):
                 return str(pvalue)
             else:
@@ -332,6 +332,7 @@ class Dialog:
         listitem.setArt(art)
         listitem.setCast(cast)
         listitem.setUniqueIDs(uniqueid)
+        # listitem.setProperties({})
     
         for ainfo in streamInfo.get('audio',[]):    listitem.addStreamInfo('audio'   , ainfo)
         for vinfo in streamInfo.get('video',[]):    listitem.addStreamInfo('video'   , vinfo)
@@ -483,7 +484,7 @@ class Dialog:
         elif control:
             if percent == 100 or control.isFinished(): 
                 if hasattr(control, 'close'): control.close()
-                return True
+                return
             elif hasattr(control, 'update'): control.update(percent, header, message)
         return control
         
@@ -495,12 +496,12 @@ class Dialog:
             control.create(header, message)
         elif control:
             if percent == 100 or control.isFinished(): 
-                control.close()
-                return True
+                if hasattr(control, 'close'): control.close()
+                return
             else: control.update(percent, header, message)
         elif control.iscanceled():
-            control.close()
-            return True
+            if hasattr(control, 'close'): control.close()
+            return
         return control
         
    

@@ -190,7 +190,9 @@ class Plugin:
         if nowitem:
             nowitem  = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
             writer   = getWriter(nowitem.get('writer',{}))
-            response = self.jsonRPC.requestList(id, writer.get('citem',{}).get('path',''), 'music', page=RADIO_ITEM_LIMIT)
+            path     = writer.get('citem',{}).get('path','')
+            if isinstance(path,list): path = path[0]
+            response = self.jsonRPC.requestList(id, path, 'music', page=RADIO_ITEM_LIMIT)
             if response:
                 self.channelPlaylist.clear()
                 xbmc.sleep(100)
@@ -277,21 +279,18 @@ class Plugin:
             liz.setProperty('pvritem',dumpJSON(pvritem))
             listitems = [liz]
             
-            if isPlaylist:
-                self.channelPlaylist.clear()
-                xbmc.sleep(100)
+            self.channelPlaylist.clear()
+            xbmc.sleep(100)
                 
-                lastitem  = nextitems.pop(-1)
-                lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
-                lastitem['writer'] = setWriter('Unavailable',lastwrite)
-                nextitems.append(lastitem) #insert pvr callback
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
-                for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
-                if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-                self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
-                return self.player.play(self.channelPlaylist)  
-                
+            lastitem  = nextitems.pop(-1)
+            lastwrite = getWriter(lastitem.get('writer',''))
+            lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
+            lastitem['writer'] = setWriter('Unavailable',lastwrite)
+            nextitems.append(lastitem) #insert pvr callback
+            listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
+            if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+
             # if isStack(listitems[0].getPath()):
                 # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quote(listitems[0].getLabel()),quote(encodeString(listitems[0].getPath())),quote(citem['id']),'False')
                 # self.log('playChannel, isStack calling playVOD url = %s'%(url))
@@ -311,7 +310,11 @@ class Plugin:
                 # print(listitems)
                 # self.channelPlaylist.add(path,lz,idx)
             # self.log('playChannel, set callback stack with paths = %s'%(paths))
-            
+                        
+            if isPlaylist:
+                self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
+                return self.player.play(self.channelPlaylist)  
+                
         else: self.dialog.notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         

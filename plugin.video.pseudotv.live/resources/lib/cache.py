@@ -48,7 +48,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
-def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum=ADDON_VERSION, json_data=False):
+def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum="", json_data=False):
     def decorator(func):
         def decorated(*args, **kwargs):
             method_class = args[0]

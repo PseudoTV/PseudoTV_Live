@@ -149,7 +149,6 @@ class Library:
         return True
         
         
-        
     def setEnableStates(self, type, selects, items=None):
         if items is None: items = self.getLibraryItems(type)
         self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
@@ -158,7 +157,7 @@ class Library:
                 item['enabled'] = True
             else: 
                 item['enabled'] = False
-        return self.setLibraryItems(type,items)
+        return self.setLibraryItems(type,items,setSetting=True)
         
    
     def chkLibraryItems(self, type=None):
@@ -243,8 +242,10 @@ class Library:
         fillItems = self.getfillItems()
         if not fillItems: return True
         interrupted = False
-        busy = self.dialog.progressBGDialog()
-        for pos, type in enumerate(CHAN_TYPES):
+        busy  = self.dialog.progressBGDialog()
+        types = CHAN_TYPES.copy()
+        types.remove(LANGUAGE(30033)) #remove imports type. ie. Recommended Service
+        for pos, type in enumerate(types):
             
             busy = self.dialog.progressBGDialog(1, busy)
             if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
@@ -260,7 +261,7 @@ class Library:
                     break
                     
                 fill = int((idx*100)//len(fillItem))
-                prog = int((pos*100)//len(CHAN_TYPES))
+                prog = int((pos*100)//len(types))
                 busy = self.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
@@ -272,9 +273,8 @@ class Library:
 
                 enabled = len(list(filter(lambda k:k['name'] == name, existing))) > 0
                 tmpItem = {'enabled':enabled,'name':name,'type':type,'logo':logo}
-                if   type == LANGUAGE(30033): pass                           #Imports / "Recommended Services"
-                elif type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
-                else: tmpItem['path'] = self.predefined.pathTypes[type](name)#Predefined
+                if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
+                else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
                 results.append(tmpItem)
                 
             if interrupted: break

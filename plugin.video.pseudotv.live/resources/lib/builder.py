@@ -76,7 +76,7 @@ class Builder:
         
 
     def buildService(self, myService):
-        if self.writer.isClient():
+        if isClient():
             self.log('buildService, Client mode enabled; returning!')
             return False
                         

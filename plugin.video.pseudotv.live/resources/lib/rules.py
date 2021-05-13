@@ -418,7 +418,7 @@ class DisableOverlay(BaseRule):
         self.name         = "Disable Overlay"
         self.description  = ""
         self.optionLabels = ['Disable Overlay']
-        self.optionValues = [not SETTINGS.getSettingBool('Enable_Overlay')]
+        self.optionValues = [not bool(SETTINGS.getSettingBool('Enable_Overlay'))]
         self.actions      = [RULES_ACTION_PLAYER]
         self.selectBoxOptions = [[True, False]]
 
@@ -441,7 +441,7 @@ class DisableOverlay(BaseRule):
 
     def runAction(self, actionid, player, channeldata):
         if actionid == RULES_ACTION_OVERLAY:
-            self.storedOverlayValue = overlay.showOverlay
+            self.storedOverlayValue = player.showOverlay
             player.showOverlay = self.optionValues[0]
             self.log("runAction, setting showOverlay = %s"%(player.showOverlay))
         return channeldata

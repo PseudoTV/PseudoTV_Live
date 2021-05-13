@@ -169,7 +169,7 @@ class JSONRPC:
             json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}' % (
                 self.getActivePlayer())
         result = sendJSON(json_query).get('result', {})
-        return (result.get('item', {}) or result.get('items', {}))
+        return (result.get('item', {}) or result.get('items', []))
 
 
     @cacheit(expiration=datetime.timedelta(seconds=10),json_data=True)  # channel surfing buffer! cache/io impact needs to be eval., cache maybe overkill? video content can not be lower than cache expiration.
@@ -440,15 +440,15 @@ class JSONRPC:
 
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         limits = self.writer.autoPagination(id, path, limits)  # get
-        params = {}
-        params['limits'] = {}
-        params['directory'] = escapeDirJSON(path)
-        params['media'] = media
-        params['properties'] = self.getEnums(id="List.Fields.Files", type='items')
-        params['limits']['start'] = limits.get('end', 0)
-        params['limits']['end'] = limits.get('end', 0) + page
+        params                      = {}
+        params['limits']            = {}
+        params['directory']         = escapeDirJSON(path)
+        params['media']             = media
+        params['properties']        = self.getEnums(id="List.Fields.Files", type='items')
+        params['limits']['start']   = limits.get('end', 0)
+        params['limits']['end']     = limits.get('end', 0) + page
 
-        if sort:   params['sort'] = sort
+        if sort:   params['sort']   = sort
         if filter: params['filter'] = filter
 
         self.log('requestList, id = %s, path = %s, page = %s' % (id, path, page))
@@ -458,7 +458,7 @@ class JSONRPC:
         else:
             key = 'files'
 
-        items = results.get(key, [])
+        items  = results.get(key, [])
         limits = results.get('limits', params['limits'])
         self.log('requestList, id = %s, response items = %s, key = %s, limits = %s' % (id, len(items), key, limits))
 
@@ -467,6 +467,7 @@ class JSONRPC:
             limits = {"end": 0, "start": 0, "total": limits.get('total', 0)}
         self.writer.autoPagination(id, path, limits)  # set
 
+        # no results try again with new limits.
         if len(items) == 0 and limits.get('start', 0) > 0 and limits.get('total', 0) > 0:
             self.log("requestList, id = %s, trying again at start page 0" % (id))
             return self.requestList(id, path, media, page, sort, filter, limits)
@@ -554,8 +555,8 @@ class JSONRPC:
         channelItem['isPlaylist'] = isPlaylist
         channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(
             id=(channelItem.get('uniqueid', -1)))
-        if isPlaylist:
-            channelItem = self.fillPVRbroadcasts(channelItem)
-        else:
-            channelItem['broadcastnext'] = [channelItem.get('broadcastnext', [])]
+        # if isPlaylist:
+        channelItem = self.fillPVRbroadcasts(channelItem)
+        # else:
+            # channelItem['broadcastnext'] = [channelItem.get('broadcastnext', [])]
         return channelItem

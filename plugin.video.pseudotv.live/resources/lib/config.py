@@ -73,7 +73,7 @@ class Config:
 
     def openChannelManager(self, chnum=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if self.writer.isClient(): return
+        if isClient(): return
         chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", sysARG=self.sysARG,config=self,channel=chnum)
         del chmanager
         PROPERTIES.setPropertyBool('Config.Running',False)
@@ -116,7 +116,7 @@ class Config:
 
 
     def autoTune(self):
-        if (self.writer.isClient() | PROPERTIES.getPropertyBool('autotuned')): return False #already ran or dismissed by user, check on next reboot.
+        if (isClient() | PROPERTIES.getPropertyBool('autotuned')): return False #already ran or dismissed by user, check on next reboot.
         elif self.backup.hasBackup():
             retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211))
             if   retval == 2: return self.writer.recoverChannelsFromBackup()
@@ -130,7 +130,7 @@ class Config:
        
         busy   = self.dialog.progressBGDialog()
         types  = CHAN_TYPES.copy()
-        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning.
+        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
         
         for idx, type in enumerate(types):
             self.log('autoTune, type = %s'%(type))
@@ -144,7 +144,7 @@ class Config:
  
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        if self.writer.isClient(): return False
+        if isClient(): return False
             
         escape = autoTune is not None
         with busy_dialog(escape):
@@ -171,7 +171,6 @@ class Config:
                     pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                     self.library.setEnableStates(type,pselect,items)
                     self.writer.groupLibraryItems(type)
-                    self.library.setTypeSettings(type, items)
                     self.setPendingChangeTimer()
             setBusy(False)
             return True

@@ -55,6 +55,7 @@ class Channels:
         self.log('reload')
         self.vault.channelList = self.getTemplate()
         self.vault.channelList.update(self.cleanSelf(self.load()))
+        self.chkClient()
         return self.deposit()
         
         
@@ -138,11 +139,10 @@ class Channels:
             
             
     def chkClient(self):
-        isClient = (SETTINGS.getSettingBool('Enable_Client') | PROPERTIES.getPropertyBool('isClient'))
-        if not isClient:
+        if not PROPERTIES.getPropertyBool('isClient'):
             isClient = self.getUUID() != self.getMYUUID()
-            SETTINGS.setSettingBool('Enable_Client',isClient)
             PROPERTIES.setPropertyBool('isClient',isClient)
+            SETTINGS.setSettingBool('Enable_Client',isClient)
         self.log('chkClient, isClient = %s'%(isClient))
         return isClient
 
