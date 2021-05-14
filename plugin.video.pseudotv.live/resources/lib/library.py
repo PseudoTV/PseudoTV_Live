@@ -123,11 +123,11 @@ class Library:
         # return sorted(filter(lambda k:k.get('enabled',False) == True, items), key=lambda k: k.get('name'))
 
 
-    def setLibraryItems(self, type, items, setSetting=False):
+    def setLibraryItems(self, type, items):
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: PROPERTIES.setPropertyBool('has.Predefined',True)
         self.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
-        if setSetting: self.setTypeSettings(type,items)
+        self.setTypeSettings(type,items)
         return self.save()
         
         
@@ -145,7 +145,7 @@ class Library:
         if type is None: types = CHAN_TYPES
         else:            types = [type]
         for type in types:
-            self.setLibraryItems(type,self.pool.poolList(setDisabled,self.getLibraryItems(type)),setSettings=True)
+            self.setLibraryItems(type,self.pool.poolList(setDisabled,self.getLibraryItems(type)))
         return True
         
         
@@ -157,7 +157,7 @@ class Library:
                 item['enabled'] = True
             else: 
                 item['enabled'] = False
-        return self.setLibraryItems(type,items,setSetting=True)
+        return self.setLibraryItems(type,items)
         
    
     def chkLibraryItems(self, type=None):
@@ -243,12 +243,10 @@ class Library:
         if not fillItems: return True
         interrupted = False
         busy  = self.dialog.progressBGDialog()
-        types = CHAN_TYPES.copy()
-        types.remove(LANGUAGE(30033)) #remove imports type. ie. Recommended Service
-        for pos, type in enumerate(types):
+        for pos, type in enumerate(CHAN_TYPES):
             
             busy = self.dialog.progressBGDialog(1, busy)
-            if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
+            if self.monitor.waitForAbort(0.01):
                 break
                 
             results  = []
@@ -256,17 +254,21 @@ class Library:
             existing = self.getLibraryItems(type, enabled=True)
             log('fillLibraryItems, type = %s, fillItem = %s, existing = %s'%(type, len(fillItem),len(existing)))
             for idx, item in enumerate(fillItem):
-                if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
+                if self.monitor.waitForAbort(0.01):
                     interrupted = True
                     break
                     
                 fill = int((idx*100)//len(fillItem))
-                prog = int((pos*100)//len(types))
+                prog = int((pos*100)//len(CHAN_TYPES))
                 busy = self.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
+
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
                     if not name: continue
-                    logo = self.jsonRPC.getLogo(name, type, item.get('file',None), item)
+                    if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
+                        logo = item.get('icon','')
+                    else: 
+                        logo = self.jsonRPC.getLogo(name, type, item.get('file',None), item)
                 else: 
                     name = item
                     logo = self.jsonRPC.getLogo(name, type)
@@ -274,6 +276,7 @@ class Library:
                 enabled = len(list(filter(lambda k:k['name'] == name, existing))) > 0
                 tmpItem = {'enabled':enabled,'name':name,'type':type,'logo':logo}
                 if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
+                elif  type == LANGUAGE(30033): tmpItem['item'] = item
                 else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
                 results.append(tmpItem)
                 

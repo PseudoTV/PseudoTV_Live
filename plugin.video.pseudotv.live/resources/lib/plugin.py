@@ -222,11 +222,10 @@ class Plugin:
     def playChannel(self, name, id, isPlaylist=False, failed=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
-        runtime   = 0
-        progress  = 0
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
         if self.currentChannel != id: self.currentChannel = id
+            
         pvritem   = self.jsonRPC.getPVRposition(name, id, isPlaylist=isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
@@ -237,59 +236,59 @@ class Plugin:
         if nowitem:
             found    = True
             lastitem = PROPERTIES.getPropertyDict('Last_Played_NowItem')
+            
             if nowitem != lastitem: #detect loopback
                 nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
-                percent   = round(nowitem['progresspercentage'])
-                progress  = nowitem['progress']
-                runtime   = nowitem['runtime']
-                seekTHLD  = SETTINGS.getSettingInt('Seek_Threshold%')
                 seekTLRNC = SETTINGS.getSettingInt('Seek_Tolerance')
-            
-                if progress > seekTLRNC:
-                    self.log('playChannel, progresspercentage = %s, seekThreshold = %s'%(percent,seekTHLD))
-                    if percent >= seekTHLD:  # near end, avoid callback; override nowitem and queue next show.
-                        self.log('playChannel, progress near the end, queue nextitem')
-                        nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
-                    else: 
-                        self.setOffset = True #channel requires offset for "PseudoTV" effect.
-                        
+                seekTHLD  = SETTINGS.getSettingInt('Seek_Threshold%')
+                self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],seekTLRNC))
+                self.log('playChannel, progresspercentage = %s, Seek_Threshold = %s'%(nowitem['progresspercentage'],seekTHLD))
+                
+                if round(nowitem['progress']) <= seekTLRNC:
+                    nowitem['progress'] = 0
+                    nowitem['progresspercentage'] = 0
+                    
+                elif round(nowitem['progresspercentage']) > seekTHLD: # near end, avoid callback; override nowitem and queue next show.
+                    self.log('playChannel, progress near the end, queue nextitem')
+                    nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
             else: 
                 nowitem = nextitems.pop(0)
                 self.log('playChannel, loopback detected advancing queue to nextitem')
             PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
-                
+            
             writer = getWriter(nowitem.get('writer',{}))
             liz    = self.dialog.buildItemListItem(writer)
             self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
             
-            if self.setOffset and (runtime > 0 and progress > 0):
-                self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((runtime * 60),progress))
-                pvritem['progress'] = progress
-                pvritem['runtime']  = runtime
-                liz.setProperty('totaltime'  , str((runtime * 60))) #sec
-                liz.setProperty('resumetime' , str(progress))       #sec
-                liz.setProperty('startoffset', str(progress))       #sec
+            if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs
+                liz.setProperty('resumetime' , str(nowitem['progress']))       #secs
+                liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                 
-                url  = liz.getPath()
-                file = writer.get('originalfile','')
-                if isStack(url) and not hasStack(url,file):
-                    self.log('playChannel, playing stack with url = %s'%(url))
-                    liz.setPath('stack://%s'%(' , '.join(stripStack(url, file))))#remove pre-roll stack from seek offset video.
+                # url  = liz.getPath()
+                # file = writer.get('originalfile','')
+                # if isStack(url) and not hasStack(url,file):
+                    # self.log('playChannel, playing stack with url = %s'%(url))
+                    # liz.setPath('stack://%s'%(' , '.join(stripStack(url, file))))#remove pre-roll stack from seek offset video.
 
-            liz.setProperty('pvritem',dumpJSON(pvritem))
-            listitems = [liz]
-            
-            self.channelPlaylist.clear()
-            xbmc.sleep(100)
-                
             lastitem  = nextitems.pop(-1)
             lastwrite = getWriter(lastitem.get('writer',''))
             lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
             lastitem['writer'] = setWriter('Unavailable',lastwrite)
             nextitems.append(lastitem) #insert pvr callback
+            
+            pvritem['broadcastnow']  = nowitem
+            pvritem['broadcastnext'] = nextitems
+            liz.setProperty('pvritem',dumpJSON(pvritem))
+            
+            self.channelPlaylist.clear()
+            xbmc.sleep(100)
+                
+            listitems = [liz]
             listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
-            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
 
             # if isStack(listitems[0].getPath()):
                 # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quote(listitems[0].getLabel()),quote(encodeString(listitems[0].getPath())),quote(citem['id']),'False')
@@ -343,8 +342,8 @@ class Plugin:
         channel = (params.get("channel",'')       or None)
         url     = (params.get("url",'')           or None)
         id      = (params.get("id",'')            or None)
-        radio   = (params.get("radio",'')         or 'False') == "True"
         mode    = (params.get("mode",'')          or None)
+        radio   = (params.get("radio",'')         or 'False') == "True"
         self.log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
 
         if   mode is None:  self.buildMenu(name)

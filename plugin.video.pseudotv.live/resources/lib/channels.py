@@ -139,7 +139,8 @@ class Channels:
             
             
     def chkClient(self):
-        if not PROPERTIES.getPropertyBool('isClient'):
+        isClient = PROPERTIES.getPropertyBool('isClient')
+        if not isClient:
             isClient = self.getUUID() != self.getMYUUID()
             PROPERTIES.setPropertyBool('isClient',isClient)
             SETTINGS.setSettingBool('Enable_Client',isClient)
@@ -164,7 +165,7 @@ class Channels:
 
     def getPage(self, id):
         idx, citem = self.findChannel({'id':id})
-        page = (citem.get('page','') or {"end":0,"start":0,"total":0})
+        page = (citem.get('page','') or self.getCitem().get('page'))
         self.log('getPage, id = %s, page = %s'%(id, page))
         return page
 
@@ -188,25 +189,25 @@ class Channels:
         return True
 
 
-    def add(self, citem):
-        self.log('add, id = %s'%(citem['id']))
+    def addChannel(self, citem):
+        self.log('addChannel, id = %s'%(citem['id']))
         idx, channel = self.findChannel(citem)
         if idx is not None:
             for key in ['id','rules','number','favorite','page']: 
                 citem[key] = channel[key] # existing id found, reuse channel meta.
             citem['group'] = list(set(citem.get('group',[])))
-            self.log('Updating channel %s, id %s'%(citem["number"],citem["id"]))
+            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
             self.vault.channelList['channels'][idx] = citem #can't .update() must replace.
         else:
             citem['group'] = list(set(citem.get('group',[])))
-            self.log('Adding channel %s, id %s'%(citem["number"],citem["id"]))
+            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
             self.vault.channelList.setdefault('channels',[]).append(citem)
-        self.log('add, total channels = %s'%(len(self.vault.channelList.get('channels',[]))))
+        self.log('addChannel, total channels = %s'%(len(self.vault.channelList.get('channels',[]))))
         return True
         
         
-    def remove(self, citem):
-        self.log('removing id = %s'%(citem['id']))
+    def removeChannel(self, citem):
+        self.log('removeChannel, id = %s'%(citem['id']))
         idx, channel = self.findChannel(citem)
         if idx is not None: self.vault.channelList['channels'].pop(idx)
         return True

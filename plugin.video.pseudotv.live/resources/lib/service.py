@@ -155,7 +155,7 @@ class Player(xbmc.Player):
         self.pendingStop  = True
 
 
-    def onPlayBackSeek(self, seek_time, seek_offset):
+    def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, limited to pvr?
         self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
         self.pendingSeek = False
         self.toggleSubtitles(self.lastSubState)
@@ -189,7 +189,6 @@ class Player(xbmc.Player):
             self.log('playAction, returning missing pvritem or not PseudoTV!')
             return self.stopAction()
             
-        self.log('playAction, current pvritem:\n%s\nplaying pvritem:\n%s'%(pvritem,self.playingPVRitem))
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         
         if not pvritem.get('callback'):
@@ -206,10 +205,11 @@ class Player(xbmc.Player):
             self.ruleList = self.rules.loadRules([citem])
             pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem)
             
-            self.pendingSeek = int(pvritem.get('progress','0')) > 0
+            self.pendingSeek = round(pvritem.get('broadcastnow',{}).get('progress',0)) > 0
+            self.log('playAction, pendingSeek = %s'%(self.pendingSeek))
             if self.pendingSeek: 
                 self.toggleSubtitles(False)
-            self.log('playAction, pendingSeek = %s'%(self.pendingSeek))
+                self.onPlayBackSeek() #manually trigger, until Kodi fix.
         self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
         
         
@@ -284,8 +284,10 @@ class Monitor(xbmc.Monitor):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
             
-    def isSettingsOpened(self):
-        if xbmcgui.getCurrentWindowDialogId() in [10140,12000,10126,10138,13001]:
+    def isSettingsOpened(self, aggressive=True):
+        windowIDS = [10140]
+        if aggressive: windowIDS.extend([12000,10126,10138,13001])
+        if xbmcgui.getCurrentWindowDialogId() in windowIDS:
             return self.onSettingsChanged()
         return False
 

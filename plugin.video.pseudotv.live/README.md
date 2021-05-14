@@ -17,7 +17,9 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/PseudoTV/PseudoTV_Live.svg?color=red&style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/commits?author=Lunatixz)
 [![Kodi URL](https://img.shields.io/badge/Supports-Kodi%2019-blue.svg?style=flat-square)](https://kodi.tv/download)
 [![Kodi Donate](https://img.shields.io/badge/Donate-Kodi-blue.svg?style=flat-square)](https://kodi.tv/contribute/donate)
-[![Lunatixz Donate](https://img.shields.io/badge/Donate-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
+[![Lunatixz Coffee](https://img.shields.io/badge/Coffee-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
+[![Lunatixz Patreon](https://img.shields.io/badge/Patreon-Lunatixz-blue.svg?style=flat-square)](https://www.patreon.com/pseudotv)
+[![Lunatixz Paypal](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](paypal.me/Lunatixz)
 [![Twitter URL](https://img.shields.io/twitter/follow/PseudoTV_Live.svg?color=blue&label=%40PseudoTV_Live&style=flat-square)](https://twitter.com/PseudoTV_Live)
 
 # Special Thanks:
@@ -224,6 +226,8 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 
   ![Play Programme](https://i.imgur.com/ykLfzu6.png "Play Programme")
   ![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
+
+- Channel surfing only works while in PVR CallbacK mode and during linear playback; VOD playback exits PVR.
 
 ------------
 

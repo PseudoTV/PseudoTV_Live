@@ -3,6 +3,10 @@ v.0.3.0
 -Added m3u/xmltv support for "xmltv_ns", "provider" parameters.
 -Miscellaneous Tweaks & Improvements.
 -Fixed Radio Stations.
+-Fixed Recommended Services Imports.
+-Fixed Playback bug regarding channels containing a comma in it's name (requires IPTV Simple v7.6.5).
+-Added m3u/xmltv imports that lack guidedata default to a single cell playable EPG entry.
+-Added m3u import support for #EXTM3U parameters, all compliant parameters converted to #EXTINF.
 
 v.0.2.9
 -Fixed "UpNext" display.

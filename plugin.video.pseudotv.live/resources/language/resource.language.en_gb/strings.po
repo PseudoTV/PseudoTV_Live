@@ -1173,9 +1173,21 @@ msgid "Stay tuned for more..."
 msgstr ""
 
 msgctxt "#30290"
-msgid "You're Watching:"
+msgid "[B]You're Watching:[/B]"
 msgstr ""
 
 msgctxt "#30291"
-msgid "Up Next:"
+msgid "[B]Up Next:[/B]"
+msgstr ""
+
+msgctxt "#30292"
+msgid "Install Log Uploader"
+msgstr ""
+
+msgctxt "#30293"
+msgid "Open Log Uploader"
+msgstr ""
+
+msgctxt "#30294"
+msgid "Advanced"
 msgstr ""

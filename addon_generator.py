@@ -71,7 +71,10 @@ class Generator(object):
                 if dirname in DELETE_FOLDERS:
                     try:
                         print("found: " + dirname)
-                        rmtree(os.path.join(root, dirname))
+                        try:
+                            os.rmdir(os.path.join(root, dirname))
+                        except: 
+                            rmtree(os.path.join(root, dirname))
                         print("removing: " + dirname)
                     except: pass
             for filename in filenames:

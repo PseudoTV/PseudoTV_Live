@@ -330,7 +330,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="Select_Imports" type="string" label="30150" help="30246">
+                <setting id="Select_Imports" type="string" label="30150" help="30246">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -680,7 +680,7 @@
 				</setting>
 				<setting id="Seek_Tolerance" type="integer" label="30040" help="30232">
 					<level>2</level>
-					<default>55</default>
+					<default>60</default>
 					<constraints>
 						<minimum>0</minimum>
 						<step>5</step>
@@ -692,7 +692,7 @@
 				</setting>
 				<setting id="Seek_Threshold%" type="integer" label="30129" help="30233">
 					<level>2</level>
-					<default>85</default>
+					<default>98</default>
 					<constraints>
 						<minimum>85</minimum>
 						<step>5</step>
@@ -1004,6 +1004,41 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+                <setting id="Install_Logger" type="action" label="30292" help="" parent="Enable_Debugging">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<condition on="property" name="InfoBool">!System.HasAddon(script.kodi.loguploader)</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>InstallAddon(script.kodi.loguploader)</data>
+						<close>true</close>
+					</control>
+                </setting> 
+                <setting id="Run_Logger" type="action" label="30293" help="" parent="Enable_Debugging">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunAddon(script.kodi.loguploader)</data>
+						<close>true</close>
+					</control>
+                </setting>
+			</group>
+            
+			<group id="2" label="30294">
 				<setting id="Enable_Recommended" type="boolean" label="30148" help="30270">
 					<level>1</level>
 					<default>true</default>
@@ -1016,8 +1051,8 @@
 				</setting>
 			</group>
       
-			<group id="2" label="30276">
-        <setting id="Show_Readme" type="action" label="30274" help="">
+			<group id="3" label="30276">
+                <setting id="Show_Readme" type="action" label="30274" help="">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1028,7 +1063,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-        <setting id="Show_Changelog" type="action" label="30275" help="">
+                <setting id="Show_Changelog" type="action" label="30275" help="">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -1038,10 +1073,10 @@
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/config.py, Show_Changelog)</data>
 						<close>true</close>
 					</control>
-				</setting>
-      </group>
+                </setting>
+            </group>
       
-			<group id="3" label="30222">
+			<group id="4" label="30222">
 				<setting id="iptvsimple" type="action" label="30046" help="">
 					<level>0</level>
 					<data>Addon.OpenSettings(pvr.iptvsimple)</data>

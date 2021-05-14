@@ -459,7 +459,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.newChannels = self.validateChannels(self.newChannels)
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
-        [self.channels.add(citem) if citem in self.newChannels else self.removeChannel(citem) for citem in difference] #add new, remove old.
+        [self.channels.addChannel(citem) if citem in self.newChannels else self.removeChannel(citem) for citem in difference] #add new, remove old.
         if self.channels.save():
             self.dialog.notificationDialog(LANGUAGE(30053))
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.newChannels)))

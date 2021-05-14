@@ -90,16 +90,16 @@ DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
 
 MAX_IMPORT          = 5
-EPG_HRS             = 10800  # 3hr in Secs., Min. EPG guidedata
+EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
-UPDATE_OFFSET       = 3600 #1hr in secs.
-RECOMMENDED_OFFSET  = 900 #15mins in secs.
-PREDEFINED_OFFSET   = 10800 # 3hr in Secs
-UPDATE_WAIT         = 3600 #1hr in secs.
-AUTOTUNE_LIMIT      = 3 #auto items per type.
-CHANNEL_LIMIT       = 999
-OVERLAY_DELAY       = 30 #secs
+UPDATE_OFFSET       = 3600  #1hr in secs.
+RECOMMENDED_OFFSET  = 900   #15mins in secs.
+PREDEFINED_OFFSET   = 10800 #3hr in Secs
+UPDATE_WAIT         = 3600  #1hr in secs.
+AUTOTUNE_LIMIT      = 3     #auto items per type.
+CHANNEL_LIMIT       = 999   #hard limit, do not exceed!
+OVERLAY_DELAY       = 30    #secs
 CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]#Limit is 10
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
@@ -229,7 +229,26 @@ def busy_dialog(escape=False):
         try: yield
         finally:
             xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
-        
+
+def cleanAbandonedLocks():
+    ... #todo remove .locks
+     
+def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
+    n = datetime.datetime.fromtimestamp(thetime)
+    delta = datetime.timedelta(minutes=offset)
+    if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
+    else: n = n.replace(minute=0, second=0, microsecond=0)
+    return time.mktime(n.timetuple())
+    # if n.minute < (offset): n = n.replace(minute=0, second=0, microsecond=0)
+    # else: n = n.replace(minute=offset, second=0, microsecond=0)
+    # return time.mktime(n.timetuple())
+    
+def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
+    n = datetime.datetime.fromtimestamp(thetime)
+    delta = datetime.timedelta(minutes=offset)
+    n = (n + (datetime.datetime.min - n) % delta)
+    return time.mktime(n.timetuple())
+    
 def roundupDIV(p, q):
     try:
         d, r = divmod(p, q)
@@ -238,10 +257,47 @@ def roundupDIV(p, q):
     except ZeroDivisionError: 
         return 1
     
+def pagination(list, end):
+    for start in range(0, len(list), end):
+        yield seq[start:start+end]
+ 
+def getRandomPage(limit,total=50):
+    page = random.randrange(0, total, limit)
+    return page, page+limit
+  
 def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-        
+
+def padLST(lst, targetLen):
+    if len(lst) == 0: return lst
+    lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
+    return lst[:targetLen]
+
+def percentDiff(org, new):
+    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
+    except ZeroDivisionError: return 0
+
+def setInfoMonitor(values):
+    return PROPERTIES.setProperties('monitor.montiorList',list(set(values)))
+    
+def getInfoMonitor():
+    return list(filter(lambda d:d != '', PROPERTIES.getProperties('monitor.montiorList')))
+ 
+def fillInfoMonitor(type='ListItem'):
+    item = {'name'  :xbmc.getInfoLabel('%s.Label'%(type)),
+            'label' :xbmc.getInfoLabel('%s.Label'%(type)),
+            'label2':xbmc.getInfoLabel('%s.Label2'%(type)),
+            'path'  :xbmc.getInfoLabel('%s.Path'%(type)),
+            'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
+            'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
+            'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}   
+    if item:
+        montiorList = getInfoMonitor()
+        montiorList.insert(0,dumpJSON(item))
+        setInfoMonitor(montiorList)
+    return True
+    
 def initDirs():
     dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,LOCK_LOC]
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
@@ -265,6 +321,50 @@ def moveUser(oldFolder, newFolder): #todo finish
         dia = Dialog().progressDialog(pnt, dia, message='Moving %s failed!'%(file))
     return Dialog().notificationDialog(LANGUAGE(30053))
 
+def dumpJSON(item, idnt=None, sortkey=True):
+    try: 
+        if not item:
+            return ''
+        elif hasattr(item, 'read'):
+            return json.dump(item, indent=idnt, sort_keys=sortkey)
+        elif not isinstance(item,basestring):
+            return json.dumps(item, indent=idnt, sort_keys=sortkey)
+        elif isinstance(item,basestring):
+            return item
+    except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    return ''
+    
+def loadJSON(item):
+    try: 
+        if not item:
+            return {}
+        elif hasattr(item, 'read'):
+            return json.load(item)
+        elif isinstance(item,basestring):
+            return json.loads(item)
+        elif isinstance(item,dict):
+            return item
+    except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    return {}#except json.decoder.JSONDecodeError:,ValueError:
+    
+def sendJSON(command):
+    log('globals: sendJSON, command = %s'%(command))
+    response = loadJSON(xbmc.executeJSONRPC(command))
+    return response
+
+def escapeDirJSON(path):
+    mydir = path
+    if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
+    return mydir
+
+def splitall(plugin):
+    plugin = [plugin]
+    while not xbmc.Monitor().abortRequested():
+        last   = plugin
+        plugin = os.path.split(plugin[0])
+        if not plugin[0]: break
+    return last[0]
+    
 def isSSD():
     #TODO DETECT SSD/FLASH
     return (USER_LOC)
@@ -272,18 +372,6 @@ def isSSD():
 def getIdleTime():
     try: return (int(xbmc.getGlobalIdleTime()) or 0)
     except: return 0 #Kodi raises error after sleep.
-    
-def hasPVR():
-    return xbmc.getCondVisibility('Pvr.HasTVChannels')
-    
-def hasMusic():
-    return xbmc.getCondVisibility('Library.HasContent(Music)')
-    
-def hasTV():
-    return xbmc.getCondVisibility('Library.HasContent(TVShows)')
-    
-def hasMovie():
-    return xbmc.getCondVisibility('Library.HasContent(Movies)')
 
 def setBusy(state):
     return PROPERTIES.setPropertyBool("BUSY.RUNNING",state)
@@ -314,12 +402,25 @@ def hasAutoTuned():
     
 def setAutoTuned(state=True):
     return PROPERTIES.setPropertyBool('autotuned',state)
-
-def padLST(lst, targetLen):
-    if len(lst) == 0: return lst
-    lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
-    return lst[:targetLen]
-
+    
+def hasPVR():
+    return xbmc.getCondVisibility('Pvr.HasTVChannels')
+    
+def hasMusic():
+    return xbmc.getCondVisibility('Library.HasContent(Music)')
+    
+def hasTV():
+    return xbmc.getCondVisibility('Library.HasContent(TVShows)')
+    
+def hasMovie():
+    return xbmc.getCondVisibility('Library.HasContent(Movies)')
+ 
+def hasPVRAddon():
+    return xbmc.getCondVisibility("System.HasPVRAddon") == "true"
+         
+def hasAddon(id):
+    return xbmc.getCondVisibility("System.HasAddon(%s)"%id) == "true"
+    
 def hasVersionChanged(cleanStart=False):
     lastVersion = (SETTINGS.getSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
@@ -367,45 +468,6 @@ def chkUpdateTime(key, wait, lastUpdate=None):
     if (time.time() >= (lastUpdate + wait)): return True
     return False
 
-def dumpJSON(item, idnt=None, sortkey=True):
-    try: 
-        if not item:
-            return ''
-        elif hasattr(item, 'read'):
-            return json.dump(item, indent=idnt, sort_keys=sortkey)
-        elif not isinstance(item,basestring):
-            return json.dumps(item, indent=idnt, sort_keys=sortkey)
-        elif isinstance(item,basestring):
-            return item
-    except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
-    return ''
-    
-def loadJSON(item):
-    try: 
-        if not item:
-            return {}
-        elif hasattr(item, 'read'):
-            return json.load(item)
-        elif isinstance(item,basestring):
-            return json.loads(item)
-        elif isinstance(item,dict):
-            return item
-    except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
-    return {}#except json.decoder.JSONDecodeError:,ValueError:
-    
-def sendJSON(command):
-    log('globals: sendJSON, command = %s'%(command))
-    response = loadJSON(xbmc.executeJSONRPC(command))
-    return response
-
-def splitall(plugin):
-    plugin = [plugin]
-    while not xbmc.Monitor().abortRequested():
-        last   = plugin
-        plugin = os.path.split(plugin[0])
-        if not plugin[0]: break
-    return last[0]
-    
 def getPluginMeta(id):
     try:
         if id.startswith(('plugin://','resource://')):
@@ -417,13 +479,7 @@ def getPluginMeta(id):
         return meta
     except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
-      
-def hasPVRAddon():
-    return xbmc.getCondVisibility("System.HasPVRAddon") == "true"
-         
-def hasAddon(id):
-    return xbmc.getCondVisibility("System.HasAddon(%s)"%id) == "true"
-    
+
 def installAddon(id, manual=False):
     if hasAddon(id):
         if not addonEnabled(id): toggleADDON(id)
@@ -503,14 +559,6 @@ def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'):
 def getLocalTime():
     offset = (datetime.datetime.utcnow() - datetime.datetime.now())
     return time.time() + offset.total_seconds()
-
-def getDeltaTime(time):
-    datetime.datetime.fromtimestamp(time) + datetime.timedelta(time)
-
-def escapeDirJSON(path):
-    mydir = path
-    if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
-    return mydir
 
 def isHD(item):
     if 'isHD' in item: return item['isHD']
@@ -724,30 +772,6 @@ def cleanResourcePath(path):
     if path.startswith('resource://'):
         return (path.replace('resource://','special://home/addons/'))
     return path
-    
-def percentDiff(org, new):
-    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
-    except ZeroDivisionError: return 0
-        
-def fillInfoMonitor(type='ListItem'):
-    item = {'name'  :xbmc.getInfoLabel('%s.Label'%(type)),
-            'label' :xbmc.getInfoLabel('%s.Label'%(type)),
-            'label2':xbmc.getInfoLabel('%s.Label2'%(type)),
-            'path'  :xbmc.getInfoLabel('%s.Path'%(type)),
-            'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
-            'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
-            'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}   
-    if item:
-        montiorList = getInfoMonitor()
-        montiorList.insert(0,dumpJSON(item))
-        setInfoMonitor(montiorList)
-    return True
-    
-def setInfoMonitor(values):
-    return PROPERTIES.setProperties('monitor.montiorList',list(set(values)))
-    
-def getInfoMonitor():
-    return list(filter(lambda d:d != '', PROPERTIES.getProperties('monitor.montiorList')))
 
 def isCHKInfo():
     return PROPERTIES.getProperty('chkInfo') == "True"
@@ -757,11 +781,6 @@ def hasSubtitle():
 
 def isSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
- 
-def getRandomPage(limit,total=50):
-    page = random.randrange(0, total, limit)
-    log('globals: getRandomPage, page = %s'%(page))
-    return page, page+limit
 
 def isPlaylistRandom():
     return xbmc.getInfoLabel('Playlist.Random').lower() == 'on' # Disable auto playlist shuffling if it's on
@@ -771,26 +790,6 @@ def isPlaylistRepeat():
 
 def titleLabels(list):
      return [str(item).title() for item in list]
- 
-def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
-    n = datetime.datetime.fromtimestamp(thetime)
-    delta = datetime.timedelta(minutes=offset)
-    if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
-    else: n = n.replace(minute=0, second=0, microsecond=0)
-    return time.mktime(n.timetuple())
-    # if n.minute < (offset): n = n.replace(minute=0, second=0, microsecond=0)
-    # else: n = n.replace(minute=offset, second=0, microsecond=0)
-    # return time.mktime(n.timetuple())
-    
-def roundTimeUp(thetime, offset=30): # round the given time up to the nearest
-    n = datetime.datetime.fromtimestamp(thetime)
-    delta = datetime.timedelta(minutes=offset)
-    n = (n + (datetime.datetime.min - n) % delta)
-    return time.mktime(n.timetuple())
-    
-def pagination(list, end):
-    for start in range(0, len(list), end):
-        yield seq[start:start+end]
 
 def getChannelSuffix(name, type):
     if name.endswith((LANGUAGE(30155),LANGUAGE(30157),LANGUAGE(30156),LANGUAGE(30177))): return name  
@@ -806,5 +805,3 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
     
-def cleanAbandonedLocks():
-    ... #todo remove .locks

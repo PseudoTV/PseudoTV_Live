@@ -48,7 +48,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
-def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum="", json_data=False):
+def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), checksum=ADDON_VERSION, json_data=False):
     def decorator(func):
         def decorated(*args, **kwargs):
             method_class = args[0]
@@ -76,13 +76,17 @@ class Cache:
         
 
     def set(self, name, data, checksum="", expiration=timedelta(minutes=15), json_data=False):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
-        self.log('set, name = %s'%(name))
+        if not name.startswith(ADDON_ID): 
+            name = '%s.%s'%(ADDON_ID,name)
+            if not checksum: checksum = ADDON_VERSION
+        self.log('set, name = %s, checksum = %s'%(name,checksum))
         self.cache.set(name.lower(),data,checksum,expiration,json_data)
         return data
         
     
     def get(self, name, checksum="", json_data=False):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
-        self.log('get, name = %s'%(name))
+        if not name.startswith(ADDON_ID): 
+            name = '%s.%s'%(ADDON_ID,name)
+            if not checksum: checksum = ADDON_VERSION
+        self.log('get, name = %s, checksum = %s'%(name,checksum))
         return self.cache.get(name.lower(),checksum,json_data)

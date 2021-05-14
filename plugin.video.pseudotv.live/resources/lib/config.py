@@ -170,7 +170,7 @@ class Config:
                 with busy_dialog(escape):
                     pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                     self.library.setEnableStates(type,pselect,items)
-                    self.writer.groupLibraryItems(type)
+                    self.writer.convertLibraryItems(type)
                     self.setPendingChangeTimer()
             setBusy(False)
             return True
@@ -180,7 +180,7 @@ class Config:
         self.log('buildLibraryItems')
         if self.library.fillLibraryItems(myService):
             self.library.chkLibraryItems()
-            return self.writer.groupLibraryItems()
+            return self.writer.convertLibraryItems()
         else: 
             return False
 

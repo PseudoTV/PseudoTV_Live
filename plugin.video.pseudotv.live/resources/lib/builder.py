@@ -94,10 +94,11 @@ class Builder:
         self.progDialog   = self.dialog.progressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.rules.loadRules(channels)
-        endTimes          = self.writer.getChannelEndtimes()
+        endTimes          = dict(self.writer.getChannelEndtimes())
+        self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):
-            if self.monitor.waitForAbort(0.01) or myService.monitor.isSettingsOpened():
+            if self.monitor.waitForAbort(0.01):
                 self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
                 return False
                 
@@ -174,6 +175,7 @@ class Builder:
             self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
             self.limits   = {}#{"end":0,"start":0,"total":0}
             self.limit    = PAGE_LIMIT
+            
             valid         = False
             now           = getLocalTime()
             start         = (start or roundTimeDown(now,offset=60)) #offset time to start top of the hour
@@ -272,7 +274,7 @@ class Builder:
         id = channel['id']
         fileList      = []
         seasoneplist  = []
-        method        =  sort.get("method","random")
+        method        = sort.get("method","random")
         json_response = (self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
         
         # malformed calls will return root response, catch a reparse of same folder and quit. 

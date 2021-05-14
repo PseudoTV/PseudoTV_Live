@@ -42,7 +42,7 @@ class STRMParser:
             
         log("STRMParser: determineLength, file = %s, nfo = %s"%(filename,fleName))
         try:
-            File = FileAccess.open(fleName, "rb", None)
+            File = FileAccess.open(fleName, "rb")
             dom = parse(File)
             File.close()
         except:

@@ -17,8 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from resources.lib.globals import *
-from resources.lib.resource import Resources
+from resources.lib.globals     import *
+from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
 
 
@@ -52,10 +52,10 @@ class JSONRPC:
             from resources.lib.parser import Writer
             self.writer = Writer(self)
 
-        self.sendQueue = Queue(maxsize=(PAGE_LIMIT * 5))
+        self.sendQueue = Queue()
         self.videoParser = VideoParser()
         self.resources = Resources(self)
-        self.queueThread = threading.Timer(30.0, self.setDuration)
+        self.queueThread = threading.Timer(30.0, self.queueWorker)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -256,27 +256,25 @@ class JSONRPC:
             dbid, dur),
             'episode': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}' % (
             dbid, dur)}
-        # self.sendQueue.put(param[media]) #todo fix
-        # return self.sendQueueThread()
-
-
-    def setDuration(self):
-        self.log('setDuration')
-        self.pool.poolList(sendJSON, list(filter(None, [que for que in iter(self.sendQueue.get, None)])))
+        self.sendQueue.put(param[media])
+        self.sendQueueThread()
 
 
     def sendQueueThread(self):
-        ## Egg Timer, reset on each call.
-        if self.queueThread.is_alive():
-            self.queueThread.cancel()
-            try:
-                self.queueThread.join()
-            except:
-                pass
-        self.queueThread = threading.Timer(900.0, self.setDuration)
-        self.queueThread.name = "queueThread"
-        self.queueThread.start()
+        if not self.queueThread.is_alive():
+            self.queueThread = threading.Timer(30.0, self.queueWorker)
+            self.queueThread.name = "queueThread"
+            self.queueThread.start()
 
+
+    def queueWorker(self):
+        self.log('queueWorker, starting thread')
+        while not self.monitor.abortRequested() and not self.sendQueue.empty():
+            if self.monitor.waitForAbort(5): break
+            try: sendJSON(self.sendQueue.get())
+            except: pass
+        self.log('queueWorker, finishing thread')
+                    
 
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://', 'upnp://')): return True
@@ -439,7 +437,7 @@ class JSONRPC:
 
 
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        limits = self.writer.autoPagination(id, path, limits)  # get
+        limits = self.writer.autoPagination(id, path) #get
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)
@@ -460,12 +458,12 @@ class JSONRPC:
 
         items  = results.get(key, [])
         limits = results.get('limits', params['limits'])
-        self.log('requestList, id = %s, response items = %s, key = %s, limits = %s' % (id, len(items), key, limits))
+        self.log('requestList, id = %s\nitems = %s\nlimits = %s'%(id, len(items), limits))
 
         if limits.get('end', 0) >= limits.get('total', 0):  # restart page, exceeding boundaries.
-            self.log('requestList, id = %s, resetting page to 0' % (id))
+            self.log('requestList, id = %s, resetting page to 0'%(id))
             limits = {"end": 0, "start": 0, "total": limits.get('total', 0)}
-        self.writer.autoPagination(id, path, limits)  # set
+        self.writer.autoPagination(id, path, limits) #set
 
         # no results try again with new limits.
         if len(items) == 0 and limits.get('start', 0) > 0 and limits.get('total', 0) > 0:
@@ -495,7 +493,11 @@ class JSONRPC:
 
     def matchPVRChannel(self, chname, id, radio=False):  # Convert PseudoTV Live channelID into a Kodi channelID for playback
         def _matchChannel(channel):
-            if channel.get('label') == chname:
+            # match = re.compile('\, (.*)', re.IGNORECASE).search(chname)
+            # if match: chname_alt = match.group(1)
+            # else:     chname_alt = chname
+            chname_alt = chname
+            if channel.get('label') in [chname,chname_alt]:
                 for key in ['broadcastnow', 'broadcastnext']:
                     writer = getWriter(channel.get(key, {}).get('writer', ''))
                     if writer.get('citem', {}).get('id', '') == id:
@@ -551,10 +553,9 @@ class JSONRPC:
     def getPVRposition(self, chname, id, radio=False, isPlaylist=False):
         self.log('getPVRposition, chname = %s, id = %s, isPlaylist = %s' % (chname, id, isPlaylist))
         channelItem = self.matchPVRChannel(chname, id, radio)
-        channelItem['citem'] = {'name': chname, 'id': id, 'radio': radio}
+        channelItem['citem']      = {'name': chname, 'id': id, 'radio': radio}
         channelItem['isPlaylist'] = isPlaylist
-        channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(
-            id=(channelItem.get('uniqueid', -1)))
+        channelItem['callback']   = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniqueid', -1)))
         # if isPlaylist:
         channelItem = self.fillPVRbroadcasts(channelItem)
         # else:

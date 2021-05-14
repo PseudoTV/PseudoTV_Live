@@ -67,11 +67,10 @@ class PoolHelper:
         self.procSetting = {0:False,1:0,2:2,3:1}[REAL_SETTINGS.getSettingInt('Enable_CPU_CORES')]#User Select Full or *Half cores. *default
         self.procEnabled = (ENABLE_POOL and self.procSetting) != False
         self.procCount   = int(roundupDIV(self.CPUcores(), self.procSetting)) 
-        self.minQueue    = self.procCount
-        self.maxQueue    = int(PAGE_LIMIT * self.procCount) #limit queue size to reasonable value.
+        self.threadCount = self.procCount * 4 
         
-        if self.procEnabled:
-            self.log("ThreadPool procCount/threadCount = %s, minQueue = %s, maxQueue = %s"%(self.procCount,self.minQueue,self.maxQueue))
+        if self.procEnabled or self.procSetting != False:
+            self.log("ThreadPool procCount = %s, threadCount = %s"%(self.procCount,self.threadCount))
         else:
             if ENABLE_POOL: THREAD_MSG = "User Disabled!"
             else:           THREAD_MSG = "Multiprocessing not supported!"
@@ -82,7 +81,7 @@ class PoolHelper:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None): # chunksize=None # temp Debug
+    def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None):
         results = []
         failed  = False
         if self.procEnabled:
@@ -106,11 +105,7 @@ class PoolHelper:
                 
         elif self.procSetting != False:
             try:
-                threadCount = self.procCount
-                if len(items) >= self.minQueue and len(items) <= self.maxQueue:
-                    results = self.threadList(func, items, args, kwargs, threadCount)
-                else:
-                    results = self.genList(func, items, args, kwargs)
+                results = self.threadList(func, items, args, kwargs, self.threadCount)
             except Exception as e: 
                 self.log("poolList, threadList Failed! %s"%(e), xbmc.LOGERROR)
                 failed = True
@@ -119,7 +114,6 @@ class PoolHelper:
             
         if failed and not results: results = self.genList(func, items, args, kwargs)
         if results: results = list(filter(None, results))
-        self.log("poolList, %s has %s results"%(func.__name__,len(results)))
         return results
         
         

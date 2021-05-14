@@ -1,14 +1,12 @@
 ![](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Artwork/master/PseudoTV%20Live/Flat/PTVL%20-%20Metro%20-%20Fanart%20(1).png)
 
-# PseudoTV Live for Kodiâ„¢ (Matrix):
+# PseudoTV Live for Kodi™ (Matrix):
 
 ## What is it?:
 
 PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) into a broadcast or cable TV emulator, complete with configurable channels. UI Provided by Kodis PVR frontend via IPTV Simple.
 
 [Changelog](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/changelog.txt)
-
-[Readme](https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/README.md)
 
 [Forum: Kodi.TV](https://forum.kodi.tv/showthread.php?tid=355549)
 
@@ -19,7 +17,9 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/PseudoTV/PseudoTV_Live.svg?color=red&style=flat-square)](https://github.com/PseudoTV/PseudoTV_Live/commits?author=Lunatixz)
 [![Kodi URL](https://img.shields.io/badge/Supports-Kodi%2019-blue.svg?style=flat-square)](https://kodi.tv/download)
 [![Kodi Donate](https://img.shields.io/badge/Donate-Kodi-blue.svg?style=flat-square)](https://kodi.tv/contribute/donate)
-[![Lunatixz Donate](https://img.shields.io/badge/Donate-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
+[![Lunatixz Coffee](https://img.shields.io/badge/Coffee-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
+[![Lunatixz Patreon](https://img.shields.io/badge/Patreon-Lunatixz-blue.svg?style=flat-square)](https://www.patreon.com/pseudotv)
+[![Lunatixz Paypal](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](paypal.me/Lunatixz)
 [![Twitter URL](https://img.shields.io/twitter/follow/PseudoTV_Live.svg?color=blue&label=%40PseudoTV_Live&style=flat-square)](https://twitter.com/PseudoTV_Live)
 
 # Special Thanks:
