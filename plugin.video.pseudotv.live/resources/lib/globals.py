@@ -41,7 +41,6 @@ except:
     from threading import Thread
     from queue     import Queue, Empty
 
-PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 if PY3: 
     basestring = str
@@ -140,7 +139,7 @@ ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
 
 def log(msg, level=xbmc.LOGDEBUG):
-    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
+    if not SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
     if not isinstance(msg,basestring): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)

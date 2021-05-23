@@ -625,7 +625,7 @@ msgid "Saving..."
 msgstr ""
 
 msgctxt "#30153"
-msgid "Show OnNext Pop-up"
+msgid "Show OnNext"
 msgstr ""
 
 msgctxt "#30154"
@@ -937,7 +937,7 @@ msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
 msgstr ""
 
 msgctxt "#30230"
-msgid "If a selection is [COLOR=dimgray]Dim[/COLOR] a background task is running, no content found or system configured as a client!\nClose settings to resume background tasks."
+msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running, no media found or system configured as a client!\nClose settings to resume background tasks."
 msgstr ""
 
 msgctxt "#30231"
@@ -945,7 +945,7 @@ msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue c
 msgstr ""
 
 msgctxt "#30232"
-msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [55s Default] *see readme for details."
+msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see readme for details."
 msgstr ""
 
 msgctxt "#30233"
@@ -1029,7 +1029,7 @@ msgid "Select File or Enter URL"
 msgstr ""
 
 msgctxt "#30253"
-msgid "Filter imports by @ID. *see readme for details."
+msgid "Filter imports by @ID or XMLTV Provider meta. *see readme for details."
 msgstr ""
 
 msgctxt "#30254"
@@ -1069,11 +1069,11 @@ msgid "Max guidedata to fill during a given query. [1 Day Default]\n[Lower == Fr
 msgstr ""
 
 msgctxt "#30264"
-msgid "Include Specials and Extras."
+msgid "Include Specials and Extras.\nSeason 00 & Movie Extras"
 msgstr ""
 
 msgctxt "#30265"
-msgid "Include .strm files. *see readme for details."
+msgid "Include .strm files *see readme for details."
 msgstr ""
 
 msgctxt "#30266"
@@ -1085,7 +1085,7 @@ msgid "Include content fillers (Ratings/Bumpers/Commercials/Trailers). *see read
 msgstr ""
 
 msgctxt "#30268"
-msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]"
+msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]\nGlobal Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
 msgstr ""
 
 msgctxt "#30269"
@@ -1141,7 +1141,7 @@ msgid "Idle Timer"
 msgstr ""
 
 msgctxt "#30282"
-msgid "Stop Playback when Idle for X Hours"
+msgid "Stop Playback when Idle for x Hours"
 msgstr ""
 
 msgctxt "#30283"
@@ -1190,4 +1190,36 @@ msgstr ""
 
 msgctxt "#30294"
 msgid "Advanced"
+msgstr ""
+
+msgctxt "#30295"
+msgid "General"
+msgstr ""
+
+msgctxt "#30296"
+msgid "Playback"
+msgstr ""
+
+msgctxt "#30297"
+msgid "Parsing"
+msgstr ""
+
+msgctxt "#30298"
+msgid "Overlay"
+msgstr ""
+
+msgctxt "#30299"
+msgid "Display coming up next meta"
+msgstr ""
+
+msgctxt "#30300"
+msgid "Display emulated static between broadcasts for a retro experience."
+msgstr ""
+
+msgctxt "#30301"
+msgid "Display the channel logo at the bottom corner of your screen."
+msgstr ""
+
+msgctxt "#30302"
+msgid "Enable visual features."
 msgstr ""

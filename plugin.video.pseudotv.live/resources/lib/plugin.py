@@ -103,7 +103,7 @@ class Plugin:
             elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
             elif name == LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
             elif name == LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
-            elif name == LANGUAGE(30013): REAL_SETTINGS.openSettings()
+            elif name == LANGUAGE(30013): SETTINGS.openSettings()
             else: return
         xbmc.executebuiltin('Action(Back,10025)')
             

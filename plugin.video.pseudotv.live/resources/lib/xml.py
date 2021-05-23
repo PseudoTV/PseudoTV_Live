@@ -179,17 +179,22 @@ class XMLTV:
         return programmes
 
 
-    def importXMLTV(self, file, slug=None):
-        self.log('importXMLTV, file = %s'%file)
+    def importXMLTV(self, file, slugs=[]):
+        self.log('importXMLTV, file = %s, slugs = %s'%(file,slugs))
         try:
             if file.startswith('http'):
                 url  = file
                 file = os.path.join(TEMP_LOC,'%s.xml'%(slugify(url)))
                 saveURL(url,file)
                 
-            importChannels, importProgrammes = self.chkImport(self.cleanSelf(self.loadChannels(file),'id',slug), self.cleanSelf(self.loadProgrammes(file),'channel',slug))
-            self.vault.xmltvList['channels'].extend(self.sortChannels(importChannels))
-            self.vault.xmltvList['programmes'].extend(self.sortProgrammes(importProgrammes))
+            channels   = self.loadChannels(file)
+            programmes = self.loadProgrammes(file)
+            
+            for slug in slugs:
+                importChannels, importProgrammes = self.chkImport(self.cleanSelf(channels,'id',slug), self.cleanSelf(programmes,'channel',slug))
+                self.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
+                self.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
+                
         except Exception as e: log("XMLTV: importXMLTV, failed! " + str(e), xbmc.LOGERROR)
         return True
 

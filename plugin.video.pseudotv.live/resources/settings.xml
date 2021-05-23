@@ -144,21 +144,6 @@
     
 		<category id="autotune" label="30203" help="30230">
 			<group id="1" label="30022">
-				<setting id="BUSY" type="string" label="30218" help="30228">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="visible">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),true)</condition>
-						</dependency>
-					</dependencies>
-					<control type="edit" format="string">
-						<heading>30218</heading>
-					</control>
-				</setting>
 				<setting id="Select_TV_Networks" type="string" label="30002" help="30237">
 					<level>0</level>
 					<default/>
@@ -170,6 +155,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -189,6 +175,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -208,6 +195,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Genres),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -227,6 +215,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Genres),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -246,6 +235,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Studios),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -265,6 +255,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed_Genres),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -284,6 +275,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -303,6 +295,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -322,6 +315,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -341,6 +335,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -360,6 +355,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 								<condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
 							</and>
 						</dependency>
@@ -383,6 +379,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Predefined),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -402,6 +399,7 @@
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.BlackList),true)</condition>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -418,6 +416,14 @@
 				<setting id="User_Import" type="boolean" label="30036" help="30251">
 					<level>1</level>
 					<default>false</default>
+                    <dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+                        </dependency>
+					</dependencies>
 					<control type="toggle"/>
 				</setting>
 				<setting id="Import_M3U_TYPE" type="integer" label="30197" help="30252">
@@ -431,7 +437,11 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="User_Import">true</condition>
+							<and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="spinner" format="string"/>
@@ -450,8 +460,10 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">0</condition>
-                <condition operator="is" setting="User_Import">true</condition>
-							</and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="file">
@@ -468,8 +480,10 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">1</condition>
-                <condition operator="is" setting="User_Import">true</condition>
-							</and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="edit" format="string">
@@ -487,7 +501,11 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="User_Import">true</condition>
+							<and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="spinner" format="string"/>
@@ -506,8 +524,10 @@
 						<dependency type="visible">
 							<and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">0</condition>
-                <condition operator="is" setting="User_Import">true</condition>
-							</and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="file">
@@ -522,10 +542,12 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<and>
+                            <and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">1</condition>
-                <condition operator="is" setting="User_Import">true</condition>
-							</and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="edit" format="string">
@@ -540,7 +562,11 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="User_Import">true</condition>
+                            <and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="edit" format="string">
@@ -555,7 +581,11 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="User_Import">true</condition>
+                            <and>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
@@ -579,17 +609,39 @@
 							<option label="30280">4</option>
 						</options>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Silent_OnPlayback" type="boolean" label="30176" help="30255">
 					<level>0</level>
 					<default>false</default>
 					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 				</setting>
 				<setting id="Enable_Grouping" type="boolean" label="30019" help="30256">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
+                    <dependencies>
+                        <dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+                        </dependency>
+					</dependencies>
 				</setting>
 				<setting id="User_Groups" type="string" label="30075" help="30257" parent="Enable_Grouping">
 					<level>1</level>
@@ -599,7 +651,11 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="Enable_Grouping">true</condition>
+                            <and>
+                                <condition operator="is" setting="Enable_Grouping">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
@@ -607,9 +663,30 @@
 						<close>true</close>
 					</control>
 				</setting>
+				<setting id="Enable_Recommended" type="boolean" label="30148" help="30270">
+					<level>1</level>
+					<default>true</default>
+					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+				</setting>
 				<setting id="Color_Logos" type="integer" label="30044" help="">
 					<level>0</level>
 					<default>0</default>
+                    <dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+                        </dependency>
+					</dependencies>
 					<constraints>
 						<options>
 							<option label="30166">0</option>
@@ -621,6 +698,14 @@
 				<setting id="EPG_Artwork" type="integer" label="30168" help="">
 					<level>0</level>
 					<default>0</default>
+                    <dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+                        </dependency>
+					</dependencies>
 					<constraints>
 						<options>
 							<option label="30169">0</option>
@@ -642,7 +727,10 @@
 					</constraints>
 					<dependencies>
 						<dependency type="enable">
-							<condition on="property" name="InfoBool">true</condition>
+                            <and>
+                                <condition on="property" name="InfoBool">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="path">
@@ -654,7 +742,10 @@
 					<default>false</default>
 					<dependencies>
 						<dependency type="enable">
-							<condition operator="!is" setting="User_Folder">special://profile/addon_data/plugin.video.pseudotv.live/</condition>
+                            <and>
+                                <condition operator="!is" setting="User_Folder">special://profile/addon_data/plugin.video.pseudotv.live/</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
 						</dependency>
 						<dependency type="visible">
 							<condition operator="!is" setting="User_Folder">special://profile/addon_data/plugin.video.pseudotv.live/</condition>
@@ -666,7 +757,29 @@
 		</category>
     
 		<category id="tweaks" label="30048" help="">
-			<group id="1">
+			<group id="1" label="30295">
+				<setting id="Enable_CPU_CORES" type="integer" label="30208" help="30260">
+					<level>3</level>
+					<default>2</default>
+					<constraints>
+						<options>
+							<option label="30220">0</option>
+							<option label="30219">1</option>
+							<option label="30206">2</option>
+							<option label="30207">3</option>
+						</options>
+					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="spinner" format="string"/>
+				</setting>
+			</group>
+			<group id="2" label="30296">
 				<setting id="Playback_Method" type="integer" label="30045" help="30231">
 					<level>1</level>
 					<default>0</default>
@@ -676,6 +789,13 @@
 							<option label="30163">1</option>
 						</options>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Seek_Tolerance" type="integer" label="30040" help="30232">
@@ -686,6 +806,13 @@
 						<step>5</step>
 						<maximum>900</maximum>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -698,25 +825,19 @@
 						<step>5</step>
 						<maximum>100</maximum>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
 				</setting>
 			</group>
-			<group id="2" label="">
-				<setting id="Enable_CPU_CORES" type="integer" label="30208" help="30260">
-					<level>3</level>
-					<default>2</default>
-					<constraints>
-						<options>
-							<option label="30220">0</option>
-							<option label="30219">1</option>
-							<option label="30206">2</option>
-							<option label="30207">3</option>
-						</options>
-					</constraints>
-					<control type="spinner" format="string"/>
-				</setting>
+			<group id="3" label="30297">
 				<setting id="Page_Limit" type="integer" label="30038" help="30261">
 					<level>3</level>
 					<default>25</default>
@@ -725,6 +846,14 @@
 						<step>25</step>
 						<maximum>250</maximum>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -737,6 +866,14 @@
 						<step>1</step>
 						<maximum>7</maximum>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -745,7 +882,7 @@
 		</category>
     
 		<category id="globals" label="30055" help="30236">
-			<group id="1">
+			<group id="1" label="30296">
 				<setting id="Duration_Type" type="integer" label="30041" help="30235">
 					<level>1</level>
 					<default>1</default>
@@ -755,75 +892,134 @@
 							<option label="30165">1</option>
 						</options>
 					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Store_Duration" type="boolean" label="30042" help="30234" parent="Duration_Type">
 					<level>2</level>
 					<default>false</default>
 					<control type="toggle"/>
-					<dependencies>
+                    <dependencies>
 						<dependency type="visible">
-              <condition operator="is" setting="Duration_Type">1</condition>
+							<and>
+                                <condition operator="is" setting="Duration_Type">1</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Enable_Overlay" type="boolean" label="30054" help="">
+			</group>
+			<group id="2" label="30298">
+				<setting id="Enable_Overlay" type="boolean" label="30054" help="30302">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 				</setting>
-				<setting id="Enable_ChannelBug" type="boolean" label="30175" help="" parent="Enable_Overlay">
+				<setting id="Enable_ChannelBug" type="boolean" label="30175" help="30301" parent="Enable_Overlay">
 					<level>1</level>
 					<default>true</default>
-					<dependencies>
+                    <dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="Enable_Overlay">true</condition>
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="Enable_OnNext" type="boolean" label="30153" help="" parent="Enable_Overlay">
+				<setting id="Enable_OnNext" type="boolean" label="30153" help="30299" parent="Enable_Overlay">
 					<level>1</level>
 					<default>true</default>
-					<dependencies>
+                    <dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="Enable_Overlay">true</condition>
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-				<setting id="Static_Overlay" type="boolean" label="30205" help="" parent="Enable_Overlay">
+				<setting id="Static_Overlay" type="boolean" label="30205" help="30300" parent="Enable_Overlay">
 					<level>1</level>
 					<default>false</default>
-					<dependencies>
+                    <dependencies>
 						<dependency type="visible">
-							<condition operator="is" setting="Enable_Overlay">true</condition>
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
+			</group>
+			<group id="3" label="30297">
 				<setting id="Enable_Extras" type="boolean" label="30094" help="30264">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 				</setting>
 				<setting id="Enable_Strms" type="boolean" label="30095" help="30265">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 				</setting>
 				<setting id="Enable_3D" type="boolean" label="30185" help="30266">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30030" help="30267">
 					<level>1</level>
 					<default>false</default>
 					<dependencies>
 						<dependency type="enable">
-							<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isPlaylist),true)</condition>
-						</dependency>
+                            <and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isPlaylist),true)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+                        </dependency>
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
@@ -843,10 +1039,13 @@
 						</options>
 					</constraints>
                     <dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
-                    </dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Fillers_Bumpers" type="integer" label="30188" help="">
@@ -859,10 +1058,13 @@
 							<option label="30224">2</option>
 						</options>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
@@ -879,10 +1081,13 @@
 							<option label="30227">5</option>
 						</options>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
@@ -899,10 +1104,13 @@
 							<option label="30227">5</option>
 						</options>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
@@ -915,10 +1123,13 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30067</heading>
@@ -932,10 +1143,13 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30069</heading>
@@ -943,16 +1157,19 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Resource_Networks" type="list[addon]" label="30068" help="">
+				<setting id="Resource_Bumpers" type="list[addon]" label="30068" help="">
 					<level>2</level>
-					<default>resource.videos.bumpers.sample,resource.videos.bumpers.pseudotv</default>
+					<default>resource.videos.bumpers.sample|resource.videos.bumpers.pseudotv</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30068</heading>
@@ -966,10 +1183,13 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30070</heading>
@@ -983,10 +1203,13 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                        </dependency>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                            </and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30071</heading>
@@ -1037,19 +1260,6 @@
 					</control>
                 </setting>
 			</group>
-            
-			<group id="2" label="30294">
-				<setting id="Enable_Recommended" type="boolean" label="30148" help="30270">
-					<level>1</level>
-					<default>true</default>
-					<control type="toggle"/>
-				</setting>
-				<setting id="Enable_Config" type="boolean" label="30145" help="30271">
-					<level>1</level>
-					<default>false</default>
-					<control type="toggle"/>
-				</setting>
-			</group>
       
 			<group id="3" label="30276">
                 <setting id="Show_Readme" type="action" label="30274" help="">
@@ -1077,6 +1287,11 @@
             </group>
       
 			<group id="4" label="30222">
+				<setting id="Enable_Config" type="boolean" label="30145" help="30271">
+					<level>1</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="iptvsimple" type="action" label="30046" help="">
 					<level>0</level>
 					<data>Addon.OpenSettings(pvr.iptvsimple)</data>
@@ -1108,8 +1323,6 @@
 					</control>
 				</setting>
 			</group>
-      
 		</category>
-    
 	</section>
 </settings>

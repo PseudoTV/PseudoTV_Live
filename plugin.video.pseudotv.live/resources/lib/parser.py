@@ -97,7 +97,7 @@ class Writer:
         if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
             Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
             Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
-            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_Path,'slug':SETTINGS.getSetting('Import_SLUG')},'xmltv':{'path':Import_XMLTV_Path}}})
+            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_Path,'slug':SETTINGS.getSettingsList('Import_SLUG')},'xmltv':{'path':Import_XMLTV_Path}}})
         
         for idx, item in enumerate(importLST):
             importItem = item.get('item',{})

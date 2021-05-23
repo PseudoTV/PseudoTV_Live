@@ -309,7 +309,7 @@ class Config:
 
     def installResources(self):
         found  = []
-        params = ['Resource_Logos','Resource_Ratings','Resource_Networks','Resource_Commericals','Resource_Trailers']
+        params = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
         for param in params:
             addons = SETTINGS.getSetting(param).split(',')
             for addon in addons: found.append(installAddon(addon,manual=True))
@@ -335,7 +335,7 @@ class Config:
         self.log('run, param = %s'%(param))
         if isBusy():
             self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return REAL_SETTINGS.openSettings()
+            return SETTINGS.openSettings()
                              
         if param.startswith('Channel_Manager'):
             return self.openChannelManager()

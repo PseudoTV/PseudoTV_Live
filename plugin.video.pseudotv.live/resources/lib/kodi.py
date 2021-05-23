@@ -48,19 +48,15 @@ def log(msg, level=xbmc.LOGDEBUG):
 class Settings:
     realSetting = REAL_SETTINGS
     
-    def __init__(self, refresh=False):
-        if refresh: 
+    def __init__(self, reload=False):
+        if reload: 
             REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
             self.realSetting = REAL_SETTINGS
-    
+            
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
-    
-    def getSettingRefresh(self, key):
-        return xbmcaddon.Addon(id=ADDON_ID).getSetting(key)
-
 
     def _getSetting(self, func, key):
         try:
@@ -72,7 +68,7 @@ class Settings:
 
 
     def getSetting(self, key):
-        return self._getSetting(self.realSetting.getSetting,key)
+        return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
         
         
     def getSettingsList(self, key):
@@ -84,14 +80,14 @@ class Settings:
     
     
     def getSettingBool(self, key):
-        try:    return self._getSetting(self.realSetting.getSettingBool,key)
-        except: return self._getSetting(self.realSetting.getSetting,key).lower() == "true" 
+        try:    return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingBool,key)
+        except: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key).lower() == "true" 
         
         
     def getSettingInt(self, key):
-        try: return self._getSetting(self.realSetting.getSettingInt,key)
+        try: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingInt,key)
         except:
-            value = self._getSetting(self.realSetting.getSetting,key)
+            value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
             if value.isdecimal():
                 return float(value)
             elif value.isdigit(): 
@@ -99,17 +95,17 @@ class Settings:
               
               
     def getSettingNumber(self, key): 
-        try: return self._getSetting(self.realSetting.getSettingNumber,key)
+        try: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingNumber,key)
         except:
-            value = self._getSetting(self.realSetting.getSetting,key)
+            value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
             if value.isdecimal():
                 return float(value)
             elif value.isdigit(): 
                 return int(value)    
         
         
-    def getSettingString(self, key):     
-        return self._getSetting(self.realSetting.getSettingString,key)
+    def getSettingString(self, key):
+        return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingString,key)
         
         
     def openSettings(self):     

@@ -214,10 +214,10 @@ class M3U:
         
         
     @staticmethod
-    def cleanSelf(channels, slug='@%s'%(slugify(ADDON_NAME))):
+    def cleanSelf(channels, key='id', slug='@%s'%(slugify(ADDON_NAME))):
         log('M3U: cleanSelf, slug = %s'%(slug)) # remove imports (Non PseudoTV Live)
         if not slug: return channels
-        return list(filter(lambda line:line.get('id','').endswith(slug), channels))
+        return list(filter(lambda line:line.get(key,'').endswith(slug), channels))
         
         
     @staticmethod
@@ -225,14 +225,20 @@ class M3U:
         return sorted(channels, key=lambda k: k['number'])
         
         
-    def importM3U(self, file, slug=None, multiplier=1):
-        self.log('importM3U, file = %s'%file)
+    def importM3U(self, file, slugs=[], multiplier=1):
+        self.log('importXMLTV, file = %s, slugs = %s, multiplier = %s'%(file,slugs,multiplier))
         try:
             if file.startswith('http'):
                 url  = file
                 file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
                 saveURL(url,file)
-            self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(self.chkImport(self.loadM3U(file),multiplier),slug)))
+                
+            #todo support `provider` key
+            channels = self.chkImport(self.loadM3U(file),multiplier)
+            
+            for slug in slugs:
+                self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'id',slug)))
+                
         except Exception as e: log("M3U: importM3U, failed! " + str(e), xbmc.LOGERROR)
         return True
         

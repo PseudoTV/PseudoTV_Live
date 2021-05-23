@@ -27,10 +27,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         if (PROPERTIES.getPropertyBool('isClient')):
             Dialog().notificationDialog(LANGUAGE(30288))
-            return REAL_SETTINGS.openSettings()
+            return SETTINGS.openSettings()
         elif (isBusy() | PROPERTIES.getPropertyBool('Config.Running')):
             Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return REAL_SETTINGS.openSettings()
+            return SETTINGS.openSettings()
         
         with busy_dialog():
             setBusy(True)
@@ -580,7 +580,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         # todo select from resources, browse resources
         self.log('selectLogo, channelPOS = %s'%(channelPOS))
         if self.isVisible(self.ruleList): return
-        retval = self.dialog.browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+        retval = self.dialog.browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),
+                                          shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
         if retval in [None,'',channelData.get('icon','')]: return
         self.madeChanges = True
         channelData['logo'] = retval
@@ -691,8 +692,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             elif self.isVisible(self.ruleList): self.toggleruleList(False)
             elif self.isVisible(self.itemList): self.togglechanList(True,focus=items['chanList']['position'])
             elif self.isVisible(self.chanList):
-                if    self.madeChanges: self.saveChanges()
-                else: self.closeManager()
+                if    self.madeChanges: 
+                    self.saveChanges()
+                else: 
+                    self.closeManager()
         
         
     def onClick(self, controlId):

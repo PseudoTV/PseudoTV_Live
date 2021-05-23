@@ -142,17 +142,37 @@ Imports are considered "third-party" and are not treated as "PseudoTV" channels.
 `http://path-to-stream/live/channel-feed`
 
 
-- "Filter channels using a common id (Optional)." - Inorder for this feature to work the provided m3u/xmltv must contain channel `tvg-id` formated with source indicators. ex. `NBC4@zap2it.com`,`CBS2@tvguide.com`. If you would like to import only `zap2it.com` sources, enter `@zap2it.com`.
+- "Filter channels using a common id (Optional)." - In-order for this feature to work the provided m3u/xmltv must contain one of the following examples:
+
+1. `tvg-id` formatted with source indicators. ex. `tvg-id=NBC4@zap2it.com`,`tvg-id=CBS2@tvguide.com`. If you would like to import only `zap2it.com` sources, enter `@zap2it.com`.
+
+2. `provider` formatted with provider parameters. ex. `provider=Locast`,`provider=PlutoTV`. If you would like to import only `PlutoTV` sources, enter `PlutoTV`.
+
+Stack multiples as `tvg-id=NBC4@zap2it.com|PlutoTV`
+
 
 ### XMLTV 
 - requires one of the two timestamps:
 	1. `%Y%m%d%H%M%S` - Local Time 
 
 	1. `%Y%m%d%H%M%S +%z` - UTC Time with Offset
+    
+    
+## Options:
+    
+- Centralized file location: Location to store PseudoTV Live M3U/XMLTV and other shared resources. ie. Playlists, Nodes and Channel Logos.
 
+    
 ------------
 
 # General Information:
+
+## - Channel Logos:
+
+1. Resource pack -
+
+2. Local user folder -
+
 
 ## - Channel Sharing (Multi-Room):
 
@@ -241,6 +261,8 @@ Inorder for a plugin to announce itself to PseudoTV Live it must run a "Beacon" 
 
 [Beacon Asset Example](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/asset.json)
 
-[Pluto TV Example](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.plutotv/pseudotv_recommended.py)
+[Locast Example (Live)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.locast/pseudotv_recommended.py)
 
-[Locast Example](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.locast/pseudotv_recommended.py)
+[Crackle Example (VOD)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.crackle/pseudotv_recommended.py)
+
+[Pluto TV Example (Live & VOD)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.plutotv/pseudotv_recommended.py)
