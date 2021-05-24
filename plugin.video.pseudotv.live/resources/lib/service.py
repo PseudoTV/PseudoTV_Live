@@ -294,7 +294,6 @@ class Monitor(xbmc.Monitor):
 
     def onSettingsChanged(self, wait=30.0):
         ## Egg Timer, reset on each call.
-        self.log('onSettingsChanged')
         if self.onChangeThread.is_alive(): 
             self.onChangeThread.cancel()
             try: self.onChangeThread.join()
@@ -306,7 +305,8 @@ class Monitor(xbmc.Monitor):
         
         
     def onChange(self):
-        if isBusy() or self.isSettingsOpened(): return self.onSettingsChanged(15.0) # delay restart, changes still occurring.
+        if isBusy(): return self.onSettingsChanged(15.0) #try again later
+        elif self.isSettingsOpened(): return #changes still occurring.
         self.log('onChange')
         with busy():
             if self.hasSettingsChanged():
@@ -331,7 +331,7 @@ class Monitor(xbmc.Monitor):
                 'Import_M3U_TYPE'     :{'setting':SETTINGS.getSetting('Import_M3U_TYPE')     ,'action':None},
                 'Import_M3U_FILE'     :{'setting':SETTINGS.getSetting('Import_M3U_FILE')     ,'action':None},
                 'Import_M3U_URL'      :{'setting':SETTINGS.getSetting('Import_M3U_URL')      ,'action':None},
-                'Import_SLUG'         :{'setting':SETTINGS.getSetting('Import_SLUG')         ,'action':None},
+                'Import_Provider'     :{'setting':SETTINGS.getSettingList('Import_Provider') ,'action':None},
                 'User_Folder'         :{'setting':SETTINGS.getSetting('User_Folder')         ,'action':moveUser},
                 'Select_Channels'     :{'setting':SETTINGS.getSetting('Select_Channels')     ,'action':None},
                 'Select_TV_Networks'  :{'setting':SETTINGS.getSetting('Select_TV_Networks')  ,'action':None},

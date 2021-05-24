@@ -554,7 +554,7 @@
 						<heading>30035</heading>
 					</control>
 				</setting>
-				<setting id="Import_SLUG" type="string" label="30184" help="30253">
+				<setting id="Import_Provider" type="string" label="30184" help="30253">
 					<level>1</level>
 					<default/>
 					<constraints>
@@ -882,41 +882,7 @@
 		</category>
     
 		<category id="globals" label="30055" help="30236">
-			<group id="1" label="30296">
-				<setting id="Duration_Type" type="integer" label="30041" help="30235">
-					<level>1</level>
-					<default>1</default>
-					<constraints>
-						<options>
-							<option label="30164">0</option>
-							<option label="30165">1</option>
-						</options>
-					</constraints>
-                    <dependencies>
-						<dependency type="enable">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="spinner" format="string"/>
-				</setting>
-				<setting id="Store_Duration" type="boolean" label="30042" help="30234" parent="Duration_Type">
-					<level>2</level>
-					<default>false</default>
-					<control type="toggle"/>
-                    <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition operator="is" setting="Duration_Type">1</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-				</setting>
-			</group>
-			<group id="2" label="30298">
+			<group id="1" label="30298">
 				<setting id="Enable_Overlay" type="boolean" label="30054" help="30302">
 					<level>1</level>
 					<default>true</default>
@@ -969,7 +935,39 @@
 					<control type="toggle"/>
 				</setting>
 			</group>
-			<group id="3" label="30297">
+			<group id="2" label="30297">
+				<setting id="Duration_Type" type="integer" label="30041" help="30235">
+					<level>1</level>
+					<default>1</default>
+					<constraints>
+						<options>
+							<option label="30164">0</option>
+							<option label="30165">1</option>
+						</options>
+					</constraints>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="spinner" format="string"/>
+				</setting>
+				<setting id="Store_Duration" type="boolean" label="30042" help="30234" parent="Duration_Type">
+					<level>2</level>
+					<default>false</default>
+					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Duration_Type">1</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+				</setting>
 				<setting id="Enable_Extras" type="boolean" label="30094" help="30264">
 					<level>1</level>
 					<default>false</default>

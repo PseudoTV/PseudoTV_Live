@@ -257,7 +257,7 @@ class Config:
             SETTINGS.setSetting('Import_XMLTV'     ,'')
             SETTINGS.setSetting('Import_XMLTV_FILE','')
             SETTINGS.setSetting('Import_XMLTV_URL' ,'')
-            SETTINGS.setSetting('Import_SLUG'      ,'')
+            SETTINGS.setSetting('Import_Provider'  ,'')
             SETTINGS.setSetting('User_Import'      ,'false')
             setRestartRequired()
             return self.dialog.notificationDialog(LANGUAGE(30053))

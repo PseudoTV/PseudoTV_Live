@@ -142,13 +142,10 @@ Imports are considered "third-party" and are not treated as "PseudoTV" channels.
 `http://path-to-stream/live/channel-feed`
 
 
-- "Filter channels using a common id (Optional)." - In-order for this feature to work the provided m3u/xmltv must contain one of the following examples:
+- "Filter channels using the `provider` parameter (Optional)." - In-order for this feature to work the provided m3u must contain the following example:
 
-1. `tvg-id` formatted with source indicators. ex. `tvg-id=NBC4@zap2it.com`,`tvg-id=CBS2@tvguide.com`. If you would like to import only `zap2it.com` sources, enter `@zap2it.com`.
+1. `provider` ex. `provider=Locast`,`provider=PlutoTV`. If you would like to import only `PlutoTV` sources, enter `PlutoTV`. For multiples enter `Locast|PlutoTV`
 
-2. `provider` formatted with provider parameters. ex. `provider=Locast`,`provider=PlutoTV`. If you would like to import only `PlutoTV` sources, enter `PlutoTV`.
-
-Stack multiples as `tvg-id=NBC4@zap2it.com|PlutoTV`
 
 
 ### XMLTV 

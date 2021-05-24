@@ -225,8 +225,8 @@ class M3U:
         return sorted(channels, key=lambda k: k['number'])
         
         
-    def importM3U(self, file, slugs=[], multiplier=1):
-        self.log('importXMLTV, file = %s, slugs = %s, multiplier = %s'%(file,slugs,multiplier))
+    def importM3U(self, file, filters={}, multiplier=1):
+        self.log('importXMLTV, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))
         try:
             if file.startswith('http'):
                 url  = file
@@ -236,9 +236,12 @@ class M3U:
             #todo support `provider` key
             channels = self.chkImport(self.loadM3U(file),multiplier)
             
-            for slug in slugs:
-                self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'id',slug)))
-                
+            for key, value in filters.items():
+                if not value: continue
+                elif key == 'slug':
+                    self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'id',value)))
+                elif key == 'providers':
+                    for provider in value: self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'provider',provider)))
         except Exception as e: log("M3U: importM3U, failed! " + str(e), xbmc.LOGERROR)
         return True
         

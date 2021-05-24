@@ -348,7 +348,9 @@ def loadJSON(item):
     
 def sendJSON(command):
     log('globals: sendJSON, command = %s'%(command))
+    PROPERTIES.setPropertyBool('sendBUSY',True)
     response = loadJSON(xbmc.executeJSONRPC(command))
+    PROPERTIES.setPropertyBool('sendBUSY',False)
     return response
 
 def escapeDirJSON(path):

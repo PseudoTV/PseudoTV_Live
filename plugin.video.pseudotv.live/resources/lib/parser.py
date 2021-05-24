@@ -95,9 +95,15 @@ class Writer:
         importLST = self.channels.getImports()
         
         if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
-            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
-            Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
-            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV','m3u':{'path':Import_M3U_Path,'slug':SETTINGS.getSettingsList('Import_SLUG')},'xmltv':{'path':Import_XMLTV_Path}}})
+            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,
+                                 1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
+                                 
+            Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),
+                                 1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
+
+            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV',
+                                      'm3u':{'path':Import_M3U_Path,'providers':SETTINGS.getSettingList('Import_Provider')},
+                                      'xmltv':{'path':Import_XMLTV_Path}}})
         
         for idx, item in enumerate(importLST):
             importItem = item.get('item',{})
@@ -108,11 +114,14 @@ class Writer:
                     self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                 
                 idx += 1
-                slug   = importItem.get('m3u'  ,{}).get('slug','')
-                m3ufle = importItem.get('m3u'  ,{}).get('path','')
-                xmlfle = importItem.get('xmltv',{}).get('path','')
-                self.m3u.importM3U(m3ufle,slug,multiplier=idx)
-                self.xmltv.importXMLTV(xmlfle,slug)
+                m3ufle   = importItem.get('m3u'  ,{}).get('path','')
+                xmlfle   = importItem.get('xmltv',{}).get('path','')
+                
+                filters  = {'slug':importItem.get('m3u',{}).get('slug',''),
+                            'providers':importItem.get('m3u',{}).get('provider',[])}
+                            
+                self.m3u.importM3U(m3ufle,filters,multiplier=idx)
+                self.xmltv.importXMLTV(xmlfle,filters)
             except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
         return True
         

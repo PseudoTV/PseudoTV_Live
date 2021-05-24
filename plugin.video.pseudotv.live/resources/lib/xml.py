@@ -179,8 +179,8 @@ class XMLTV:
         return programmes
 
 
-    def importXMLTV(self, file, slugs=[]):
-        self.log('importXMLTV, file = %s, slugs = %s'%(file,slugs))
+    def importXMLTV(self, file, filters={}):
+        self.log('importXMLTV, file = %s, filters = %s'%(file,filters))
         try:
             if file.startswith('http'):
                 url  = file
@@ -190,8 +190,13 @@ class XMLTV:
             channels   = self.loadChannels(file)
             programmes = self.loadProgrammes(file)
             
-            for slug in slugs:
-                importChannels, importProgrammes = self.chkImport(self.cleanSelf(channels,'id',slug), self.cleanSelf(programmes,'channel',slug))
+            for key, value in filters.items():
+                if not value: continue
+                elif key == 'slug':
+                    importChannels, importProgrammes = self.chkImport(self.cleanSelf(channels,'id',value), self.cleanSelf(programmes,'channel',value))
+                elif key == 'providers':  #currently no provider filter for xmltv, include all guide meta; let m3u filter by provider.
+                    importChannels, importProgrammes = self.chkImport(channels, programmes)
+                else: continue
                 self.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
                 self.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
                 

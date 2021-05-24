@@ -2,10 +2,12 @@
 	"iptv": {
 		"type": "iptv",
 		"name": "",
+		"description": "",
 		"icon": "",
 		"m3u": {
 			"path": "",
-			"slug": ""
+			"slug": "",
+			"provider": ""
 		},
 		"xmltv": {
 			"path": ""

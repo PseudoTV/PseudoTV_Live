@@ -753,7 +753,7 @@ msgid "Please Reboot!\nPending Changes..."
 msgstr ""
 
 msgctxt "#30184"
-msgid "Filter channels using a common id (Optional)."
+msgid "Filter channels using the m3u provider parameter (Optional)."
 msgstr ""
 
 msgctxt "#30185"
@@ -1029,7 +1029,7 @@ msgid "Select File or Enter URL"
 msgstr ""
 
 msgctxt "#30253"
-msgid "Filter imports by @ID or XMLTV Provider meta. *see readme for details."
+msgid "Filter imports by 'Provider'. *see readme for details."
 msgstr ""
 
 msgctxt "#30254"

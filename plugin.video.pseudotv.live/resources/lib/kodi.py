@@ -71,11 +71,11 @@ class Settings:
         return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
         
         
-    def getSettingsList(self, key):
+    def getSettingList(self, key):
         return self.getSetting(key).split('|')
     
     
-    def getSettingsDict(self, key):
+    def getSettingDict(self, key):
         return loadJSON(self.getSetting(key))
     
     
@@ -125,11 +125,11 @@ class Settings:
         self._setSetting(self.realSetting.setSetting,key,value)
             
             
-    def setSettingsDict(self, key, values):
+    def setSettingDict(self, key, values):
         self.setSetting(key, dumpJSON(values))
             
             
-    def setSettingsList(self, key, values):
+    def setSettingList(self, key, values):
         self.setSetting(key, '|'.join(values))
         
         

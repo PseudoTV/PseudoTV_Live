@@ -55,7 +55,7 @@ class JSONRPC:
         self.sendQueue = Queue()
         self.videoParser = VideoParser()
         self.resources = Resources(self)
-        self.queueThread = threading.Timer(30.0, self.queueWorker)
+        self.queueThread = threading.Timer(1.0, self.sendQueueWorker)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -73,14 +73,14 @@ class JSONRPC:
     @cacheit()
     def getIntrospect(self, id):
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params":{"filter":{"id":"%s","type":"method"}},"id":1}'%(id))
-        return sendJSON(json_query).get('result',{})
+        return self.sendJSON(json_query).get('result',{})
 
 
     @cacheit()
     def getEnums(self, id, type=''):
         self.log('getEnums id = %s, type = %s' % (id, type))
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params": {"getmetadata": true, "filterbytransport": true,"filter": {"getreferences": false, "id":"%s","type":"type"}},"id":1}'%(id))
-        json_response = sendJSON(json_query).get('result',{}).get('types',{}).get(id,{})
+        json_response = self.sendJSON(json_query).get('result',{}).get('types',{}).get(id,{})
         return (json_response.get(type,{}).get('enums',[]) or json_response.get('enums',[]))
 
 
@@ -138,9 +138,40 @@ class JSONRPC:
         cacheName = 'cacheJSON.%s' % (command)
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
-            cacheResponse = sendJSON(command)
+            cacheResponse = self.sendJSON(command)
             self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
+
+
+    def sendJSON(self, command):
+        while PROPERTIES.getPropertyBool('sendBUSY'):
+            if self.monitor.waitForAbort(.5): break
+        return sendJSON(command)
+        
+
+    def queueJSON(self, param):
+        self.sendQueue.put(param)
+        self.sendQueueThread()
+
+
+    def sendQueueThread(self):
+        if not self.queueThread.is_alive():
+            self.queueThread = threading.Timer(1.0, self.sendQueueWorker)
+            self.queueThread.name = "queueThread"
+            self.queueThread.start()
+
+
+    def sendQueueWorker(self):
+        self.log('sendQueueWorker, starting thread worker')
+        while not self.monitor.abortRequested():
+            if self.monitor.waitForAbort(5) or self.sendQueue.empty(): break
+            while PROPERTIES.getPropertyBool('sendBUSY'):
+                if self.monitor.waitForAbort(.5): break
+            try: 
+                param = self.sendQueue.get()
+                response = self.sendJSON(param)
+            except: pass
+        self.log('sendQueueWorker, finishing thread worker')
 
 
     def getActivePlaylist(self):
@@ -149,7 +180,7 @@ class JSONRPC:
 
     def getActivePlayer(self, return_item=False):
         json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
-        json_response = (sendJSON(json_query))
+        json_response = (self.sendJSON(json_query))
         item = json_response.get('result', [])
         if item:
             id = item[0].get('playerid', 1)
@@ -168,7 +199,7 @@ class JSONRPC:
         else:
             json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}' % (
                 self.getActivePlayer())
-        result = sendJSON(json_query).get('result', {})
+        result = self.sendJSON(json_query).get('result', {})
         return (result.get('item', {}) or result.get('items', []))
 
 
@@ -177,14 +208,14 @@ class JSONRPC:
         json_query = (
                     '{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}' % (
             {True: 'allradio', False: 'alltv'}[radio]))
-        return sendJSON(json_query).get('result', {}).get('channels', [])
+        return self.sendJSON(json_query).get('result', {}).get('channels', [])
 
 
     def getPVRBroadcasts(self, id):
         json_query = (
                     '{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","endtime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}' % (
                 id))
-        return sendJSON(json_query).get('result', {}).get('broadcasts', [])
+        return self.sendJSON(json_query).get('result', {}).get('broadcasts', [])
 
 
     def getResources(self,params='{"type":"kodi.resource.images","properties":["path","name","version","summary","description","thumbnail","fanart","author"]}',cache=True):
@@ -196,7 +227,7 @@ class JSONRPC:
         if cache:
             return self.cacheJSON(json_query).get('result', {}).get('addons', [])
         else:
-            return sendJSON(json_query).get('result', {}).get('addons', [])
+            return self.sendJSON(json_query).get('result', {}).get('addons', [])
 
 
     def getSongs(self, params='{"properties":["genre"]}', cache=True):
@@ -205,7 +236,7 @@ class JSONRPC:
             return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))).get(
                 'result', {}).get('songs', [])
         else:
-            return sendJSON(json_query).get('result', {}).get('songs', [])
+            return self.sendJSON(json_query).get('result', {}).get('songs', [])
 
 
     def getTVshows(self, params='{"properties":["title","genre","year","studio","art","file","episode"]}', cache=True):
@@ -214,7 +245,7 @@ class JSONRPC:
             return self.cacheJSON(json_query, life=datetime.timedelta(hours=SETTINGS.getSettingInt('Max_Days'))).get(
                 'result', {}).get('tvshows', [])
         else:
-            return sendJSON(json_query).get('result', {}).get('tvshows', [])
+            return self.sendJSON(json_query).get('result', {}).get('tvshows', [])
 
 
     def getMovies(self, params='{"properties":["title","genre","year","studio","art","file"]}', cache=True):
@@ -223,7 +254,7 @@ class JSONRPC:
             return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))).get(
                 'result', {}).get('movies', [])
         else:
-            return sendJSON(json_query).get('result', {}).get('movies', [])
+            return self.sendJSON(json_query).get('result', {}).get('movies', [])
 
 
     def getDirectory(self, params='', cache=True, total=0):
@@ -231,7 +262,7 @@ class JSONRPC:
         if cache:
             return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=str(total)).get('result', {})
         else:
-            return sendJSON(json_query).get('result', {})
+            return self.sendJSON(json_query).get('result', {})
 
 
     def getStreamDetails(self, path, media='video'):
@@ -241,40 +272,13 @@ class JSONRPC:
 
     def getSettingValue(self, params=''):
         json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":%s,"id":1}' % (params))
-        return sendJSON(json_query)
+        return self.sendJSON(json_query)
 
 
     def setSettingValue(self, params=''):
         json_query = ('{"jsonrpc":"2.0","method":"Settings.SetSettingValue","params":%s,"id":1}' % (params))
-        return sendJSON(json_query)
+        return self.sendJSON(json_query)
 
-
-    def queDuration(self, media, dbid, dur):
-        self.log('queDuration, media = %s, dbid = %s, dur = %s' % (media, dbid, dur))
-        param = {
-            'movie': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}' % (
-            dbid, dur),
-            'episode': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}' % (
-            dbid, dur)}
-        self.sendQueue.put(param[media])
-        self.sendQueueThread()
-
-
-    def sendQueueThread(self):
-        if not self.queueThread.is_alive():
-            self.queueThread = threading.Timer(30.0, self.queueWorker)
-            self.queueThread.name = "queueThread"
-            self.queueThread.start()
-
-
-    def queueWorker(self):
-        self.log('queueWorker, starting thread')
-        while not self.monitor.abortRequested() and not self.sendQueue.empty():
-            if self.monitor.waitForAbort(5): break
-            try: sendJSON(self.sendQueue.get())
-            except: pass
-        self.log('queueWorker, finishing thread')
-                    
 
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://', 'upnp://')): return True
@@ -434,8 +438,15 @@ class JSONRPC:
         if runsafe: runtime = duration
         self.log("parseDuration, returning runtime = %s" % (runtime))
         return runtime
+  
 
-
+    def queDuration(self, media, dbid, dur):
+        self.log('queDuration, media = %s, dbid = %s, dur = %s' % (media, dbid, dur))
+        param = {'movie': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
+                 'episode': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}' % (dbid, dur)}
+        return self.queueJSON(param[media])
+        
+        
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         limits = self.writer.autoPagination(id, path) #get
         params                      = {}
