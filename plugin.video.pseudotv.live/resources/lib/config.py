@@ -144,36 +144,32 @@ class Config:
  
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        if isClient(): return False
-            
+        if isClient(): return
         escape = autoTune is not None
         with busy_dialog(escape):
-            setBusy(True)
             items = self.library.getLibraryItems(type)
             if not items:
                 self.dialog.notificationDialog(LANGUAGE(30103)%(type))
                 # self.library.clearLibraryItems(type) #clear stale meta type
                 setBusy(False)
-                return False
-                
+                return
+            
             pitems    = self.library.getEnabledItems(items) # existing predefined
             listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
             pselect   = self.findItemsInLST(listItems,pitems,val_key='name')
-                        
-            if autoTune is None:
-                select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=pselect)
-            else:
+            if autoTune:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)
-                
-            if not select is None:
-                with busy_dialog(escape):
-                    pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
-                    self.library.setEnableStates(type,pselect,items)
-                    self.writer.convertLibraryItems(type)
-                    self.setPendingChangeTimer()
-            setBusy(False)
-            return True
+
+        if autoTune is None:
+            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=pselect)
+
+        if not select is None:
+            with busy_dialog(escape):
+                pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
+                self.library.setEnableStates(type,pselect,items)
+                self.writer.convertLibraryItems(type)
+                self.setPendingChangeTimer()
 
 
     def buildLibraryItems(self,myService):
@@ -261,31 +257,6 @@ class Config:
             SETTINGS.setSetting('User_Import'      ,'false')
             setRestartRequired()
             return self.dialog.notificationDialog(LANGUAGE(30053))
-        
-
-    def openEditor(self, file='newsmartplaylist://{type}/', media='video'):
-        ## smartplaylisteditor	
-        ## WINDOW_DIALOG_SMART_PLAYLIST_EDITOR	
-        ## 10136	
-        ## SmartPlaylistEditor.xml
-        file = file.format(type=media)
-        self.log('openEditor, file = %s, media = %s'%(file,media))
-        with busy_dialog():
-            xbmc.executebuiltin("ActivateWindow(10136,return)")
-            xbmc.sleep(500)
-            xbmc.executebuiltin("Action(Back)")
-            xbmc.sleep(500)
-        xbmc.executebuiltin("ReplaceWindowAndFocus(smartplaylisteditor,%s,%s)"%(file,media))
-        #todo create custom plugin to handle editing/creating smartplaylists, call like library node.
-        
-
-    def openNode(self, file='', media='video'):
-         #todo create PR to library node to accept node for edit through plugin call.
-        # file = 'library://video/network-nbc.xml/'
-        self.log('openNode, file = %s, media = %s'%(file,media))
-        if file: file = '?ltype=%s&path=%s)'%(media,urllib.parse.quote(xbmcvfs.translatePath(file.strip('/').replace('library://','special://userdata/library/'))))
-        xbmc.executebuiltin('RunPlugin(plugin://plugin.library.node.editor%s'%(file))
-        # # (plugin://plugin.library.node.editor/?ltype=video&path=D%3a%2fKodi%2fportable_data%2fuserdata%2flibrary%2fvideo%2fnetwork-nbc.xml) 
 
 
     def sleepTimer(self):
@@ -324,7 +295,9 @@ class Config:
         ## Example: self.openAddonSettings((2,3),'plugin.video.name')
         ## This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
         xbmc.executebuiltin('Addon.OpenSettings(%s)'%id)
+        xbmc.sleep(500)
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]+100))
+        xbmc.sleep(100)
         xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]+80))
         return True
 
@@ -358,9 +331,6 @@ class Config:
         elif  param == 'User_Groups':
             ctl = (2,2)
             self.userGroups()
-        elif  param == 'Open_Editor':
-            ctl = (0,6)
-            return self.openEditor()
         elif  param == 'Install_Resources':
             ctl = (5,10)
             self.installResources()
@@ -372,7 +342,8 @@ class Config:
             self.backup.recoverChannels()
         else:
             ctl = (1,1)
-            self.selectPredefined(param.replace('_',' '))
+            with busy():  
+                self.selectPredefined(param.replace('_',' '))
         return self.openAddonSettings(ctl)
             
 if __name__ == '__main__': Config(sys.argv).run()

@@ -67,15 +67,15 @@ class RulesList:
         return ruleList
            
         
-    def loadRules(self, channels):      
+    def loadRules(self, channels): #load channel rules and their instances.
         tmpruleList = self.ruleList.copy()
-        tmpruleList.pop(0) #remove template
+        tmpruleList.pop(0) #remove boilerplate
         ruleList = dict(self.pool.poolList(self._loadRule,channels,tmpruleList))
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
         
         
-    def buildRuleList(self, channels):
+    def buildRuleList(self, channels): #load all rules and apply their per channel instances.
         ruleList = {}
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0)

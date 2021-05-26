@@ -357,11 +357,11 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#30085"
-msgid "Open Library (Node) Editor"
+msgid "Open Library Editor"
 msgstr ""
 
 msgctxt "#30086"
-msgid "Create SmartPlaylist"
+msgid "Open Playlist Editor"
 msgstr ""
 
 msgctxt "#30087"
@@ -1222,4 +1222,12 @@ msgstr ""
 
 msgctxt "#30302"
 msgid "Enable visual features."
+msgstr ""
+
+msgctxt "#30303"
+msgid "Manage Library Nodes."
+msgstr ""
+
+msgctxt "#30304"
+msgid "Manage Smartplaylists."
 msgstr ""

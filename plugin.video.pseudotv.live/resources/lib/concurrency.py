@@ -17,25 +17,19 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
+import concurrent.futures
 import re, os, subprocess, traceback
 
 from kodi_six           import xbmc, xbmcaddon
 from itertools          import repeat
 from functools          import partial
 
-ADDON_ID      = 'plugin.video.pseudotv.live'
-REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
-THREAD_ERROR  = ""
-    
 try:
     import _multiprocessing # android will raise issue, inherent decency of multiprocessing.
     try:    from multiprocessing.dummy import Pool as ThreadPool
     except: from multiprocessing.pool  import ThreadPool
     ENABLE_POOL  = True
+    THREAD_ERROR = ""
 except Exception as e:
     # Android currently does not support multiprocessing (parallelism), use (concurrent) threads.
     THREAD_ERROR = e
@@ -48,6 +42,13 @@ except:
     from threading import Thread
     from queue     import Queue, Empty
    
+ADDON_ID      = 'plugin.video.pseudotv.live'
+REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
+ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
+ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
+    
 def roundupDIV(p, q):
     try:
         d, r = divmod(p, q)
@@ -61,6 +62,25 @@ def log(msg, level=xbmc.LOGDEBUG):
     if not isinstance(msg,str): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+
+
+class Concurrent:
+    def __init__(self):
+        ...
+        
+        
+    def executor(self, func, params):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(func, params)
+        return future.result()
+
+        
+    def executors(self, tupLST):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(func, params) for func, params in tupLST]
+        return [f.result() for f in futures] 
+
+
 
 class PoolHelper:
     def __init__(self):

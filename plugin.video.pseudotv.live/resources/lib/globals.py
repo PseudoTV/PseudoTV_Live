@@ -35,11 +35,11 @@ from operator                  import itemgetter
 from collections               import deque
 
 try:
-    from multiprocessing import Thread, Queue, Empty
+    from multiprocessing import Thread, Queue, Empty, PriorityQueue
     Queue() # importing Queue does not raise importError on android, call directly.
 except:
     from threading import Thread
-    from queue     import Queue, Empty
+    from queue     import Queue, Empty, PriorityQueue
 
 PY3 = sys.version_info[0] == 3
 if PY3: 
@@ -138,17 +138,25 @@ CHANNELBUG_CHECK_TIME            = 15.0 #seconds
 ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
 
+# Windows
+FILE_MANAGER	     = 10003
+YESNO_DIALOG	     = 10100
+VIRTUAL_KEYBOARD     = 10103
+CONTEXT_MENU      	 = 10106
+NUMERIC_INPUT        = 10109
+FILE_BROWSER         = 10126
+BUSY_DIALOG          = 10138
+ADDON_SETTINGS       = 10140
+BUSY_DIALOG_NOCANCEL = 10160
+SELECT_DIALOG        = 12000
+OK_DIALOG            = 12002
+ADDON_DIALOG         = 13001
+
 def log(msg, level=xbmc.LOGDEBUG):
     if not SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
     if not isinstance(msg,basestring): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-
-def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
-    return PROPERTIES.getEXTProperty('PseudoTVRunning') == "True"
-
-def setLegacyPseudoTV(state):
-    return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
 
 def getUserFilePath(file=None):
     path = SETTINGS.getSetting('User_Folder')
@@ -348,10 +356,7 @@ def loadJSON(item):
     
 def sendJSON(command):
     log('globals: sendJSON, command = %s'%(command))
-    PROPERTIES.setPropertyBool('sendBUSY',True)
-    response = loadJSON(xbmc.executeJSONRPC(command))
-    PROPERTIES.setPropertyBool('sendBUSY',False)
-    return response
+    return loadJSON(xbmc.executeJSONRPC(command))
 
 def escapeDirJSON(path):
     mydir = path
@@ -373,6 +378,12 @@ def isSSD():
 def getIdleTime():
     try: return (int(xbmc.getGlobalIdleTime()) or 0)
     except: return 0 #Kodi raises error after sleep.
+
+def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
+    return PROPERTIES.getEXTProperty('PseudoTVRunning') == "True"
+
+def setLegacyPseudoTV(state):
+    return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
 
 def setBusy(state):
     return PROPERTIES.setPropertyBool("BUSY.RUNNING",state)
@@ -446,7 +457,8 @@ def showChangelog():
         text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
         return text
         
-    with busy_dialog(): changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
+    with busy_dialog(): 
+        changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
     return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def showReadme():
@@ -459,7 +471,8 @@ def showReadme():
         markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
         return markdown
         
-    with busy_dialog(): readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
+    with busy_dialog(): 
+        readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
     return Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def chkUpdateTime(key, wait, lastUpdate=None):
@@ -695,8 +708,9 @@ def decodeString(base64_bytes):
     message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
     return message_bytes.decode(DEFAULT_ENCODING)
 
-def getGroups():
+def getGroups(add=False):
     if SETTINGS.getSetting('User_Groups'): GROUP_TYPES.extend(SETTINGS.getSetting('User_Groups').split('|'))
+    if add: GROUP_TYPES.insert(0,'+Add')
     return sorted(set(GROUP_TYPES))
 
 def genUUID(seed=None):

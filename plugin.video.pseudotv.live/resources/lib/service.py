@@ -190,7 +190,6 @@ class Player(xbmc.Player):
             return self.stopAction()
             
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
-        
         if not pvritem.get('callback'):
             pvritem['callback'] = self.getCallback()
             self.log('playAction, updating callback to = %s'%(pvritem['callback']))
@@ -285,10 +284,14 @@ class Monitor(xbmc.Monitor):
             
             
     def isSettingsOpened(self, aggressive=True):
-        windowIDS = [10140]
-        if aggressive: windowIDS.extend([12000,10126,10138,13001])
-        if xbmcgui.getCurrentWindowDialogId() in windowIDS:
-            return self.onSettingsChanged()
+        windowIDS = [ADDON_SETTINGS,ADDON_DIALOG]
+        currentWindow = xbmcgui.getCurrentWindowDialogId()
+        if aggressive: windowIDS.extend([FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,NUMERIC_INPUT,
+                                         FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
+        if currentWindow in windowIDS:
+            # if currentWindow == ADDON_SETTINGS:
+                # self.onSettingsChanged()
+            return True
         return False
 
 
@@ -301,7 +304,6 @@ class Monitor(xbmc.Monitor):
         self.onChangeThread = threading.Timer(wait, self.onChange)
         self.onChangeThread.name = "onChangeThread"
         self.onChangeThread.start()
-        return True
         
         
     def onChange(self):
@@ -331,7 +333,7 @@ class Monitor(xbmc.Monitor):
                 'Import_M3U_TYPE'     :{'setting':SETTINGS.getSetting('Import_M3U_TYPE')     ,'action':None},
                 'Import_M3U_FILE'     :{'setting':SETTINGS.getSetting('Import_M3U_FILE')     ,'action':None},
                 'Import_M3U_URL'      :{'setting':SETTINGS.getSetting('Import_M3U_URL')      ,'action':None},
-                'Import_Provider'     :{'setting':SETTINGS.getSettingList('Import_Provider') ,'action':None},
+                'Import_Provider'     :{'setting':SETTINGS.getSetting('Import_Provider')     ,'action':None},
                 'User_Folder'         :{'setting':SETTINGS.getSetting('User_Folder')         ,'action':moveUser},
                 'Select_Channels'     :{'setting':SETTINGS.getSetting('Select_Channels')     ,'action':None},
                 'Select_TV_Networks'  :{'setting':SETTINGS.getSetting('Select_TV_Networks')  ,'action':None},
@@ -540,7 +542,7 @@ class Service:
         while not self.monitor.abortRequested():
             if   isRestartRequired(): break
             elif self.chkInfo():      continue # aggressive polling required (bypass waitForAbort)!
-            elif self.monitor.waitForAbort(2): break
+            elif self.monitor.waitForAbort(10): break
             
             if self.player.isPlaying():
                 self.chkIdle()

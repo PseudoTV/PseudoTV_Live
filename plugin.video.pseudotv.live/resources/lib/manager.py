@@ -240,7 +240,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         channelProp = dumpJSON(channelData, sortkey=False)
         for key, value in channelData.items():
             if   key in ["number","type","logo","id","page","favorite","catchup"]: continue # keys to ignore, internal use only.
-            elif key == 'rules' and not channelData.get('id',''): continue
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(value)
                 elif key == "path"  :    value = '|'.join(value)
@@ -261,7 +260,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('itemInput, channelData = %s, value = %s, key = %s'%(channelData,value,key))
         KEY_INPUT = {"name"  : {'func':self.dialog.inputDialog  ,'args':{'message':LANGUAGE(30123),'default':value}},
                      "path"  : {'func':self.dialog.browseDialog ,'args':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
-                     "group" : {'func':self.dialog.selectDialog ,'args':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':self.config.findItemsInLST(GROUP_TYPES,value.split(' / ')),'useDetails':False}},
+                     "group" : {'func':self.dialog.selectDialog ,'args':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':self.config.findItemsInLST(getGroups(),value.split(' / ')),'useDetails':False}},
                      "rules" : {'func':self.selectRules         ,'args':{'channelData':channelData}},
                      "radio" : {'func':self.toggleBool          ,'args':{'state':channelData.get('radio',False)}},
                      "clear" : {'func':self.clearChannel        ,'args':{'item':channelData}}}
@@ -355,6 +354,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def validateInput(self, retval, key, channelData):
         self.log('validateInput')
         if retval is None:   return None  , channelData
+        elif key == 'rules': return None  , channelData
         elif key == 'clear': return retval, channelData
         elif key == 'path':
             retval, channelData = self.validatePath(channelData, retval, key)
@@ -459,7 +459,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.newChannels = self.validateChannels(self.newChannels)
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
-        [self.channels.addChannel(citem) if citem in self.newChannels else self.removeChannel(citem) for citem in difference] #add new, remove old.
+        [self.channels.addChannel(citem) if citem in self.newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
         if self.channels.save():
             self.dialog.notificationDialog(LANGUAGE(30053))
             SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.newChannels)))

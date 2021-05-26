@@ -59,7 +59,7 @@
 			</group>
       
 			<group id="2" label="30008">
-				<setting id="Open_Node" type="action" label="30085" help="30085">
+				<setting id="Open_Node" type="action" label="30085" help="30303">
 					<level>2</level>
 					<default/>
 					<constraints>
@@ -78,7 +78,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="Open_Editor" type="action" label="30086" help="30086">
+				<setting id="Open_Editor" type="action" label="30086" help="30304">
 					<level>2</level>
 					<default/>
 					<constraints>
@@ -91,12 +91,9 @@
                                 <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
-						<dependency type="visible">
-							<condition on="property" name="InfoBool">false</condition>
-						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/config.py, Open_Editor)</data>
+						<data>ActivateWindow(Videos,library://video/playlists.xml,return)</data>
 						<close>true</close>
 					</control>
 				</setting>

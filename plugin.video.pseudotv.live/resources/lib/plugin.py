@@ -85,14 +85,13 @@ class Plugin:
         
     def deleteFiles(self, msg, full=False):
         self.log('deleteFiles, full = %s'%(full))
-        setBusy(True)
-        files = {LANGUAGE(30172):getUserFilePath(M3UFLE),LANGUAGE(30173):getUserFilePath(XMLTVFLE),LANGUAGE(30009):getUserFilePath(CHANNELFLE),LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):getUserFilePath(LIBRARYFLE)}
-        keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
-        if not full: keys = keys[:3]
-        if self.dialog.yesnoDialog('%s ?'%(msg)): [self.dialog.notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
-        PROPERTIES.setPropertyBool('autotuned',False)
-        if full: return self.dialog.okDialog(LANGUAGE(30183))
-        setBusy(False)
+        with busy():
+            files = {LANGUAGE(30172):getUserFilePath(M3UFLE),LANGUAGE(30173):getUserFilePath(XMLTVFLE),LANGUAGE(30009):getUserFilePath(CHANNELFLE),LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):getUserFilePath(LIBRARYFLE)}
+            keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
+            if not full: keys = keys[:3]
+            if self.dialog.yesnoDialog('%s ?'%(msg)): [self.dialog.notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
+            PROPERTIES.setPropertyBool('autotuned',False)
+            if full: return self.dialog.okDialog(LANGUAGE(30183))
         return True
 
             

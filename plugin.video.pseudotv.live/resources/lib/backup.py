@@ -91,9 +91,8 @@ class Backup:
             return False
         
         with busy_dialog():
-            setBusy(True)
-            self.writer.recoverChannelsFromBackup(file)
-            setBusy(False)
+            with busy():
+                self.writer.recoverChannelsFromBackup(file)
         setRestartRequired()
         return True
         
