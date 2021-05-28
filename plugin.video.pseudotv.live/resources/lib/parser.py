@@ -47,14 +47,14 @@ class Writer:
             self.pool         = PoolHelper()
             self.rules        = RulesList()
         
-        if not inherited.__class__.__name__ in ['Builder','Config']:
-            self.progDialog   = None
-            self.progress     = None
-            self.chanName     = None
-        else:
+        if inherited.__class__.__name__ in ['Builder','Config']:
             self.progDialog   = inherited.progDialog
             self.progress     = inherited.progress
             self.chanName     = inherited.chanName
+        else:
+            self.progDialog   = None
+            self.progress     = None
+            self.chanName     = None
             
         if not inherited.__class__.__name__ == 'JSONRPC':
             from resources.lib.jsonrpc import JSONRPC 
@@ -87,7 +87,7 @@ class Writer:
             except ValueError: pass
             except Exception as e:
                 self.log("getChannelEndtimes, Failed!\n%s\nremoving malformed xmltv channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
-                self.removeChannel(channel)
+                self.removeChannelLineup(channel) #something went wrong; remove channel from m3u/xmltv force fresh rebuild.
          
          
     def importSETS(self):
@@ -106,10 +106,11 @@ class Writer:
                                       'xmltv':{'path':Import_XMLTV_Path}}})
         
         for idx, item in enumerate(importLST):
-            importItem = item.get('item',{})
-            if importItem.get('type','') != 'iptv': continue
-            self.log('importSETS, %s: importItem = %s'%(idx,importItem))
             try:
+                importItem = item.get('item',{})
+                if importItem.get('type','') != 'iptv': continue
+                self.log('importSETS, %s: importItem = %s'%(idx,importItem))
+                
                 if self.progDialog is not None:
                     self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                 
@@ -117,7 +118,7 @@ class Writer:
                 m3ufle   = importItem.get('m3u'  ,{}).get('path','')
                 xmlfle   = importItem.get('xmltv',{}).get('path','')
                 
-                filters  = {'slug':importItem.get('m3u',{}).get('slug',''),
+                filters  = {'slug'     :importItem.get('m3u',{}).get('slug',''),
                             'providers':importItem.get('m3u',{}).get('provider',[])}
                             
                 self.m3u.importM3U(m3ufle,filters,multiplier=idx)

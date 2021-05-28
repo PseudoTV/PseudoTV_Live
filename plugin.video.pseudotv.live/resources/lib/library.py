@@ -241,10 +241,10 @@ class Library:
         ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
         fillItems = self.getfillItems()
         if not fillItems: return True
-        interrupted = False
-        busy  = self.dialog.progressBGDialog()
-        for pos, type in enumerate(CHAN_TYPES):
             
+        interrupted = False
+        busy = self.dialog.progressBGDialog()
+        for pos, type in enumerate(CHAN_TYPES):
             busy = self.dialog.progressBGDialog(1, busy)
             if self.monitor.waitForAbort(0.01):
                 break
@@ -253,6 +253,11 @@ class Library:
             fillItem = fillItems.get(type,[])
             existing = self.getLibraryItems(type, enabled=True)
             log('fillLibraryItems, type = %s, fillItem = %s, existing = %s'%(type, len(fillItem),len(existing)))
+            
+            if not fillItem and existing:
+                log('fillLibraryItems, something went wrong no fillItem; sub existing.')
+                fillItem = existing.copy()
+                
             for idx, item in enumerate(fillItem):
                 if self.monitor.waitForAbort(0.01):
                     interrupted = True
@@ -265,6 +270,7 @@ class Library:
                 if isinstance(item,dict):
                     name = (item.get('name','') or item.get('label',''))
                     if not name: continue
+                        
                     if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
                         logo = item.get('icon','')
                     else: 

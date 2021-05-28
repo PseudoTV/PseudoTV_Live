@@ -148,7 +148,8 @@ class JSONRPC:
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)
-            self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+            if cacheResponse.get('result',None):
+                self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
@@ -339,16 +340,15 @@ class JSONRPC:
         if not hasTV():
             return [], [], []
 
-        NetworkList = collections.Counter()
+        NetworkList   = collections.Counter()
         ShowGenreList = collections.Counter()
-        TVShows = collections.Counter()
+        TVShows       = collections.Counter()
         json_response = self.getTVshows()
+        
         for info in json_response:
             label = getLabel(info)
             if not label: continue
-            TVShows.update({json.dumps({'label': label,
-                                        'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
-
+            TVShows.update({json.dumps({'label': label, 'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
             NetworkList.update([studio for studio in info.get('studio', [])])
             ShowGenreList.update([genre for genre in info.get('genre', [])])
 
@@ -363,8 +363,7 @@ class JSONRPC:
             del NetworkList[250:]
             ShowGenreList = (sorted(set(list(ShowGenreList.keys()))))
 
-        self.log(
-            'getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShows)))
+        self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShows)))
         return NetworkList, ShowGenreList, TVShows
 
 
@@ -415,8 +414,8 @@ class JSONRPC:
         if not duration:
             try:
                 duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item)
-                self.cache.set(cacheName, duration, checksum=runtime, expiration=datetime.timedelta(days=28),
-                               json_data=False)
+                if duration > 0:
+                    self.cache.set(cacheName, duration, checksum=runtime, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
@@ -523,20 +522,18 @@ class JSONRPC:
     def fillPVRbroadcasts(self, channelItem, cache=False):
         self.log('fillPVRbroadcasts, channelItem = %s, cache = %s' % (channelItem, cache))
         def _parseBroadcasts():
-            if cache:  # todo check if channelitem events in cacheresponce if not, old data reparse? use checksum to refresh?
+            if cache:  # todo use checksum to refresh?
                 cacheName = 'fillPVRbroadcasts.%s' % (channelItem.get('citem'))
                 cacheResponse = self.cache.get(cacheName, checksum="", json_data=True)
                 if not cacheResponse:
                     cacheResponse = self.getPVRBroadcasts(channelItem['channelid'])
                     if cacheResponse:
-                        now = datetime.datetime.utcnow()
+                        now = getLocalTime()
                         if cacheResponse[-1].get('progress', -1) == 0:
                             lastTime = (strpTime(cacheResponse[-1].get('endtime')) or now)
                         else:
                             lastTime = now
-                        self.cache.set(cacheName, cacheResponse, checksum="",
-                                       expiration=datetime.timedelta(seconds=(now - lastTime).total_seconds()),
-                                       json_data=True)
+                        self.cache.set(cacheName, cacheResponse, checksum="", expiration=datetime.timedelta(seconds=(now - lastTime).total_seconds()), json_data=True)
                 return cacheResponse
             else:
                 return self.getPVRBroadcasts(channelItem['channelid'])

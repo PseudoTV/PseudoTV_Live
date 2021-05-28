@@ -48,7 +48,7 @@ ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
 ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
-    
+
 def roundupDIV(p, q):
     try:
         d, r = divmod(p, q)
@@ -62,12 +62,11 @@ def log(msg, level=xbmc.LOGDEBUG):
     if not isinstance(msg,str): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-
-
+    
 class Concurrent:
     def __init__(self):
         ...
-        
+        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
         
     def executor(self, func, params):
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -274,3 +273,154 @@ class PoolHelper:
             if res > 0: return res
         except OSError: pass
         return 1
+# class PoolHelper:
+    # def __init__(self):
+        # self.workerCNT = int(roundupDIV(self.CPUcores(), {0:0,1:0,2:2,3:1}[REAL_SETTINGS.getSettingInt('Enable_CPU_CORES')])) #User Select Full or *Half cores. *default
+        # if self.workerCNT > 2:
+            # self.workexecutor = concurrent.futures.ThreadPoolExecutor(self.workerCNT)
+        # else:
+            # self.workexecutor = concurrent.futures.ProcessPoolExecutor(self.workerCNT)
+
+
+    # def log(self, msg, level=xbmc.LOGDEBUG):
+        # return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    # def poolExec(self, func, args=None, kwargs=None):
+        # self.log("poolExec, %s"%(func.__name__))
+        # # try:
+        # results = self.executor(func, args, kwargs)
+        # # except Exception as e: 
+            # # self.log("poolExec, Failed! %s"%(e), xbmc.LOGERROR)
+            # # results = func(args, kwargs)
+        # return results
+
+
+    # def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None):
+        # self.log("poolList, %s"%(func.__name__))
+        # # try:
+        # results = self.executors(func, items, args, kwargs, chunksize)
+        # # except Exception as e: 
+            # # self.log("poolList, Failed! %s"%(e), xbmc.LOGERROR)
+            # # results = self.genList(func, items, args, kwargs)
+        # return results
+        
+        
+    # def genList(self, func, items=[], args=None, kwargs=None):
+        # self.log("genList, %s"%(func.__name__))
+        # try:
+            # if kwargs and isinstance(kwargs,dict):
+                # results = map(partial(func, **kwargs), items)
+            # else:
+                # if args: items = zip(items,repeat(args))
+                # results = map(func, items)
+            # return list(filter(None, results))
+        # except Exception as e: 
+            # self.log("genList, Failed! %s"%(e), xbmc.LOGERROR)
+            # return []
+        
+        
+    # def executor(self, func, args=None, kwargs=None):
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+            # future = executor.submit(func, args)
+            # # if   args:   future = executor.submit(func, args)
+            # # elif kwargs: future = executor.submit(func, kwargs)
+            # # else:        future = executor.submit(func)
+            # return future.result()
+
+        
+    # def executors(self, func, items=[], args=None, kwargs=None, chunksize=None, timeout=300):
+        # results = []
+        # if chunksize is None: chunksize = roundupDIV(len(items), self.workerCNT)
+        # if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
+                
+        # with self.workexecutor as executor:
+            # if kwargs and isinstance(kwargs,dict):
+                # results = executor.map(partial(func, **kwargs), items, timeout, chunksize)
+            # else:
+                # if args: items = zip(items,repeat(args))
+                # results = executor.map(func, items, timeout, chunksize)
+        # return list(filter(None,results))
+
+
+    # def CPUcores(self):
+        # """ Number of available virtual or physical CPUs on this system, i.e.
+        # user/real as output by time(1) when called with an optimally scaling
+        # userspace-only program"""
+        # # cpuset
+        # # cpuset may restrict the number of *available* processors
+        # try:
+            # m = re.search(r'(?m)^Cpus_allowed:\s*(.*)$',open('/proc/self/status').read())
+            # if m:
+                # res = bin(int(m.group(1).replace(',', ''), 16)).count('1')
+                # if res > 0: return res
+        # except IOError: pass
+        
+        # # Python 2.6+
+        # try:
+            # from multiprocessing import cpu_count
+            # return cpu_count()
+        # except (ImportError, NotImplementedError):
+            # pass
+
+        # try:
+            # import psutil
+            # return psutil.cpu_count()   # psutil.NUM_CPUS on old versions
+        # except (ImportError, AttributeError):  pass
+
+        # # POSIX
+        # try:
+            # res = int(os.sysconf('SC_NPROCESSORS_ONLN'))
+            # if res > 0: return res
+        # except (AttributeError, ValueError): pass
+
+        # # Windows
+        # try:
+            # res = int(os.environ['NUMBER_OF_PROCESSORS'])
+            # if res > 0: return res
+        # except (KeyError, ValueError): pass
+
+        # # jython
+        # try:
+            # from java.lang import Runtime
+            # runtime = Runtime.getRuntime()
+            # res = runtime.availableProcessors()
+            # if res > 0: return res
+        # except ImportError: pass
+
+        # # BSD
+        # try:
+            # sysctl = subprocess.Popen(['sysctl', '-n', 'hw.ncpu'],stdout=subprocess.PIPE)
+            # scStdout = sysctl.communicate()[0]
+            # res = int(scStdout)
+            # if res > 0: return res
+        # except (OSError, ValueError): pass
+
+        # # Linux
+        # try:
+            # res = open('/proc/cpuinfo').read().count('processor\t:')
+            # if res > 0: return res
+        # except IOError: pass
+
+        # # Solaris
+        # try:
+            # pseudoDevices = os.listdir('/devices/pseudo/')
+            # res = 0
+            # for pd in pseudoDevices:
+                # if re.match(r'^cpuid@[0-9]+$', pd): res += 1
+            # if res > 0: return res
+        # except OSError: pass
+
+        # # Other UNIXes (heuristic)
+        # try:
+            # try:
+                # dmesg = open('/var/run/dmesg.boot').read()
+            # except IOError:
+                # dmesgProcess = subprocess.Popen(['dmesg'], stdout=subprocess.PIPE)
+                # dmesg = dmesgProcess.communicate()[0]
+
+            # res = 0
+            # while '\ncpu' + str(res) + ':' in dmesg: res += 1
+            # if res > 0: return res
+        # except OSError: pass
+        # return 1
