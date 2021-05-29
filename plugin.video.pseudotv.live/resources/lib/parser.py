@@ -75,8 +75,8 @@ class Writer:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
         
-    def getChannelEndtimes(self):
-        self.log('getChannelEndtimes')
+    def getChannelEndtimes(self, now):
+        self.log('getChannelEndtimes, now = %s'%(now))
         now        = datetime.datetime.fromtimestamp(getLocalTime())
         channels   = self.xmltv.getChannels()
         programmes = self.xmltv.getProgrammes()
@@ -84,7 +84,7 @@ class Writer:
             try: 
                 stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']], default=now)
                 yield channel['id'],time.mktime(stopDate)
-            except ValueError: pass
+            except ValueError: yield channel['id'],time.mktime(now)
             except Exception as e:
                 self.log("getChannelEndtimes, Failed!\n%s\nremoving malformed xmltv channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
                 self.removeChannelLineup(channel) #something went wrong; remove channel from m3u/xmltv force fresh rebuild.

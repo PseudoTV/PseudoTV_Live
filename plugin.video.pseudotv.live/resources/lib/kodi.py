@@ -20,7 +20,7 @@
 
 import os, json, traceback
 
-from kodi_six  import xbmc, xbmcgui, xbmcaddon
+from kodi_six  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
 from resources.lib.concurrency import PoolHelper
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
@@ -30,7 +30,10 @@ ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 LANGUAGE      = REAL_SETTINGS.getLocalizedString
 COLOR_LOGO    = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
-
+    
+def splitPath(filepath):
+    return (os.path.split(filepath))
+    
 def dumpJSON(item):
     try:    return json.dumps(item)
     except: return ''
@@ -337,8 +340,7 @@ class Dialog:
         if playable: listitem.setProperty("IsPlayable","true")
         return listitem
              
-        
-        
+         
     def okDialog(self, msg, heading=ADDON_NAME):
         return xbmcgui.Dialog().ok(heading, msg)
         
@@ -412,18 +414,23 @@ class Dialog:
         def buildMenuItem(option):
             return self.buildMenuListItem(option['label'],option['label2'],iconImage=COLOR_LOGO)
             
-        if prompt and not default:
+        if prompt:
             if options is None:
-                options  = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://videoplaylists/"          , "mask":'.xsp'                            , "type":1, "multi":False},
-                            {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://musicplaylists/"          , "mask":'.xsp'                            , "type":1, "multi":False},
-                            {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0, "multi":False},
-                            {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0, "multi":False},
-                            {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
-                            {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                            {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                            {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                            {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
-            
+                options = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://videoplaylists/"          , "mask":".xsp"                            , "type":1, "multi":False},
+                           {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://musicplaylists/"          , "mask":".xsp"                            , "type":1, "multi":False},
+                           {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0, "multi":False},
+                           {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0, "multi":False},
+                           {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
+                           {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
+                           {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
+                           {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
+                           {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
+                if default:
+                    default, file = splitPath(default)
+                    if file: type = 1
+                    else:    type = 0
+                    options.insert(0,{"label":"Existing Path", "label2":default, "default":default , "mask":"", "type":type, "multi":False})
+                    
             listitems = self.pool.poolList(buildMenuItem,options)
             select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
             if select is not None:

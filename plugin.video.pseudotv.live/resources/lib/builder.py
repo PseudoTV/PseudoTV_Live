@@ -94,7 +94,7 @@ class Builder:
         self.progDialog   = self.dialog.progressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.rules.loadRules(channels)
-        endTimes          = dict(self.writer.getChannelEndtimes())
+        endTimes          = dict(self.writer.getChannelEndtimes(datetime.datetime.fromtimestamp(getLocalTime())))
         self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):

@@ -311,7 +311,9 @@ class Plugin:
                         
             if isPlaylist:
                 self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
-                return self.player.play(self.channelPlaylist)  
+                self.player.play(self.channelPlaylist)
+                xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
+                return
                 
         else: self.dialog.notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])

@@ -1,3 +1,7 @@
+v.0.3.1
+-Fixed custom smartplaylist paths, existing channels will require replaced/updated path in the channel manager.
+-Fixed playlist playback mode busy spinner.
+
 v.0.3.0
 -Added import support for new IPTV Simple m3u parameters. ie. "x-tvg-url", all "provider" and "catchup" parameters; including "#EXTGRP" (#EXTGRP converted to "group-title").
 -Added m3u/xmltv support for "xmltv_ns", "provider" parameters.

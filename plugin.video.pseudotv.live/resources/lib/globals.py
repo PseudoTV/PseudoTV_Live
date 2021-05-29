@@ -819,4 +819,3 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
-    

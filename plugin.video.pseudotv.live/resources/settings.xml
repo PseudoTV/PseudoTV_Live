@@ -356,6 +356,14 @@
 								<condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
 							</and>
 						</dependency>
+						<dependency type="visible">
+							<and>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Imports),true)</condition>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.BUSY.RUNNING),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+								<condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
+							</and>
+						</dependency>
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(service.iptv.manager,refresh)</data>

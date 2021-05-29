@@ -73,13 +73,6 @@ class Concurrent:
             future = executor.submit(func, params)
         return future.result()
 
-        
-    def executors(self, tupLST):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(func, params) for func, params in tupLST]
-        return [f.result() for f in futures] 
-
-
 
 class PoolHelper:
     def __init__(self):

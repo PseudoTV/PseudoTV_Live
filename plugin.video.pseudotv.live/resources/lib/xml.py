@@ -116,7 +116,7 @@ class XMLTV:
             data = self.vault.xmltvList['data']
             
         with fileLocker(self.filelock):
-            writer = xmltv.Writer(encoding=DEFAULT_ENCODING, 
+            writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
                                   date                = data['date'],
                                   source_info_url     = data['source-info-url'], 
                                   source_info_name    = data['source-info-name'],

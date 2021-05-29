@@ -381,17 +381,18 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     
     def validatePlaylist(self, path, channelData):
-        if path.strip('/').endswith('.xml'):
-            newPath = path.strip('/').replace('library://','special://userdata/library/')
-            dir, file =(os.path.split(newPath))
-            dir = dir.replace('special://userdata/library',CACHE_LOC)
-            cachefile = os.path.join(dir,file)
-        elif path.endswith('.xsp'):
-            cachefile = os.path.join(CACHE_LOC,os.path.basename(path))
-        else: return path, channelData
-        self.log('validatePlaylist, path = %s, cachefile = %s'%(path,cachefile))
-        if FileAccess.copy(path, cachefile): 
-            return cachefile, channelData
+        #todo cache only needed if multi-room editor is allowed.
+        # if path.strip('/').endswith('.xml'):
+            # newPath = path.strip('/').replace('library://','special://userdata/library/')
+            # # dir, file =(os.path.split(newPath))
+            # # dir = dir.replace('special://userdata/library',CACHE_LOC)
+            # # cachefile = os.path.join(dir,file)
+        # elif path.endswith('.xsp'):
+            # cachefile = os.path.join(CACHE_LOC,os.path.basename(path))
+        # else: return path, channelData
+        # self.log('validatePlaylist, path = %s, cachefile = %s'%(path,cachefile))
+        # if FileAccess.copy(path, cachefile): 
+            # return cachefile, channelData
         return path, channelData
 
 
