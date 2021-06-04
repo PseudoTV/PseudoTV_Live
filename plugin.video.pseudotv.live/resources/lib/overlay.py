@@ -46,6 +46,10 @@ class Overlay(xbmcgui.WindowXML):
         self.rules              = self.service.rules
         self.dialog             = self.service.dialog
         self.monitor            = self.service.monitor
+        
+        from resources.lib.jsonrpc import JSONRPC 
+        self.jsonRPC = JSONRPC()
+        
         self.ruleList           = {}
         self.pvritem            = {}
         self.citem              = {}
@@ -276,10 +280,40 @@ class Overlay(xbmcgui.WindowXML):
 
 
     def onAction(self, act):
-        self.log('onAction, actionid = %s'%(act.getId()))
-        # actionid = act.getId()
-        # if actionid in ACTION_SHOW_INFO:
-            # xbmc.executebuiltin("action(Info)")
-        # elif actionid in ACTION_PREVIOUS_MENU:
-            # xbmc.executebuiltin("action(PreviousMenu)") 
+        actionid = act.getId()
+        self.log('onAction, actionid = %s'%(actionid))
+        if actionid == ACTION_MOVE_LEFT:
+            if not self.openWindow('pvrosdchannels'):
+                return
+        elif actionid == ACTION_MOVE_RIGHT:
+            if not self.openWindow('pvrchannelguide'):
+                return
+        # elif actionid == ACTION_MOVE_UP:
+            # xbmc.executebuiltin("Action(Up)")
+        # elif actionid == ACTION_MOVE_DOWN:
+            # xbmc.executebuiltin("Action(Info)")
+        # elif actionid == ACTION_SELECT_ITEM:
+            # if not self.openWindow('videoosd'): 
+                # return
         self.closeOverlay()
+        
+        
+    def sendButton(self, id):
+        self.log('sendButton, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"Input.ButtonEvent","params":{"button":"%s","keymap":"KB"},"id":1}'%id)
+        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+            return True
+        
+        
+    def sendAction(self, id):
+        self.log('sendAction, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"%s"},"id":1}'%id)
+        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+            return True  
+            
+            
+    def openWindow(self, id):
+        self.log('openWindow, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
+        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+            return True

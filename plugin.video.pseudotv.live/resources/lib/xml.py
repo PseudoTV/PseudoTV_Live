@@ -393,11 +393,14 @@ class XMLTV:
 
 
     @staticmethod
-    def cleanMPAA(str1):
+    def cleanMPAA(text):
         #todo regex, detect other region rating formats
-        # re.compile(':(.*)', re.IGNORECASE).search(str1.split('Rated ')[1])
-        try: return str1.split('Rated ')[1]
-        except: return str1
+        # re.compile(':(.*)', re.IGNORECASE).search(text))
+        try:
+            text = re.sub('/ US', ''  , text)
+            text = re.sub('Rated ', '', text)
+            return text
+        except: return text
 
 
     @staticmethod

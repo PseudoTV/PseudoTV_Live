@@ -76,8 +76,8 @@ class Builder:
         
 
     def buildService(self, myService):
-        if isClient():
-            self.log('buildService, Client mode enabled; returning!')
+        if isClient() or self.monitor.isSettingsOpened(aggressive=False):
+            self.log('buildService, Client mode enabled/Settings Opened; returning!')
             return False
                         
         channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
@@ -94,11 +94,12 @@ class Builder:
         self.progDialog   = self.dialog.progressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.rules.loadRules(channels)
-        endTimes          = dict(self.writer.getChannelEndtimes(datetime.datetime.fromtimestamp(getLocalTime())))
+        startEpoch        = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
+        endTimes          = dict(self.writer.getChannelEndtimes(startEpoch))
         self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):
-            if self.monitor.waitForAbort(0.01):
+            if self.monitor.waitForAbort(0.01) or self.monitor.isSettingsOpened(aggressive=False):
                 self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
                 return False
                 
@@ -106,7 +107,7 @@ class Builder:
             self.chanName   = channel['name']
             self.progress   = int(idx*100//len(channels))
             self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
-            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'],'') , channel['radio'])
+            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'],startEpoch) , channel['radio'])
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
             
             if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
@@ -177,22 +178,21 @@ class Builder:
             self.limit    = PAGE_LIMIT
             
             valid         = False
-            now           = getLocalTime()
-            start         = (start or roundTimeDown(now,offset=60)) #offset time to start top of the hour
             self.dirCount = 0
             self.loopback = {}
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             
-            if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(now) + datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))): 
+            if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(getLocalTime()) + datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))): 
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)),xbmc.LOGINFO)
                 return True# prevent over-building
-                
             citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)
+            
             if isinstance(citem['path'], list): 
                 path = citem['path']
             else: 
                 path = [citem['path']]
             mixed = len(path) > 1
+            
             media = 'music' if radio else 'video'
             if radio:
                 cacheResponse = self.buildRadio(citem)

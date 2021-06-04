@@ -137,9 +137,6 @@ class JSONRPC:
 
 
     def sendJSON(self, command):
-        #lazy flow control, move to concurrent.futures? with queue priority? semaphore counter?
-        # while PROPERTIES.getPropertyBool('sendBUSY'):
-            # if self.monitor.waitForAbort(.1): break
         return self.concurrent.executor(sendJSON,command)
         
 
@@ -203,7 +200,7 @@ class JSONRPC:
         return (result.get('item', {}) or result.get('items', []))
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=10),json_data=True)  # channel surfing buffer! cache/io impact needs to be eval., cache maybe overkill? video content can not be lower than cache expiration.
+    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),json_data=True)  # channel surfing buffer! cache/io impact needs to be eval., cache maybe overkill? video content can not be lower than cache expiration.
     def getPVRChannels(self, radio=False):
         json_query = (
                     '{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}' % (

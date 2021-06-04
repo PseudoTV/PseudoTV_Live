@@ -75,20 +75,19 @@ class Writer:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
         
-    def getChannelEndtimes(self, now):
-        self.log('getChannelEndtimes, now = %s'%(now))
-        now        = datetime.datetime.fromtimestamp(getLocalTime())
+    def getChannelEndtimes(self, startTimestamp):
+        self.log('getChannelEndtimes')
         channels   = self.xmltv.getChannels()
         programmes = self.xmltv.getProgrammes()
         for channel in channels:
             try: 
-                stopDate = max([strpTime(program['stop'], DTFORMAT).timetuple() for program in programmes if program['channel'] == channel['id']], default=now)
-                yield channel['id'],time.mktime(stopDate)
-            except ValueError: yield channel['id'],time.mktime(now)
+                stopDate = max([strpTime(program['stop'], DTFORMAT) for program in programmes if program['channel'] == channel['id']], default=datetime.datetime.fromtimestamp(startTimestamp))
+                yield channel['id'],getTimestamp(stopDate)
             except Exception as e:
-                self.log("getChannelEndtimes, Failed!\n%s\nremoving malformed xmltv channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
-                self.removeChannelLineup(channel) #something went wrong; remove channel from m3u/xmltv force fresh rebuild.
-         
+                self.log("getChannelEndtimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s\nNew starttime = %s"%(e,channel.get('id'),startTimestamp), xbmc.LOGERROR)
+                self.xmltv.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
+                yield channel['id'],startTimestamp
+                
          
     def importSETS(self):
         self.log('importSETS')

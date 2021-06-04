@@ -98,7 +98,7 @@ PREDEFINED_OFFSET   = 10800 #3hr in Secs
 UPDATE_WAIT         = 3600  #1hr in secs.
 AUTOTUNE_LIMIT      = 3     #auto items per type.
 CHANNEL_LIMIT       = 999   #hard limit, do not exceed!
-OVERLAY_DELAY       = 30    #secs
+OVERLAY_DELAY       = 15    #secs
 CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]#Limit is 10
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
@@ -135,6 +135,11 @@ NOTIFICATION_DISPLAY_TIME        = 30   #seconds
 CHANNELBUG_CHECK_TIME            = 15.0 #seconds
 
 # Actions
+ACTION_MOVE_LEFT     = 1
+ACTION_MOVE_RIGHT    = 2
+ACTION_MOVE_UP       = 3
+ACTION_MOVE_DOWN     = 4
+ACTION_SELECT_ITEM   = 7
 ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
 
@@ -566,13 +571,20 @@ def refreshMGR():
     if getPVR(PVR_MANAGER):
         xbmc.executebuiltin('RunScript(service.iptv.manager,refresh)')
 
-def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'):
-    try: return datetime.datetime.strptime(datestring, format)
+def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'): #convert json pvr datetime string to datetime obj, thread safe!
+    try:              return datetime.datetime.strptime(datestring, format)
     except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
-
+    except:           return ''
+        
 def getLocalTime():
     offset = (datetime.datetime.utcnow() - datetime.datetime.now())
-    return time.time() + offset.total_seconds()
+    return time.time() + offset.total_seconds() #returns timestamp
+
+def getTimestamp(dateOBJ):
+    return datetime.datetime.timestamp(dateOBJ)
+
+def makeTimestamp(dateOBJ):
+    return time.mktime(dateOBJ)
 
 def isHD(item):
     if 'isHD' in item: return item['isHD']

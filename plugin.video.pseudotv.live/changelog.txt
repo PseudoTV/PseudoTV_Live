@@ -1,6 +1,8 @@
 v.0.3.1
+-Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.
 -Fixed custom smartplaylist paths, existing channels will require replaced/updated path in the channel manager.
 -Fixed playlist playback mode busy spinner.
+-Improved concurrent/parallel operations (reduced memory demands).
 
 v.0.3.0
 -Added import support for new IPTV Simple m3u parameters. ie. "x-tvg-url", all "provider" and "catchup" parameters; including "#EXTGRP" (#EXTGRP converted to "group-title").

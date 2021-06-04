@@ -284,13 +284,13 @@ class Monitor(xbmc.Monitor):
             
             
     def isSettingsOpened(self, aggressive=True):
-        windowIDS = [ADDON_SETTINGS,ADDON_DIALOG]
+        windowIDS = [ADDON_SETTINGS]
         currentWindow = xbmcgui.getCurrentWindowDialogId()
-        if aggressive: windowIDS.extend([FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,NUMERIC_INPUT,
-                                         FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
+        if aggressive: windowIDS.extend([ADDON_DIALOG,FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,
+                                         NUMERIC_INPUT,FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
         if currentWindow in windowIDS:
-            # if currentWindow == ADDON_SETTINGS:
-                # self.onSettingsChanged()
+            if currentWindow == ADDON_SETTINGS:
+                self.onSettingsChanged()
             return True
         return False
 
@@ -466,7 +466,7 @@ class Service:
         if not isPseudoTV():  return
         idleTime  = getIdleTime()
         sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
-        if sleepTime != 0 and idleTime > (sleepTime * 10800):
+        if sleepTime != 0 and idleTime > (sleepTime * 10800): #3hr increments
             if self.player.triggerSleep(): return
         
         if  idleTime > OVERLAY_DELAY:

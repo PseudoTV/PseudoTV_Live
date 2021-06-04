@@ -70,12 +70,11 @@ class Plugin:
         self.log('buildMenu, name = %s'%name)
         MAIN_MENU = [(LANGUAGE(30008), '', '')]#"Channels"
 
-        UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),#"Rebuild M3U/XMLTV"
-                     (LANGUAGE(30011), '', '', LANGUAGE(30008)),#"Delete [M3U/XMLTV/Genre]"
-                     (LANGUAGE(30096), '', '', LANGUAGE(30008)),#"Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
+        UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),                                                                    #"Rebuild M3U/XMLTV"
+                     (LANGUAGE(30011), '', '', LANGUAGE(30008)),                                                                     #"Delete [M3U/XMLTV/Genre]"
+                     (LANGUAGE(30096), '', '', LANGUAGE(30008)),                                                                     #"Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
                      (LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)), #"Reconfigure PVR for use with PTVL"
-                     (LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008)),#"Force PVR reload"
-                     (LANGUAGE(30013), '', '', LANGUAGE(30008))]#"Open Settings"
+                     (LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008))]             #"Force PVR reload"
 
         if   name is None:            items = MAIN_MENU
         elif name == LANGUAGE(30008): items = UTIL_MENU
