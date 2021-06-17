@@ -55,6 +55,7 @@ class Channels:
         self.log('reload')
         self.vault.channelList = self.getTemplate()
         self.vault.channelList.update(self.cleanSelf(self.load()))
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
         self.chkClient()
         return self.deposit()
         
@@ -89,7 +90,7 @@ class Channels:
             self.log('save, saving to %s'%(filePath))
             fle.write(dumpJSON(self.cleanSelf(self.vault.channelList), idnt=4, sortkey=False))
             fle.close()
-        return self.reload()
+            return self.reload()
 
 
     @cacheit(checksum=ADDON_VERSION,json_data=True)
@@ -158,9 +159,10 @@ class Channels:
         return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.vault.channelList.get('channels',[]))))
 
 
-    def getPredefinedChannelsByType(self, type):
+    def getPredefinedChannelsByType(self, type, channels=None):
         self.log('getPredefinedChannelsByType')
-        return self.sortChannels(filter(lambda c:c.get('type') == type, self.getPredefinedChannels()))
+        if channels is None: channels = self.getPredefinedChannels()
+        return self.sortChannels(filter(lambda c:c.get('type') == type, channels))
 
 
     def getPage(self, id):

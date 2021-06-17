@@ -35,19 +35,19 @@ class UPNP:
 
     def CHKUPNP_Setting(self):
         log('CHKUPNP_Setting')# Check Kodi UPNP support.
-        if not self.jsonRPC.getSettingValue('{"setting":"services.upnp"}').get('result',{}).get('value',True): 
+        if not (self.jsonRPC.getSettingValue('services.upnp') or True): 
             return self.setUPNP_Setting()
         
     
     def setUPNP_Setting(self):
         log('setUPNP_Setting') #Enable Kodi UPNP support.
-        return self.jsonRPC.setSettingValue('{"setting":"services.upnp","value":true}')
+        return self.jsonRPC.setSettingValue('services.upnp','true')
 
     
     def getUPNP_IDs(self):
         log('getUPNP_IDs') #Check if upnp id is valid.
         if self.CHKUPNP_Setting():
-            return self.jsonRPC.getDirectory('{"directory":"upnp://"},cache=False).get('result',{}').get('files',[])
+            return self.jsonRPC.getDirectory('{"directory":"upnp://"}',cache=False).get('result',{}).get('files',[])
             
             
     def chkUPNP(self, path):

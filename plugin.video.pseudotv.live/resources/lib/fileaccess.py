@@ -232,8 +232,7 @@ class VFSFile:
 
 
     def size(self):
-        loc = self.currentFile.size()
-        return loc
+        return self.currentFile.size()
 
 
     def readlines(self):

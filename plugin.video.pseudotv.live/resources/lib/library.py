@@ -96,7 +96,7 @@ class Library:
             fle = FileAccess.open(filePath, 'w')
             fle.write(dumpJSON(self.vault.libraryItems, idnt=4, sortkey=False))
             fle.close()
-        return self.reload()
+            return self.reload()
 
 
     @cacheit(checksum=ADDON_VERSION,json_data=True)
@@ -127,14 +127,9 @@ class Library:
         self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
         if len(items) > 0: PROPERTIES.setPropertyBool('has.Predefined',True)
         self.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
-        self.setTypeSettings(type,items)
-        return self.save()
-        
-        
-    def setTypeSettings(self, type, items):
-        self.log('setTypeSettings, type = %s, items = %s'%(type,len(items)))
         SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
-        
+        return self.save()
+
         
     def clearLibraryItems(self, type=None):
         log('clearLibraryItems, type = %s'%(type))
@@ -175,44 +170,52 @@ class Library:
                 PROPERTIES.setProperty('has.%s'%(type.replace(' ','_')),'true')
             else: 
                 PROPERTIES.setProperty('has.%s'%(type.replace(' ','_')),'false')
-            
-        blackList = self.recommended.getBlackList()
-        if len(blackList) > 0: 
-            PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
-            SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
+                
+        self.recommended.setWhiteList(self.recommended.getWhiteList())
+        self.recommended.setBlackList(self.recommended.getBlackList())
         return True
         
  
+    @cacheit()
     def getNetworks(self):
-        return self.jsonRPC.getTVInfo()[0]
+        return self.jsonRPC.getTVInfo().get('studios',[])
         
         
+    @cacheit()
     def getTVGenres(self):
-        return self.jsonRPC.getTVInfo()[1]
+        return self.jsonRPC.getTVInfo().get('genres',[])
  
  
+    @cacheit(expiration=datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days')))
     def getTVShows(self):
-        return self.jsonRPC.getTVInfo()[2]
+        return self.jsonRPC.getTVInfo().get('shows',[])
  
  
+    @cacheit()
     def getMovieStudios(self):
-        return self.jsonRPC.getMovieInfo()[0]
+        return self.jsonRPC.getMovieInfo().get('studios',[])
         
         
+    @cacheit()
     def getMovieGenres(self):
-        return self.jsonRPC.getMovieInfo()[1]
-        
-        
+        return self.jsonRPC.getMovieInfo().get('genres',[])
+              
+ 
+    @cacheit()
+    def getMusicGenres(self):
+        return self.jsonRPC.getMusicInfo().get('genres',[])
+ 
+         
     def getMixedGenres(self):
         return [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.lower() == movie.lower()]
-        
-        
+
+
     def getMixed(self):
         return [LANGUAGE(30078),#"Recently Added"
                 LANGUAGE(30141),#"Seasonal"
                 LANGUAGE(30079)]#"PVR Recordings"
- 
- 
+
+
     def getfillItems(self):
         log('getfillItems')
         results = {}
@@ -223,7 +226,7 @@ class Library:
                    LANGUAGE(30007):self.getMovieStudios,
                    LANGUAGE(30006):self.getMixedGenres,
                    LANGUAGE(30080):self.getMixed,
-                   LANGUAGE(30097):self.jsonRPC.getMusicInfo,
+                   LANGUAGE(30097):self.getMusicGenres,
                    LANGUAGE(30026):self.recommended.fillRecommended,
                    LANGUAGE(30033):self.recommended.fillImports}
  
@@ -237,7 +240,7 @@ class Library:
         return results
 
 
-    def fillLibraryItems(self, myService):
+    def fillLibraryItems(self):
         ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
         fillItems = self.getfillItems()
         if not fillItems: return True
@@ -328,31 +331,40 @@ class Recommended:
     
     def addWhiteList(self, addonid):
         self.log('addWhiteList, addonid = %s'%(addonid))
-        whitelist = self.getWhiteList()
-        whitelist.append(addonid)
-        self.library.vault.libraryItems.get('recommended',{})['whitelist'] = list(set(whitelist))
+        whiteList = self.getWhiteList()
+        whiteList.append(addonid)
+        self.library.vault.libraryItems.get('recommended',{})['whitelist'] = list(set(whiteList))
+        if len(whiteList) > 0: 
+            PROPERTIES.setPropertyBool('has.WhiteList',len(whiteList) > 0)
         return True
+        
+        
+    def setWhiteList(self, whiteList):
+        if len(whiteList) > 0: 
+            PROPERTIES.setPropertyBool('has.WhiteList',len(whiteList) > 0)
+        return whiteList
         
 
     def addBlackList(self, addonid):
         self.log('addBlackList, addonid = %s'%(addonid))
-        blacklist = self.getBlackList()
-        blacklist.append(addonid)
-        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = list(set(blacklist))
-        blackList = self.library.vault.libraryItems.get('recommended',{})['blacklist']
-        if len(blackList) > 0: 
-            PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
-            SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
+        blackList = self.getBlackList()
+        blackList.append(addonid)
+        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = list(set(blackList))
+        self.setBlackList(self.library.vault.libraryItems.get('recommended',{})['blacklist'])
         return True
     
     
-    def clearBlackList(self):
-        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = []
-        if self.library.save():
-            blackList = self.getBlackList()
+    def setBlackList(self, blackList):
+        if len(blackList) > 0: 
             PROPERTIES.setPropertyBool('has.BlackList',len(blackList) > 0)
             SETTINGS.setSetting('Clear_BlackList','|'.join(blackList))
-            return True
+        return blackList
+        
+    
+    def clearBlackList(self):
+        self.library.vault.libraryItems.get('recommended',{})['blacklist'] = []
+        if self.library.save(): self.setBlackList(self.getBlackList())
+        return True
         
       
     def searchRecommendedAddons(self):

@@ -37,43 +37,43 @@ class M3U:
         self.resources  = Resources(self.writer.jsonRPC)
         
         if not self.vault.m3uList:
-            self.reload()
+            self._reload()
         else:
-            self.withdraw()
+            self._withdraw()
             
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
-    def clear(self):
-        self.log('clear')
+    def _clear(self):
+        self.log('_clear')
         self.vault.m3uList  = {}
-        return self.deposit()
+        return self._deposit()
         
         
-    def reload(self):
+    def _reload(self):
         self.log('reload')
-        self.vault.m3uList = self.load()
-        return self.deposit()
+        self.vault.m3uList = self._load()
+        return self._deposit()
         
      
-    def deposit(self):
-        self.log('deposit')
+    def _deposit(self):
+        self.log('_deposit')
         self.vault.set_m3uList(self.vault.m3uList)
         return True
         
     
-    def withdraw(self):
-        self.log('withdraw')
+    def _withdraw(self):
+        self.log('_withdraw')
         self.vault.m3uList = self.vault.get_m3uList()
         return True
         
 
-    def load(self):
-        self.log('load')
+    def _load(self):
+        self.log('_load')
         return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""',
-                'channels':[]}
+                'channels':self.cleanSelf(self.loadM3U())}
         
 
     def loadM3U(self, file=getUserFilePath(M3UFLE)):
@@ -169,17 +169,17 @@ class M3U:
                 yield item
                     
 
-    def save(self):
-        self.log('save')
+    def saveM3U(self):
+        self.log('saveM3U')
         with fileLocker(self.filelock):
             filePath = getUserFilePath(M3UFLE)
             fle = FileAccess.open(filePath, 'w')
-            self.log('save, saving to %s'%(filePath))
+            self.log('saveM3U, saving to %s'%(filePath))
             fle.write('%s\n'%(self.vault.m3uList['data']))
             keys     = list(self.writer.channels.getCitem().keys())
             keys.extend(['kodiprops','label'])#add keys to ignore from optional.
             citem    = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-            channels = self.sortChannels(self.vault.m3uList.get('channels',[]))
+            channels = self.sortStations(self.vault.m3uList.get('channels',[]))
             
             for channel in channels:
                 optional = ''
@@ -204,11 +204,11 @@ class M3U:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
-        return self.reload()
+            return self._reload()
         
         
-    def delete(self):
-        self.log('delete')
+    def deleteM3U(self):
+        self.log('deleteM3U')
         if FileAccess.delete(getUserFilePath(M3UFLE)): return self.dialog.notificationDialog(LANGUAGE(30016)%('M3U'))
         return False
         
@@ -221,28 +221,37 @@ class M3U:
         
         
     @staticmethod
-    def sortChannels(channels):
+    def sortStations(channels):
         return sorted(channels, key=lambda k: k['number'])
         
         
     def importM3U(self, file, filters={}, multiplier=1):
-        self.log('importXMLTV, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))
+        self.log('importM3U, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))
         try:
             if file.startswith('http'):
                 url  = file
                 file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
                 saveURL(url,file)
                 
-            #todo support `provider` key
-            channels = self.chkImport(self.loadM3U(file),multiplier)
+            importChannels = []
+            channels = self.loadM3U(file)
             
             for key, value in filters.items():
-                if not value: continue
-                elif key == 'slug':
-                    self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'id',value)))
-                elif key == 'providers':
-                    for provider in value: self.vault.m3uList.get('channels',[]).extend(self.sortChannels(self.cleanSelf(channels,'provider',provider)))
-        except Exception as e: log("M3U: importM3U, failed! " + str(e), xbmc.LOGERROR)
+                if key == 'slug' and value:
+                    importChannels.extend(self.cleanSelf(channels,'id',value))
+                elif key == 'providers' and value:
+                    for provider in value: 
+                        importChannels.extend(self.cleanSelf(channels,'provider',provider))
+            
+            #no filter found, import all channels.
+            if not importChannels: 
+                importChannels.extend(channels)
+                
+            importChannels = self.chkImport(importChannels,multiplier)
+            self.log('importM3U, found import stations = %s'%(len(importChannels)))
+            self.vault.m3uList.get('channels',[]).extend(self.sortStations(importChannels))
+                
+        except Exception as e: self.log("importM3U, failed! " + str(e), xbmc.LOGERROR)
         return True
         
         
@@ -255,7 +264,7 @@ class M3U:
             yield float(start)
             start += decimal.Decimal(step)
 
-        channels  = self.sortChannels(channels)
+        channels  = self.sortStations(channels)
         chstart   = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
         chmin     = int(chstart + (multiplier*1000))
         chmax     = int(chmin + (CHANNEL_LIMIT))
@@ -290,33 +299,33 @@ class M3U:
         return ((time.mktime(time.localtime()) - time.mktime(time.gmtime())) / 60 / 60)
 
     
-    def getChannels(self):
-        self.log('getChannels')
-        return self.sortChannels(self.vault.m3uList.get('channels',[]))
+    def getStations(self):
+        self.log('getStations')
+        return self.sortStations(self.vault.m3uList.get('channels',[]))
         
         
-    def addChannel(self, item):
-        self.log('addChannel, item = %s'%(item))
+    def addStation(self, item):
+        self.log('addStation, item = %s'%(item))
         item['provider']      = ADDON_NAME
         item['provider-type'] = 'local'
         item['provider-logo'] = HOST_LOGO
-        idx, line = self.findChannel(item)
+        idx, line = self.findStation(item)
         if idx is None: self.vault.m3uList.get('channels',[]).append(item)
         else: self.vault.m3uList.get('channels',[])[idx] = item # replace existing channel
         return True
 
 
-    def findChannel(self, citem, channels=None):
+    def findStation(self, citem, channels=None):
         if channels is None: channels = self.vault.m3uList.get('channels',[])
         for idx, line in enumerate(channels):
             if line.get('id') == citem.get('id'):
-                self.log('findChannel, idx = %s, line = %s'%(idx, line))
+                self.log('findStation, idx = %s, line = %s'%(idx, line))
                 return idx, line
         return None, {}
         
         
-    def removeChannel(self, citem):
-        self.log('removeChannel id = %s'%(citem['id']))
-        idx, line = self.findChannel(citem)
+    def removeStation(self, citem):
+        self.log('removeStation id = %s'%(citem['id']))
+        idx, line = self.findStation(citem)
         if idx is not None: self.vault.m3uList['channels'].pop(idx)
         return True

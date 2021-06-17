@@ -65,7 +65,7 @@ msgid "Delete [M3U/XMLTV]"
 msgstr ""
 
 msgctxt "#30012"
-msgid "Reconfigure %s for use with %s"
+msgid "Reconfigure %s"
 msgstr ""
 
 msgctxt "#30013"
@@ -221,7 +221,7 @@ msgid "Building"
 msgstr ""
 
 msgctxt "#30051"
-msgid "Updating"
+msgid "Updating Channel"
 msgstr ""
 
 msgctxt "#30052"
@@ -401,7 +401,7 @@ msgid "Include STRMs"
 msgstr ""
 
 msgctxt "#30096"
-msgid "Clean Start, Delete All User Files [Channels/Settings/M3U/XMLTV]"
+msgid "Clean Start"
 msgstr ""
 
 msgctxt "#30097"
@@ -625,7 +625,7 @@ msgid "Saving..."
 msgstr ""
 
 msgctxt "#30153"
-msgid "Show OnNext"
+msgid "Show On Next"
 msgstr ""
 
 msgctxt "#30154"
@@ -645,15 +645,15 @@ msgid "Music"
 msgstr ""
 
 msgctxt "#30158"
-msgid "Parsing Library"
+msgid "Parsing Kodi Library"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Building"
+msgid "Populating AutoTunes"
 msgstr ""
 
 msgctxt "#30160"
-msgid "Parsing"
+msgid "Parsing Kodi Library"
 msgstr ""
 
 msgctxt "#30161"
@@ -813,7 +813,7 @@ msgid "Select XMLTV Type"
 msgstr ""
 
 msgctxt "#30199"
-msgid "Filling"
+msgid "Populating"
 msgstr ""
 
 msgctxt "#30200"
@@ -1230,4 +1230,36 @@ msgstr ""
 
 msgctxt "#30304"
 msgid "Manage Smartplaylists."
+msgstr ""
+
+msgctxt "#30305"
+msgid "Utilities Menu"
+msgstr ""
+
+msgctxt "#30306"
+msgid "Utilities List"
+msgstr ""
+
+msgctxt "#30307"
+msgid "Please install the %s Repository..."
+msgstr ""
+
+msgctxt "#30308"
+msgid "Browse"
+msgstr ""
+
+msgctxt "#30309"
+msgid "Delete [M3U/XMLTV/Channels]"
+msgstr ""
+
+msgctxt "#30310"
+msgid "Force PVR refresh"
+msgstr ""
+
+msgctxt "#30311"
+msgid "Restart %s service"
+msgstr ""
+
+msgctxt "#30312"
+msgid "Editors"
 msgstr ""

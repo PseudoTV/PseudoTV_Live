@@ -67,7 +67,7 @@ class Settings:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             return value
         except Exception as e: 
-            self.log("_getSetting, Failed! %s"%(e), xbmc.LOGERROR)
+            self.log("_getSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
 
 
     def getSetting(self, key):
@@ -95,6 +95,8 @@ class Settings:
                 return float(value)
             elif value.isdigit(): 
                 return int(value)
+            elif value: 
+                return eval(value)
               
               
     def getSettingNumber(self, key): 
@@ -105,6 +107,8 @@ class Settings:
                 return float(value)
             elif value.isdigit(): 
                 return int(value)    
+            elif value: 
+                return eval(value)
         
         
     def getSettingString(self, key):
@@ -120,7 +124,7 @@ class Settings:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             func(key, value)
         except Exception as e: 
-            self.log("_setSetting, Failed! %s"%(e), xbmc.LOGERROR)
+            self.log("_setSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
         
         
     def setSetting(self, key, value=""):  
@@ -181,7 +185,7 @@ class Properties:
         return self.window.clearProperty(self.getKey(key))
 
 
-    def getProperties(self, key):
+    def getPropertyList(self, key):
         return self.getProperty(key).split('|')
 
         
@@ -195,9 +199,13 @@ class Properties:
         
     def getPropertyInt(self, key):
         value = self.getProperty(key)
-        if value.isdigit(): return int(value)
-        return -1
-
+        if value.isdecimal():
+            return float(value)
+        elif value.isdigit(): 
+            return int(value)
+        elif value: 
+            return eval(value)
+        
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
@@ -218,7 +226,7 @@ class Properties:
         return self.window.setProperty(key,value)
         
         
-    def setProperties(self, key, values):
+    def setPropertyList(self, key, values):
         return self.setProperty(key, '|'.join(values))
         
         
@@ -230,9 +238,9 @@ class Properties:
     def setPropertyDict(self, key, value):
         return self.setProperty(key, dumpJSON(value))
         
-        
+                
     def setPropertyInt(self, key, value):
-        return self.setProperty(key, value)
+        return self.setProperty(key, str(value))
         
         
     def setProperty(self, key, value):
@@ -257,9 +265,9 @@ class Dialog:
     
     
     def toggleCHKInfo(self, state):
-        self.properties.setProperty('chkInfo',str(state))
+        self.properties.setPropertyBool('chkInfo',state)
         if state: self.properties.clearProperty('monitor.montiorList')
-        else: self.properties.clearProperty('chkInfo')
+        else:     self.properties.clearProperty('chkInfo')
         
         
     @staticmethod
@@ -476,10 +484,13 @@ class Dialog:
         return self.progressBGDialog(100,control=dia)
 
 
-    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
+    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
         if not isinstance(percent,int): percent = int(percent)
-        if (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | xbmc.getCondVisibility('Player.Playing'))):
-            if hasattr(control, 'close'): control.close()
+        if silent is None:
+            silent = (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | xbmc.getCondVisibility('Player.Playing')))
+        
+        if silent and hasattr(control, 'close'): 
+            control.close()
             return
         elif control is None and percent == 0:
             control = xbmcgui.DialogProgressBG()

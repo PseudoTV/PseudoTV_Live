@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
 from resources.lib.parser      import Writer
-from plugin                    import Plugin
+from resources.lib.plugin      import Plugin
 from resources.lib.backup      import Backup
 from resources.lib.manager     import Manager
 from resources.lib.widgets     import Widgets
@@ -86,35 +86,6 @@ class Config:
         PROPERTIES.setPropertyBool('Config.Running',False)
 
 
-    def findItemsInLST(self, items, values, item_key='getLabel', val_key='', index=True):
-        self.log("findItemsInLST, values = %s, item_key = %s, val_key = %s, index = %s"%(len(values), item_key, val_key, index))
-        if not values:
-            return [-1]
-               
-        matches = []
-        def match(fkey,fvalue):
-            if fkey.lower() == fvalue.lower():
-                matches.append(idx if index else item)
-                        
-        for value in values:
-            if isinstance(value,dict): 
-                value = value.get(val_key,'')
-                
-            for idx, item in enumerate(items): 
-                if isinstance(item,xbmcgui.ListItem): 
-                    if item_key == 'getLabel':  
-                        match(item.getLabel() ,value)
-                    elif item_key == 'getLabel2': 
-                        match(item.getLabel2(),value)
-                elif isinstance(item,dict):       
-                    match(item.get(item_key,''),value)
-                else:                             
-                    match(item,value)
-                    
-        self.log("findItemsInLST, matches = %s"%(matches))
-        return matches
-
-
     def autoTune(self):
         if (isClient() | PROPERTIES.getPropertyBool('autotuned')): return False #already ran or dismissed by user, check on next reboot.
         elif self.backup.hasBackup():
@@ -156,7 +127,7 @@ class Config:
             
             pitems    = self.library.getEnabledItems(items) # existing predefined
             listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-            pselect   = self.findItemsInLST(listItems,pitems,val_key='name')
+            pselect   = findItemsInLST(listItems,pitems,val_key='name')
             if autoTune:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)
@@ -166,15 +137,15 @@ class Config:
 
         if not select is None:
             with busy_dialog(escape):
-                pselect = self.findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
+                pselect = findItemsInLST(items,[listItems[idx].getLabel() for idx in select],item_key='name')
                 self.library.setEnableStates(type,pselect,items)
                 self.writer.convertLibraryItems(type)
                 self.setPendingChangeTimer()
 
 
-    def buildLibraryItems(self,myService):
+    def buildLibraryItems(self):
         self.log('buildLibraryItems')
-        if self.library.fillLibraryItems(myService):
+        if self.library.fillLibraryItems():
             self.library.chkLibraryItems()
             return self.writer.convertLibraryItems()
         else: 
@@ -197,15 +168,13 @@ class Config:
         
     def triggerPendingChange(self):
         self.log('triggerPendingChange')
-        if isBusy():
-            self.setPendingChangeTimer()
-        else:
-            setPendingChange()
+        if isBusy(): self.setPendingChangeTimer()
+        else:        setPendingChange()
 
         
     def clearPredefined(self):
         self.log('clearPredefined')
-        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029))
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30077))): return False
             if self.library.clearLibraryItems():
@@ -216,10 +185,9 @@ class Config:
 
     def clearUserChannels(self):
         self.log('clearUserChannels')
-        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029))
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
         with busy():
-            if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): 
-                return False
+            if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): return False
             if self.writer.clearChannels(all=False):
                 setAutoTuned(False)
                 setRestartRequired()
@@ -228,36 +196,28 @@ class Config:
 
     def clearBlackList(self):
         self.log('clearBlackList') 
-        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029))
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30154))): 
                 return False
             return self.recommended.clearBlackList()
-        
 
-    def userGroups(self):
-        self.log('userGroups')
-        with busy():
-            retval = self.dialog.inputDialog(LANGUAGE(30076), default=SETTINGS.getSetting('User_Groups'))
-            if not retval: return
-            SETTINGS.setSetting('User_Groups',retval)
-            return self.dialog.notificationDialog(LANGUAGE(30053))
+
+    def installResources(self, silent=True):
+        self.log('installResources, silent = %s'%(silent)) 
+        if not hasAddon(ADDON_REPOSITORY): 
+            if not silent: self.dialog.notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
+            return 
             
-
-    def clearImport(self):
-        self.log('clearImport') 
-        with busy_dialog():
-            SETTINGS.setSetting('Import_M3U'       ,'')
-            SETTINGS.setSetting('Import_M3U_FILE'  ,'')
-            SETTINGS.setSetting('Import_M3U_URL'   ,'')
-            SETTINGS.setSetting('Import_XMLTV'     ,'')
-            SETTINGS.setSetting('Import_XMLTV_FILE','')
-            SETTINGS.setSetting('Import_XMLTV_URL' ,'')
-            SETTINGS.setSetting('Import_Provider'  ,'')
-            SETTINGS.setSetting('User_Import'      ,'false')
-            setRestartRequired()
-            return self.dialog.notificationDialog(LANGUAGE(30053))
-
+        params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
+        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+        if missing:
+            for addon in missing: 
+                installAddon(addon, silent)
+                if self.monitor.waitForAbort(15): return False
+            return self.dialog.notificationDialog(LANGUAGE(30192))
+        return True
+        
 
     def sleepTimer(self):
         self.log('sleepTimer')
@@ -278,33 +238,10 @@ class Config:
         return not bool(cnx)
 
 
-    def installResources(self):
-        found  = []
-        params = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
-        for param in params:
-            addons = SETTINGS.getSetting(param).split(',')
-            for addon in addons: found.append(installAddon(addon,manual=True))
-        if True in found: return True
-        return self.dialog.notificationDialog(LANGUAGE(30192))
-        
-        
-    def openAddonSettings(self,ctl=(None,None),id=ADDON_ID):
-        self.log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
-        ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
-        ## ctl[1] is the Setting (Control) offset (0=first, 1=second, 2...etc)# addonId is the Addon ID
-        ## Example: self.openAddonSettings((2,3),'plugin.video.name')
-        ## This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
-        xbmc.executebuiltin('Addon.OpenSettings(%s)'%id)
-        xbmc.sleep(500)
-        xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]+100))
-        xbmc.sleep(100)
-        xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]+80))
-        return True
-
-
     def run(self): 
         ctl = (0,0) #settings return focus
-        param = self.sysARG[1]
+        try:    param = self.sysARG[1]
+        except: param = ''
         self.log('run, param = %s'%(param))
         if isBusy():
             self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
@@ -312,13 +249,6 @@ class Config:
                              
         if param.startswith('Channel_Manager'):
             return self.openChannelManager()
-        elif  param == 'Clear_Import':
-            ctl = (6,8)
-            self.clearImport()
-        elif  param == 'Show_Readme':
-            showReadme()
-        elif  param == 'Show_Changelog':
-            showChangelog()
         elif  param == 'Clear_Userdefined':
             ctl = (0,4)
             self.clearUserChannels()
@@ -328,9 +258,6 @@ class Config:
         elif  param == 'Clear_BlackList':
             ctl = (1,13)
             self.clearBlackList()
-        elif  param == 'User_Groups':
-            ctl = (2,2)
-            self.userGroups()
         elif  param == 'Install_Resources':
             ctl = (5,10)
             self.installResources()
@@ -344,6 +271,6 @@ class Config:
             ctl = (1,1)
             with busy():  
                 self.selectPredefined(param.replace('_',' '))
-        return self.openAddonSettings(ctl)
+        return openAddonSettings(ctl)
             
 if __name__ == '__main__': Config(sys.argv).run()

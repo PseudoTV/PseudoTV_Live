@@ -27,10 +27,8 @@ class Plugin:
     
     def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = ' + str(sysARG))
-        self.sysARG         = sysARG
-        self.CONTENT_TYPE   = 'episodes'
-        self.CACHE_ENABLED  = True
-        self.setOffset      = False #todo adv. channel rule to disable seek 
+        self.sysARG    = sysARG
+        self.setOffset = False #todo adv. channel rule to disable seek 
         
         if service is None:
             from resources.lib.jsonrpc     import JSONRPC
@@ -66,67 +64,6 @@ class Plugin:
         return parameter
 
 
-    def buildMenu(self, name=None):
-        self.log('buildMenu, name = %s'%name)
-        MAIN_MENU = [(LANGUAGE(30008), '', '')]#"Channels"
-
-        UTIL_MENU = [#(LANGUAGE(30010), '', '', LANGUAGE(30008)),                                                                    #"Rebuild M3U/XMLTV"
-                     (LANGUAGE(30011), '', '', LANGUAGE(30008)),                                                                     #"Delete [M3U/XMLTV/Genre]"
-                     (LANGUAGE(30096), '', '', LANGUAGE(30008)),                                                                     #"Clean Start, Delete [Channels/Settings/M3U/XMLTV/Genre]"
-                     (LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,), '', '', LANGUAGE(30008)), #"Reconfigure PVR for use with PTVL"
-                     (LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')), '', '', LANGUAGE(30008))]             #"Force PVR reload"
-
-        if   name is None:            items = MAIN_MENU
-        elif name == LANGUAGE(30008): items = UTIL_MENU
-        else: return
-        [self.addDir(*item) for item in items]
-        
-        
-    def deleteFiles(self, msg, full=False):
-        self.log('deleteFiles, full = %s'%(full))
-        with busy():
-            files = {LANGUAGE(30172):getUserFilePath(M3UFLE),LANGUAGE(30173):getUserFilePath(XMLTVFLE),LANGUAGE(30009):getUserFilePath(CHANNELFLE),LANGUAGE(30130):SETTINGS_FLE,LANGUAGE(30179):getUserFilePath(LIBRARYFLE)}
-            keys  = [LANGUAGE(30172),LANGUAGE(30173),LANGUAGE(30009),LANGUAGE(30130),LANGUAGE(30179)]
-            if not full: keys = keys[:3]
-            if self.dialog.yesnoDialog('%s ?'%(msg)): [self.dialog.notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
-            PROPERTIES.setPropertyBool('autotuned',False)
-            if full: return self.dialog.okDialog(LANGUAGE(30183))
-        return True
-
-            
-    def utilities(self, name):
-        self.log('utilities, name = %s'%name)
-        with busy():
-            if   name == LANGUAGE(30011): self.deleteFiles(name)
-            elif name == LANGUAGE(30096): self.deleteFiles(name, full=True)
-            elif name == LANGUAGE(30012)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name',''),ADDON_NAME,): configurePVR()
-            elif name == LANGUAGE(30065)%(self.jsonRPC.getPluginMeta(PVR_CLIENT).get('name','')): brutePVR()
-            elif name == LANGUAGE(30013): SETTINGS.openSettings()
-            else: return
-        xbmc.executebuiltin('Action(Back,10025)')
-            
-
-    def addLink(self, name, channel, path, mode='',icon=ICON, liz=None, total=0):
-        if liz is None:
-            liz=xbmcgui.ListItem(name)
-            liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
-            liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
-        self.log('addLink, name = %s'%(name))
-        u=self.sysARG[0]+"?url="+urllib.parse.quote(path)+"&channel="+str(channel)+"&name="+urllib.parse.quote(name)+"&mode="+str(mode)
-        xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,totalItems=total)
-
-
-    def addDir(self, name, channel, path, mode='',icon=ICON, liz=None):
-        self.log('addDir, name = %s'%(name))
-        if liz is None:
-            liz=xbmcgui.ListItem(name)
-            liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
-            liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
-        liz.setProperty('IsPlayable', 'false')
-        u=self.sysARG[0]+"?url="+urllib.parse.quote(path)+"&channel="+str(channel)+"&name="+urllib.parse.quote(name)+"&mode="+str(mode)
-        xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,isFolder=True)
-     
-
     def contextPlay(self, writer, isPlaylist=False):
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
@@ -157,8 +94,7 @@ class Plugin:
                 liz.setProperty('pvritem', dumpJSON(pvritem))       
                 
                 lastitem  = nextitems.pop(-1)
-                lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,citem.get('name',''),citem.get('id','')) #pvritem.get('callback')
+                lastwrite['file'] = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(citem['name']),id=urllib.parse.quote(citem['id']),radio=str(item['radio']))#pvritem.get('callback')
                 lastitem['writer'] = setWriter('Unavailable',lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
@@ -272,7 +208,7 @@ class Plugin:
 
             lastitem  = nextitems.pop(-1)
             lastwrite = getWriter(lastitem.get('writer',''))
-            lastwrite['file'] = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
+            lastwrite['file']  = 'plugin://%s/?mode=play&name=%s&id=%s&radio=False'%(ADDON_ID,name,id) #pvritem.get('callback')
             lastitem['writer'] = setWriter('Unavailable',lastwrite)
             nextitems.append(lastitem) #insert pvr callback
             
@@ -330,36 +266,3 @@ class Plugin:
         if writer.get('writer',''):
             writer = getWriter(writer.get('writer',''))
         return self.dialog.buildItemListItem(writer, mType)
-
-
-    def getParams(self):
-        return dict(urllib.parse.parse_qsl(self.sysARG[2][1:]))
-
-
-    def run(self):  
-        params  = self.getParams()
-        name    = (unquote(params.get("name",'')) or None)
-        channel = (params.get("channel",'')       or None)
-        url     = (params.get("url",'')           or None)
-        id      = (params.get("id",'')            or None)
-        mode    = (params.get("mode",'')          or None)
-        radio   = (params.get("radio",'')         or 'False') == "True"
-        self.log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
-
-        if   mode is None:  self.buildMenu(name)
-        elif mode == 'vod': self.playVOD(name, id)
-        elif mode == 'play':
-            if radio:
-                return self.playRadio(name, id)
-            else:
-                return self.playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
-        elif mode == 'Utilities': self.utilities(name)
-
-        xbmcplugin.setContent(int(self.sysARG[1])    , self.CONTENT_TYPE)
-        xbmcplugin.addSortMethod(int(self.sysARG[1]) , xbmcplugin.SORT_METHOD_UNSORTED)
-        xbmcplugin.addSortMethod(int(self.sysARG[1]) , xbmcplugin.SORT_METHOD_NONE)
-        xbmcplugin.addSortMethod(int(self.sysARG[1]) , xbmcplugin.SORT_METHOD_LABEL)
-        xbmcplugin.addSortMethod(int(self.sysARG[1]) , xbmcplugin.SORT_METHOD_TITLE)
-        xbmcplugin.endOfDirectory(int(self.sysARG[1]), cacheToDisc=self.CACHE_ENABLED)
-       
-if __name__ == '__main__': Plugin(sys.argv).run()

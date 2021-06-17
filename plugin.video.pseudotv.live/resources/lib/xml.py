@@ -36,41 +36,41 @@ class XMLTV:
         self.filelock   = self.writer.GlobalFileLock
         
         if not self.vault.xmltvList:
-            self.reload()
+            self._reload()
         else:
-            self.withdraw()
-                   
-        
+            self._withdraw()
+                
+                
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
+
             
-    def clear(self):
-        self.log('clear')
+    def _clear(self):
+        self.log('_clear')
         self.vault.xmltvList = {}
-        return self.deposit()
+        return self._deposit()
         
 
-    def reload(self):
-        self.log('reload')
-        self.vault.xmltvList = self.load()
-        return self.deposit()
+    def _reload(self):
+        self.log('_reload')
+        self.vault.xmltvList = self._load()
+        return self._deposit()
         
         
-    def deposit(self):
-        self.log('deposit')
+    def _deposit(self):
+        self.log('_deposit')
         self.vault.set_xmltvList(self.vault.xmltvList)
         return True
         
     
-    def withdraw(self):
-        self.log('withdraw')
+    def _withdraw(self):
+        self.log('_withdraw')
         self.vault.xmltvList = self.vault.get_xmltvList()
         return True
      
 
-    def load(self):
-        self.log('load')
+    def _load(self):
+        self.log('_load')
         return {'data'       : self.loadData(),
                 'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
                 'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
@@ -108,8 +108,8 @@ class XMLTV:
             return []
 
 
-    def save(self, reset=True):
-        self.log('save')
+    def saveXMLTV(self, reset=True):
+        self.log('saveXMLTV')
         if reset: 
             data = self.resetData()
         else:     
@@ -130,14 +130,14 @@ class XMLTV:
             for program in programmes: writer.addProgramme(program)
             
             filePath = getUserFilePath(XMLTVFLE)
-            self.log('save, saving to %s'%(filePath))
+            self.log('saveXMLTV, saving to %s'%(filePath))
             writer.write(FileAccess.open(filePath, "w"), pretty_print=True)
             self.buildGenres()
-        return self.reload()
+        return self._reload()
         
 
-    def delete(self):
-        self.log('delete')
+    def deleteXMLTV(self):
+        self.log('deleteXMLTV')
         if FileAccess.delete(getUserFilePath(XMLTVFLE)): #xmltv.xml
             FileAccess.delete(getUserFilePath(GENREFLE)) #genre.xml
             return self.dialog.notificationDialog(LANGUAGE(30016)%('XMLTV'))
@@ -151,15 +151,15 @@ class XMLTV:
         return list(filter(lambda item:item.get(key,'').endswith(slug), items))
         
         
-    @staticmethod
-    def cleanProgrammes(programmes): # remove expired content
+    def cleanProgrammes(self, programmes): # remove expired content
         try:
-            now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(hours=3) #allow some old programmes to avoid empty cells.
+            min = (self.writer.jsonRPC.getSettingValue('epg.pastdaystodisplay')  or 1)
+            now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(days=min) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT)  > now]
         except Exception as e: 
-            log("XMLTV: cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
+            self.log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
-        log('XMLTV: cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
+        self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
 
 
@@ -187,20 +187,24 @@ class XMLTV:
                 file = os.path.join(TEMP_LOC,'%s.xml'%(slugify(url)))
                 saveURL(url,file)
                 
-            channels   = self.loadChannels(file)
-            programmes = self.loadProgrammes(file)
+                
+            importChannels, importProgrammes = [],[]
+            channels, programmes = self.loadChannels(file), self.loadProgrammes(file)
             
             for key, value in filters.items():
-                if not value: continue
-                elif key == 'slug':
-                    importChannels, importProgrammes = self.chkImport(self.cleanSelf(channels,'id',value), self.cleanSelf(programmes,'channel',value))
-                elif key == 'providers':  #currently no provider filter for xmltv, include all guide meta; let m3u filter by provider.
-                    importChannels, importProgrammes = self.chkImport(channels, programmes)
-                else: continue
-                self.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
-                self.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
+                if key == 'slug' and value:
+                    importChannels, importProgrammes = self.cleanSelf(channels,'id',value), self.cleanSelf(programmes,'channel',value)
+            
+            #currently no provider filter for xmltv, include all guide meta; let m3u filter by provider.
+            if not importChannels and importProgrammes: 
+                importChannels, importProgrammes = channels, programmes
                 
-        except Exception as e: log("XMLTV: importXMLTV, failed! " + str(e), xbmc.LOGERROR)
+            importChannels, importProgrammes = self.chkImport(importChannels, importProgrammes)
+            self.log('importXMLTV, found importChannels = %s, importProgrammes = %s'%(len(importChannels),len(importProgrammes)))
+            self.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
+            self.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
+                            
+        except Exception as e: self.log("importXMLTV, failed! " + str(e), xbmc.LOGERROR)
         return True
 
 
@@ -264,7 +268,7 @@ class XMLTV:
             xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
             xmlData.write(doc.toprettyxml(indent='\t'))
             xmlData.close()
-        return True
+            return True
 
 
     def getChannels(self):
@@ -356,16 +360,15 @@ class XMLTV:
         return True
 
 
-    def addSingleEntry(self, channel):
-        secs  = EPG_HRS #(SETTINGS.getSettingInt('Max_Days') * 3600)
-        now   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
+    def addSingleEntry(self, channel, start=None, length=EPG_HRS): #create a single entry with min. channel meta, use as a filler.
+        if start is None: start = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
         pitem = {'channel'     : channel.get('id'),
                  'title'       : [(channel.get('display-name',[{'',LANG}])[0][0], LANG)],
-                 'desc'        : [(xbmc.getLocalizedString(161), LANG)],
-                 'stop'        : ((now + datetime.timedelta(seconds=secs)).strftime(DTFORMAT)),
-                 'start'       : (now.strftime(DTFORMAT)),
+                 'desc'        : [((channel.get('desc',[{'',LANG}])[0][0] or xbmc.getLocalizedString(161)), LANG)],
+                 'stop'        : ((start + datetime.timedelta(seconds=length)).strftime(DTFORMAT)),
+                 'start'       : (start.strftime(DTFORMAT)),
                  'icon'        : [{'src': channel.get('icon',[{}])[0].get('src')}],
-                 'length'      : {'units': 'seconds', 'length': str(secs)}}
+                 'length'      : {'units': 'seconds', 'length': str(length)}}
         self.log('addSingleEntry = %s'%(pitem))
         return pitem
 

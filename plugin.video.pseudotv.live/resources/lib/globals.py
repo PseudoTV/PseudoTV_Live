@@ -81,6 +81,10 @@ COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
 
+PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
+VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}&radio={radio}.pvr'
+
+ADDON_REPOSITORY    = 'repository.pseudotv'
 PVR_CLIENT          = 'pvr.iptvsimple'
 PVR_MANAGER         = 'service.iptv.manager'
 LANG                = 'en' #todo
@@ -94,7 +98,7 @@ RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
 UPDATE_OFFSET       = 3600  #1hr in secs.
 RECOMMENDED_OFFSET  = 900   #15mins in secs.
-PREDEFINED_OFFSET   = 10800 #3hr in Secs
+PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
 UPDATE_WAIT         = 3600  #1hr in secs.
 AUTOTUNE_LIMIT      = 3     #auto items per type.
 CHANNEL_LIMIT       = 999   #hard limit, do not exceed!
@@ -214,6 +218,18 @@ PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefre
                     'numberByOrder':'false','startNum':'1',
                     'epgTimeShift':'0','epgTSOverride':'false',
                     'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
+                    
+JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel':'true',
+                    'pvrmanager.syncchannelgroups':'true',
+                    'pvrmanager.backendchannelorder':'true',
+                    'pvrmanager.usebackendchannelnumbers':'true',
+                    # 'pvrmenu.iconpath':'',
+                    # 'pvrplayback.switchtofullscreenchanneltypes':1,
+                    # 'pvrplayback.confirmchannelswitch':'true',
+                    # 'epg.selectaction':2,
+                    # 'epg.epgupdate':120,
+                    'pvrmanager.startgroupchannelnumbersfromone':'false'}
+
 
 @contextmanager
 def fileLocker(GlobalFileLock):
@@ -291,10 +307,10 @@ def percentDiff(org, new):
     except ZeroDivisionError: return 0
 
 def setInfoMonitor(values):
-    return PROPERTIES.setProperties('monitor.montiorList',list(set(values)))
+    return PROPERTIES.setPropertyList('monitor.montiorList',list(set(values)))
     
 def getInfoMonitor():
-    return list(filter(lambda d:d != '', PROPERTIES.getProperties('monitor.montiorList')))
+    return list(filter(lambda d:d != '', PROPERTIES.getPropertyList('monitor.montiorList')))
  
 def fillInfoMonitor(type='ListItem'):
     item = {'name'  :xbmc.getInfoLabel('%s.Label'%(type)),
@@ -433,10 +449,10 @@ def hasMovie():
     return xbmc.getCondVisibility('Library.HasContent(Movies)')
  
 def hasPVRAddon():
-    return xbmc.getCondVisibility("System.HasPVRAddon") == "true"
+    return xbmc.getCondVisibility("System.HasPVRAddon")
          
 def hasAddon(id):
-    return xbmc.getCondVisibility("System.HasAddon(%s)"%id) == "true"
+    return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def hasVersionChanged(cleanStart=False):
     lastVersion = (SETTINGS.getSetting('lastVersion') or 'v.0.0.0')
@@ -446,47 +462,35 @@ def hasVersionChanged(cleanStart=False):
         # if cleanStart:
             # xbmc.executebuiltin('RunPlugin("(plugin://'+ADDON_ID+'/?channel&mode=Utilities&name=Clean%20Start%2c%20Delete%20all%20files%20and%20settings.&url)")')
     return False
-    
-def showChangelog():
-    def addColor(text):
-        text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
-        text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
-        text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
-        text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
-        text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
-        text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
-        text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
-        text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
-        text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
-        text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
-        text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-        return text
-        
-    with busy_dialog(): 
-        changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
-    return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
-def showReadme():
-    def convertMD2TXT(md):
-        markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
-        markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-        markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
-        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
-        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
-        markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
-        return markdown
-        
-    with busy_dialog(): 
-        readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
-    return Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-
-def chkUpdateTime(key, wait, lastUpdate=None):
+def chkUpdateTime(key, wait, lastUpdate=None, persistent=False):
     #todo fuzzy logic to determine if run within % tolerance to expedite execution.
-    if    lastUpdate is None: lastUpdate = float((PROPERTIES.getProperty(key) or '0'))
-    else: lastUpdate = float(lastUpdate)
-    if (time.time() >= (lastUpdate + wait)): return True
-    return False
-
+    if lastUpdate is None:
+        lastUpdate = (PROPERTIES.getPropertyInt(key) or 0)
+        if persistent: lastUpdate = (SETTINGS.getSettingInt(key) or lastUpdate)
+    
+    state = False
+    epoch = time.time()
+    if (epoch >= (lastUpdate + wait)):
+        state = True
+        PROPERTIES.setPropertyInt(key,epoch)
+        if persistent: SETTINGS.setSettingInt(key,epoch)
+    log('globals: chkUpdateTime, key = %s, epoch = %s,  wait = %s, lastUpdate = %s, returning %s'%(key,epoch,wait,lastUpdate,state))
+    return state
+    
+def openAddonSettings(ctl=(None,None),id=ADDON_ID):
+    log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
+    ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
+    ## ctl[1] is the Setting (Control) offset (0=first, 1=second, 2...etc)# addonId is the Addon ID
+    ## Example: openAddonSettings((2,3),'plugin.video.name')
+    ## This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
+    xbmc.executebuiltin('Addon.OpenSettings(%s)'%id)
+    xbmc.sleep(500)
+    xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]+100))
+    xbmc.sleep(100)
+    xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]+80))
+    return True
+   
 def getPluginMeta(id):
     try:
         if id.startswith(('plugin://','resource://')):
@@ -499,18 +503,18 @@ def getPluginMeta(id):
     except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
 
-def installAddon(id, manual=False):
+def installAddon(id, silent=False):
     if hasAddon(id):
         if not addonEnabled(id): toggleADDON(id)
         return True
     else:
         xbmc.executebuiltin('InstallAddon("%s")'%(id))
-        if manual: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
+        if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
         return True
         
 def addonEnabled(id):
-    return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id) == "true"
-    
+    return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
+
 def toggleADDON(id, state='true', reverse=False):
     # if not hasAddon(id): return log('globals: toggleADDON, id = %s, not installed'%id)
     log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
@@ -540,7 +544,11 @@ def getPVR(id=PVR_CLIENT):
         try: return xbmcaddon.Addon(id)
         except: 
             return None
- 
+
+def setJsonSettings():
+    for key in JSON_SETTINGS.keys():
+        JSON_SETTINGS[key]
+
 def chkMGR():
     return chkPVR(PVR_MANAGER, MGR_SETTINGS)
 
@@ -557,7 +565,7 @@ def chkPVR(id=PVR_CLIENT, values=PVR_SETTINGS):
 def configurePVR(id=PVR_CLIENT,values=PVR_SETTINGS,override=False):
     log('globals: configurePVR')
     if not override:
-        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name',''),ADDON_NAME,))): return
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name','')))): return
     try:
         addon = getPVR(id)
         if addon is None: return False
@@ -637,6 +645,35 @@ def getThumb(item,opt=0): #unify thumbnail artwork
                item.get(key,''))
         if art: return art
     return LOGO
+
+def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
+    log("findItemsInLST, values = %s, item_key = %s, val_key = %s, index = %s"%(len(values), item_key, val_key, index))
+    if not values:
+        return [-1]
+           
+    matches = []
+    def match(fkey,fvalue):
+        if fkey.lower() == fvalue.lower():
+            matches.append(idx if index else item)
+                    
+    for value in values:
+        if isinstance(value,dict): 
+            value = value.get(val_key,'')
+            
+        for idx, item in enumerate(items): 
+            if isinstance(item,xbmcgui.ListItem): 
+                if item_key == 'getLabel':  
+                    match(item.getLabel() ,value)
+                elif item_key == 'getLabel2': 
+                    match(item.getLabel2(),value)
+            elif isinstance(item,dict):       
+                match(item.get(item_key,''),value)
+            else:                             
+                match(item,value)
+                
+    log("findItemsInLST, matches = %s"%(matches))
+    return matches
+
 
 def funcExecute(func,args):
     log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
@@ -801,7 +838,7 @@ def cleanResourcePath(path):
     return path
 
 def isCHKInfo():
-    return PROPERTIES.getProperty('chkInfo') == "True"
+    return PROPERTIES.getPropertyBool('chkInfo')
         
 def hasSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.HasSubtitles')

@@ -270,6 +270,7 @@ class Monitor(xbmc.Monitor):
     def __init__(self, service):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
+        self.jsonRPC        = None
         self.myService      = service
         self.lastSettings   = {}
         self.onChangeThread = threading.Timer(30.0, self.onChange)
@@ -326,8 +327,11 @@ class Monitor(xbmc.Monitor):
         self.log('chkSettings')
         PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
         PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingBool('Enable_Client'))
-        
+        SETTINGS.setSettingInt('Max_Days',(self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or SETTINGS.getSetting('Max_Days')))
         #priority settings that trigger chkUpdate on change.
+        #todo chk resource addon installed after change:
+        # ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
+        
         return {'User_Import'         :{'setting':SETTINGS.getSetting('User_Import')         ,'action':None},
                 'Enable_Client'       :{'setting':SETTINGS.getSetting('Enable_Client')       ,'action':setRestartRequired},
                 'Import_M3U_TYPE'     :{'setting':SETTINGS.getSetting('Import_M3U_TYPE')     ,'action':None},
@@ -397,7 +401,8 @@ class Service:
         self.startThread    = threading.Timer(1.0, hasVersionChanged)
         self.serviceThread  = threading.Timer(0.5, self.runServiceThread)
         
-        self.player.jsonRPC = self.jsonRPC
+        self.monitor.jsonRPC = self.jsonRPC
+        self.player.jsonRPC  = self.jsonRPC
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -437,10 +442,8 @@ class Service:
     def chkChannels(self):
         self.log('chkChannels')
         # check channels.json for changes
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
         # re-enable missing library.json items from channels.json
         if isClient(): return
-        return self.writer.recoverItemsFromChannels()
         
         
     def chkRecommended(self, lastUpdate=None):
@@ -448,7 +451,6 @@ class Service:
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
             self.myConfig.recommended.importPrompt()
-            PROPERTIES.setProperty('Last_Recommended',str(time.time()))
             return True
 
             
@@ -457,16 +459,15 @@ class Service:
         elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
-            if self.myConfig.buildLibraryItems(myService=self):
-                PROPERTIES.setProperty('Last_Predefined',str(time.time()))
+            self.myConfig.buildLibraryItems()
             return True
         
                 
     def chkIdle(self):
-        if not isPseudoTV():  return
+        if not isPseudoTV(): return
         idleTime  = getIdleTime()
         sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
-        if sleepTime != 0 and idleTime > (sleepTime * 10800): #3hr increments
+        if sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments
             if self.player.triggerSleep(): return
         
         if  idleTime > OVERLAY_DELAY:
@@ -521,6 +522,7 @@ class Service:
             funcs = [initDirs,
                      self.chkVersion,
                      self.monitor.chkPluginSettings,
+                     self.myConfig.installResources,
                      self.myConfig.backup.hasBackup,
                      self.chkChannels]
             for func in funcs: func()
@@ -542,7 +544,7 @@ class Service:
         while not self.monitor.abortRequested():
             if   isRestartRequired(): break
             elif self.chkInfo():      continue # aggressive polling required (bypass waitForAbort)!
-            elif self.monitor.waitForAbort(10): break
+            elif self.monitor.waitForAbort(5): break
             
             if self.player.isPlaying():
                 self.chkIdle()

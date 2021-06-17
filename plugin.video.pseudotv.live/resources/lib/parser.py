@@ -128,14 +128,14 @@ class Writer:
         
     def saveChannels(self):
         self.log('saveChannels')
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channels.getChannels())))
         return self.channels.save()
         
         
     def saveChannelLineup(self):
         self.log('saveChannelLineup')
         if self.cleanChannelLineup() and self.importSETS():
-            if False in [func.save() for func in [self.m3u, self.xmltv]]:
+            if False in [self.m3u.saveM3U(), 
+                         self.xmltv.saveXMLTV()]:
                 self.dialog.notificationDialog(LANGUAGE(30001))
                 return
         return True
@@ -149,21 +149,21 @@ class Writer:
                 
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
         self.log('removeChannelLineup, citem = %s'%(citem))
-        self.m3u.removeChannel(citem)
+        self.m3u.removeStation(citem)
         self.xmltv.removeChannel(citem)
         
     
     def addChannelLineup(self, citem, radio=False, catchup=True):
         item = citem.copy()
         item['label'] = (item.get('label','') or item['name'])
-        item['url']   = 'plugin://%s/?mode=play&name=%s&id=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['name']),urllib.parse.quote(item['id']),str(item['radio']))
+        item['url']   = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(item['name']),id=urllib.parse.quote(item['id']),radio=str(item['radio']))
         if not SETTINGS.getSettingBool('Enable_Grouping'): 
             item['group'] = [ADDON_NAME]
         else:
             item['group'].append(ADDON_NAME)
         item['group'] = list(set(item['group']))
         self.log('addChannelLineup, item = %s, radio = %s, catchup = %s'%(item,radio,catchup))
-        self.m3u.addChannel(item)
+        self.m3u.addStation(item)
         self.xmltv.addChannel(item)
     
 
@@ -189,7 +189,7 @@ class Writer:
             item['date']        = file.get('premiered','')
             
             if catchup:
-                item['catchup-id'] = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,urllib.parse.quote(item['title']),urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),urllib.parse.quote(citem['id']),str(item['radio']))
+                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=urllib.parse.quote(item['title']),id=urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),channel=urllib.parse.quote(citem['id']),radio=str(item['radio']))
             
             if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
                 item['episode-num'] = {'xmltv_ns':'%s.%s'%(file.get("season",1)-1,file.get("episode",1)-1),
@@ -213,7 +213,7 @@ class Writer:
             
     def cleanChannelLineup(self):
         # Clean M3U of Channels with no guidedata.
-        m3uChannels = self.m3u.getChannels()
+        m3uChannels = self.m3u.getStations()
         xmlChannels = self.xmltv.getChannels()
         abandoned   = m3uChannels.copy() 
         [abandoned.remove(m3u) for xmltv in xmlChannels for m3u in m3uChannels if xmltv.get('id') == m3u.get('id')]
@@ -244,57 +244,48 @@ class Writer:
         self.log('recoverChannelsFromBackup, file = %s'%(file))
         oldChannels = self.channels.getChannels().copy()
         newChannels = self.channels.cleanSelf(self.channels.load(CHANNELFLE_BACKUP)).get('channels',[])
+        
         if self.channels.clear():
             difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
             [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
             self.channels.save()
-        setRestartRequired()
-        self.log('recoverChannelsFromBackup, finished')
-        return True
-        
-        
-    def recoverChannelsFromM3U(self):
-        self.log('recoverChannelsFromM3U') #rebuild channels.json from m3u. #todo reenable predefined. 
-        # channels = self.channels.getChannels()
-        # m3u      = self.m3u.getChannels().copy()
-        # if not channels and m3u:
-            # self.log('recoverChannelsFromM3U, recovering %s m3u channels'%(m3u))
-            # if not self.dialog.yesnoDialog('%s ?'%(LANGUAGE(30178))): return
-            # for item in m3u: 
-                # citem = self.channels.getCitem()
-                # citem.update(item) #todo repair path.
-                # self.channels.addChannel(citem)
-            # return self.saveChannels()
-        # setRestartRequired()
-        # self.log('recoverChannelsFromM3U, finished')
-        return True
+            
+        if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()):
+            setRestartRequired()
      
        
-    def recoverItemsFromChannels(self):
-        self.log('recoverItemsFromChannels')
-        #todo chk 4 empty library.json and full channels.json then recover.
-        # ##re-enable library.json items from channels.json
-        # for type in CHAN_TYPES: 
-            # if self.monitor.waitForAbort(0.01): break
-            # items = self.library.getLibraryItems(type)
-            # if not items: continue
-            # channels = self.channels.getPredefinedChannelsByType(type)
-            # if not channels: continue
+    def recoverItemsFromChannels(self, predefined=None):
+        self.log('recoverItemsFromChannels') #re-enable library.json items from channels.json
+        if predefined is None: predefined = self.channels.getPredefinedChannels()
+        for type in CHAN_TYPES: 
+            items = self.library.getLibraryItems(type)
+            if not items: continue #no library items, continue
                 
-            # selects = []
-            # for idx, item in enumerate(items):
-                # for channel in channels:
-                    # if channel.get('name','').lower() == item.get('name','').lower():
-                        # selects.append(idx)
-                        
-            # self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
-            # if selects: self.library.setEnableStates(type, selects, items)
-        # setPendingChange()
-        # self.log('recoverItemsFromChannels, finished')
+            channels = self.channels.getPredefinedChannelsByType(type, predefined)
+            selects  = [idx for idx, item in enumerate(items) for channel in channels if channel.get('name','').lower() == item.get('name','').lower()]
+            self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
+            self.library.setEnableStates(type, selects, items)
         return True
         
 
+    def recoverChannelsFromM3U(self):
+        self.log('recoverChannelsFromM3U') #rebuild predefined channels from m3u. #todo reenable predefined. 
+        channels = self.channels.getChannels()
+        m3u      = self.m3u.getStations().copy()
+        if not channels and m3u:
+            self.log('recoverChannelsFromM3U, recovering %s m3u channels'%(m3u))
+            if not self.dialog.yesnoDialog('%s ?'%(LANGUAGE(30178))): return
+            for item in m3u: 
+                citem = self.channels.getCitem()
+                citem.update(item) #todo repair path.
+                self.channels.addChannel(citem)
+            return self.saveChannels()
+        setRestartRequired()
+        self.log('recoverChannelsFromM3U, finished')
+        return True
+        
+        
     def convertLibraryItems(self, type=None):
         if not type is None: types = [type]
         else:                types = CHAN_TYPES

@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
+from types                     import SimpleNamespace
 
 class Vault:
     #todo convert json to dataclass create class array to handle types. https://pypi.org/project/dataclasses-json/
@@ -69,7 +70,6 @@ class Vault:
     def get_libraryItems(self):
         return getattr(self, '_libraryItems', None)
 
-
     m3uList      = property(get_m3uList     , set_m3uList)
     xmltvList    = property(get_xmltvList   , set_xmltvList)
     channelList  = property(get_channelList , set_channelList)
@@ -78,7 +78,7 @@ class Vault:
 class StationItem():
     #M3U Entry
     def __init__(self): ...
-           
+        
 class ProgramItem():
     #XMLTV Entry
     def __init__(self): ...
@@ -90,12 +90,8 @@ class ChannelItem():
 class LibraryItem():
     #Library Entry
     def __init__(self): ...
-        
-# todo automatic getters?
-# import json
-# from types import SimpleNamespace
-# data = '{"name": "John Smith", "hometown": {"name": "New York", "id": 123}}'
 
-# # Parse JSON into an object with attributes corresponding to dict keys.
-# x = json.loads(data, object_hook=lambda d: SimpleNamespace(**d))
+# todo json to class
+# StationItem = json.loads(data, object_hook=lambda d: SimpleNamespace(**d))
+# data = '{"name": "John Smith", "hometown": {"name": "New York", "id": 123}}'
 # print(x.name, x.hometown.name, x.hometown.id)
