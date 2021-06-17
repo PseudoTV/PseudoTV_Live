@@ -243,7 +243,7 @@ class Writer:
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannelsFromBackup, file = %s'%(file))
         oldChannels = self.channels.getChannels().copy()
-        newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP).get('channels',[])
+        newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP)
         
         if self.channels.clearChannels():
             difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])

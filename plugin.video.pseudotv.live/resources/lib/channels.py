@@ -85,7 +85,7 @@ class Channels:
             
     def loadChannels(self, file=getUserFilePath(CHANNELFLE)):
         self.log('loadChannels, file = %s'%(file))
-        return self.cleanSelf(self._load(file))
+        return self.cleanSelf(self._load(file)).get('channels',[])
         
        
     def saveChannels(self):
