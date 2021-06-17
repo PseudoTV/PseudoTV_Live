@@ -132,7 +132,7 @@ class Builder:
 
     def verifyChannelItems(self):
         #check channel configuration, verify and updates paths, logos.
-        if self.channels.reload():
+        if self.channels.reloadChannels():
             items = self.channels.getChannels()
             for idx, item in enumerate(items):
                 self.log('verifyChannelItems, %s: %s'%(idx,item))

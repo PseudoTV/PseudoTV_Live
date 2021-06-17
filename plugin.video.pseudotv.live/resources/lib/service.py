@@ -497,7 +497,7 @@ class Service:
                 setPendingChange(False)
                 self.chkPredefined()
                 
-                if self.channels.reload():
+                if self.channels.reloadChannels():
                     channels = self.channels.getChannels()
                     if not channels:
                         if self.myConfig.autoTune(): #autotune

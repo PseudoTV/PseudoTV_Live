@@ -247,7 +247,7 @@ class M3U:
             if not importChannels: 
                 importChannels.extend(channels)
                 
-            importChannels = self.chkImport(importChannels,multiplier)
+            importChannels = list(self.chkImport(importChannels,multiplier))
             self.log('importM3U, found import stations = %s'%(len(importChannels)))
             self.vault.m3uList.get('channels',[]).extend(self.sortStations(importChannels))
                 

@@ -364,7 +364,7 @@ class XMLTV:
         if start is None: start = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
         pitem = {'channel'     : channel.get('id'),
                  'title'       : [(channel.get('display-name',[{'',LANG}])[0][0], LANG)],
-                 'desc'        : [((channel.get('desc',[{'',LANG}])[0][0] or xbmc.getLocalizedString(161)), LANG)],
+                 'desc'        : [(xbmc.getLocalizedString(161), LANG)],
                  'stop'        : ((start + datetime.timedelta(seconds=length)).strftime(DTFORMAT)),
                  'start'       : (start.strftime(DTFORMAT)),
                  'icon'        : [{'src': channel.get('icon',[{}])[0].get('src')}],

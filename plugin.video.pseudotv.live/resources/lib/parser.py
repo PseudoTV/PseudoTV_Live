@@ -128,7 +128,7 @@ class Writer:
         
     def saveChannels(self):
         self.log('saveChannels')
-        return self.channels.save()
+        return self.channels.saveChannels()
         
         
     def saveChannelLineup(self):
@@ -232,7 +232,7 @@ class Writer:
 
     def clearChannels(self, all=False): #clear user-defined channels. all includes pre-defined
         self.log('clearChannels, all = %s'%(all))
-        if all: self.channels.clear()
+        if all: self.channels.clearChannels()
         else:
             channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.channels.getChannels()))
             for citem in channels: self.removeChannel(citem)
@@ -243,13 +243,13 @@ class Writer:
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannelsFromBackup, file = %s'%(file))
         oldChannels = self.channels.getChannels().copy()
-        newChannels = self.channels.cleanSelf(self.channels.load(CHANNELFLE_BACKUP)).get('channels',[])
+        newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP).get('channels',[])
         
-        if self.channels.clear():
+        if self.channels.clearChannels():
             difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
             [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
-            self.channels.save()
+            self.channels.saveChannels()
             
         if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()):
             setRestartRequired()
@@ -363,7 +363,7 @@ class Writer:
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
-            if self.channels.setPage(id, limits): self.channels.save()
+            if self.channels.setPage(id, limits): self.channels.saveChannels()
         self.log("%s autoPagination, id = %s\npath = %s\nlimits = %s"%(msg,id,path,limits))
         return limits
             

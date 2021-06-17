@@ -36,44 +36,44 @@ class Channels:
         self.filelock   = self.writer.GlobalFileLock
         
         if not self.vault.channelList: 
-            self.reload()
+            self._reload()
         else: 
-            self.withdraw()
+            self._withdraw()
             
                 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
-    def clear(self):
-        self.log('clear')
+    def _clear(self):
+        self.log('_clear')
         self.vault.channelList = {}
-        return self.deposit()
+        return self._deposit()
         
 
-    def reload(self):
-        self.log('reload')
+    def _reload(self):
+        self.log('_reload')
         self.vault.channelList = self.getTemplate()
-        self.vault.channelList.update(self.cleanSelf(self.load()))
+        self.vault.channelList.update(self.cleanSelf(self._load()))
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
         self.chkClient()
-        return self.deposit()
+        return self._deposit()
         
         
-    def deposit(self):
-        self.log('deposit')
+    def _deposit(self):
+        self.log('_deposit')
         self.vault.set_channelList(self.vault.channelList)
         return True
         
     
-    def withdraw(self):
-        self.log('withdraw')
+    def _withdraw(self):
+        self.log('_withdraw')
         self.vault.channelList = self.vault.get_channelList()
         return True
         
 
-    def load(self, file=getUserFilePath(CHANNELFLE)):
-        self.log('load file = %s'%(file))
+    def _load(self, file=getUserFilePath(CHANNELFLE)):
+        self.log('_load, file = %s'%(file))
         if not FileAccess.exists(file): 
             file = CHANNELFLE_DEFAULT
         with fileLocker(self.filelock):
@@ -82,21 +82,26 @@ class Channels:
             fle.close()
             return data
         
+            
+    def loadChannels(self, file=getUserFilePath(CHANNELFLE)):
+        self.log('loadChannels, file = %s'%(file))
+        return self.cleanSelf(self._load(file))
         
-    def save(self):
+       
+    def saveChannels(self):
         with fileLocker(self.filelock):
             filePath = getUserFilePath(CHANNELFLE)
             fle = FileAccess.open(filePath, 'w')
             self.log('save, saving to %s'%(filePath))
             fle.write(dumpJSON(self.cleanSelf(self.vault.channelList), idnt=4, sortkey=False))
             fle.close()
-            return self.reload()
+            return self._reload()
 
 
     @cacheit(checksum=ADDON_VERSION,json_data=True)
     def getTemplate(self):
         self.log('getTemplate')
-        channelList = (self.load(CHANNELFLE_DEFAULT) or {})
+        channelList = (self._load(CHANNELFLE_DEFAULT) or {})
         channelList['uuid'] = self.getUUID(channelList)
         return channelList
 
@@ -223,6 +228,23 @@ class Channels:
                 return idx, channel
         return None, {}
         
+    
+    def deleteChannels(self):
+        self.log('deleteChannels')
+        if FileAccess.delete(getUserFilePath(CHANNELFLE)):
+            return self.dialog.notificationDialog(LANGUAGE(30016)%('Channels'))
+        return False
+
+
+    def clearChannels(self):
+        self.log('clearChannels')
+        return self._clear()
+       
+       
+    def reloadChannels(self):
+        self.log('reloadChannels')
+        return self._reload()
+       
        
     def getRitem(self):
         self.log('getRitem') #rule schema
