@@ -20,7 +20,9 @@
 
 import os, json, traceback
 
-from kodi_six  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
+from kodi_six                  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
+from datetime                  import timedelta
+from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
@@ -52,15 +54,20 @@ class Settings:
     realSetting = REAL_SETTINGS
     
     def __init__(self, reload=False):
+        self.cache = Cache()
         if reload: 
             REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
             self.realSetting = REAL_SETTINGS
-            
+        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def openSettings(self):     
+        self.realSetting.openSettings()
+    
+    
     def _getSetting(self, func, key):
         try:
             value = func(key)
@@ -92,11 +99,21 @@ class Settings:
         except:
             value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
             if value.isdecimal():
-                return float(value)
-            elif value.isdigit(): 
                 return int(value)
-            elif value: 
-                return eval(value)
+            elif value.isdigit(): 
+                return int(value)  
+            elif value.isnumeric():
+                return int(value)
+              
+              
+    def getSettingFloat(self, key):
+        value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
+        if value.isdecimal():
+            return float(value)
+        elif value.isdigit(): 
+            return float(value)  
+        elif value.isnumeric():
+            return float(value)
               
               
     def getSettingNumber(self, key): 
@@ -107,22 +124,30 @@ class Settings:
                 return float(value)
             elif value.isdigit(): 
                 return int(value)    
-            elif value: 
-                return eval(value)
+            elif value.isnumeric():
+                return int(value)
         
         
     def getSettingString(self, key):
         return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingString,key)
         
         
-    def openSettings(self):     
-        self.realSetting.openSettings()
-    
-
+    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
+        value = self.cache.get(key, checksum, json_data)
+        self.log('getCacheSetting, key = %s, value = %s'%(key,value))
+        return value
+        
+        
+    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), json_data=False):
+        self.log('setCacheSetting, key = %s, value = %s'%(key,value))
+        self.cache.set(key, value, checksum, life, json_data)
+        
+            
     def _setSetting(self, func, key, value):
         try:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             func(key, value)
+            self.setCacheSetting(key, value,json_data=isinstance(value,dict))
         except Exception as e: 
             self.log("_setSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
         
@@ -150,8 +175,13 @@ class Settings:
         self._setSetting(self.realSetting.setSettingInt,key,value)
         
         
+    def setSettingFloat(self, key, value):  
+        if not isinstance(value,(float,log)): value = float(value)
+        self._setSetting(self.realSetting.setSetting,key,value)
+        
+        
     def setSettingNumber(self, key, value):  
-        if not isinstance(value,float): value = float(value)
+        if not isinstance(value,(int,float,log)): value = float(value)
         self._setSetting(self.realSetting.setSettingNumber,key,value)
         
         
@@ -199,16 +229,31 @@ class Properties:
         
     def getPropertyInt(self, key):
         value = self.getProperty(key)
+        if isinstance(value,(int,float)):
+            return int(value)
+        elif value.isdecimal():
+            return int(value)
+        elif value.isdigit(): 
+            return int(value) 
+        elif value.isnumeric():
+            return int(value)
+            
+        
+    def getPropertyFloat(self, key):
+        value = self.getProperty(key)
+        if isinstance(value,(int,float)):
+            return float(value)
         if value.isdecimal():
             return float(value)
         elif value.isdigit(): 
-            return int(value)
-        elif value: 
-            return eval(value)
+            return float(value)  
+        elif value.isnumeric():
+            return float(value)
         
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
+        if isinstance(value,tuple): value = value[0]
         self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         return value
         
@@ -240,7 +285,13 @@ class Properties:
         
                 
     def setPropertyInt(self, key, value):
-        return self.setProperty(key, str(value))
+        if not isinstance(value,int): value = int(value)
+        return self.setProperty(key, value)
+                
+                
+    def setPropertyFloat(self, key, value):
+        if not isinstance(value,float): value = float(value)
+        return self.setProperty(key, value)
         
         
     def setProperty(self, key, value):
@@ -377,13 +428,17 @@ class Dialog:
         return True
              
              
-    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True):
+    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True, custom=False):
         if multi == True:
             if preselect is None: preselect = [-1]
-            select = xbmcgui.Dialog().multiselect(header, list, autoclose, preselect, useDetails)
+            if custom: ... #todo domodel custom selectDialog for library select.
+            else:
+                select = xbmcgui.Dialog().multiselect(header, list, autoclose, preselect, useDetails)
         else:
             if preselect is None: preselect = -1
-            select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
+            if custom: ... #todo domodel custom selectDialog for library select.
+            else:
+                select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
         return select
       
       

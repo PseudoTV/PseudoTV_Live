@@ -46,8 +46,9 @@ class Library:
         else:
             self.withdraw()
             
-        self.predefined  = Predefined()
-        self.recommended = Recommended(library=self)
+        self.predefined    = Predefined()
+        self.recommended   = Recommended(library=self)
+        self.serviceThread = threading.Timer(0.5, self.triggerPendingChange)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -101,7 +102,7 @@ class Library:
 
     @cacheit(checksum=ADDON_VERSION,json_data=True)
     def getTemplate(self):
-        log('getTemplate')
+        self.log('getTemplate')
         return (self.load(LIBRARYFLE_DEFAULT) or {})
 
         
@@ -132,7 +133,7 @@ class Library:
 
         
     def clearLibraryItems(self, type=None):
-        log('clearLibraryItems, type = %s'%(type))
+        self.log('clearLibraryItems, type = %s'%(type))
         def setDisabled(item):
             item['enabled'] = False
             return item
@@ -161,7 +162,7 @@ class Library:
             types = [type]
         else: 
             types = CHAN_TYPES.copy()
-        log('chkLibraryItems, types = %s'%(types))
+        self.log('chkLibraryItems, types = %s'%(types))
         
         for type in types:
             libraryItems = self.getLibraryItems(type) #all items, check if they exist to enable settings option.
@@ -216,84 +217,79 @@ class Library:
                 LANGUAGE(30079)]#"PVR Recordings"
 
 
-    def getfillItems(self):
-        log('getfillItems')
-        results = {}
-        funcs   = {LANGUAGE(30002):self.getNetworks,
-                   LANGUAGE(30003):self.getTVShows,
-                   LANGUAGE(30004):self.getTVGenres,
-                   LANGUAGE(30005):self.getMovieGenres,
-                   LANGUAGE(30007):self.getMovieStudios,
-                   LANGUAGE(30006):self.getMixedGenres,
-                   LANGUAGE(30080):self.getMixed,
-                   LANGUAGE(30097):self.getMusicGenres,
-                   LANGUAGE(30026):self.recommended.fillRecommended,
-                   LANGUAGE(30033):self.recommended.fillImports}
- 
-        busy = self.dialog.progressBGDialog()
-        for idx, type in enumerate(CHAN_TYPES):
-            if self.monitor.waitForAbort(0.01): break
-            prog = int((idx*100)//len(CHAN_TYPES))
-            busy = self.dialog.progressBGDialog(prog, busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30160)))
-            results.setdefault(type,[]).extend(funcs[type]())
-        busy = self.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
-        return results
+    def fillTypeItems(self, type):
+        funcs = {LANGUAGE(30002):self.getNetworks,
+                 LANGUAGE(30003):self.getTVShows,
+                 LANGUAGE(30004):self.getTVGenres,
+                 LANGUAGE(30005):self.getMovieGenres,
+                 LANGUAGE(30007):self.getMovieStudios,
+                 LANGUAGE(30006):self.getMixedGenres,
+                 LANGUAGE(30080):self.getMixed,
+                 LANGUAGE(30097):self.getMusicGenres,
+                 LANGUAGE(30026):self.recommended.fillRecommended,
+                 LANGUAGE(30033):self.recommended.fillImports}
+        return funcs[type]()
 
 
-    def fillLibraryItems(self):
+    def fillLibraryItems(self, logoLookup=False):
         ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
-        fillItems = self.getfillItems()
-        if not fillItems: return True
-            
-        interrupted = False
-        busy = self.dialog.progressBGDialog()
-        for pos, type in enumerate(CHAN_TYPES):
-            busy = self.dialog.progressBGDialog(1, busy)
-            if self.monitor.waitForAbort(0.01):
-                break
-                
-            results  = []
-            fillItem = fillItems.get(type,[])
-            existing = self.getLibraryItems(type, enabled=True)
-            log('fillLibraryItems, type = %s, fillItem = %s, existing = %s'%(type, len(fillItem),len(existing)))
-            
-            if not fillItem and existing:
-                log('fillLibraryItems, something went wrong no fillItem; sub existing.')
-                fillItem = existing.copy()
-                
-            for idx, item in enumerate(fillItem):
-                if self.monitor.waitForAbort(0.01):
-                    interrupted = True
-                    break
-                    
-                fill = int((idx*100)//len(fillItem))
-                prog = int((pos*100)//len(CHAN_TYPES))
-                busy = self.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
-
-                if isinstance(item,dict):
-                    name = (item.get('name','') or item.get('label',''))
-                    if not name: continue
+        def fillType(type, busy):
+            if not self.monitor.waitForAbort(0.01): 
+                items     = self.fillTypeItems(type)
+                existing  = self.getLibraryItems(type)
+                cacheName = 'fillType.%s.%s'%(type,len(items))
+                results   = self.cache.get(cacheName, checksum=len(items), json_data=True)
+                if not results or not existing:
+                    results  = []
+                    if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
+                        life = datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days'))
+                    else:
+                        life = datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))
                         
-                    if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
-                        logo = item.get('icon','')
-                    else: 
-                        logo = self.jsonRPC.getLogo(name, type, item.get('file',None), item)
-                else: 
-                    name = item
-                    logo = self.jsonRPC.getLogo(name, type)
+                    enabled  = self.getEnabledItems(existing)
+                    self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
+                    
+                    # if not items and enabled:
+                        # self.log('fillType, something went wrong no items; substitute existing.')
+                        # items = enabled.copy()
+                
+                    for idx, item in enumerate(items):
+                        if self.monitor.waitForAbort(0.01):
+                            return
+                            
+                        fill = int((idx*100)//len(items))
+                        prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
+                        busy = self.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
 
-                enabled = len(list(filter(lambda k:k['name'] == name, existing))) > 0
-                tmpItem = {'enabled':enabled,'name':name,'type':type,'logo':logo}
-                if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
-                elif  type == LANGUAGE(30033): tmpItem['item'] = item
-                else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
-                results.append(tmpItem)
-                
-            if interrupted: break
-            else: self.setLibraryItems(type,results)
-                
+                        if isinstance(item,dict):
+                            name = (item.get('name','') or item.get('label',''))
+                            if not name: continue
+                            if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
+                                logo = item.get('icon','')
+                            else: 
+                                logo = self.jsonRPC.getLogo(name, type, item.get('file',None), item)
+                        else: 
+                            name = item
+                            logo = self.jsonRPC.getLogo(name, type)
+
+                        tmpItem = {'enabled':len(list(filter(lambda k:k['name'] == name, enabled))) > 0,
+                                   'name':name,
+                                   'type':type,
+                                   'logo':logo}
+                                   
+                        if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
+                        elif  type == LANGUAGE(30033): tmpItem['item'] = item
+                        else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
+                        results.append(tmpItem)
+                        
+                    if results: #only cache found items.
+                        self.setLibraryItems(type,results)
+                        self.cache.set(cacheName, results, checksum=len(items), expiration=life, json_data=True)
+
+        busy = self.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
+        for type in CHAN_TYPES: fillType(type,busy)
         busy = self.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
-        return not bool(interrupted)
+        return True
         
 
     def buildLibraryListitem(self, data):
@@ -301,6 +297,65 @@ class Library:
         return self.dialog.buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
 
 
+    def selectPredefined(self, type=None, autoTune=None):
+        self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
+        if isClient(): return
+        escape = autoTune is not None
+        with busy_dialog(escape):
+            items = self.getLibraryItems(type)
+            if not items:
+                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                setBusy(False)
+                return
+            listItems = self.pool.poolList(self.buildLibraryListitem,items,type)
+            
+        if autoTune:
+            if autoTune > len(items): autoTune = len(items)
+            select = random.sample(list(set(range(0,len(items)))),autoTune)
+        else:
+            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.getEnabledItems(items))))
+
+        if not select is None:
+            with busy_dialog(escape):
+                self.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
+                self.writer.convertLibraryItems(type)
+                self.setPendingChangeTimer()
+
+
+    def matchLizIDX(self, listitems, selects, key='name', retval=False):
+        for select in selects:
+            for idx, listitem in enumerate(listitems):
+                if select.get(key) == listitem.getLabel():
+                    if retval: yield listitem
+                    else:      yield idx
+
+
+    def matchDictIDX(self, items, listitems, key='name', retval=False):
+        for listitem in listitems:
+            for idx, item in enumerate(items):
+                if listitem.getLabel() == item.get(key):
+                    if retval: yield item
+                    else:      yield idx
+
+
+    def setPendingChangeTimer(self, wait=30.0):
+        self.log('setPendingChangeTimer, wait = %s'%(wait))
+        if self.serviceThread.is_alive(): 
+            try: 
+                self.serviceThread.cancel()
+                self.serviceThread.join()
+            except: pass
+        self.serviceThread = threading.Timer(wait, self.triggerPendingChange)
+        self.serviceThread.name = "serviceThread"
+        self.serviceThread.start()
+        
+        
+    def triggerPendingChange(self):
+        self.log('triggerPendingChange')
+        if isBusy(): self.setPendingChangeTimer()
+        else:        setPendingChange()
+        
+        
 class Recommended:
     def __init__(self, library):
         self.log('__init__')

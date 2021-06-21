@@ -436,6 +436,9 @@ def hasAutoTuned():
 def setAutoTuned(state=True):
     return PROPERTIES.setPropertyBool('autotuned',state)
     
+def getAutoTuned():
+    return PROPERTIES.getPropertyBool('autotuned')
+    
 def hasPVR():
     return xbmc.getCondVisibility('Pvr.HasTVChannels')
     
@@ -455,29 +458,53 @@ def hasAddon(id):
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def hasVersionChanged(cleanStart=False):
-    lastVersion = (SETTINGS.getSetting('lastVersion') or 'v.0.0.0')
+    lastVersion = (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
-        SETTINGS.setSetting('lastVersion',ADDON_VERSION)
-        return showChangelog()
-        # if cleanStart:
-            # xbmc.executebuiltin('RunPlugin("(plugin://'+ADDON_ID+'/?channel&mode=Utilities&name=Clean%20Start%2c%20Delete%20all%20files%20and%20settings.&url)")')
-    return False
+        SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+        showChangelog()
 
-def chkUpdateTime(key, wait, lastUpdate=None, persistent=False):
-    #todo fuzzy logic to determine if run within % tolerance to expedite execution.
+def chkUpdateTime(key, wait, lastUpdate=None):
     if lastUpdate is None:
         lastUpdate = (PROPERTIES.getPropertyInt(key) or 0)
-        if persistent: lastUpdate = (SETTINGS.getSettingInt(key) or lastUpdate)
-    
-    state = False
-    epoch = time.time()
+    epoch = int(time.time())    
     if (epoch >= (lastUpdate + wait)):
-        state = True
         PROPERTIES.setPropertyInt(key,epoch)
-        if persistent: SETTINGS.setSettingInt(key,epoch)
-    log('globals: chkUpdateTime, key = %s, epoch = %s,  wait = %s, lastUpdate = %s, returning %s'%(key,epoch,wait,lastUpdate,state))
-    return state
-    
+        return True
+    return False
+
+def showReadme():
+    def convertMD2TXT(md):
+        markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
+        markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
+        markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
+        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
+        markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
+        markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
+        return markdown
+        
+    with busy_dialog(): 
+        readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
+        return Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+
+def showChangelog():
+    def addColor(text):
+        text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
+        text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
+        text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
+        text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
+        text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
+        text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
+        text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
+        text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
+        text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
+        text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
+        text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
+        return text
+        
+    with busy_dialog(): 
+        changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
+        return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+
 def openAddonSettings(ctl=(None,None),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
@@ -511,7 +538,18 @@ def installAddon(id, silent=False):
         xbmc.executebuiltin('InstallAddon("%s")'%(id))
         if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
         return True
+ 
+def chkResources(silent=True):
+    log('globals: chkResources, silent = %s'%(silent)) 
+    if not hasAddon(ADDON_REPOSITORY): 
+        if not silent: Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
+        return 
         
+    params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
+    missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+    for addon in missing: installAddon(addon, silent)
+    return True
+
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
 

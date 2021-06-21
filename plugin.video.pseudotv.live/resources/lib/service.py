@@ -19,11 +19,12 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
 from resources.lib.builder     import Builder
-from resources.lib.config      import Config
 from resources.lib.cache       import Cache
+from resources.lib.backup      import Backup
 from resources.lib.concurrency import PoolHelper
 from resources.lib.rules       import RulesList
 from resources.lib.overlay     import Overlay
+from resources.lib.config      import Config
 
 
 class Player(xbmc.Player):
@@ -34,6 +35,7 @@ class Player(xbmc.Player):
         self.jsonRPC            = None
         self.myService          = service
         self.cache              = service.cache
+        self.dialog             = service.dialog
         self.rules              = self.myService.rules
         
         self.pendingStart       = False
@@ -261,10 +263,27 @@ class Player(xbmc.Player):
         conditions = [not xbmc.getCondVisibility('Player.Paused'),self.isPlaying(),isPseudoTV()]
         self.log("triggerSleep, conditions = %s"%(conditions))
         if False in conditions: return
-        if self.service.myConfig.sleepTimer():
+        if self.sleepTimer():
             self.stop()
             return True
         
+        
+    def sleepTimer(self):
+        self.log('sleepTimer')
+        sec = 0
+        cnx = False
+        inc = int(100/OVERLAY_DELAY)
+        dia = self.dialog.progressDialog(message=LANGUAGE(30281))
+        while not self.myService.monitor.abortRequested() and (sec < OVERLAY_DELAY):
+            sec += 1
+            msg = '%s\n%s'%(LANGUAGE(30283),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
+            dia = self.dialog.progressDialog((inc*sec),dia, msg)
+            if self.myService.monitor.waitForAbort(1) or not dia:
+                cnx = True
+                break
+        self.dialog.progressDialog(100,dia)
+        return not bool(cnx)
+
 
 class Monitor(xbmc.Monitor):
     def __init__(self, service):
@@ -299,8 +318,9 @@ class Monitor(xbmc.Monitor):
     def onSettingsChanged(self, wait=30.0):
         ## Egg Timer, reset on each call.
         if self.onChangeThread.is_alive(): 
-            self.onChangeThread.cancel()
-            try: self.onChangeThread.join()
+            try: 
+                self.onChangeThread.cancel()
+                self.onChangeThread.join()
             except: pass
         self.onChangeThread = threading.Timer(wait, self.onChange)
         self.onChangeThread.name = "onChangeThread"
@@ -395,8 +415,9 @@ class Service:
         self.writer         = self.myBuilder.writer
         self.channels       = self.myBuilder.writer.channels
         self.jsonRPC        = self.myBuilder.jsonRPC
-        
-        self.myConfig       = Config(sys.argv,service=self)
+        self.library        = self.writer.library
+        self.recommended    = self.library.recommended
+        self.backup         = Backup(self)
         
         self.startThread    = threading.Timer(1.0, hasVersionChanged)
         self.serviceThread  = threading.Timer(0.5, self.runServiceThread)
@@ -412,8 +433,9 @@ class Service:
     def startServiceThread(self, wait=30.0):
         self.log('startServiceThread, wait = %s'%(wait))
         if self.serviceThread.is_alive(): 
-            self.serviceThread.cancel()
-            try: self.serviceThread.join()
+            try: 
+                self.serviceThread.cancel()
+                self.serviceThread.join()
             except: pass
         self.serviceThread = threading.Timer(wait, self.runServiceThread)
         self.serviceThread.name = "serviceThread"
@@ -426,13 +448,14 @@ class Service:
         self.log('runServiceThread')
         setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
-               
+
 
     def chkVersion(self):
         # call in thread so prompt doesn't hold up service.
         if self.startThread.is_alive():
-            self.startThread.cancel()
-            try: self.startThread.join()
+            try: 
+                self.startThread.cancel()
+                self.startThread.join()
             except: pass
         self.startThread = threading.Timer(1.0, hasVersionChanged)
         self.startThread.name = "startThread"
@@ -450,7 +473,7 @@ class Service:
         if   isClient(): return
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
-            self.myConfig.recommended.importPrompt()
+            self.recommended.importPrompt()
             return True
 
             
@@ -459,10 +482,19 @@ class Service:
         elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
             self.log('chkPredefined')
             self.chkRecommended(lastUpdate=0)
-            self.myConfig.buildLibraryItems()
+            self.chkLibraryItems()
             return True
         
-                
+        
+    def chkLibraryItems(self):
+        self.log('chkLibraryItems')
+        if self.library.fillLibraryItems():
+            self.library.chkLibraryItems()
+            return self.writer.convertLibraryItems()
+        else: 
+            return False
+
+        
     def chkIdle(self):
         if not isPseudoTV(): return
         idleTime  = getIdleTime()
@@ -500,7 +532,7 @@ class Service:
                 if self.channels.reloadChannels():
                     channels = self.channels.getChannels()
                     if not channels:
-                        if self.myConfig.autoTune(): #autotune
+                        if Config(self).autoTune(): #autotune
                             return self.chkUpdate(0) #force rebuild after autotune
                         self.log('chkUpdate, no channels found & autotuned recently')
                         return False #skip autotune if performed recently.
@@ -511,7 +543,6 @@ class Service:
     def updateChannels(self):
         if self.myBuilder.buildService(myService=self):
             self.log('updateChannels, finished buildService')
-            PROPERTIES.setProperty('Last_Update',str(time.time()))
             return brutePVR(override=True)
         return False
                 
@@ -522,8 +553,8 @@ class Service:
             funcs = [initDirs,
                      self.chkVersion,
                      self.monitor.chkPluginSettings,
-                     self.myConfig.installResources,
-                     self.myConfig.backup.hasBackup,
+                     chkResources,
+                     self.backup.hasBackup,
                      self.chkChannels]
             for func in funcs: func()
             return True
@@ -567,8 +598,9 @@ class Service:
             try: 
                 if thread.name == "MainThread": continue
                 self.log("closeThreads joining thread %s"%(thread.name))
-                thread.cancel()
-                try: thread.join(1.0)
+                try: 
+                    thread.cancel()
+                    thread.join(1.0)
                 except: pass
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
         self.log('closeThreads finished, exiting %s...'%(ADDON_NAME))

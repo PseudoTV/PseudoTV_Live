@@ -22,37 +22,23 @@
 from resources.lib.globals   import *
 from resources.lib.plugin    import Plugin
 
-class Default:
-    def __init__(self, sysARG=sys.argv, service=None):
-        self.sysARG = sysARG
-        self.plugin = Plugin(sysARG=self.sysARG)
-                
-                
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
+def run(sysARG):  
+    params  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+    name    = (unquote(params.get("name",'')) or None)
+    channel = (params.get("channel",'')       or None)
+    url     = (params.get("url",'')           or None)
+    id      = (params.get("id",'')            or None)
+    mode    = (params.get("mode",'')          or None)
+    radio   = (params.get("radio",'')         or 'False').lower() == "true"
+    log("Default: run, Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
 
-
-    def getParams(self):
-        return dict(urllib.parse.parse_qsl(self.sysARG[2][1:]))
-
-
-    def run(self):  
-        params  = self.getParams()
-        name    = (unquote(params.get("name",'')) or None)
-        channel = (params.get("channel",'')       or None)
-        url     = (params.get("url",'')           or None)
-        id      = (params.get("id",'')            or None)
-        mode    = (params.get("mode",'')          or None)
-        radio   = (params.get("radio",'')         or 'False') == "True"
-        self.log("Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
-
-        if mode is None:
-            if isBusy(): Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            else:        SETTINGS.openSettings()
-            xbmc.executebuiltin("Action(Close)") #todo debug busy dialog
-        elif mode == 'vod':  self.plugin.playVOD(name, id)
-        elif mode == 'play':
-            if radio: self.plugin.playRadio(name, id)
-            else:     self.plugin.playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
+    if mode is None:
+        if isBusy(): Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        else:        SETTINGS.openSettings()
+        xbmc.executebuiltin("Action(Close)") #todo debug busy dialog
+    elif mode == 'vod':  Plugin(sysARG).playVOD(name, id)
+    elif mode == 'play':
+        if radio: Plugin(sysARG).playRadio(name, id)
+        else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
        
-if __name__ == '__main__': Default(sys.argv).run()
+if __name__ == '__main__': run(sys.argv)

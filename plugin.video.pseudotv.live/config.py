@@ -19,6 +19,6 @@
 # -*- coding: utf-8 -*-
 # -entry point-
 import sys
-from resources.lib.config  import Config
+from resources.lib.config   import Config
 
 if __name__ == '__main__': Config(sys.argv).run()

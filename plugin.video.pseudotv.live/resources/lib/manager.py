@@ -18,9 +18,6 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
-from resources.lib.rules       import RulesList
-from resources.lib.fileaccess  import FileAccess
-from resources.lib.concurrency import PoolHelper
 
 class Manager(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
@@ -41,10 +38,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.showingList   = True
             self.madeChanges   = False
             self.channelLimit  = CHANNEL_LIMIT
-            self.monitor       = xbmc.Monitor()
-            self.rules         = RulesList()
-            self.pool          = PoolHelper()
-            self.dialog        = Dialog()
             
             self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to index
             self.config        = kwargs.get('config')
@@ -52,6 +45,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             self.jsonRPC       = self.config.jsonRPC
             self.channels      = self.config.channels
+            self.dialog        = self.config.dialog
+            self.pool          = self.config.pool
+            self.monitor       = self.config.monitor
+            self.rules         = self.config.rules
             
             self.newChannel    = self.channels.getCitem()
             self.channelList   = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
@@ -60,7 +57,6 @@ class Manager(xbmcgui.WindowXMLDialog):
               
             try:    self.doModal()
             except: self.closeManager()
-
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

@@ -22,11 +22,16 @@ from resources.lib.globals     import *
 from resources.lib.parser      import Writer
 
 class Backup:
-    def __init__(self, config):
+    def __init__(self, inherited=None):
         self.log('__init__')
-        self.dialog   = config.dialog
-        self.writer   = config.writer
-        self.channels = config.channels
+        if inherited:
+            self.writer   = inherited.writer
+            self.channels = inherited.channels
+            self.dialog   = inherited.dialog
+        else:
+            self.writer   = Writer()
+            self.channels = self.writer.channels
+            self.dialog   = self.writer.dialog
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -48,25 +53,24 @@ class Backup:
         self.log('hasBackup')
         with busy():
             if isClient(): return False
-            elif not FileAccess.exists(CHANNELFLE_BACKUP):
-                PROPERTIES.setPropertyBool('has.Backup',False)
-                SETTINGS.setSetting('Backup_Channels'  ,'')
-                SETTINGS.setSetting('Recover_Channels' ,'')
-                return False
-            else:
+            elif FileAccess.exists(CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
                 if not SETTINGS.getSetting('Backup_Channels'):
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
                     SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.load(CHANNELFLE_BACKUP).get('channels',[]))))
                 return True
-            
-            
+            else:
+                PROPERTIES.setPropertyBool('has.Backup',False)
+                SETTINGS.setSetting('Backup_Channels'  ,'')
+                SETTINGS.setSetting('Recover_Channels' ,'')
+                return False
+
+
     def backupChannels(self):
         self.log('backupChannels')
-        if isClient(): return False
-        elif isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029))
-            
+        if   isClient(): return False
+        elif isBusy():   return self.dialog.notificationDialog(LANGUAGE(30029))
         elif FileAccess.exists(CHANNELFLE_BACKUP):
             if not self.dialog.yesnoDialog('%s\n%s?'%(LANGUAGE(30212),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
@@ -95,25 +99,3 @@ class Backup:
                 self.writer.recoverChannelsFromBackup(file)
         setRestartRequired()
         return True
-        
-        
-        
-    # def recoverChannels(self, file=CHANNELFLE_BACKUP):
-        # """
-        # Recover Channel backup, restart service by toggling enabled.
-        # """
-        # self.log('recoverChannels')
-        # if isBusy(): 
-            # return self.dialog.notificationDialog(LANGUAGE(30029))
-        # elif not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
-            # return False
-            
-        # with busy_dialog():
-            # setBusy(True)
-            # CONFIGFLE = getUserFilePath(CHANNELFLE)
-            # if FileAccess.move(CONFIGFLE,CHANNELFLE_RESTORE):
-                # if FileAccess.copy(file,CONFIGFLE):
-                    # # PROPERTIES.setPropertyBool('restartRequired',True)
-                    # toggleADDON(ADDON_ID,'false',reverse=True)
-            # setBusy(False)
-            # return True

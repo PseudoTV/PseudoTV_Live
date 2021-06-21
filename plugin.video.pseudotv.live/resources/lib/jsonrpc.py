@@ -142,7 +142,7 @@ class JSONRPC:
         
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=""):
-        cacheName = 'cacheJSON.%s' % (command)
+        cacheName = 'cacheJSON.%s'%(command)
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)

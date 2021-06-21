@@ -199,8 +199,9 @@ class Overlay(xbmcgui.WindowXML):
     def cancelOnNext(self):
         self.onNext.setVisible(False)
         if self.onNextToggleThread.is_alive(): 
-            self.onNextToggleThread.cancel()
-            try: self.onNextToggleThread.join()
+            try: 
+                self.onNextToggleThread.cancel()
+                self.onNextToggleThread.join()
             except: pass
 
 
@@ -220,8 +221,9 @@ class Overlay(xbmcgui.WindowXML):
     def onNextChk(self):
         try:
             if self.onNextChkThread.is_alive(): 
-                self.onNextChkThread.cancel()
-                try: self.onNextChkThread.join()
+                try: 
+                    self.onNextChkThread.cancel()
+                    self.onNextChkThread.join()
                 except: pass
             
             if self.onNextToggleThread.is_alive() and not self.isoverlayVisible(): 
@@ -239,8 +241,9 @@ class Overlay(xbmcgui.WindowXML):
         try:
             self.log('onNextToggle, state = %s'%(state))
             if self.onNextToggleThread.is_alive(): 
-                self.onNextToggleThread.cancel()
-                try: self.onNextToggleThread.join()
+                try: 
+                    self.onNextToggleThread.cancel()
+                    self.onNextToggleThread.join()
                 except: pass
                     
             wait   = {True:float(10),False:float(random.randint(180,300))}[state]
@@ -256,8 +259,9 @@ class Overlay(xbmcgui.WindowXML):
         try:
             self.log('bugToggle, state = %s'%(state))
             if self.bugToggleThread.is_alive(): 
-                self.bugToggleThread.cancel()
-                try: self.bugToggleThread.join()
+                try: 
+                    self.bugToggleThread.cancel()
+                    self.bugToggleThread.join()
                 except: pass
             wait   = {True:float(random.randint(30,60)),False:float(random.randint(300,600))}[state]
             nstate = not bool(state)
@@ -283,20 +287,19 @@ class Overlay(xbmcgui.WindowXML):
         actionid = act.getId()
         self.log('onAction, actionid = %s'%(actionid))
         if actionid == ACTION_MOVE_LEFT:
-            if not self.openWindow('pvrosdchannels'):
-                return
+            xbmc.executebuiltin("ActivateWindowAndFocus(pvrosdchannels)")
         elif actionid == ACTION_MOVE_RIGHT:
-            if not self.openWindow('pvrchannelguide'):
-                return
+            xbmc.executebuiltin("ActivateWindowAndFocus(pvrchannelguide)")
         # elif actionid == ACTION_MOVE_UP:
-            # xbmc.executebuiltin("Action(Up)")
+            # xbmc.executebuiltin("Action(Info)")
         # elif actionid == ACTION_MOVE_DOWN:
             # xbmc.executebuiltin("Action(Info)")
+            
         # elif actionid == ACTION_SELECT_ITEM:
             # if not self.openWindow('videoosd'): 
                 # return
         self.closeOverlay()
-        
+
         
     def sendButton(self, id):
         self.log('sendButton, id = %s'%(id))

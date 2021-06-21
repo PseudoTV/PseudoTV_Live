@@ -156,7 +156,7 @@ class PoolHelper:
     @timeit
     def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None):
         results = []
-        
+        if len(items) == 0: return results
         try:
             if chunksize is None:
                 chunksize = roundupDIV(len(items), self.cpuCount)

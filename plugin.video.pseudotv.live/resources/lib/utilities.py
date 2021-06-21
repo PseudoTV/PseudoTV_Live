@@ -94,43 +94,8 @@ class Utilities:
                         if FileAccess.delete(files[key]):
                             self.dialog.notificationDialog(LANGUAGE(30016)%(key))
             if full: 
-                PROPERTIES.setPropertyBool('autotuned',False)
+                setAutoTuned(False)
                 setRestartRequired()
-
-
-    def showReadme(self):
-        def convertMD2TXT(md):
-            markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
-            markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-            markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
-            markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
-            markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
-            markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
-            return markdown
-            
-        with busy_dialog(): 
-            readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
-            return self.dialog.textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-
-            
-    def showChangelog(self):
-        def addColor(text):
-            text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
-            text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
-            text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
-            text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
-            text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
-            text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
-            text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
-            text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
-            text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
-            text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
-            text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-            return text
-            
-        with busy_dialog(): 
-            changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
-            return self.dialog.textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 
     def run(self):  
@@ -143,8 +108,8 @@ class Utilities:
             self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return SETTINGS.openSettings()
 
-        if    param == 'Show_Readme':    self.showReadme()
-        elif  param == 'Show_Changelog': self.showChangelog()
+        if    param == 'Show_Readme':    showReadme()
+        elif  param == 'Show_Changelog': showChangelog()
         elif  param == 'User_Groups':    self.userGroups()
         elif  param == 'Clear_Import':   self.clearImport()
         else:  self.buildMenu(param)
