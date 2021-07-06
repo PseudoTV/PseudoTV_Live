@@ -19,11 +19,15 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
-from resources.lib.parser      import Writer
 
 class Builder:
-    def __init__(self, service):
+    def __init__(self, writer=None):
         self.log('__init__')
+        if writer is None:
+            from resources.lib.parser import Writer
+            writer = Writer()
+        self.writer           = writer
+        
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
         self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
@@ -34,12 +38,12 @@ class Builder:
         self.filter           = {}
         self.sort             = {}
         self.limits           = {}
+        self.loopback         = {}
         self.limit            = PAGE_LIMIT
         self.progDialog       = None
         self.progress         = 0
         self.channelCount     = 0
         self.dirCount         = 0
-        self.loopback         = {}
         self.chanName         = ''
         
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
@@ -47,18 +51,6 @@ class Builder:
                                  "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split(',')},
                                  "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0   ,"paths":(SETTINGS.getSetting('Resource_Trailers')).split(',')}}#todo check adv. rules get settings
 
-        self.monitor          = service.monitor
-        self.player           = service.player
-        self.cache            = service.cache
-        self.dialog           = service.dialog
-        self.pool             = service.pool
-        self.rules            = service.rules
-        
-        self.writer           = Writer(inherited=self)
-        self.channels         = self.writer.channels
-        self.jsonRPC          = self.writer.jsonRPC
-        self.resources        = self.jsonRPC.resources
-        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -75,39 +67,39 @@ class Builder:
         return parameter
         
 
-    def buildService(self, myService):
-        if isClient() or self.monitor.isSettingsOpened(aggressive=False):
+    def buildService(self):
+        if isClient() or self.writer.monitor.isSettingsOpened(aggressive=False):
             self.log('buildService, Client mode enabled/Settings Opened; returning!')
             return False
-                        
+                       
         channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
         self.log('buildService, channels = %s'%(len(channels)))
         
         if not channels:
-            self.dialog.notificationDialog(LANGUAGE(30056))
+            self.writer.dialog.notificationDialog(LANGUAGE(30056))
             return None
 
         if not isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
             setLegacyPseudoTV(True)
             
         self.progress     = 0
-        self.progDialog   = self.dialog.progressBGDialog()
+        self.progDialog   = self.writer.dialog.progressBGDialog()
         self.channelCount = len(channels)
-        self.ruleList     = self.rules.loadRules(channels)
-        startEpoch        = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
-        endTimes          = dict(self.writer.getChannelEndtimes(startEpoch))
+        self.ruleList     = self.writer.rules.loadRules(channels)
+        start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
+        endTimes          = self.writer.xmltv.getEndtimes(start=datetime.datetime.fromtimestamp(start))
         self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):
-            if self.monitor.waitForAbort(0.01) or self.monitor.isSettingsOpened(aggressive=False):
-                self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
+            if self.writer.monitor.waitForAbort(0.01) or self.writer.monitor.isSettingsOpened(aggressive=False):
+                self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
                 return False
                 
             channel         = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName   = channel['name']
             self.progress   = int(idx*100//len(channels))
-            self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
-            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'],startEpoch) , channel['radio'])
+            self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
+            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
             
             if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
@@ -118,12 +110,11 @@ class Builder:
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
                 self.writer.removeChannelLineup(channel)
             
-        self.progDialog = self.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
-        
+        self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
         if not self.writer.saveChannelLineup(): 
-            self.dialog.notificationDialog(LANGUAGE(30001))
+            self.writer.dialog.notificationDialog(LANGUAGE(30001))
             
-        if isLegacyPseudoTV() and not self.player.isPlaying():
+        if isLegacyPseudoTV() and not self.writer.player.isPlaying():
             setLegacyPseudoTV(False)
             
         self.log('buildService, finished')
@@ -132,8 +123,8 @@ class Builder:
 
     def verifyChannelItems(self):
         #check channel configuration, verify and updates paths, logos.
-        if self.channels.reloadChannels():
-            items = self.channels.getChannels()
+        if self.writer.channels.reloadChannels():
+            items = self.writer.channels.getChannels()
             for idx, item in enumerate(items):
                 self.log('verifyChannelItems, %s: %s'%(idx,item))
                 if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
@@ -145,8 +136,8 @@ class Builder:
                 item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
                 item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
                 item['group']   = list(set((item.get('group',[]) or [])))
-                # item['logo']    = (self.jsonRPC.chkLocalLogo(item['name'],item['type']) or item.get('logo')) #replace with local logo if available. 
-                item['logo']    = (self.jsonRPC.getLogo(item['name'],item['type'],item['path'],item,featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
+                # item['logo']    = (self.writer.jsonRPC.chkLocalLogo(item['name'],item['type']) or item.get('logo')) #replace with local logo if available. 
+                item['logo']    = (self.writer.jsonRPC.getLogo(item['name'],item['type'],item['path'],item,featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
                 yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
@@ -182,11 +173,12 @@ class Builder:
             self.loopback = {}
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             
-            if datetime.datetime.fromtimestamp(start) >= (datetime.datetime.fromtimestamp(getLocalTime()) + datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days'))): 
+            print('getFileList', start, (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)),start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)))
+            if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)):
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)),xbmc.LOGINFO)
                 return True# prevent over-building
+                
             citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)
-            
             if isinstance(citem['path'], list): 
                 path = citem['path']
             else: 
@@ -242,7 +234,7 @@ class Builder:
                     'file'        : channel['path'],
                     'start'       : 0,
                     'stop'        : 0,
-                    'art'         : channel.get('art',{"thumb":LOGO,"logo":LOGO})}
+                    'art'         : channel.get('art',{"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO})}
         return [tmpItem.copy() for idx in range(entries)]
         
         
@@ -250,7 +242,7 @@ class Builder:
         self.log("fillCells; fileList = %s"%(len(fileList)))
         totRuntime = sum([item.get('duration') for item in fileList])
         iters = cycle(fileList)
-        while not self.monitor.abortRequested() and totRuntime < EPG_HRS:
+        while not self.writer.monitor.abortRequested() and totRuntime < EPG_HRS:
             item = next(iters).copy()
             totRuntime += item.get('duration')
             fileList.append(item)
@@ -275,7 +267,7 @@ class Builder:
         fileList      = []
         seasoneplist  = []
         method        = sort.get("method","random")
-        json_response = (self.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
+        json_response = (self.writer.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
         
         # malformed calls will return root response, catch a reparse of same folder and quit. 
         if json_response == self.loopback:
@@ -301,9 +293,9 @@ class Builder:
 
                 #parsing missing meta
                 if not item.get('streamdetails',{}).get('video',[]):
-                    item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
+                    item['streamdetails'] = self.writer.jsonRPC.getStreamDetails(file, media)
 
-                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
+                dur = self.writer.jsonRPC.getDuration(file, item, self.accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
                     # if int(item.get("year","0")) == 1601: #default null for kodi rpc?
@@ -344,7 +336,7 @@ class Builder:
                 
                     chprog = int((len(fileList)*100)//limit)
                     if self.progDialog is not None:
-                        self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
+                        self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
 
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])
@@ -353,6 +345,7 @@ class Builder:
                         
                     if len(fileList) >= limit:
                         break
+                        
                 else: self.log("buildFileList, id: %s skipping no duration meta found!"%(id),xbmc.LOGINFO)
                     
             elif fileType == 'directory' and (len(fileList) < limit) and (self.dirCount < roundupDIV(limit,2)): #extend fileList by parsing child folders, limit folder parsing to half limit to avoid runaways/loopbacks.
@@ -373,7 +366,7 @@ class Builder:
         self.log("buildLocalTrailers, citem = %s, fileList = %s"%(citem,len(fileList)))
         def getItem(item):
             file = item.get('trailer','')
-            if file: return {'label':item['label'],'duration':self.jsonRPC.parseDuration(file, item),'path':'','file':file}
+            if file: return {'label':item['label'],'duration':self.writer.jsonRPC.parseDuration(file, item),'path':'','file':file}
         return list(filter(None,list(set([getItem(fileItem) for fileItem in fileList]))))
     
     
@@ -386,7 +379,7 @@ class Builder:
         if not fileList: return fileList
         lstop            = 0
         nfileList        = list()
-        bctItems         = {key:(self.resources.buildResourceType(key, self.bctTypes.get(key,{}).get("paths",[]))) for key in self.bctTypes.keys() if self.bctTypes.get(key,{}).get('enabled',False)}
+        bctItems         = {key:(self.writer.jsonRPC.resources.buildResourceType(key, self.bctTypes.get(key,{}).get("paths",[]))) for key in self.bctTypes.keys() if self.bctTypes.get(key,{}).get('enabled',False)}
         print('bctItems',bctItems)
         
         chname           = citem.get('name','')
@@ -496,8 +489,8 @@ class Builder:
                         
                 #auto fill POST_ROLL
                 if auto_commercials | auto_trailers:
-                    while end > 0 and not self.monitor.abortRequested():
-                        if self.monitor.waitForAbort(0.001): break
+                    while end > 0 and not self.writer.monitor.abortRequested():
+                        if self.writer.monitor.waitForAbort(0.001): break
                         print('autofill while loop',end)
                         stpos = end
                         if commercials and auto_commercials and cnt_commercials <= max_commercials:

@@ -19,24 +19,16 @@
 # -*- coding: utf-8 -*-
      
 from resources.lib.globals     import *
-from resources.lib.resource    import Resources
 
 class M3U:
     def __init__(self, writer=None):
         self.log('__init__')
-        if writer:
-            self.writer = writer
-        else:
+        if writer is None:
             from resources.lib.parser import Writer
-            self.writer = Writer()
+            writer = Writer()
+        self.writer = writer
             
-        self.vault      = self.writer.vault
-        self.dialog     = self.writer.dialog
-        self.monitor    = self.writer.monitor
-        self.filelock   = self.writer.GlobalFileLock
-        self.resources  = Resources(self.writer.jsonRPC)
-        
-        if not self.vault.m3uList:
+        if self.writer.vault.m3uList is None:
             self._reload()
         else:
             self._withdraw()
@@ -48,25 +40,25 @@ class M3U:
         
     def _clear(self):
         self.log('_clear')
-        self.vault.m3uList  = {}
+        self.writer.vault.m3uList  = {}
         return self._deposit()
         
         
     def _reload(self):
         self.log('reload')
-        self.vault.m3uList = self._load()
+        self.writer.vault.m3uList = self._load()
         return self._deposit()
         
      
     def _deposit(self):
         self.log('_deposit')
-        self.vault.set_m3uList(self.vault.m3uList)
+        self.writer.vault.set_m3uList(self.writer.vault.m3uList)
         return True
         
     
     def _withdraw(self):
         self.log('_withdraw')
-        self.vault.m3uList = self.vault.get_m3uList()
+        self.writer.vault.m3uList = self.writer.vault.get_m3uList()
         return True
         
 
@@ -83,7 +75,7 @@ class M3U:
             file = os.path.join(TEMP_LOC,slugify(url),'.m3u')
             saveURL(url,file)
             
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             fle   = FileAccess.open(file, 'r')
             lines = (fle.readlines())
             data  = lines.pop(0)
@@ -118,7 +110,7 @@ class M3U:
                          'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
                          'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line)}
                 
-                item  = self.writer.channels.getCitem()
+                item = self.writer.channels.getCitem()
                 item.update({'number' :chCount,
                              'logo'   :LOGO,
                              'catchup':''})
@@ -131,7 +123,7 @@ class M3U:
                         else: continue
                     item[key] = match[key].group(1)
                     if key == 'logo':
-                        item[key] = self.resources.cleanLogoPath(item[key])
+                        item[key] = self.writer.jsonRPC.resources.cleanLogoPath(item[key])
                     elif key == 'number':
                         try:    item[key] = int(item[key])
                         except: item[key] = float(item[key])
@@ -171,15 +163,15 @@ class M3U:
 
     def saveM3U(self):
         self.log('saveM3U')
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             filePath = getUserFilePath(M3UFLE)
             fle = FileAccess.open(filePath, 'w')
             self.log('saveM3U, saving to %s'%(filePath))
-            fle.write('%s\n'%(self.vault.m3uList['data']))
+            fle.write('%s\n'%(self.writer.vault.m3uList['data']))
             keys     = list(self.writer.channels.getCitem().keys())
             keys.extend(['kodiprops','label'])#add keys to ignore from optional.
             citem    = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-            channels = self.sortStations(self.vault.m3uList.get('channels',[]))
+            channels = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
             
             for channel in channels:
                 optional = ''
@@ -209,7 +201,7 @@ class M3U:
         
     def deleteM3U(self):
         self.log('deleteM3U')
-        if FileAccess.delete(getUserFilePath(M3UFLE)): return self.dialog.notificationDialog(LANGUAGE(30016)%('M3U'))
+        if FileAccess.delete(getUserFilePath(M3UFLE)): return self.writer.dialog.notificationDialog(LANGUAGE(30016)%('M3U'))
         return False
         
         
@@ -249,7 +241,7 @@ class M3U:
                 
             importChannels = list(self.chkImport(importChannels,multiplier))
             self.log('importM3U, found import stations = %s'%(len(importChannels)))
-            self.vault.m3uList.get('channels',[]).extend(self.sortStations(importChannels))
+            self.writer.vault.m3uList.get('channels',[]).extend(self.sortStations(importChannels))
                 
         except Exception as e: self.log("importM3U, failed! " + str(e), xbmc.LOGERROR)
         return True
@@ -260,9 +252,22 @@ class M3U:
             return x if x % 1000 == 0 else x + 1000 - x % 1000
             
         def frange(start, stop, step):
-          while not self.monitor.abortRequested() and start < stop:
+          while not self.writer.monitor.abortRequested() and start < stop:
             yield float(start)
             start += decimal.Decimal(step)
+
+#todo
+# ERROR <general>: plugin.video.pseudotv.live-0.3.0y-M3U: importM3U, failed! [<class 'decimal.FloatOperation'>]
+# Traceback (most recent call last):
+# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 250, in importM3U
+# importChannels = list(self.chkImport(importChannels,multiplier))
+# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 271, in chkImport
+# chrange   = list(frange(chmin,chmax,0.1))
+# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 265, in frange
+# start += decimal.Decimal(step)
+# decimal.FloatOperation: [<class 'decimal.FloatOperation'>]
+
+
 
         channels  = self.sortStations(channels)
         chstart   = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
@@ -301,7 +306,7 @@ class M3U:
     
     def getStations(self):
         self.log('getStations')
-        return self.sortStations(self.vault.m3uList.get('channels',[]))
+        return self.sortStations(self.writer.vault.m3uList.get('channels',[]))
         
         
     def addStation(self, item):
@@ -310,13 +315,13 @@ class M3U:
         item['provider-type'] = 'local'
         item['provider-logo'] = HOST_LOGO
         idx, line = self.findStation(item)
-        if idx is None: self.vault.m3uList.get('channels',[]).append(item)
-        else: self.vault.m3uList.get('channels',[])[idx] = item # replace existing channel
+        if idx is None: self.writer.vault.m3uList.get('channels',[]).append(item)
+        else: self.writer.vault.m3uList.get('channels',[])[idx] = item # replace existing channel
         return True
 
 
     def findStation(self, citem, channels=None):
-        if channels is None: channels = self.vault.m3uList.get('channels',[])
+        if channels is None: channels = self.writer.vault.m3uList.get('channels',[])
         for idx, line in enumerate(channels):
             if line.get('id') == citem.get('id'):
                 self.log('findStation, idx = %s, line = %s'%(idx, line))
@@ -327,5 +332,5 @@ class M3U:
     def removeStation(self, citem):
         self.log('removeStation id = %s'%(citem['id']))
         idx, line = self.findStation(citem)
-        if idx is not None: self.vault.m3uList['channels'].pop(idx)
+        if idx is not None: self.writer.vault.m3uList['channels'].pop(idx)
         return True

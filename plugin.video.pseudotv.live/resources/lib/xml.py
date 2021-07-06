@@ -24,18 +24,12 @@ from resources.lib             import xmltv
 class XMLTV:
     def __init__(self, writer=None):
         self.log('__init__')
-        if writer:
-            self.writer = writer
-        else:
+        if writer is None:
             from resources.lib.parser import Writer
-            self.writer = Writer()
-            
-        self.pool       = self.writer.pool
-        self.vault      = self.writer.vault
-        self.dialog     = self.writer.dialog
-        self.filelock   = self.writer.GlobalFileLock
-        
-        if not self.vault.xmltvList:
+            writer = Writer()
+        self.writer = writer
+
+        if self.writer.vault.xmltvList is None:
             self._reload()
         else:
             self._withdraw()
@@ -47,39 +41,41 @@ class XMLTV:
             
     def _clear(self):
         self.log('_clear')
-        self.vault.xmltvList = {}
+        self.writer.vault.xmltvList = {}
         return self._deposit()
         
 
     def _reload(self):
         self.log('_reload')
-        self.vault.xmltvList = self._load()
+        self.writer.vault.xmltvList = self._load()
         return self._deposit()
         
         
     def _deposit(self):
         self.log('_deposit')
-        self.vault.set_xmltvList(self.vault.xmltvList)
+        self.writer.vault.set_xmltvList(self.writer.vault.xmltvList)
         return True
         
     
     def _withdraw(self):
         self.log('_withdraw')
-        self.vault.xmltvList = self.vault.get_xmltvList()
+        self.writer.vault.xmltvList = self.writer.vault.get_xmltvList()
         return True
      
 
     def _load(self):
         self.log('_load')
-        return {'data'       : self.loadData(),
-                'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
-                'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
+        xmltvList = {'data'       : self.loadData(),
+                     'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
+                     'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
+        xmltvList['endtimes'] = dict(self.loadEndTimes(xmltvList['channels'],xmltvList['programmes']))
+        return xmltvList
         
         
     def loadData(self):
         self.log('loadData')
         try: 
-            with fileLocker(self.filelock):
+            with fileLocker(self.writer.globalFileLock):
                 return (xmltv.read_data(FileAccess.open(getUserFilePath(XMLTVFLE), 'r')) or self.resetData())
         except Exception as e: 
             self.log('loadData, failed! %s'%(e))
@@ -89,7 +85,7 @@ class XMLTV:
     def loadChannels(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadChannels, file = %s'%file)
         try:
-            with fileLocker(self.filelock):
+            with fileLocker(self.writer.globalFileLock):
                 return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -100,7 +96,7 @@ class XMLTV:
     def loadProgrammes(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadProgrammes, file = %s'%file)
         try: 
-            with fileLocker(self.filelock):
+            with fileLocker(self.writer.globalFileLock):
                 return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -108,14 +104,30 @@ class XMLTV:
             return []
 
 
+    def loadEndTimes(self, channels=None, programmes=None, fallback=None):
+        if channels   is None: channels   = self.getChannels()
+        if programmes is None: programmes = self.getProgrammes()
+        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
+        print('loadEndTimes',len(channels))
+        for channel in channels:
+            try: 
+                stopDate = max([strpTime(program['stop'], DTFORMAT) for program in programmes if program['channel'] == channel['id']], default=fallback)
+                self.log('loadEndTimes, channel = %s, stopDate = %s'%(channel['id'],stopDate.strftime(DTFORMAT)))
+                yield channel['id'],datetime.datetime.timestamp(stopDate)
+            except Exception as e:
+                self.log("loadEndTimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
+                #self.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
+                yield channel['id'],datetime.datetime.timestamp(fallback)
+
+
     def saveXMLTV(self, reset=True):
         self.log('saveXMLTV')
         if reset: 
             data = self.resetData()
         else:     
-            data = self.vault.xmltvList['data']
+            data = self.writer.vault.xmltvList['data']
             
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
                                   date                = data['date'],
                                   source_info_url     = data['source-info-url'], 
@@ -123,10 +135,10 @@ class XMLTV:
                                   generator_info_url  = data['generator-info-url'], 
                                   generator_info_name = data['generator-info-name'])
                    
-            channels = self.sortChannels(self.vault.xmltvList['channels'])
-            for channel in channels: writer.addChannel(channel)
 
-            programmes = self.sortProgrammes(self.vault.xmltvList['programmes'])
+            programmes = self.sortProgrammes(self.writer.vault.xmltvList['programmes'])
+            channels   = self.sortChannels(self.cleanChannels(self.writer.vault.xmltvList['channels'], programmes))
+            for channel in channels:   writer.addChannel(channel)
             for program in programmes: writer.addProgramme(program)
             
             filePath = getUserFilePath(XMLTVFLE)
@@ -140,7 +152,7 @@ class XMLTV:
         self.log('deleteXMLTV')
         if FileAccess.delete(getUserFilePath(XMLTVFLE)): #xmltv.xml
             FileAccess.delete(getUserFilePath(GENREFLE)) #genre.xml
-            return self.dialog.notificationDialog(LANGUAGE(30016)%('XMLTV'))
+            return self.writer.dialog.notificationDialog(LANGUAGE(30016)%('XMLTV'))
         return False
 
 
@@ -151,11 +163,19 @@ class XMLTV:
         return list(filter(lambda item:item.get(key,'').endswith(slug), items))
         
         
+    @staticmethod
+    def cleanChannels(channels, programmes): # remove stations with no guidedata
+        stations    = list(set([program.get('channel') for program in programmes]))
+        tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]
+        log('XMLTV: cleanChannels, before = %s, after = %s'%(len(channels),len(tmpChannels)))
+        return tmpChannels
+        
+        
     def cleanProgrammes(self, programmes): # remove expired content
         try:
             min = (self.writer.jsonRPC.getSettingValue('epg.pastdaystodisplay')  or 1)
             now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(days=min) #allow some old programmes to avoid empty cells.
-            tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT)  > now]
+            tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT) > now]
         except Exception as e: 
             self.log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
@@ -201,8 +221,8 @@ class XMLTV:
                 
             importChannels, importProgrammes = self.chkImport(importChannels, importProgrammes)
             self.log('importXMLTV, found importChannels = %s, importProgrammes = %s'%(len(importChannels),len(importProgrammes)))
-            self.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
-            self.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
+            self.writer.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
+            self.writer.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
                             
         except Exception as e: self.log("importXMLTV, failed! " + str(e), xbmc.LOGERROR)
         return True
@@ -217,7 +237,7 @@ class XMLTV:
                         except: continue
                           
             tmpChannels = channels.copy() 
-            self.pool.poolList(parsePrograms,channels)
+            self.writer.pool.poolList(parsePrograms,channels)
             for channel in tmpChannels: programmes.append(self.addSingleEntry(channel))
             self.log("chkImport, added %s single entries"%(len(tmpChannels)))
         except Exception as e: 
@@ -227,7 +247,7 @@ class XMLTV:
 
     def buildGenres(self):
         self.log('buildGenres') #todo user color selector.
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
         
         epggenres = {}
@@ -238,7 +258,7 @@ class XMLTV:
                 epggenres[item.strip()] = line.attributes['genreId'].value
             
         proggenres = []
-        for program in self.vault.xmltvList['programmes']:
+        for program in self.writer.vault.xmltvList['programmes']:
             group = []
             for genre in program.get('category',[]):
                 group.append(genre[0])
@@ -264,21 +284,27 @@ class XMLTV:
             gen.appendChild(doc.createTextNode(key))
             root.appendChild(gen)
         
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
             xmlData.write(doc.toprettyxml(indent='\t'))
             xmlData.close()
             return True
 
 
+    def getEndtimes(self, start=None):
+        self.log('getEndtimes')
+        if start: return dict(self.loadEndTimes(fallback=start))
+        else:     return self.writer.vault.xmltvList.get('endtimes',{})
+        
+        
     def getChannels(self):
         self.log('getChannels')
-        return self.sortChannels(self.vault.xmltvList.get('channels',[]))
+        return self.sortChannels(self.writer.vault.xmltvList.get('channels',[]))
 
 
     def getProgrammes(self):
         self.log('getProgrammes')
-        return self.sortProgrammes(self.vault.xmltvList.get('programmes',[]))
+        return self.sortProgrammes(self.writer.vault.xmltvList.get('programmes',[]))
 
 
     def resetData(self):
@@ -295,9 +321,9 @@ class XMLTV:
                      'display-name' : [(self.cleanString(item['name']), LANG)],
                      'icon'         : [{'src':item['logo']}]})
         self.log('addChannel, citem = %s'%(citem))
-        idx, channel = self.findChannel(citem, channels=self.vault.xmltvList['channels'])
-        if idx is None: self.vault.xmltvList['channels'].append(citem)
-        else: self.vault.xmltvList['channels'][idx] = citem # replace existing channel meta
+        idx, channel = self.findChannel(citem, channels=self.writer.vault.xmltvList['channels'])
+        if idx is None: self.writer.vault.xmltvList['channels'].append(citem)
+        else: self.writer.vault.xmltvList['channels'][idx] = citem # replace existing channel meta
         return True
 
 
@@ -307,7 +333,6 @@ class XMLTV:
                       'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                       'title'       : [(self.cleanString(item['title']), LANG)],
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
-                      'star-rating' : [{'value': self.cleanStar(item['stars'])}],
                       'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
                       'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
                       'icon'        : [{'src': item['thumb']}],
@@ -316,8 +341,14 @@ class XMLTV:
         if item.get('sub-title',''):
             pitem['sub-title'] = [(self.cleanString(item['sub-title']), LANG)]
 
+        if item.get('stars'):
+            pitem['star-rating'] = [{'value': '%s/10'%(int(round(float(item['stars']))))}]
+                      
         if item.get('director',''):
             pitem['credits']['director'] = [self.cleanString(item['director'])]
+            
+        if item.get('actor',''):
+            pitem['credits']['actor'] = item['actor']
 
         if item.get('catchup-id',''):
             pitem['catchup-id'] = item['catchup-id']
@@ -329,34 +360,35 @@ class XMLTV:
         if item.get('new',False): 
             pitem['new'] = '' #write empty tag, tag == True
         
-        rating = self.cleanMPAA(item.get('rating',''))
-        if rating != 'NA' and rating.startswith('TV'): 
-            pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
-        elif rating != 'NA' :  
-            pitem['rating'] = [{'system': 'MPAA', 'value': rating}]
+        rating = item.get('rating','')
+        if rating != 'NA':
+            if rating.lower().startswith('tv'): 
+                pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
+            else:  
+                pitem['rating'] = [{'system': 'MPAA', 'value': rating}]
             
         if item.get('episode-num',{}): 
             pitem['episode-num'] = [(item['episode-num'].get('xmltv_ns',''), 'xmltv_ns'),
                                     (item['episode-num'].get('onscreen',''), 'onscreen')]
             
-        if item.get('audio',[]):
-            pitem['audio'] = {'stereo': item.get('audio',[])[0]}
+        if item.get('audio',False):
+            pitem['audio'] = [{'stereo': 'stereo'}]
 
-        if item.get('video',[]):
-            pitem['video'] = {'aspect': item.get('video',[])[0]}
+        # if item.get('video',{}):
+            # pitem['video'] = [{'aspect': item.get('video',{}).get('aspect')}]
         
-        if item.get('language',[]):
-            pitem['language'] = (item.get('language',[])[0], LANG)
+        # if item.get('language',''):
+            # pitem['language'] = [(item.get('language'), LANG)]
            
-        if item.get('subtitle',[]): #needed?
-            pitem['subtitles'] = [{'type': 'teletext', 'language': ('%s'%(sub), LANG)} for sub in item.get('subtitle',[])]
+        # if item.get('subtitle',[]):
+            # pitem['subtitles'] = [{'type': 'teletext', 'language': ('%s'%(sub), LANG)} for sub in item.get('subtitle',[])]
             
          ##### TODO #####
            # 'country'     : [('USA', LANG)],#todo
            # 'premiere': (u'Not really. Just testing', u'en'),
-            
+           
         self.log('addProgram = %s'%(pitem.get('channel')))
-        self.vault.xmltvList['programmes'].append(pitem)
+        self.writer.vault.xmltvList['programmes'].append(pitem)
         return True
 
 
@@ -374,39 +406,23 @@ class XMLTV:
 
 
     def removeChannel(self, citem): # remove single channel and all programmes from xmltvList
-        channels   = self.vault.xmltvList['channels'].copy()
-        programmes = self.vault.xmltvList['programmes'].copy()
-        self.vault.xmltvList['channels']   = list(filter(lambda channel:channel.get('id') != citem.get('id'), channels))
-        self.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
-        self.log('removeChannel, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.vault.xmltvList['channels']),len(programmes),len(self.vault.xmltvList['programmes'])))
+        channels   = self.writer.vault.xmltvList['channels'].copy()
+        programmes = self.writer.vault.xmltvList['programmes'].copy()
+        self.writer.vault.xmltvList['channels']   = list(filter(lambda channel:channel.get('id') != citem.get('id'), channels))
+        self.writer.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
+        self.log('removeChannel, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.writer.vault.xmltvList['channels']),len(programmes),len(self.writer.vault.xmltvList['programmes'])))
         return True
         
         
     def findChannel(self, citem, channels=None): #find existing channel id in xmltvList
-        if channels is None: channels = self.vault.xmltvList['channels']
+        if channels is None: channels = self.writer.vault.xmltvList['channels']
         for idx, channel in enumerate(channels): 
             if channel.get('id') == citem.get('id'): 
                 return idx, channel
         return None, {}
-        
-
-    @staticmethod
-    def cleanStar(str1):
-        return '%s/10'%(int(round(float(str1))))
-
-
-    @staticmethod
-    def cleanMPAA(text):
-        #todo regex, detect other region rating formats
-        # re.compile(':(.*)', re.IGNORECASE).search(text))
-        try:
-            text = re.sub('/ US', ''  , text)
-            text = re.sub('Rated ', '', text)
-            return text
-        except: return text
 
 
     @staticmethod
     def cleanString(text):
-        if text == ',' or not text: text = LANGUAGE(30161) #"Unavailable"
+        if text == ', ' or not text: text = LANGUAGE(30161) #"Unavailable"
         return text

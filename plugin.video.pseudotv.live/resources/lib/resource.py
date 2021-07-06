@@ -32,8 +32,8 @@ class Resources:
     def __init__(self, jsonRPC):
         self.log('__init__')
         self.jsonRPC  = jsonRPC
-        self.cache    = self.jsonRPC.cache
-        self.pool     = self.jsonRPC.pool
+        self.cache    = jsonRPC.cache
+        self.pool     = jsonRPC.pool
         self.logoSets = self.buildLogoResources()
         
         

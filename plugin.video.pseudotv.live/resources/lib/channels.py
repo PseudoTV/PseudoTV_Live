@@ -24,18 +24,13 @@ from resources.lib.globals     import *
 class Channels:
     def __init__(self, writer=None):
         self.log('__init__')
-        if writer:
-            self.writer = writer
-        else:
-            from resources.lib.writer import Writer
-            self.writer = Writer()
-            
-        self.vault      = self.writer.vault
-        self.cache      = self.writer.cache
-        self.monitor    = self.writer.monitor
-        self.filelock   = self.writer.GlobalFileLock
+        if writer is None:
+            from resources.lib.parser import Writer
+            writer = Writer()
+        self.writer = writer
+        self.cache  = writer.cache
         
-        if not self.vault.channelList: 
+        if self.writer.vault.channelList is None: 
             self._reload()
         else: 
             self._withdraw()
@@ -47,28 +42,28 @@ class Channels:
 
     def _clear(self):
         self.log('_clear')
-        self.vault.channelList = {}
+        self.writer.vault.channelList = {}
         return self._deposit()
         
 
     def _reload(self):
         self.log('_reload')
-        self.vault.channelList = self.getTemplate()
-        self.vault.channelList.update(self.cleanSelf(self._load()))
+        self.writer.vault.channelList = self.getTemplate()
+        self.writer.vault.channelList.update(self.cleanSelf(self._load()))
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
         self.chkClient()
         return self._deposit()
         
         
     def _deposit(self):
-        self.log('_deposit')
-        self.vault.set_channelList(self.vault.channelList)
+        self.log('_deposit, channels = %s'%(len(self.writer.vault.channelList.get('channels',[]))))
+        self.writer.vault.set_channelList(self.writer.vault.channelList)
         return True
         
     
     def _withdraw(self):
-        self.log('_withdraw')
-        self.vault.channelList = self.vault.get_channelList()
+        self.writer.vault.channelList = self.writer.vault.get_channelList()
+        self.log('_withdraw, channels = %s'%(len(self.writer.vault.channelList)))
         return True
         
 
@@ -76,7 +71,7 @@ class Channels:
         self.log('_load, file = %s'%(file))
         if not FileAccess.exists(file): 
             file = CHANNELFLE_DEFAULT
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()
@@ -89,25 +84,23 @@ class Channels:
         
        
     def saveChannels(self):
-        with fileLocker(self.filelock):
+        with fileLocker(self.writer.globalFileLock):
             filePath = getUserFilePath(CHANNELFLE)
             fle = FileAccess.open(filePath, 'w')
-            self.log('save, saving to %s'%(filePath))
-            fle.write(dumpJSON(self.cleanSelf(self.vault.channelList), idnt=4, sortkey=False))
+            self.log('saveChannels, saving %s channels to %s'%(len(self.getChannels()),filePath))
+            fle.write(dumpJSON(self.cleanSelf(self.writer.vault.channelList), idnt=4, sortkey=False))
             fle.close()
             return self._reload()
 
 
     @cacheit(checksum=ADDON_VERSION,json_data=True)
     def getTemplate(self):
-        self.log('getTemplate')
         channelList = (self._load(CHANNELFLE_DEFAULT) or {})
         channelList['uuid'] = self.getUUID(channelList)
         return channelList
 
 
-    def getCitem(self):
-        self.log('getCitem') #channel schema
+    def getCitem(self):#channel schema
         citem = self.getTemplate().get('channels',[])[0].copy()
         citem['rules'] = []
         return citem
@@ -126,21 +119,21 @@ class Channels:
 
   
     def getMYUUID(self):
-        uuid = SETTINGS.getSetting('MY_UUID')
+        uuid = SETTINGS.getCacheSetting('MY_UUID')
         if not uuid: 
             uuid = genUUID(seed=getIP())
-            SETTINGS.setSetting('MY_UUID',uuid)
+            SETTINGS.setCacheSetting('MY_UUID',uuid)
         return uuid
 
 
     def getUUID(self, channelList=None):
         if channelList is None: 
-            channelList = self.vault.channelList
+            channelList = self.writer.vault.channelList
         uuid = channelList.get('uuid','')
         if not uuid: 
             uuid = self.getMYUUID()
             channelList['uuid'] = uuid
-            self.vault.channelList = channelList
+            self.writer.vault.channelList = channelList
         return uuid
             
             
@@ -155,17 +148,20 @@ class Channels:
 
 
     def getChannels(self):
-        self.log('getChannels')
-        return self.sortChannels(self.vault.channelList.get('channels',[]))
+        channels = self.sortChannels(self.writer.vault.channelList.get('channels',[]))
+        self.log('getChannels, channels = %s'%(len(channels)))
+        return channels
+
+
+    def getUserChannels(self):
+        return self.sortChannels(list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.getChannels())))
 
 
     def getPredefinedChannels(self):
-        self.log('getPredefinedChannels')
-        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.vault.channelList.get('channels',[]))))
+        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels())))
 
 
     def getPredefinedChannelsByType(self, type, channels=None):
-        self.log('getPredefinedChannelsByType')
         if channels is None: channels = self.getPredefinedChannels()
         return self.sortChannels(filter(lambda c:c.get('type') == type, channels))
 
@@ -181,18 +177,18 @@ class Channels:
         self.log('setPage, id = %s, page = %s'%(id, page))
         idx, citem = self.findChannel({'id':id})
         if idx is None: return False
-        self.vault.channelList['channels'][idx]['page'] = page
-        return True
+        self.writer.vault.channelList['channels'][idx]['page'] = page
+        return self.saveChannels()
 
 
     def getImports(self):
         self.log('getImports')
-        return self.vault.channelList.get('imports',[])
+        return self.writer.vault.channelList.get('imports',[])
 
 
     def setImports(self, imports): #save called by config.
         self.log('setImports, imports = %s'%(imports))
-        self.vault.channelList['imports'] = imports
+        self.writer.vault.channelList['imports'] = imports
         return True
 
 
@@ -204,24 +200,24 @@ class Channels:
                 citem[key] = channel[key] # existing id found, reuse channel meta.
             citem['group'] = list(set(citem.get('group',[])))
             self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
-            self.vault.channelList['channels'][idx] = citem #can't .update() must replace.
+            self.writer.vault.channelList['channels'][idx] = citem #can't .update() must replace.
         else:
             citem['group'] = list(set(citem.get('group',[])))
             self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
-            self.vault.channelList.setdefault('channels',[]).append(citem)
-        self.log('addChannel, total channels = %s'%(len(self.vault.channelList.get('channels',[]))))
+            self.writer.vault.channelList.setdefault('channels',[]).append(citem)
+            self.log('addChannel, total channels = %s'%(len(self.writer.vault.channelList.get('channels',[]))))
         return True
         
         
     def removeChannel(self, citem):
         self.log('removeChannel, id = %s'%(citem['id']))
         idx, channel = self.findChannel(citem)
-        if idx is not None: self.vault.channelList['channels'].pop(idx)
+        if idx is not None: self.writer.vault.channelList['channels'].pop(idx)
         return True
 
         
     def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.vault.channelList.get('channels',[])
+        if channels is None: channels = self.writer.vault.channelList.get('channels',[])
         for idx, channel in enumerate(channels):
             if citem.get("id") == channel.get("id"):
                 self.log('findChannel, item = %s, found = %s'%(citem['id'],channel['id']))
@@ -239,7 +235,7 @@ class Channels:
     def clearChannels(self):
         self.log('clearChannels')
         return self._clear()
-       
+
        
     def reloadChannels(self):
         self.log('reloadChannels')

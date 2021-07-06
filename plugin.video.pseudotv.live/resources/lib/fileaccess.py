@@ -375,7 +375,6 @@ class FileLock:
 
 
     def grabLockFile(self):
-        log("FileLock: grabLockFile")
         # Wait a maximum of 20 seconds to grab file-lock file.  This long
         # timeout should help prevent issues with an old cache.
         for i in range(40):

@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals import *
-from plugin  import Plugin
+from plugin                import Plugin
 
 class Context:
     def __init__(self, sysARG, writer):

@@ -33,9 +33,6 @@ ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 LANGUAGE      = REAL_SETTINGS.getLocalizedString
 COLOR_LOGO    = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
     
-def splitPath(filepath):
-    return (os.path.split(filepath))
-    
 def dumpJSON(item):
     try:    return json.dumps(item)
     except: return ''
@@ -64,6 +61,11 @@ class Settings:
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def getRealSettings(self):
+        try:    return xbmcaddon.Addon(id=ADDON_ID)
+        except: return self.realSetting
+
+
     def openSettings(self):     
         self.realSetting.openSettings()
     
@@ -78,7 +80,7 @@ class Settings:
 
 
     def getSetting(self, key):
-        return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
+        return self._getSetting(self.getRealSettings().getSetting,key)
         
         
     def getSettingList(self, key):
@@ -90,14 +92,14 @@ class Settings:
     
     
     def getSettingBool(self, key):
-        try:    return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingBool,key)
-        except: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key).lower() == "true" 
+        try:    return self._getSetting(self.getRealSettings().getSettingBool,key)
+        except: return self._getSetting(self.getRealSettings().getSetting,key).lower() == "true" 
         
         
     def getSettingInt(self, key):
-        try: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingInt,key)
+        try: return self._getSetting(self.getRealSettings().getSettingInt,key)
         except:
-            value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
+            value = self._getSetting(self.getRealSettings().getSetting,key)
             if value.isdecimal():
                 return int(value)
             elif value.isdigit(): 
@@ -107,7 +109,7 @@ class Settings:
               
               
     def getSettingFloat(self, key):
-        value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
+        value = self._getSetting(self.getRealSettings().getSetting,key)
         if value.isdecimal():
             return float(value)
         elif value.isdigit(): 
@@ -117,9 +119,9 @@ class Settings:
               
               
     def getSettingNumber(self, key): 
-        try: return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingNumber,key)
+        try: return self._getSetting(self.getRealSettings().getSettingNumber,key)
         except:
-            value = self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSetting,key)
+            value = self._getSetting(self.getRealSettings().getSetting,key)
             if value.isdecimal():
                 return float(value)
             elif value.isdigit(): 
@@ -129,7 +131,7 @@ class Settings:
         
         
     def getSettingString(self, key):
-        return self._getSetting(xbmcaddon.Addon(id=ADDON_ID).getSettingString,key)
+        return self._getSetting(self.getRealSettings().getSettingString,key)
         
         
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
@@ -147,7 +149,6 @@ class Settings:
         try:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             func(key, value)
-            self.setCacheSetting(key, value,json_data=isinstance(value,dict))
         except Exception as e: 
             self.log("_setSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
         
@@ -489,7 +490,7 @@ class Dialog:
                            {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
                            {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
                 if default:
-                    default, file = splitPath(default)
+                    default, file = os.path.split(default)
                     if file: type = 1
                     else:    type = 0
                     options.insert(0,{"label":"Existing Path", "label2":default, "default":default , "mask":"", "type":type, "multi":False})

@@ -41,15 +41,7 @@ class Player(xbmc.Player):
 class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.player             = kwargs.get('player')
-        self.service            = self.player.myService
-        self.rules              = self.service.rules
-        self.dialog             = self.service.dialog
-        self.monitor            = self.service.monitor
-        
-        from resources.lib.jsonrpc import JSONRPC 
-        self.jsonRPC = JSONRPC()
-        
+        self.service            = kwargs.get('service')
         self.ruleList           = {}
         self.pvritem            = {}
         self.citem              = {}
@@ -61,6 +53,7 @@ class Overlay(xbmcgui.WindowXML):
         self.staticOverlay      = False
         self.showChannelBug     = False
         self.showOnNext         = False
+        
         self.bugToggleThread    = threading.Timer(5.0, self.bugToggle)
         self.onNextChkThread    = threading.Timer(5.0, self.onNextChk)
         self.onNextToggleThread = threading.Timer(5.0, self.onNextToggle)
@@ -139,7 +132,7 @@ class Overlay(xbmcgui.WindowXML):
     def load(self):
         try:
             self.log('load')
-            self.pvritem = self.player.getPVRitem()
+            self.pvritem = self.service.player.getPVRitem()
             if not self.pvritem or not isPseudoTV(): 
                 return False
                 
@@ -162,11 +155,11 @@ class Overlay(xbmcgui.WindowXML):
                 nextitem.get('art',{})['thumb'] = getThumb(nextitem) #unify artwork
                 self.nextwriters.append(nextitem)
 
-            self.listitems   = [self.dialog.buildItemListItem(self.nowwriter)]
-            self.listitems.extend([self.dialog.buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
+            self.listitems   = [self.service.writer.dialog.buildItemListItem(self.nowwriter)]
+            self.listitems.extend([self.service.writer.dialog.buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
             self.container.addItems(self.listitems)
                         
-            self.ruleList    = self.rules.loadRules([self.citem])
+            self.ruleList    = self.service.writer.rules.loadRules([self.citem])
             self.runActions(RULES_ACTION_OVERLAY, self.citem)
             self.static.setVisible(self.staticOverlay)
             self.myPlayer.onPlayBackStarted()
@@ -304,19 +297,19 @@ class Overlay(xbmcgui.WindowXML):
     def sendButton(self, id):
         self.log('sendButton, id = %s'%(id))
         json_query = ('{"jsonrpc":"2.0","method":"Input.ButtonEvent","params":{"button":"%s","keymap":"KB"},"id":1}'%id)
-        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
             return True
         
         
     def sendAction(self, id):
         self.log('sendAction, id = %s'%(id))
         json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"%s"},"id":1}'%id)
-        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
             return True  
             
             
     def openWindow(self, id):
         self.log('openWindow, id = %s'%(id))
         json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
-        if 'OK' in self.jsonRPC.sendJSON(json_query).get('result',''): 
+        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
             return True

@@ -4,7 +4,10 @@ v.0.3.1
 -Fixed playlist playback mode busy spinner.
 -Improved concurrent/parallel operations (reduced memory demands).
 -Added consolidated utilities, one menu accessible in settings. PseudoTV Live default execution changed to open settings.
--Max guide day setting disabled moved to Kodi "LiveTV & PVR" setting.
+-Max guide day setting disabled and moved to Kodi "PVR & LiveTV" and now reflects aforementioned setting.
+-Added additional xmltv meta: Actors, Director, Audio, Language and Subtitles.
+-Various improvements, tweaks and fixes.
+-"Smarter" updating methods, less redundant background parsing and updates.
 
 v.0.3.0
 -Added import support for new IPTV Simple m3u parameters. ie. "x-tvg-url", all "provider" and "catchup" parameters; including "#EXTGRP" (#EXTGRP converted to "group-title").

@@ -20,44 +20,27 @@
 from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
-from resources.lib.concurrency import Concurrent
 
 
 class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
 
-    def __init__(self, inherited=None):
+    def __init__(self, writer=None):  
         self.log('__init__')
-        if inherited:
-            self.monitor = inherited.monitor
-            self.player  = inherited.player
-            self.cache   = inherited.cache
-            self.dialog  = inherited.dialog
-            self.pool    = inherited.pool
-            self.rules   = inherited.rules
-        else:
-            from resources.lib.cache import Cache
-            from resources.lib.concurrency import PoolHelper
-            from resources.lib.rules import RulesList
-            self.monitor = xbmc.Monitor()
-            self.player  = xbmc.Player()
-            self.cache   = Cache()
-            self.dialog  = Dialog()
-            self.pool    = PoolHelper()
-            self.rules   = RulesList()
-
-        if inherited.__class__.__name__ == 'Writer':
-            self.writer  = inherited
-        else:
+        if writer is None:
             from resources.lib.parser import Writer
-            self.writer  = Writer(self)
+            writer = Writer()
+            
+        self.writer       = writer
+        self.cache        = writer.cache
+        self.pool         = writer.pool
+        self.sendQueue    = PriorityQueue()
+        self.videoParser  = VideoParser()
+        self.resources    = Resources(jsonRPC=self)
         
-        self.concurrent  = Concurrent()
-        self.sendQueue   = PriorityQueue()
-        self.videoParser = VideoParser()
-        self.resources = Resources(self)
-        self.queueThread = threading.Timer(1.0, self.startQueueWorker)
+        self.queueThread  = threading.Timer(1.0, self.startQueueWorker)
+        self.queueRunning = False
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -137,17 +120,17 @@ class JSONRPC:
 
 
     def sendJSON(self, command):
-        try:    return self.concurrent.executor(sendJSON,command)
-        except: return sendJSON(command)
-        
+        if self.queueRunning: return self.writer.pool.executor(sendJSON,command)
+        else:                 return sendJSON(command)
 
-    def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=""):
-        cacheName = 'cacheJSON.%s'%(command)
-        cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
+
+    def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
+        cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(command)))
+        cacheResponse = self.writer.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)
             if cacheResponse.get('result',None):
-                self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+                self.writer.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
@@ -165,12 +148,14 @@ class JSONRPC:
 
     def startQueueWorker(self):
         self.log('startQueueWorker, starting thread worker')
-        while not self.monitor.abortRequested():
-            if self.monitor.waitForAbort(1) or self.sendQueue.empty(): break
+        self.queueRunning = True
+        while not self.writer.monitor.abortRequested():
+            if self.writer.monitor.waitForAbort(1) or self.sendQueue.empty(): break
             try: 
                 self.sendJSON(self.sendQueue.get())
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
+        self.queueRunning = False
         self.log('startQueueWorker, finishing thread worker')
 
 
@@ -190,28 +175,20 @@ class JSONRPC:
 
     def getPlayerItem(self, playlist=False):
         self.log('getPlayerItem, playlist = %s' % (playlist))
-        if playlist:
-            json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}' % (
-                self.getActivePlaylist())
-        else:
-            json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}' % (
-                self.getActivePlayer())
+        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}'%(self.getActivePlaylist())
+        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}'%(self.getActivePlayer())
         result = self.sendJSON(json_query).get('result', {})
         return (result.get('item', {}) or result.get('items', []))
 
 
     @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),json_data=True)  # channel surfing buffer! cache/io impact needs to be eval., cache maybe overkill? video content can not be lower than cache expiration.
     def getPVRChannels(self, radio=False):
-        json_query = (
-                    '{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}' % (
-            {True: 'allradio', False: 'alltv'}[radio]))
+        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}'%({True:'allradio',False:'alltv'}[radio]))
         return self.sendJSON(json_query).get('result', {}).get('channels', [])
 
 
     def getPVRBroadcasts(self, id):
-        json_query = (
-                    '{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","endtime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}' % (
-                id))
+        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","endtime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}'%(id))
         return self.sendJSON(json_query).get('result', {}).get('broadcasts', [])
 
 
@@ -221,47 +198,37 @@ class JSONRPC:
 
     def getAddons(self,params='{"type":"xbmc.addon.video","enabled":true,"properties":["name","version","description","summary","path","author","thumbnail","disclaimer","fanart","dependencies","extrainfo"]}',cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":%s,"id":1}' % (params))
-        if cache:
-            return self.cacheJSON(json_query).get('result', {}).get('addons', [])
-        else:
-            return self.sendJSON(json_query).get('result', {}).get('addons', [])
+        if cache: return self.cacheJSON(json_query).get('result', {}).get('addons', [])
+        else:     return self.sendJSON(json_query).get('result', {}).get('addons', [])
 
 
     def getSongs(self, params='{"properties":["genre"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"AudioLibrary.GetSongs","params":%s,"id":1}' % (params))
-        if cache:
-            return self.cacheJSON(json_query).get('result', {}).get('songs', [])
-        else:
-            return self.sendJSON(json_query).get('result', {}).get('songs', [])
+        if cache: return self.cacheJSON(json_query).get('result', {}).get('songs', [])
+        else:     return self.sendJSON(json_query).get('result', {}).get('songs', [])
 
 
     def getTVshows(self, params='{"properties":["title","genre","year","studio","art","file","episode"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetTVShows","params":%s,"id":1}' % (params))
-        if cache:
-            return self.cacheJSON(json_query).get('result', {}).get('tvshows', [])
-        else:
-            return self.sendJSON(json_query).get('result', {}).get('tvshows', [])
+        if cache: return self.cacheJSON(json_query).get('result', {}).get('tvshows', [])
+        else:     return self.sendJSON(json_query).get('result', {}).get('tvshows', [])
 
 
     def getMovies(self, params='{"properties":["title","genre","year","studio","art","file"]}', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetMovies","params":%s,"id":1}' % (params))
-        if cache:
-            return self.cacheJSON(json_query).get('result', {}).get('movies', [])
-        else:
-            return self.sendJSON(json_query).get('result', {}).get('movies', [])
+        if cache: return self.cacheJSON(json_query).get('result', {}).get('movies', [])
+        else:     return self.sendJSON(json_query).get('result', {}).get('movies', [])
 
 
     def getDirectory(self, params='', cache=True, total=0):
         json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":%s,"id":1}' % (params))
-        if cache:
-            return self.cacheJSON(json_query, checksum=total).get('result', {})
-        else:
-            return self.sendJSON(json_query).get('result', {})
+        if cache: return self.cacheJSON(json_query, checksum=total).get('result', {})
+        else:     return self.sendJSON(json_query).get('result', {})
 
 
     def getStreamDetails(self, path, media='video'):
         json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["streamdetails"]},"id":1}' % ((path), media))
-        return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=path).get('result',{}).get('filedetails',{}).get('streamdetails',{})
+        return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getFileSize(self, path, media='video', real=False):
@@ -277,7 +244,7 @@ class JSONRPC:
                 return 0
         else:
             json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["size"]},"id":1}' % ((path), media))
-            return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=path).get('result',{}).get('filedetails',{}).get('size',0)
+            return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('size',0)
             
 
     def getSettingValue(self, key):
@@ -293,7 +260,7 @@ class JSONRPC:
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://','upnp://','pvr://')): return True
         # todo test seek for support disable via adv. rule if fails.
-        self.dialog.notificationDialog(LANGUAGE(30142))
+        self.writer.dialog.notificationDialog(LANGUAGE(30142))
         liz = xbmcgui.ListItem('Seek Test', path=file)
         playpast = False
         progress = int(dur / 2)
@@ -301,25 +268,25 @@ class JSONRPC:
         liz.setProperty('resumetime', str(progress))
         liz.setProperty('startoffset', str(progress))
         liz.setProperty("IsPlayable", "true")
-        if self.player.isPlaying(): return True  # todo prompt to stop playback and test.
-        self.player.play(file, liz, windowed=True)
-        while not self.monitor.abortRequested():
+        if self.writer.player.isPlaying(): return True  # todo prompt to stop playback and test.
+        self.writer.player.play(file, liz, windowed=True)
+        while not self.writer.monitor.abortRequested():
             self.log('chkSeeking seeking')
-            if self.monitor.waitForAbort(2):
+            if self.writer.monitor.waitForAbort(2):
                 break
-            elif not self.player.isPlaying():
+            elif not self.writer.player.isPlaying():
                 break
-            if int(self.player.getTime()) > progress:
+            if int(self.writer.player.getTime()) > progress:
                 self.log('chkSeeking seeking complete')
                 playpast = True
                 break
-        while not self.monitor.abortRequested() and self.player.isPlaying():
-            if self.monitor.waitForAbort(1): break
+        while not self.writer.monitor.abortRequested() and self.writer.player.isPlaying():
+            if self.writer.monitor.waitForAbort(1): break
             self.log('chkSeeking stopping playback')
-            self.player.stop()
+            self.writer.player.stop()
         msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
         self.log('chkSeeking file = %s %s' % (file, msg))
-        self.dialog.notificationDialog(msg)
+        self.writer.dialog.notificationDialog(msg)
         return playpast
 
 
@@ -417,16 +384,17 @@ class JSONRPC:
 
 
     def parseDuration(self, path, item={}, save=None):
-        cacheName = 'parseDuration.%s' % (path)
+        cacheName = 'parseDuration.%s'%(getMD5(path))
+        cacheCHK  = getMD5(path)
         runtime   = int(item.get('runtime', '') or item.get('duration', '') or
                        (item.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration', '') or '0')
                        
-        duration  = self.cache.get(cacheName, checksum=path, json_data=False)
+        duration  = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:
                 duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item)
                 if duration > 0:
-                    self.cache.set(cacheName, duration, checksum=path, expiration=datetime.timedelta(days=28),json_data=False)
+                    self.writer.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
@@ -497,8 +465,7 @@ class JSONRPC:
                     'pvr://channels/tv/*']
 
         for path in pvrPaths:
-            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}' % (path), cache=False).get(
-                'files', [])
+            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}' % (path), cache=False).get('files', [])
             if not json_response: continue
             item = list(filter(lambda k: k.get('id', -1) == channelid, json_response))
             if item:
@@ -508,7 +475,7 @@ class JSONRPC:
         return ''
 
 
-    def matchPVRChannel(self, chname, id, radio=False):  # Convert PseudoTV Live channelID into a Kodi channelID for playback
+    def matchPVRChannel(self, chname, id, radio=False, second_attempt=False):  # Convert PseudoTV Live channelID into a Kodi channelID for playback
         def _matchChannel(channel):
             # match = re.compile('\, (.*)', re.IGNORECASE).search(chname)
             # if match: chname_alt = match.group(1)
@@ -516,16 +483,19 @@ class JSONRPC:
             chname_alt = chname
             if channel.get('label') in [chname,chname_alt]:
                 for key in ['broadcastnow', 'broadcastnext']:
-                    writer = getWriter(channel.get(key, {}).get('writer', ''))
-                    if writer.get('citem', {}).get('id', '') == id:
-                        log('matchPVRChannel, match found! id = %s' % (id))
+                    writer = getWriter(channel.get(key,{}).get('writer',''))
+                    if writer.get('citem',{}).get('id','') == id:
+                        log('matchPVRChannel, match found! id = %s'%(id))
                         return channel
             return None
 
-        results = self.pool.poolList(_matchChannel, self.getPVRChannels(radio))
+        results = self.writer.pool.poolList(_matchChannel, self.getPVRChannels(radio))
         if results and isinstance(results, list): results = results[0]
         if not results:
-            return {}
+            if not second_attempt:
+                if brutePVR(override=True):
+                    return self.matchPVRChannel(chname, id, radio, True)
+            else: return {}
         else:
             return results
 
@@ -534,8 +504,8 @@ class JSONRPC:
         self.log('fillPVRbroadcasts, channelItem = %s, cache = %s' % (channelItem, cache))
         def _parseBroadcasts():
             if cache:  # todo use checksum to refresh?
-                cacheName = 'fillPVRbroadcasts.%s' % (channelItem.get('citem'))
-                cacheResponse = self.cache.get(cacheName, checksum="", json_data=True)
+                cacheName = 'fillPVRbroadcasts.%s'%(channelItem.get('citem',{}).get('id'))
+                cacheResponse = self.writer.cache.get(cacheName, checksum="", json_data=True)
                 if not cacheResponse:
                     cacheResponse = self.getPVRBroadcasts(channelItem['channelid'])
                     if cacheResponse:
@@ -544,10 +514,10 @@ class JSONRPC:
                             lastTime = (strpTime(cacheResponse[-1].get('endtime')) or now)
                         else:
                             lastTime = now
-                        self.cache.set(cacheName, cacheResponse, checksum="", expiration=datetime.timedelta(seconds=(now - lastTime).total_seconds()), json_data=True)
+                        self.writer.cache.set(cacheName, cacheResponse, checksum="", expiration=datetime.timedelta(seconds=(now - lastTime).total_seconds()), json_data=True)
                 return cacheResponse
             else:
-                return self.getPVRBroadcasts(channelItem['channelid'])
+                return self.getPVRBroadcasts(channelItem.get('channelid'))
 
         def _parseBroadcast(item):
             if item['progresspercentage'] == 100:
@@ -561,19 +531,27 @@ class JSONRPC:
                 channelItem['broadcastnext'].append(item)
 
         channelItem['broadcastnext'] = []
-        self.pool.poolList(_parseBroadcast, _parseBroadcasts())
+        self.writer.pool.poolList(_parseBroadcast, _parseBroadcasts())
         self.log('fillPVRbroadcasts, found broadcastnext = %s' % (len(channelItem['broadcastnext'])))
         return channelItem
 
 
+    def getPVRPlaylist(self, chname, id, radio=False, isPlaylist=False):
+        self.log('getPVRPlaylist, chname = %s, id = %s, isPlaylist = %s' % (chname, id, isPlaylist))
+        channelItem               = self.matchPVRChannel(chname, id, radio)
+        channelItem['citem']      = {'name': chname,'id':id,'radio':radio}
+        channelItem['isPlaylist'] = isPlaylist
+        if channelItem.get('uniqueid'):
+            channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniquid', -1)))
+        return self.fillPVRbroadcasts(channelItem)
+
+
     def getPVRposition(self, chname, id, radio=False, isPlaylist=False):
         self.log('getPVRposition, chname = %s, id = %s, isPlaylist = %s' % (chname, id, isPlaylist))
-        channelItem = self.matchPVRChannel(chname, id, radio)
-        channelItem['citem']      = {'name': chname, 'id': id, 'radio': radio}
-        channelItem['isPlaylist'] = isPlaylist
-        channelItem['callback']   = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniqueid', -1)))
-        # if isPlaylist:
-        channelItem = self.fillPVRbroadcasts(channelItem)
-        # else:
-            # channelItem['broadcastnext'] = [channelItem.get('broadcastnext', [])]
+        channelItem                  = self.matchPVRChannel(chname, id, radio)
+        channelItem['broadcastnext'] = [channelItem.get('broadcastnext', [])]
+        channelItem['citem']         = {'name':chname,'id':id,'radio':radio}
+        channelItem['isPlaylist']    = isPlaylist
+        if channelItem.get('uniqueid'):
+            channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniqueid', -1)))
         return channelItem

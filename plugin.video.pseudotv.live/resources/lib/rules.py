@@ -20,34 +20,34 @@
 from resources.lib.globals     import *
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
-from resources.lib.jsonrpc     import JSONRPC 
-''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
+
+# ''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
 
 class RulesList:
-    def __init__(self):
-        self.monitor        = xbmc.Monitor()
-        self.player         = xbmc.Player()
-        self.cache          = Cache()
-        self.dialog         = Dialog()
-        self.pool           = PoolHelper() 
-        self.rules          = self
-        self.jsonRPC        = JSONRPC(self)
-
-        self.JSON_FILE_ENUM = self.jsonRPC.getEnums(id="List.Fields.Files", type='items')
-        self.JSON_METHOD    = self.jsonRPC.getEnums(id="List.Sort", type='method')
-        self.JSON_ORDER     = self.jsonRPC.getEnums(id="List.Sort", type='order')
-        self.JSON_OPERATORS = self.jsonRPC.getEnums(id="List.Filter.Operators")
-
-        self.ruleList       = [BaseRule(dialog=self.dialog),
-                               ShowChannelBug(),
-                               ShowOnNext(),
-                               DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
+    def __init__(self, writer=None):  
+        self.log('__init__')
+        if writer is None:
+            from resources.lib.parser import Writer
+            writer = Writer()
+        self.writer = writer
+        
+        self.ruleList = [BaseRule(writer=self.writer),
+                         ShowChannelBug(),
+                         ShowOnNext(),
+                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
+    def getENUM(self, key):
+        return sorted({'JSON_METHOD'    : self.writer.jsonRPC.getEnums(id="List.Sort", type='method'),
+                       'JSON_ORDER'     : self.writer.jsonRPC.getEnums(id="List.Sort", type='order'),
+                       'JSON_OPERATORS' : self.writer.jsonRPC.getEnums(id="List.Filter.Operators"),
+                       'JSON_FILE_ENUM' : self.writer.jsonRPC.getEnums(id="List.Fields.Files", type='items')}[key])
+        
+
     def _loadRule(self, data):
         channel,tmpruleList = data
         ruleList = {}
@@ -70,7 +70,7 @@ class RulesList:
     def loadRules(self, channels): #load channel rules and their instances.
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate
-        ruleList = dict(self.pool.poolList(self._loadRule,channels,tmpruleList))
+        ruleList = dict(self.writer.pool.poolList(self._loadRule,channels,tmpruleList))
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
         
@@ -127,8 +127,8 @@ class RulesList:
         
  
 class BaseRule:
-    def __init__(self, dialog):
-        self.dialog       = dialog
+    def __init__(self, writer):
+        self.writer       = writer
         self.myId         = 0
         self.name         = ""
         self.description  = ""
@@ -272,19 +272,19 @@ class BaseRule:
 
 
     def onActionTextBox(self, optionindex):
-        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.writer.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value
         
 
     def onActionDateBox(self, optionindex):
         log("onActionDateBox")
-        info =  self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info =  self.writer.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None: self.optionValues[optionindex] = info
 
 
     def onActionTimeBox(self, optionindex):
         log("onActionTimeBox")
-        info = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info = self.writer.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None:
             if info[0] == ' ': info = info[1:]
             if len(info) == 4: info = "0" + info
@@ -296,13 +296,13 @@ class BaseRule:
         if psel < 0:
             psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
             if not multi: psel = (psel[0] or -1)
-        select = self.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
+        select = self.writer.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
         if select is not None: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           
     def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
         log("onActionBrowse")
-        info = self.dialog.browseDialog(type, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
+        info = self.writer.dialog.browseDialog(type, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
         if info is not None: self.optionValues[optionindex] = info 
                      
                 
@@ -323,12 +323,12 @@ class BaseRule:
 
     def onActionDaysofWeekBox(self, optionindex):
         log("onActionDaysofWeekBox")
-        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.writer.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value.upper()
 
 
     def onActionDigitBox(self, optionindex):
-        self.optionValues[optionindex] = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        self.optionValues[optionindex] = self.writer.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
 
 
 class ShowChannelBug(BaseRule):
@@ -489,7 +489,7 @@ class HandleMethodOrder(BaseRule):
         self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
         self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions = [[n for n in range(25, 275, 25)], sorted(JSON_METHOD), sorted(JSON_ORDER), [True, False]]
+        self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.getENUM(JSON_METHOD), self.getENUM(JSON_ORDER), [True, False]]
 
         
     def copy(self):
@@ -534,7 +534,7 @@ class HandleFilter(BaseRule):
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.optionLabels     = ['Field','Operator','Value']
         self.optionValues     = ['showtitle','contains','']
-        self.selectBoxOptions = [sorted(JSON_FILE_ENUM), sorted(JSON_OPERATORS)]
+        self.selectBoxOptions = [self.getENUM(JSON_FILE_ENUM), self.getENUM(JSON_OPERATORS)]
         
 
     def copy(self): 

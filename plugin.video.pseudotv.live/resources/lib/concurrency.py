@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*-
 import concurrent.futures
-import time, re, os, subprocess, traceback
+import sys, time, re, os, subprocess, traceback
 
 from kodi_six                  import xbmc, xbmcaddon
 from itertools                 import repeat
@@ -26,10 +26,13 @@ from functools                 import partial, wraps
 from resources.lib.cache       import Cache, cacheit
 
 try:
-    import _multiprocessing # android will raise issue, inherent decency of multiprocessing.
-    from multiprocessing.pool  import ThreadPool
+    CORES = Cores().CPUcount()
+    USING_THREAD = (CORES == 1 or xbmc.getCondVisibility('System.Platform.Windows')) #multiprocessing takes foreground focus from windows, bug in python?
+    if USING_THREAD:    from multiprocessing.dummy import Pool as ThreadPool
+    else:               from multiprocessing.pool  import ThreadPool
 except Exception as e:
-    import multiprocessing.dummy as ThreadPool
+    USING_THREAD = True
+    from resources.lib._threadpool import ThreadPool
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -41,6 +44,7 @@ PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
 def timeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
+        if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true": return
         start_time = time.time()
         result     = method(*args, **kwargs)
         end_time   = time.time()
@@ -62,9 +66,17 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
+def getThreadMax():
+    CORES = Cores().CPUcount()
+    if USING_THREAD:
+        if   CORES == 1: return 8
+        elif CORES  > 1: return CORES * 4
+    return CORES
+    
 class Concurrent:
     def __init__(self):
-        self.cpuCount = Cores().CPUcount()
+        self.cpuCount = getThreadMax()
+        # https://pythonhosted.org/futures/
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
         
 
@@ -72,7 +84,6 @@ class Concurrent:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @timeit
     def executor(self, func, args=None, kwargs=None, call=None):
         with concurrent.futures.ThreadPoolExecutor(self.cpuCount) as executor:
             if   args:   future = executor.submit(func, args)
@@ -105,7 +116,8 @@ class Concurrent:
 
 class Parallel:
     def __init__(self):
-        self.cpuCount = Cores().CPUcount()
+        self.cpuCount = getThreadMax()
+        # https://pythonhosted.org/futures/
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
         
 
@@ -113,7 +125,6 @@ class Parallel:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    @timeit
     def executor(self, func, args=None, kwargs=None, call=None):
         with concurrent.futures.ProcessPoolExecutor(self.cpuCount) as executor:
             if   args:   future = executor.submit(func, args)
@@ -146,11 +157,17 @@ class Parallel:
 
 class PoolHelper:
     def __init__(self):
-        self.cpuCount = Cores().CPUcount()
-
+        self.cpuCount = getThreadMax()
+        if USING_THREAD: self.pool = Concurrent()
+        else:            self.pool = Parallel()
+        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def executor(self, func, args=None, kwargs=None, call=None):
+        return self.pool.executor(func, args, kwargs, call)
 
 
     @timeit
@@ -158,9 +175,8 @@ class PoolHelper:
         results = []
         if len(items) == 0: return results
         try:
-            if chunksize is None:
-                chunksize = roundupDIV(len(items), self.cpuCount)
-                if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
+            if chunksize is None: chunksize = roundupDIV(len(items), self.cpuCount)
+            if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
             self.log("poolList, chunksize = %s, items = %s"%(chunksize,len(items)))
             
             pool = ThreadPool(self.cpuCount)
@@ -181,7 +197,6 @@ class PoolHelper:
         return results
         
         
-    @timeit
     def genList(self, func, items=[], args=None, kwargs=None):
         self.log("genList, %s"%(func.__name__))
         try:

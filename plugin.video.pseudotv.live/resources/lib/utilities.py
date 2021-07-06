@@ -33,11 +33,11 @@ class Utilities:
     def buildMenu(self, select=None):
         with busy():
             PVR_NAME = getPluginMeta(PVR_CLIENT).get('name','')
-            items    = [{'label':LANGUAGE(30010)              ,'label2':LANGUAGE(30011),'icon':LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30011), False)}, #"Rebuild M3U/XMLTV"
-                        {'label':LANGUAGE(30096)              ,'label2':LANGUAGE(30309),'icon':LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30096), True)},  #"Clean Start"
-                        {'label':LANGUAGE(30012)%(PVR_NAME)   ,'label2':LANGUAGE(30145),'icon':LOGO,'func':configurePVR},                                     #"Reconfigure PVR for use with PTVL"
-                        {'label':LANGUAGE(30065)%(PVR_NAME)   ,'label2':LANGUAGE(30310),'icon':LOGO,'func':brutePVR},                                         #"Force PVR reload"
-                        {'label':LANGUAGE(30065)%(ADDON_NAME) ,'label2':LANGUAGE(30311)%(ADDON_NAME),'icon':LOGO,'func':setRestartRequired}]                  #"Force PTVL reload"
+            items    = [{'label':LANGUAGE(30010)              ,'label2':LANGUAGE(30011)             ,'icon':COLOR_LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30011), False)}, #"Rebuild M3U/XMLTV"
+                        {'label':LANGUAGE(30096)              ,'label2':LANGUAGE(30309)             ,'icon':COLOR_LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30096), True)},  #"Clean Start"
+                        {'label':LANGUAGE(30012)%(PVR_NAME)   ,'label2':LANGUAGE(30145)             ,'icon':COLOR_LOGO,'func':configurePVR},                                     #"Reconfigure PVR for use with PTVL"
+                        {'label':LANGUAGE(30065)%(PVR_NAME)   ,'label2':LANGUAGE(30310)             ,'icon':COLOR_LOGO,'func':brutePVR},                                         #"Force PVR reload"
+                        {'label':LANGUAGE(30065)%(ADDON_NAME) ,'label2':LANGUAGE(30311)%(ADDON_NAME),'icon':COLOR_LOGO,'func':setRestartRequired}]                               #"Force PTVL reload"
 
             listItems = [self.dialog.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
             if not select: select = self.dialog.selectDialog(listItems, '%s - %s'%(ADDON_NAME,'Select utility to perform'),multi=False)
@@ -74,7 +74,7 @@ class Utilities:
             SETTINGS.setSetting('Import_XMLTV_URL' ,'')
             SETTINGS.setSetting('Import_Provider'  ,'')
             SETTINGS.setSetting('User_Import'      ,'false')
-            setRestartRequired()
+            setPendingChange()#setRestartRequired()
             return self.dialog.notificationDialog(LANGUAGE(30053))
 
 
@@ -95,25 +95,26 @@ class Utilities:
                             self.dialog.notificationDialog(LANGUAGE(30016)%(key))
             if full: 
                 setAutoTuned(False)
-                setRestartRequired()
+                setPendingChange()#setRestartRequired()
 
 
     def run(self):  
         ctl = (0,0) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
-            
         self.log('run, param = %s'%(param))
+        
         if isBusy():
             self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return SETTINGS.openSettings()
 
-        if    param == 'Show_Readme':    showReadme()
-        elif  param == 'Show_Changelog': showChangelog()
-        elif  param == 'User_Groups':    self.userGroups()
-        elif  param == 'Clear_Import':   self.clearImport()
-        else:  self.buildMenu(param)
-        return openAddonSettings(ctl)
+        if    param is None: self.buildMenu(param)
+        elif  param == 'Show_Readme':       showReadme()
+        elif  param == 'Show_Changelog':    showChangelog()
+        elif  param == 'User_Groups':       self.userGroups()
+        elif  param == 'Clear_Import':      self.clearImport()
+        elif  param == 'Install_Resources': chkResources()
+        else: setUtilities(param)
             
 if __name__ == '__main__': Utilities(sys.argv).run()
     

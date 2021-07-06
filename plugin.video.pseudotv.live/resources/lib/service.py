@@ -18,34 +18,22 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
-from resources.lib.builder     import Builder
-from resources.lib.cache       import Cache
-from resources.lib.backup      import Backup
-from resources.lib.concurrency import PoolHelper
-from resources.lib.rules       import RulesList
 from resources.lib.overlay     import Overlay
-from resources.lib.config      import Config
-
+from resources.lib.parser      import Writer
+from resources.lib.vault       import Vault
 
 class Player(xbmc.Player):
     
-    def __init__(self, service):
+    def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.jsonRPC            = None
-        self.myService          = service
-        self.cache              = service.cache
-        self.dialog             = service.dialog
-        self.rules              = self.myService.rules
-        
-        self.pendingStart       = False
-        self.pendingSeek        = False
-        self.pendingStop        = False
-        self.ruleList           = {}
-        self.playingPVRitem     = {}
-        self.lastSubState       = isSubtitle()
-        self.showOverlay        = SETTINGS.getSettingBool('Enable_Overlay')
-        self.overlayWindow      = Overlay(OVERLAY_FLE, ADDON_PATH, "default", player=self)
+        self.pendingStart   = False
+        self.pendingSeek    = False
+        self.pendingStop    = False
+        self.ruleList       = {}
+        self.playingPVRitem = {}
+        self.lastSubState   = isSubtitle()
+        self.showOverlay    = SETTINGS.getSettingBool('Enable_Overlay')
         
         """
         Player() trigger order
@@ -102,7 +90,7 @@ class Player(xbmc.Player):
     def getPlayerItem(self):
         self.log('getPlayerItem')
         try:    return self.getPlayingItem() #Kodi v20. todo
-        except: return self.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False))
+        except: return self.myService.writer.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False))
         
 
     def getPVRitem(self):
@@ -203,7 +191,7 @@ class Player(xbmc.Player):
             self.log('playAction, channel changed')
             self.playingPVRitem = pvritem
             citem = self.getCitem()
-            self.ruleList = self.rules.loadRules([citem])
+            self.ruleList = self.myService.writer.rules.loadRules([citem])
             pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem)
             
             self.pendingSeek = round(pvritem.get('broadcastnow',{}).get('progress',0)) > 0
@@ -216,8 +204,8 @@ class Player(xbmc.Player):
         
     def updatePVRItem(self, pvritem=None):
         if pvritem is None: pvritem = self.playingPVRitem
-        return self.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
-        # (self.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.jsonRPC.getPlayerItem().get('mediapath',''))})
+        return self.myService.writer.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
+        # (self.myService.writer.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.myService.writer.jsonRPC.getPlayerItem().get('mediapath',''))})
 
 
     def changeAction(self):
@@ -229,8 +217,7 @@ class Player(xbmc.Player):
             self.log('changeAction, playing playlist')
             #todo pop broadcastnext? keep pvritem in sync with playlist pos?
         else:
-            # xbmc.executebuiltin("Action(SkipNext)")
-            # xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             callback = self.playingPVRitem.get('callback','')
             self.log('changeAction, playing = %s'%(callback))
             # xbmc.executebuiltin("Action(SkipNext)")
@@ -248,15 +235,16 @@ class Player(xbmc.Player):
         
 
     def toggleOverlay(self, state):
+        overlayWindow = Overlay(OVERLAY_FLE, ADDON_PATH, "default", service=self.myService)
         if state and not isOverlay():
             conditions = [self.showOverlay,self.isPlaying(),isPseudoTV()]
             self.log("toggleOverlay, conditions = %s"%(conditions))
             if False in conditions: return
             self.log("toggleOverlay, show")
-            self.overlayWindow.show()
+            overlayWindow.show()
         elif not state and isOverlay():
             self.log("toggleOverlay, close")
-            self.overlayWindow.close()
+            overlayWindow.close()
 
 
     def triggerSleep(self):
@@ -273,24 +261,22 @@ class Player(xbmc.Player):
         sec = 0
         cnx = False
         inc = int(100/OVERLAY_DELAY)
-        dia = self.dialog.progressDialog(message=LANGUAGE(30281))
+        dia = self.myService.writer.dialog.progressDialog(message=LANGUAGE(30281))
         while not self.myService.monitor.abortRequested() and (sec < OVERLAY_DELAY):
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(30283),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
-            dia = self.dialog.progressDialog((inc*sec),dia, msg)
+            dia = self.myService.writer.dialog.progressDialog((inc*sec),dia, msg)
             if self.myService.monitor.waitForAbort(1) or not dia:
                 cnx = True
                 break
-        self.dialog.progressDialog(100,dia)
+        self.myService.writer.dialog.progressDialog(100,dia)
         return not bool(cnx)
 
 
 class Monitor(xbmc.Monitor):
-    def __init__(self, service):
+    def __init__(self):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
-        self.jsonRPC        = None
-        self.myService      = service
         self.lastSettings   = {}
         self.onChangeThread = threading.Timer(30.0, self.onChange)
         
@@ -304,11 +290,13 @@ class Monitor(xbmc.Monitor):
             
             
     def isSettingsOpened(self, aggressive=True):
-        windowIDS = [ADDON_SETTINGS]
+        windowIDS     = [ADDON_SETTINGS]
         currentWindow = xbmcgui.getCurrentWindowDialogId()
         if aggressive: windowIDS.extend([ADDON_DIALOG,FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,
                                          NUMERIC_INPUT,FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
-        if currentWindow in windowIDS:
+                                         
+        if   isSelectOpened(): return True
+        elif currentWindow in windowIDS:
             if currentWindow == ADDON_SETTINGS:
                 self.onSettingsChanged()
             return True
@@ -333,7 +321,7 @@ class Monitor(xbmc.Monitor):
         self.log('onChange')
         with busy():
             if self.hasSettingsChanged():
-                setPendingChange()
+                self.writer.setPendingChangeTimer()
             
             
     def chkPluginSettings(self):
@@ -347,7 +335,7 @@ class Monitor(xbmc.Monitor):
         self.log('chkSettings')
         PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
         PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingBool('Enable_Client'))
-        SETTINGS.setSettingInt('Max_Days',(self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or SETTINGS.getSetting('Max_Days')))
+        SETTINGS.setSettingInt('Max_Days',(self.myService.writer.jsonRPC.getSettingValue('epg.futuredaystodisplay') or SETTINGS.getSetting('Max_Days')))
         #priority settings that trigger chkUpdate on change.
         #todo chk resource addon installed after change:
         # ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
@@ -403,33 +391,29 @@ class Monitor(xbmc.Monitor):
 class Service:
     def __init__(self):
         self.log('__init__')
-        self.cache          = Cache()
-        self.dialog         = Dialog()   
-        self.pool           = PoolHelper() 
-        self.rules          = RulesList()  
+        self.monitor           = Monitor()
+        self.player            = Player()
+        self.writer            = Writer(service=self)
+        self.player.myService  = self
+        self.monitor.myService = self
         
-        self.monitor        = Monitor(service=self)
-        self.player         = Player(service=self)
-        
-        self.myBuilder      = Builder(service=self)
-        self.writer         = self.myBuilder.writer
-        self.channels       = self.myBuilder.writer.channels
-        self.jsonRPC        = self.myBuilder.jsonRPC
-        self.library        = self.writer.library
-        self.recommended    = self.library.recommended
-        self.backup         = Backup(self)
-        
-        self.startThread    = threading.Timer(1.0, hasVersionChanged)
-        self.serviceThread  = threading.Timer(0.5, self.runServiceThread)
-        
-        self.monitor.jsonRPC = self.jsonRPC
-        self.player.jsonRPC  = self.jsonRPC
-        
+        self.startThread       = threading.Timer(1.0, hasVersionChanged)
+        self.serviceThread     = threading.Timer(0.5, self.runServiceThread)
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-
+        
+    def openChannelManager(self, chnum=1):
+        self.log('openChannelManager, chnum = %s'%(chnum))
+        with busy():
+            from resources.lib.manager import Manager
+            chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default",writer=self.writer,channel=chnum)
+            del chmanager
+            self.writer.setPendingChangeTimer()
+        
+        
     def startServiceThread(self, wait=30.0):
         self.log('startServiceThread, wait = %s'%(wait))
         if self.serviceThread.is_alive(): 
@@ -470,27 +454,22 @@ class Service:
         
         
     def chkRecommended(self, lastUpdate=None):
-        if   isClient(): return
+        if isClient(): return
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
-            self.recommended.importPrompt()
-            return True
+            self.writer.library.recommended.importPrompt()
 
             
     def chkPredefined(self, lastUpdate=None):
         if isClient(): return False
-        elif chkUpdateTime('Last_Predefined',PREDEFINED_OFFSET,lastUpdate):
-            self.log('chkPredefined')
-            self.chkRecommended(lastUpdate=0)
-            self.chkLibraryItems()
-            return True
+        self.chkRecommended(lastUpdate=0)#Force Check with lastUpdate=0
+        self.chkLibraryItems()
         
         
     def chkLibraryItems(self):
         self.log('chkLibraryItems')
-        if self.library.fillLibraryItems():
-            self.library.chkLibraryItems()
-            return self.writer.convertLibraryItems()
+        if self.writer.library.fillLibraryItems():
+            return self.writer.buildPredefinedChannels()
         else: 
             return False
 
@@ -510,7 +489,7 @@ class Service:
 
     def chkInfo(self):
         if not isCHKInfo(): return
-        self.monitor.waitForAbort(1) #adjust wait time to catch navigation meta. < 2secs? < 1sec. users report instability.
+        self.monitor.waitForAbort(.5) #adjust wait time to catch navigation meta. < 2secs? < 1sec. users report instability.
         return fillInfoMonitor()
 
 
@@ -529,24 +508,43 @@ class Service:
                 setPendingChange(False)
                 self.chkPredefined()
                 
-                if self.channels.reloadChannels():
-                    channels = self.channels.getChannels()
-                    if not channels:
-                        if Config(self).autoTune(): #autotune
-                            return self.chkUpdate(0) #force rebuild after autotune
-                        self.log('chkUpdate, no channels found & autotuned recently')
-                        return False #skip autotune if performed recently.
-                    return self.updateChannels()
+                # if self.writer.channels.reloadChannels():
+                channels = self.writer.channels.getChannels()
+                if not channels:
+                    if self.writer.autoTune(): #autotune
+                        return self.chkUpdate(0) #force rebuild after autotune
+                    self.log('chkUpdate, no channels found & autotuned recently')
+                    return False #skip autotune if performed recently.
+                    
+                updateIPTVManager()
+                if self.writer.builder.buildService():
+                    self.log('chkUpdate, update finished')
+                    return brutePVR(override=True)
             return False
-        
-        
-    def updateChannels(self):
-        if self.myBuilder.buildService(myService=self):
-            self.log('updateChannels, finished buildService')
-            return brutePVR(override=True)
-        return False
-                
 
+
+    def chkUtilites(self):
+        param = doUtilities()
+        if not param: return
+        self.log('chkLibraryItems, doUtilities = %s'%(param))
+        
+        if param.startswith('Channel_Manager'):
+            return self.openChannelManager()
+        elif  param == 'Clear_Userdefined':
+            self.writer.clearUserChannels()
+        elif  param == 'Clear_Predefined':
+            self.writer.clearPredefined()
+        elif  param == 'Clear_BlackList':
+            self.writer.clearBlackList()
+        elif  param == 'Backup_Channels':
+            self.writer.backup.backupChannels()
+        elif  param == 'Recover_Channels':
+            self.writer.backup.recoverChannels()
+        else:
+            self.writer.selectPredefined(param.replace('_',' '))
+        SETTINGS.openSettings()
+        
+            
     def initialize(self):
         self.monitor.lastSettings = self.monitor.chkSettings()
         with busy():
@@ -554,7 +552,7 @@ class Service:
                      self.chkVersion,
                      self.monitor.chkPluginSettings,
                      chkResources,
-                     self.backup.hasBackup,
+                     self.writer.backup.hasBackup,
                      self.chkChannels]
             for func in funcs: func()
             return True
@@ -566,23 +564,24 @@ class Service:
         self.monitor.waitForAbort(5) # startup delay
         
         if self.initialize():
-            self.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=5)
+            self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=5)
             self.monitor.waitForAbort(5) # service delay
             self.startServiceThread()
         else:
-            self.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
+            self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
-            if   isRestartRequired(): break
-            elif self.chkInfo():      continue # aggressive polling required (bypass waitForAbort)!
+            if isShutdownRequired() or isRestartRequired(): break
+            elif self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
             elif self.monitor.waitForAbort(5): break
-            
+                
+            self.chkUtilites()
             if self.player.isPlaying():
                 self.chkIdle()
             else:
                 self.chkRecommended()
-                        
-            if isBusy(): continue
+                      
+            if   isBusy(): continue
             elif self.monitor.isSettingsOpened(): continue
             self.chkUpdate()
                 
@@ -590,7 +589,7 @@ class Service:
         if isRestartRequired():
             self.log('run, restarting buildService')
             setRestartRequired(False)
-            self.run()
+            Service().run()
             
                 
     def closeThreads(self):
@@ -604,3 +603,6 @@ class Service:
                 except: pass
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
         self.log('closeThreads finished, exiting %s...'%(ADDON_NAME))
+     
+        
+if __name__ == '__main__': Service().run()

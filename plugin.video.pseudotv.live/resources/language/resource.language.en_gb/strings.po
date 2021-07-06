@@ -173,7 +173,7 @@ msgid "Pagination Size"
 msgstr ""
 
 msgctxt "#30039"
-msgid "Max Guidedata (Days)"
+msgid "Future days to build"
 msgstr ""
 
 msgctxt "#30040"
@@ -1065,7 +1065,7 @@ msgid "Pagination Limit, How many entries are requested and parsed per call. [25
 msgstr ""
 
 msgctxt "#30263"
-msgid "Max guidedata to fill during a given query. [1 Day Default]\n[Lower == Fresh Data]"
+msgid "Configure 'Future days to display' in Kodi PVR & LiveTV settings. (3-days Recommended).\n[Lower == Fresh Data]"
 msgstr ""
 
 msgctxt "#30264"

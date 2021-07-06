@@ -96,7 +96,7 @@ MAX_IMPORT          = 5
 EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
-UPDATE_OFFSET       = 3600  #1hr in secs.
+UPDATE_OFFSET       = 10800 #3hr in secs.
 RECOMMENDED_OFFSET  = 900   #15mins in secs.
 PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
 UPDATE_WAIT         = 3600  #1hr in secs.
@@ -232,13 +232,12 @@ JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel':'true',
 
 
 @contextmanager
-def fileLocker(GlobalFileLock):
-    log('globals: fileLocker')
-    GlobalFileLock.lockFile("MasterLock")
+def fileLocker(globalFileLock):
+    globalFileLock.lockFile("MasterLock")
     try: yield
     finally: 
-        GlobalFileLock.unlockFile('MasterLock')
-        GlobalFileLock.close()
+        globalFileLock.unlockFile('MasterLock')
+        globalFileLock.close()
 
 @contextmanager
 def busy():
@@ -250,13 +249,11 @@ def busy():
             setBusy(False)
 
 @contextmanager
-def busy_dialog(escape=False):
-    if escape: yield
-    else:
-        xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-        try: yield
-        finally:
-            xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+def busy_dialog():
+    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+    try: yield
+    finally:
+        xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
 
 def cleanAbandonedLocks():
     ... #todo remove .locks
@@ -415,14 +412,40 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
+def doUtilities():
+    param = PROPERTIES.getProperty('utilities')
+    PROPERTIES.clearProperty('utilities')
+    return param
+    
+def setUtilities(key):
+    return PROPERTIES.setProperty('utilities',key)
+
 def isRestartRequired():
     return PROPERTIES.getPropertyBool('restartRequired')
-
-def isClient():
-    return PROPERTIES.getPropertyBool('isClient')
-              
+        
 def setRestartRequired(state=True):
     return PROPERTIES.setPropertyBool('restartRequired',state)
+       
+def isShutdownRequired():
+    return PROPERTIES.getPropertyBool('shutdownRequired')
+                 
+def setServiceStop(state=True):
+    return PROPERTIES.setPropertyBool('shutdownRequired',state)
+       
+def isSelectOpened():
+    return PROPERTIES.getPropertyBool('selectOpened')
+                 
+def setSelectOpened(state=True):
+    return PROPERTIES.setPropertyBool('selectOpened',state)
+       
+def isManagerRunning():
+    return PROPERTIES.getPropertyBool('managerRunning')
+    
+def setManagerRunning(state=True):
+    return PROPERTIES.setPropertyBool('managerRunning',state)
+    
+def isClient():
+    return PROPERTIES.getPropertyBool('isClient')
 
 def isPendingChange():
     return PROPERTIES.getPropertyBool('pendingChange')
@@ -436,7 +459,7 @@ def hasAutoTuned():
 def setAutoTuned(state=True):
     return PROPERTIES.setPropertyBool('autotuned',state)
     
-def getAutoTuned():
+def hasAutotuned():
     return PROPERTIES.getPropertyBool('autotuned')
     
 def hasPVR():
@@ -464,13 +487,29 @@ def hasVersionChanged(cleanStart=False):
         showChangelog()
 
 def chkUpdateTime(key, wait, lastUpdate=None):
-    if lastUpdate is None:
-        lastUpdate = (PROPERTIES.getPropertyInt(key) or 0)
-    epoch = int(time.time())    
-    if (epoch >= (lastUpdate + wait)):
-        PROPERTIES.setPropertyInt(key,epoch)
-        return True
-    return False
+    state = False
+    def getValue(key):
+        try:
+            value = PROPERTIES.getProperty(key)
+            if not value: return SETTINGS.getCacheSetting(key)
+            if isinstance(value,str) and len(value.split(', ')) > 1:#correct odd behavior with properties, storing as string tuple?, todo debug issue.
+                return value.split(', ')[1]
+            else:
+                return value
+        except: pass
+            
+    epoch = time.time()
+    if lastUpdate is None: lastUpdate = (getValue(key) or 0)
+    if (epoch >= (float(lastUpdate) + wait)):
+        PROPERTIES.setProperty(key,epoch)
+        SETTINGS.setCacheSetting(key,epoch)
+        state = True
+    log('chkUpdateTime, key = %s, lastUpdate = %s, update now = %s'%(key,lastUpdate,state))
+    return state
+
+def updateIPTVManager():
+    if getPluginMeta(PVR_MANAGER).get('version') == "0.2.3a+matrix.1":
+        xbmc.executebuiltin("RunScript(%s,update)"%(PVR_MANAGER))
 
 def showReadme():
     def convertMD2TXT(md):
@@ -505,7 +544,7 @@ def showChangelog():
         changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
         return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
-def openAddonSettings(ctl=(None,None),id=ADDON_ID):
+def openAddonSettings(ctl=(1,1),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
     ## ctl[1] is the Setting (Control) offset (0=first, 1=second, 2...etc)# addonId is the Addon ID
@@ -560,28 +599,25 @@ def toggleADDON(id, state='true', reverse=False):
     if reverse and state == 'false': xbmc.executebuiltin("AlarmClock(Re-enable,EnableAddon(%s),00:04)"%id)
     return True
     
-def togglePVR(state='true'):
-    return toggleADDON(PVR_CLIENT,state)
-
 def brutePVR(override=False):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): 
         return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    togglePVR('false')
+    toggleADDON(PVR_CLIENT,'false')
     xbmc.sleep(2000)
-    togglePVR('true')
+    toggleADDON(PVR_CLIENT,'true')
+    xbmc.sleep(2000)
     if override: return True
     return Dialog().notificationDialog(LANGUAGE(30053))
 
 def getPVR(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)
     except: # backend disabled?
-        togglePVR('true')
-        xbmc.sleep(1000)
-        try: return xbmcaddon.Addon(id)
-        except: 
-            return None
+        toggleADDON(id)
+        xbmc.sleep(2000)
+        try:    return xbmcaddon.Addon(id)
+        except: return None
 
 def setJsonSettings():
     for key in JSON_SETTINGS.keys():
@@ -625,9 +661,6 @@ def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'): #convert json pvr datetime
 def getLocalTime():
     offset = (datetime.datetime.utcnow() - datetime.datetime.now())
     return time.time() + offset.total_seconds() #returns timestamp
-
-def getTimestamp(dateOBJ):
-    return datetime.datetime.timestamp(dateOBJ)
 
 def makeTimestamp(dateOBJ):
     return time.mktime(dateOBJ)
@@ -682,7 +715,7 @@ def getThumb(item,opt=0): #unify thumbnail artwork
                item.get('art',{}).get(key,'')               or
                item.get(key,''))
         if art: return art
-    return LOGO
+    return {0:FANART,1:COLOR_LOGO}[opt]
 
 def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     log("findItemsInLST, values = %s, item_key = %s, val_key = %s, index = %s"%(len(values), item_key, val_key, index))
@@ -711,7 +744,6 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
                 
     log("findItemsInLST, matches = %s"%(matches))
     return matches
-
 
 def funcExecute(func,args):
     log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
@@ -800,6 +832,10 @@ def getGroups(add=False):
     if add: GROUP_TYPES.insert(0,'+Add')
     return sorted(set(GROUP_TYPES))
 
+def getMD5(text):
+    hash_object = hashlib.md5(text.encode())
+    return hash_object.hexdigest()
+
 def genUUID(seed=None):
     if seed:
         m = hashlib.md5()
@@ -866,10 +902,18 @@ def buildStack(paths):
     
 def cleanMPAA(mpaa):
     mpaa = mpaa.lower()
-    if ':' in mpaa: mpaa = re.split(':',mpaa)[1]  #todo prop. regex
+    if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
     if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
-    return mpaa.upper()
-        
+    #todo regex, detect other region rating formats
+    # re.compile(':(.*)', re.IGNORECASE).search(text))
+    text = mpaa.upper()
+    try:
+        text = re.sub('/ US', ''  , text)
+        text = re.sub('Rated ', '', text)
+        return text.strip()
+    except: 
+        return mpaa.strip()
+                
 def cleanResourcePath(path):
     if path.startswith('resource://'):
         return (path.replace('resource://','special://home/addons/'))

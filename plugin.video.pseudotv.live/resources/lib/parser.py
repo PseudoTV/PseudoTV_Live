@@ -18,83 +18,59 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
+from resources.lib.vault       import Vault
 from resources.lib.m3u         import M3U
 from resources.lib.xml         import XMLTV
-from resources.lib.vault       import Vault
+from resources.lib.jsonrpc     import JSONRPC 
 from resources.lib.channels    import Channels
 from resources.lib.library     import Library
+from resources.lib.cache       import Cache
+from resources.lib.concurrency import PoolHelper
+from resources.lib.rules       import RulesList
+from resources.lib.builder     import Builder 
+from resources.lib.backup      import Backup
 
 class Writer:
-    GlobalFileLock = FileLock()
+    vault          = Vault()
+    globalFileLock = FileLock()
     
-    def __init__(self, inherited=None):
+    def __init__(self, service=None):
         self.log('__init__')
-        if inherited:
-            self.monitor      = inherited.monitor
-            self.player       = inherited.player
-            self.cache        = inherited.cache
-            self.dialog       = inherited.dialog
-            self.pool         = inherited.pool
-            self.rules        = inherited.rules
+        if service is None:
+            self.monitor   = xbmc.Monitor()
+            self.player    = xbmc.Player()
         else:
-            from resources.lib.cache       import Cache
-            from resources.lib.concurrency import PoolHelper
-            from resources.lib.rules       import RulesList
-            self.monitor      = xbmc.Monitor()
-            self.player       = xbmc.Player()
-            self.cache        = Cache()
-            self.dialog       = Dialog()
-            self.pool         = PoolHelper()
-            self.rules        = RulesList()
+            self.monitor   = service.monitor
+            self.player    = service.player
         
-        if inherited.__class__.__name__ in ['Builder','Config']:
-            self.progDialog   = inherited.progDialog
-            self.progress     = inherited.progress
-            self.chanName     = inherited.chanName
-        else:
-            self.progDialog   = None
-            self.progress     = None
-            self.chanName     = None
-            
-        if not inherited.__class__.__name__ == 'JSONRPC':
-            from resources.lib.jsonrpc import JSONRPC 
-            self.jsonRPC      = JSONRPC(self)
-        else:
-            self.jsonRPC      = inherited
+        self.cache         = Cache()
+        self.dialog        = Dialog()
+        self.pool          = PoolHelper()
         
-        self.vault            = Vault()   
-        self.channels         = Channels(writer=self)
-        self.library          = Library(writer=self)
-        self.recommended      = self.library.recommended
+        self.channels      = Channels(writer=self)
+        self.jsonRPC       = JSONRPC(writer=self)
+        self.backup        = Backup(writer=self)
+        self.builder       = Builder(writer=self)
+        self.m3u           = M3U(writer=self)
+        self.xmltv         = XMLTV(writer=self)
+        self.rules         = RulesList(writer=self)
         
-        self.m3u              = M3U(writer=self)
-        self.xmltv            = XMLTV(writer=self)
-      
-      
+        self.library       = Library(writer=self)
+        self.recommended   = self.library.recommended
+          
+        self.serviceThread = threading.Timer(0.5, self.triggerPendingChange)
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
-        
-    def getChannelEndtimes(self, startTimestamp):
-        self.log('getChannelEndtimes')
-        channels   = self.xmltv.getChannels()
-        programmes = self.xmltv.getProgrammes()
-        for channel in channels:
-            try: 
-                stopDate = max([strpTime(program['stop'], DTFORMAT) for program in programmes if program['channel'] == channel['id']], default=datetime.datetime.fromtimestamp(startTimestamp))
-                yield channel['id'],getTimestamp(stopDate)
-            except Exception as e:
-                self.log("getChannelEndtimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s\nNew starttime = %s"%(e,channel.get('id'),startTimestamp), xbmc.LOGERROR)
-                self.xmltv.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
-                yield channel['id'],startTimestamp
-                
-         
+
+
     def importSETS(self):
         self.log('importSETS')
         importLST = self.channels.getImports()
         
         if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
-            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE')  ,
+            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE'),
                                  1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
                                  
             Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),
@@ -110,8 +86,8 @@ class Writer:
                 if importItem.get('type','') != 'iptv': continue
                 self.log('importSETS, %s: importItem = %s'%(idx,importItem))
                 
-                if self.progDialog is not None:
-                    self.progDialog = self.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
+                if self.builder.progDialog is not None:
+                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                 
                 idx += 1
                 m3ufle   = importItem.get('m3u'  ,{}).get('path','')
@@ -124,13 +100,20 @@ class Writer:
                 self.xmltv.importXMLTV(xmlfle,filters)
             except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
         return True
+
+
+    def removeChannel(self, citem, inclLineup=True): #remove channel completely from channels.json and m3u/xmltv
+        self.log('removeChannel, inclLineup = %s, citem = %s'%(inclLineup, citem))
+        self.channels.removeChannel(citem)
+        if inclLineup: self.removeChannelLineup(citem)
+
+
+    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
+        self.log('removeChannelLineup, citem = %s'%(citem))
+        self.m3u.removeStation(citem)
+        self.xmltv.removeChannel(citem)
         
-        
-    def saveChannels(self):
-        self.log('saveChannels')
-        return self.channels.saveChannels()
-        
-        
+                
     def saveChannelLineup(self):
         self.log('saveChannelLineup')
         if self.cleanChannelLineup() and self.importSETS():
@@ -140,19 +123,18 @@ class Writer:
                 return
         return True
         
-    
-    def removeChannel(self, citem, inclLineup=True): #remove channel completely from channels.json and m3u/xmltv
-        self.log('removeChannel, citem = %s'%(citem))
-        self.channels.removeChannel(citem)
-        if inclLineup: self.removeChannelLineup(citem)
         
-                
-    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
-        self.log('removeChannelLineup, citem = %s'%(citem))
-        self.m3u.removeStation(citem)
-        self.xmltv.removeChannel(citem)
+    def cleanChannelLineup(self):
+        # Clean M3U/XMLTV from abandoned channels.
+        channels    = self.channels.getChannels()
+        m3uChannels = self.m3u.getStations()
+        abandoned   = m3uChannels.copy() 
+        [abandoned.remove(m3u) for m3u in m3uChannels for channel in channels if channel.get('id') == m3u.get('id')]
+        self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
+        for leftover in abandoned: self.removeChannelLineup(leftover)
+        return True
+
         
-    
     def addChannelLineup(self, citem, radio=False, catchup=True):
         item = citem.copy()
         item['label'] = (item.get('label','') or item['name'])
@@ -179,8 +161,6 @@ class Writer:
             item['desc']        = file['plot']
             item['length']      = file['duration']
             item['sub-title']   = (file.get('episodetitle','') or '')
-            item['rating']      = cleanMPAA(file.get('mpaa','')or 'NA')
-            item['stars']       = (file.get('rating','')       or '0')
             item['categories']  = (file.get('genre','')        or ['Undefined'])
             item['type']        = file.get('type','video')
             item['new']         = int(file.get('playcount','1')) == 0
@@ -190,53 +170,106 @@ class Writer:
             
             if catchup:
                 item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=urllib.parse.quote(item['title']),id=urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),channel=urllib.parse.quote(citem['id']),radio=str(item['radio']))
-            
+                file['catchup-id'] = item['catchup-id']
+                
             if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
                 item['episode-num'] = {'xmltv_ns':'%s.%s'%(file.get("season",1)-1,file.get("episode",1)-1),
                                        'onscreen':'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))}
 
-            item['director']    = (','.join(file.get('director',[])))
-            item['writer']      = (','.join(file.get('writer',[])))
+            item['rating']      = cleanMPAA(file.get('mpaa','') or 'NA')
+            item['stars']       = (file.get('rating','')        or '0')
+            item['writer']      = ', '.join(file.get('writer',[]))
+            item['director']    = ', '.join(file.get('director',[]))
+            item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role','')) for actor in file.get('cast',[]) if actor.get('name')]
             
-            file['citem']       = citem #channel dict (stale data due to xmltv storage)
-            item['fitem']       = file # kodi fileitem/listitem dict.
+            file['citem']       = citem #channel item (stale data due to xmltv storage) use for reference.
+            item['fitem']       = file  #raw kodi fileitem/listitem, contains citem both passed through 'writer' xmltv param.
             
-            # streamdetails        = file.get('streamdetails',{})
-            # if streamdetails:
-                # item['subtitle'] = list(set([sub.get('language','') for sub in streamdetails.get('subtitle',[]) if sub.get('language','')]))
-                # item['audio']    = list(set([aud.get('codec','')    for aud in streamdetails.get('audio',[])    if aud.get('codec','')]))
-                # item['language'] = list(set([aud.get('language','') for aud in streamdetails.get('audio',[])    if aud.get('language','')]))
-                # item['video']    = list(set([vid.get('aspect','')   for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
-            
+            streamdetails = file.get('streamdetails',{})
+            if streamdetails:
+                item['subtitle'] = list(set([sub.get('language','') for sub in streamdetails.get('subtitle',[]) if sub.get('language')]))
+                item['language'] = ', '.join(list(set([aud.get('language','') for aud in streamdetails.get('audio',[]) if aud.get('language')])))
+                item['audio']    = True if True in list(set([aud.get('codec','') for aud in streamdetails.get('audio',[]) if aud.get('channels',0) >= 2])) else False
+                # item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','')   for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
             self.xmltv.addProgram(citem['id'], item)
             
             
-    def cleanChannelLineup(self):
-        # Clean M3U of Channels with no guidedata.
-        m3uChannels = self.m3u.getStations()
-        xmlChannels = self.xmltv.getChannels()
-        abandoned   = m3uChannels.copy() 
-        [abandoned.remove(m3u) for xmltv in xmlChannels for m3u in m3uChannels if xmltv.get('id') == m3u.get('id')]
-        self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-        for leftover in abandoned: self.removeChannelLineup(leftover)
+    def buildPredefinedChannels(self, type=None):
+        if not type is None: 
+            types = [type]
+        else:                
+            types = CHAN_TYPES
+        self.log('buildPredefinedChannels, types = %s'%(types))
+        
+        # convert enabled library.json into channels.json items
+        def findChannel(citem):
+            for idx, eitem in enumerate(echannels):
+                if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
+                    return idx, eitem
+            return None, {}
                 
-        # Clean XMLTV of Abandoned Channels.
-        channels    = self.channels.getChannels()
-        xmlChannels = self.xmltv.getChannels()
-        abandoned   = xmlChannels.copy() 
-        [abandoned.remove(xmltv) for xmltv in xmlChannels for channel in channels if xmltv.get('id') == channel.get('id')]
-        self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-        for leftover in abandoned: self.removeChannelLineup(leftover)
-        return True
+        def buildAvailableRange():
+            # create number array for given type, excluding existing channel numbers.
+            start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
+            stop  = (start + CHANNEL_LIMIT)
+            self.log('buildPredefinedChannels, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
+            return [num for num in range(start,stop) if num not in enumbers]
+                           
+        # group enabled libraryItems by type
+        libraryItems = {} 
+        for type in types: 
+            libraryItems.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
+ 
+        addLST = []
+        for type, items in libraryItems.items():
+            self.log('buildPredefinedChannels, type = %s'%(type))
+
+            if type == LANGUAGE(30033): #convert enabled imports to channel items.
+                self.channels.setImports(items)
+            else:
+                echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
+                enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] # existing channel numbers
+                numbers   = iter(buildAvailableRange()) #list of available channel numbers 
+                leftovers = echannels.copy()
+
+                for item in items:
+                    citem = self.channels.getCitem()
+                    citem.update({'name'   :getChannelSuffix(item['name'], type),
+                                  'path'   :item['path'],
+                                  'type'   :item['type'],
+                                  'logo'   :item['logo'],
+                                  'group'  :[type]})
+                    citem['group']   = list(set(citem['group']))
+                    citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
+                    citem['catchup'] = ('vod' if not citem['radio'] else '')
+                    
+                    match, eitem = findChannel(citem)
+                    if match is not None: #update new citems with existing values.
+                        try: leftovers.remove(eitem)
+                        except: pass
+                            
+                        for key in ['id','rules','number','favorite','page']: 
+                            citem[key] = eitem[key]
+                    else: 
+                        citem['number'] = next(numbers,0)
+                        citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
+                    addLST.append(citem)
+
+        # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
+        difference = sorted(diffLSTDICT(leftovers,addLST), key=lambda k: k['number'])
+        print('buildPredefinedChannels',difference)
+        [self.channels.addChannel(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
+        self.log('buildPredefinedChannels, finished building')
+        return self.channels.saveChannels()
 
 
-    def clearChannels(self, all=False): #clear user-defined channels. all includes pre-defined
-        self.log('clearChannels, all = %s'%(all))
-        if all: self.channels.clearChannels()
-        else:
-            channels = list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.channels.getChannels()))
-            for citem in channels: self.removeChannel(citem)
-        if self.saveChannels():
+    def clearChannels(self, type='all'): #clear user-defined channels. all includes pre-defined
+        self.log('clearChannels, type = %s'%(type))
+        channels = {'all'          : self.channels.getChannels,
+                    'user-defined' : self.channels.getUserChannels,
+                    'pre-defined'  : self.channels.getPredefinedChannels}[type.lower()]()
+        for citem in channels: self.removeChannel(citem)
+        if self.channels.saveChannels():
             return self.saveChannelLineup()
             
         
@@ -252,7 +285,7 @@ class Writer:
             self.channels.saveChannels()
             
         if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()):
-            setRestartRequired()
+            self.setPendingChangeTimer()#setRestartRequired()
      
        
     def recoverItemsFromChannels(self, predefined=None):
@@ -280,81 +313,14 @@ class Writer:
                 citem = self.channels.getCitem()
                 citem.update(item) #todo repair path.
                 self.channels.addChannel(citem)
-            return self.saveChannels()
-        setRestartRequired()
+            return self.channels.saveChannels()
+        self.setPendingChangeTimer()#setRestartRequired()
         self.log('recoverChannelsFromM3U, finished')
         return True
         
         
-    def convertLibraryItems(self, type=None):
-        if not type is None: types = [type]
-        else:                types = CHAN_TYPES
-        self.log('convertLibraryItems, types = %s'%(types))
-        # group enabled libraryItems by type
-        items = {} 
-        for type in types: items.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
-        return self.buildPredefinedChannels(items) 
-
-
-    def buildPredefinedChannels(self, libraryItems):
-        # convert enabled library.json into channels.json items
-        def findChannel(citem):
-            for idx, eitem in enumerate(echannels):
-                if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
-                    return idx, eitem
-            return None, {}
-                
-        def buildAvailableRange():
-            # create number array for given type, excluding existing channel numbers.
-            start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
-            stop  = (start + CHANNEL_LIMIT)
-            self.log('buildAvailableRange, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
-            return [num for num in range(start,stop) if num not in enumbers]
-                
-        addLST    = []
-        removeLST = []
-        for type, items in libraryItems.items():
-            self.log('buildPredefinedChannels, type = %s'%(type))
-
-            if type == LANGUAGE(30033): #convert enabled imports to channel items.
-                self.channels.setImports(items)
-            else:
-                echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
-                enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] # existing channel numbers
-                numbers   = iter(buildAvailableRange()) #list of available channel numbers 
-                leftovers = echannels.copy()
-
-                for item in items:
-                    citem = self.channels.getCitem()
-                    citem.update({'name'   :getChannelSuffix(item['name'], type),
-                                  'path'   :item['path'],
-                                  'type'   :item['type'],
-                                  'logo'   :item['logo'],
-                                  'group'  :[type]})
-                    citem['group']   = list(set(citem['group']))
-                    citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
-                    citem['catchup'] = ('vod' if not citem['radio'] else '')
-                    
-                    match, eitem = findChannel(citem)
-                    if match is not None: #update new citems with existing values.
-                        if eitem in removeLST: leftovers.remove(eitem)
-                        for key in ['id','rules','number','favorite','page']: 
-                            citem[key] = eitem[key]
-                    else: 
-                        citem['number'] = next(numbers,0)
-                        citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
-                    addLST.append(citem)
-                removeLST.extend(leftovers)
-            
-        # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
-        difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
-        [self.channels.addChannel(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
-        self.log('buildPredefinedChannels, finished building')
-        return self.saveChannels()
-        
-        
     def autoPagination(self, id, path, limits={}):
-        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,path)
+        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,getMD5(path))
         if not limits:
             msg = 'get'
             limits = self.channels.getPage(id) #check channels.json
@@ -363,7 +329,7 @@ class Writer:
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
-            if self.channels.setPage(id, limits): self.channels.saveChannels()
+            self.channels.setPage(id, limits)
         self.log("%s autoPagination, id = %s\npath = %s\nlimits = %s"%(msg,id,path,limits))
         return limits
             
@@ -378,3 +344,118 @@ class Writer:
                     copypath = os.path.join(PLS_LOC,type,media,file)
                     self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
                     yield FileAccess.copy(orgpath, copypath)
+
+
+    def autoTune(self):
+        if (isClient() | hasAutotuned()): return False #already ran or dismissed by user, check on next reboot.
+        elif self.backup.hasBackup():
+            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211))
+            if   retval == 2: return self.recoverChannelsFromBackup()
+            elif retval != 1:
+                setAutoTuned()
+                return False
+        else:
+            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286))): 
+                setAutoTuned()
+                return False
+       
+        busy   = self.dialog.progressBGDialog()
+        types  = CHAN_TYPES.copy()
+        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
+        for idx, type in enumerate(types):
+            self.log('autoTune, type = %s'%(type))
+            busy = self.dialog.progressBGDialog((idx*100//len(types)), busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
+            self.selectPredefined(type,AUTOTUNE_LIMIT)
+        self.dialog.progressBGDialog(100, busy, '%s...'%(LANGUAGE(30053)))
+        setAutoTuned()
+        return True
+
+
+    def matchLizIDX(self, listitems, selects, key='name', retval=False):
+        for select in selects:
+            for idx, listitem in enumerate(listitems):
+                if select.get(key) == listitem.getLabel():
+                    if retval: yield listitem
+                    else:      yield idx
+
+
+    def matchDictIDX(self, items, listitems, key='name', retval=False):
+        for listitem in listitems:
+            for idx, item in enumerate(items):
+                if listitem.getLabel() == item.get(key):
+                    if retval: yield item
+                    else:      yield idx
+
+
+    def selectPredefined(self, type=None, autoTune=None):
+        self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
+        with busy_dialog():
+            if isClient(): return
+            setSelectOpened(True)
+            items = self.library.getLibraryItems(type)
+            if not items:
+                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                setBusy(False)
+                return
+            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+            
+            if autoTune:
+                if autoTune > len(items): autoTune = len(items)
+                select = random.sample(list(set(range(0,len(items)))),autoTune)
+                
+        if not autoTune:
+            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
+
+        if not select is None:
+            with busy_dialog():
+                self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
+                self.buildPredefinedChannels(type)
+                self.setPendingChangeTimer()
+        setSelectOpened(False)
+        
+        
+    def triggerPendingChange(self):
+        self.log('triggerPendingChange')
+        if isBusy(): self.setPendingChangeTimer()
+        else:        setPendingChange()
+            
+            
+    def setPendingChangeTimer(self, wait=30.0):
+        self.log('setPendingChangeTimer, wait = %s'%(wait))
+        if self.serviceThread.is_alive(): 
+            try: self.serviceThread.cancel()
+            except: pass
+        self.serviceThread = threading.Timer(wait, self.triggerPendingChange)
+        self.serviceThread.name = "serviceThread"
+        self.serviceThread.start()
+        
+
+    def clearPredefined(self):
+        self.log('clearPredefined')
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        with busy():
+            if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30077))): return False
+            if self.library.clearLibraryItems() and self.clearChannels('pre-defined'):
+                setAutoTuned(False)
+                self.setPendingChangeTimer()
+                return self.dialog.notificationDialog(LANGUAGE(30053))
+
+
+    def clearUserChannels(self):
+        self.log('clearUserChannels')
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        with busy():
+            if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): return False
+            if self.clearChannels('user-defined'):
+                setAutoTuned(False)
+                self.setPendingChangeTimer()# setRestartRequired()
+                return self.dialog.notificationDialog(LANGUAGE(30053))
+
+
+    def clearBlackList(self):
+        self.log('clearBlackList') 
+        if isBusy(): return self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        with busy():
+            if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30154))): 
+                return False
+            return self.library.recommended.clearBlackList()
