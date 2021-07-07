@@ -24,10 +24,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         if isClient():
             Dialog().notificationDialog(LANGUAGE(30288))
-            return SETTINGS.openSettings()
+            return openAddonSettings()
         elif isManagerRunning():
             Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return SETTINGS.openSettings()
+            return openAddonSettings()
         
         with busy_dialog():
             setManagerRunning(True)

@@ -256,19 +256,6 @@ class M3U:
             yield float(start)
             start += decimal.Decimal(step)
 
-#todo
-# ERROR <general>: plugin.video.pseudotv.live-0.3.0y-M3U: importM3U, failed! [<class 'decimal.FloatOperation'>]
-# Traceback (most recent call last):
-# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 250, in importM3U
-# importChannels = list(self.chkImport(importChannels,multiplier))
-# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 271, in chkImport
-# chrange   = list(frange(chmin,chmax,0.1))
-# File "D:\Kodi\portable_data\addons\plugin.video.pseudotv.live\resources\lib\m3u.py", line 265, in frange
-# start += decimal.Decimal(step)
-# decimal.FloatOperation: [<class 'decimal.FloatOperation'>]
-
-
-
         channels  = self.sortStations(channels)
         chstart   = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
         chmin     = int(chstart + (multiplier*1000))

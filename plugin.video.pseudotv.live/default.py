@@ -34,7 +34,7 @@ def run(sysARG):
 
     if mode is None:
         if isBusy(): Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-        else:        SETTINGS.openSettings()
+        else:        openAddonSettings()
     elif mode == 'guide': xbmc.executebuiltin("ActivateWindowAndFocus(pvrchannelguide)")
     elif mode == 'vod':   Plugin(sysARG).playVOD(name, id)
     elif mode == 'play':

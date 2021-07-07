@@ -421,13 +421,17 @@ def setUtilities(key):
     return PROPERTIES.setProperty('utilities',key)
 
 def isRestartRequired():
-    return PROPERTIES.getPropertyBool('restartRequired')
+    state = PROPERTIES.getPropertyBool('restartRequired')
+    setRestartRequired(False)
+    return state
         
 def setRestartRequired(state=True):
     return PROPERTIES.setPropertyBool('restartRequired',state)
        
 def isShutdownRequired():
-    return PROPERTIES.getPropertyBool('shutdownRequired')
+    state = PROPERTIES.getPropertyBool('shutdownRequired')
+    setServiceStop(False)
+    return state
                  
 def setServiceStop(state=True):
     return PROPERTIES.setPropertyBool('shutdownRequired',state)
@@ -523,7 +527,7 @@ def showReadme():
         
     with busy_dialog(): 
         readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
-        return Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def showChangelog():
     def addColor(text):
@@ -542,7 +546,7 @@ def showChangelog():
         
     with busy_dialog(): 
         changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
-        return Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
 def openAddonSettings(ctl=(1,1),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
@@ -592,24 +596,21 @@ def chkResources(silent=True):
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
 
-def toggleADDON(id, state='true', reverse=False):
-    # if not hasAddon(id): return log('globals: toggleADDON, id = %s, not installed'%id)
+def toggleADDON(id, state=True, reverse=False):
     log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
-    sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,state))
-    if reverse and state == 'false': xbmc.executebuiltin("AlarmClock(Re-enable,EnableAddon(%s),00:04)"%id)
-    return True
+    sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
+    if reverse:
+        if id == ADDON_ID: xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({'EnableAddon':False,'DisableAddon':True}[state],id))
+        else: 
+            xbmc.sleep(4000)
+            return toggleADDON(id, not bool(state))
+    else: return True
     
 def brutePVR(override=False):
-    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): 
-        return
+    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    toggleADDON(PVR_CLIENT,'false')
-    xbmc.sleep(2000)
-    toggleADDON(PVR_CLIENT,'true')
-    xbmc.sleep(2000)
-    if override: return True
-    return Dialog().notificationDialog(LANGUAGE(30053))
+    return toggleADDON(PVR_CLIENT,False,reverse=True)
 
 def getPVR(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)

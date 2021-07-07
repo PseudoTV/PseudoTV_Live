@@ -321,7 +321,7 @@ class Monitor(xbmc.Monitor):
         self.log('onChange')
         with busy():
             if self.hasSettingsChanged():
-                self.writer.setPendingChangeTimer()
+                self.myService.writer.setPendingChangeTimer()
             
             
     def chkPluginSettings(self):
@@ -519,15 +519,13 @@ class Service:
                 updateIPTVManager()
                 if self.writer.builder.buildService():
                     self.log('chkUpdate, update finished')
-                    return brutePVR(override=True)
-            return False
+                    brutePVR(override=True)
 
 
     def chkUtilites(self):
         param = doUtilities()
         if not param: return
         self.log('chkLibraryItems, doUtilities = %s'%(param))
-        
         if param.startswith('Channel_Manager'):
             return self.openChannelManager()
         elif  param == 'Clear_Userdefined':
@@ -542,7 +540,7 @@ class Service:
             self.writer.backup.recoverChannels()
         else:
             self.writer.selectPredefined(param.replace('_',' '))
-        SETTINGS.openSettings()
+        openAddonSettings()
         
             
     def initialize(self):
@@ -571,7 +569,9 @@ class Service:
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
-            if isShutdownRequired() or isRestartRequired(): break
+            doShutdown = isShutdownRequired()
+            doRestart  = isRestartRequired()
+            if doShutdown or doRestart: break
             elif self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
             elif self.monitor.waitForAbort(5): break
                 
@@ -586,9 +586,8 @@ class Service:
             self.chkUpdate()
                 
         self.closeThreads()
-        if isRestartRequired():
+        if doRestart:
             self.log('run, restarting buildService')
-            setRestartRequired(False)
             Service().run()
             
                 

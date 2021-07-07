@@ -24,5 +24,4 @@ class Context:
         with busy_dialog():
             log('Context: __init__, sysARG = ' + str(sysARG))
             Plugin(sysARG).contextPlay(writer,isPlaylist=True)
-        
 if __name__ == '__main__': Context(sys.argv, writer=getWriterfromString())

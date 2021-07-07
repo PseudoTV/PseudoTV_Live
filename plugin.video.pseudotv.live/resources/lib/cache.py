@@ -52,12 +52,11 @@ def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), 
     def decorator(func):
         def decorated(*args, **kwargs):
             method_class = args[0]
-            method_class_name = method_class.__class__.__name__
-            cache_str = "%s.%s" % (method_class_name, func.__name__)
-            for item in args[1:]: cache_str += u".%s"%item
-            results = method_class.cache.get(cache_str.lower(), checksum, json_data)
+            cacheName    = "%s.%s"%(method_class.__class__.__name__, func.__name__)
+            for item in args[1:]: cacheName += u".%s"%item
+            results = method_class.cache.get(cacheName.lower(), checksum, json_data)
             if results: return results
-            return method_class.cache.set(cache_str.lower(), func(*args, **kwargs), checksum, expiration, json_data)
+            return method_class.cache.set(cacheName.lower(), func(*args, **kwargs), checksum, expiration, json_data)
         return decorated
     return decorator
 
@@ -75,18 +74,14 @@ class Cache:
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def set(self, name, data, checksum="", expiration=timedelta(minutes=15), json_data=False):
-        if not name.startswith(ADDON_ID): 
-            name = '%s.%s'%(ADDON_ID,name)
-            if not checksum: checksum = ADDON_VERSION
+    def set(self, name, data, checksum=ADDON_VERSION, expiration=timedelta(minutes=15), json_data=False):
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         self.log('set, name = %s, checksum = %s'%(name,checksum))
         self.cache.set(name.lower(),data,checksum,expiration,json_data)
         return data
         
     
-    def get(self, name, checksum="", json_data=False):
-        if not name.startswith(ADDON_ID): 
-            name = '%s.%s'%(ADDON_ID,name)
-            if not checksum: checksum = ADDON_VERSION
+    def get(self, name, checksum=ADDON_VERSION, json_data=False):
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         self.log('get, name = %s, checksum = %s'%(name,checksum))
         return self.cache.get(name.lower(),checksum,json_data)

@@ -46,9 +46,10 @@ class Utilities:
                     selectItem = items[findItemsInLST(items,[listItems[select].getLabel()],item_key='label')[0]]
                     self.log('buildMenu, selectItem = %s'%selectItem)
                     if selectItem.get('args'): 
-                        return selectItem['func'](*selectItem['args'])
+                        selectItem['func'](*selectItem['args'])
                     else: 
-                        return selectItem['func']()
+                        selectItem['func']()
+                    self.dialog.notificationDialog(LANGUAGE(30053))
                 except Exception as e: 
                     self.log("buildMenu, Failed! %s"%(e), xbmc.LOGERROR)
                     return self.dialog.notificationDialog(LANGUAGE(30001))
@@ -60,22 +61,20 @@ class Utilities:
             retval = self.dialog.inputDialog(LANGUAGE(30076), default=SETTINGS.getSetting('User_Groups'))
             if not retval: return
             SETTINGS.setSetting('User_Groups',retval)
-            return self.dialog.notificationDialog(LANGUAGE(30053))
+            self.dialog.notificationDialog(LANGUAGE(30053))
             
 
     def clearImport(self):
         self.log('clearImport') 
+        keys = ['Import_M3U','Import_M3U_FILE','Import_M3U_URL',
+                'Import_XMLTV','Import_XMLTV_FILE','Import_XMLTV_URL',
+                'Import_Provider']
+                
         with busy_dialog():
-            SETTINGS.setSetting('Import_M3U'       ,'')
-            SETTINGS.setSetting('Import_M3U_FILE'  ,'')
-            SETTINGS.setSetting('Import_M3U_URL'   ,'')
-            SETTINGS.setSetting('Import_XMLTV'     ,'')
-            SETTINGS.setSetting('Import_XMLTV_FILE','')
-            SETTINGS.setSetting('Import_XMLTV_URL' ,'')
-            SETTINGS.setSetting('Import_Provider'  ,'')
-            SETTINGS.setSetting('User_Import'      ,'false')
-            setPendingChange()#setRestartRequired()
-            return self.dialog.notificationDialog(LANGUAGE(30053))
+            for key in keys: SETTINGS.setSetting(key,'')
+            SETTINGS.setSetting('User_Import','false')
+            self.dialog.notificationDialog(LANGUAGE(30053))
+            setPendingChange()
 
 
     def deleteFiles(self, msg, full=False):
@@ -90,12 +89,10 @@ class Utilities:
             if not full: keys = keys[:2]
             if self.dialog.yesnoDialog('%s ?'%(msg)): 
                 with busy_dialog():
-                    for key in keys:
-                        if FileAccess.delete(files[key]):
-                            self.dialog.notificationDialog(LANGUAGE(30016)%(key))
+                    [self.dialog.notificationDialog(LANGUAGE(30016)%(key)) for key in keys if FileAccess.delete(files[key])]
             if full: 
                 setAutoTuned(False)
-                setPendingChange()#setRestartRequired()
+                setRestartRequired()
 
 
     def run(self):  
@@ -106,7 +103,7 @@ class Utilities:
         
         if isBusy():
             self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return SETTINGS.openSettings()
+            return openAddonSettings()
 
         if    param is None: self.buildMenu(param)
         elif  param == 'Show_Readme':       showReadme()

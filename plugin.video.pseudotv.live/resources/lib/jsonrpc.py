@@ -152,7 +152,7 @@ class JSONRPC:
         while not self.writer.monitor.abortRequested():
             if self.writer.monitor.waitForAbort(1) or self.sendQueue.empty(): break
             try: 
-                self.sendJSON(self.sendQueue.get())
+                self.sendJSON(self.sendQueue.get()[1])
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
         self.queueRunning = False

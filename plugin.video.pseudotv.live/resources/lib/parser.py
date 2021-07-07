@@ -285,7 +285,7 @@ class Writer:
             self.channels.saveChannels()
             
         if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()):
-            self.setPendingChangeTimer()#setRestartRequired()
+            self.setPendingChangeTimer()
      
        
     def recoverItemsFromChannels(self, predefined=None):
@@ -314,7 +314,7 @@ class Writer:
                 citem.update(item) #todo repair path.
                 self.channels.addChannel(citem)
             return self.channels.saveChannels()
-        self.setPendingChangeTimer()#setRestartRequired()
+        self.setPendingChangeTimer()
         self.log('recoverChannelsFromM3U, finished')
         return True
         
@@ -392,20 +392,21 @@ class Writer:
         with busy_dialog():
             if isClient(): return
             setSelectOpened(True)
+            
             items = self.library.getLibraryItems(type)
             if not items:
                 self.dialog.notificationDialog(LANGUAGE(30103)%(type))
                 setBusy(False)
                 return
+                
             listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-            
             if autoTune:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)
                 
         if not autoTune:
             select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
-
+            
         if not select is None:
             with busy_dialog():
                 self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
@@ -448,7 +449,7 @@ class Writer:
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): return False
             if self.clearChannels('user-defined'):
                 setAutoTuned(False)
-                self.setPendingChangeTimer()# setRestartRequired()
+                self.setPendingChangeTimer()
                 return self.dialog.notificationDialog(LANGUAGE(30053))
 
 

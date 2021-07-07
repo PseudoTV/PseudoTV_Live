@@ -82,15 +82,14 @@ class Backup:
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannels, file = %s'%(file))
-        if isBusy(): 
+        if isClient(): return False
+        elif isBusy(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30029))
             return False
-        elif isClient(): return False
         elif not self.writer.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
         
         with busy_dialog():
             with busy():
                 self.writer.recoverChannelsFromBackup(file)
-        setRestartRequired()
         return True

@@ -3,7 +3,7 @@ v.0.3.1
 -Fixed custom smartplaylist paths, existing channels will require replaced/updated path in the channel manager.
 -Fixed playlist playback mode busy spinner.
 -Improved concurrent/parallel operations (reduced memory demands).
--Added consolidated utilities, one menu accessible in settings. PseudoTV Live default execution changed to open settings.
+-Added consolidated utilities, one menu accessible in settings. PseudoTV Live default execution changed to open settings and moved from video to program menu.
 -Max guide day setting disabled and moved to Kodi "PVR & LiveTV" and now reflects aforementioned setting.
 -Added additional xmltv meta: Actors, Director, Audio, Language and Subtitles.
 -Various improvements, tweaks and fixes.
