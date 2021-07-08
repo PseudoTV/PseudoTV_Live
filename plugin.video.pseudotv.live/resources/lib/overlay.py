@@ -70,7 +70,7 @@ class Overlay(xbmcgui.WindowXML):
         for rule in ruleList:
             if action in rule.actions:
                 self.log("runActions performing channel rule: %s"%(rule.name))
-                parameter = rule.runAction(action, self, parameter)
+                return rule.runAction(action, self, parameter)
         return parameter
 
 
@@ -136,12 +136,10 @@ class Overlay(xbmcgui.WindowXML):
             if not self.pvritem or not isPseudoTV(): 
                 return False
                 
-            self.citem   = self.pvritem.get('citem',{})
-            self.container.reset()
-            
-            self.isPlaylist  = self.pvritem.get('isPlaylist',False)
             self.channelbug.setImage(self.pvritem.get('icon',LOGO))
-        
+            
+            self.citem       = self.pvritem.get('citem',{})
+            self.isPlaylist  = self.pvritem.get('isPlaylist',False)
             self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
             self.nextitems   = self.pvritem.get('broadcastnext',[])
             del self.nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
@@ -157,6 +155,9 @@ class Overlay(xbmcgui.WindowXML):
 
             self.listitems   = [self.service.writer.dialog.buildItemListItem(self.nowwriter)]
             self.listitems.extend([self.service.writer.dialog.buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
+            
+            self.container.reset()
+            xbmc.sleep(100)
             self.container.addItems(self.listitems)
                         
             self.ruleList    = self.service.writer.rules.loadRules([self.citem])

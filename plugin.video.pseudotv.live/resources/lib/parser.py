@@ -220,7 +220,8 @@ class Writer:
         for type in types: 
             libraryItems.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
  
-        addLST = []
+        addLST    = []
+        leftovers = []
         for type, items in libraryItems.items():
             self.log('buildPredefinedChannels, type = %s'%(type))
 

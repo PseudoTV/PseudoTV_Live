@@ -29,7 +29,7 @@ class RulesList:
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
-        self.writer = writer
+        self.writer   = writer
         
         self.ruleList = [BaseRule(writer=self.writer),
                          ShowChannelBug(),
@@ -41,13 +41,6 @@ class RulesList:
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
-    def getENUM(self, key):
-        return sorted({'JSON_METHOD'    : self.writer.jsonRPC.getEnums(id="List.Sort", type='method'),
-                       'JSON_ORDER'     : self.writer.jsonRPC.getEnums(id="List.Sort", type='order'),
-                       'JSON_OPERATORS' : self.writer.jsonRPC.getEnums(id="List.Filter.Operators"),
-                       'JSON_FILE_ENUM' : self.writer.jsonRPC.getEnums(id="List.Fields.Files", type='items')}[key])
-        
-
     def _loadRule(self, data):
         channel,tmpruleList = data
         ruleList = {}
@@ -489,7 +482,7 @@ class HandleMethodOrder(BaseRule):
         self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
         self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.getENUM(JSON_METHOD), self.getENUM(JSON_ORDER), [True, False]]
+        self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.jsonRPC.getENUM(JSON_METHOD), self.jsonRPC.getENUM(JSON_ORDER), [True, False]]
 
         
     def copy(self):
@@ -534,7 +527,7 @@ class HandleFilter(BaseRule):
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.optionLabels     = ['Field','Operator','Value']
         self.optionValues     = ['showtitle','contains','']
-        self.selectBoxOptions = [self.getENUM(JSON_FILE_ENUM), self.getENUM(JSON_OPERATORS)]
+        self.selectBoxOptions = [self.jsonRPC.getENUM(JSON_FILE_ENUM), self.jsonRPC.getENUM(JSON_OPERATORS)]
         
 
     def copy(self): 

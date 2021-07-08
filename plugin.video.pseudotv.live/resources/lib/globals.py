@@ -610,6 +610,7 @@ def brutePVR(override=False):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
+    genInstanceID()
     return toggleADDON(PVR_CLIENT,False,reverse=True)
 
 def getPVR(id=PVR_CLIENT):
@@ -836,6 +837,12 @@ def getGroups(add=False):
 def getMD5(text):
     hash_object = hashlib.md5(text.encode())
     return hash_object.hexdigest()
+
+def genInstanceID():
+    PROPERTIES.setProperty('InstanceID',uuid.uuid4())
+
+def getInstanceID():
+    return (PROPERTIES.getProperty('InstanceID') or uuid.uuid4())
 
 def genUUID(seed=None):
     if seed:

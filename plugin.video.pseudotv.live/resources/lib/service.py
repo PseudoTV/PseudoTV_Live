@@ -546,7 +546,8 @@ class Service:
     def initialize(self):
         self.monitor.lastSettings = self.monitor.chkSettings()
         with busy():
-            funcs = [initDirs,
+            funcs = [genInstanceID,
+                     initDirs,
                      self.chkVersion,
                      self.monitor.chkPluginSettings,
                      chkResources,
@@ -558,6 +559,7 @@ class Service:
          
     def run(self, silent=False):
         self.log('run')
+        doRestart = False
         setBusy(False) #reset value on 1st run.
         self.monitor.waitForAbort(5) # startup delay
         

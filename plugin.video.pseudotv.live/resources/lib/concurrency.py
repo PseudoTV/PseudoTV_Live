@@ -27,6 +27,7 @@ from resources.lib.cache       import Cache, cacheit
 
 try:
     CORES = Cores().CPUcount()
+    # if xbmc.getCondVisibility('System.Platform.Android'): raise Exception('Using Android threading')
     USING_THREAD = (CORES == 1 or xbmc.getCondVisibility('System.Platform.Windows')) #multiprocessing takes foreground focus from windows, bug in python?
     if USING_THREAD:    from multiprocessing.dummy import Pool as ThreadPool
     else:               from multiprocessing.pool  import ThreadPool
@@ -69,8 +70,7 @@ def log(msg, level=xbmc.LOGDEBUG):
 def getThreadMax():
     CORES = Cores().CPUcount()
     if USING_THREAD:
-        if   CORES == 1: return 8
-        elif CORES  > 1: return CORES * 4
+        return CORES * 4
     return CORES
     
 class Concurrent:
@@ -96,7 +96,7 @@ class Concurrent:
     @timeit
     def executors(self, func, items=[], args=None, kwargs=None, chunksize=None, timeout=300):
         results = []
-        if chunksize is None: chunksize = roundupDIV(len(items), self.cpuCount)
+        if chunksize is None: chunksize = roundupDIV(len(items), Cores().CPUcount())
         if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
         self.log("executors, chunksize = %s, items = %s"%(chunksize,len(items)))
         
@@ -137,7 +137,7 @@ class Parallel:
     @timeit
     def executors(self, func, items=[], args=None, kwargs=None, chunksize=None, timeout=300):
         results = []
-        if chunksize is None: chunksize = roundupDIV(len(items), self.cpuCount)
+        if chunksize is None: chunksize = roundupDIV(len(items), Cores().CPUcount())
         if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
         self.log("executors, chunksize = %s, items = %s"%(chunksize,len(items)))
         
@@ -175,7 +175,7 @@ class PoolHelper:
         results = []
         if len(items) == 0: return results
         try:
-            if chunksize is None: chunksize = roundupDIV(len(items), self.cpuCount)
+            if chunksize is None: chunksize = roundupDIV(len(items), Cores().CPUcount())
             if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
             self.log("poolList, chunksize = %s, items = %s"%(chunksize,len(items)))
             

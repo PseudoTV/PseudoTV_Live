@@ -21,7 +21,6 @@ from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
 
-
 class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
@@ -55,13 +54,13 @@ class JSONRPC:
         return self.resources.getLogo(name, type, path, item, featured)
 
 
-    @cacheit()
+    @cacheit(json_data=True)
     def getIntrospect(self, id):
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params":{"filter":{"id":"%s","type":"method"}},"id":1}'%(id))
         return self.sendJSON(json_query).get('result',{})
 
 
-    @cacheit()
+    @cacheit(expiration=datetime.timedelta(days=28),json_data=True)
     def getEnums(self, id, type=''):
         self.log('getEnums id = %s, type = %s' % (id, type))
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params": {"getmetadata": true, "filterbytransport": true,"filter": {"getreferences": false, "id":"%s","type":"type"}},"id":1}'%(id))
@@ -181,7 +180,6 @@ class JSONRPC:
         return (result.get('item', {}) or result.get('items', []))
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),json_data=True)  # channel surfing buffer! cache/io impact needs to be eval., cache maybe overkill? video content can not be lower than cache expiration.
     def getPVRChannels(self, radio=False):
         json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}'%({True:'allradio',False:'alltv'}[radio]))
         return self.sendJSON(json_query).get('result', {}).get('channels', [])
@@ -473,85 +471,3 @@ class JSONRPC:
                 return item[0].get('file', '')
         self.log('matchPVRPath, path not found \n%s' % (dumpJSON(json_response)))
         return ''
-
-
-    def matchPVRChannel(self, chname, id, radio=False, second_attempt=False):  # Convert PseudoTV Live channelID into a Kodi channelID for playback
-        def _matchChannel(channel):
-            # match = re.compile('\, (.*)', re.IGNORECASE).search(chname)
-            # if match: chname_alt = match.group(1)
-            # else:     chname_alt = chname
-            chname_alt = chname
-            if channel.get('label') in [chname,chname_alt]:
-                for key in ['broadcastnow', 'broadcastnext']:
-                    writer = getWriter(channel.get(key,{}).get('writer',''))
-                    if writer.get('citem',{}).get('id','') == id:
-                        log('matchPVRChannel, match found! id = %s'%(id))
-                        return channel
-            return None
-
-        results = self.writer.pool.poolList(_matchChannel, self.getPVRChannels(radio))
-        if results and isinstance(results, list): results = results[0]
-        if not results:
-            if not second_attempt:
-                if brutePVR(override=True):
-                    return self.matchPVRChannel(chname, id, radio, True)
-            else: return {}
-        else:
-            return results
-
-
-    def fillPVRbroadcasts(self, channelItem, cache=False):
-        self.log('fillPVRbroadcasts, channelItem = %s, cache = %s' % (channelItem, cache))
-        def _parseBroadcasts():
-            if cache:  # todo use checksum to refresh?
-                cacheName = 'fillPVRbroadcasts.%s'%(channelItem.get('citem',{}).get('id'))
-                cacheResponse = self.writer.cache.get(cacheName, checksum="", json_data=True)
-                if not cacheResponse:
-                    cacheResponse = self.getPVRBroadcasts(channelItem['channelid'])
-                    if cacheResponse:
-                        now = getLocalTime()
-                        if cacheResponse[-1].get('progress', -1) == 0:
-                            lastTime = (strpTime(cacheResponse[-1].get('endtime')) or now)
-                        else:
-                            lastTime = now
-                        self.writer.cache.set(cacheName, cacheResponse, checksum="", expiration=datetime.timedelta(seconds=(now - lastTime).total_seconds()), json_data=True)
-                return cacheResponse
-            else:
-                return self.getPVRBroadcasts(channelItem.get('channelid'))
-
-        def _parseBroadcast(item):
-            if item['progresspercentage'] == 100:
-                return None
-            elif item['progresspercentage'] > 0:
-                broadcastnow = channelItem['broadcastnow']
-                channelItem.pop('broadcastnow')
-                item.update(broadcastnow)
-                channelItem['broadcastnow'] = item
-            elif item['progresspercentage'] == 0:
-                channelItem['broadcastnext'].append(item)
-
-        channelItem['broadcastnext'] = []
-        self.writer.pool.poolList(_parseBroadcast, _parseBroadcasts())
-        self.log('fillPVRbroadcasts, found broadcastnext = %s' % (len(channelItem['broadcastnext'])))
-        return channelItem
-
-
-    def getPVRPlaylist(self, chname, id, radio=False, isPlaylist=False):
-        self.log('getPVRPlaylist, chname = %s, id = %s, isPlaylist = %s' % (chname, id, isPlaylist))
-        channelItem               = self.matchPVRChannel(chname, id, radio)
-        channelItem['citem']      = {'name': chname,'id':id,'radio':radio}
-        channelItem['isPlaylist'] = isPlaylist
-        if channelItem.get('uniqueid'):
-            channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniquid', -1)))
-        return self.fillPVRbroadcasts(channelItem)
-
-
-    def getPVRposition(self, chname, id, radio=False, isPlaylist=False):
-        self.log('getPVRposition, chname = %s, id = %s, isPlaylist = %s' % (chname, id, isPlaylist))
-        channelItem                  = self.matchPVRChannel(chname, id, radio)
-        channelItem['broadcastnext'] = [channelItem.get('broadcastnext', [])]
-        channelItem['citem']         = {'name':chname,'id':id,'radio':radio}
-        channelItem['isPlaylist']    = isPlaylist
-        if channelItem.get('uniqueid'):
-            channelItem['callback'] = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniqueid', -1)))
-        return channelItem

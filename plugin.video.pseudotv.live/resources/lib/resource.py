@@ -89,10 +89,12 @@ class Resources:
         paths    = [LOGO_LOC,IMAGE_LOC]
         patterns = self.getNamePatterns(chname,type)
         for path in paths:
-            results = self.pool.poolList(matchPattern,self.jsonRPC.getListDirectory(path)[1])
-            if len(results) > 0: 
-                self.log('chkLocalLogo, found = %s'%(results[0]))
-                return results[0]
+            items = self.jsonRPC.getListDirectory(path)[1]
+            for item in items:
+                match = matchPattern(item)
+                if match: 
+                    self.log('chkLocalLogo, found = %s'%(match))
+                    return match
                
                
     def findResourceLogo(self, chname, type):
@@ -110,10 +112,12 @@ class Resources:
         patterns = self.getNamePatterns(chname,type)
         for item in self.logoSets:
             if type in item['type']:
-                results = self.pool.poolList(chkFile,item.get('files',[]))
-                if len(results) > 0:
-                    self.log('findResourceLogo, found = %s'%(results[0]))
-                    return results[0]
+                files = item.get('files',[])
+                for file in files:
+                    match = chkFile(file)
+                    if match:
+                        self.log('findResourceLogo, found = %s'%(match))
+                        return match
             
             
     @cacheit()
@@ -126,10 +130,11 @@ class Resources:
         
         items    = self.jsonRPC.getTVshows()
         patterns = [chname, splitYear(chname)[0]]
-        results  = self.pool.poolList(findMatch,items)
-        if len(results) > 0:
-            self.log('findTVLogo, found = %s'%(results[0]))
-            return results[0]
+        for item in items:
+            match = findMatch(item)
+            if match: 
+                self.log('findTVLogo, found = %s'%(match))
+                return match
         
         
     @cacheit(expiration=datetime.timedelta(minutes=15)) #cache long enough for concurrent run-throughs. Should be fresh data, not cached. 

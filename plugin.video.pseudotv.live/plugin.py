@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 # -entry point-
 import sys
+from kodi_six             import xbmc
 from resources.lib.plugin import Plugin
 
 if __name__ == '__main__': Plugin(sys.argv).run()

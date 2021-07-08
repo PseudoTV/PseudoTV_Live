@@ -649,7 +649,7 @@ msgid "Parsing Kodi Library"
 msgstr ""
 
 msgctxt "#30159"
-msgid "Populating AutoTunes"
+msgid "Populating AutoTune"
 msgstr ""
 
 msgctxt "#30160"
