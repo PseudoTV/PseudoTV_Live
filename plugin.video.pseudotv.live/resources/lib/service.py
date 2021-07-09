@@ -102,14 +102,15 @@ class Player(xbmc.Player):
         
     def getCitem(self):
         self.log('getCitem')
-        if not self.playingPVRitem: self.playingPVRitem = self.getPVRitem()
+        self.playingPVRitem.update(self.getPVRitem())
         return self.playingPVRitem.get('citem',{})
         
         
     def getCallback(self):
-        self.log('getCallback')
-        if not self.playingPVRitem: self.playingPVRitem = self.getPVRitem()
-        return 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=self.playingPVRitem.get('uniqueid',-1))
+        self.playingPVRitem.update(self.getPVRitem())
+        callback = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=self.playingPVRitem.get('uniqueid',-1))
+        self.log('getCallback, callback = %s'%(callback))
+        return callback
 
 
     def toggleSubtitles(self, state):
@@ -180,7 +181,7 @@ class Player(xbmc.Player):
             return self.stopAction()
             
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
-        if not pvritem.get('callback'):
+        if not pvritem.get('callback') or pvritem.get('callback','').endswith(('-1.pvr','None.pvr')):
             pvritem['callback'] = self.getCallback()
             self.log('playAction, updating callback to = %s'%(pvritem['callback']))
 

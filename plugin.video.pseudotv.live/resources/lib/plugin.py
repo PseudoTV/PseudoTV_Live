@@ -55,22 +55,14 @@ class Plugin:
 
     @cacheit(checksum=getInstanceID(),json_data=True) #stale channel meta for static parameters.
     def getChannel(self, chname, id, radio=False, second_attempt=False):
-        def _matchLabel(channel):
-            if channel.get('label') == chname: 
-                return channel
-        
         def _matchChannel(channel):
-            if _matchLabel(channel):
+            if channel.get('label') == chname:
                 for key in ['broadcastnow', 'broadcastnext']:
                     writer = getWriter(channel.get(key,{}).get('writer',''))
                     if writer.get('citem',{}).get('id','') == id:
                         return channel
 
         channels = self.writer.jsonRPC.getPVRChannels(radio)
-        for channel in channels:
-            match = _matchLabel(channel)
-            if match: return match
-
         for channel in channels:
             match = _matchChannel(channel)
             if match: return match
@@ -80,7 +72,7 @@ class Plugin:
         return {}
         
         
-    # @cacheit(checksum=getInstanceID(),json_data=True)
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getChannelID(self, chname, id, radio=False): # Convert PseudoTV Live id into a Kodi channelID
         return {'channelid':self.getChannel(chname, id, radio).get('channelid',-1),'uniqueid':self.getChannel(chname, id, radio).get('uniqueid',-1)}
         
@@ -102,7 +94,8 @@ class Plugin:
         broadcasts  = self.getChannelBroadcasts(chname, id, channelItem.get('channelid'))
         channelItem['isPlaylist'] = isPlaylist
         channelItem['citem']      = {'name':chname,'id':id,'radio':radio}
-        channelItem['callback']   = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniquid')))
+        channelItem['callback']   = 'pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=(channelItem.get('uniqueid')))
+        print('buildChannel',channelItem)
         self.writer.pool.poolList(_parseBroadcast, broadcasts)#self.writer.pool.genList(_parseBroadcast,broadcasts)#
         return channelItem
     
