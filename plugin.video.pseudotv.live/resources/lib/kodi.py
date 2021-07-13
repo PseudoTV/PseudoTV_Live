@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*-
 
-import os, json, traceback
+import os, json, traceback, threading
 
 from kodi_six                  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
 from datetime                  import timedelta
@@ -40,7 +40,12 @@ def dumpJSON(item):
 def loadJSON(item):
     try:    return json.loads(item)
     except: return {}
-    
+
+def removeDUPSLST(lst):
+    list_of_strings = [dumpJSON(d) for d in lst]
+    list_of_strings = set(list_of_strings)
+    return [loadJSON(s) for s in list_of_strings]
+
 def log(msg, level=xbmc.LOGDEBUG):
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
     if not isinstance(msg,str): msg = str(msg)
@@ -309,17 +314,55 @@ class Dialog:
     pool       = PoolHelper()
     
     def __init__(self):
-        ...
+        self.infoMonitorThread = threading.Timer(0.5, self.doInfoMonitor)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
     
-    def toggleCHKInfo(self, state):
-        self.properties.setPropertyBool('chkInfo',state)
-        if state: self.properties.clearProperty('monitor.montiorList')
-        else:     self.properties.clearProperty('chkInfo')
+    def chkInfoMonitor(self):
+        return self.properties.getPropertyBool('chkInfoMonitor')
+        
+    
+    def getInfoMonitor(self):
+        return self.properties.getPropertyDict('monitor.montiorList').get('info',[])
+    
+    
+    def setInfoMonitor(self, items):
+        return self.properties.setPropertyDict('monitor.montiorList',{'info':removeDUPSLST(items)})
+
+
+    def toggleInfoMonitor(self, state):
+        self.properties.setPropertyBool('chkInfoMonitor',state)
+        if state: 
+            self.properties.clearProperty('monitor.montiorList')
+            if not self.infoMonitorThread.is_alive():
+                self.infoMonitorThread = threading.Timer(.5, self.doInfoMonitor)
+                self.infoMonitorThread.name = "infoMonitorThread"
+                self.infoMonitorThread.start()
+
+
+    def doInfoMonitor(self):
+        while not self.monitor.abortRequested():
+            if self.monitor.waitForAbort(1): break
+            elif not self.fillInfoMonitor(): break
+            
+
+    def fillInfoMonitor(self, type='ListItem'):
+        if not self.chkInfoMonitor(): return False
+        item = {'name'  :xbmc.getInfoLabel('%s.Label'%(type)),
+                'label' :xbmc.getInfoLabel('%s.Label'%(type)),
+                'label2':xbmc.getInfoLabel('%s.Label2'%(type)),
+                'path'  :xbmc.getInfoLabel('%s.Path'%(type)),
+                'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
+                'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
+                'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}   
+        if item.get('label'):
+            montiorList = self.getInfoMonitor()
+            montiorList.insert(0,item)
+            self.setInfoMonitor(montiorList)
+        return True
         
         
     @staticmethod
@@ -510,7 +553,7 @@ class Dialog:
                 default   = options[select]['default']
             
         self.log('browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
-        if monitor: self.toggleCHKInfo(True)
+        if monitor: self.toggleInfoMonitor(True)
         if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
             ## type integer - the type of browse dialog.
@@ -525,7 +568,7 @@ class Dialog:
             ## 2	ShowAndGetImage
             ## 3	ShowAndGetWriteableDirectory
             retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        if monitor: self.toggleCHKInfo(False)
+        if monitor: self.toggleInfoMonitor(False)
         if retval:
             if prompt and retval == default: return None
             return retval

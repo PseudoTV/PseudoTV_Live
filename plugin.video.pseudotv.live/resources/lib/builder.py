@@ -45,6 +45,7 @@ class Builder:
         self.channelCount     = 0
         self.dirCount         = 0
         self.chanName         = ''
+        self.chanError        = []
         
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
                                  "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split(',')},
@@ -97,6 +98,7 @@ class Builder:
                 
             channel         = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName   = channel['name']
+            self.chanError  = []
             self.progress   = int(idx*100//len(channels))
             self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])
@@ -108,7 +110,9 @@ class Builder:
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
+                self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30313)))
                 self.writer.removeChannelLineup(channel)
+                self.writer.monitor.waitForAbort(4)
             
         self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
         if not self.writer.saveChannelLineup(): 
@@ -173,7 +177,6 @@ class Builder:
             self.loopback = {}
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             
-            print('getFileList', start, (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)),start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)))
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)):
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)),xbmc.LOGINFO)
                 return True# prevent over-building
@@ -271,10 +274,13 @@ class Builder:
         
         # malformed calls will return root response, catch a reparse of same folder and quit. 
         if json_response == self.loopback:
+            self.chanError.append(LANGUAGE(30318))
             self.log("buildFileList, loopback detected returning")
             return fileList
-        else: 
+        elif json_response:
             self.loopback = json_response
+        else:
+            self.chanError.append(LANGUAGE(30317))
             
         for idx, item in enumerate(json_response):
             file     = item.get('file','')
@@ -282,12 +288,15 @@ class Builder:
 
             if fileType == 'file':
                 if not file:
+                    self.chanError.append(LANGUAGE(30316))
                     self.log("buildFileList, id: %s, IDX = %s skipping missing playable file!"%(id,idx),xbmc.LOGINFO)
                     continue
                 elif (file.lower().endswith('strm') and not self.incStrms): 
+                    self.chanError.append('%s STRM'%(LANGUAGE(30315)))
                     self.log("buildFileList, id: %s, IDX = %s skipping strm!"%(id,idx),xbmc.LOGINFO)
                     continue
                 elif (is3D(item) and not self.inc3D): 
+                    self.chanError.append('%s 3D'%(LANGUAGE(30315)))
                     self.log("buildFileList, id: %s, IDX = %s skipping 3D!"%(id,idx),xbmc.LOGINFO)
                     continue
 
@@ -346,12 +355,14 @@ class Builder:
                     if len(fileList) >= limit:
                         break
                         
-                else: self.log("buildFileList, id: %s skipping no duration meta found!"%(id),xbmc.LOGINFO)
+                else: 
+                    self.chanError.append(LANGUAGE(30314))
+                    self.log("buildFileList, id: %s skipping no duration meta found!"%(id),xbmc.LOGINFO)
                     
             elif fileType == 'directory' and (len(fileList) < limit) and (self.dirCount < roundupDIV(limit,2)): #extend fileList by parsing child folders, limit folder parsing to half limit to avoid runaways/loopbacks.
                 self.dirCount += 1
                 fileList.extend(self.buildFileList(channel, file, media, limit, sort, filter, limits))
-            
+
         if method == 'episode':
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])

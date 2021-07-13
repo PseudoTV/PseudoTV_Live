@@ -244,20 +244,20 @@ class Manager(xbmcgui.WindowXMLDialog):
         value = channelListItem.getProperty('value')
         channelData = loadJSON(channelListItem.getProperty('channelData'))
         self.log('itemInput, channelData = %s, value = %s, key = %s'%(channelData,value,key))
-        KEY_INPUT = {"name"  : {'func':self.writer.dialog.inputDialog  ,'args':{'message':LANGUAGE(30123),'default':value}},
-                     "path"  : {'func':self.writer.dialog.browseDialog ,'args':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
-                     "group" : {'func':self.writer.dialog.selectDialog ,'args':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':findItemsInLST(getGroups(),value.split(' / ')),'useDetails':False}},
-                     "rules" : {'func':self.selectRules         ,'args':{'channelData':channelData}},
-                     "radio" : {'func':self.toggleBool          ,'args':{'state':channelData.get('radio',False)}},
-                     "clear" : {'func':self.clearChannel        ,'args':{'item':channelData}}}
+        KEY_INPUT = {"name"  : {'func':self.writer.dialog.inputDialog  ,'kwargs':{'message':LANGUAGE(30123),'default':value}},
+                     "path"  : {'func':self.writer.dialog.browseDialog ,'kwargs':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
+                     "group" : {'func':self.writer.dialog.selectDialog ,'kwargs':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':findItemsInLST(getGroups(),value.split(' / ')),'useDetails':False}},
+                     "rules" : {'func':self.selectRules                ,'kwargs':{'channelData':channelData}},
+                     "radio" : {'func':self.toggleBool                 ,'kwargs':{'state':channelData.get('radio',False)}},
+                     "clear" : {'func':self.clearChannel               ,'kwargs':{'item':channelData}}}
            
-        func = KEY_INPUT[key.lower()]['func']
-        args = KEY_INPUT[key.lower()]['args']
-        retval, channelData = self.validateInput(funcExecute(func, args),key, channelData)
+        func   = KEY_INPUT[key.lower()]['func']
+        kwargs = KEY_INPUT[key.lower()]['kwargs']
+        retval, channelData = self.validateInput(func(**kwargs),key, channelData)
         if retval is not None:
             self.madeChanges = True
             if isinstance(retval,list):
-                retval = [args['list'][idx] for idx in retval]
+                retval = [kwargs.get('list',[])[idx] for idx in retval]
             if key in self.newChannel:
                 channelData[key] = retval
             elif key == 'clear':
@@ -286,7 +286,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             if retval.strip('/').endswith(('.xml','.xsp')):
                 channelData['name'] = self.getSmartPlaylistName(retval)
             elif retval.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
-                channelData['name'] = self.getMontiorList('name').getLabel()
+                channelData['name'] = self.getMontiorList().getLabel()
             else:
                 channelData['name'] = os.path.basename(os.path.dirname(retval)).strip('/')
         return channelData
@@ -298,7 +298,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             def getItem(item):
                 return self.writer.dialog.buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
                 
-            infoList = list(map(loadJSON,getInfoMonitor()))
+            infoList = self.writer.dialog.getInfoMonitor()
             itemList = [getItem(info) for info in infoList if info.get('label')]
             select   = self.writer.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
             if select is not None: return itemList[select]

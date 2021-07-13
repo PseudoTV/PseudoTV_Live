@@ -19,16 +19,16 @@
 
 from resources.lib.globals     import *
 from resources.lib.vault       import Vault
-from resources.lib.m3u         import M3U
-from resources.lib.xml         import XMLTV
-from resources.lib.jsonrpc     import JSONRPC 
-from resources.lib.channels    import Channels
-from resources.lib.library     import Library
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
-from resources.lib.rules       import RulesList
-from resources.lib.builder     import Builder 
+from resources.lib.channels    import Channels
+from resources.lib.jsonrpc     import JSONRPC 
 from resources.lib.backup      import Backup
+from resources.lib.builder     import Builder 
+from resources.lib.m3u         import M3U
+from resources.lib.xml         import XMLTV
+from resources.lib.rules       import RulesList
+from resources.lib.library     import Library
 
 class Writer:
     vault          = Vault()
@@ -48,12 +48,12 @@ class Writer:
         self.pool          = PoolHelper()
         
         self.channels      = Channels(writer=self)
-        self.jsonRPC       = JSONRPC(writer=self)
+        self.jsonRPC       = JSONRPC(inherited=self)
         self.backup        = Backup(writer=self)
         self.builder       = Builder(writer=self)
         self.m3u           = M3U(writer=self)
         self.xmltv         = XMLTV(writer=self)
-        self.rules         = RulesList(writer=self)
+        self.rules         = RulesList(inherited=self)
         
         self.library       = Library(writer=self)
         self.recommended   = self.library.recommended
@@ -258,7 +258,6 @@ class Writer:
 
         # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
         difference = sorted(diffLSTDICT(leftovers,addLST), key=lambda k: k['number'])
-        print('buildPredefinedChannels',difference)
         [self.channels.addChannel(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
         self.log('buildPredefinedChannels, finished building')
         return self.channels.saveChannels()

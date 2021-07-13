@@ -108,7 +108,7 @@ class XMLTV:
         if channels   is None: channels   = self.getChannels()
         if programmes is None: programmes = self.getProgrammes()
         if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
-        print('loadEndTimes',len(channels))
+            
         for channel in channels:
             try: 
                 stopDate = max([strpTime(program['stop'], DTFORMAT) for program in programmes if program['channel'] == channel['id']], default=fallback)

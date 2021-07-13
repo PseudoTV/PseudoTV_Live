@@ -1,3 +1,9 @@
+v.0.3.2
+-Added channel building error notification.
+-Fixed channel manager name selection.
+-Fixed channel bug not appearing.
+-Tweaked playback protocols.
+
 v.0.3.1
 -Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.
 -Fixed custom smartplaylist paths, existing channels will require replaced/updated path in the channel manager.

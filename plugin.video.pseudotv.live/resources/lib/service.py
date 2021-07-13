@@ -488,12 +488,6 @@ class Service:
             self.player.toggleOverlay(False)
 
 
-    def chkInfo(self):
-        if not isCHKInfo(): return
-        self.monitor.waitForAbort(.5) #adjust wait time to catch navigation meta. < 2secs? < 1sec. users report instability.
-        return fillInfoMonitor()
-
-
     def chkUpdate(self, lastUpdate=None):
         if (isBusy() | self.monitor.isSettingsOpened() | isClient()): 
             return False
@@ -520,7 +514,7 @@ class Service:
                 updateIPTVManager()
                 if self.writer.builder.buildService():
                     self.log('chkUpdate, update finished')
-                    brutePVR(override=True)
+                    # brutePVR(override=True)
 
 
     def chkUtilites(self):
@@ -575,7 +569,7 @@ class Service:
             doShutdown = isShutdownRequired()
             doRestart  = isRestartRequired()
             if doShutdown or doRestart: break
-            elif self.chkInfo(): continue # aggressive polling required (bypass waitForAbort)!
+            elif self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
             elif self.monitor.waitForAbort(5): break
                 
             self.chkUtilites()

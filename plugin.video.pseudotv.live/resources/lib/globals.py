@@ -31,6 +31,7 @@ from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring
 from resources.lib.fileaccess  import FileAccess, FileLock
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
+from resources.lib.events      import logit
 from operator                  import itemgetter
 from collections               import deque
 
@@ -63,6 +64,7 @@ OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
 README_FLE          = os.path.join(ADDON_PATH,'readme.md')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
+
 LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'library.json')
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
 GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'groups.xml')
@@ -186,6 +188,7 @@ USER_LOC         = getUserFilePath()
 LOCK_LOC         = USER_LOC
 XMLTVFLE         = '%s.xml'%('pseudotv')
 M3UFLE           = '%s.m3u'%('pseudotv')
+
 CHANNELFLE       = 'channels.json'
 LIBRARYFLE       = 'library.json'
 GENREFLE         = 'genres.xml'
@@ -303,26 +306,6 @@ def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
     except ZeroDivisionError: return 0
 
-def setInfoMonitor(values):
-    return PROPERTIES.setPropertyList('monitor.montiorList',list(set(values)))
-    
-def getInfoMonitor():
-    return list(filter(lambda d:d != '', PROPERTIES.getPropertyList('monitor.montiorList')))
- 
-def fillInfoMonitor(type='ListItem'):
-    item = {'name'  :xbmc.getInfoLabel('%s.Label'%(type)),
-            'label' :xbmc.getInfoLabel('%s.Label'%(type)),
-            'label2':xbmc.getInfoLabel('%s.Label2'%(type)),
-            'path'  :xbmc.getInfoLabel('%s.Path'%(type)),
-            'writer':xbmc.getInfoLabel('%s.Writer'%(type)),
-            'logo'  :xbmc.getInfoLabel('%s.Icon'%(type)),
-            'thumb' :xbmc.getInfoLabel('%s.Thumb'%(type))}   
-    if item:
-        montiorList = getInfoMonitor()
-        montiorList.insert(0,dumpJSON(item))
-        setInfoMonitor(montiorList)
-    return True
-    
 def initDirs():
     dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,LOCK_LOC]
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
@@ -747,19 +730,6 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     log("findItemsInLST, matches = %s"%(matches))
     return matches
 
-def funcExecute(func,args):
-    log("globals: funcExecute, func = %s, args = %s"%(func.__name__,args))
-    if isinstance(args,dict): 
-        retval = func(**args)
-    elif isinstance(args,tuple): 
-        retval = func(*args)
-    elif args:
-        retval = func(args)
-    else: 
-        retval = func()
-    log("globals: funcExecute, retval = %s"%(retval))
-    return retval
-
 def diffLST(old, new): 
     return list(set(old) - set(new))
     
@@ -927,9 +897,6 @@ def cleanResourcePath(path):
         return (path.replace('resource://','special://home/addons/'))
     return path
 
-def isCHKInfo():
-    return PROPERTIES.getPropertyBool('chkInfo')
-        
 def hasSubtitle():
     return xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
 

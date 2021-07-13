@@ -53,7 +53,7 @@ class Backup:
                 if not SETTINGS.getSetting('Backup_Channels'):
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
-                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.load(CHANNELFLE_BACKUP).get('channels',[]))))
+                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.loadChannels(CHANNELFLE_BACKUP).get('channels',[]))))
                 return True
             else:
                 PROPERTIES.setPropertyBool('has.Backup',False)
@@ -74,7 +74,7 @@ class Backup:
             if FileAccess.copy(getUserFilePath(CHANNELFLE),CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
                 SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p')))
-                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.load(CHANNELFLE_BACKUP).get('channels',[]))))
+                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.loadChannels(CHANNELFLE_BACKUP).get('channels',[]))))
                 return self.writer.dialog.notificationDialog(LANGUAGE(30053))
             else: self.hasBackup()
             return False

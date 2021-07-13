@@ -26,9 +26,8 @@ from functools                 import partial, wraps
 from resources.lib.cache       import Cache, cacheit
 
 try:
-    CORES = Cores().CPUcount()
     # if xbmc.getCondVisibility('System.Platform.Android'): raise Exception('Using Android threading')
-    USING_THREAD = (CORES == 1 or xbmc.getCondVisibility('System.Platform.Windows')) #multiprocessing takes foreground focus from windows, bug in python?
+    USING_THREAD = xbmc.getCondVisibility('System.Platform.Windows') #multiprocessing takes foreground focus from windows, bug in python?
     if USING_THREAD:    from multiprocessing.dummy import Pool as ThreadPool
     else:               from multiprocessing.pool  import ThreadPool
 except Exception as e:

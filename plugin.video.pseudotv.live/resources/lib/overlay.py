@@ -135,15 +135,15 @@ class Overlay(xbmcgui.WindowXML):
             self.pvritem = self.service.player.getPVRitem()
             if not self.pvritem or not isPseudoTV(): 
                 return False
-                
-            self.channelbug.setImage(self.pvritem.get('icon',LOGO))
-            
+
             self.citem       = self.pvritem.get('citem',{})
+            self.channelbug.setImage(self.citem.get('logo',LOGO))
+
             self.isPlaylist  = self.pvritem.get('isPlaylist',False)
             self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
             self.nextitems   = self.pvritem.get('broadcastnext',[])
             del self.nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-            
+                            
             self.nowwriter   = getWriter(self.pvritem.get('broadcastnow',{}).get('writer',{}))
             self.nowwriter.get('art',{})['thumb'] = getThumb(self.nowwriter) #unify artwork
             

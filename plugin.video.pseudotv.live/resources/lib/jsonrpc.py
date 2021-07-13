@@ -25,15 +25,15 @@ class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
 
-    def __init__(self, writer=None):  
+    def __init__(self, inherited=None):  
         self.log('__init__')
-        if writer is None:
-            from resources.lib.parser import Writer
-            writer = Writer()
-            
-        self.writer       = writer
-        self.cache        = writer.cache
-        self.pool         = writer.pool
+        # if inherited.__class__.__name__ == 'Writer':
+            # self.writer  = inherited
+        self.writer       = inherited
+        self.inherited    = inherited
+        self.cache        = inherited.cache
+        self.pool         = inherited.pool
+        
         self.sendQueue    = PriorityQueue()
         self.videoParser  = VideoParser()
         self.resources    = Resources(jsonRPC=self)
@@ -119,17 +119,17 @@ class JSONRPC:
 
 
     def sendJSON(self, command):
-        if self.queueRunning: return self.writer.pool.executor(sendJSON,command)
+        if self.queueRunning: return self.inherited.pool.executor(sendJSON,command)
         else:                 return sendJSON(command)
 
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(command)))
-        cacheResponse = self.writer.cache.get(cacheName, checksum=checksum, json_data=True)
+        cacheResponse = self.inherited.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)
             if cacheResponse.get('result',None):
-                self.writer.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+                self.inherited.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
@@ -148,8 +148,8 @@ class JSONRPC:
     def startQueueWorker(self):
         self.log('startQueueWorker, starting thread worker')
         self.queueRunning = True
-        while not self.writer.monitor.abortRequested():
-            if self.writer.monitor.waitForAbort(1) or self.sendQueue.empty(): break
+        while not self.inherited.monitor.abortRequested():
+            if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
             try: 
                 self.sendJSON(self.sendQueue.get()[1])
             except Exception as e: 
@@ -258,7 +258,7 @@ class JSONRPC:
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://','upnp://','pvr://')): return True
         # todo test seek for support disable via adv. rule if fails.
-        self.writer.dialog.notificationDialog(LANGUAGE(30142))
+        self.inherited.dialog.notificationDialog(LANGUAGE(30142))
         liz = xbmcgui.ListItem('Seek Test', path=file)
         playpast = False
         progress = int(dur / 2)
@@ -266,25 +266,25 @@ class JSONRPC:
         liz.setProperty('resumetime', str(progress))
         liz.setProperty('startoffset', str(progress))
         liz.setProperty("IsPlayable", "true")
-        if self.writer.player.isPlaying(): return True  # todo prompt to stop playback and test.
-        self.writer.player.play(file, liz, windowed=True)
-        while not self.writer.monitor.abortRequested():
+        if self.inherited.player.isPlaying(): return True  # todo prompt to stop playback and test.
+        self.inherited.player.play(file, liz, windowed=True)
+        while not self.inherited.monitor.abortRequested():
             self.log('chkSeeking seeking')
-            if self.writer.monitor.waitForAbort(2):
+            if self.inherited.monitor.waitForAbort(2):
                 break
-            elif not self.writer.player.isPlaying():
+            elif not self.inherited.player.isPlaying():
                 break
-            if int(self.writer.player.getTime()) > progress:
+            if int(self.inherited.player.getTime()) > progress:
                 self.log('chkSeeking seeking complete')
                 playpast = True
                 break
-        while not self.writer.monitor.abortRequested() and self.writer.player.isPlaying():
-            if self.writer.monitor.waitForAbort(1): break
+        while not self.inherited.monitor.abortRequested() and self.inherited.player.isPlaying():
+            if self.inherited.monitor.waitForAbort(1): break
             self.log('chkSeeking stopping playback')
-            self.writer.player.stop()
+            self.inherited.player.stop()
         msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
         self.log('chkSeeking file = %s %s' % (file, msg))
-        self.writer.dialog.notificationDialog(msg)
+        self.inherited.dialog.notificationDialog(msg)
         return playpast
 
 
@@ -387,12 +387,12 @@ class JSONRPC:
         runtime   = int(item.get('runtime', '') or item.get('duration', '') or
                        (item.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration', '') or '0')
                        
-        duration  = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=False)
+        duration  = self.inherited.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:
                 duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item)
                 if duration > 0:
-                    self.writer.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
+                    self.inherited.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
                 log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
                 duration = 0
@@ -458,7 +458,7 @@ class JSONRPC:
 
     def matchPVRPath(self, channelid=-1):
         self.log('matchPVRPath, channelid = %s' % (channelid))
-        pvrPaths = ['pvr://channels/tv/%s/' % (urllib.parse.quote(ADDON_NAME)),
+        pvrPaths = ['pvr://channels/tv/%s/'%(urllib.parse.quote(ADDON_NAME)),
                     'pvr://channels/tv/All%20channels/',
                     'pvr://channels/tv/*']
 
