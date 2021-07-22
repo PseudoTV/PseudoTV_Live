@@ -3,6 +3,13 @@ v.0.3.2
 -Fixed channel manager name selection.
 -Fixed channel bug not appearing.
 -Tweaked playback protocols.
+-Changed default video/program icon execution behavior to TV Guide (PseudoTV Live Group).
+-Updated background overlay layout/artwork.
+-Fixed channel Backup/Recovery? requires real-world testing...
+-Refactored channel logo parsing, see readme for details.
+-Tweaked performance, optimized caching.
+-Fixed Radio channels and corrected artwork.
+-Added channel logo selection to the channel manager. User can either browse/select a file or select from a list of curated logos.
 
 v.0.3.1
 -Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.

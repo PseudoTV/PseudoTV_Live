@@ -68,7 +68,6 @@ class XMLTV:
         xmltvList = {'data'       : self.loadData(),
                      'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
                      'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
-        xmltvList['endtimes'] = dict(self.loadEndTimes(xmltvList['channels'],xmltvList['programmes']))
         return xmltvList
         
         
@@ -116,7 +115,7 @@ class XMLTV:
                 yield channel['id'],datetime.datetime.timestamp(stopDate)
             except Exception as e:
                 self.log("loadEndTimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
-                #self.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
+                self.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
                 yield channel['id'],datetime.datetime.timestamp(fallback)
 
 
@@ -291,12 +290,6 @@ class XMLTV:
             return True
 
 
-    def getEndtimes(self, start=None):
-        self.log('getEndtimes')
-        if start: return dict(self.loadEndTimes(fallback=start))
-        else:     return self.writer.vault.xmltvList.get('endtimes',{})
-        
-        
     def getChannels(self):
         self.log('getChannels')
         return self.sortChannels(self.writer.vault.xmltvList.get('channels',[]))

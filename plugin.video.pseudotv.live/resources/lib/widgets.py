@@ -94,7 +94,7 @@ class Widgets(xbmcgui.WindowXML):
             # liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
             # liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
         # self.log('addLink, name = %s'%(name))
-        # u=self.sysARG[0]+"?url="+urllib.parse.quote(path)+"&channel="+str(channel)+"&name="+urllib.parse.quote(name)+"&mode="+str(mode)
+        # u=self.sysARG[0]+"?url="+quote(path)+"&channel="+str(channel)+"&name="+quote(name)+"&mode="+str(mode)
         # xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,totalItems=total)
 
 
@@ -105,7 +105,7 @@ class Widgets(xbmcgui.WindowXML):
             # liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
             # liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
         # liz.setProperty('IsPlayable', 'false')
-        # u=self.sysARG[0]+"?url="+urllib.parse.quote(path)+"&channel="+str(channel)+"&name="+urllib.parse.quote(name)+"&mode="+str(mode)
+        # u=self.sysARG[0]+"?url="+quote(path)+"&channel="+str(channel)+"&name="+quote(name)+"&mode="+str(mode)
         # xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,isFolder=True)
 
         

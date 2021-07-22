@@ -1,0 +1,200 @@
+
+
+    def fuzzyMatchResources(self, chname, packs):
+        def _match(dir, files):
+            results = self.findFuzzyMatch(chname, files)
+            if results: return dir,results
+
+        def _parse(pack):
+            cacheName = 'fuzzyMatchResources.%s.%s'%(chname,getMD5(dumpJSON(pack)))
+            items = pack.get('items',{})
+            response = None#self.cache.get(cacheName)
+            if not response:
+                for dir in items.keys():
+                    response = _match(dir,items.get(dir,[]))
+                    #response = ('special://home/addons/resource.images.studios.white/resources', ('bbc america.png', 95))
+                    if response:
+                        #self.cache.set(cacheName,response,expiration=datetime.timedelta(days=28))
+                        return response
+            else: 
+                return response
+                    
+        # matches = self.pool.poolList(_parse,packs)
+        # if matches:
+            # matches = (sorted(matches, key=lambda x: x[1][1])) #sort high-lowest match score.
+            # matches.reverse()
+            
+        for pack in packs:
+            match = _parse(pack)
+            if match: 
+                print('fuzzyMatchResources return',match)
+                return match
+
+                    
+                 
+
+    def matchLogo(self, chname, type, fuzzy=True):
+        chnames = self.getNamePatterns(chname,type)
+        print('matchLogo',chnames)
+        for chname in chnames:
+            if fuzzy:
+                match = self.fuzzyMatchResources(chname, self.logoSets.get(type,{}).get('packs',[]))#packs by type
+            else:
+                match = self.matchResource(chname, self.logoSets.get(type,{}).get('packs',[]))#packs by type
+            if match: return match
+                
+
+    def matchLocal(self, chname, type):
+        return self.fuzzyMatchResources(chname, self.logoSets.get(LANGUAGE(30320),{}).get('packs',[]))#packs by type
+
+            
+    def matchResource(self, chname, packs):
+        def _match(data):
+            path, items = data
+            for file in items:
+                if '%s.png'%(chname).lower() == file.lower():
+                    return (path,[(file,100)])
+                    
+        def _parse(pack,chname):
+            cacheName = 'matchResource.%s.%s'%(chname,getMD5(dumpJSON(pack)))
+            results   = None#self.cache.get(cacheName)
+            if not results:
+                items   = pack.get('items',{})
+                matches = list(filter(None,map(_match,zip(items.keys(),repeat(items)))))
+                if matches and isinstance(matches,(list,tuple,dict)): 
+                    results = matches[0]
+                    # self.cache.set(cacheName,results,expiration=datetime.timedelta(days=28))
+            return results
+
+        matches = self.pool.poolList(_parse,packs,kwargs={'chname':chname})
+        return matches
+            
+            
+
+    def parseLogo(self, chname, type):
+        def cleanFuzzyLogo(logo):
+            if isinstance(logo,(list,tuple)):
+                logo = os.path.join(logo[0],logo[1][0]).replace('\\','/')
+            return logo
+
+        #Resource Packs
+        logo = self.matchLogo(chname,type)
+        if logo: return cleanFuzzyLogo(logo)
+        
+    # def buildBCTresource(self, type, path, media='video'):
+        # self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))
+        # if path.startswith(('resource://')):
+            # version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
+        # else: 
+            # version = ADDON_VERSION
+        # if type in PRE_ROLL: 
+            # force = True
+        # else: 
+            # force = False
+        # return self.jsonRPC.listVFS(cleanResourcePath(path),media,force,version)
+
+
+    # def buildResourceType(self, type, paths):
+        # for resource in paths:
+            # yield self.getPlayablePaths(type,resource)
+        
+        
+    # def getPlayablePaths(self, type, resource):
+        # self.log('getPlayablePaths, type = %s, resource = %s'%(type,resource))
+        # if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
+        # tmpdict = dict()
+        # items   = list(self.buildBCTresource(type, resource))
+        # for item in items:
+            # folder = os.path.basename(os.path.normpath(item.get('path','')))
+            # if folder and folder != 'resources': 
+                # tmpdict.setdefault(folder.lower(),[]).append(item)
+            # else:
+                # if type == "ratings":
+                    # tmpdict.setdefault(os.path.splitext(item.get('label'))[0].lower(),{}).update(item)
+                # else:
+                    # tmpdict.setdefault('root',[]).append(item)
+        # return tmpdict
+
+
+                
+        # elif logo.startswith('resource://'):
+            # path, file = os.path.split(logo)
+            # return path.replace('resource:\\','special://home/addons/') + '/resources/%s'%(file)
+        # if logo.startswith(ADDON_PATH):
+            # logo = logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
+        # if featured:
+            # localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
+            # if logo.startswith('resource://'): return logo #todo parse xbt and extract image?
+            # # if FileAccess.copy(logo, localIcon): return localIcon
+        # return logo
+
+
+    # def parseDirectory(self, path, name, patterns=None):
+        # if patterns is None: patterns = self.getNamePatterns(name)
+        # dirs, files = self.jsonRPC.getListDirectory(path)
+        # for pattern in patterns:
+            # for file in files:
+                # if file == pattern:
+                    # return self.cleanLogoPath(os.path.join(path,pattern))
+            # for dir in dirs:
+                # if dir == os.path.splitext(pattern)[0]:
+                    # return self.chkDirectory4Logo(dir,name,patterns)
+        # return None
+
+    
+    # def buildLocalTrailers(self, path=None, items=[]):
+        # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
+        # if path is None and len(items) > 0:
+            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer',''),item),'file'}]
+        # list(filter(lambda item:(,item.get('trailer')), validItems))
+# # os.path.splitext(os.path.basename(item.get('file')))[0]
+
+     # def buildResourcePath(self, path, file):
+        # if path.startswith('resource://'):
+            # path = path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
+        # else: 
+            # path = os.path.join(path,file)
+        # return path
+        
+    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':files}
+    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':[self.buildResourcePath(path,file) for file in files]}
+        
+
+    # def chkMono(self, logo):
+        # try:
+            # dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(xbmcvfs.translatePath(logo))[1]))
+            # if FileAccess.exists(dest): return dest
+            # return self.monoConvert(logo,dest,bool(SETTINGS.getSettingInt('Color_Logos')))
+        # except Exception as e: self.log("chkMono, failed! " + str(e), xbmc.LOGERROR)
+        # return logo
+            
+
+    # def monoConvert(self, logo, dest, useColor=bool(SETTINGS.getSettingInt('Color_Logos'))):
+        # return logo
+        # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.
+        # pil_img = Image.open(FileAccess.translatePath(logo))
+        # # pil_img = Image.open(FileAccess.open(logo,"r"))
+        # def isColor(adjust_color_bias=True):
+            # bands = pil_img.getbands()
+            # if bands == ('R','G','B') or bands== ('R','G','B','A'):
+                # thumb = pil_img.resize((40,40))
+                # SSE, bias = 0, [0,0,0]
+                # if adjust_color_bias:
+                    # bias = ImageStat.Stat(thumb).mean[:3]
+                    # bias = [b - sum(bias)/3 for b in bias ]
+                # for pixel in thumb.getdata():
+                    # mu = sum(pixel)/3
+                    # SSE += sum((pixel[i] - mu - bias[i])*(pixel[i] - mu - bias[i]) for i in [0,1,2])
+                # MSE = float(SSE)/(40*40)
+                # if MSE <= 22: return False #grayscale
+                # else: return True#Color
+            # elif len(bands)==1: return False #Mono"
+            # else: return True #Undetermined
+            
+        # if not hasPillow: return logo
+        # if isColor(logo) and useColor:
+            # img_bright = ImageEnhance.Brightness(pil_img.convert('LA'))
+            # converted_img = img_bright.enhance(2.0)
+            # converted_img.save(dest)
+            # return dest
+        # return logo

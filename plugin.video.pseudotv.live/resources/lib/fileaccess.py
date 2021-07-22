@@ -32,7 +32,7 @@ class FileAccess:
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
         fle = 0
-        log("FileAccess: trying to open " + filename)
+        log("FileAccess: trying to open %s"%filename)
         try: return VFSFile(filename, mode)
         except UnicodeDecodeError: return FileAccess.open(filename, mode, encoding)
         return fle
@@ -50,7 +50,7 @@ class FileAccess:
 
     @staticmethod
     def copy(orgfilename, newfilename):
-        log('FileAccess: copying ' + orgfilename + ' to ' + newfilename)
+        log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
         dir, file = os.path.split(newfilename)
         if not FileAccess.exists(dir): FileAccess.makedirs(dir)
         return xbmcvfs.copy(orgfilename, newfilename)
@@ -58,7 +58,7 @@ class FileAccess:
 
     @staticmethod
     def move(orgfilename, newfilename):
-        log('FileAccess: moving ' + orgfilename + ' to ' + newfilename)
+        log('FileAccess: moving %s to %s'%(orgfilename,newfilename))
         if xbmcvfs.copy(orgfilename, newfilename):
             return xbmcvfs.delete(orgfilename)
         return False
@@ -193,15 +193,15 @@ class FileAccess:
 
 class VFSFile:
     def __init__(self, filename, mode):
-        log("VFSFile: trying to open " + filename)
+        log("VFSFile: trying to open %s"%filename)
         if mode == 'w':
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:
             self.currentFile = xbmcvfs.File(filename, 'r')
-        log("VFSFile: Opening " + filename, xbmc.LOGDEBUG)
+        log("VFSFile: Opening %s"%filename, xbmc.LOGDEBUG)
 
         if self.currentFile == None:
-            log("VFSFile: Couldnt open " + filename, xbmc.LOGERROR)
+            log("VFSFile: Couldnt open %s"%filename, xbmc.LOGERROR)
 
 
     def read(self, bytes=0):
@@ -296,7 +296,7 @@ class FileLock:
 
 
     def lockFile(self, filename, block = False):
-        log("FileLock: lockFile " + filename)
+        log("FileLock: lockFile %s"%filename)
         curval   = -1
         attempts = 0
         fle      = 0
@@ -304,14 +304,12 @@ class FileLock:
         locked   = True
         lines    = []
 
-        while not self.monitor.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
 
             if curval > -1:
                 self.releaseLockFile()
                 self.grabSemaphore.release()
-                if self.monitor.waitForAbort(1): 
-                    break
 
             self.grabSemaphore.acquire()
             if self.grabLockFile() == False:
@@ -385,7 +383,8 @@ class FileLock:
                 fle = FileAccess.open(self.lockName, 'r')
                 fle.close()
                 return True
-            except: self.monitor.waitForAbort(.5)
+            except: 
+                self.monitor.waitForAbort(.5)
 
         log("FileLock: Creating lock file")
         try:
@@ -454,7 +453,7 @@ class FileLock:
 
             # The lock already exists
             if flenme == filename:
-                log("FileLock: entry exists, val is " + str(setval))
+                log("FileLock: entry exists, val is %s"%(setval))
                 return setval
         return -1
 
@@ -471,7 +470,7 @@ class FileLock:
 
 
     def unlockFile(self, filename):
-        log("FileLock: unlockFile " + filename)
+        log("FileLock: unlockFile %s"%filename)
         realindex = 0
         found     = False
         

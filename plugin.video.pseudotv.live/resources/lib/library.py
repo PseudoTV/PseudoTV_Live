@@ -200,66 +200,69 @@ class Library:
 
 
     def fillLibraryItems(self):
+        self.log('fillLibraryItems')
         ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
         def fillType(type, busy):
-            if not self.writer.monitor.waitForAbort(0.01): 
-                items      = self.fillTypeItems(type)
-                existing   = self.getLibraryItems(type)
-                enabled    = self.getEnabledItems(existing)
-                cacheName  = 'fillType.%s'%(type)
-                cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
-                results    = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True)
-                
-                if not results or not existing:
-                    results  = []
-                    if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
-                        life = datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days'))
-                    else:
-                        life = datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))
+            items      = self.fillTypeItems(type)
+            existing   = self.getLibraryItems(type)
+            enabled    = self.getEnabledItems(existing)
+            cacheName  = 'fillType.%s'%(type)
+            cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
+            results    = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True) #temp debug, cache no longer needed? shorter life?
+            
+            if not results or not existing:
+                results  = []
+                if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
+                    life = datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days'))
+                else:
+                    life = datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))
+                    
+                self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
+
+                for idx, item in enumerate(items):
+                    if self.writer.monitor.waitForAbort(0.01) or isDialog(): 
+                        results = []
+                        return
                         
-                    self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
+                    fill = int((idx*100)//len(items))
+                    prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
+                    busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
 
-                    for idx, item in enumerate(items):
-                        if self.writer.monitor.waitForAbort(0.01):
-                            return
-                            
-                        fill = int((idx*100)//len(items))
-                        prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
-                        busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
-
-                        if isinstance(item,dict):
-                            name = (item.get('name','') or item.get('label',''))
-                            if not name: continue
-                            if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
-                                logo = item.get('icon','')
-                            else: 
-                                logo = self.writer.jsonRPC.getLogo(name, type, item.get('file',None), item)
+                    if isinstance(item,dict):
+                        name = (item.get('name','') or item.get('label',''))
+                        if not name: continue
+                        if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
+                            logo = item.get('icon','')
                         else: 
-                            name = item
-                            logo = self.writer.jsonRPC.getLogo(name, type)
+                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item)
+                    else: 
+                        name = item
+                        logo = self.writer.jsonRPC.resources.getLogo(name, type)
 
-                        tmpItem = {'enabled':len(list(filter(lambda k:k['name'] == name, enabled))) > 0,
-                                   'name':name,
-                                   'type':type,
-                                   'logo':logo}
-                                   
-                        if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
-                        elif  type == LANGUAGE(30033): tmpItem['item'] = item
-                        else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
-                        results.append(tmpItem)
-                        
-                    if results: #only cache found items.
-                        self.setLibraryItems(type,results)
-                        self.writer.cache.set(cacheName, results, checksum=cacheCHK, expiration=life, json_data=True)
-                        
-                if not PROPERTIES.getPropertyBool('has.Predefined'): 
-                    PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
-                PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
+                    tmpItem = {'enabled':len(list(filter(lambda k:k['name'] == name, enabled))) > 0,
+                               'name':name,
+                               'type':type,
+                               'logo':logo}
+                               
+                    if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
+                    elif  type == LANGUAGE(30033): tmpItem['item'] = item
+                    else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
+                    results.append(tmpItem) 
+                    
+                if results: #only cache found items.
+                    self.setLibraryItems(type,results)
+                    self.writer.cache.set(cacheName, results, checksum=cacheCHK, expiration=life, json_data=True)
+                    
+            if not PROPERTIES.getPropertyBool('has.Predefined'): 
+                PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
+            PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
                         
         busy = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
-        for type in CHAN_TYPES: fillType(type,busy)
+        for type in CHAN_TYPES: 
+            if self.writer.monitor.waitForAbort(0.01) or isDialog(): return
+            fillType(type,busy)
         busy = self.writer.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
-        return True
+        return self.writer.buildPredefinedChannels()
         
 
     def buildLibraryListitem(self, data):

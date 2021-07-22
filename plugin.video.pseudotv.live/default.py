@@ -28,15 +28,14 @@ def run(sysARG):
     channel = (params.get("channel",'')       or None)
     url     = (params.get("url",'')           or None)
     id      = (params.get("id",'')            or None)
-    mode    = (params.get("mode",'')          or None)
+    mode    = (params.get("mode",'')          or 'guide')
     radio   = (params.get("radio",'')         or 'False').lower() == "true"
     log("Default: run, Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
 
-    if   mode == 'guide':    xbmc.executebuiltin("ActivateWindow(10702,pvr://guide/tv/%s,return)"%(urllib.parse.quote(ADDON_NAME)))
+    if   mode == 'guide':    loadGuide()
     elif mode == 'settings': openAddonSettings()
     elif mode == 'vod':      Plugin(sysARG).playVOD(name, id)
     elif mode == 'play':
         if radio: Plugin(sysARG).playRadio(name, id)
         else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
-       
 if __name__ == '__main__': run(sys.argv)

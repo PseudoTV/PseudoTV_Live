@@ -26,15 +26,31 @@ try:
 except:
     hasPillow = False
 
+def unquoteImage(imagestring):
+    # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
+    # extracted thumbnail images need to keep their 'image://' encoding
+    if imagestring.startswith('image://') and not imagestring.startswith(('image://video', 'image://music')):
+        return unquote(imagestring[8:-1])
+    return imagestring
+
+def quoteImage(imagestring):
+     # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F                                                   
+    if imagestring.startswith('image://'): return imagestring
+    # Kodi goes lowercase and doesn't encode some chars
+    result = 'image://{0}/'.format(quote(imagestring, '()!'))
+    result = re.sub(r'%[0-9A-F]{2}', lambda mo: mo.group().lower(), result)
+    return result
+
 class Resources:
-    IMG_EXTS = ['.png','.jpg','.gif']
+    IMG_EXTS = ('.png','.jpg','.gif') #todo convert all formats to png.
+    TEXTURES = 'Textures.xbt'
 
     def __init__(self, jsonRPC):
         self.log('__init__')
-        self.jsonRPC  = jsonRPC
-        self.cache    = jsonRPC.cache
-        self.pool     = jsonRPC.pool
-        self.logoSets = self.buildLogoResources()
+        self.jsonRPC     = jsonRPC
+        self.cache       = jsonRPC.cache
+        self.pool        = jsonRPC.pool
+        self.logoSets    = self.buildLogoResources()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -42,245 +58,219 @@ class Resources:
 
 
     def buildLogoResources(self):
-        self.log('buildLogoResources')#Collect all logo resources into dict. array. #todo refactor this approach. 
-        logos     = []
-        packs     = (SETTINGS.getSetting('Resource_Logos')).split(',')
-        radios    = ["resource.images.musicgenreicons.text"]
-        genres    = ["resource.images.moviegenreicons.transparent"]
-        studios   = ["resource.images.studios.white", 
-                     "resource.images.studios.coloured"]
+        self.log('buildLogoResources')#build all logo resources into dict. array.
+        local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,LOGO_LOC]]#LOGO_LOC
+        
+        show_pack = local_folder.copy()  #todo add tvshow logos to show_pack
+        # show_pack.extend([{'id':pack,'version':ADDON_VERSION,'items':self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
+        
+        user_pack  = show_pack.copy()
+        user_pack.extend([{"id":pack,"version":ADDON_VERSION,"items":self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
+        
+        studios = ["resource.images.studios.white", "resource.images.studios.coloured"]
         if bool(SETTINGS.getSettingInt('Color_Logos')): studios.reverse()
+        studios_pack = user_pack.copy()
+        studios_pack.extend([{"id":pack,"version":self.jsonRPC.getPluginMeta(pack).get('version',ADDON_VERSION),"items":self.walkResource(pack)} for pack in studios])
         
-        [logos.append({'type':[LANGUAGE(30003),LANGUAGE(30007),LANGUAGE(30171),
-                               LANGUAGE(30026),LANGUAGE(30033),LANGUAGE(30002),
-                               LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30006),LANGUAGE(30097)],'path':'resource://%s'%(pack)  ,'files': self.getResourceFiles(pack)})   for pack   in packs]
-        [logos.append({'type':[LANGUAGE(30097),LANGUAGE(30171)],                                'path':'resource://%s'%(radio) ,'files': self.getResourceFiles(radio)})  for radio  in radios]
-        [logos.append({'type':[LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30006),LANGUAGE(30171)],'path':'resource://%s'%(genre) ,'files': self.getResourceFiles(genre)})  for genre  in genres]
-        [logos.append({'type':[LANGUAGE(30002),LANGUAGE(30007),LANGUAGE(30171)],                'path':'resource://%s'%(studio),'files': self.getResourceFiles(studio)}) for studio in studios]
-        return logos
+        genres_pack = user_pack.copy()
+        genres_pack.extend([{"id":pack,"version":self.jsonRPC.getPluginMeta(pack).get('version',ADDON_VERSION),"items":self.walkResource(pack)} for pack in ["resource.images.moviegenreicons.transparent"]])
+
+        music_pack = user_pack.copy()
+        music_pack.extend([{"id":pack,"version":self.jsonRPC.getPluginMeta(pack).get('version',ADDON_VERSION),"items":self.walkResource(pack)} for pack in ["resource.images.musicgenreicons.text"]])
+
+        custom_pack = user_pack.copy() + studios_pack.copy() + genres_pack .copy()+ music_pack.copy()
+        custom_pack = removeDUPSLST(custom_pack)
+        
+        return {LANGUAGE(30002):{"label":"TV Networks"  ,"packs":studios_pack},
+                LANGUAGE(30003):{"label":"TV Shows"     ,"packs":show_pack},
+                LANGUAGE(30004):{"label":"TV Genres"    ,"packs":genres_pack},
+                LANGUAGE(30005):{"label":"Movie Genres" ,"packs":genres_pack},
+                LANGUAGE(30007):{"label":"Movie Studios","packs":studios_pack},
+                LANGUAGE(30006):{"label":"Mixed Genres" ,"packs":genres_pack},
+                LANGUAGE(30097):{"label":"Music Genres" ,"packs":music_pack},
+                LANGUAGE(30026):{"label":"Recommended"  ,"packs":user_pack},
+                LANGUAGE(30033):{"label":"Imports"      ,"packs":user_pack},
+                LANGUAGE(30080):{"label":"Mixed"        ,"packs":user_pack},
+                LANGUAGE(30320):{"label":"Local"        ,"packs":local_folder},
+                LANGUAGE(30171):{"label":"Custom"       ,"packs":custom_pack}}
 
 
-    def getResourceFiles(self, resource):
-        self.log('getResourceFiles, resource = %s'%(resource))
-        if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
-        return self.jsonRPC.getListDirectory(resource,version=self.jsonRPC.getPluginMeta(resource).get('version',ADDON_VERSION))[1]
+    def walkResource(self, id): #convert path from id to vfs, include version checksum 4 cache expiration
+        return self.walkDirectory(os.path.join('special://home/addons/%s'%id,'resources'),self.jsonRPC.getPluginMeta(id).get('version',ADDON_VERSION))
 
-  
+
+    def walkDirectory(self, path, checksum=ADDON_VERSION): #recursively walk all folders, parse xbt textures.
+        def _parseXBT():
+            resource = path.replace('/resources','').replace('special://home/addons/','resource://')
+            walk.setdefault(resource,[]).extend(self.jsonRPC.getListDirectory(resource,checksum,expiration)[1])
+            return walk
+            
+        walk = dict()
+        path = path.replace('\\','/')
+        self.log('walkDirectory, path = %s'%(path))
+        expiration  = datetime.timedelta(days=28)
+        dirs, files = self.jsonRPC.getListDirectory(path,checksum,expiration)
+        if self.TEXTURES in files: return _parseXBT()
+        else: walk.setdefault(path,[]).extend(list(filter(lambda f:f.endswith(self.IMG_EXTS),files)))
+        for dir in dirs: walk.update(self.walkDirectory(os.path.join(path, dir)))
+        return walk
+            
+            
+    def buildImagebase(self):
+        port     = 80
+        username = 'kodi'
+        password = ''
+        secure   = False
+        enabled  = True
+        settings = (self.jsonRPC.getSetting('control','services') or [])
+        for setting in settings:
+            if setting['id'] == 'services.webserver' and not setting['value']:
+                enabled = False
+                break
+            if setting['id'] == 'services.webserverusername':
+                username = setting['value']
+            elif setting['id'] == 'services.webserverport':
+                port = setting['value']
+            elif setting['id'] == 'services.webserverpassword':
+                password = setting['value']
+            elif setting['id'] == 'services.webserverssl' and setting['value']:
+                secure = True
+            username = '{0}:{1}@'.format(username, password) if username and password else ''
+            
+        if enabled:
+            protocol = 'https' if secure else 'http'
+            return '{0}://{1}localhost:{2}/image/'.format(protocol, username, port)
+            # http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
+            
+            
     def getNamePatterns(self, chname, type):
-        patterns = list(set([chname,stripRegion(chname),splitYear(chname)[0],cleanChannelSuffix(chname, type),slugify(chname)]))#,stripNumber(chname),stripNumber(stripRegion(chname))]
-        patterns = ['%s%s'%(pattern,ext) for ext in self.IMG_EXTS for pattern in patterns]
-        return patterns
+        return list(set([slugify(chname),slugify(stripRegion(chname)),chname,stripRegion(chname),splitYear(chname)[0],cleanChannelSuffix(chname, type)]))
+
+        
+    def cleanLogoPath(self, logo):
+        if logo: #convert fs to kodi vfs.
+            realPath = xbmcvfs.translatePath('special://home/addons/')
+            if logo.startswith(realPath): #convert real path. to vfs
+                logo = logo.replace(realPath,'special://home/addons/').replace('\\','/')
+            return logo
+               
+               
+    def findLogos(self, name, type=LANGUAGE(30171)): #channel manager search
+        self.log('findLogos, chname = %s'%(name))
+        def _match(dir, meta, chname):
+            match = self.findFuzzyMatch(chname,meta.get(dir,[]))
+            if match: return dir, match
+        
+        def _parse(pack, chname):
+            meta = pack.get('items',{})
+            for dir in meta.keys():
+                results = _match(dir,meta,chname)
+                if results: return pack.get('id'),results
+                    
+        chnames = self.getNamePatterns(name,type)
+        packs   = self.logoSets.get(type,{}).get('packs',[])
+        matches = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames]
+        if matches:
+            matches = (sorted(matches[0], key=lambda x: x[1][1])) #sort high-lowest match score.
+            matches.reverse()
+            self.log('findLogos, found = %s'%(matches))
+            return [{'label':match[1][1][0],'label2':match[0],'path':os.path.join(match[1][0],match[1][1][0]).replace('\\','/')} for match in matches]
+            
+
+    def findFuzzyMatch(self, chname, files, matchOne=True, THLD=90):
+        try:
+            if files:
+                if matchOne: 
+                    match = FuzzyProcess.extractOne(chname, files)
+                    if match[1] >= THLD: return match
+                else:  
+                    match = FuzzyProcess.extract(chname, files)
+                    if match: return match        
+        except Exception as e: 
+            self.log("findFuzzyMatch, failed! %s"%str(e), xbmc.LOGERROR)
 
 
-    def cleanLogoPath(self, logo=''):
-        if logo is None: return logo
-        realPath = xbmcvfs.translatePath('special://home/addons/')
-        if logo.startswith(realPath): #convert real path. to vfs
-            logo = logo.replace(realPath,'special://home/addons/').replace('\\','/')
-        return logo
-               
-               
-    def chkLocalLogo(self, chname, type): ## CHK user folder, Plugin folder
-        def matchPattern(item):
-            for pattern in patterns:
-                if item.lower() == pattern.lower():
-                    return self.cleanLogoPath(os.path.join(path,item))
+    def fuzzyResource(self, chname, type):
+        def cleanLogo(match):
+            if isinstance(match,(list,tuple)):
+                logo = os.path.join(match[0],match[1][0])
+                return logo.replace('\\','/')
+            
+        def _match(pack):
+            #pack = {'id': 'resource.images.studios.white', 'version': '0.0.28', 'items': {'special://home/addons/resource.images.studios.white/resources': ['#0.png']}}
+            meta = pack.get('items',{})
+            for dir in meta.keys():
+                match = self.findFuzzyMatch(chname,meta.get(dir,[]))
+                if match: return dir, match
+                    
+        packs      = self.logoSets.get(type,{}).get('packs',[])
+        cacheName  = 'fuzzyResource.%s.%s'%(chname,type)
+        cacheCHK   = getMD5(dumpJSON(packs))
+        matches    = self.cache.get(cacheName, checksum=cacheCHK)
+        if not matches:
+            matches = self.pool.poolList(_match,packs)
+            # matches = [('D:/Kodi/portable_data/addons/plugin.video.pseudotv.live/resources/images',('Recently Added.png', 95))]
+            if matches:
+                matches = (sorted(matches, key=lambda x: x[1][1])) #sort high-lowest match score.
+                matches.reverse()
+                matches = cleanLogo(matches[0])
+                self.cache.set(cacheName, matches, checksum=cacheCHK, expiration=datetime.timedelta(days=28))
+        return matches
+        
+
+    def parseLogo(self, chname, type):
+        chnames = self.getNamePatterns(chname,type)
+        for chname in chnames:
+            logo = self.fuzzyResource(chname,type)
+            if logo: return logo
+        
+        
+    def parseResource(self, chname, type):
+        chnames = self.getNamePatterns(chname,type)
+        for chname in chnames:
+            logo = self.chkResource(chname,type)
+            if logo: return logo
                 
-        paths    = [LOGO_LOC,IMAGE_LOC]
-        patterns = self.getNamePatterns(chname,type)
-        for path in paths:
-            items = self.jsonRPC.getListDirectory(path)[1]
-            for item in items:
-                match = matchPattern(item)
-                if match: 
-                    self.log('chkLocalLogo, found = %s'%(match))
-                    return match
-               
-               
-    def findResourceLogo(self, chname, type):
-        def chkFile(file):
-            if isinstance(file, dict): #file item
-                if chname.lower() == (file.get('showtitle','') or file.get('label','') or file.get('name','') or file.get('title','')).lower():
-                    art  = (file.get('art','') or file)
-                    logo = (art.get('clearlogo','') or art.get('thumbnail',''))
-                    if logo: return self.cleanLogoPath(logo)
-            else: #resource item
-                for pattern in patterns:
-                    if pattern.lower() == file.lower():
-                        return self.cleanLogoPath(os.path.join(item['path'],file))
                 
-        patterns = self.getNamePatterns(chname,type)
-        for item in self.logoSets:
-            if type in item['type']:
-                files = item.get('files',[])
-                for file in files:
-                    match = chkFile(file)
-                    if match:
-                        self.log('findResourceLogo, found = %s'%(match))
-                        return match
-            
-            
-    @cacheit()
-    def findTVLogo(self, chname):
-        self.log('findTVLogo: chname = %s'%(chname))
-        def findMatch(item):
-            for pattern in patterns:
-                if item.get('label','').lower() == pattern.lower():
-                    return self.cleanLogoPath(item.get('logo',''))
+    def chkResource(self, chname, type):
+        ids = [pack.get('id') for pack in self.logoSets.get(type,{}).get('packs',[])]
+        for id in ids:
+            if not id.startswith('resource'): continue
+            for ext in self.IMG_EXTS:
+                logo = 'resource://%s/%s%s'%(id,chname,ext)
+                if FileAccess.exists(logo):
+                    return logo
         
-        items    = self.jsonRPC.getTVshows()
-        patterns = [chname, splitYear(chname)[0]]
-        for item in items:
-            match = findMatch(item)
-            if match: 
-                self.log('findTVLogo, found = %s'%(match))
-                return match
-        
-        
-    @cacheit(expiration=datetime.timedelta(minutes=15)) #cache long enough for concurrent run-throughs. Should be fresh data, not cached. 
-    def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False): 
-        self.log('getLogo: name = %s, type = %s'%(name,type))
-        ##local
-        local = self.chkLocalLogo(name, type)
-        if local: return local
+
+    def chkLocal(self, chname):
+        for ext in self.IMG_EXTS:
+            logo = '%s%s'%(chname,ext)
+            if FileAccess.exists(logo):
+                return logo
+
+
+    def chkItem(self, chname, item):
+        logo = item.get('logo')
+        if logo and logo != LOGO and not logo.startswith(LOGO_LOC):
+            if FileAccess.exists(unquoteImage(logo)): 
+                return logo
+
+
+    def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False):
+        self.log('getLogo: chname = %s, type = %s, featured = %s'%(chname,type,featured)) 
+        def cleanLogo(logo):
+            return logo.replace('\\','/')
             
-        #fileitem
-        if item is not None:
-            #todo check if item art is a default fallback LOGO, COLOR_LOGO, ETC and ignore
-            art  = (item.get('art','') or item)
-            logo = (art.get('clearlogo','') or art.get('logo','') or art.get('icon',''))
-            if logo: return self.cleanLogoPath(logo)
-            
-        #plugin meta
-        if path is not None:
-            if isinstance(path, list) and len(path) > 0: path = path[0]
-            if path.startswith('plugin://'): return self.cleanLogoPath(self.jsonRPC.getPluginMeta(path).get('icon',''))
-            #todo parse vfs for logo
-            
-        if type == LANGUAGE(30003): #TV Show
-            tvlogo = self.findTVLogo(name)
-            if tvlogo: return tvlogo
-        else: #resources
-            rlogo = self.findResourceLogo(name,type)
-            if rlogo: return rlogo
-            
+        logo = self.chkLocal(chname)
+        if not logo:
+            logo = self.chkItem(chname, item)
+            if not logo:
+                logo = self.parseResource(chname, type)
+                if not logo: 
+                    logo = self.parseLogo(chname, type)
+                    
+        if logo: 
+            logo = cleanLogo(logo)
+            self.log('getLogo: found %s'%(logo))
+            return logo
         return LOGO
-        
-        
-    def buildBCTresource(self, type, path, media='video'):
-        self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))
-        if path.startswith(('resource://')):
-            version = self.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
-        else: 
-            version = ADDON_VERSION
-        if type in PRE_ROLL: 
-            force = True
-        else: 
-            force = False
-        return self.jsonRPC.listVFS(cleanResourcePath(path),media,force,version)
-
-
-    def buildResourceType(self, type, paths):
-        for resource in paths:
-            yield self.getPlayablePaths(type,resource)
-        
-        
-    def getPlayablePaths(self, type, resource):
-        self.log('getPlayablePaths, type = %s, resource = %s'%(type,resource))
-        if not resource.startswith('resource://'): resource = 'resource://%s'%(resource)
-        tmpdict = dict()
-        items   = list(self.buildBCTresource(type, resource))
-        for item in items:
-            folder = os.path.basename(os.path.normpath(item.get('path','')))
-            if folder and folder != 'resources': 
-                tmpdict.setdefault(folder.lower(),[]).append(item)
-            else:
-                if type == "ratings":
-                    tmpdict.setdefault(os.path.splitext(item.get('label'))[0].lower(),{}).update(item)
-                else:
-                    tmpdict.setdefault('root',[]).append(item)
-        return tmpdict
-
-
-                
-        # elif logo.startswith('resource://'):
-            # path, file = os.path.split(logo)
-            # return path.replace('resource:\\','special://home/addons/') + '/resources/%s'%(file)
-        # if logo.startswith(ADDON_PATH):
-            # logo = logo.replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
-        # if featured:
-            # localIcon = os.path.join(LOGO_LOC,'%s.png'%(channelname))
-            # if logo.startswith('resource://'): return logo #todo parse xbt and extract image?
-            # # if FileAccess.copy(logo, localIcon): return localIcon
-        # return logo
-
-
-    def parseDirectory(self, path, name, patterns=None):
-        if patterns is None: patterns = self.getNamePatterns(name)
-        dirs, files = self.jsonRPC.getListDirectory(path)
-        for pattern in patterns:
-            for file in files:
-                if file == pattern:
-                    return self.cleanLogoPath(os.path.join(path,pattern))
-            for dir in dirs:
-                if dir == os.path.splitext(pattern)[0]:
-                    return self.chkDirectory4Logo(dir,name,patterns)
-        return None
-
-    
-    # def buildLocalTrailers(self, path=None, items=[]):
-        # self.log('buildLocalTrailers, path = %s, items = %s'%(path,len(items)))
-        # if path is None and len(items) > 0:
-            # return [{'label':item.get('label',''),'duration':self.parseDuration(item.get('trailer',''),item),'file'}]
-        # list(filter(lambda item:(,item.get('trailer')), validItems))
-# # os.path.splitext(os.path.basename(item.get('file')))[0]
-
-     # def buildResourcePath(self, path, file):
-        # if path.startswith('resource://'):
-            # path = path.replace('resource://','special://home/addons/') + '/resources/%s'%(file)
-        # else: 
-            # path = os.path.join(path,file)
-        # return path
-        
-    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':files}
-    # resourceMap = {'path':path,'files':files,'dirs':dirs,'filepaths':[self.buildResourcePath(path,file) for file in files]}
-        
-
-    # def chkMono(self, logo):
-        # try:
-            # dest = os.path.join(LOGO_MONO_LOC,'w%s'%(os.path.split(xbmcvfs.translatePath(logo))[1]))
-            # if FileAccess.exists(dest): return dest
-            # return self.monoConvert(logo,dest,bool(SETTINGS.getSettingInt('Color_Logos')))
-        # except Exception as e: self.log("chkMono, failed! " + str(e), xbmc.LOGERROR)
-        # return logo
-            
-
-    # def monoConvert(self, logo, dest, useColor=bool(SETTINGS.getSettingInt('Color_Logos'))):
-        # return logo
-        # self.log('monoConvert, logo = %s, dest = %s'%(logo,dest)) #detect if logo is color and if preference is mono, covert to mono.
-        # pil_img = Image.open(FileAccess.translatePath(logo))
-        # # pil_img = Image.open(FileAccess.open(logo,"r"))
-        # def isColor(adjust_color_bias=True):
-            # bands = pil_img.getbands()
-            # if bands == ('R','G','B') or bands== ('R','G','B','A'):
-                # thumb = pil_img.resize((40,40))
-                # SSE, bias = 0, [0,0,0]
-                # if adjust_color_bias:
-                    # bias = ImageStat.Stat(thumb).mean[:3]
-                    # bias = [b - sum(bias)/3 for b in bias ]
-                # for pixel in thumb.getdata():
-                    # mu = sum(pixel)/3
-                    # SSE += sum((pixel[i] - mu - bias[i])*(pixel[i] - mu - bias[i]) for i in [0,1,2])
-                # MSE = float(SSE)/(40*40)
-                # if MSE <= 22: return False #grayscale
-                # else: return True#Color
-            # elif len(bands)==1: return False #Mono"
-            # else: return True #Undetermined
-            
-        # if not hasPillow: return logo
-        # if isColor(logo) and useColor:
-            # img_bright = ImageEnhance.Brightness(pil_img.convert('LA'))
-            # converted_img = img_bright.enhance(2.0)
-            # converted_img.save(dest)
-            # return dest
-        # return logo

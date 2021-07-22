@@ -22,11 +22,30 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 [![Lunatixz Paypal](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](paypal.me/Lunatixz)
 [![Twitter URL](https://img.shields.io/twitter/follow/PseudoTV_Live.svg?color=blue&label=%40PseudoTV_Live&style=flat-square)](https://twitter.com/PseudoTV_Live)
 
-# Special Thanks:
+## Contributors:
+
+This project exists thanks to all the people who contribute. [Contribute](CONTRIBUTING.md).
+
+## Backers:
+
+Thank you to all our backers! 🙏 [Become a backer]()
+
+## Sponsors:
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor]()
+
+## Mega Sponsors:
+
+## Special Thanks:
 - @xbmc If you are enjoying this project please donate to Kodi!
 - @phunkyfish for his continued work and help with IPTV Simple.
 - @IAmJayFord for awesome PseudoTV Live Icon/Fanart sets.
 - @preroller for fantastic PseudoTV Live Bumpers.
+
+### License
+
+* [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
+* Copyright 2009-2021
 
 ------------
 
@@ -164,11 +183,19 @@ Imports are considered "third-party" and are not treated as "PseudoTV" channels.
 
 # General Information:
 
+
 ## - Channel Logos:
 
-1. Resource pack -
+Logo's are cached and may not be refreshed immediately.... For immediate update use PseudoTV Lives channel manager to swap logo.
 
-2. Local user folder -
+Logo folder location -  `/userdata/plugin.video.pseudotv.live/cache/logos` (default  path shown,  configurable under settings ).
+
+Logo's are cap-sensitive and must match the channel name exactly as it appears in the guide. Supported formats `*.jpg,*.png,*.gif`
+
+If no logo is found, PseudoTV Live will parse for a matching logo in the following folder order. `/addons/plugin.video.pseudotv.live/resources/images`, `*resource.images.pseudotv.logos`, ** [`resource.images.studios.white`, `resource.images.studios.coloured`], `resource.images.moviegenreicons.transparent`, `resource.images.musicgenreicons.text`
+ *user selected "logo" resource pack (default shown). | **color preference selected in settings.
+
+[Resource pack](https://github.com/PseudoTV/PseudoTV_Resources/blob/master/README.md) - Standard Kodi image resource packs. 
 
 
 ## - Channel Sharing (Multi-Room):

@@ -328,12 +328,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         if path is None: path = channelData.get('path','')
         if not name: return channelData
         logo = channelData.get('logo','')
-        if not logo or logo.endswith(('wlogo.png','logo.png','icon.png')):
-            logo = self.writer.jsonRPC.getLogo(name, LANGUAGE(30171), path, featured=True)
-            if logo.endswith(('wlogo.png','logo.png','icon.png')): 
-                channelData['logo'] = ''
-            else: 
-                channelData['logo'] = logo
+        if not logo or logo in [LOGO,COLOR_LOGO,MONO_LOGO,ICON]:
+            channelData['logo'] = (self.matchLogo(name) or LOGO)
         return channelData
         
     
@@ -563,18 +559,46 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def selectLogo(self, channelData, channelPOS):
-        # todo select from resources, browse resources
-        self.log('selectLogo, channelPOS = %s'%(channelPOS))
+        def cleanLogo(chlogo):
+            return self.writer.jsonRPC.resources.unquoteImage(chlogo)
+            #todo convert resource from vfs to fs
+            # return chlogo.replace('resource://','special://home/addons/')
+            # resource = path.replace('/resources','').replace(,)
+            # resource://resource.images.studios.white/Amazon.png
+        
         if self.isVisible(self.ruleList): return
-        retval = self.writer.dialog.browseDialog(type=1,heading=LANGUAGE(30111),default=channelData.get('icon',''),
-                                          shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
-        if retval in [None,'',channelData.get('icon','')]: return
-        self.madeChanges = True
-        channelData['logo'] = retval
-        if self.isVisible(self.itemList): self.buildChannelItem(channelData)
-        else:
-            self.newChannels[channelPOS] = channelData
-            self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
+        chname = channelData.get('name')
+        self.log('selectLogo, chname = %s'%(chname))
+        if not chname: return self.writer.dialog.notificationDialog(LANGUAGE(30084))
+            
+        image  = None
+        retval = self.writer.dialog.yesnoDialog('%s Source'%LANGUAGE(30111), nolabel=LANGUAGE(30321), yeslabel=LANGUAGE(30308), customlabel=LANGUAGE(30120))
+        if   retval == 0: image = self.matchLogo(chname)
+        elif retval == 1: 
+            retval = self.writer.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+            chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,image[-4:])).replace('\\','/')
+            if FileAccess.copy(cleanLogo(retval), chlogo): image = chlogo
+        if image:
+            self.madeChanges = True
+            channelData['logo'] = image
+            if self.isVisible(self.itemList): self.buildChannelItem(channelData)
+            else:
+                self.newChannels[channelPOS] = channelData
+                self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
+                
+            
+    def matchLogo(self, chname):
+        if not chname: return self.writer.dialog.notificationDialog(LANGUAGE(30084))
+        self.toggleSpinner(self.itemList,True)
+        logos = self.writer.jsonRPC.resources.findLogos(chname, LANGUAGE(30171))
+        listitems = [self.writer.dialog.buildMenuListItem(logo['label'],logo['label2'],iconImage=logo['path'],url=logo['path']) for logo in logos]
+        self.toggleSpinner(self.itemList,False)
+        if listitems:
+            select = self.writer.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
+            if select >= 0:
+                chlogo = listitems[select].getPath()
+                self.log('matchLogo, chname = %s, chlogo = %s'%(chname,chlogo))
+                return chlogo
 
 
     def isVisible(self, cntrl):

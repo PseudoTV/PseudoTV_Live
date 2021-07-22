@@ -138,7 +138,7 @@ class Writer:
     def addChannelLineup(self, citem, radio=False, catchup=True):
         item = citem.copy()
         item['label'] = (item.get('label','') or item['name'])
-        item['url']   = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(item['name']),id=urllib.parse.quote(item['id']),radio=str(item['radio']))
+        item['url']   = PVR_URL.format(addon=ADDON_ID,name=quote(item['name']),id=quote(item['id']),radio=str(item['radio']))
         if not SETTINGS.getSettingBool('Enable_Grouping'): 
             item['group'] = [ADDON_NAME]
         else:
@@ -169,7 +169,7 @@ class Writer:
             item['date']        = file.get('premiered','')
             
             if catchup:
-                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=urllib.parse.quote(item['title']),id=urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),channel=urllib.parse.quote(citem['id']),radio=str(item['radio']))
+                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=quote(item['title']),id=urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),channel=urllib.parse.quote(citem['id']),radio=str(item['radio']))
                 file['catchup-id'] = item['catchup-id']
                 
             if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
@@ -277,14 +277,15 @@ class Writer:
         self.log('recoverChannelsFromBackup, file = %s'%(file))
         oldChannels = self.channels.getChannels().copy()
         newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP)
+        difference  = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
         
-        if self.channels.clearChannels():
-            difference = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
+        if   len(difference) == 0: return
+        elif self.channels.clearChannels():
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
             [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
             self.channels.saveChannels()
             
-        if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()):
+        if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()): #re-enable library (pre-defined) items
             self.setPendingChangeTimer()
      
        

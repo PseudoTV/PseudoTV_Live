@@ -88,7 +88,7 @@ class Builder:
         self.channelCount = len(channels)
         self.ruleList     = self.writer.rules.loadRules(channels)
         start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
-        endTimes          = self.writer.xmltv.getEndtimes(start=datetime.datetime.fromtimestamp(start))
+        endTimes          = dict(self.writer.xmltv.loadEndTimes(fallback=start))
         self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):
@@ -140,8 +140,8 @@ class Builder:
                 item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
                 item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
                 item['group']   = list(set((item.get('group',[]) or [])))
-                # item['logo']    = (self.writer.jsonRPC.chkLocalLogo(item['name'],item['type']) or item.get('logo')) #replace with local logo if available. 
-                item['logo']    = (self.writer.jsonRPC.getLogo(item['name'],item['type'],item['path'],item,featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
+                # item['logo']    = (self(item['name'],item['type']) or item.get('logo')) #replace with local logo if available. 
+                item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
                 yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 

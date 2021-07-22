@@ -27,31 +27,22 @@ class JSONRPC:
 
     def __init__(self, inherited=None):  
         self.log('__init__')
-        # if inherited.__class__.__name__ == 'Writer':
-            # self.writer  = inherited
+        self.queueRunning = False
         self.writer       = inherited
         self.inherited    = inherited
         self.cache        = inherited.cache
         self.pool         = inherited.pool
+        self.dialog       = inherited.dialog
         
         self.sendQueue    = PriorityQueue()
         self.videoParser  = VideoParser()
         self.resources    = Resources(jsonRPC=self)
         
         self.queueThread  = threading.Timer(1.0, self.startQueueWorker)
-        self.queueRunning = False
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
-
-
-    def chkLocalLogo(self, chname, type=LANGUAGE(30171)):
-        return self.resources.chkLocalLogo(chname, type)
-
-
-    def getLogo(self, name, type=LANGUAGE(30171), path=None, item=None, featured=False):
-        return self.resources.getLogo(name, type, path, item, featured)
 
 
     @cacheit(json_data=True)
@@ -73,14 +64,16 @@ class JSONRPC:
         return getPluginMeta(plugin)
 
 
-    @cacheit()
-    def getListDirectory(self, path, version=ADDON_VERSION):
-        self.log('getListDirectory path = %s, version = %s' % (path, version))
-        try:
-            return FileAccess.listdir(path)
-        except:
-            return [], []
-
+    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))):
+        self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
+        cacheName = 'getListDirectory.%s'%(path)
+        results = self.cache.get(cacheName, checksum)
+        if not results:
+            try:    results = FileAccess.listdir(path)
+            except: results = [],[]
+            self.cache.set(cacheName, results, checksum, expiration)
+        return results
+        
 
     @cacheit()
     def listVFS(self, path, media='video', force=False, version=ADDON_VERSION):
@@ -148,12 +141,14 @@ class JSONRPC:
     def startQueueWorker(self):
         self.log('startQueueWorker, starting thread worker')
         self.queueRunning = True
+        
         while not self.inherited.monitor.abortRequested():
             if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
             try: 
                 self.sendJSON(self.sendQueue.get()[1])
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
+                
         self.queueRunning = False
         self.log('startQueueWorker, finishing thread worker')
 
@@ -245,9 +240,14 @@ class JSONRPC:
             return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('size',0)
             
 
+    def getSetting(self, category, section):
+        json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettings","params":{"filter":{"category":"%s","section":"%s"}},"id":1}'%(category, section))
+        return self.sendJSON(json_query).get('result',{}).get('settings')
+
+
     def getSettingValue(self, key):
         json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"%s"},"id":1}'%(key))
-        return self.cacheJSON(json_query).get('result',{}).get('value')
+        return self.sendJSON(json_query).get('result',{}).get('value')
 
 
     def setSettingValue(self, key, value):
@@ -258,7 +258,7 @@ class JSONRPC:
     def chkSeeking(self, file, dur):
         if not file.startswith(('plugin://','upnp://','pvr://')): return True
         # todo test seek for support disable via adv. rule if fails.
-        self.inherited.dialog.notificationDialog(LANGUAGE(30142))
+        self.dialog.notificationDialog(LANGUAGE(30142))
         liz = xbmcgui.ListItem('Seek Test', path=file)
         playpast = False
         progress = int(dur / 2)
@@ -268,6 +268,7 @@ class JSONRPC:
         liz.setProperty("IsPlayable", "true")
         if self.inherited.player.isPlaying(): return True  # todo prompt to stop playback and test.
         self.inherited.player.play(file, liz, windowed=True)
+        
         while not self.inherited.monitor.abortRequested():
             self.log('chkSeeking seeking')
             if self.inherited.monitor.waitForAbort(2):
@@ -278,13 +279,15 @@ class JSONRPC:
                 self.log('chkSeeking seeking complete')
                 playpast = True
                 break
+                
         while not self.inherited.monitor.abortRequested() and self.inherited.player.isPlaying():
             if self.inherited.monitor.waitForAbort(1): break
             self.log('chkSeeking stopping playback')
             self.inherited.player.stop()
+            
         msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
         self.log('chkSeeking file = %s %s' % (file, msg))
-        self.inherited.dialog.notificationDialog(msg)
+        self.dialog.notificationDialog(msg)
         return playpast
 
 
@@ -420,6 +423,10 @@ class JSONRPC:
         
         
     def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
+        if self.writer.__class__.__name__ != 'Writer':
+            from resources.lib.parser import Writer
+            self.writer = Writer()
+            
         limits = self.writer.autoPagination(id, path) #get
         params                      = {}
         params['limits']            = {}

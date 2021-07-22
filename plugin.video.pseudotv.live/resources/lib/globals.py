@@ -34,6 +34,7 @@ from resources.lib.cache       import cacheit
 from resources.lib.events      import logit
 from operator                  import itemgetter
 from collections               import deque
+from fuzzywuzzy                import process as FuzzyProcess
 
 try:
     from multiprocessing import Thread, Queue, Empty, PriorityQueue
@@ -99,6 +100,7 @@ EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
 UPDATE_OFFSET       = 10800 #3hr in secs.
+LIBRARY_OFFSET      = 3600
 RECOMMENDED_OFFSET  = 900   #15mins in secs.
 PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
 UPDATE_WAIT         = 3600  #1hr in secs.
@@ -199,8 +201,6 @@ PROVIDERFLE      = 'providers.xml'
 CACHE_LOC        = os.path.join(USER_LOC ,'cache')
 PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
 LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
-LOGO_COLOR_LOC   = os.path.join(LOGO_LOC ,'color')
-LOGO_MONO_LOC    = os.path.join(LOGO_LOC ,'mono')
 
 TEMP_LOC         = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC       = os.path.join(SETTINGS_LOC,'backup')
@@ -395,6 +395,12 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
+def isDialog():
+    return PROPERTIES.getPropertyBool('isDialog')
+
+def setDialog(state):
+    return PROPERTIES.setPropertyBool('isDialog',state)
+
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
     PROPERTIES.clearProperty('utilities')
@@ -531,6 +537,10 @@ def showChangelog():
         changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
         Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
 
+def loadGuide():
+    xbmc.executebuiltin("Dialog.Close(all)")
+    xbmc.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s,return)"%(quote(ADDON_NAME)))
+
 def openAddonSettings(ctl=(1,1),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
@@ -548,7 +558,7 @@ def getPluginMeta(id):
     try:
         if id.startswith(('plugin://','resource://')):
             id =  splitall(id.replace('plugin://','').replace('resource://','')).strip()
-        if not hasAddon(id): installAddon(id)
+        # if not hasAddon(id): installAddon(id)#todo
         pluginID = xbmcaddon.Addon(id)
         meta = {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
         log('globals: getPluginMeta, plugin meta = %s'%(meta))
@@ -593,7 +603,7 @@ def brutePVR(override=False):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    genInstanceID()
+    setInstanceID()
     return toggleADDON(PVR_CLIENT,False,reverse=True)
 
 def getPVR(id=PVR_CLIENT):
@@ -672,15 +682,20 @@ def stripNumber(label):
     return re.sub(r'\d+','',label)
     
 def stripRegion(label):
-    match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
-    if match:
-        if match.group(1): return match.group(1)
+    try:
+        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+        if match:
+            if match.group(1): 
+                return match.group(1)
+    except: pass
     return label
     
 def splitYear(label):
-    match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
-    if match:
-        if match.group(2): return match.groups()
+    try:
+        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+        if match:
+            if match.group(2): return match.groups()
+    except: pass
     return label, None
         
 def getLabel(item):
@@ -692,12 +707,16 @@ def getLabel(item):
     return label
     
 def getThumb(item,opt=0): #unify thumbnail artwork
-    keys = {0:['landscape','fanart','poster','thumb','thumbnail','folder','icon'],
-            1:['poster','landscape','fanart','thumb','thumbnail','folder','icon']}[opt]
+    keys = {0:['landscape','fanart','poster','thumb','thumbnail','clearlogo','logo','folder','icon'],
+            1:['poster','clearlogo','logo','thumb','thumbnail','landscape','fanart','folder','icon']}[opt]
+            # 1:['poster','landscape','fanart','thumb','thumbnail','clearlogo','logo','folder','icon']}[opt]
     for key in keys:
-        art = (item.get('art',{}).get('season.%s'%(key),'') or 
-               item.get('art',{}).get('tvshow.%s'%(key),'') or 
-               item.get('art',{}).get(key,'')               or
+        art = (item.get('art',{}).get('album.%s'%(key),'')       or 
+               item.get('art',{}).get('albumartist.%s'%(key),'') or 
+               item.get('art',{}).get('artist.%s'%(key),'')      or 
+               item.get('art',{}).get('season.%s'%(key),'')      or 
+               item.get('art',{}).get('tvshow.%s'%(key),'')      or 
+               item.get('art',{}).get(key,'')                    or
                item.get(key,''))
         if art: return art
     return {0:FANART,1:COLOR_LOGO}[opt]
@@ -805,14 +824,15 @@ def getGroups(add=False):
     return sorted(set(GROUP_TYPES))
 
 def getMD5(text):
+    if not isinstance(text,str): text = str(text)
     hash_object = hashlib.md5(text.encode())
     return hash_object.hexdigest()
 
-def genInstanceID():
+def setInstanceID():
     PROPERTIES.setProperty('InstanceID',uuid.uuid4())
 
 def getInstanceID():
-    return (PROPERTIES.getProperty('InstanceID') or uuid.uuid4())
+    return (PROPERTIES.getProperty('InstanceID') or str(uuid.uuid4()))
 
 def genUUID(seed=None):
     if seed:
@@ -925,3 +945,4 @@ def cleanChannelSuffix(name, type):
     elif type == LANGUAGE(30097): name = name.split(' %s'%LANGUAGE(30157))[0]#Music
     elif type == LANGUAGE(30005): name = name.split(' %s'%LANGUAGE(30156))[0]#Movie
     return name
+            

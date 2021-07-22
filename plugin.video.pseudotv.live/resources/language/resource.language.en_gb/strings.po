@@ -353,7 +353,7 @@ msgid "Select Content Path"
 msgstr ""
 
 msgctxt "#30084"
-msgid "Enter Channel Name"
+msgid "Channel Name Missing..."
 msgstr ""
 
 msgctxt "#30085"
@@ -1286,4 +1286,16 @@ msgstr ""
 
 msgctxt "#30318"
 msgid "In-Valid Path!"
+msgstr ""
+
+msgctxt "#30319"
+msgid "PseudoTV Live"
+msgstr ""
+
+msgctxt "#30320"
+msgid "Local"
+msgstr ""
+
+msgctxt "#30321"
+msgid "Select"
 msgstr ""

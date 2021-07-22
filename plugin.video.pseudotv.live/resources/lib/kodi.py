@@ -30,6 +30,8 @@ REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
 ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+ICON          = REAL_SETTINGS.getAddonInfo('icon')
+FANART        = REAL_SETTINGS.getAddonInfo('fanart')
 LANGUAGE      = REAL_SETTINGS.getLocalizedString
 COLOR_LOGO    = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
     
@@ -51,16 +53,28 @@ def log(msg, level=xbmc.LOGDEBUG):
     if not isinstance(msg,str): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+    
+def getThumb(item,opt=0): #unify thumbnail artwork
+    keys = {0:['landscape','fanart','poster','thumb','thumbnail','clearlogo','logo','folder','icon'],
+            1:['poster','clearlogo','logo','thumb','thumbnail','landscape','fanart','folder','icon']}[opt]
+    for key in keys:
+        art = (item.get('art',{}).get('album.%s'%(key),'')       or 
+               item.get('art',{}).get('albumartist.%s'%(key),'') or 
+               item.get('art',{}).get('artist.%s'%(key),'')      or 
+               item.get('art',{}).get('season.%s'%(key),'')      or 
+               item.get('art',{}).get('tvshow.%s'%(key),'')      or 
+               item.get('art',{}).get(key,'')                    or
+               item.get(key,''))
+        if art: return art
+    return {0:FANART,1:COLOR_LOGO}[opt]
 
 class Settings:
     realSetting = REAL_SETTINGS
     
-    def __init__(self, reload=False):
-        self.cache = Cache()
-        if reload: 
-            REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-            self.realSetting = REAL_SETTINGS
-        
+    def __init__(self):
+        self.cache    = Cache()
+        self.property = Properties()
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -83,24 +97,12 @@ class Settings:
         except Exception as e: 
             self.log("_getSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
 
-
-    def getSetting(self, key):
-        return self._getSetting(self.getRealSettings().getSetting,key)
         
-        
-    def getSettingList(self, key):
-        return self.getSetting(key).split('|')
-    
-    
-    def getSettingDict(self, key):
-        return loadJSON(self.getSetting(key))
-    
-    
     def getSettingBool(self, key):
         try:    return self._getSetting(self.getRealSettings().getSettingBool,key)
         except: return self._getSetting(self.getRealSettings().getSetting,key).lower() == "true" 
-        
-        
+
+
     def getSettingInt(self, key):
         try: return self._getSetting(self.getRealSettings().getSettingInt,key)
         except:
@@ -111,16 +113,6 @@ class Settings:
                 return int(value)  
             elif value.isnumeric():
                 return int(value)
-              
-              
-    def getSettingFloat(self, key):
-        value = self._getSetting(self.getRealSettings().getSetting,key)
-        if value.isdecimal():
-            return float(value)
-        elif value.isdigit(): 
-            return float(value)  
-        elif value.isnumeric():
-            return float(value)
               
               
     def getSettingNumber(self, key): 
@@ -134,22 +126,52 @@ class Settings:
             elif value.isnumeric():
                 return int(value)
         
+
+    def getSetting(self, key):
+        return self._getSetting(self.getRealSettings().getSetting,key)
+        
         
     def getSettingString(self, key):
         return self._getSetting(self.getRealSettings().getSettingString,key)
-        
-        
+  
+  
+    def getSettingFloat(self, key):
+        value = self._getSetting(self.getRealSettings().getSetting,key)
+        if value.isdecimal():
+            return float(value)
+        elif value.isdigit(): 
+            return float(value)  
+        elif value.isnumeric():
+            return float(value)
+              
+
+    def getSettingList(self, key):
+        return self.getSetting(key).split('|')
+    
+    
+    def getSettingDict(self, key):
+        return loadJSON(self.getSetting(key))
+    
+    
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
         value = self.cache.get(key, checksum, json_data)
         self.log('getCacheSetting, key = %s, value = %s'%(key,value))
         return value
         
         
+    def getPropertySetting(self, key):
+        return self.property.getProperty(key)
+    
+    
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), json_data=False):
         self.log('setCacheSetting, key = %s, value = %s'%(key,value))
         self.cache.set(key, value, checksum, life, json_data)
         
             
+    def setPropertySetting(self, key, value):
+        return self.property.setProperty(key, value)
+        
+        
     def _setSetting(self, func, key, value):
         try:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
@@ -160,40 +182,40 @@ class Settings:
         
     def setSetting(self, key, value=""):  
         if not isinstance(value,str): value = str(value)
-        self._setSetting(self.realSetting.setSetting,key,value)
+        self._setSetting(self.getRealSettings().setSetting,key,value)
             
             
+    def setSettingBool(self, key, value):  
+        if not isinstance(value,bool): value = value.lower() == "true"
+        self._setSetting(self.getRealSettings().setSettingBool,key,value)
+        
+           
+    def setSettingInt(self, key, value):  
+        if not isinstance(value,int): value = int(value)
+        self._setSetting(self.getRealSettings().setSettingInt,key,value)
+         
+            
+    def setSettingNumber(self, key, value):  
+        if not isinstance(value,(int,float,log)): value = float(value)
+        self._setSetting(self.getRealSettings().setSettingNumber,key,value)
+        
+            
+    def setSettingString(self, key, value):  
+        if not isinstance(value,str): value = str(value)
+        self._setSetting(self.getRealSettings().setSettingString,key,value)
+        
+            
+    def setSettingFloat(self, key, value):  
+        if not isinstance(value,(float,log)): value = float(value)
+        self._setSetting(self.getRealSettings().setSetting,key,value)
+        
+        
     def setSettingDict(self, key, values):
         self.setSetting(key, dumpJSON(values))
             
             
     def setSettingList(self, key, values):
         self.setSetting(key, '|'.join(values))
-        
-        
-    def setSettingBool(self, key, value):  
-        if not isinstance(value,bool): value = value.lower() == "true"
-        self._setSetting(self.realSetting.setSettingBool,key,value)
-        
-        
-    def setSettingInt(self, key, value):  
-        if not isinstance(value,int): value = int(value)
-        self._setSetting(self.realSetting.setSettingInt,key,value)
-        
-        
-    def setSettingFloat(self, key, value):  
-        if not isinstance(value,(float,log)): value = float(value)
-        self._setSetting(self.realSetting.setSetting,key,value)
-        
-        
-    def setSettingNumber(self, key, value):  
-        if not isinstance(value,(int,float,log)): value = float(value)
-        self._setSetting(self.realSetting.setSettingNumber,key,value)
-        
-        
-    def setSettingString(self, key, value):  
-        if not isinstance(value,str): value = str(value)
-        self._setSetting(self.realSetting.setSettingString,key,value)
         
         
 class Properties:
@@ -381,7 +403,9 @@ class Dialog:
                           'album': (str,),'artist': (list,),'votes': (str,),'path': (str,),'trailer': (str,),'dateadded': (str,),
                           'mediatype': (str,),'dbid': (int,),'track': (int,),'aspect': (float,),'codec': (str,),'language': (str,),
                           'width': (int,),'height': (int,),'duration': (int,),'channels': (int,),'audio': (list,),'video': (list,),
-                          'subtitle': (list,),'stereomode': (str,),'count': (int,),'size': (int,),'date': (str,)}
+                          'subtitle': (list,),'stereomode': (str,),'count': (int,),'size': (int,),'date': (str,),'lyrics': (str,),
+                          'musicbrainztrackid': (str,),'musicbrainzartistid': (str,),'musicbrainzalbumid': (str,),'musicbrainzalbumartistid': (str,),
+                          'comment': (str,),'discnumber': (int,),'listeners': (int,)}
                           
         info       = item.copy()
         art        = info.pop('art'                ,{})
@@ -392,6 +416,11 @@ class Dialog:
         properties.update(info.get('citem'         ,{}))# write induvial props for keys 
         properties['citem']   = info.pop('citem'   ,{}) # write dump to single key
         properties['pvritem'] = info.pop('pvritem' ,{}) # write dump to single key
+        
+        
+        #unify default artwork
+        art['thumb']  = getThumb(info,opt=1)
+        art['fanart'] = getThumb(info)
         
         def cleanInfo(ninfo):
             tmpInfo = ninfo.copy()
@@ -435,6 +464,7 @@ class Dialog:
         listitem.setCast(cast)
         listitem.setUniqueIDs(uniqueid)
         # listitem.setProperties({})
+        # listitem.setIsFolder(True)
     
         for ainfo in streamInfo.get('audio',[]):    listitem.addStreamInfo('audio'   , ainfo)
         for vinfo in streamInfo.get('video',[]):    listitem.addStreamInfo('video'   , vinfo)

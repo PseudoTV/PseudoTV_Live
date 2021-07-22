@@ -556,7 +556,7 @@ class HandleFilter(BaseRule):
         #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
         if actionid == RULES_ACTION_CHANNEL_START: 
             self.storedFilterValue = Builder.fileListFilter
-            filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": urllib.quote((self.optionValues[2]))}
+            filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": quote((self.optionValues[2]))}
             log("Filter for HandleFilter is = " + str(filter))
             for i in range(len(self.optionValues)):
                 if len(self.optionValues[i]) == 0:

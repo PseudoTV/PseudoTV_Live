@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.3.1f" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.3.1g" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="pvr.iptvsimple" version="7.5.0"/>
@@ -12,6 +12,7 @@
         <import addon="plugin.library.node.editor" version="0.0.1" />
         <import addon="resource.images.studios.white" version="0.0.1"/>
         <import addon="resource.images.studios.coloured" version="0.0.18"/>
+        <import addon="script.module.fuzzywuzzy" version="0.17.0"/>
         <import addon="resource.images.moviegenreicons.transparent" version="0.0.6"/>
         <import addon="resource.images.musicgenreicons.text" version="0.1.0"/>
         <import addon="resource.images.pseudotv.logos" version="0.0.1" optional="true"/>
@@ -24,7 +25,7 @@
         <import addon="script.artistslideshow" version="3.2.1" optional="true"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
-        <provides>executable</provides>
+        <provides>video executable</provides>
     </extension>
     <extension point="xbmc.service" library="service.py"/>
     <extension point="kodi.context.item">
@@ -55,7 +56,7 @@
         <source>https://github.com/PseudoTV/PseudoTV_Live</source>
         <forum>https://forum.kodi.tv/showthread.php?tid=355549</forum>
         <disclaimer lang="en_GB">BETA PROJECT; SUBJECT TO BUGS</disclaimer>
-        <reuselanguageinvoker>true</reuselanguageinvoker>
+        <reuselanguageinvoker>false</reuselanguageinvoker>
         <assets>
             <icon>resources/images/icon.png</icon>
             <fanart>resources/images/fanart.jpg</fanart>
@@ -89,5 +90,23 @@
             <fanart>fanart.jpg</fanart>
         </assets>
     </extension>
+</addon>
+
+<addon id="script.module.fuzzywuzzy" name="fuzzywuzzy" provider-name="SeetGeek" version="0.17.0+matrix.1">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+  </requires>
+  <extension library="lib" point="xbmc.python.module"/>
+  <extension point="xbmc.addon.metadata">
+    <description lang="en">Packed for KODI from https://github.com/seatgeek/fuzzywuzzy</description>
+    <summary lang="en">python fuzzywuzzy module</summary>
+    <license>GPLv2</license>
+    <platform>all</platform>
+    <email/>
+    <website>https://chairnerd.seatgeek.com/fuzzywuzzy-fuzzy-string-matching-in-python/</website>
+    <forum/>
+    <source>https://github.com/seatgeek/fuzzywuzzy</source>
+    <language/>
+  </extension>
 </addon>
 </addons>

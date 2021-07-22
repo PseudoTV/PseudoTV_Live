@@ -296,11 +296,15 @@ class Monitor(xbmc.Monitor):
         if aggressive: windowIDS.extend([ADDON_DIALOG,FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,
                                          NUMERIC_INPUT,FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
                                          
-        if   isSelectOpened(): return True
+        if isSelectOpened():
+            setDialog(True)
+            return True
         elif currentWindow in windowIDS:
             if currentWindow == ADDON_SETTINGS:
                 self.onSettingsChanged()
+            setDialog(True)
             return True
+        setDialog(False)
         return False
 
 
@@ -455,7 +459,7 @@ class Service:
         
         
     def chkRecommended(self, lastUpdate=None):
-        if isClient(): return
+        if   isClient(): return
         elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
             self.log('chkRecommended')
             self.writer.library.recommended.importPrompt()
@@ -464,15 +468,7 @@ class Service:
     def chkPredefined(self, lastUpdate=None):
         if isClient(): return False
         self.chkRecommended(lastUpdate=0)#Force Check with lastUpdate=0
-        self.chkLibraryItems()
-        
-        
-    def chkLibraryItems(self):
-        self.log('chkLibraryItems')
-        if self.writer.library.fillLibraryItems():
-            return self.writer.buildPredefinedChannels()
-        else: 
-            return False
+        self.writer.library.fillLibraryItems()
 
         
     def chkIdle(self):
@@ -541,7 +537,7 @@ class Service:
     def initialize(self):
         self.monitor.lastSettings = self.monitor.chkSettings()
         with busy():
-            funcs = [genInstanceID,
+            funcs = [setInstanceID,
                      initDirs,
                      self.chkVersion,
                      self.monitor.chkPluginSettings,
@@ -566,11 +562,9 @@ class Service:
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
-            doShutdown = isShutdownRequired()
             doRestart  = isRestartRequired()
-            if doShutdown or doRestart: break
-            elif self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
-            elif self.monitor.waitForAbort(5): break
+            if   self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
+            elif doRestart or self.monitor.waitForAbort(5): break
                 
             self.chkUtilites()
             if self.player.isPlaying():

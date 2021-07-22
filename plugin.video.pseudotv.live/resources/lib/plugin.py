@@ -17,7 +17,6 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-
 from resources.lib.globals     import *
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
@@ -137,6 +136,8 @@ class Plugin:
                 nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
                 seekTLRNC = SETTINGS.getSettingInt('Seek_Tolerance')
                 seekTHLD  = SETTINGS.getSettingInt('Seek_Threshold%')
+                timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
+                self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
                 self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],seekTLRNC))
                 self.log('playChannel, progresspercentage = %s, Seek_Threshold = %s'%(nowitem['progresspercentage'],seekTHLD))
                 
@@ -171,7 +172,7 @@ class Plugin:
             if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(name),id=urllib.parse.quote(id),radio=str(False))
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(name),id=quote(id),radio=str(False))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem)
             
@@ -250,7 +251,7 @@ class Plugin:
                 
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(citem['name']),id=urllib.parse.quote(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
@@ -272,7 +273,7 @@ class Plugin:
         
     def playRadio(self, name, id):
         self.log('playRadio, id = %s'%(id))
-        pvritem = self.jsonRPC.getPVRposition(name, id, radio=True, isPlaylist=True)
+        pvritem = self.buildChannel(name, id, isPlaylist=True, radio=True)
         nowitem = pvritem.get('broadcastnow',{})  # current item
         
         pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with comprehensive meta
@@ -296,7 +297,7 @@ class Plugin:
                 nowitem   = nextitems.pop(0)
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=urllib.parse.quote(name),id=urllib.parse.quote(id),radio=str(True))
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(name),id=quote(id),radio=str(True))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
@@ -304,9 +305,8 @@ class Plugin:
                 liz.setProperty('pvritem', dumpJSON(pvritem))          
                 
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={'mType':'music'}))
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={'mType':'song'}))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
-                    
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                 return self.player.play(self.channelPlaylist)
