@@ -111,7 +111,8 @@ class Utilities:
         elif  param == 'User_Groups':       self.userGroups()
         elif  param == 'Clear_Import':      self.clearImport()
         elif  param == 'Install_Resources': chkResources()
-        else: setUtilities(param)
+        else: 
+            setUtilities(param)
             
 if __name__ == '__main__': Utilities(sys.argv).run()
     

@@ -471,6 +471,7 @@ def hasPVRAddon():
     return xbmc.getCondVisibility("System.HasPVRAddon")
          
 def hasAddon(id):
+    if not id: return True
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def hasVersionChanged(cleanStart=False):
@@ -525,6 +526,7 @@ def showChangelog():
         text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
         text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
         text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
+        text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
         text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
         text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
         text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
@@ -558,7 +560,6 @@ def getPluginMeta(id):
     try:
         if id.startswith(('plugin://','resource://')):
             id =  splitall(id.replace('plugin://','').replace('resource://','')).strip()
-        # if not hasAddon(id): installAddon(id)#todo
         pluginID = xbmcaddon.Addon(id)
         meta = {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
         log('globals: getPluginMeta, plugin meta = %s'%(meta))
@@ -569,22 +570,20 @@ def getPluginMeta(id):
 def installAddon(id, silent=False):
     if hasAddon(id):
         if not addonEnabled(id): toggleADDON(id)
-        return True
     else:
         xbmc.executebuiltin('InstallAddon("%s")'%(id))
         if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
-        return True
  
 def chkResources(silent=True):
     log('globals: chkResources, silent = %s'%(silent)) 
-    if not hasAddon(ADDON_REPOSITORY): 
-        if not silent: Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
-        return 
-        
-    params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
-    missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
-    for addon in missing: installAddon(addon, silent)
-    return True
+    if hasAddon(ADDON_REPOSITORY) and not isClient(): 
+        params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
+        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+        for addon in missing:
+            installAddon(addon, silent)
+            if xbmc.Monitor().waitForAbort(15): break
+    elif not silent: 
+        Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
 
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
@@ -593,18 +592,19 @@ def toggleADDON(id, state=True, reverse=False):
     log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
     sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
     if reverse:
-        if id == ADDON_ID: xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({'EnableAddon':False,'DisableAddon':True}[state],id))
+        if id == ADDON_ID: 
+            xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({'EnableAddon':False,'DisableAddon':True}[state],id))
         else: 
             xbmc.sleep(4000)
-            return toggleADDON(id, not bool(state))
-    else: return True
+            toggleADDON(id, not bool(state))
     
 def brutePVR(override=False):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    setInstanceID()
-    return toggleADDON(PVR_CLIENT,False,reverse=True)
+    # setInstanceID()
+    toggleADDON(PVR_CLIENT,False,reverse=True)
+    return True
 
 def getPVR(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)

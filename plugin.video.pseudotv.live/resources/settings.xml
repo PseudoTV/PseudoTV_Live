@@ -1129,7 +1129,7 @@
 					</constraints>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Show_Readme)</data>
-						<close>true</close>
+						<close>false</close>
 					</control>
 				</setting>
                 <setting id="Show_Changelog" type="action" label="30275" help="">
@@ -1140,7 +1140,7 @@
 					</constraints>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Show_Changelog)</data>
-						<close>true</close>
+						<close>false</close>
 					</control>
                 </setting>
             </group>

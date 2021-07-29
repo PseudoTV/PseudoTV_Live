@@ -88,7 +88,7 @@ class Builder:
         self.channelCount = len(channels)
         self.ruleList     = self.writer.rules.loadRules(channels)
         start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
-        endTimes          = dict(self.writer.xmltv.loadEndTimes(fallback=start))
+        endTimes          = dict(self.writer.xmltv.loadEndTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
         self.log('buildService, endTimes = %s'%(endTimes))
         
         for idx, channel in enumerate(channels):
@@ -140,7 +140,6 @@ class Builder:
                 item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
                 item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
                 item['group']   = list(set((item.get('group',[]) or [])))
-                # item['logo']    = (self(item['name'],item['type']) or item.get('logo')) #replace with local logo if available. 
                 item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
                 yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
@@ -178,7 +177,7 @@ class Builder:
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)):
-                self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)),xbmc.LOGINFO)
+                self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
                 
             citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)

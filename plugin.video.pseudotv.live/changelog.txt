@@ -3,7 +3,7 @@ v.0.3.2
 -Fixed channel manager name selection.
 -Fixed channel bug not appearing.
 -Tweaked playback protocols.
--Changed default video/program icon execution behavior to TV Guide (PseudoTV Live Group).
+-Changed default video/program icon execution behavior: Video opens TV Guide (PseudoTV Live Group), Program opens settings.
 -Updated background overlay layout/artwork.
 -Fixed channel Backup/Recovery? requires real-world testing...
 -Refactored channel logo parsing, see readme for details.

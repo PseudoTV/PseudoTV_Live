@@ -158,8 +158,9 @@ class Resources:
     def findLogos(self, name, type=LANGUAGE(30171)): #channel manager search
         self.log('findLogos, chname = %s'%(name))
         def _match(dir, meta, chname):
-            match = self.findFuzzyMatch(chname,meta.get(dir,[]))
-            if match: return dir, match
+            match = self.findFuzzyMatch(chname,meta.get(dir,[]),matchOne=False)
+            if match: 
+                return dir, match
         
         def _parse(pack, chname):
             meta = pack.get('items',{})
@@ -169,12 +170,21 @@ class Resources:
                     
         chnames = self.getNamePatterns(name,type)
         packs   = self.logoSets.get(type,{}).get('packs',[])
-        matches = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames]
-        if matches:
-            matches = (sorted(matches[0], key=lambda x: x[1][1])) #sort high-lowest match score.
-            matches.reverse()
-            self.log('findLogos, found = %s'%(matches))
-            return [{'label':match[1][1][0],'label2':match[0],'path':os.path.join(match[1][0],match[1][1][0]).replace('\\','/')} for match in matches]
+        cacheName  = 'findLogos.%s.%s'%(name,type)
+        cacheCHK   = getMD5(dumpJSON(packs))
+        matches    = self.cache.get(cacheName, checksum=cacheCHK)
+        if not matches:
+            results = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames]
+            #results =  [[('resource.images.pseudotv.logos', ('special://home/addons/resource.images.pseudotv.logos/resources', [('Action Movies.png', 30), ('Action TV.png', 30), ('AMC Pictures.png', 30), ('Anonymous Content.png', 30), ('Biography Movies.png', 30)]))]]
+            if results:
+                matches = []
+                results = sorted(results[0], key=lambda x: x[1][1]) #sort high-lowest match score.
+                results.reverse()
+                self.log('findLogos, found = %s'%(results))
+                for result in results:
+                    matches.extend([{'label':label,'label2':result[0],'path':os.path.join(result[1][0],label).replace('\\','/')} for label, val in result[1][1]])
+                self.cache.set(cacheName, matches, checksum=cacheCHK, expiration=datetime.timedelta(days=28))
+        return matches
             
 
     def findFuzzyMatch(self, chname, files, matchOne=True, THLD=90):
@@ -184,7 +194,8 @@ class Resources:
                     match = FuzzyProcess.extractOne(chname, files)
                     if match[1] >= THLD: return match
                 else:  
-                    match = FuzzyProcess.extract(chname, files)
+                    fuzzy = FuzzyProcess.extract(chname, files)
+                    match = [fuzz for fuzz in fuzzy if fuzz[1] >= THLD]
                     if match: return match        
         except Exception as e: 
             self.log("findFuzzyMatch, failed! %s"%str(e), xbmc.LOGERROR)
@@ -218,35 +229,36 @@ class Resources:
         return matches
         
 
+    @cacheit()
     def parseLogo(self, chname, type):
         chnames = self.getNamePatterns(chname,type)
         for chname in chnames:
             logo = self.fuzzyResource(chname,type)
             if logo: return logo
         
-        
-    def parseResource(self, chname, type):
-        chnames = self.getNamePatterns(chname,type)
+          
+    @cacheit()
+    def chkResource(self, name, type):
+        chnames = self.getNamePatterns(name,type)
+        ids     = [pack.get('id') for pack in self.logoSets.get(type,{}).get('packs',[])]
         for chname in chnames:
-            logo = self.chkResource(chname,type)
-            if logo: return logo
-                
-                
-    def chkResource(self, chname, type):
-        ids = [pack.get('id') for pack in self.logoSets.get(type,{}).get('packs',[])]
-        for id in ids:
-            if not id.startswith('resource'): continue
-            for ext in self.IMG_EXTS:
-                logo = 'resource://%s/%s%s'%(id,chname,ext)
-                if FileAccess.exists(logo):
-                    return logo
+            for id in ids:
+                if not id.startswith('resource'): continue
+                for ext in self.IMG_EXTS:
+                    logo = 'resource://%s/%s%s'%(id,chname,ext)
+                    if FileAccess.exists(logo):
+                        self.log('chkResource: chname = %s, type = %s found = %s'%(name,type,logo))
+                        return logo
         
 
+    @cacheit(checksum=getInstanceID())
     def chkLocal(self, chname):
-        for ext in self.IMG_EXTS:
-            logo = '%s%s'%(chname,ext)
-            if FileAccess.exists(logo):
-                return logo
+        for path in [IMAGE_LOC,LOGO_LOC]:
+            for ext in self.IMG_EXTS:
+                logo = os.path.join(path,'%s%s'%(chname,ext))
+                if FileAccess.exists(logo):
+                    self.log('chkLocal: chname = %s found = %s'%(chname,logo))
+                    return logo
 
 
     def chkItem(self, chname, item):
@@ -256,7 +268,7 @@ class Resources:
                 return logo
 
 
-    def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False):
+    def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False, startup=False):
         self.log('getLogo: chname = %s, type = %s, featured = %s'%(chname,type,featured)) 
         def cleanLogo(logo):
             return logo.replace('\\','/')
@@ -265,8 +277,8 @@ class Resources:
         if not logo:
             logo = self.chkItem(chname, item)
             if not logo:
-                logo = self.parseResource(chname, type)
-                if not logo: 
+                logo = self.chkResource(chname, type)
+                if not logo and not startup: 
                     logo = self.parseLogo(chname, type)
                     
         if logo: 

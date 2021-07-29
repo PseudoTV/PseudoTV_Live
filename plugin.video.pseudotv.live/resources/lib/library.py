@@ -90,7 +90,7 @@ class Library:
             return self.reload()
 
 
-    @cacheit(checksum=ADDON_VERSION,json_data=True)
+    @cacheit(json_data=True)
     def getTemplate(self):
         self.log('getTemplate')
         return (self.load(LIBRARYFLE_DEFAULT) or {})
@@ -227,19 +227,24 @@ class Library:
                     fill = int((idx*100)//len(items))
                     prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
-
+                    
                     if isinstance(item,dict):
                         name = (item.get('name','') or item.get('label',''))
+                        try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
+                        except: enabled_item = {}
                         if not name: continue
                         if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
                             logo = item.get('icon','')
                         else: 
-                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item)
+                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item, startup=True)
                     else: 
                         name = item
-                        logo = self.writer.jsonRPC.resources.getLogo(name, type)
+                        try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
+                        except: enabled_item = {}
+                        print('fillType enabled_item',enabled_item)
+                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item, startup=True)
 
-                    tmpItem = {'enabled':len(list(filter(lambda k:k['name'] == name, enabled))) > 0,
+                    tmpItem = {'enabled':len(enabled_item) > 0,
                                'name':name,
                                'type':type,
                                'logo':logo}

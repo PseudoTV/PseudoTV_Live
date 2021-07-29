@@ -496,21 +496,21 @@ class Service:
             
             if True in conditions:
                 self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
+                updateIPTVManager()
                 setPendingChange(False)
                 self.chkPredefined()
                 
-                # if self.writer.channels.reloadChannels():
-                channels = self.writer.channels.getChannels()
-                if not channels:
-                    if self.writer.autoTune(): #autotune
-                        return self.chkUpdate(0) #force rebuild after autotune
-                    self.log('chkUpdate, no channels found & autotuned recently')
-                    return False #skip autotune if performed recently.
-                    
-                updateIPTVManager()
-                if self.writer.builder.buildService():
-                    self.log('chkUpdate, update finished')
-                    # brutePVR(override=True)
+                if self.writer.channels.reloadChannels(): #todo debug missing channels
+                    channels = self.writer.channels.getChannels()
+                    if not channels:
+                        if self.writer.autoTune(): #autotune
+                            return self.chkUpdate(0) #force rebuild after autotune
+                        self.log('chkUpdate, no channels found & autotuned recently')
+                        return False #skip autotune if performed recently.
+                        
+                    if self.writer.builder.buildService():
+                        self.log('chkUpdate, update finished')
+                        brutePVR(override=True)
 
 
     def chkUtilites(self):
@@ -562,7 +562,7 @@ class Service:
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
-            doRestart  = isRestartRequired()
+            doRestart = isRestartRequired()
             if   self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
                 

@@ -106,17 +106,17 @@ class XMLTV:
     def loadEndTimes(self, channels=None, programmes=None, fallback=None):
         if channels   is None: channels   = self.getChannels()
         if programmes is None: programmes = self.getProgrammes()
-        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
+        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60)).strftime(DTFORMAT)
             
         for channel in channels:
             try: 
-                stopDate = max([strpTime(program['stop'], DTFORMAT) for program in programmes if program['channel'] == channel['id']], default=fallback)
-                self.log('loadEndTimes, channel = %s, stopDate = %s'%(channel['id'],stopDate.strftime(DTFORMAT)))
-                yield channel['id'],datetime.datetime.timestamp(stopDate)
+                stopString = max([program['stop'] for program in programmes if program['channel'] == channel['id']], default=fallback)
+                self.log('loadEndTimes, channel = %s, stopString = %s'%(channel['id'],stopString))
+                yield channel['id'],datetime.datetime.timestamp(strpTime(stopString, DTFORMAT))
             except Exception as e:
                 self.log("loadEndTimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
                 self.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
-                yield channel['id'],datetime.datetime.timestamp(fallback)
+                yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
     def saveXMLTV(self, reset=True):

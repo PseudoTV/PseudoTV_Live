@@ -65,7 +65,7 @@ def extractWithoutOrder(query, choices, processor=default_processor, scorer=defa
 
     try:
         if choices is None or len(choices) == 0:
-            raise StopIteration
+            return
     except TypeError:
         pass
 
@@ -105,7 +105,7 @@ def extractWithoutOrder(query, choices, processor=default_processor, scorer=defa
 
     try:
         # See if choices is a dictionary-like object.
-        for key, choice in list(choices.items()):
+        for key, choice in choices.items():
             processed = pre_processor(processor(choice))
             score = scorer(processed_query, processed)
             if score >= score_cutoff:
@@ -275,7 +275,7 @@ def dedupe(contains_dupes, threshold=70, scorer=fuzz.token_set_ratio):
     keys = {}
     for e in extractor:
         keys[e] = 1
-    extractor = list(keys.keys())
+    extractor = keys.keys()
 
     # check that extractor differs from contain_dupes (e.g. duplicates were found)
     # if not, then return the original list

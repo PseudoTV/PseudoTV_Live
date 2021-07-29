@@ -93,7 +93,7 @@ class Channels:
             return self._reload()
 
 
-    @cacheit(checksum=ADDON_VERSION,json_data=True)
+    @cacheit(json_data=True)
     def getTemplate(self):
         channelList = (self._load(CHANNELFLE_DEFAULT) or {})
         channelList['uuid'] = self.getUUID(channelList)

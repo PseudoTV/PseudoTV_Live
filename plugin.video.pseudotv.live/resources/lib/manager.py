@@ -533,7 +533,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         
             #todo create listitem using ruleInstance and rule.py action map.
             listitems     = [self.writer.dialog.buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'channelData':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
-            print(listitems)
             self.ruleList.addItems(listitems)
             
             # optionIDX    = self.writer.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
@@ -545,7 +544,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             
     def saveRuleList(self, items):
         self.log('saveRuleList')
-        print(items)
         self.toggleruleList(False)
             
             

@@ -282,7 +282,7 @@ class Writer:
         if   len(difference) == 0: return
         elif self.channels.clearChannels():
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
-            [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
+            [self.channels.addChannel(citem) if citem in newChannels else self.removeChannel(citem) for citem in difference] #add new, remove old.
             self.channels.saveChannels()
             
         if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()): #re-enable library (pre-defined) items
@@ -321,16 +321,16 @@ class Writer:
         
         
     def autoPagination(self, id, path, limits={}):
-        cacheName = '%s.autoPagination.%s.%s'%(ADDON_ID,id,getMD5(path))
+        cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
         if not limits:
             msg = 'get'
             limits = self.channels.getPage(id) #check channels.json
-            if limits.get('total') == 0:       #check cache for fallback
+            if limits.get('total',0) == 0:       #check cache for fallback
                 limits = (self.cache.get(cacheName, checksum=id, json_data=True) or limits)
         else:
             msg = 'set'
-            self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
             self.channels.setPage(id, limits)
+            self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
         self.log("%s autoPagination, id = %s\npath = %s\nlimits = %s"%(msg,id,path,limits))
         return limits
             

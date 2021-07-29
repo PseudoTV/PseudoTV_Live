@@ -45,7 +45,7 @@ class JSONRPC:
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    @cacheit(json_data=True)
+    @cacheit(expiration=datetime.timedelta(days=28),json_data=True)
     def getIntrospect(self, id):
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params":{"filter":{"id":"%s","type":"method"}},"id":1}'%(id))
         return self.sendJSON(json_query).get('result',{})
@@ -78,9 +78,7 @@ class JSONRPC:
     @cacheit()
     def listVFS(self, path, media='video', force=False, version=ADDON_VERSION):
         self.log('listVFS path = %s, version = %s' % (path, version))
-        json_response = self.getDirectory(
-            '{"directory":"%s","media":"%s","properties":["duration","runtime"]}' % (path, media), cache=False).get(
-            'files', [])
+        json_response = self.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
         files = []
         for item in json_response:
             file = item['file']
