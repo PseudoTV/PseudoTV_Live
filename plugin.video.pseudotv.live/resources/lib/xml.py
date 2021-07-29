@@ -115,7 +115,7 @@ class XMLTV:
                 yield channel['id'],datetime.datetime.timestamp(strpTime(stopString, DTFORMAT))
             except Exception as e:
                 self.log("loadEndTimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
-                self.removeChannel(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
+                self.removeBroadcasts(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
@@ -398,12 +398,12 @@ class XMLTV:
         return pitem
 
 
-    def removeChannel(self, citem): # remove single channel and all programmes from xmltvList
+    def removeBroadcasts(self, citem): # remove single channel and all programmes from xmltvList
         channels   = self.writer.vault.xmltvList['channels'].copy()
         programmes = self.writer.vault.xmltvList['programmes'].copy()
         self.writer.vault.xmltvList['channels']   = list(filter(lambda channel:channel.get('id') != citem.get('id'), channels))
         self.writer.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
-        self.log('removeChannel, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.writer.vault.xmltvList['channels']),len(programmes),len(self.writer.vault.xmltvList['programmes'])))
+        self.log('removeBroadcasts, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.writer.vault.xmltvList['channels']),len(programmes),len(self.writer.vault.xmltvList['programmes'])))
         return True
         
         

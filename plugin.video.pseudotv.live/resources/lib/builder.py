@@ -127,21 +127,20 @@ class Builder:
 
     def verifyChannelItems(self):
         #check channel configuration, verify and updates paths, logos.
-        if self.writer.channels.reloadChannels():
-            items = self.writer.channels.getChannels()
-            for idx, item in enumerate(items):
-                self.log('verifyChannelItems, %s: %s'%(idx,item))
-                if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
-                    self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
-                    continue
-                    
-                if not isinstance(item.get('path',[]),list): item['path'] = [item['path']] #custom channels are not lists, no mixed channels only adv. interleave rule.
-                item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
-                item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
-                item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
-                item['group']   = list(set((item.get('group',[]) or [])))
-                item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
-                yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
+        items = self.writer.channels.getChannels()
+        for idx, item in enumerate(items):
+            self.log('verifyChannelItems, %s: %s'%(idx,item))
+            if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
+                self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
+                continue
+                
+            if not isinstance(item.get('path',[]),list): item['path'] = [item['path']] #custom channels are not lists, no mixed channels only adv. interleave rule.
+            item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
+            item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
+            item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
+            item['group']   = list(set((item.get('group',[]) or [])))
+            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
+            yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
     def addScheduling(self, channel, fileList, start):

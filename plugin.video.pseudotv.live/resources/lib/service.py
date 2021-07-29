@@ -500,17 +500,16 @@ class Service:
                 setPendingChange(False)
                 self.chkPredefined()
                 
-                if self.writer.channels.reloadChannels(): #todo debug missing channels
-                    channels = self.writer.channels.getChannels()
-                    if not channels:
-                        if self.writer.autoTune(): #autotune
-                            return self.chkUpdate(0) #force rebuild after autotune
-                        self.log('chkUpdate, no channels found & autotuned recently')
-                        return False #skip autotune if performed recently.
-                        
-                    if self.writer.builder.buildService():
-                        self.log('chkUpdate, update finished')
-                        brutePVR(override=True)
+                channels = self.writer.channels.getChannels()
+                if not channels:
+                    if self.writer.autoTune(): #autotune
+                        return self.chkUpdate(0) #force rebuild after autotune
+                    self.log('chkUpdate, no channels found & autotuned recently')
+                    return False #skip autotune if performed recently.
+                    
+                if self.writer.builder.buildService():
+                    self.log('chkUpdate, update finished')
+                    brutePVR(override=True)
 
 
     def chkUtilites(self):

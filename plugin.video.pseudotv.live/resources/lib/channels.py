@@ -95,6 +95,7 @@ class Channels:
 
     @cacheit(json_data=True)
     def getTemplate(self):
+        self.log('getTemplate')
         channelList = (self._load(CHANNELFLE_DEFAULT) or {})
         channelList['uuid'] = self.getUUID(channelList)
         return channelList
@@ -236,12 +237,7 @@ class Channels:
         self.log('clearChannels')
         return self._clear()
 
-       
-    def reloadChannels(self):
-        self.log('reloadChannels')
-        return self._reload()
-       
-       
+
     def getRitem(self):
         self.log('getRitem') #rule schema
         return self.getTemplate().get('channels',[{}])[0].get('rules',[])[0].copy()

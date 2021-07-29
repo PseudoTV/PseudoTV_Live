@@ -111,7 +111,7 @@ class Writer:
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
         self.log('removeChannelLineup, citem = %s'%(citem))
         self.m3u.removeStation(citem)
-        self.xmltv.removeChannel(citem)
+        self.xmltv.removeBroadcasts(citem)
         
                 
     def saveChannelLineup(self):
@@ -258,6 +258,7 @@ class Writer:
 
         # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
         difference = sorted(diffLSTDICT(leftovers,addLST), key=lambda k: k['number'])
+        [self.channels.addChannel(citem) for citem in self.channels.getUserChannels()] #todo debug missing channels
         [self.channels.addChannel(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
         self.log('buildPredefinedChannels, finished building')
         return self.channels.saveChannels()
