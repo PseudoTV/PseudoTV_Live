@@ -139,7 +139,7 @@ class Builder:
             item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
             item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
             item['group']   = list(set((item.get('group',[]) or [])))
-            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
+            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
             yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 

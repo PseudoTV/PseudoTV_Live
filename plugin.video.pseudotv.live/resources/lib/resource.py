@@ -268,7 +268,7 @@ class Resources:
                 return logo
 
 
-    def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False, startup=False):
+    def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False, lookup=False):
         self.log('getLogo: chname = %s, type = %s, featured = %s'%(chname,type,featured)) 
         def cleanLogo(logo):
             return logo.replace('\\','/')
@@ -278,7 +278,7 @@ class Resources:
             logo = self.chkItem(chname, item)
             if not logo:
                 logo = self.chkResource(chname, type)
-                if not logo and not startup: 
+                if not logo and lookup: 
                     logo = self.parseLogo(chname, type)
                     
         if logo: 

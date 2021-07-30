@@ -329,7 +329,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if not name: return channelData
         logo = channelData.get('logo','')
         if not logo or logo in [LOGO,COLOR_LOGO,MONO_LOGO,ICON]:
-            channelData['logo'] = (self.matchLogo(name) or LOGO)
+            channelData['logo'] = self.writer.jsonRPC.resources.getLogo(name)
         return channelData
         
     

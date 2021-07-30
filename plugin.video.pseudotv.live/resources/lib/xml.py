@@ -246,16 +246,6 @@ class XMLTV:
 
     def buildGenres(self):
         self.log('buildGenres') #todo user color selector.
-        with fileLocker(self.writer.globalFileLock):
-            dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
-        
-        epggenres = {}
-        lines = dom.getElementsByTagName('genre')
-        for line in lines: 
-            items = line.childNodes[0].data.split('/')
-            for item in items:
-                epggenres[item.strip()] = line.attributes['genreId'].value
-            
         proggenres = []
         for program in self.writer.vault.xmltvList['programmes']:
             group = []
@@ -263,12 +253,24 @@ class XMLTV:
                 group.append(genre[0])
             proggenres.append(group)
             
+        epggenres = {}
+        with fileLocker(self.writer.globalFileLock):
+            try:
+                dom   = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
+                lines = dom.getElementsByTagName('genre')
+                for line in lines: 
+                    items = line.childNodes[0].data.split('/')
+                    for item in items: epggenres[item.strip()] = line.attributes['genreId'].value
+            except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+        
         for genres in proggenres:
             for genre in genres:
                 if genre and epggenres.get(genre,''): #{'Drama': '0x81'}
-                    epggenres[('/').join(list(filter(None,genres)))] = (epggenres.get(genre,'') or '0x00')
-                    break
-                    
+                    genresLabel = (' / ').join(list(filter(None,genres)))
+                    if not epggenres.get(genre):       epggenres[genre]       = (epggenres.get(genre,'') or '0x00')
+                    if not epggenres.get(genresLabel): epggenres[genresLabel] = (epggenres.get(genre,'') or '0x00')
+                    [epggenres.update({gen:(epggenres.get(genre,'') or '0x00')}) for gen in genres if not epggenres.get(gen)]
+
         doc  = Document()
         root = doc.createElement('genres')
         doc.appendChild(root)
@@ -284,9 +286,11 @@ class XMLTV:
             root.appendChild(gen)
         
         with fileLocker(self.writer.globalFileLock):
-            xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
-            xmlData.write(doc.toprettyxml(indent='\t'))
-            xmlData.close()
+            try:
+                xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
+                xmlData.write(doc.toprettyxml(indent='\t'))
+                xmlData.close()
+            except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
             return True
 
 

@@ -104,6 +104,7 @@ class Library:
         
 
     def getEnabledItems(self, items):
+        if not items: return []
         self.log('getEnabledItems, items = %s'%(len(items)))
         def chkEnabled(item):
             if item.get('enabled',False): 
@@ -236,13 +237,13 @@ class Library:
                         if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
                             logo = item.get('icon','')
                         else: 
-                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item, startup=True)
+                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item, lookup=True)
                     else: 
                         name = item
                         try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
                         except: enabled_item = {}
                         print('fillType enabled_item',enabled_item)
-                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item, startup=True)
+                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item, lookup=True)
 
                     tmpItem = {'enabled':len(enabled_item) > 0,
                                'name':name,
@@ -329,7 +330,7 @@ class Recommended:
         if not SETTINGS.getSettingBool('Enable_Recommended'): return []
         blackList = self.getBlackList()
         addonList = list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))
-        return self.library.writer.pool.poolList(self.searchRecommendedAddon, addonList)
+        return (self.library.writer.pool.poolList(self.searchRecommendedAddon, addonList) or [])
         
         
     @cacheit(expiration=datetime.timedelta(minutes=30),json_data=True)
@@ -340,7 +341,6 @@ class Recommended:
         if addonData:
             self.log('searchRecommendedAddon, found addonid = %s, payload = %s'%(addonid,addonData))
             return {addonid:{"id":addonid,"data":loadJSON(addonData),"meta":getPluginMeta(addonid)}}
-        return None
         
 
     def findbyType(self, type='iptv'):
