@@ -281,7 +281,6 @@ class Properties:
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
-        if isinstance(value,tuple): value = value[0]
         self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         return value
         

@@ -60,12 +60,11 @@ class Resources:
     def buildLogoResources(self):
         self.log('buildLogoResources')#build all logo resources into dict. array.
         local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,LOGO_LOC]]#LOGO_LOC
-        
-        show_pack = local_folder.copy()  #todo add tvshow logos to show_pack
-        # show_pack.extend([{'id':pack,'version':ADDON_VERSION,'items':self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
-        
-        user_pack  = show_pack.copy()
+
+        user_pack = local_folder.copy()
         user_pack.extend([{"id":pack,"version":ADDON_VERSION,"items":self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
+                
+        show_pack = user_pack.copy()
         
         studios = ["resource.images.studios.white", "resource.images.studios.coloured"]
         if bool(SETTINGS.getSettingInt('Color_Logos')): studios.reverse()
@@ -252,6 +251,16 @@ class Resources:
         
 
     @cacheit(checksum=getInstanceID())
+    def chkTVShows(self, chname):
+        shows = self.jsonRPC.getTVInfo().get('shows',[])
+        for show in shows:
+            if chname.lower() == show.get('label','').lower():
+                logo = show.get('logo')
+                if FileAccess.exists(unquoteImage(logo)):
+                    return logo
+        
+        
+    @cacheit(checksum=getInstanceID())
     def chkLocal(self, chname):
         for path in [IMAGE_LOC,LOGO_LOC]:
             for ext in self.IMG_EXTS:
@@ -277,10 +286,12 @@ class Resources:
         if not logo:
             logo = self.chkItem(chname, item)
             if not logo:
-                logo = self.chkResource(chname, type)
-                if not logo and lookup: 
-                    logo = self.parseLogo(chname, type)
-                    
+                logo = self.chkTVShows(chname)
+                if not logo:
+                    logo = self.chkResource(chname, type)
+                    if not logo and lookup: #parse all resources for match using channel name variations.
+                        logo = self.parseLogo(chname, type)
+                        
         if logo: 
             logo = cleanLogo(logo)
             self.log('getLogo: found %s'%(logo))

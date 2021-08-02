@@ -102,12 +102,6 @@ class Writer:
         return True
 
 
-    def removeChannel(self, citem, inclLineup=True): #remove channel completely from channels.json and m3u/xmltv
-        self.log('removeChannel, inclLineup = %s, citem = %s'%(inclLineup, citem))
-        self.channels.removeChannel(citem)
-        if inclLineup: self.removeChannelLineup(citem)
-
-
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
         self.log('removeChannelLineup, citem = %s'%(citem))
         self.m3u.removeStation(citem)
@@ -258,8 +252,7 @@ class Writer:
 
         # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
         difference = sorted(diffLSTDICT(leftovers,addLST), key=lambda k: k['number'])
-        [self.channels.addChannel(citem) for citem in self.channels.getUserChannels()] #todo debug missing channels
-        [self.channels.addChannel(citem) if citem in addLST else self.removeChannel(citem) for citem in difference] #add new, remove old.
+        [self.channels.addChannel(citem) if citem in addLST else self.channels.removeChannel(citem) for citem in difference if citem.get('number',0) >= CHANNEL_LIMIT] #add new, remove old.
         self.log('buildPredefinedChannels, finished building')
         return self.channels.saveChannels()
 
@@ -269,7 +262,11 @@ class Writer:
         channels = {'all'          : self.channels.getChannels,
                     'user-defined' : self.channels.getUserChannels,
                     'pre-defined'  : self.channels.getPredefinedChannels}[type.lower()]()
-        for citem in channels: self.removeChannel(citem)
+                    
+        for citem in channels: 
+            if self.channels.removeChannel(citem):
+                self.removeChannelLineup(citem)
+                
         if self.channels.saveChannels():
             return self.saveChannelLineup()
             
@@ -283,7 +280,7 @@ class Writer:
         if   len(difference) == 0: return
         elif self.channels.clearChannels():
             self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
-            [self.channels.addChannel(citem) if citem in newChannels else self.removeChannel(citem) for citem in difference] #add new, remove old.
+            [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
             self.channels.saveChannels()
             
         if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()): #re-enable library (pre-defined) items

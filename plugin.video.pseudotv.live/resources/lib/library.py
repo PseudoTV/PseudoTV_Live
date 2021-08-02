@@ -242,7 +242,6 @@ class Library:
                         name = item
                         try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
                         except: enabled_item = {}
-                        print('fillType enabled_item',enabled_item)
                         logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item, lookup=True)
 
                     tmpItem = {'enabled':len(enabled_item) > 0,

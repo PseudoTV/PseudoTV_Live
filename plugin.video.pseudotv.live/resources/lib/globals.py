@@ -483,20 +483,18 @@ def hasVersionChanged(cleanStart=False):
 def chkUpdateTime(key, wait, lastUpdate=None):
     state = False
     def getValue(key):
-        try:
-            value = PROPERTIES.getProperty(key)
-            if not value: return SETTINGS.getCacheSetting(key)
-            if isinstance(value,str) and len(value.split(', ')) > 1:#correct odd behavior with properties, storing as string tuple?, todo debug issue.
-                return value.split(', ')[1]
-            else:
-                return value
-        except: pass
+        value = PROPERTIES.getProperty(key)
+        if value: #todo debug property returning string tuple (1628009030, 1627922630, 347) !?
+            if ', ' in value: value = value.split(', ')[1]
+        else:
+            value = SETTINGS.getCacheSetting(key)
+        return (value or 0)
             
     epoch = time.time()
-    if lastUpdate is None: lastUpdate = (getValue(key) or 0)
-    if (epoch >= (float(lastUpdate) + wait)):
-        PROPERTIES.setProperty(key,epoch)
-        SETTINGS.setCacheSetting(key,epoch)
+    if lastUpdate is None: lastUpdate = float(getValue(key))
+    if (epoch >= (lastUpdate + wait)):
+        PROPERTIES.setPropertyInt(key,int(epoch))
+        SETTINGS.setCacheSetting(key,int(epoch))
         state = True
     log('chkUpdateTime, key = %s, lastUpdate = %s, update now = %s'%(key,lastUpdate,state))
     return state
