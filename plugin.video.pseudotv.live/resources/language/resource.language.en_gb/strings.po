@@ -1303,3 +1303,15 @@ msgstr ""
 msgctxt "#30322"
 msgid "Match"
 msgstr ""
+
+msgctxt "#30323"
+msgid "Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
+msgstr ""
+
+msgctxt "#30324"
+msgid "Channel bug visibility Interval"
+msgstr "" 
+
+msgctxt "#30325"
+msgid "No Logo Found!"
+msgstr "" 

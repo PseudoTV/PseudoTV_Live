@@ -36,7 +36,7 @@ class Vault:
 
 
     def set_m3uList(self, m3uList):
-        self.log('set_m3uList, m3uList')
+        self.log('set_m3uList, m3uList: channels = %s'%(len(m3uList.get('channels',[]))))
         self._m3uList = m3uList
 
 
@@ -45,7 +45,7 @@ class Vault:
 
 
     def set_xmltvList(self, xmltvList):
-        self.log('set_xmltvList, xmltvList')
+        self.log('set_xmltvList, xmltvList: channels = %s'%(len(xmltvList.get('channels',[]))))
         self._xmltvList = xmltvList
 
 

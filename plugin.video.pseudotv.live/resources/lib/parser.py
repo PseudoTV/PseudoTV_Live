@@ -123,9 +123,18 @@ class Writer:
         channels    = self.channels.getChannels()
         m3uChannels = self.m3u.getStations()
         abandoned   = m3uChannels.copy() 
-        [abandoned.remove(m3u) for m3u in m3uChannels for channel in channels if channel.get('id') == m3u.get('id')]
-        self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-        for leftover in abandoned: self.removeChannelLineup(leftover)
+        print('channels',len(channels))
+        print('m3uChannels',len(m3uChannels))
+        
+        for channel in channels:
+            for m3u in m3uChannels:
+                if channel.get('id') == m3u.get('id'):
+                    abandoned.remove(m3u) #match found remove from abandoned list.
+                    
+        # [abandoned.remove(m3u) for m3u in m3uChannels for channel in channels if channel.get('id') == m3u.get('id')]
+        if abandoned != m3uChannels:
+            self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
+            for leftover in abandoned: self.removeChannelLineup(leftover)
         return True
 
         

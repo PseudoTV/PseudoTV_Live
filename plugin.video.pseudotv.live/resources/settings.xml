@@ -745,6 +745,20 @@
 					</control>
 				</setting>
 			</group>
+			<group id="3" label="30298">
+				<setting id="Channel_Bug_Interval" type="integer" label="30324" help="30323">
+					<level>2</level>
+					<default>0</default>
+					<constraints>
+						<minimum>-1</minimum>
+						<step>1</step>
+						<maximum>15</maximum>
+					</constraints>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
+			</group>
 		</category>
     
 		<category id="globals" label="30055" help="30236">

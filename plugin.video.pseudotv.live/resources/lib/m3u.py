@@ -119,7 +119,7 @@ class M3U:
                     if not match[key]:
                         if data.get(key):
                             self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF')%(key)
-                            match[key] = data[key] #no local EXTINF value found; use EXTM3U if applicable.
+                            match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
                         else: continue
                     item[key] = match[key].group(1)
                     if key == 'logo':
@@ -157,6 +157,7 @@ class M3U:
                 if not item.get('id','') or not item.get('name','') or not item.get('number',''): 
                     self.log('loadM3U, SKIPPED MISSING META item = %s'%item)
                     continue
+                    
                 self.log('loadM3U, item = %s'%item)
                 yield item
                     
@@ -170,7 +171,7 @@ class M3U:
             fle.write('%s\n'%(self.writer.vault.m3uList['data']))
             keys     = list(self.writer.channels.getCitem().keys())
             keys.extend(['kodiprops','label'])#add keys to ignore from optional.
-            citem    = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            item  = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             channels = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
             
             for channel in channels:
@@ -182,15 +183,15 @@ class M3U:
                     if key in keys: continue
                     elif value: optional += '%s="%s" '%(key,value)
                         
-                fle.write(citem%(channel['number'],
-                                 channel['id'],
-                                 channel['name'],
-                                 channel['logo'],
-                                 ';'.join(channel['group']),
-                                 channel['radio'],
-                                 channel['catchup'],
-                                 optional,
-                                 channel['label']))
+                fle.write(item%(channel['number'],
+                                channel['id'],
+                                channel['name'],
+                                channel['logo'],
+                                ';'.join(channel['group']),
+                                channel['radio'],
+                                channel['catchup'],
+                                optional,
+                                channel['label']))
                                  
                 if channel.get('kodiprops',[]):
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
@@ -292,8 +293,9 @@ class M3U:
 
     
     def getStations(self):
-        self.log('getStations')
-        return self.sortStations(self.writer.vault.m3uList.get('channels',[]))
+        stations = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
+        self.log('getStations, channels = %s'%(len(stations)))
+        return stations
         
         
     def addStation(self, item):

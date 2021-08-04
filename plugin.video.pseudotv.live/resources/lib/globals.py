@@ -705,9 +705,8 @@ def getLabel(item):
     return label
     
 def getThumb(item,opt=0): #unify thumbnail artwork
-    keys = {0:['landscape','fanart','poster','thumb','thumbnail','clearlogo','logo','folder','icon'],
-            1:['poster','clearlogo','logo','thumb','thumbnail','landscape','fanart','folder','icon']}[opt]
-            # 1:['poster','landscape','fanart','thumb','thumbnail','clearlogo','logo','folder','icon']}[opt]
+    keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','folder','icon'],
+            1:['poster','clearlogo','logo','landscape','fanart','thumb','thumbnail','folder','icon']}[opt]
     for key in keys:
         art = (item.get('art',{}).get('album.%s'%(key),'')       or 
                item.get('art',{}).get('albumartist.%s'%(key),'') or 

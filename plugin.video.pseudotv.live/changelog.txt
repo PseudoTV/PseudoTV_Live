@@ -9,7 +9,8 @@ v.0.3.2
 -Refactored channel logo parsing, see readme for details.
 -Tweaked performance, optimized caching.
 -Fixed Radio channels and corrected artwork.
--Added channel logo selection to the channel manager. User can either browse/select a file or select from a list of curated logos.
+-Added channel logo selection to the channel manager. User can either:[CR]Browse - Browse filesystem for logo.[CR]Select - Select from a curated list of logos. Matched by name and available logos.[CR]Match - Auto select best match if available.
+-Added channel bug visibility settings to "Tweaks" setting tab.
 
 v.0.3.1
 -Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.

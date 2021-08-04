@@ -73,12 +73,7 @@ class Plugin:
         broadcasts = self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid'))
         self.pool.poolList(_parseBroadcast, broadcasts)
         return channelItem
-        
-        
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)
-    def getPVRChannels(self, radio=False):
-        return self.jsonRPC.getPVRChannels(radio)
-        
+
 
     @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)
     def getChannel(self, chname, id, radio=False, second_attempt=False):
@@ -89,7 +84,7 @@ class Plugin:
                     if writer.get('citem',{}).get('id','') == id:
                         return channel
 
-        channels = self.getPVRChannels(radio)
+        channels = self.jsonRPC.getPVRChannels(radio)
         for channel in channels:
             match = _matchChannel(channel)
             if match: return match

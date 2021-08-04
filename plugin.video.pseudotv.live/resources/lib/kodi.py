@@ -55,8 +55,8 @@ def log(msg, level=xbmc.LOGDEBUG):
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
 def getThumb(item,opt=0): #unify thumbnail artwork
-    keys = {0:['landscape','fanart','poster','thumb','thumbnail','clearlogo','logo','folder','icon'],
-            1:['poster','clearlogo','logo','thumb','thumbnail','landscape','fanart','folder','icon']}[opt]
+    keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','folder','icon'],
+            1:['poster','clearlogo','logo','landscape','fanart','thumb','thumbnail','folder','icon']}[opt]
     for key in keys:
         art = (item.get('art',{}).get('album.%s'%(key),'')       or 
                item.get('art',{}).get('albumartist.%s'%(key),'') or 
@@ -417,9 +417,10 @@ class Dialog:
         properties['pvritem'] = info.pop('pvritem' ,{}) # write dump to single key
         
         
-        #unify default artwork
-        art['thumb']  = getThumb(info,opt=1)
-        art['fanart'] = getThumb(info)
+        
+        if mType != 'video': #unify default artwork for music.
+            art['thumb']  = getThumb(info,opt=1)
+            art['fanart'] = getThumb(info)
         
         def cleanInfo(ninfo):
             tmpInfo = ninfo.copy()

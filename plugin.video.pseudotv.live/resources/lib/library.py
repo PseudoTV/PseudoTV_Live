@@ -332,14 +332,14 @@ class Recommended:
         return (self.library.writer.pool.poolList(self.searchRecommendedAddon, addonList) or [])
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=30),json_data=True)
+    @cacheit(expiration=datetime.timedelta(seconds=RECOMMENDED_OFFSET),json_data=True)
     def searchRecommendedAddon(self, addon):
         addonid   = addon.get('addonid','')
         cacheName = 'searchRecommendedAddon.%s'%(addonid)
         addonData = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
         if addonData:
             self.log('searchRecommendedAddon, found addonid = %s, payload = %s'%(addonid,addonData))
-            return {addonid:{"id":addonid,"data":loadJSON(addonData),"meta":getPluginMeta(addonid)}}
+            return {addonid:{"id":addonid,"data":loadJSON(addonData),"meta":self.library.writer.jsonRPC.getPluginMeta(addonid)}}
         
 
     def findbyType(self, type='iptv'):

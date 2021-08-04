@@ -574,8 +574,9 @@ class Manager(xbmcgui.WindowXMLDialog):
         if   retval == 0: image = self.matchLogo(chname)
         elif retval == 1: 
             retval = self.writer.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
-            chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,image[-4:])).replace('\\','/')
-            if FileAccess.copy(cleanLogo(retval), chlogo): image = chlogo
+            chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
+            if FileAccess.copy(cleanLogo(retval), chlogo): 
+                if FileAccess.exists(chlogo): image = chlogo
         elif retval == 2: image = self.writer.jsonRPC.resources.getLogo(chname)
             
         if image:
@@ -585,7 +586,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:
                 self.newChannels[channelPOS] = channelData
                 self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
-                
+        else: self.writer.dialog.notificationDialog(LANGUAGE(30325))
+            
             
     def matchLogo(self, chname):
         if not chname: return self.writer.dialog.notificationDialog(LANGUAGE(30084))

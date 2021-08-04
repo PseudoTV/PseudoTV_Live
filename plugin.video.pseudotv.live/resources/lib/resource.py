@@ -236,7 +236,6 @@ class Resources:
             if logo: return logo
         
           
-    @cacheit()
     def chkResource(self, name, type):
         chnames = self.getNamePatterns(name,type)
         ids     = [pack.get('id') for pack in self.logoSets.get(type,{}).get('packs',[])]
@@ -250,17 +249,17 @@ class Resources:
                         return logo
         
 
-    @cacheit(checksum=getInstanceID())
-    def chkTVShows(self, chname):
-        shows = self.jsonRPC.getTVInfo().get('shows',[])
-        for show in shows:
-            if chname.lower() == show.get('label','').lower():
-                logo = show.get('logo')
-                if FileAccess.exists(unquoteImage(logo)):
-                    return logo
+    def chkTVShows(self, name):
+        chnames = list(set([name,splitYear(name)[0]]))
+        shows   = self.jsonRPC.getTVInfo().get('shows',[])
+        for chname in chnames:
+            for show in shows:
+                if chname.lower() == show.get('label','').lower():
+                    logo = show.get('logo')
+                    if FileAccess.exists(unquoteImage(logo)):
+                        return logo
         
         
-    @cacheit(checksum=getInstanceID())
     def chkLocal(self, chname):
         for path in [IMAGE_LOC,LOGO_LOC]:
             for ext in self.IMG_EXTS:

@@ -45,13 +45,13 @@ class JSONRPC:
         return log('%s: %s' % (self.__class__.__name__, msg), level)
 
 
-    @cacheit(expiration=datetime.timedelta(days=28),json_data=True)
+    @cacheit(checksum=xbmc.getInfoLabel('System.BuildVersion'),expiration=datetime.timedelta(days=28),json_data=True)
     def getIntrospect(self, id):
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params":{"filter":{"id":"%s","type":"method"}},"id":1}'%(id))
         return self.sendJSON(json_query).get('result',{})
 
 
-    @cacheit(expiration=datetime.timedelta(days=28),json_data=True)
+    @cacheit(checksum=xbmc.getInfoLabel('System.BuildVersion'),expiration=datetime.timedelta(days=28),json_data=True)
     def getEnums(self, id, type=''):
         self.log('getEnums id = %s, type = %s' % (id, type))
         json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params": {"getmetadata": true, "filterbytransport": true,"filter": {"getreferences": false, "id":"%s","type":"type"}},"id":1}'%(id))
@@ -59,7 +59,7 @@ class JSONRPC:
         return (json_response.get(type,{}).get('enums',[]) or json_response.get('enums',[]))
 
 
-    @cacheit(json_data=True)
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getPluginMeta(self, plugin):
         return getPluginMeta(plugin)
 

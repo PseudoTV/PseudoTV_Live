@@ -251,13 +251,25 @@ class Overlay(xbmcgui.WindowXML):
             
     def bugToggle(self, state=True):
         try:
-            self.log('bugToggle, state = %s'%(state))
             if self.bugToggleThread.is_alive(): 
                 try: 
                     self.bugToggleThread.cancel()
                     self.bugToggleThread.join()
                 except: pass
-            wait   = {True:float(random.randint(30,60)),False:float(random.randint(300,600))}[state]
+                    
+            bugVal  = SETTINGS.getSettingInt("Channel_Bug_Interval")
+            if bugVal == -1: 
+                onVAL  = self.getTimeRemaining()
+                offVAL = .1
+            elif bugVal == 0:  
+                onVAL  = random.randint(30,60)
+                offVAL = random.randint(300,600)
+            else:
+                onVAL  = bugVal * 60
+                offVAL = onVAL
+ 
+            wait = {True:float(onVAL),False:float(offVAL)}[state]
+            self.log('bugToggle, state = %s, wait = %s'%(state,wait))
             nstate = not bool(state)
             self.channelbug.setVisible(state)
             self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
