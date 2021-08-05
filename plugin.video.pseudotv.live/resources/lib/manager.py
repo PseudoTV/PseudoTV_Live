@@ -558,7 +558,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def selectLogo(self, channelData, channelPOS):
         def cleanLogo(chlogo):
-            return self.writer.jsonRPC.resources.unquoteImage(chlogo)
+            return unquoteImage(chlogo)
             #todo convert resource from vfs to fs
             # return chlogo.replace('resource://','special://home/addons/')
             # resource = path.replace('/resources','').replace(,)
@@ -575,6 +575,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif retval == 1: 
             retval = self.writer.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
             chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
+            
+            print('matchLogo',retval,chlogo)
             if FileAccess.copy(cleanLogo(retval), chlogo): 
                 if FileAccess.exists(chlogo): image = chlogo
         elif retval == 2: image = self.writer.jsonRPC.resources.getLogo(chname)

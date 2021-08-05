@@ -26,21 +26,6 @@ try:
 except:
     hasPillow = False
 
-def unquoteImage(imagestring):
-    # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
-    # extracted thumbnail images need to keep their 'image://' encoding
-    if imagestring.startswith('image://') and not imagestring.startswith(('image://video', 'image://music')):
-        return unquote(imagestring[8:-1])
-    return imagestring
-
-def quoteImage(imagestring):
-     # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F                                                   
-    if imagestring.startswith('image://'): return imagestring
-    # Kodi goes lowercase and doesn't encode some chars
-    result = 'image://{0}/'.format(quote(imagestring, '()!'))
-    result = re.sub(r'%[0-9A-F]{2}', lambda mo: mo.group().lower(), result)
-    return result
-
 class Resources:
     IMG_EXTS = ('.png','.jpg','.gif') #todo convert all formats to png.
     TEXTURES = 'Textures.xbt'
