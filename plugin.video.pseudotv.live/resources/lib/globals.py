@@ -173,9 +173,12 @@ def log(msg, level=xbmc.LOGDEBUG):
 
 def getUserFilePath(file=None):
     path = SETTINGS.getSetting('User_Folder')
+    if not FileAccess.exists(path):
+        notificationDialog(LANGUAGE(30326))
+        path = SETTINGS_LOC
     if file: return os.path.join(path,file)
-    else: return path
-  
+    else:    return path
+            
 def unquote(text):
     return urllib.parse.unquote(text)
     
@@ -186,8 +189,6 @@ PAGE_LIMIT       = SETTINGS.getSettingInt('Page_Limit')
 MIN_ENTRIES      = int(PAGE_LIMIT//2)
 LOGO             = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
 
-USER_LOC         = getUserFilePath()
-LOCK_LOC         = USER_LOC
 XMLTVFLE         = '%s.xml'%('pseudotv')
 M3UFLE           = '%s.m3u'%('pseudotv')
 
@@ -198,30 +199,12 @@ TVGROUPFLE       = 'tv_groups.xml'
 RADIOGROUPFLE    = 'radio_groups.xml'
 PROVIDERFLE      = 'providers.xml'
 
-CACHE_LOC        = os.path.join(USER_LOC ,'cache')
-PLS_LOC          = os.path.join(CACHE_LOC,'playlists')
-LOGO_LOC         = os.path.join(CACHE_LOC,'logos')
-
 TEMP_LOC         = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC       = os.path.join(SETTINGS_LOC,'backup')
 
 MGR_SETTINGS     = {'refresh_interval':'1',
                     'iptv_simple_restart':'false'}
-                    
-PVR_SETTINGS     = {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
-                    'logoPathType':'0','logoPath':LOGO_LOC,
-                    'm3uPathType':'0','m3uPath':getUserFilePath(M3UFLE),
-                    'epgPathType':'0','epgPath':getUserFilePath(XMLTVFLE),
-                    'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
-                    # 'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
-                    # 'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
-                    'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
-                    'useEpgGenreText':'true', 'logoFromEpg':'1',
-                    'catchupEnabled':'true','allChannelsCatchupMode':'0',
-                    'numberByOrder':'false','startNum':'1',
-                    'epgTimeShift':'0','epgTSOverride':'false',
-                    'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
-                    
+
 JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel':'true',
                     'pvrmanager.syncchannelgroups':'true',
                     'pvrmanager.backendchannelorder':'true',
@@ -233,7 +216,21 @@ JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel':'true',
                     # 'epg.epgupdate':120,
                     'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
-
+def getPVRSettings():
+    return {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
+            'logoPathType':'0','logoPath':os.path.join(getUserFilePath(),'cache','logos'),
+            'm3uPathType':'0','m3uPath':getUserFilePath(M3UFLE),
+            'epgPathType':'0','epgPath':getUserFilePath(XMLTVFLE),
+            'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
+            # 'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
+            # 'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
+            'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
+            'useEpgGenreText':'true', 'logoFromEpg':'1',
+            'catchupEnabled':'true','allChannelsCatchupMode':'0',
+            'numberByOrder':'false','startNum':'1',
+            'epgTimeShift':'0','epgTSOverride':'false',
+            'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
+                    
 @contextmanager
 def fileLocker(globalFileLock):
     globalFileLock.lockFile("MasterLock")
@@ -307,14 +304,19 @@ def percentDiff(org, new):
     except ZeroDivisionError: return 0
 
 def initDirs():
-    dirs = [CACHE_LOC,LOGO_LOC,PLS_LOC,LOCK_LOC]
+    USER_LOC  = getUserFilePath()
+    CACHE_LOC = os.path.join(USER_LOC,'cache')
+    PLS_LOC   = os.path.join(CACHE_LOC,'playlists')
+    LOGO_LOC  = os.path.join(CACHE_LOC,'logos')
+    dirs = [USER_LOC,CACHE_LOC,PLS_LOC,LOGO_LOC]
     [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
     return True
 
 def moveUser(oldFolder, newFolder): #todo finish
     if PROPERTIES.getPropertyBool('isClient'): return
+    CACHE_LOC = os.path.join(getUserFilePath(),'cache')
     log('globals: moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
-    MoveLST = [M3UFLE,XMLTVFLE,CHANNELFLE,LIBRARYFLE,GENREFLE,CACHE_LOC]
+    MoveLST = [CACHE_LOC,M3UFLE,XMLTVFLE,CHANNELFLE,LIBRARYFLE,GENREFLE]
     if not Dialog().yesnoDialog('Centralized file location changed from\n%s to\%s move files?'%(oldFolder,newFolder)): return
     dia = Dialog().progressDialog(message='Preparing to move files...')
     for idx, file in enumerate(MoveLST):
@@ -352,7 +354,7 @@ def loadJSON(item):
             return json.loads(item)
         elif isinstance(item,dict):
             return item
-    except Exception as e: log("globals: loadJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    except Exception as e: log("globals: loadJSON failed! %s"%(e), xbmc.LOGERROR)
     return {}#except json.decoder.JSONDecodeError:,ValueError:
     
 def sendJSON(command):
@@ -374,7 +376,7 @@ def splitall(plugin):
     
 def isSSD():
     #TODO DETECT SSD/FLASH
-    return (USER_LOC)
+    return False
 
 def getIdleTime():
     try: return (int(xbmc.getGlobalIdleTime()) or 0)
@@ -619,23 +621,23 @@ def setJsonSettings():
 def chkMGR():
     return chkPVR(PVR_MANAGER, MGR_SETTINGS)
 
-def chkPVR(id=PVR_CLIENT, values=PVR_SETTINGS):
+def chkPVR(id=PVR_CLIENT, values=getPVRSettings()):
     log('globals: chkPVR, id = %s'%(id))
     #check for min. settings' required
     addon = getPVR(id)
-    if addon is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
+    if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
     for setting, value in values.items():
         if not str(addon.getSetting(setting)) == str(value): 
             return configurePVR(id,values,SETTINGS.getSettingBool('Enable_Config'))
     return True
     
-def configurePVR(id=PVR_CLIENT,values=PVR_SETTINGS,override=False):
+def configurePVR(id=PVR_CLIENT,values=getPVRSettings(),override=False):
     log('globals: configurePVR')
     if not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name','')))): return
     try:
         addon = getPVR(id)
-        if addon is None: return False
+        if addon  is None: return False
         for setting, value in values.items(): 
             addon.setSetting(setting, value)
     except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))

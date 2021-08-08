@@ -93,7 +93,6 @@ class Channels:
             return self._reload()
 
 
-    @cacheit(json_data=True)
     def getTemplate(self):
         self.log('getTemplate')
         channelList = (self._load(CHANNELFLE_DEFAULT) or {})
@@ -101,6 +100,7 @@ class Channels:
         return channelList
 
 
+    @cacheit(json_data=True)
     def getCitem(self):#channel schema
         citem = self.getTemplate().get('channels',[])[0].copy()
         citem['rules'] = []
@@ -139,7 +139,7 @@ class Channels:
             
             
     def chkClient(self):
-        isClient = PROPERTIES.getPropertyBool('isClient')
+        isClient = (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingBool('Enable_Client'))
         if not isClient:
             isClient = self.getUUID() != self.getMYUUID()
             PROPERTIES.setPropertyBool('isClient',isClient)

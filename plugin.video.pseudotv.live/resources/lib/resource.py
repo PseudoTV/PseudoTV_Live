@@ -35,6 +35,7 @@ class Resources:
         self.jsonRPC     = jsonRPC
         self.cache       = jsonRPC.cache
         self.pool        = jsonRPC.pool
+        self.LOGO_LOC    = os.path.join(getUserFilePath(),'cache','logos')
         self.logoSets    = self.buildLogoResources()
         
         
@@ -44,7 +45,7 @@ class Resources:
 
     def buildLogoResources(self):
         self.log('buildLogoResources')#build all logo resources into dict. array.
-        local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,LOGO_LOC]]#LOGO_LOC
+        local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,self.LOGO_LOC]]#LOGO_LOC
 
         user_pack = local_folder.copy()
         user_pack.extend([{"id":pack,"version":ADDON_VERSION,"items":self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
@@ -246,7 +247,7 @@ class Resources:
         
         
     def chkLocal(self, chname):
-        for path in [IMAGE_LOC,LOGO_LOC]:
+        for path in [IMAGE_LOC,self.LOGO_LOC]:
             for ext in self.IMG_EXTS:
                 logo = os.path.join(path,'%s%s'%(chname,ext))
                 if FileAccess.exists(logo):
@@ -256,7 +257,7 @@ class Resources:
 
     def chkItem(self, chname, item):
         logo = item.get('logo')
-        if logo and logo != LOGO and not logo.startswith(LOGO_LOC):
+        if logo and logo != LOGO and not logo.startswith(self.LOGO_LOC):
             if FileAccess.exists(unquoteImage(logo)): 
                 return logo
 

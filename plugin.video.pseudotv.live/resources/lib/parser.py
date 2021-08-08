@@ -125,6 +125,7 @@ class Writer:
         abandoned   = m3uChannels.copy() 
         print('channels',len(channels))
         print('m3uChannels',len(m3uChannels))
+        if (channels or m3uChannels) is None: return True
         
         for channel in channels:
             for m3u in m3uChannels:
@@ -349,7 +350,7 @@ class Writer:
                 files = FileAccess.listdir(path)[1]
                 for file in files:
                     orgpath  = os.path.join(path,file)
-                    copypath = os.path.join(PLS_LOC,type,media,file)
+                    copypath = os.path.join(getUserFilePath(),'cache','playlists',type,media,file)
                     self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
                     yield FileAccess.copy(orgpath, copypath)
 

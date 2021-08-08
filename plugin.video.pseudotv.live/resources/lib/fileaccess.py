@@ -247,8 +247,9 @@ class VFSFile:
 class FileLock:
     def __init__(self):
         random.seed()        
-        if not FileAccess.exists(globals.LOCK_LOC): 
-            FileAccess.makedirs(globals.LOCK_LOC)
+        self.LOCK_LOC = globals.getUserFilePath()
+        if not FileAccess.exists(self.LOCK_LOC): 
+            FileAccess.makedirs(self.LOCK_LOC)
             
         if not FileAccess.exists(FILE_LOCK_NAME):    
             FileAccess.open(FILE_LOCK_NAME,'a').close()
@@ -256,7 +257,7 @@ class FileLock:
         self.monitor      = xbmc.Monitor()
         self.lockedList   = []
         self.isExiting    = False
-        self.lockFileName = os.path.join(globals.LOCK_LOC,FILE_LOCK_NAME)
+        self.lockFileName = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
         
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
@@ -377,7 +378,7 @@ class FileLock:
         # timeout should help prevent issues with an old cache.
         for i in range(40):
             # Cycle file names in case one of them is sitting around in the directory
-            self.lockName = os.path.join(globals.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
+            self.lockName = os.path.join(self.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
             try:
                 FileAccess.rename(self.lockFileName, self.lockName)
                 fle = FileAccess.open(self.lockName, 'r')

@@ -1315,3 +1315,7 @@ msgstr ""
 msgctxt "#30325"
 msgid "No Logo Found!"
 msgstr "" 
+
+msgctxt "#30326"
+msgid "Centralize file location not found, please reconfigure!"
+msgstr "" 

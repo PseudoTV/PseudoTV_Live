@@ -557,6 +557,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def selectLogo(self, channelData, channelPOS):
+        LOGO_LOC  = os.path.join(getUserFilePath(),'cache','logos')
         def cleanLogo(chlogo):
             return unquoteImage(chlogo)
             #todo convert resource from vfs to fs

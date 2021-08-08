@@ -36,10 +36,8 @@ class Plugin:
                             
         self.log('__init__, sysARG = %s, channel info = %s'%(sysARG,self.channelInfo))
         self.setOffset  = False #todo adv. channel rule to disable seek 
-
         self.monitor    = xbmc.Monitor()
         self.player     = xbmc.Player()
-            
         self.cache      = Cache()
         self.dialog     = Dialog()
         self.pool       = PoolHelper()
@@ -62,7 +60,7 @@ class Plugin:
         return parameter
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)
+    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)#channel-surfing buffer
     def parseBroadcasts(self, channelItem, channelLimit=2):
         def _parseBroadcast(broadcast):
             if broadcast['progresspercentage'] > 0 and broadcast['progresspercentage'] != 100:
@@ -70,12 +68,11 @@ class Plugin:
             elif broadcast['progresspercentage'] == 0 and len(channelItem.get('broadcastnext',[])) < channelLimit:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
                 
-        broadcasts = self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid'))
-        self.pool.poolList(_parseBroadcast, broadcasts)
+        self.pool.poolList(_parseBroadcast, self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
         return channelItem
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)
+    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)#channel-surfing buffer
     def getChannel(self, chname, id, radio=False, second_attempt=False):
         def _matchChannel(channel):
             if channel.get('label') == chname:
@@ -219,7 +216,6 @@ class Plugin:
         citem     = writer.get('citem',{})
         
         if citem: 
-            
             pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
             pvritem['citem'].update(citem) #update citem with comprehensive meta
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
@@ -309,7 +305,6 @@ class Plugin:
         else: self.dialog.notificationDialog(LANGUAGE(30001))
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
 
-        
 
     def playVOD(self, name, id):
         path = decodeString(id)
