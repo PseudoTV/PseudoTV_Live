@@ -43,11 +43,6 @@ except:
     from threading import Thread
     from queue     import Queue, Empty, PriorityQueue
 
-PY3 = sys.version_info[0] == 3
-if PY3: 
-    basestring = str
-    unicode = str
-    
 # Plugin Info
 ADDON_ID            = 'plugin.video.pseudotv.live'
 REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
@@ -58,8 +53,11 @@ ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
 ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
-SETTINGS            = Settings()
-PROPERTIES          = Properties()
+
+IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
+MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
+BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
 OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
 README_FLE          = os.path.join(ADDON_PATH,'readme.md')
@@ -74,15 +72,20 @@ SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
 
-VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
-MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
-IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
+SETTINGS            = Settings()
+PROPERTIES          = Properties()
 
-IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
-MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
+
+PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
+MIN_ENTRIES         = int(PAGE_LIMIT//2)
+LOGO                = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
+
+VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
+MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
 PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}&radio={radio}.pvr'
@@ -90,26 +93,40 @@ VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={c
 ADDON_REPOSITORY    = 'repository.pseudotv'
 PVR_CLIENT          = 'pvr.iptvsimple'
 PVR_MANAGER         = 'service.iptv.manager'
+
 LANG                = 'en' #todo
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
 
+XMLTVFLE            = '%s.xml'%('pseudotv')
+M3UFLE              = '%s.m3u'%('pseudotv')
+CHANNELFLE          = 'channels.json'
+LIBRARYFLE          = 'library.json'
+GENREFLE            = 'genres.xml'
+TVGROUPFLE          = 'tv_groups.xml'
+RADIOGROUPFLE       = 'radio_groups.xml'
+PROVIDERFLE         = 'providers.xml'
+
 MAX_IMPORT          = 5
-EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
-RADIO_ITEM_LIMIT    = 250
 CLOCK_SEQ           = 70420
+UPDATE_WAIT         = 3600  #1hr in secs.
+EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
+OVERLAY_DELAY       = 15    #secs
+
 UPDATE_OFFSET       = 10800 #3hr in secs.
 LIBRARY_OFFSET      = 3600
 RECOMMENDED_OFFSET  = 900   #15mins in secs.
 PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
-UPDATE_WAIT         = 3600  #1hr in secs.
+
+RADIO_ITEM_LIMIT    = 250
 AUTOTUNE_LIMIT      = 3     #auto items per type.
 CHANNEL_LIMIT       = 999   #hard limit, do not exceed!
-OVERLAY_DELAY       = 15    #secs
+
 CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]#Limit is 10
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
+
 PRE_ROLL            = ['bumpers','ratings']
 POST_ROLL           = ['commercials','trailers']
 
@@ -165,9 +182,23 @@ SELECT_DIALOG        = 12000
 OK_DIALOG            = 12002
 ADDON_DIALOG         = 13001
 
+MGR_SETTINGS     = {'refresh_interval'   :'1',
+                    'iptv_simple_restart':'false'}
+
+JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel' :'true',
+                    'pvrmanager.syncchannelgroups'       :'true',
+                    'pvrmanager.backendchannelorder'     :'true',
+                    'pvrmanager.usebackendchannelnumbers':'true',
+                    # 'pvrmenu.iconpath':'',
+                    # 'pvrplayback.switchtofullscreenchanneltypes':1,
+                    # 'pvrplayback.confirmchannelswitch':'true',
+                    # 'epg.selectaction':2,
+                    # 'epg.epgupdate':120,
+                    'pvrmanager.startgroupchannelnumbersfromone':'false'}
+
 def log(msg, level=xbmc.LOGDEBUG):
     if not SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if not isinstance(msg,basestring): msg = str(msg)
+    if not isinstance(msg,str): msg = str(msg)
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
@@ -176,45 +207,9 @@ def getUserFilePath(file=None):
     if not FileAccess.exists(path):
         notificationDialog(LANGUAGE(30326))
         path = SETTINGS_LOC
+        SETTINGS.setSetting('User_Folder',path)
     if file: return os.path.join(path,file)
     else:    return path
-            
-def unquote(text):
-    return urllib.parse.unquote(text)
-    
-def quote(text):
-    return urllib.parse.quote(text)
-
-PAGE_LIMIT       = SETTINGS.getSettingInt('Page_Limit')
-MIN_ENTRIES      = int(PAGE_LIMIT//2)
-LOGO             = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
-
-XMLTVFLE         = '%s.xml'%('pseudotv')
-M3UFLE           = '%s.m3u'%('pseudotv')
-
-CHANNELFLE       = 'channels.json'
-LIBRARYFLE       = 'library.json'
-GENREFLE         = 'genres.xml'
-TVGROUPFLE       = 'tv_groups.xml'
-RADIOGROUPFLE    = 'radio_groups.xml'
-PROVIDERFLE      = 'providers.xml'
-
-TEMP_LOC         = os.path.join(SETTINGS_LOC,'temp')
-BACKUP_LOC       = os.path.join(SETTINGS_LOC,'backup')
-
-MGR_SETTINGS     = {'refresh_interval':'1',
-                    'iptv_simple_restart':'false'}
-
-JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel':'true',
-                    'pvrmanager.syncchannelgroups':'true',
-                    'pvrmanager.backendchannelorder':'true',
-                    'pvrmanager.usebackendchannelnumbers':'true',
-                    # 'pvrmenu.iconpath':'',
-                    # 'pvrplayback.switchtofullscreenchanneltypes':1,
-                    # 'pvrplayback.confirmchannelswitch':'true',
-                    # 'epg.selectaction':2,
-                    # 'epg.epgupdate':120,
-                    'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def getPVRSettings():
     return {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
@@ -254,6 +249,12 @@ def busy_dialog():
     try: yield
     finally:
         xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+            
+def unquote(text):
+    return urllib.parse.unquote(text)
+    
+def quote(text):
+    return urllib.parse.quote(text)
 
 def cleanAbandonedLocks():
     ... #todo remove .locks
@@ -337,9 +338,9 @@ def dumpJSON(item, idnt=None, sortkey=True):
             return ''
         elif hasattr(item, 'read'):
             return json.dump(item, indent=idnt, sort_keys=sortkey)
-        elif not isinstance(item,basestring):
+        elif not isinstance(item,str):
             return json.dumps(item, indent=idnt, sort_keys=sortkey)
-        elif isinstance(item,basestring):
+        elif isinstance(item,str):
             return item
     except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return ''
@@ -350,7 +351,7 @@ def loadJSON(item):
             return {}
         elif hasattr(item, 'read'):
             return json.load(item)
-        elif isinstance(item,basestring):
+        elif isinstance(item,str):
             return json.loads(item)
         elif isinstance(item,dict):
             return item
@@ -793,7 +794,7 @@ def setWriter(writer, fileItem):
 
 def getWriter(text):
     if isinstance(text, list): text = text[0]
-    if isinstance(text, basestring):
+    if isinstance(text, str):
         writer = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
         if writer: return loadJSON(decodeString(writer.group(1)))
     return {}
@@ -862,7 +863,7 @@ def saveURL(url, file):
 def interleave(*args): #interleave multi-lists, while preserving order
     try:
         iters = list(map(iter, args))
-        while iters and not xbmc.Monitor().abortRequested():
+        while not xbmc.Monitor().abortRequested() and iters:
             it = random.choice(iters)
             try: yield next(it)
             except StopIteration:

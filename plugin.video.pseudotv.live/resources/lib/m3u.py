@@ -253,7 +253,7 @@ class M3U:
             return x if x % 1000 == 0 else x + 1000 - x % 1000
             
         def frange(start, stop, step):
-          while start < stop:
+          while not xbmc.Monitor().abortRequested() and start < stop:
             yield float(start)
             start += decimal.Decimal(step)
 

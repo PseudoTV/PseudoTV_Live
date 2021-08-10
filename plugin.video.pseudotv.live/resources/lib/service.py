@@ -176,6 +176,8 @@ class Player(xbmc.Player):
         
     def playAction(self):
         pvritem = self.getPVRitem()
+        self.showOverlay = SETTINGS.getSettingBool('Enable_Overlay')
+        
         if not pvritem or not isPseudoTV(): 
             self.log('playAction, returning missing pvritem or not PseudoTV!')
             return self.stopAction()
@@ -331,8 +333,7 @@ class Monitor(xbmc.Monitor):
             
     def chkPluginSettings(self):
         self.log('chkPluginSettings')
-        for func in [chkPVR, chkMGR]: 
-            func()
+        for func in [chkPVR, chkMGR]: func()
         return True
         
         
@@ -432,15 +433,15 @@ class Service:
         
                 
     def runServiceThread(self):
-        if isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
-        elif isClient(): self.startServiceThread(900.0)
+        if   isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
+        elif isClient(): self.startServiceThread(900.0) #wait and call again if isClient changes.
         self.log('runServiceThread')
         setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
 
 
     def chkVersion(self):
-        # call in thread so prompt doesn't hold up service.
+        # call in thread so prompt does not hold up service.
         if self.startThread.is_alive():
             try: 
                 self.startThread.cancel()
@@ -455,20 +456,19 @@ class Service:
         self.log('chkChannels')
         # check channels.json for changes
         # re-enable missing library.json items from channels.json
-        if isClient(): return
         
         
     def chkRecommended(self, lastUpdate=None):
-        if   isClient(): return
-        elif chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
-            self.log('chkRecommended')
+        if not isClient() and chkUpdateTime('Last_Recommended',RECOMMENDED_OFFSET,lastUpdate):
+            self.log('chkRecommended, lastUpdate = %s'%(lastUpdate))
             self.writer.library.recommended.importPrompt()
 
             
     def chkPredefined(self, lastUpdate=None):
-        if isClient(): return False
-        self.chkRecommended(lastUpdate=0)#Force Check with lastUpdate=0
-        self.writer.library.fillLibraryItems()
+        if not isClient():
+            self.log('chkPredefined, lastUpdate = %s'%(lastUpdate))
+            self.chkRecommended(lastUpdate=0)#Force Check with lastUpdate=0
+            self.writer.library.fillLibraryItems()
 
         
     def chkIdle(self):
@@ -561,19 +561,18 @@ class Service:
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
         
         while not self.monitor.abortRequested():
+            isMaster  = not isClient()
             doRestart = isRestartRequired()
             if   self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
                 
             self.chkUtilites()
-            if self.player.isPlaying():
-                self.chkIdle()
-            else:
-                self.chkRecommended()
+            if self.player.isPlaying(): self.chkIdle()
+            elif isMaster: self.chkRecommended()
                       
             if   isBusy(): continue
             elif self.monitor.isSettingsOpened(): continue
-            self.chkUpdate()
+            elif isMaster: self.chkUpdate()
                 
         self.closeThreads()
         if doRestart:
@@ -589,7 +588,7 @@ class Service:
                 try: 
                     thread.cancel()
                     thread.join(1.0)
-                except: pass
+                except: log("closeThreads, %s Failed! %s"%(thread.name,e), xbmc.LOGERROR)
             except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
         self.log('closeThreads finished, exiting %s...'%(ADDON_NAME))
      

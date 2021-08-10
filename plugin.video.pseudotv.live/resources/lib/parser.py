@@ -135,7 +135,7 @@ class Writer:
         # [abandoned.remove(m3u) for m3u in m3uChannels for channel in channels if channel.get('id') == m3u.get('id')]
         if abandoned != m3uChannels:
             self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-            for leftover in abandoned: self.removeChannelLineup(leftover)
+            # for leftover in abandoned: self.removeChannelLineup(leftover)
         return True
 
         
@@ -398,30 +398,30 @@ class Writer:
 
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        with busy_dialog():
-            if isClient(): return
-            setSelectOpened(True)
-            
-            items = self.library.getLibraryItems(type)
-            if not items:
-                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
-                setBusy(False)
-                return
-                
-            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-            if autoTune:
-                if autoTune > len(items): autoTune = len(items)
-                select = random.sample(list(set(range(0,len(items)))),autoTune)
-                
-        if not autoTune:
-            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
-            
-        if not select is None:
+        if not isClient():
             with busy_dialog():
-                self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
-                self.buildPredefinedChannels(type)
-                self.setPendingChangeTimer()
-        setSelectOpened(False)
+                setSelectOpened(True)
+                
+                items = self.library.getLibraryItems(type)
+                if not items:
+                    self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                    setBusy(False)
+                    return
+                    
+                listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+                if autoTune:
+                    if autoTune > len(items): autoTune = len(items)
+                    select = random.sample(list(set(range(0,len(items)))),autoTune)
+                    
+            if not autoTune:
+                select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
+                
+            if not select is None:
+                with busy_dialog():
+                    self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
+                    self.buildPredefinedChannels(type)
+                    self.setPendingChangeTimer()
+            setSelectOpened(False)
         
         
     def triggerPendingChange(self):

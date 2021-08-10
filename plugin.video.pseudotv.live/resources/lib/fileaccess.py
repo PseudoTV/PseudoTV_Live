@@ -305,15 +305,14 @@ class FileLock:
         locked   = True
         lines    = []
 
-        while (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while not self.monitor.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
-
             if curval > -1:
                 self.releaseLockFile()
                 self.grabSemaphore.release()
 
             self.grabSemaphore.acquire()
-            if self.grabLockFile() == False:
+            if self.grabLockFile() == False or self.monitor.waitForAbort(.001):
                 self.grabSemaphore.release()
                 return False
 

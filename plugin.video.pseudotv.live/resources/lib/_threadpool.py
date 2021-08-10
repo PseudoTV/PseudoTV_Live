@@ -79,7 +79,9 @@ class ThreadPool:
                 while not self.monitor.abortRequested() and not errors:
                     try:
                         idx, item = queue.get(block=False)
-                        try: results[idx] = func(item)
+                        try: 
+                            results[idx] = func(item)
+                            # if self.monitor.waitForAbort(.001): break # unnecessary slows down func.  
                         except Exception as e: errors[idx] = sys.exc_info()
                     except Empty: break
 

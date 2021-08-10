@@ -206,7 +206,7 @@ class Plugin:
                 xbmc.sleep(100)
                 return xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
                 
-        else: self.dialog.notificationDialog(LANGUAGE(30001))
+        else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
     
@@ -258,7 +258,7 @@ class Plugin:
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             return self.player.play(self.channelPlaylist, startpos=0)
 
-        else: self.dialog.notificationDialog(LANGUAGE(30001))
+        else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
         
@@ -302,8 +302,13 @@ class Plugin:
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                 return self.player.play(self.channelPlaylist)
 
-        else: self.dialog.notificationDialog(LANGUAGE(30001))
+        else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
+
+
+    def playbackError(self):
+        setInstanceID()
+        self.dialog.notificationDialog(LANGUAGE(30001))
 
 
     def playVOD(self, name, id):
