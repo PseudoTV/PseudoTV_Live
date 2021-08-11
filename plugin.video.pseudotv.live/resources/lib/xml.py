@@ -71,11 +71,11 @@ class XMLTV:
         return xmltvList
         
         
-    def loadData(self):
+    def loadData(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadData')
         try: 
-            with fileLocker(self.writer.globalFileLock):
-                return (xmltv.read_data(FileAccess.open(getUserFilePath(XMLTVFLE), 'r')) or self.resetData())
+            if FileAccess.exists(file): 
+                return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
         except Exception as e: 
             self.log('loadData, failed! %s'%(e))
             return self.resetData()
@@ -84,7 +84,7 @@ class XMLTV:
     def loadChannels(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadChannels, file = %s'%file)
         try:
-            with fileLocker(self.writer.globalFileLock):
+            if FileAccess.exists(file): 
                 return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -95,7 +95,7 @@ class XMLTV:
     def loadProgrammes(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadProgrammes, file = %s'%file)
         try: 
-            with fileLocker(self.writer.globalFileLock):
+            if FileAccess.exists(file): 
                 return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
@@ -254,7 +254,7 @@ class XMLTV:
             proggenres.append(group)
             
         epggenres = {}
-        with fileLocker(self.writer.globalFileLock):
+        if FileAccess.exists(GENREFLE_DEFAULT): 
             try:
                 dom   = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
                 lines = dom.getElementsByTagName('genre')
@@ -263,35 +263,35 @@ class XMLTV:
                     for item in items: epggenres[item.strip()] = line.attributes['genreId'].value
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
         
-        for genres in proggenres:
-            for genre in genres:
-                if genre and epggenres.get(genre,''): #{'Drama': '0x81'}
-                    genresLabel = (' / ').join(list(filter(None,genres)))
-                    if not epggenres.get(genre):       epggenres[genre]       = (epggenres.get(genre,'') or '0x00')
-                    if not epggenres.get(genresLabel): epggenres[genresLabel] = (epggenres.get(genre,'') or '0x00')
-                    [epggenres.update({gen:(epggenres.get(genre,'') or '0x00')}) for gen in genres if not epggenres.get(gen)]
+            for genres in proggenres:
+                for genre in genres:
+                    if genre and epggenres.get(genre,''): #{'Drama': '0x81'}
+                        genresLabel = (' / ').join(list(filter(None,genres)))
+                        if not epggenres.get(genre):       epggenres[genre]       = (epggenres.get(genre,'') or '0x00')
+                        if not epggenres.get(genresLabel): epggenres[genresLabel] = (epggenres.get(genre,'') or '0x00')
+                        [epggenres.update({gen:(epggenres.get(genre,'') or '0x00')}) for gen in genres if not epggenres.get(gen)]
 
-        doc  = Document()
-        root = doc.createElement('genres')
-        doc.appendChild(root)
-        name = doc.createElement('name')
-        name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))
-        root.appendChild(name)
-        [root.appendChild(line) for line in lines] #append org. genre.xml list
-        
-        for key in epggenres:
-            gen = doc.createElement('genre')
-            gen.setAttribute('genreId',epggenres[key])
-            gen.appendChild(doc.createTextNode(key))
-            root.appendChild(gen)
-        
-        with fileLocker(self.writer.globalFileLock):
-            try:
-                xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
-                xmlData.write(doc.toprettyxml(indent='\t'))
-                xmlData.close()
-            except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-            return True
+            doc  = Document()
+            root = doc.createElement('genres')
+            doc.appendChild(root)
+            name = doc.createElement('name')
+            name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))
+            root.appendChild(name)
+            [root.appendChild(line) for line in lines] #append org. genre.xml list
+            
+            for key in epggenres:
+                gen = doc.createElement('genre')
+                gen.setAttribute('genreId',epggenres[key])
+                gen.appendChild(doc.createTextNode(key))
+                root.appendChild(gen)
+            
+            with fileLocker(self.writer.globalFileLock):
+                try:
+                    xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
+                    xmlData.write(doc.toprettyxml(indent='\t'))
+                    xmlData.close()
+                except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+                return True
 
 
     def getChannels(self):

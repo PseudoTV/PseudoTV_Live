@@ -75,91 +75,91 @@ class M3U:
             file = os.path.join(TEMP_LOC,slugify(url),'.m3u')
             saveURL(url,file)
             
-        with fileLocker(self.writer.globalFileLock):
+        if FileAccess.exists(file): 
             fle   = FileAccess.open(file, 'r')
             lines = (fle.readlines())
             data  = lines.pop(0)
             fle.close()
             
-        chCount = 0
-        data    = {}
-        for idx, line in enumerate(lines):
-            line = line.rstrip()
-            if line.startswith('#EXTM3U'):
-                data = {'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                        'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                        'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line)}
+            chCount = 0
+            data    = {}
+            for idx, line in enumerate(lines):
+                line = line.rstrip()
+                if line.startswith('#EXTM3U'):
+                    data = {'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                            'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                            'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line)}
 
-            elif line.startswith('#EXTINF:'):
-                chCount += 1
-                match = {'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                         'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
-                         'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                         'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                         'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
-                         'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
-                         'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
-                         'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                         'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                         'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
-                         'catchup-source'    :re.compile('catchup-source=\"(.*?)\"'     , re.IGNORECASE).search(line),
-                         'catchup-days'      :re.compile('catchup-days=\"(.*?)\"'       , re.IGNORECASE).search(line),
-                         'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line),
-                         'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                         'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                         'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                         'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line)}
-                
-                item = self.writer.channels.getCitem()
-                item.update({'number' :chCount,
-                             'logo'   :LOGO,
-                             'catchup':''})
-                
-                for key in match.keys():
-                    if not match[key]:
-                        if data.get(key):
-                            self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF')%(key)
-                            match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
-                        else: continue
-                    item[key] = match[key].group(1)
-                    if key == 'logo':
-                        item[key] = self.writer.jsonRPC.resources.cleanLogoPath(item[key])
-                    elif key == 'number':
-                        try:    item[key] = int(item[key])
-                        except: item[key] = float(item[key])
-                    elif key == 'group':
-                        item[key] = list(filter(None,list(set(item[key].split(';')))))
-                        if ADDON_NAME in item[key]: item[key].remove(ADDON_NAME)
-                    elif key == 'radio':
-                        item[key] = item[key].lower() == 'true'
-
-                for nidx in range(idx+1,len(lines)):
-                    try:
-                        nline = lines[nidx].rstrip()
-                        if   nline.startswith('#EXTINF:'): break
-                        # elif nline.startswith('#EXTVLCOPT'):
-                        # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
-                        elif nline.startswith('#EXTGRP'):
-                            group = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
-                            if group: 
-                                item['group'].append(prop.group(1).split(';'))
-                                item['group'] = list(set(item['group']))
-                        elif nline.startswith('#KODIPROP:'):
-                            prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                            if prop: item.setdefault('kodiprops',[]).append(prop.group(1))
-                        elif nline.startswith('##'): continue
-                        elif not nline: continue
-                        else: item['url'] = nline
-                    except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
-                        
-                item['name']  = (item.get('name','')  or item.get('label',''))
-                item['label'] = (item.get('label','') or item.get('name',''))
-                if not item.get('id','') or not item.get('name','') or not item.get('number',''): 
-                    self.log('loadM3U, SKIPPED MISSING META item = %s'%item)
-                    continue
+                elif line.startswith('#EXTINF:'):
+                    chCount += 1
+                    match = {'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                             'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
+                             'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                             'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
+                             'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
+                             'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
+                             'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                             'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                             'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
+                             'catchup-source'    :re.compile('catchup-source=\"(.*?)\"'     , re.IGNORECASE).search(line),
+                             'catchup-days'      :re.compile('catchup-days=\"(.*?)\"'       , re.IGNORECASE).search(line),
+                             'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line),
+                             'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                             'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                             'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                             'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line)}
                     
-                self.log('loadM3U, item = %s'%item)
-                yield item
+                    item = self.writer.channels.getCitem()
+                    item.update({'number' :chCount,
+                                 'logo'   :LOGO,
+                                 'catchup':''})
+                    
+                    for key in match.keys():
+                        if not match[key]:
+                            if data.get(key):
+                                self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF')%(key)
+                                match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
+                            else: continue
+                        item[key] = match[key].group(1)
+                        if key == 'logo':
+                            item[key] = self.writer.jsonRPC.resources.cleanLogoPath(item[key])
+                        elif key == 'number':
+                            try:    item[key] = int(item[key])
+                            except: item[key] = float(item[key])
+                        elif key == 'group':
+                            item[key] = list(filter(None,list(set(item[key].split(';')))))
+                            if ADDON_NAME in item[key]: item[key].remove(ADDON_NAME)
+                        elif key == 'radio':
+                            item[key] = item[key].lower() == 'true'
+
+                    for nidx in range(idx+1,len(lines)):
+                        try:
+                            nline = lines[nidx].rstrip()
+                            if   nline.startswith('#EXTINF:'): break
+                            # elif nline.startswith('#EXTVLCOPT'):
+                            # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
+                            elif nline.startswith('#EXTGRP'):
+                                group = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
+                                if group: 
+                                    item['group'].append(prop.group(1).split(';'))
+                                    item['group'] = list(set(item['group']))
+                            elif nline.startswith('#KODIPROP:'):
+                                prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
+                                if prop: item.setdefault('kodiprops',[]).append(prop.group(1))
+                            elif nline.startswith('##'): continue
+                            elif not nline: continue
+                            else: item['url'] = nline
+                        except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
+                            
+                    item['name']  = (item.get('name','')  or item.get('label',''))
+                    item['label'] = (item.get('label','') or item.get('name',''))
+                    if not item.get('id','') or not item.get('name','') or not item.get('number',''): 
+                        self.log('loadM3U, SKIPPED MISSING META item = %s'%item)
+                        continue
+                        
+                    self.log('loadM3U, item = %s'%item)
+                    yield item
                     
 
     def saveM3U(self):

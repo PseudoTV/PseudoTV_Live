@@ -789,8 +789,16 @@ def isPseudoTV(condition='VideoPlayer'):
     log('globals: isPseudoTV = %s'%(isPseudoTV))
     return isPseudoTV
 
-def setWriter(writer, fileItem):
-    return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(fileItem)))
+def hasChannelData(condition='ListItem'):
+    return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
+
+def getWriterfromString(condition='ListItem'):
+    return getWriter(xbmc.getInfoLabel('%s.Writer'%(condition)))
+    
+def getChannelID(name, path, number):
+    if isinstance(path, list): path = '|'.join(path)
+    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
+    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
 
 def getWriter(text):
     if isinstance(text, list): text = text[0]
@@ -799,16 +807,8 @@ def getWriter(text):
         if writer: return loadJSON(decodeString(writer.group(1)))
     return {}
 
-def getWriterfromString(condition='ListItem'):
-    return getWriter(xbmc.getInfoLabel('%s.Writer'%(condition)))
-    
-def hasChannelData(condition='ListItem'):
-    return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
-
-def getChannelID(name, path, number):
-    if isinstance(path, list): path = '|'.join(path)
-    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
-    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
+def setWriter(writer, fileItem):
+    return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(fileItem)))
 
 def encodeString(text):
     base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))

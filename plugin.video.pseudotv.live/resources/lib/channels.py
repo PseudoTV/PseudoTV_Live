@@ -69,9 +69,7 @@ class Channels:
 
     def _load(self, file=getUserFilePath(CHANNELFLE)):
         self.log('_load, file = %s'%(file))
-        if not FileAccess.exists(file): 
-            file = CHANNELFLE_DEFAULT
-        with fileLocker(self.writer.globalFileLock):
+        if FileAccess.exists(file): 
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()

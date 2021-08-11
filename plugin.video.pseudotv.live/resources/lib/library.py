@@ -71,9 +71,7 @@ class Library:
 
     def load(self, file=getUserFilePath(LIBRARYFLE)):
         self.log('load file = %s'%(file))
-        with fileLocker(self.writer.globalFileLock):
-            if not FileAccess.exists(file): 
-                file = LIBRARYFLE_DEFAULT
+        if FileAccess.exists(file): 
             fle  = FileAccess.open(file, 'r')
             data = (loadJSON(fle.read()) or {})
             fle.close()

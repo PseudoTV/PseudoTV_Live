@@ -120,12 +120,14 @@ class Player(xbmc.Player):
         
         
     def setSeekTime(self, seek):
-        if not self.isPlayingVideo(): return
-        self.log('setSeekTime, seek = %s'%(seek))
-        self.seekTime(seek)
+        if not isPseudoTV(): return
+        elif self.isPlayingVideo():
+            self.log('setSeekTime, seek = %s'%(seek))
+            self.seekTime(seek)
         
         
     def onPlayBackStarted(self):
+        if not isPseudoTV(): return
         self.log('onPlayBackStarted')
         self.lastSubState = isSubtitle()
         self.pendingStart = True
@@ -133,6 +135,7 @@ class Player(xbmc.Player):
         
 
     def onAVChange(self):
+        if not isPseudoTV(): return
         self.log('onAVChange')
         if self.pendingSeek and not self.pendingStart: #catch failed seekTime
             log('onAVChange, pendingSeek failed!',xbmc.LOGERROR)
@@ -141,18 +144,21 @@ class Player(xbmc.Player):
 
         
     def onAVStarted(self):
+        if not isPseudoTV(): return
         self.log('onAVStarted')
         self.pendingStart = False
         self.pendingStop  = True
 
 
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, limited to pvr?
+        if not isPseudoTV(): return
         self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
         self.pendingSeek = False
         self.toggleSubtitles(self.lastSubState)
         
         
     def onPlayBackEnded(self):
+        if not isPseudoTV(): return
         self.log('onPlayBackEnded')
         self.pendingStart = False
         self.pendingSeek  = False
@@ -160,6 +166,7 @@ class Player(xbmc.Player):
         
 
     def onPlayBackStopped(self):
+        if not isPseudoTV(): return
         self.log('onPlayBackStopped')
         self.pendingStart = False
         self.pendingSeek  = False
@@ -168,6 +175,7 @@ class Player(xbmc.Player):
         
         
     def onPlayBackError(self):
+        if not isPseudoTV(): return
         self.log('onPlayBackError')
         self.pendingStart = False
         self.pendingSeek  = False
@@ -178,7 +186,7 @@ class Player(xbmc.Player):
         pvritem = self.getPVRitem()
         self.showOverlay = SETTINGS.getSettingBool('Enable_Overlay')
         
-        if not pvritem or not isPseudoTV(): 
+        if not pvritem: 
             self.log('playAction, returning missing pvritem or not PseudoTV!')
             return self.stopAction()
             
@@ -229,10 +237,9 @@ class Player(xbmc.Player):
 
     def stopAction(self):
         self.log('stopAction')
-        if isPseudoTV():
-            self.toggleOverlay(False)
-            if self.playingPVRitem.get('isPlaylist',False):
-                xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        self.toggleOverlay(False)
+        if self.playingPVRitem.get('isPlaylist',False):
+            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.playingPVRitem = {}
         setLegacyPseudoTV(False)
         
