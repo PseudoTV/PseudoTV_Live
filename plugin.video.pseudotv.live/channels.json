@@ -16,12 +16,7 @@
 			"name": "",
 			"description": "",
 			"options": {}
-		}],
-		"page": {
-			"end": 0,
-			"start": 0,
-			"total": 0
-		}
+		}]
 	}],
 	"imports": []
 }

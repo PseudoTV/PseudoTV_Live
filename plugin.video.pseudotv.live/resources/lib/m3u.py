@@ -160,7 +160,8 @@ class M3U:
                         
                     self.log('loadM3U, item = %s'%item)
                     yield item
-                    
+        yield {}
+        
 
     def saveM3U(self):
         self.log('saveM3U')

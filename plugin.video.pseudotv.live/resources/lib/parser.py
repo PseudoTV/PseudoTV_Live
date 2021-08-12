@@ -106,8 +106,8 @@ class Writer:
         self.log('removeChannelLineup, citem = %s'%(citem))
         self.m3u.removeStation(citem)
         self.xmltv.removeBroadcasts(citem)
-        
-                
+
+
     def saveChannelLineup(self):
         self.log('saveChannelLineup')
         if self.cleanChannelLineup() and self.importSETS():
@@ -253,7 +253,7 @@ class Writer:
                         try: leftovers.remove(eitem)
                         except: pass
                             
-                        for key in ['id','rules','number','favorite','page']: 
+                        for key in ['id','rules','number','favorite']: 
                             citem[key] = eitem[key]
                     else: 
                         citem['number'] = next(numbers,0)
@@ -332,12 +332,9 @@ class Writer:
         cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
         if not limits:
             msg = 'get'
-            limits = self.channels.getPage(id) #check channels.json
-            if limits.get('total',0) == 0:       #check cache for fallback
-                limits = (self.cache.get(cacheName, checksum=id, json_data=True) or limits)
+            limits = (self.cache.get(cacheName, checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
         else:
             msg = 'set'
-            self.channels.setPage(id, limits)
             self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
         self.log("%s autoPagination, id = %s\npath = %s\nlimits = %s"%(msg,id,path,limits))
         return limits

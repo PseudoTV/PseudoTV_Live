@@ -69,11 +69,10 @@ class Channels:
 
     def _load(self, file=getUserFilePath(CHANNELFLE)):
         self.log('_load, file = %s'%(file))
-        if FileAccess.exists(file): 
-            fle  = FileAccess.open(file, 'r')
-            data = (loadJSON(fle.read()) or {})
-            fle.close()
-            return data
+        fle  = FileAccess.open(file, 'r')
+        data = (loadJSON(fle.read()) or {})
+        fle.close()
+        return data
         
             
     def loadChannels(self, file=getUserFilePath(CHANNELFLE)):
@@ -93,14 +92,14 @@ class Channels:
 
     def getTemplate(self):
         self.log('getTemplate')
-        channelList = (self._load(CHANNELFLE_DEFAULT) or {})
+        channelList = self._load(CHANNELFLE_DEFAULT)
         channelList['uuid'] = self.getUUID(channelList)
         return channelList
 
 
     @cacheit(json_data=True)
     def getCitem(self):#channel schema
-        citem = self.getTemplate().get('channels',[])[0].copy()
+        citem = self.getTemplate().get('channels',[{}])[0].copy()
         citem['rules'] = []
         return citem
         
@@ -165,21 +164,6 @@ class Channels:
         return self.sortChannels(filter(lambda c:c.get('type') == type, channels))
 
 
-    def getPage(self, id):
-        idx, citem = self.findChannel({'id':id})
-        page = (citem.get('page','') or self.getCitem().get('page'))
-        self.log('getPage, id = %s, page = %s'%(id, page))
-        return page
-
-
-    def setPage(self, id, page={}):
-        self.log('setPage, id = %s, page = %s'%(id, page))
-        idx, citem = self.findChannel({'id':id})
-        if idx is None: return False
-        self.writer.vault.channelList['channels'][idx]['page'] = page
-        return self.saveChannels()
-
-
     def getImports(self):
         self.log('getImports')
         return self.writer.vault.channelList.get('imports',[])
@@ -195,7 +179,7 @@ class Channels:
         self.log('addChannel, id = %s'%(citem['id']))
         idx, channel = self.findChannel(citem)
         if idx is not None:
-            for key in ['id','rules','number','favorite','page']: 
+            for key in ['id','rules','number','favorite']: 
                 citem[key] = channel[key] # existing id found, reuse channel meta.
             citem['group'] = list(set(citem.get('group',[])))
             self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))

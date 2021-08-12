@@ -74,8 +74,7 @@ class XMLTV:
     def loadData(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadData')
         try: 
-            if FileAccess.exists(file): 
-                return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
+            return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
         except Exception as e: 
             self.log('loadData, failed! %s'%(e))
             return self.resetData()
@@ -84,8 +83,7 @@ class XMLTV:
     def loadChannels(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadChannels, file = %s'%file)
         try:
-            if FileAccess.exists(file): 
-                return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
+            return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             self.log('loadChannels, failed! %s'%(e))
@@ -95,8 +93,7 @@ class XMLTV:
     def loadProgrammes(self, file=getUserFilePath(XMLTVFLE)):
         self.log('loadProgrammes, file = %s'%file)
         try: 
-            if FileAccess.exists(file): 
-                return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
+            return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             self.log('loadProgrammes, failed! %s'%(e))

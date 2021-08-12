@@ -113,6 +113,7 @@ CLOCK_SEQ           = 70420
 UPDATE_WAIT         = 3600  #1hr in secs.
 EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 OVERLAY_DELAY       = 15    #secs
+PROMPT_DELAY        = 4000  #msecs
 
 UPDATE_OFFSET       = 10800 #3hr in secs.
 LIBRARY_OFFSET      = 3600
@@ -283,13 +284,23 @@ def roundupDIV(p, q):
     except ZeroDivisionError: 
         return 1
     
+def shuffleLST(lst=[]):
+    if len(lst) == 0: return lst
+    random.seed()
+    random.shuffle(lst)
+    return lst
+    
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
  
-def getRandomPage(limit,total=50):
-    page = random.randrange(0, total, limit)
-    return page, page+limit
+def getRandomPage(limit,total=0):
+    if total > 0:
+        start = random.randrange(0, total, limit)
+    else: 
+        start = 0
+    end = start + limit
+    return {"end": end, "start": start, "total":total}
   
 def chunks(lst, n):
     for i in range(0, len(lst), n):
@@ -596,7 +607,7 @@ def toggleADDON(id, state=True, reverse=False):
         if id == ADDON_ID: 
             xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({'EnableAddon':False,'DisableAddon':True}[state],id))
         else: 
-            xbmc.sleep(4000)
+            xbmc.sleep(PROMPT_DELAY)
             toggleADDON(id, not bool(state))
     
 def brutePVR(override=False):

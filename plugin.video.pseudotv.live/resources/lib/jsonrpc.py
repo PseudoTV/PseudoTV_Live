@@ -424,8 +424,12 @@ class JSONRPC:
         if self.writer.__class__.__name__ != 'Writer':
             from resources.lib.parser import Writer
             self.writer = Writer()
+                  
+        if not limits: 
+            limits = self.writer.autoPagination(id, path) #get
+            total  = limits.get('total',0)
+            if sort.get("method","random") == "random": limits = getRandomPage(page,total)
             
-        limits = self.writer.autoPagination(id, path) #get
         params                      = {}
         params['limits']            = {}
         params['directory']         = escapeDirJSON(path)

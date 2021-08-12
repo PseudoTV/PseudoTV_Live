@@ -34,7 +34,8 @@ ICON          = REAL_SETTINGS.getAddonInfo('icon')
 FANART        = REAL_SETTINGS.getAddonInfo('fanart')
 LANGUAGE      = REAL_SETTINGS.getLocalizedString
 COLOR_LOGO    = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
-    
+PROMPT_DELAY  = 4000 #msecs
+
 def dumpJSON(item):
     try:    return json.dumps(item)
     except: return ''
@@ -489,7 +490,7 @@ class Dialog:
             return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
 
 
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=4000, icon=COLOR_LOGO):
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
         self.log('notificationDialog: %s'%(message))
         ## - Builtin Icons:
         ## - xbmcgui.NOTIFICATION_INFO

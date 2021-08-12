@@ -71,11 +71,10 @@ class Library:
 
     def load(self, file=getUserFilePath(LIBRARYFLE)):
         self.log('load file = %s'%(file))
-        if FileAccess.exists(file): 
-            fle  = FileAccess.open(file, 'r')
-            data = (loadJSON(fle.read()) or {})
-            fle.close()
-            return data
+        fle  = FileAccess.open(file, 'r')
+        data = (loadJSON(fle.read()) or {})
+        fle.close()
+        return data
         
         
     def save(self):

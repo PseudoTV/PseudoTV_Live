@@ -101,10 +101,11 @@ class Builder:
             self.chanError  = []
             self.progress   = int(idx*100//len(channels))
             self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
+            
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
-            
-            if cacheResponse: # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
+             # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
+            if cacheResponse:
                 self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
@@ -112,9 +113,10 @@ class Builder:
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
                 self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30313)))
                 self.writer.removeChannelLineup(channel)
-                self.writer.monitor.waitForAbort(4)
+                self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
             
         self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
+        
         if not self.writer.saveChannelLineup(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30001))
             
@@ -162,7 +164,7 @@ class Builder:
             
 
     def getFileList(self, citem, start, radio=False):
-        self.log('getFileList; citem = %s, radio = %s'%(citem,radio))
+        self.log('getFileList, citem = %s, radio = %s'%(citem,radio))
         try:
             # global values prior to channel rules
             self.filter   = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
@@ -191,7 +193,7 @@ class Builder:
                 cacheResponse = self.buildRadio(citem)
             else:         
                 cacheResponse = [(self.buildFileList(citem, file, media, self.limit, self.sort, self.filter, self.limits)) for file in path] # build multi-paths as induvial arrays for easier interleaving.
-                valid = (list(filter(lambda k:k, cacheResponse))) #check that at least one array contains a filelist
+                valid = list(filter(lambda k:k, cacheResponse)) #check that at least one array contains a filelist
                 if not valid:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
@@ -252,24 +254,26 @@ class Builder:
 
     def buildFileList(self, channel, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(channel['id'],path,limit,sort,filter,limits))
-        if path.startswith('videodb://movies'): 
-            if not sort: sort = {"method": "random"}
-        elif path.startswith(LANGUAGE(30174)):#seasonal
+        if path.startswith(LANGUAGE(30174)):#seasonal
             def getSeason():
                 try:    return {'September':'startrek',
                                 'October'  :'horror',
                                 'December' :'xmas',
                                 'May'      :'starwars'}[datetime.datetime.now().strftime('%B')]
                 except: return  'none'
-            if not sort: sort = {"method": "episode"}
             path = path.format(list=getSeason(),limit=250)
             
+        if not sort: #set fallback method
+            if   path.startswith('videodb://tvshows'): sort = {"method": "episode"}
+            elif path.startswith('videodb://movies'):  sort = {"method": "random"}
+            else:                                      sort = {"method": "random"}
+                      
         id = channel['id']
         fileList      = []
         seasoneplist  = []
         method        = sort.get("method","random")
-        json_response = (self.writer.jsonRPC.requestList(id, path, media, limit, sort, filter, limits))
-        
+
+        json_response = self.writer.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
         # malformed calls will return root response, catch a reparse of same folder and quit. 
         if json_response == self.loopback:
             self.chanError.append(LANGUAGE(30318))
@@ -281,6 +285,8 @@ class Builder:
             self.chanError.append(LANGUAGE(30317))
             
         for idx, item in enumerate(json_response):
+            if self.writer.monitor.waitForAbort(0.01) or self.writer.monitor.isSettingsOpened(aggressive=False): break
+                
             file     = item.get('file','')
             fileType = item.get('filetype','file')
 
@@ -361,12 +367,15 @@ class Builder:
                 self.dirCount += 1
                 fileList.extend(self.buildFileList(channel, file, media, limit, sort, filter, limits))
 
+        self.log("buildFileList, id: %s sorting by %s"%(id,method))
         if method == 'episode':
             seasoneplist.sort(key=lambda seep: seep[1])
             seasoneplist.sort(key=lambda seep: seep[0])
             for seepitem in seasoneplist: 
                 fileList.append(seepitem[2])
-            
+        elif method == 'random':
+            fileList = shuffleLST(fileList)
+                
         self.log("buildFileList, id: %s returning fileList %s / %s"%(id,len(fileList),limit),xbmc.LOGINFO)
         return fileList
 
