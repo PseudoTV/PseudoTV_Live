@@ -428,7 +428,9 @@ class JSONRPC:
         if not limits: 
             limits = self.writer.autoPagination(id, path) #get
             total  = limits.get('total',0)
-            if sort.get("method","random") == "random": limits = getRandomPage(page,total)
+            if sort.get("method","random") == "random": 
+                self.log('requestList, id = %s generating random limits'%(id))
+                limits = getRandomPage(page,total)
             
         params                      = {}
         params['limits']            = {}
@@ -441,26 +443,25 @@ class JSONRPC:
         if sort:   params['sort']   = sort
         if filter: params['filter'] = filter
 
-        self.log('requestList, id = %s, path = %s, page = %s' % (id, path, page))
+        self.log('requestList, id = %s ↓\npath = %s\npage = %s\nlimits= %s'%(id, path, page, limits))
         results = self.getDirectory(dumpJSON(params), total=limits.get('total'))
-        if 'filedetails' in results:
-            key = 'filedetails'
-        else:
-            key = 'files'
-
+        
+        if 'filedetails' in results: key = 'filedetails'
+        else:                        key = 'files'
         items  = results.get(key, [])
         limits = results.get('limits', params['limits'])
-        self.log('requestList, id = %s\nitems = %s\nlimits = %s'%(id, len(items), limits))
+        self.log('requestList, id = %s ↓\nitems = %s\nresult limits = %s'%(id, len(items), limits))
 
         if limits.get('end', 0) >= limits.get('total', 0):  # restart page, exceeding boundaries.
-            self.log('requestList, id = %s, resetting page to 0'%(id))
-            limits = {"end": 0, "start": 0, "total": limits.get('total', 0)}
+            self.log('requestList, id = %s, resetting start to 0'%(id))
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
         self.writer.autoPagination(id, path, limits) #set
 
         # no results try again with new limits.
-        if len(items) == 0 and limits.get('start', 0) > 0 and limits.get('total', 0) > 0:
-            self.log("requestList, id = %s, trying again at start page 0" % (id))
+        if len(items) == 0 and limits.get('start',0) == 0 and limits.get('total',0) > 0:
+            self.log("requestList, id = %s, trying again with start at 0"%(id))
             return self.requestList(id, path, media, page, sort, filter, limits)
+            
         self.log("requestList, id = %s, return items = %s" % (id, len(items)))
         return items
 

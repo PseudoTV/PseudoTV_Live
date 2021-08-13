@@ -294,12 +294,12 @@ def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
  
-def getRandomPage(limit,total=0):
+def getRandomPage(page,total=0):
     if total > 0:
-        start = random.randrange(0, total, limit)
+        start = random.randrange(0, total, page)
     else: 
         start = 0
-    end = start + limit
+    end = start + page
     return {"end": end, "start": start, "total":total}
   
 def chunks(lst, n):

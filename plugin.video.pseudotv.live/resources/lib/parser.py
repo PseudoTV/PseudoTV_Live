@@ -86,18 +86,20 @@ class Writer:
                 if importItem.get('type','') != 'iptv': continue
                 self.log('importSETS, %s: importItem = %s'%(idx,importItem))
                 
-                if self.builder.progDialog is not None:
-                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message='%s'%(importItem.get('name','')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
-                
                 idx += 1
                 m3ufle   = importItem.get('m3u'  ,{}).get('path','')
                 xmlfle   = importItem.get('xmltv',{}).get('path','')
-                
                 filters  = {'slug'     :importItem.get('m3u',{}).get('slug',''),
                             'providers':importItem.get('m3u',{}).get('provider',[])}
                             
                 self.m3u.importM3U(m3ufle,filters,multiplier=idx)
                 self.xmltv.importXMLTV(xmlfle,filters)
+                
+                if self.builder.progDialog is not None:
+                    self.builder.progress += .1
+                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
+                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
+
             except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
         return True
 
@@ -126,16 +128,15 @@ class Writer:
         print('channels',len(channels))
         print('m3uChannels',len(m3uChannels))
         if (channels or m3uChannels) is None: return True
-        
-        for channel in channels:
-            for m3u in m3uChannels:
-                if channel.get('id') == m3u.get('id'):
-                    abandoned.remove(m3u) #match found remove from abandoned list.
-                    
-        # [abandoned.remove(m3u) for m3u in m3uChannels for channel in channels if channel.get('id') == m3u.get('id')]
+        [abandoned.remove(m3u) for channel in channels for m3u in m3uChannels if channel.get('id') == m3u.get('id')]
         if abandoned != m3uChannels:
             self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-            # for leftover in abandoned: self.removeChannelLineup(leftover)
+            for leftover in abandoned:
+                self.removeChannelLineup(leftover)
+                if self.builder.progDialog is not None:
+                    self.builder.progress += .1
+                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=leftover.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30327)))
+                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
         return True
 
         

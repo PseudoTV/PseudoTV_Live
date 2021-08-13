@@ -27,21 +27,22 @@ class Player(xbmc.Player):
     def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.pendingStart   = False
-        self.pendingSeek    = False
-        self.pendingStop    = False
-        self.ruleList       = {}
-        self.playingPVRitem = {}
-        self.lastSubState   = isSubtitle()
-        self.showOverlay    = SETTINGS.getSettingBool('Enable_Overlay')
+        self.pendingStart    = False
+        self.pendingSeek     = False
+        self.pendingStop     = False
+        self.ruleList        = {}
+        self.playingPVRitem  = {}
+        self.lastSubState    = isSubtitle()
+        self.showOverlay     = SETTINGS.getSettingBool('Enable_Overlay')
         
         """
-        Player() trigger order
+        ##Player() trigger order##
         Player: onPlayBackStarted
-        Player: onAVChange
+        Player: onAVChange (if playing)
         Player: onAVStarted
-        Player: onPlayBackSeek
-        Player: onAVChange
+        Player: onPlayBackSeek (if seek)
+        Player: onAVChange (if seek)
+        Player: onPlayBackError
         Player: onPlayBackEnded
         Player: onPlayBackStopped
         """
@@ -127,25 +128,25 @@ class Player(xbmc.Player):
         
         
     def onPlayBackStarted(self):
-        if not isPseudoTV(): return
         self.log('onPlayBackStarted')
+        if not isPseudoTV(): return
         self.lastSubState = isSubtitle()
         self.pendingStart = True
         self.playAction()
         
 
     def onAVChange(self):
-        if not isPseudoTV(): return
         self.log('onAVChange')
-        if self.pendingSeek and not self.pendingStart: #catch failed seekTime
+        if not isPseudoTV(): return
+        elif self.pendingSeek and not self.pendingStart: #catch failed seekTime
             log('onAVChange, pendingSeek failed!',xbmc.LOGERROR)
             # self.setSeekTime(self.getPVRTime()) #onPlayBackSeek slow, false triggers! debug. 
             # self.toggleSubtitles(False)
 
         
     def onAVStarted(self):
-        if not isPseudoTV(): return
         self.log('onAVStarted')
+        if not isPseudoTV(): return
         self.pendingStart = False
         self.pendingStop  = True
 
@@ -158,27 +159,24 @@ class Player(xbmc.Player):
         
         
     def onPlayBackEnded(self):
-        if not isPseudoTV(): return
         self.log('onPlayBackEnded')
-        self.pendingStart = False
-        self.pendingSeek  = False
+        self.pendingStart    = False
+        self.pendingSeek     = False
         self.changeAction()
         
 
     def onPlayBackStopped(self):
-        if not isPseudoTV(): return
         self.log('onPlayBackStopped')
-        self.pendingStart = False
-        self.pendingSeek  = False
-        self.pendingStop  = False
+        self.pendingStart    = False
+        self.pendingSeek     = False
+        self.pendingStop     = False
         self.stopAction()
         
         
     def onPlayBackError(self):
-        if not isPseudoTV(): return
         self.log('onPlayBackError')
-        self.pendingStart = False
-        self.pendingSeek  = False
+        self.pendingStart    = False
+        self.pendingSeek     = False
         self.stopAction()
         
         
@@ -480,6 +478,7 @@ class Service:
         
     def chkIdle(self):
         if not isPseudoTV(): return
+            
         idleTime  = getIdleTime()
         sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
         if sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments

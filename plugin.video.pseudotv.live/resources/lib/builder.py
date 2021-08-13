@@ -114,12 +114,12 @@ class Builder:
                 self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30313)))
                 self.writer.removeChannelLineup(channel)
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
-            
-        self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
-        
+
         if not self.writer.saveChannelLineup(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30001))
-            
+                     
+        self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
+           
         if isLegacyPseudoTV() and not self.writer.player.isPlaying():
             setLegacyPseudoTV(False)
             
@@ -347,14 +347,13 @@ class Builder:
                     item.get('art',{})['icon']  = channel['logo']
                     # item.get('art',{})['thumb'] = getThumb(item) #unify artwork # item.get('art',{})['fanart'] = getThumb(item) #unify artwork
                 
-                    chprog = int((len(fileList)*100)//limit)
                     if self.progDialog is not None:
+                        chprog = int((len(fileList)*100)//limit)
                         self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
 
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])
-                    else: 
-                        fileList.append(item)
+                    else: fileList.append(item)
                         
                     if len(fileList) >= limit:
                         break
