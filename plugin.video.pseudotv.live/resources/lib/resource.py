@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
+from fuzzywuzzy                import process as FuzzyProcess
 
 try:
     from PIL                   import Image, ImageStat

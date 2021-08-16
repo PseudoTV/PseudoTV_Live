@@ -1,0 +1,30 @@
+<!--
+
+Custom Providers:
+ - Allows users to create a bespoke list of providers to map to.
+ - For each provider name that matches a provider name below the given name, type,
+   icon, country codes and lanuage codes will be used.
+ - If no names match the addon will just use the supplied name and any other metadta supplied
+   in the M3U for the provider.
+ - The valid values for types are: unknown, addon, satellite, cable, aerial and iptv
+ - Country codes should be ISO 3166 codes, comma separated (e.g 'GB,IE,FR,CA'),
+   an empty string means this value is undefined.
+ - Language codes should be RFC 5646 codes, comma separated (e.g. 'en_GB,fr_CA'),
+   an empty string means this value is undefined.
+
+If you have publicly available icons for providers and would like to make them available as default please
+create an issue at https://github.com/kodi-pvr/pvr.iptvsimple/issues requesting their inclusion.
+
+If you are creating your own Custom Providers file make a copy of this file in the same directory so it's
+not overwritten and start from there.
+
+NOTE: IF YOU MODIFY THIS FILE IT WILL BE OVERWRITTEN NEXT TIME THE ADDON IS STARTED
+-->
+
+<providerMappings>
+  <providerMapping mappedName="PseudoTV">
+    <name>PseudoTV Live</name>
+    <type>local</type>
+    <iconPath>https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png</iconPath>
+  </providerMapping>
+</providerMappings>

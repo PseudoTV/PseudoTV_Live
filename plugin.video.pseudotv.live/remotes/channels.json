@@ -1,0 +1,22 @@
+{
+	"uuid": "",
+	"channels": [{
+		"number": 0,
+		"id": "",
+		"type": "",
+		"name": "",
+		"logo": "",
+		"radio": false,
+		"catchup": "vod",
+		"favorite": false,
+		"path": [],
+		"group": [],
+		"rules": [{
+			"id": 0,
+			"name": "",
+			"description": "",
+			"options": {}
+		}]
+	}],
+	"imports": []
+}

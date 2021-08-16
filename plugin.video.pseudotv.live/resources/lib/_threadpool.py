@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-import sys, time, re, os, subprocess, traceback
+import sys, time, re, os, traceback
 
 from kodi_six                  import xbmc, xbmcaddon
 from itertools                 import repeat

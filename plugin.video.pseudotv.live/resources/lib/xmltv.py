@@ -34,7 +34,8 @@ PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License along
 with this software; if not, see <http://www.gnu.org/licenses/>.
 """
-from resources.lib.globals import *
+from resources.lib.globals     import *
+from xml.etree.ElementTree     import ElementTree, Element, SubElement, XMLParser
 
 # The Python-XMLTV version
 VERSION = "1.4.4_PSEUDOTV"

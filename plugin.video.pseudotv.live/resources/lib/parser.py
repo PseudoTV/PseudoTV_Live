@@ -202,10 +202,8 @@ class Writer:
             
             
     def buildPredefinedChannels(self, type=None):
-        if not type is None: 
-            types = [type]
-        else:                
-            types = CHAN_TYPES
+        if not type is None: types = [type]
+        else:                types = CHAN_TYPES
         self.log('buildPredefinedChannels, types = %s'%(types))
         
         # convert enabled library.json into channels.json items
@@ -215,30 +213,26 @@ class Writer:
                     return idx, eitem
             return None, {}
                 
-        def buildAvailableRange():
+        def buildAvailableRange(enumbers):
             # create number array for given type, excluding existing channel numbers.
             start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildPredefinedChannels, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
             return [num for num in range(start,stop) if num not in enumbers]
-                           
-        # group enabled libraryItems by type
-        libraryItems = {} 
-        for type in types: 
-            libraryItems.setdefault(type,[]).extend(self.library.getLibraryItems(type, enabled=True))
- 
+                       
         addLST    = []
-        leftovers = []
-        for type, items in libraryItems.items():
-            self.log('buildPredefinedChannels, type = %s'%(type))
+        removeLST = []    
+        for type in types:
+            items = self.library.getLibraryItems(type, enabled=True)
+            self.log('buildPredefinedChannels, type = %s, enabled items = %s'%(type,len(items)))
 
             if type == LANGUAGE(30033): #convert enabled imports to channel items.
                 self.channels.setImports(items)
             else:
                 echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
                 enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] # existing channel numbers
-                numbers   = iter(buildAvailableRange()) #list of available channel numbers 
-                leftovers = echannels.copy()
+                numbers   = iter(buildAvailableRange(enumbers)) #list of available channel numbers 
+                removeLST.extend(echannels.copy())
 
                 for item in items:
                     citem = self.channels.getCitem()
@@ -253,19 +247,23 @@ class Writer:
                     
                     match, eitem = findChannel(citem)
                     if match is not None: #update new citems with existing values.
-                        try: leftovers.remove(eitem)
+                        try:   removeLST.remove(eitem)
                         except: pass
                             
-                        for key in ['id','rules','number','favorite']: 
+                        for key in ['id','rules','number','favorite']: #transfer static channels states.
                             citem[key] = eitem[key]
-                    else: 
+                    else: #add new channel
                         citem['number'] = next(numbers,0)
-                        citem['id'] = getChannelID(citem['name'],citem['path'],citem['number'])
+                        citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])
                     addLST.append(citem)
-
-        # pre-defined citems are all dynamic ie. paths may change. don't update replace with new.
-        difference = sorted(diffLSTDICT(leftovers,addLST), key=lambda k: k['number'])
-        [self.channels.addChannel(citem) if citem in addLST else self.channels.removeChannel(citem) for citem in difference if citem.get('number',0) >= CHANNEL_LIMIT] #add new, remove old.
+                
+        if len(addLST) > 0 and (addLST != removeLST):
+            difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
+            for citem in difference: #add new, remove old.
+                if   citem.get('number',0) < CHANNEL_LIMIT: continue #unnecessary check to enforce only changes to predefined channels.
+                elif citem in addLST: self.channels.addChannel(citem)
+                else:                 self.channels.removeChannel(citem)
+                            
         self.log('buildPredefinedChannels, finished building')
         return self.channels.saveChannels()
 

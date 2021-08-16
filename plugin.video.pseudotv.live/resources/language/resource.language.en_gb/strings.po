@@ -1321,7 +1321,7 @@ msgid "Centralize file location not found, please reconfigure!"
 msgstr "" 
 
 msgctxt "#30327"
-msgid "Abandoned Channel"
+msgid "Cleaning Channel"
 msgstr "" 
 
 msgctxt "#30328"

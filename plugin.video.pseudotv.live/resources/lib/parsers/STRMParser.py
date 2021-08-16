@@ -17,7 +17,7 @@
 # along with PseudoTV Live Live.  If not, see <http://www.gnu.org/licenses/>.
 
 from resources.lib.globals import *
-from xml.dom.minidom import parse, parseString
+from xml.dom.minidom       import parse, parseString
 
 class STRMParser:
     ##<episodedetails>

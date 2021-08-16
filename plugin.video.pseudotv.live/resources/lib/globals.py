@@ -20,28 +20,16 @@
 
 import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib
 import datetime, time, _strptime, base64, binascii, random, hashlib
-import json, codecs, collections, uuid, subprocess
+import json, codecs, collections, uuid
 
-from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs, py2_encode, py2_decode
-from itertools                 import repeat, cycle, chain, zip_longest
+from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
+from itertools                 import cycle, chain, zip_longest
 from six.moves                 import urllib
 from contextlib                import contextmanager
-from xml.dom.minidom           import parse, parseString, Document
-from xml.etree.ElementTree     import ElementTree, Element, SubElement, tostring, XMLParser
 from resources.lib.fileaccess  import FileAccess, FileLock
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
 from resources.lib.events      import logit
-from operator                  import itemgetter
-from collections               import deque
-from fuzzywuzzy                import process as FuzzyProcess
-
-try:
-    from multiprocessing import Thread, Queue, Empty, PriorityQueue
-    Queue() # importing Queue does not raise importError on android, call directly.
-except:
-    from threading import Thread
-    from queue     import Queue, Empty, PriorityQueue
 
 # Plugin Info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -54,30 +42,44 @@ ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
+#folders
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 
-OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
-README_FLE          = os.path.join(ADDON_PATH,'readme.md')
-CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
-CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'channels.json')
+#files
+XMLTVFLE            = '%s.xml'%('pseudotv')
+M3UFLE              = '%s.m3u'%('pseudotv')
+CHANNELFLE          = 'channels.json'
+LIBRARYFLE          = 'library.json'
+GENREFLE            = 'genres.xml'
+TVGROUPFLE          = 'tv_groups.xml'
+RADIOGROUPFLE       = 'radio_groups.xml'
+PROVIDERFLE         = 'providers.xml'
 
-LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'library.json')
-GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'genres.xml')
-GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'groups.xml')
-PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'providers.xml')
+OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
+COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
+MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
+
+#docs
+README_FLE          = os.path.join(ADDON_PATH,'README.md')
+CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
+LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
+
+#remotes
+IMPORT_ASSET        = os.path.join(ADDON_PATH,'remotes','asset.json')
+GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes','groups.xml')
+LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',LIBRARYFLE)
+CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',CHANNELFLE)
+GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes',GENREFLE)
+PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
 
 SETTINGS            = Settings()
 PROPERTIES          = Properties()
-
-COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
-MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
-HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
 
 PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
 MIN_ENTRIES         = int(PAGE_LIMIT//2)
@@ -87,6 +89,7 @@ VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
+HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
 PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}&radio={radio}.pvr'
 
@@ -98,15 +101,6 @@ LANG                = 'en' #todo
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
-
-XMLTVFLE            = '%s.xml'%('pseudotv')
-M3UFLE              = '%s.m3u'%('pseudotv')
-CHANNELFLE          = 'channels.json'
-LIBRARYFLE          = 'library.json'
-GENREFLE            = 'genres.xml'
-TVGROUPFLE          = 'tv_groups.xml'
-RADIOGROUPFLE       = 'radio_groups.xml'
-PROVIDERFLE         = 'providers.xml'
 
 MAX_IMPORT          = 5
 CLOCK_SEQ           = 70420

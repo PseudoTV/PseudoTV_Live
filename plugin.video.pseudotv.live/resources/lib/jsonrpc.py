@@ -21,6 +21,9 @@ from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
 
+try:    from multiprocessing   import PriorityQueue
+except: from queue             import PriorityQueue
+
 class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
