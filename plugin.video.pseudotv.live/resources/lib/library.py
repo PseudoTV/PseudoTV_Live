@@ -208,6 +208,9 @@ class Library:
             cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
             results    = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True) #temp debug, cache no longer needed? shorter life?
             
+            if existing: msg = LANGUAGE(30328)
+            else:        msg = LANGUAGE(30159) 
+                
             if not results or not existing:
                 results  = []
                 if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
@@ -224,7 +227,7 @@ class Library:
                         
                     fill = int((idx*100)//len(items))
                     prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
-                    busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
+                    busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
                     
                     if isinstance(item,dict):
                         name = (item.get('name','') or item.get('label',''))

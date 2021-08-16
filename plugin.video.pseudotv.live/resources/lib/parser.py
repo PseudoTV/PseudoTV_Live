@@ -116,7 +116,7 @@ class Writer:
             if False in [self.m3u.saveM3U(), 
                          self.xmltv.saveXMLTV()]:
                 self.dialog.notificationDialog(LANGUAGE(30001))
-                return
+                return False
         return True
         
         
@@ -144,11 +144,13 @@ class Writer:
         item = citem.copy()
         item['label'] = (item.get('label','') or item['name'])
         item['url']   = PVR_URL.format(addon=ADDON_ID,name=quote(item['name']),id=quote(item['id']),radio=str(item['radio']))
+        
         if not SETTINGS.getSettingBool('Enable_Grouping'): 
             item['group'] = [ADDON_NAME]
         else:
             item['group'].append(ADDON_NAME)
         item['group'] = list(set(item['group']))
+        
         self.log('addChannelLineup, item = %s, radio = %s, catchup = %s'%(item,radio,catchup))
         self.m3u.addStation(item)
         self.xmltv.addChannel(item)

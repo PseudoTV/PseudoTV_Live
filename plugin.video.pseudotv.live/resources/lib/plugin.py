@@ -48,7 +48,13 @@ class Plugin:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-    
+
+    def buildWriterItem(self, writer, mType='video'):
+        if writer.get('writer',''):
+            writer = getWriter(writer.get('writer',''))
+        return self.dialog.buildItemListItem(writer, mType)
+
+
     def runActions(self, action, citem, parameter=None):
         self.log("runActions action = %s, channel = %s"%(action,citem))
         if not citem.get('id',''): return parameter
@@ -106,6 +112,58 @@ class Plugin:
         return self.parseBroadcasts(channelItem)
     
     
+    def contextPlay(self, writer, isPlaylist=False):
+        found     = False
+        listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
+        citem     = writer.get('citem',{})
+        
+        if citem: 
+            pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
+            pvritem['citem'].update(citem) #update citem with comprehensive meta
+            self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
+            
+            self.channelPlaylist.clear()
+            xbmc.sleep(100)
+            
+            if isPlaylist:
+                nowitem   = pvritem.get('broadcastnow',{})  # current item
+                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
+                nextitems = pvritem.get('broadcastnext',[]) # upcoming items
+                nextitems.insert(0,nowitem)
+
+                for pos, nextitem in enumerate(nextitems):
+                    if getWriter(nextitem.get('writer',{})).get('file') == writer.get('file'):
+                        del nextitems[0:pos]      # start array at correct position
+                        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                        break
+                       
+                nowitem = nextitems.pop(0)
+                writer  = getWriter(nowitem.get('writer',{}))
+                liz = self.dialog.buildItemListItem(writer)         
+                liz.setProperty('pvritem', dumpJSON(pvritem))       
+                
+                lastitem  = nextitems.pop(-1)
+                lastwrite = getWriter(lastitem.get('writer',''))
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
+                lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
+                nextitems.append(lastitem) #insert pvr callback
+                
+                listitems = [liz]
+                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+            else:
+                liz = self.dialog.buildItemListItem(writer)
+                liz.setProperty('pvritem', dumpJSON(pvritem))
+                listitems = [liz]
+                
+            self.log('contextPlay, listitems size = %s'%(len(listitems)))
+            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
+            if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+            return self.player.play(self.channelPlaylist, startpos=0)
+
+        else: self.playbackError()
+        return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
+        
+        
     def playChannel(self, name, id, isPlaylist=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
@@ -209,58 +267,6 @@ class Plugin:
         else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
-    
-    def contextPlay(self, writer, isPlaylist=False):
-        found     = False
-        listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
-        citem     = writer.get('citem',{})
-        
-        if citem: 
-            pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
-            pvritem['citem'].update(citem) #update citem with comprehensive meta
-            self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
-            
-            self.channelPlaylist.clear()
-            xbmc.sleep(100)
-            
-            if isPlaylist:
-                nowitem   = pvritem.get('broadcastnow',{})  # current item
-                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
-                nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-                nextitems.insert(0,nowitem)
-
-                for pos, nextitem in enumerate(nextitems):
-                    if getWriter(nextitem.get('writer',{})).get('file') == writer.get('file'):
-                        del nextitems[0:pos]      # start array at correct position
-                        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-                        break
-                       
-                nowitem = nextitems.pop(0)
-                writer  = getWriter(nowitem.get('writer',{}))
-                liz = self.dialog.buildItemListItem(writer)         
-                liz.setProperty('pvritem', dumpJSON(pvritem))       
-                
-                lastitem  = nextitems.pop(-1)
-                lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
-                lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
-                nextitems.append(lastitem) #insert pvr callback
-                
-                listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
-            else:
-                liz = self.dialog.buildItemListItem(writer)
-                liz.setProperty('pvritem', dumpJSON(pvritem))
-                listitems = [liz]
-                
-            self.log('contextPlay, listitems size = %s'%(len(listitems)))
-            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
-            if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            return self.player.play(self.channelPlaylist, startpos=0)
-
-        else: self.playbackError()
-        return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
-        
         
     def playRadio(self, name, id):
         self.log('playRadio, id = %s'%(id))
@@ -306,11 +312,6 @@ class Plugin:
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
 
 
-    def playbackError(self):
-        setInstanceID()
-        self.dialog.notificationDialog(LANGUAGE(30001))
-
-
     def playVOD(self, name, id):
         path = decodeString(id)
         self.log('playVOD, path = %s'%(path))
@@ -319,7 +320,6 @@ class Plugin:
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), True, liz)
 
 
-    def buildWriterItem(self, writer, mType='video'):
-        if writer.get('writer',''):
-            writer = getWriter(writer.get('writer',''))
-        return self.dialog.buildItemListItem(writer, mType)
+    def playbackError(self):
+        setInstanceID()
+        self.dialog.notificationDialog(LANGUAGE(30001))

@@ -46,6 +46,7 @@ class Builder:
         self.dirCount         = 0
         self.chanName         = ''
         self.chanError        = []
+        self.diaMSG           = LANGUAGE(30051)
         
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
                                  "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split(',')},
@@ -78,7 +79,7 @@ class Builder:
         
         if not channels:
             self.writer.dialog.notificationDialog(LANGUAGE(30056))
-            return None
+            return
 
         if not isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
             setLegacyPseudoTV(True)
@@ -90,28 +91,35 @@ class Builder:
         start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
         endTimes          = dict(self.writer.xmltv.loadEndTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
         self.log('buildService, endTimes = %s'%(endTimes))
-        
+
         for idx, channel in enumerate(channels):
             if self.writer.monitor.waitForAbort(0.01) or self.writer.monitor.isSettingsOpened(aggressive=False):
                 self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
-                return False
+                return
                 
             channel         = self.runActions(RULES_ACTION_START, channel, channel)
             self.chanName   = channel['name']
             self.chanError  = []
-            self.progress   = int(idx*100//len(channels))
-            self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
             
+            if endTimes.get(channel['id']):
+                self.diaMSG = LANGUAGE(30051) #Updating
+            else:
+                self.diaMSG = LANGUAGE(30329) #Building
+        
+            self.progress   = int(idx*100//len(channels))
+            self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,self.diaMSG))
+            
+             #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
-             # {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
+             
             if cacheResponse:
                 self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
-                self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30313)))
+                self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
                 self.writer.removeChannelLineup(channel)
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
 
@@ -128,7 +136,7 @@ class Builder:
 
 
     def verifyChannelItems(self):
-        #check channel configuration, verify and updates paths, logos.
+        #check channel configuration, verify and update paths, logos.
         items = self.writer.channels.getChannels()
         for idx, item in enumerate(items):
             self.log('verifyChannelItems, %s: %s'%(idx,item))
@@ -136,12 +144,14 @@ class Builder:
                 self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
                 continue
                 
-            if not isinstance(item.get('path',[]),list): item['path'] = [item['path']] #custom channels are not lists, no mixed channels only adv. interleave rule.
+            if not isinstance(item.get('path',[]),list): 
+                item['path'] = [item['path']]
+                
             item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
             item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
             item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
             item['group']   = list(set((item.get('group',[]) or [])))
-            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo')) #all logos are dynamic re-parse for changes.
+            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo',LOGO)) #all logos are dynamic re-parse for changes.
             yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
 
 
@@ -349,7 +359,7 @@ class Builder:
                 
                     if self.progDialog is not None:
                         chprog = int((len(fileList)*100)//limit)
-                        self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,LANGUAGE(30051)))
+                        self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,self.diaMSG))
 
                     if method == 'episode' and seasonval is not None: 
                         seasoneplist.append([seasonval, epval, item])
@@ -372,8 +382,8 @@ class Builder:
             seasoneplist.sort(key=lambda seep: seep[0])
             for seepitem in seasoneplist: 
                 fileList.append(seepitem[2])
-        elif method == 'random':
-            fileList = shuffleLST(fileList)
+        elif method == 'random' and len(fileList) > 0:
+            random.shuffle(fileList)
                 
         self.log("buildFileList, id: %s returning fileList %s / %s"%(id,len(fileList),limit),xbmc.LOGINFO)
         return fileList

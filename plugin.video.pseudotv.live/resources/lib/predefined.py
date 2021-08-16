@@ -75,7 +75,7 @@ class Predefined:
 
     def createShowPlaylist(self, show, method='episode'):
         match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
-        try:    return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"year","operator":"is","value":["%s"]},{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,match.group(2),quote(match.group(1)),self.exclude_specials)]
+        try:    return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"year","operator":"is","value":["%s"]},{"field":"tvshow","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,match.group(2),quote(match.group(1)),self.exclude_specials)]
         except: return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,quote(show),self.exclude_specials)]
 
 

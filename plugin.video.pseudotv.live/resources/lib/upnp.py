@@ -63,9 +63,9 @@
             # # fileType = item.get('filetype','file')
             # # if fileType == 'file':
                 # # dur = self.jsonRPC.getDuration(file, item)
-                # # if dur > 0: return {'file':file,'duration':dur,'seek':self.chkSeeking(file, dur)}
+                # # if dur > 0: return {'file':file,'duration':dur,'seek':self.isVFSSeekable(file, dur)}
             # # else: dirs.append(file)
-        # # for dir in dirs: return self.playableVFS(dir, media)
+        # # for dir in dirs: return self.isVFSPlayable(dir, media)
         # # return None
             # # if file.get('label','').lower() == label.lower(): return file.get('file',path)
         # # return path

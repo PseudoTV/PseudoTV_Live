@@ -383,18 +383,17 @@ class Manager(xbmcgui.WindowXMLDialog):
         found = False
         radio = (channelData.get('radio','') or (channelData['type'] == LANGUAGE(30097) or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
-        self.toggleSpinner(self.itemList,True)
-        fitem = self.writer.jsonRPC.playableVFS(path, media)
-        if fitem is not None:
-            found = True
-            seek  = fitem.get('seek',True)
-            #todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
-        self.toggleSpinner(self.itemList,False)
-        self.log('validatePath, path = %s, found duration = %s'%(path,found))
-        if not found: 
-            self.writer.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115)))
-            return None, channelData
         channelData['radio'] = radio
+        
+        self.toggleSpinner(self.itemList,True)
+        fitem = self.writer.jsonRPC.isVFSPlayable(path, media)
+        if fitem is None:
+            path = None
+            self.writer.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115)))
+        else:
+            seek = fitem.get('seek',False) #todo set adv. chan rule to disable seek if false.
+            self.log('validatePath, path = %s, seek = %s'%(path,seek))
+        self.toggleSpinner(self.itemList,False)
         return path, channelData
         
         

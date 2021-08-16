@@ -113,7 +113,7 @@ class M3U:
                     item = self.writer.channels.getCitem()
                     item.update({'number' :chCount,
                                  'logo'   :LOGO,
-                                 'catchup':''})
+                                 'catchup':''}) #set default fallbacks
                     
                     for key in match.keys():
                         if not match[key]:
@@ -121,6 +121,7 @@ class M3U:
                                 self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF')%(key)
                                 match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
                             else: continue
+                                
                         item[key] = match[key].group(1)
                         if key == 'logo':
                             item[key] = self.writer.jsonRPC.resources.cleanLogoPath(item[key])
@@ -170,7 +171,8 @@ class M3U:
             fle = FileAccess.open(filePath, 'w')
             self.log('saveM3U, saving to %s'%(filePath))
             fle.write('%s\n'%(self.writer.vault.m3uList['data']))
-            keys     = list(self.writer.channels.getCitem().keys())
+            
+            keys = list(self.writer.channels.getCitem().keys())
             keys.extend(['kodiprops','label'])#add keys to ignore from optional.
             item  = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             channels = self.sortStations(self.writer.vault.m3uList.get('channels',[]))

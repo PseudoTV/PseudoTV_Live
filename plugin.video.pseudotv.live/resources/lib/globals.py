@@ -283,13 +283,7 @@ def roundupDIV(p, q):
         return d
     except ZeroDivisionError: 
         return 1
-    
-def shuffleLST(lst=[]):
-    if len(lst) == 0: return lst
-    random.seed()
-    random.shuffle(lst)
-    return lst
-    
+
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]

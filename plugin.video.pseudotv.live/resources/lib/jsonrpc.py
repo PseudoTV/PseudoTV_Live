@@ -67,46 +67,84 @@ class JSONRPC:
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))):
         self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
         cacheName = 'getListDirectory.%s'%(path)
-        results = self.cache.get(cacheName, checksum)
+        results   = self.cache.get(cacheName, checksum)
         if not results:
             try:    results = FileAccess.listdir(path)
             except: results = [],[]
             self.cache.set(cacheName, results, checksum, expiration)
         return results
-        
-
-    @cacheit()
-    def listVFS(self, path, media='video', force=False, version=ADDON_VERSION):
-        self.log('listVFS path = %s, version = %s' % (path, version))
-        json_response = self.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
-        files = []
-        for item in json_response:
-            file = item['file']
-            if item['filetype'] == 'file':
-                dur = self.parseDuration(file, item)
-                if dur == 0 and not force: continue
-                files.append({'label': item['label'], 'duration': dur, 'path': path, 'file': file})
-            else:
-                files.extend(self.listVFS(file, media, force, version))
-        return files
 
 
-    def playableVFS(self, path, media='video', chkSeek=False):
-        self.log('playableVFS, path = %s, media = %s' % (path, media))
+    def isVFSPlayable(self, path, media='video', chkSeek=True):
+        self.log('isVFSPlayable, path = %s, media = %s' % (path, media))
         dirs = []
         json_response = self.requestList(str(random.random()), path, media)
         for item in json_response:
-            file = item.get('file', '')
+            file     = item.get('file', '')
             fileType = item.get('filetype', 'file')
             if fileType == 'file':
-                dur = self.getDuration(file, item)
-                vfs = {'file': file, 'duration': dur}
-                if chkSeek: vfs['seek'] = self.chkSeeking(file, dur)
-                if dur > 0: return vfs
-            else:
-                dirs.append(file)
-        for dir in dirs: return self.playableVFS(dir, media)
-        return {}
+                item['duration'] = self.getDuration(file, item)
+                if   item['duration'] == 0: continue
+                elif chkSeek: 
+                    item['seek'] = self.isVFSSeekable(file, item['duration'])
+                return item
+            else: dirs.append(file)
+        for dir in dirs: return self.isVFSPlayable(dir, media)
+
+
+    def isVFSSeekable(self, file, dur):
+        if not file.startswith(('plugin://','upnp://','pvr://')): return True
+        elif self.inherited.player.isPlaying(): return True
+        # todo test seek for support disable via adv. rule if fails.
+        # todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
+        
+        self.dialog.notificationDialog(LANGUAGE(30142))
+        liz = xbmcgui.ListItem('Seek Test', path=file)
+        seekvalue = int(dur/2)
+        liz.setProperty('totaltime'  , str(dur))
+        liz.setProperty('resumetime' , str(seekvalue))
+        liz.setProperty('startoffset', str(seekvalue))
+        self.inherited.player.play(file, liz, windowed=True)
+        
+        while not self.inherited.monitor.abortRequested() and not self.inherited.player.isPlaying():
+            if self.inherited.monitor.waitForAbort(.25): break
+                
+        state = xbmc.getCondVisibility('Player.SeekEnabled')
+        if not state: state = int(self.inherited.player.getTime()) >= seekvalue
+        if state: self.dialog.notificationDialog(LANGUAGE(30143))
+        self.inherited.player.stop()
+        self.log('isVFSSeekable, path = %s, state = %s' % (file, state))
+        return state
+        
+        
+        
+        
+        
+        # playpast = False
+        # if self.inherited.player.isPlaying(): return True  # todo prompt to stop playback and test.
+        # self.inherited.player.play(file, liz, windowed=True)
+        
+        # while not self.inherited.monitor.abortRequested():
+            # self.log('isVFSSeekable seeking')
+            # if self.inherited.monitor.waitForAbort(2):
+                # break
+            # elif not self.inherited.player.isPlaying():
+                # break
+            # if int(self.inherited.player.getTime()) > progress:
+                # self.log('isVFSSeekable seeking complete')
+                # playpast = True
+                # break
+                
+        # while not self.inherited.monitor.abortRequested() and self.inherited.player.isPlaying():
+            # if self.inherited.monitor.waitForAbort(1): break
+            # self.log('isVFSSeekable stopping playback')
+            # self.inherited.player.stop()
+            
+        # msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
+        # self.log('isVFSSeekable file = %s %s' % (file, msg))
+        # self.dialog.notificationDialog(msg)
+        # return playpast
+
 
 
     def sendJSON(self, command):
@@ -253,42 +291,6 @@ class JSONRPC:
         return self.queueJSON(json_query,5)
 
 
-    def chkSeeking(self, file, dur):
-        if not file.startswith(('plugin://','upnp://','pvr://')): return True
-        # todo test seek for support disable via adv. rule if fails.
-        self.dialog.notificationDialog(LANGUAGE(30142))
-        liz = xbmcgui.ListItem('Seek Test', path=file)
-        playpast = False
-        progress = int(dur / 2)
-        liz.setProperty('totaltime', str(dur))
-        liz.setProperty('resumetime', str(progress))
-        liz.setProperty('startoffset', str(progress))
-        liz.setProperty("IsPlayable", "true")
-        if self.inherited.player.isPlaying(): return True  # todo prompt to stop playback and test.
-        self.inherited.player.play(file, liz, windowed=True)
-        
-        while not self.inherited.monitor.abortRequested():
-            self.log('chkSeeking seeking')
-            if self.inherited.monitor.waitForAbort(2):
-                break
-            elif not self.inherited.player.isPlaying():
-                break
-            if int(self.inherited.player.getTime()) > progress:
-                self.log('chkSeeking seeking complete')
-                playpast = True
-                break
-                
-        while not self.inherited.monitor.abortRequested() and self.inherited.player.isPlaying():
-            if self.inherited.monitor.waitForAbort(1): break
-            self.log('chkSeeking stopping playback')
-            self.inherited.player.stop()
-            
-        msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
-        self.log('chkSeeking file = %s %s' % (file, msg))
-        self.dialog.notificationDialog(msg)
-        return playpast
-
-
     def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
         if hasMovie():
@@ -428,7 +430,7 @@ class JSONRPC:
         if not limits: 
             limits = self.writer.autoPagination(id, path) #get
             total  = limits.get('total',0)
-            if sort.get("method","random") == "random": 
+            if sort.get("method","random") == "random":# and not path.startswith(('plugin://','upnp://','pvr://')): 
                 self.log('requestList, id = %s generating random limits'%(id))
                 limits = getRandomPage(page,total)
             
