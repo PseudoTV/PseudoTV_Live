@@ -221,7 +221,7 @@ class Library:
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
 
                 for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.01) or isDialog(): 
+                    if self.writer.monitor.waitForAbort(0.001) or isDialog(): 
                         results = []
                         return
                         
@@ -264,7 +264,7 @@ class Library:
                         
         busy = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
         for type in CHAN_TYPES: 
-            if self.writer.monitor.waitForAbort(0.01) or isDialog(): return
+            if self.writer.monitor.waitForAbort(0.001) or isDialog(): return
             fillType(type,busy)
         busy = self.writer.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
         return self.writer.buildPredefinedChannels()

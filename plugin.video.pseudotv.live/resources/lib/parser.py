@@ -223,6 +223,7 @@ class Writer:
         addLST    = []
         removeLST = []    
         for type in types:
+            if self.monitor.waitForAbort(0.001): return
             items = self.library.getLibraryItems(type, enabled=True)
             self.log('buildPredefinedChannels, type = %s, enabled items = %s'%(type,len(items)))
 
@@ -235,6 +236,7 @@ class Writer:
                 removeLST.extend(echannels.copy())
 
                 for item in items:
+                    if self.monitor.waitForAbort(0.001): return
                     citem = self.channels.getCitem()
                     citem.update({'name'   :getChannelSuffix(item['name'], type),
                                   'path'   :item['path'],

@@ -28,6 +28,7 @@ class Builder:
             writer = Writer()
         self.writer           = writer
         
+        #globals
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
         self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
@@ -69,14 +70,39 @@ class Builder:
         return parameter
         
 
+    def verifyChannelItems(self):
+        #check channel configuration, verify and update paths, logos.
+        items = self.writer.channels.getChannels()
+        for idx, item in enumerate(items):
+            if self.writer.monitor.waitForAbort(0.001) or isDialog(): 
+                break
+                
+            self.log('verifyChannelItems, %s: %s'%(idx,item))
+            if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
+                self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(item))
+                continue
+
+            if item['number'] >= CHANNEL_LIMIT: #update dynamic pre-defined channels
+                item['logo'] = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo',LOGO)) #all logos are dynamic re-parse for changes.
+                # item['path'] = self.writer.library.predefined.pathTypes[item['type']](item['name'])
+            
+            if not isinstance(item.get('path',[]),list): 
+                item['path'] = [item['path']]
+                
+            item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
+            item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
+            item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
+            item['group']   = list(set((item.get('group',[]) or [])))
+            yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
+
+
     def buildService(self):
-        if isClient() or self.writer.monitor.isSettingsOpened(aggressive=False):
+        if isClient() or isDialog(): 
             self.log('buildService, Client mode enabled/Settings Opened; returning!')
             return False
                        
         channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
         self.log('buildService, channels = %s'%(len(channels)))
-        
         if not channels:
             self.writer.dialog.notificationDialog(LANGUAGE(30056))
             return
@@ -93,8 +119,9 @@ class Builder:
         self.log('buildService, endTimes = %s'%(endTimes))
 
         for idx, channel in enumerate(channels):
-            if self.writer.monitor.waitForAbort(0.01) or self.writer.monitor.isSettingsOpened(aggressive=False):
+            if self.writer.monitor.waitForAbort(0.001) or isDialog(): 
                 self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
+                self.log('buildService, interrupted')
                 return
                 
             channel         = self.runActions(RULES_ACTION_START, channel, channel)
@@ -108,14 +135,13 @@ class Builder:
         
             self.progress   = int(idx*100//len(channels))
             self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,self.diaMSG))
-            
-             #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
-            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])
+
+            cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])#cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
              
             if cacheResponse:
-                self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio']))
-                if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
+                self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio'])) #create m3u/xmltv station entry.
+                if isinstance(cacheResponse,list) and len(cacheResponse) > 0: #write new lineup meta to xmltv
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
@@ -135,26 +161,6 @@ class Builder:
         return True
 
 
-    def verifyChannelItems(self):
-        #check channel configuration, verify and update paths, logos.
-        items = self.writer.channels.getChannels()
-        for idx, item in enumerate(items):
-            self.log('verifyChannelItems, %s: %s'%(idx,item))
-            if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
-                self.log('verifyChannelItems; skipping, missing channel path and/or channel name\n%s'%(dumpJSON(item)))
-                continue
-                
-            if not isinstance(item.get('path',[]),list): 
-                item['path'] = [item['path']]
-                
-            item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
-            item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
-            item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
-            item['group']   = list(set((item.get('group',[]) or [])))
-            item['logo']    = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo',LOGO)) #all logos are dynamic re-parse for changes.
-            yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
-
-
     def addScheduling(self, channel, fileList, start):
         self.log("addScheduling; channel = %s, fileList = %s, start = %s"%(channel,len(fileList),start))
         #todo insert adv. scheduling rules here or move to adv. rules.py
@@ -164,19 +170,25 @@ class Builder:
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(channel['id'],idx),xbmc.LOGINFO)
                 continue
+                
             item["idx"]   = idx
             item['start'] = start
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
-        tmpList = self.runActions(RULES_ACTION_CHANNEL_POST_TIME, channel, tmpList)
-        return tmpList
+        return self.runActions(RULES_ACTION_CHANNEL_POST_TIME, channel, tmpList)
             
 
     def getFileList(self, citem, start, radio=False):
         self.log('getFileList, citem = %s, radio = %s'%(citem,radio))
         try:
             # global values prior to channel rules
+            self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
+            self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
+            self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
+            self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
+            self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
+            
             self.filter   = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
             self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
             self.limits   = {}#{"end":0,"start":0,"total":0}
@@ -187,7 +199,7 @@ class Builder:
             self.loopback = {}
             self.runActions(RULES_ACTION_CHANNEL_START, citem)
             
-            if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)):
+            if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
                 
@@ -196,28 +208,32 @@ class Builder:
                 path = citem['path']
             else: 
                 path = [citem['path']]
-            mixed = len(path) > 1
+                
+            mixed  = len(path) > 1
+            media  = 'music' if radio else 'video'
+            self.log('getFileList, id: %s, mixed = %s, media = %s'%(citem['id'],mixed,media),xbmc.LOGINFO)
             
-            media = 'music' if radio else 'video'
             if radio:
-                cacheResponse = self.buildRadio(citem)
+                cacheResponse = self.buildRadio(citem) #build radio as on-the-fly playlist que.
             else:         
                 cacheResponse = [(self.buildFileList(citem, file, media, self.limit, self.sort, self.filter, self.limits)) for file in path] # build multi-paths as induvial arrays for easier interleaving.
-                valid = list(filter(lambda k:k, cacheResponse)) #check that at least one array contains a filelist
+                valid = list(filter(lambda k:k, cacheResponse)) #check that at least one filelist array contains meta.
                 if not valid:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
                 cacheResponse = self.runActions(RULES_ACTION_CHANNEL_LIST, citem, cacheResponse)
-                cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping order.
+                cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
                 
-                if cacheResponse and len(cacheResponse) < self.limit: # balance media limits, by filling randomly with duplicates to meet EPG_HRS
+                if len(cacheResponse) < self.limit:
                     cacheResponse = self.fillCells(cacheResponse)
+                    if self.sort.get("method","") == 'random' and len(cacheResponse) > 0:
+                        random.shuffle(cacheResponse)
                     
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
-            self.fillBCTs = False #temp debug
+            self.fillBCTs = False #temp debug force disabled
             if self.fillBCTs and not citem.get('radio',False): 
                 cacheResponse = self.injectBCTs(citem, cacheResponse) 
                 
@@ -252,6 +268,7 @@ class Builder:
         
         
     def fillCells(self, fileList):
+         # balance media limits, by filling randomly with duplicates to meet EPG_HRS
         self.log("fillCells; fileList = %s"%(len(fileList)))
         totRuntime = sum([item.get('duration') for item in fileList])
         iters = cycle(fileList)
@@ -273,7 +290,8 @@ class Builder:
                 except: return  'none'
             path = path.format(list=getSeason(),limit=250)
             
-        if not sort: #set fallback method
+        # sort = self.runActions('', channel) #todo set secondary sort rules via adv. rules. ex. Mixed Path - TV (sort=episode) & Movies (sort=random)
+        if not sort: #set fallback method 
             if   path.startswith('videodb://tvshows'): sort = {"method": "episode"}
             elif path.startswith('videodb://movies'):  sort = {"method": "random"}
             else:                                      sort = {"method": "random"}
@@ -284,7 +302,7 @@ class Builder:
         method        = sort.get("method","random")
 
         json_response = self.writer.jsonRPC.requestList(id, path, media, limit, sort, filter, limits)
-        # malformed calls will return root response, catch a reparse of same folder and quit. 
+        # malformed vfs jsonrpc will return root response, catch a reparse of same folder and quit. 
         if json_response == self.loopback:
             self.chanError.append(LANGUAGE(30318))
             self.log("buildFileList, loopback detected returning")
@@ -295,7 +313,8 @@ class Builder:
             self.chanError.append(LANGUAGE(30317))
             
         for idx, item in enumerate(json_response):
-            if self.writer.monitor.waitForAbort(0.01) or self.writer.monitor.isSettingsOpened(aggressive=False): break
+            if self.writer.monitor.waitForAbort(0.001) or isDialog():
+                break
                 
             file     = item.get('file','')
             fileType = item.get('filetype','file')
@@ -314,15 +333,15 @@ class Builder:
                     self.log("buildFileList, id: %s, IDX = %s skipping 3D!"%(id,idx),xbmc.LOGINFO)
                     continue
 
-                #parsing missing meta
-                if not item.get('streamdetails',{}).get('video',[]):
+               
+                if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
                     item['streamdetails'] = self.writer.jsonRPC.getStreamDetails(file, media)
 
                 dur = self.writer.jsonRPC.getDuration(file, item, self.accurateDuration)
                 if dur > 0:
                     item['duration'] = dur
-                    # if int(item.get("year","0")) == 1601: #default null for kodi rpc?
-                        # item['year'] = 0 
+                    if int(item.get("year","0")) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
+                        item['year'] = 0
                         
                     mType   = item['type']
                     label   = item['label']
@@ -343,9 +362,6 @@ class Builder:
                         item["episodelabel"] = '%s (%sx%s)'%(title,seasonval,str(epval).zfill(2))
                         
                     else: # This is a Movie
-                        # year = int(item.get("year","0"))
-                        # if year > 0 and '(' not in title: 
-                            # title = "%s (%s)"%(title, year)
                         label = title
                         item["episodetitle"] = item.get("tagline","")
                         item["episodelabel"] = item.get("tagline","")
@@ -355,7 +371,6 @@ class Builder:
                     item['label'] = splitYear(label)[0]
                     item['plot']  = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
                     item.get('art',{})['icon']  = channel['logo']
-                    # item.get('art',{})['thumb'] = getThumb(item) #unify artwork # item.get('art',{})['fanart'] = getThumb(item) #unify artwork
                 
                     if self.progDialog is not None:
                         chprog = int((len(fileList)*100)//limit)
