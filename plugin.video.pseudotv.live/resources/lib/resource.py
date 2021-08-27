@@ -65,7 +65,7 @@ class Resources:
         music_pack.extend([{"id":pack,"version":self.jsonRPC.getPluginMeta(pack).get('version',ADDON_VERSION),"items":self.walkResource(pack)} for pack in ["resource.images.musicgenreicons.text"]])
 
         custom_pack = user_pack.copy() + studios_pack.copy() + genres_pack .copy()+ music_pack.copy()
-        custom_pack = removeDUPSLST(custom_pack)
+        custom_pack = setDictLST(custom_pack)
         
         return {LANGUAGE(30002):{"label":"TV Networks"  ,"packs":studios_pack},
                 LANGUAGE(30003):{"label":"TV Shows"     ,"packs":show_pack},

@@ -38,4 +38,5 @@ def run(sysARG):
     elif mode == 'play':
         if radio: Plugin(sysARG).playRadio(name, id)
         else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
+
 if __name__ == '__main__': run(sys.argv)

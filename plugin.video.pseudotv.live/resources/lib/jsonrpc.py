@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
-
 from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
@@ -72,16 +71,18 @@ class JSONRPC:
         cacheName = 'getListDirectory.%s'%(path)
         results   = self.cache.get(cacheName, checksum)
         if not results:
-            try:    results = FileAccess.listdir(path)
-            except: results = [],[]
-            self.cache.set(cacheName, results, checksum, expiration)
+            try:    
+                results = FileAccess.listdir(path)
+                self.cache.set(cacheName, results, checksum, expiration)
+            except: 
+                results = [],[]
         return results
 
 
     def isVFSPlayable(self, path, media='video', chkSeek=True):
         self.log('isVFSPlayable, path = %s, media = %s' % (path, media))
         dirs = []
-        json_response = self.requestList(str(random.random()), path, media)
+        json_response = self.requestList({'id':str(random.random())}, path, media)
         for item in json_response:
             file     = item.get('file', '')
             fileType = item.get('filetype', 'file')
@@ -96,7 +97,7 @@ class JSONRPC:
 
 
     def isVFSSeekable(self, file, dur):
-        if not file.startswith(('plugin://','upnp://','pvr://')): return True
+        if not file.startswith(tuple(VFS_TYPES)): return True
         elif self.inherited.player.isPlaying(): return True
         # todo test seek for support disable via adv. rule if fails.
         # todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
@@ -252,9 +253,9 @@ class JSONRPC:
         else:     return self.sendJSON(json_query).get('result', {}).get('movies', [])
 
 
-    def getDirectory(self, params='', cache=True, total=0):
+    def getDirectory(self, params='', cache=True):
         json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query, checksum=total).get('result', {})
+        if cache: return self.cacheJSON(json_query).get('result', {})
         else:     return self.sendJSON(json_query).get('result', {})
 
 
@@ -264,7 +265,7 @@ class JSONRPC:
 
 
     def getFileSize(self, path, media='video', real=False):
-        if   path.startswith(('plugin://','upnp://','pvr://')): return 0
+        if   path.startswith(tuple(VFS_TYPES)): return 0
         elif real:
             try:
                 fle  = FileAccess.open(path,'r')
@@ -374,8 +375,7 @@ class JSONRPC:
         duration = 0
         runtime = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')
         if (runtime == 0 or accurate):
-            if path.startswith(('plugin://', 'upnp://',
-                                'pvr://')):  # no additional parsing needed item(runtime) has only meta available.
+            if path.startswith(tuple(VFS_TYPES)):  # no additional parsing needed item(runtime) has only meta available.
                 duration = 0
             elif isStack(path):  # handle "stacked" videos:
                 paths = splitStacks(path)
@@ -425,17 +425,40 @@ class JSONRPC:
         self.queueJSON(param[media],10)
         
         
-    def requestList(self, id, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
+    def autoPagination(self, id, path, limits={}, checksum='', life=datetime.timedelta(days=28)):
+        cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
+        if not checksum: checksum = id
+        if not limits:
+            msg = 'get'
+            limits = (self.cache.get(cacheName, checksum=checksum, json_data=True) or {"end": 0, "start": 0, "total":0})
+        else:
+            msg = 'set'
+            self.cache.set(cacheName, limits, checksum=checksum, expiration=life, json_data=True)
+        self.log("%s autoPagination; id = %s, path = %s, limits = %s"%(msg,id,path,limits))
+        return limits
+            
+             
+    def randomPagination(self, page, total=0):
+        if total > 0: start = random.randrange(0, total, page)
+        else:         start = 0
+        end = start + page
+        if end > total: end = total
+        return {"end": end, "start": start, "total":total}
+      
+
+    def requestList(self, citem, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         if self.writer.__class__.__name__ != 'Writer':
             from resources.lib.parser import Writer
             self.writer = Writer()
-                  
+
+        # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
+        id = citem['id']
         if not limits: 
-            limits = self.writer.autoPagination(id, path) #get
+            limits = self.autoPagination(id, path) #get
             total  = limits.get('total',0)
-            if sort.get("method","random") == "random":# and not path.startswith(('plugin://','upnp://','pvr://')): 
-                self.log('requestList, id = %s generating random limits'%(id))
-                limits = getRandomPage(page,total)
+            if total > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
+                limits = self.randomPagination(page,total)
+                self.log('requestList, id = %s generating random limits = %s'%(id,limits))
             
         params                      = {}
         params['limits']            = {}
@@ -448,25 +471,31 @@ class JSONRPC:
         if sort:   params['sort']   = sort
         if filter: params['filter'] = filter
 
-        self.log('requestList, id = %s ↓\npath = %s\npage = %s\nlimits= %s'%(id, path, page, limits))
-        results = self.getDirectory(dumpJSON(params), total=limits.get('total'))
+        self.log('requestList, id = %s, path = %s, page = %s, limits= %s'%(id, path, page, limits))
+        results = self.getDirectory(dumpJSON(params))
         
         if 'filedetails' in results: key = 'filedetails'
         else:                        key = 'files'
+            
         items  = results.get(key, [])
+        # files  = list(filter(lambda f:f['filetype'] == 'file',items))
+        # dirs   = list(filter(lambda f:f['filetype'] == 'directory',items))
         limits = results.get('limits', params['limits'])
-        self.log('requestList, id = %s ↓\nitems = %s\nresult limits = %s'%(id, len(items), limits))
-
-        if limits.get('end', 0) >= limits.get('total', 0):  # restart page, exceeding boundaries.
+        total  = limits.get('total',0)
+        self.log('requestList, id = %s, items = %s, result limits = %s'%(id, len(items), limits))
+        
+        # restart page to 0, exceeding boundaries.
+        if (limits.get('end',0) >= total or limits.get('start',0) > total):
             self.log('requestList, id = %s, resetting start to 0'%(id))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.writer.autoPagination(id, path, limits) #set
-
-        # no results try again with new limits.
-        if len(items) == 0 and limits.get('start',0) == 0 and limits.get('total',0) > 0:
-            self.log("requestList, id = %s, trying again with start at 0"%(id))
-            return self.requestList(id, path, media, page, sort, filter, limits)
             
+        # retry request
+        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
+            self.log("requestList, id = %s, trying again with start at 0"%(id))
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+            return self.requestList(citem, path, media, page, sort, filter, limits)
+            
+        self.autoPagination(id, path, limits) #set 
         self.log("requestList, id = %s, return items = %s" % (id, len(items)))
         return items
 
@@ -478,11 +507,11 @@ class JSONRPC:
                     'pvr://channels/tv/*']
 
         for path in pvrPaths:
-            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}' % (path), cache=False).get('files', [])
+            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}'%(path), cache=False).get('files', [])
             if not json_response: continue
-            item = list(filter(lambda k: k.get('id', -1) == channelid, json_response))
+            item = list(filter(lambda k: k.get('id',random.random()) == channelid, json_response))
             if item:
-                self.log('matchPVRPath, path found: %s' % (item[0].get('file', '')))
+                self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))
                 return item[0].get('file', '')
         self.log('matchPVRPath, path not found \n%s' % (dumpJSON(json_response)))
         return ''

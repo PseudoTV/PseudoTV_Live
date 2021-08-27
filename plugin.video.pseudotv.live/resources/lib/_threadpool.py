@@ -77,12 +77,13 @@ class ThreadPool:
             
             def run(self):
                 while not self.monitor.abortRequested() and not errors:
+                    if self.monitor.waitForAbort(.001): break
                     try:
                         idx, item = queue.get(block=False)
                         try: 
                             results[idx] = func(item)
-                            # if self.monitor.waitForAbort(.001): break # unnecessary slows down func.  
-                        except Exception as e: errors[idx] = sys.exc_info()
+                        except Exception as e: 
+                            errors[idx] = sys.exc_info()
                     except Empty: break
 
         threads = [Worker() for _ in range(threadCount)]

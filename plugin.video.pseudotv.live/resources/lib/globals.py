@@ -26,7 +26,8 @@ from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmc
 from itertools                 import cycle, chain, zip_longest
 from six.moves                 import urllib
 from contextlib                import contextmanager
-from resources.lib.fileaccess  import FileAccess, FileLock
+from xml.dom.minidom           import parse, Document
+from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
 from resources.lib.events      import logit
@@ -126,7 +127,11 @@ PRE_ROLL            = ['bumpers','ratings']
 POST_ROLL           = ['commercials','trailers']
 
 # jsonrpc
+TV_TYPES            = ['episode','tvshow']
+MOVIE_TYPES         = ['movie','movies']
+MUSIC_TYPES         = ['songs','albums','artists','music']
 ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
+VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
 
 #per channel rule limit
 RULES_PER_PAGE                   = 10
@@ -200,7 +205,7 @@ def log(msg, level=xbmc.LOGDEBUG):
 def getUserFilePath(file=None):
     path = SETTINGS.getSetting('User_Folder')
     if not FileAccess.exists(path):
-        notificationDialog(LANGUAGE(30326))
+        Dialog().notificationDialog(LANGUAGE(30326))
         path = SETTINGS_LOC
         SETTINGS.setSetting('User_Folder',path)
     if file: return os.path.join(path,file)
@@ -281,15 +286,7 @@ def roundupDIV(p, q):
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
- 
-def getRandomPage(page,total=0):
-    if total > 0:
-        start = random.randrange(0, total, page)
-    else: 
-        start = 0
-    end = start + page
-    return {"end": end, "start": start, "total":total}
-  
+
 def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
@@ -397,12 +394,6 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
-def isDialog():
-    return PROPERTIES.getPropertyBool('isDialog')
-
-def setDialog(state):
-    return PROPERTIES.setPropertyBool('isDialog',state)
-
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
     PROPERTIES.clearProperty('utilities')
@@ -426,16 +417,16 @@ def isShutdownRequired():
                  
 def setServiceStop(state=True):
     return PROPERTIES.setPropertyBool('shutdownRequired',state)
-       
-def isSelectOpened():
-    return PROPERTIES.getPropertyBool('selectOpened')
-                 
-def setSelectOpened(state=True):
-    return PROPERTIES.setPropertyBool('selectOpened',state)
-       
+             
+def isServiceQuitting():
+    return PROPERTIES.getPropertyBool('serviceQuitting')
+                          
+def setServiceQuitting(state=True):
+    return PROPERTIES.setPropertyBool('serviceQuitting',state)
+
 def isManagerRunning():
     return PROPERTIES.getPropertyBool('managerRunning')
-    
+
 def setManagerRunning(state=True):
     return PROPERTIES.setPropertyBool('managerRunning',state)
     
@@ -484,19 +475,10 @@ def hasVersionChanged(cleanStart=False):
 
 def chkUpdateTime(key, wait, lastUpdate=None):
     state = False
-    def getValue(key):
-        value = PROPERTIES.getProperty(key)
-        if value: #todo debug property returning string tuple (1628009030, 1627922630, 347) !?
-            if ', ' in value: value = value.split(', ')[1]
-        else:
-            value = SETTINGS.getCacheSetting(key)
-        return (value or 0)
-            
     epoch = time.time()
-    if lastUpdate is None: lastUpdate = float(getValue(key))
+    if lastUpdate is None: lastUpdate = float((SETTINGS.getCacheSetting(key,getInstanceID()) or 0))
     if (epoch >= (lastUpdate + wait)):
-        PROPERTIES.setPropertyInt(key,int(epoch))
-        SETTINGS.setCacheSetting(key,int(epoch))
+        SETTINGS.setCacheSetting(key,int(epoch),getInstanceID())
         state = True
     log('chkUpdateTime, key = %s, lastUpdate = %s, update now = %s'%(key,lastUpdate,state))
     return state
@@ -771,10 +753,10 @@ def mergeDICT(dict1, dict2):
 def removeDupDictFromList(list):
     return [i for n, i in enumerate(list) if i not in list[n + 1:]]
 
-def removeDUPSLST(lst):
-    list_of_strings = [dumpJSON(d) for d in lst]
-    list_of_strings = set(list_of_strings)
-    return [loadJSON(s) for s in list_of_strings]
+def setDictLST(lst):
+    sLST = [dumpJSON(d) for d in lst]
+    sLST = set(sLST)
+    return [loadJSON(s) for s in sLST]
 
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)

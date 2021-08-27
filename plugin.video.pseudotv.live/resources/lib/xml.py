@@ -20,7 +20,6 @@
 
 from resources.lib.globals     import *
 from resources.lib             import xmltv
-from xml.dom.minidom           import parse, Document
 
 class XMLTV:
     def __init__(self, writer=None):

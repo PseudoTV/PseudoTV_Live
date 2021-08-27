@@ -200,7 +200,7 @@ class M3U:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
-            return self._reload()
+        return self._reload()
         
         
     def deleteM3U(self):

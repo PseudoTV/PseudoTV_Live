@@ -303,15 +303,10 @@ class Monitor(xbmc.Monitor):
         if aggressive: windowIDS.extend([ADDON_DIALOG,FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,
                                          NUMERIC_INPUT,FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
                                          
-        if isSelectOpened():
-            setDialog(True)
-            return True
-        elif currentWindow in windowIDS:
+        if currentWindow in windowIDS:
             if currentWindow == ADDON_SETTINGS:
                 self.onSettingsChanged()
-            setDialog(True)
             return True
-        setDialog(False)
         return False
 
 
@@ -569,6 +564,7 @@ class Service:
         while not self.monitor.abortRequested():
             isMaster  = not isClient()
             doRestart = isRestartRequired()
+                        
             if   self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
                 

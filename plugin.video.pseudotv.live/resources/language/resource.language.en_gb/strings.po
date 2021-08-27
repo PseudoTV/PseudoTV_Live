@@ -1336,3 +1336,11 @@ msgctxt "#30330"
 msgid "Skipping Channel"
 msgstr ""
 
+msgctxt "#30331"
+msgid "Checking Channel"
+msgstr ""
+
+msgctxt "#30332"
+msgid "Checking AutoTune"
+msgstr ""
+

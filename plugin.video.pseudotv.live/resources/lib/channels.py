@@ -87,9 +87,10 @@ class Channels:
             self.log('saveChannels, saving %s channels to %s'%(len(self.getChannels()),filePath))
             fle.write(dumpJSON(self.cleanSelf(self.writer.vault.channelList), idnt=4, sortkey=False))
             fle.close()
-            return self._reload()
+        return self._reload()
 
 
+    @cacheit(checksum='%s.%s'%(ADDON_VERSION,getIP()),json_data=True)
     def getTemplate(self):
         self.log('getTemplate')
         channelList = self._load(CHANNELFLE_DEFAULT)
@@ -97,7 +98,6 @@ class Channels:
         return channelList
 
 
-    @cacheit(json_data=True)
     def getCitem(self):#channel schema
         citem = self.getTemplate().get('channels',[{}])[0].copy()
         citem['rules'] = []

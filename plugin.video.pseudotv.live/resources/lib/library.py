@@ -33,9 +33,9 @@ class Library:
         self.cache  = writer.cache
         
         if self.writer.vault.libraryItems is None: 
-            self.reload()
+            self._reload()
         else:
-            self.withdraw()
+            self._withdraw()
             
         self.predefined    = Predefined()
         self.recommended   = Recommended(library=self)
@@ -45,32 +45,32 @@ class Library:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
-    def clear(self):
-        self.log('clear')
+    def _clear(self):
+        self.log('_clear')
         self.writer.vault.libraryItems = {}
-        return self.deposit()
+        return self._deposit()
         
 
-    def reload(self):
-        self.log('reload')
+    def _reload(self):
+        self.log('_reload')
         self.writer.vault.libraryItems = self.getTemplate()
-        self.writer.vault.libraryItems.update(self.load())
-        return self.deposit()
+        self.writer.vault.libraryItems.update(self._load())
+        return self._deposit()
         
         
-    def deposit(self):
-        self.log('deposit')
+    def _deposit(self):
+        self.log('_deposit')
         self.writer.vault.set_libraryItems(self.writer.vault.libraryItems)
         return True
         
     
-    def withdraw(self):
-        self.log('withdraw')
+    def _withdraw(self):
+        self.log('_withdraw')
         return self.writer.vault.get_libraryItems()
      
 
-    def load(self, file=getUserFilePath(LIBRARYFLE)):
-        self.log('load file = %s'%(file))
+    def _load(self, file=getUserFilePath(LIBRARYFLE)):
+        self.log('_load file = %s'%(file))
         fle  = FileAccess.open(file, 'r')
         data = (loadJSON(fle.read()) or {})
         fle.close()
@@ -84,13 +84,13 @@ class Library:
             fle = FileAccess.open(filePath, 'w')
             fle.write(dumpJSON(self.writer.vault.libraryItems, idnt=4, sortkey=False))
             fle.close()
-            return self.reload()
+        return self._reload()
 
 
     @cacheit(json_data=True)
     def getTemplate(self):
         self.log('getTemplate')
-        return (self.load(LIBRARYFLE_DEFAULT) or {})
+        return (self._load(LIBRARYFLE_DEFAULT) or {})
 
         
     def getLibraryItems(self, type, enabled=False):
@@ -206,11 +206,11 @@ class Library:
             enabled    = self.getEnabledItems(existing)
             cacheName  = 'fillType.%s'%(type)
             cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
-            results    = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True) #temp debug, cache no longer needed? shorter life?
-            
+
             if existing: msg = LANGUAGE(30328)
             else:        msg = LANGUAGE(30159) 
-                
+               
+            results = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True)
             if not results or not existing:
                 results  = []
                 if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
@@ -221,10 +221,7 @@ class Library:
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
 
                 for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.001) or isDialog(): 
-                        results = []
-                        return
-                        
+                    if self.writer.monitor.waitForAbort(0.001): return
                     fill = int((idx*100)//len(items))
                     prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
@@ -262,10 +259,12 @@ class Library:
                 PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
                         
-        busy = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30159)))
+        busy = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
+        
         for type in CHAN_TYPES: 
-            if self.writer.monitor.waitForAbort(0.001) or isDialog(): return
             fillType(type,busy)
+            if self.writer.monitor.waitForAbort(0.001): return
+                
         busy = self.writer.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
         return self.writer.buildPredefinedChannels()
         

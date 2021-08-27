@@ -18,6 +18,7 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
+from resources.lib.fileaccess  import FileLock
 from resources.lib.vault       import Vault
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
@@ -99,7 +100,6 @@ class Writer:
                     self.builder.progress += .1
                     self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                     self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
-
             except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
         return True
 
@@ -219,8 +219,8 @@ class Writer:
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildPredefinedChannels, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
             return [num for num in range(start,stop) if num not in enumbers]
-                       
-        addLST    = []
+                  
+        addLST    = self.channels.getUserChannels()
         removeLST = []    
         for type in types:
             if self.monitor.waitForAbort(0.001): return
@@ -330,18 +330,6 @@ class Writer:
         self.log('recoverChannelsFromM3U, finished')
         return True
         
-        
-    def autoPagination(self, id, path, limits={}):
-        cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
-        if not limits:
-            msg = 'get'
-            limits = (self.cache.get(cacheName, checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
-        else:
-            msg = 'set'
-            self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
-        self.log("%s autoPagination, id = %s\npath = %s\nlimits = %s"%(msg,id,path,limits))
-        return limits
-            
 
     def syncCustom(self): #todo sync user created smartplaylists/nodes for multi-room.
         for type in ['library','playlists']:
@@ -398,30 +386,27 @@ class Writer:
 
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        if not isClient():
+        if isClient(): return
+        with busy_dialog():
+            items = self.library.getLibraryItems(type)
+            if not items:
+                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                setBusy(False)
+                return
+                
+            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+            if autoTune:
+                if autoTune > len(items): autoTune = len(items)
+                select = random.sample(list(set(range(0,len(items)))),autoTune)
+                
+        if not autoTune:
+            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
+            
+        if not select is None:
             with busy_dialog():
-                setSelectOpened(True)
-                
-                items = self.library.getLibraryItems(type)
-                if not items:
-                    self.dialog.notificationDialog(LANGUAGE(30103)%(type))
-                    setBusy(False)
-                    return
-                    
-                listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-                if autoTune:
-                    if autoTune > len(items): autoTune = len(items)
-                    select = random.sample(list(set(range(0,len(items)))),autoTune)
-                    
-            if not autoTune:
-                select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
-                
-            if not select is None:
-                with busy_dialog():
-                    self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
-                    self.buildPredefinedChannels(type)
-                    self.setPendingChangeTimer()
-            setSelectOpened(False)
+                self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
+                self.buildPredefinedChannels(type)
+                self.setPendingChangeTimer()
         
         
     def triggerPendingChange(self):

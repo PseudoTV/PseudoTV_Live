@@ -13,6 +13,7 @@ v.0.3.2
 -Added channel bug visibility settings to "Tweaks" setting tab.
 -Tweaked "random" shuffle and "random" pagination during channel building.
 -Improved dialog notifications.
+-Improved Plugin/UPNP channel building and meta parsing.
 
 v.0.3.1
 -Added overlay actions. When overlay is active: Left/Right opens channel guide and programmes guide.

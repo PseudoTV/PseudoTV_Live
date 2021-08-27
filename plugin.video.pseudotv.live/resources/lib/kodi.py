@@ -44,10 +44,10 @@ def loadJSON(item):
     try:    return json.loads(item)
     except: return {}
 
-def removeDUPSLST(lst):
-    list_of_strings = [dumpJSON(d) for d in lst]
-    list_of_strings = set(list_of_strings)
-    return [loadJSON(s) for s in list_of_strings]
+def setDictLST(lst):
+    sLST = [dumpJSON(d) for d in lst]
+    sLST = set(sLST)
+    return [loadJSON(s) for s in sLST]
 
 def log(msg, level=xbmc.LOGDEBUG):
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
@@ -91,10 +91,7 @@ class Settings:
     
     
     def _getSetting(self, func, key):
-        try:
-            value = func(key)
-            self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
-            return value
+        try: return func(key)
         except Exception as e: 
             self.log("_getSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
 
@@ -156,7 +153,6 @@ class Settings:
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
         value = self.cache.get(key, checksum, json_data)
-        self.log('getCacheSetting, key = %s, value = %s'%(key,value))
         return value
         
         
@@ -282,7 +278,6 @@ class Properties:
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
-        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         return value
         
         
@@ -352,7 +347,7 @@ class Dialog:
     
     
     def setInfoMonitor(self, items):
-        return self.properties.setPropertyDict('monitor.montiorList',{'info':removeDUPSLST(items)})
+        return self.properties.setPropertyDict('monitor.montiorList',{'info':setDictLST(items)})
 
 
     def toggleInfoMonitor(self, state):

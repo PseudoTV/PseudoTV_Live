@@ -282,7 +282,7 @@ class Plugin:
             path     = writer.get('citem',{}).get('path','')
             
             if isinstance(path,list): path = path[0]
-            response = self.jsonRPC.requestList(id, path, 'music', page=RADIO_ITEM_LIMIT)
+            response = self.jsonRPC.requestList(citem, path, 'music', page=RADIO_ITEM_LIMIT)
             
             if response:
                 self.channelPlaylist.clear()
