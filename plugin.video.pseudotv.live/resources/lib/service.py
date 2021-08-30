@@ -27,11 +27,9 @@ class Player(xbmc.Player):
     def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.pendingStart    = False
-        self.pendingSeek     = False
-        self.pendingStop     = False
         self.ruleList        = {}
         self.playingPVRitem  = {}
+        self.isPseudoTV      = isPseudoTV()
         self.lastSubState    = isSubtitle()
         self.showOverlay     = SETTINGS.getSettingBool('Enable_Overlay')
         
@@ -66,7 +64,7 @@ class Player(xbmc.Player):
         self.log('getInfoTag')
         if self.isPlayingAudio():
             return self.getMusicInfoTag()
-        else:
+        elif self.isPlayingVideo():
             return self.getVideoInfoTag()
 
     
@@ -114,80 +112,59 @@ class Player(xbmc.Player):
         return callback
 
 
-    def toggleSubtitles(self, state):
-        self.log('toggleSubtitles, state = ' + str(state))
-        if self.isPlaying():
-            self.showSubtitles(state)
-        
-        
     def setSeekTime(self, seek):
-        if not isPseudoTV(): return
-        elif self.isPlayingVideo():
-            self.log('setSeekTime, seek = %s'%(seek))
-            self.seekTime(seek)
+        if not self.isPlaying: return
+        self.log('setSeekTime, seek = %s'%(seek))
+        self.seekTime(seek)
         
+        
+    def setSubtitles(self, state):
+        self.log('setSubtitles, state = %s'%(state))
+        if (state and not hasSubtitle()): return
+        elif self.isPseudoTV: self.showSubtitles(state)
+
         
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        if not isPseudoTV(): return
-        self.lastSubState = isSubtitle()
-        self.pendingStart = True
         self.playAction()
         
 
     def onAVChange(self):
         self.log('onAVChange')
-        if not isPseudoTV(): return
-        elif self.pendingSeek and not self.pendingStart: #catch failed seekTime
-            log('onAVChange, pendingSeek failed!',xbmc.LOGERROR)
-            # self.setSeekTime(self.getPVRTime()) #onPlayBackSeek slow, false triggers! debug. 
-            # self.toggleSubtitles(False)
-
+        
         
     def onAVStarted(self):
         self.log('onAVStarted')
-        if not isPseudoTV(): return
-        self.pendingStart = False
-        self.pendingStop  = True
+        self.setSubtitles(self.lastSubState)
 
 
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, limited to pvr?
-        if not isPseudoTV(): return
         self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
-        self.pendingSeek = False
-        self.toggleSubtitles(self.lastSubState)
         
         
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded')
-        self.pendingStart    = False
-        self.pendingSeek     = False
         self.changeAction()
         
 
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
-        self.pendingStart    = False
-        self.pendingSeek     = False
-        self.pendingStop     = False
         self.stopAction()
         
         
     def onPlayBackError(self):
         self.log('onPlayBackError')
-        self.pendingStart    = False
-        self.pendingSeek     = False
         self.stopAction()
         
         
     def playAction(self):
+        self.isPseudoTV = isPseudoTV()
         pvritem = self.getPVRitem()
-        self.showOverlay = SETTINGS.getSettingBool('Enable_Overlay')
-        
-        if not pvritem: 
+        if not pvritem or not self.isPseudoTV: 
             self.log('playAction, returning missing pvritem or not PseudoTV!')
             return self.stopAction()
             
+        self.showOverlay  = SETTINGS.getSettingBool('Enable_Overlay')
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         if not pvritem.get('callback') or pvritem.get('callback','').endswith(('-1.pvr','None.pvr')):
             pvritem['callback'] = self.getCallback()
@@ -203,11 +180,9 @@ class Player(xbmc.Player):
             self.ruleList = self.myService.writer.rules.loadRules([citem])
             pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem)
             
-            self.pendingSeek = round(pvritem.get('broadcastnow',{}).get('progress',0)) > 0
-            self.log('playAction, pendingSeek = %s'%(self.pendingSeek))
-            if self.pendingSeek: 
-                self.toggleSubtitles(False)
-                self.onPlayBackSeek() #manually trigger, until Kodi fix.
+            #temp workaround for long existing kodi subtitle seek bug. Some movies formats don't properly seek when subtitles are enabled.
+            self.lastSubState = isSubtitle()
+            if self.lastSubState: self.setSubtitles(False)
         self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
         
         
@@ -235,6 +210,7 @@ class Player(xbmc.Player):
 
     def stopAction(self):
         self.log('stopAction')
+        self.isPseudoTV = False
         self.toggleOverlay(False)
         if self.playingPVRitem.get('isPlaylist',False):
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
@@ -245,7 +221,7 @@ class Player(xbmc.Player):
     def toggleOverlay(self, state):
         overlayWindow = Overlay(OVERLAY_FLE, ADDON_PATH, "default", service=self.myService)
         if state and not isOverlay():
-            conditions = [self.showOverlay,self.isPlaying(),isPseudoTV()]
+            conditions = [self.showOverlay,self.isPlaying(),self.isPseudoTV]
             self.log("toggleOverlay, conditions = %s"%(conditions))
             if False in conditions: return
             self.log("toggleOverlay, show")
@@ -256,7 +232,7 @@ class Player(xbmc.Player):
 
 
     def triggerSleep(self):
-        conditions = [not xbmc.getCondVisibility('Player.Paused'),self.isPlaying(),isPseudoTV()]
+        conditions = [not xbmc.getCondVisibility('Player.Paused'),self.isPlaying(),self.isPseudoTV]
         self.log("triggerSleep, conditions = %s"%(conditions))
         if False in conditions: return
         if self.sleepTimer():
@@ -472,11 +448,9 @@ class Service:
 
         
     def chkIdle(self):
-        if not isPseudoTV(): return
-            
         idleTime  = getIdleTime()
         sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
-        if sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments
+        if self.player.isPseudoTV and sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments
             if self.player.triggerSleep(): return
         
         if  idleTime > OVERLAY_DELAY:
@@ -556,7 +530,6 @@ class Service:
         
         if self.initialize():
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30052)),wait=5)
-            self.monitor.waitForAbort(5) # service delay
             self.startServiceThread()
         else:
             self.writer.dialog.notificationProgress('%s...'%(LANGUAGE(30100)),wait=5)
@@ -565,14 +538,14 @@ class Service:
             isMaster  = not isClient()
             doRestart = isRestartRequired()
                         
-            if   self.writer.dialog.chkInfoMonitor(): continue # aggressive polling required (bypass waitForAbort)!
+            if   self.writer.dialog.chkInfoMonitor():       continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
                 
             self.chkUtilites()
-            if self.player.isPlaying(): self.chkIdle()
-            elif isMaster: self.chkRecommended()
+            if   self.player.isPlaying(): self.chkIdle()
+            elif isMaster:                self.chkRecommended()
                       
-            if   isBusy(): continue
+            if   isBusy():                        continue
             elif self.monitor.isSettingsOpened(): continue
             elif isMaster: self.chkUpdate()
                 

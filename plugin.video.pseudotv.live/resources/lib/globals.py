@@ -899,10 +899,14 @@ def cleanResourcePath(path):
     return path
 
 def hasSubtitle():
-    return xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
+    state = xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
+    log('globals: hasSubtitle = %s'%(state))
+    return state
 
 def isSubtitle():
-    return xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
+    state = xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled')
+    log('globals: isSubtitle = %s'%(state))
+    return state
 
 def isPlaylistRandom():
     return xbmc.getInfoLabel('Playlist.Random').lower() == 'on' # Disable auto playlist shuffling if it's on

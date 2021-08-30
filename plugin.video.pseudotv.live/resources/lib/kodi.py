@@ -634,13 +634,10 @@ class Dialog:
             control = xbmcgui.DialogProgress()
             control.create(header, message)
         elif control:
-            if percent == 100 or control.isFinished(): 
+            if percent == 100 or control.iscanceled(): 
                 if hasattr(control, 'close'): control.close()
                 return
-            else: control.update(percent, header, message)
-        elif control.iscanceled():
-            if hasattr(control, 'close'): control.close()
-            return
+            elif hasattr(control, 'update'): control.update(percent, message)
         return control
         
    

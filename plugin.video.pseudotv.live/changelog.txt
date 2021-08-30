@@ -1,3 +1,8 @@
+v.0.3.3
+-Fixed sleep idle timer.
+-Tweaked background service.
+-Improved Smartplaylist parsing.
+
 v.0.3.2
 -Added channel building error notification.
 -Fixed channel manager name selection.
