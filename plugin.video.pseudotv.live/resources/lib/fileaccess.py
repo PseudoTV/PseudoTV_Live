@@ -261,7 +261,6 @@ class FileLock:
         
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
-        # self.refreshLocksTimer.start()
         
         self.grabSemaphore = threading.BoundedSemaphore()
         self.listSemaphore = threading.BoundedSemaphore()
@@ -277,6 +276,8 @@ class FileLock:
                 self.refreshLocksTimer.join()
             except: pass
 
+        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
+        self.refreshLocksTimer.name = "RefreshLocks"
         for item in self.lockedList:
             self.unlockFile(item)
 
@@ -287,11 +288,17 @@ class FileLock:
                 log("FileLock: IsExiting")
                 return False
             self.lockFile(item, True)
+            
+        if self.refreshLocksTimer.is_alive():
+            try: 
+                self.refreshLocksTimer.cancel()
+                self.refreshLocksTimer.join()
+            except: pass
+                
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
-
+        self.refreshLocksTimer.name = "RefreshLocks"
         if self.isExiting == False:
-            self.refreshLocksTimer.name = "RefreshLocks"
-            # self.refreshLocksTimer.start() #debug issue where thread is not closing.
+            self.refreshLocksTimer.start()
             return True
         return False
 

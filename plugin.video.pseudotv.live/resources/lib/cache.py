@@ -23,10 +23,8 @@ import os, json, traceback
 from kodi_six               import xbmc, xbmcaddon
 from datetime               import timedelta
 
-try:
-    from simplecache             import SimpleCache
-except:
-    from simplecache.simplecache import SimpleCache #pycharm stub
+try:    from simplecache             import SimpleCache
+except: from simplecache.simplecache import SimpleCache #pycharm stub
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)

@@ -18,11 +18,8 @@
 
 # -*- coding: utf-8 -*-
 # -entry point-
-import sys
-
 from resources.lib.globals    import *
 from resources.lib.utilities  import Utilities
 
 if __name__ == '__main__': 
-        with busy_dialog():
-            Utilities(sys.argv).run()
+        with busy_dialog(): Utilities(sys.argv).run()

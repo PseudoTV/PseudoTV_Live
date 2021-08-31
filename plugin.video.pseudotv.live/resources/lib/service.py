@@ -201,6 +201,7 @@ class Player(xbmc.Player):
             self.log('changeAction, playing playlist')
             #todo pop broadcastnext? keep pvritem in sync with playlist pos?
         else:
+            self.isPseudoTV = False
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
             callback = self.playingPVRitem.get('callback','')
             self.log('changeAction, playing = %s'%(callback))

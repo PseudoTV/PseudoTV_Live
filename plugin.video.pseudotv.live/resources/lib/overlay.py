@@ -38,6 +38,11 @@ class Player(xbmc.Player):
         self.overlay.updateOnNext()
     
     
+    def onPlayBackStopped(self):
+        self.overlay.log('onPlayBackStopped')
+        self.overlay.closeOverlay()
+        
+        
 class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
