@@ -120,37 +120,25 @@ class JSONRPC:
         self.log('isVFSSeekable, path = %s, state = %s' % (file, state))
         return state
         
+
+    def sendButton(self, id):
+        self.log('sendButton, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"Input.ButtonEvent","params":{"button":"%s","keymap":"KB"},"id":1}'%id)
+        if 'OK' in self.sendJSON(json_query).get('result',''): return True
         
         
-        
-        
-        # playpast = False
-        # if self.inherited.player.isPlaying(): return True  # todo prompt to stop playback and test.
-        # self.inherited.player.play(file, liz, windowed=True)
-        
-        # while not self.inherited.monitor.abortRequested():
-            # self.log('isVFSSeekable seeking')
-            # if self.inherited.monitor.waitForAbort(2):
-                # break
-            # elif not self.inherited.player.isPlaying():
-                # break
-            # if int(self.inherited.player.getTime()) > progress:
-                # self.log('isVFSSeekable seeking complete')
-                # playpast = True
-                # break
-                
-        # while not self.inherited.monitor.abortRequested() and self.inherited.player.isPlaying():
-            # if self.inherited.monitor.waitForAbort(1): break
-            # self.log('isVFSSeekable stopping playback')
-            # self.inherited.player.stop()
+    def sendAction(self, id):
+        self.log('sendAction, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"%s"},"id":1}'%id)
+        if 'OK' in self.sendJSON(json_query).get('result',''):  return True  
             
-        # msg = LANGUAGE(30143) if playpast else LANGUAGE(30144)
-        # self.log('isVFSSeekable file = %s %s' % (file, msg))
-        # self.dialog.notificationDialog(msg)
-        # return playpast
-
-
-
+            
+    def openWindow(self, id):
+        self.log('openWindow, id = %s'%(id))
+        json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
+        if 'OK' in self.sendJSON(json_query).get('result',''): return True
+        
+            
     def sendJSON(self, command):
         if self.queueRunning: return self.inherited.pool.executor(sendJSON,command)
         else:                 return sendJSON(command)

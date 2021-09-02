@@ -198,7 +198,7 @@
             <top>0</top>
             <width>1060</width>
             <height>1</height>
-            <texture border="1">separator.png</texture>
+            <texture border="1">overlays/separator.png</texture>
             <bordersize>1</bordersize>
           </control>
           <control type="label">
@@ -232,7 +232,7 @@
             <width>1060</width>
             <height>63</height>
             <colordiffuse>FF12A0C7</colordiffuse>
-            <texture border="63">white.png</texture>
+            <texture border="63">colors/white.png</texture>
           </control>
           <control type="label">
             <left>0</left>
@@ -309,7 +309,7 @@
             <width>1060</width>
             <height>63</height>
             <colordiffuse>FF12A0C7</colordiffuse>
-            <texture border="63">white.png</texture>
+            <texture border="63">colors/white.png</texture>
           </control>
           <control type="label">
             <left>0</left>
@@ -386,7 +386,7 @@
             <width>1060</width>
             <height>63</height>
             <colordiffuse>FF12A0C7</colordiffuse>
-            <texture border="63">white.png</texture>
+            <texture border="63">colors/white.png</texture>
           </control>
           <control type="label">
             <left>0</left>

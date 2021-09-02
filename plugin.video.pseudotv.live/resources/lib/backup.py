@@ -47,7 +47,9 @@ class Backup:
     def hasBackup(self):
         self.log('hasBackup')
         with busy():
-            if isClient(): return False
+            if isClient(): 
+                self.writer.dialog.notificationDialog(LANGUAGE(30288))
+                return False
             elif FileAccess.exists(CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
                 if not SETTINGS.getSetting('Backup_Channels'):
@@ -64,7 +66,7 @@ class Backup:
 
     def backupChannels(self):
         self.log('backupChannels')
-        if   isClient(): return False
+        if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
         elif isBusy():   return self.writer.dialog.notificationDialog(LANGUAGE(30029))
         elif FileAccess.exists(CHANNELFLE_BACKUP):
             if not self.writer.dialog.yesnoDialog('%s\n%s?'%(LANGUAGE(30212),SETTINGS.getSetting('Backup_Channels'))): 
@@ -82,7 +84,7 @@ class Backup:
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannels, file = %s'%(file))
-        if isClient(): return False
+        if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
         elif isBusy(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30029))
             return False

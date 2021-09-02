@@ -14,7 +14,7 @@
           <control type="image"> 
             <width>auto</width>
             <height>auto</height>
-            <texture>background.gif</texture>
+            <texture>backgrounds/background.gif</texture>
             <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
           </control>
           
@@ -74,7 +74,7 @@
           <control type="image"> 
             <width>auto</width>
             <height>auto</height>
-            <texture>vignette.png</texture>
+            <texture>overlays/vignette.png</texture>
             <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
           </control>
         </control>
@@ -84,7 +84,7 @@
             <width>auto</width>
             <height>auto</height>
             <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-            <texture>static.gif</texture>
+            <texture>backgrounds/static.gif</texture>
         </control>
         <control type="image">
             <centertop>50%</centertop>
@@ -111,7 +111,7 @@
           <align>center</align>
           <aligny>center</aligny>
           <colordiffuse>black</colordiffuse>
-          <texture>white.png</texture>
+          <texture>colors/white.png</texture>
         </control>
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
@@ -131,8 +131,8 @@
           <control type="button" id="41002">
             <width>auto</width>
             <height>128</height>
-            <texturefocus colordiffuse="">startover.png</texturefocus>
-            <texturenofocus colordiffuse="">startover.png</texturenofocus>
+            <texturefocus colordiffuse="">Skip/startover.png</texturefocus>
+            <texturenofocus colordiffuse="">Skip/startover.png</texturenofocus>
             <label>[B]Start Over?[/B]</label>
             <font>font_clock</font>
             <textcolor>FFFFFFFF</textcolor>

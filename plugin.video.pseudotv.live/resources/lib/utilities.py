@@ -101,19 +101,21 @@ class Utilities:
         except: param = None
         self.log('run, param = %s'%(param))
         
-        if isBusy():
-            self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return openAddonSettings()
+        if not isBusy():
+            if    param is None: self.buildMenu(param)
+            elif  param == 'Show_Readme':       showReadme()
+            elif  param == 'Show_Changelog':    showChangelog()
+            elif  param == 'User_Groups':       self.userGroups()
+            elif  param == 'Clear_Import':      self.clearImport()
+            elif  param == 'Install_Resources': chkResources()
+            else: 
+                with busy_dialog():
+                    PROPERTIES.setProperty('utilities',param)
+                    xbmc.Monitor().waitForAbort(5)
+        else: self.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        return openAddonSettings()
 
-        if    param is None: self.buildMenu(param)
-        elif  param == 'Show_Readme':       showReadme()
-        elif  param == 'Show_Changelog':    showChangelog()
-        elif  param == 'User_Groups':       self.userGroups()
-        elif  param == 'Clear_Import':      self.clearImport()
-        elif  param == 'Install_Resources': chkResources()
-        else: 
-            setUtilities(param)
-            
+                
 if __name__ == '__main__': Utilities(sys.argv).run()
     
     

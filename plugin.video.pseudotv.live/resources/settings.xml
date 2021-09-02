@@ -18,6 +18,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Channel_Manager)</data>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Backup_Channels" type="string" label="30200" help="30200" parent="Select_Channels">
@@ -35,7 +36,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Backup_Channels)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Recover_Channels" type="string" label="30216" help="30216" parent="Backup_Channels">
@@ -54,7 +55,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Recover_Channels)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 			</group>
@@ -116,7 +117,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, TV_Networks)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_TV_Shows" type="string" label="30003" help="30238">
@@ -135,7 +136,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, TV_Shows)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_TV_Genres" type="string" label="30004" help="30239">
@@ -154,7 +155,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, TV_Genres)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Movie_Genres" type="string" label="30005" help="30240">
@@ -173,7 +174,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Movie_Genres)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Movie_Studios" type="string" label="30007" help="30241">
@@ -192,7 +193,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Movie_Studios)</data>
-						<close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Mixed_Genres" type="string" label="30006" help="30242">
@@ -211,7 +211,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Mixed_Genres)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Mixed" type="string" label="30080" help="30243">
@@ -230,7 +230,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Mixed)</data>
-						<close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Music_Genres" type="string" label="30097" help="30244">
@@ -249,7 +248,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Music_Genres)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Recommended" type="string" label="30023" help="30245">
@@ -268,7 +267,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Recommended)</data>
-						<close>true</close>
 					</control>
 				</setting>
                 <setting id="Select_Imports" type="string" label="30150" help="30246">
@@ -287,7 +285,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Imports)</data>
-						<close>true</close>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Refresh_Manager" type="string" label="30182" help="30247" parent="Select_Imports">
@@ -314,7 +312,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(service.iptv.manager,refresh)</data>
-						<close>true</close>
 					</control>
 				</setting>
                 <setting id="Clear_BlackList" type="string" label="30154" help="30249" parent="Select_Imports">
@@ -385,7 +382,6 @@
 						<dependency type="visible">
 							<and>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -406,7 +402,6 @@
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">0</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -425,7 +420,6 @@
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">1</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -446,7 +440,6 @@
 						<dependency type="visible">
 							<and>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -467,7 +460,6 @@
 							<and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">0</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -486,7 +478,6 @@
                             <and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">1</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -504,7 +495,6 @@
 						<dependency type="visible">
                             <and>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -522,7 +512,6 @@
 						<dependency type="visible">
                             <and>
                                 <condition operator="is" setting="User_Import">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -582,7 +571,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, User_Groups)</data>
-						<close>true</close>
+                        <close>false</close>
 					</control>
 				</setting>
 				<setting id="Enable_Recommended" type="boolean" label="30148" help="30270">
@@ -702,7 +691,7 @@
 					<level>2</level>
 					<default>98</default>
 					<constraints>
-						<minimum>85</minimum>
+						<minimum>98</minimum>
 						<step>5</step>
 						<maximum>100</maximum>
 					</constraints>
@@ -727,6 +716,19 @@
                             </and>
 						</dependency>
 					</dependencies>
+					<control type="slider" format="integer">
+						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="Min_Days" type="integer" label="30334" help="30335">
+					<level>2</level>
+                    <enable>false</enable>
+					<default>1</default>
+					<constraints>
+						<minimum>1</minimum>
+						<step>1</step>
+						<maximum>3</maximum>
+					</constraints>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -1016,7 +1018,7 @@
 				</setting>
 				<setting id="Resource_Bumpers" type="list[addon]" label="30068" help="">
 					<level>2</level>
-					<default>resource.videos.bumpers.sample|resource.videos.bumpers.pseudotv</default>
+					<default>resource.videos.bumpers.pseudotv|resource.videos.bumpers.sample</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -1089,7 +1091,10 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition on="property" name="InfoBool">!System.HasAddon(script.kodi.loguploader)</condition>
+							<and>
+                                <condition operator="is" setting="Enable_Debugging">true</condition>
+                                <condition on="property" name="InfoBool">!System.HasAddon(script.kodi.loguploader)</condition>
+							</and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
@@ -1105,7 +1110,10 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-							<condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
+							<and>
+                                <condition operator="is" setting="Enable_Debugging">true</condition>
+                                <condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
+							</and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
@@ -1130,7 +1138,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py)</data>
-						<close>true</close>
 					</control>
 				</setting>
 			</group>

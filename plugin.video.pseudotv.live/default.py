@@ -29,7 +29,7 @@ def run(sysARG):
     id      = (params.get("id",'')            or None)
     mode    = (params.get("mode",'')          or 'guide')
     radio   = (params.get("radio",'')         or 'False').lower() == "true"
-    log("Default: run, Name = %s, Channel = %s, URL = %s, ID = %s, Radio = %s, Mode = %s"%(name,channel,url,id,radio,mode))
+    log("Default: run, params = %s"%(params))
 
     if   mode == 'guide':    loadGuide()
     elif mode == 'settings': openAddonSettings()

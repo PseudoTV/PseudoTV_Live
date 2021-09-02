@@ -173,7 +173,7 @@ msgid "Pagination Size"
 msgstr ""
 
 msgctxt "#30039"
-msgid "Future days to build"
+msgid "Future days to build (PVR & LiveTV Setting)."
 msgstr ""
 
 msgctxt "#30040"
@@ -533,7 +533,7 @@ msgid "Clear this Channels Configurations"
 msgstr ""
 
 msgctxt "#30129"
-msgid "Adjust Seek Threshold (Percent)"
+msgid "Adjust Seek Threshold (Percentage)"
 msgstr ""
 
 msgctxt "#30130"
@@ -793,7 +793,7 @@ msgid "Installing"
 msgstr ""
 
 msgctxt "#30194"
-msgid "[COLOR=red][B]Warning!! [/B]It's strongly recommend users using Flash/SSD change path to HDD.[/COLOR]"
+msgid "[COLOR=red][B]Warning!! [/B]Recommend users using Flash/SSD change path to HDD or RAMDISK.[/COLOR]"
 msgstr ""
 
 msgctxt "#30195"
@@ -949,7 +949,7 @@ msgid "Adjust (in seconds) to ignore differentials between load times and live o
 msgstr ""
 
 msgctxt "#30233"
-msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [85% Default] / [100% Disables]. *see readme for details."
+msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see readme for details."
 msgstr ""
 
 msgctxt "#30234"
@@ -997,11 +997,11 @@ msgid "AutoTune from Pre-defined Music Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#30245"
-msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#30246"
-msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#30247"
@@ -1093,7 +1093,7 @@ msgid "Required for debugging operations."
 msgstr ""
 
 msgctxt "#30270"
-msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not reasonable for the content provided by third-party plugins."
+msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#30271"
@@ -1141,7 +1141,7 @@ msgid "Idle Timer"
 msgstr ""
 
 msgctxt "#30282"
-msgid "Stop Playback when Idle for x Hours"
+msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdown."
 msgstr ""
 
 msgctxt "#30283"
@@ -1344,3 +1344,10 @@ msgctxt "#30332"
 msgid "Checking AutoTune"
 msgstr ""
 
+msgctxt "#30334"
+msgid "Past days to include (PVR & LiveTV Setting)."
+msgstr ""
+
+msgctxt "#30335"
+msgid "Configure 'Past days to display' in Kodi PVR & LiveTV settings. (1-day Recommended)."
+msgstr ""

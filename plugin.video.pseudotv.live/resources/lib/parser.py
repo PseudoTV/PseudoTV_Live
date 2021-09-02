@@ -386,12 +386,11 @@ class Writer:
 
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        if isClient(): return
+        if isClient(): return self.dialog.notificationDialog(LANGUAGE(30288))
         with busy_dialog():
             items = self.library.getLibraryItems(type)
             if not items:
                 self.dialog.notificationDialog(LANGUAGE(30103)%(type))
-                setBusy(False)
                 return
                 
             listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)

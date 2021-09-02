@@ -86,7 +86,9 @@ class Overlay(xbmcgui.WindowXML):
             self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
             self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
             
-            self.overlayToggle(False)
+            self.overlayLayer   = self.getControl(39999)
+            self.overlayLayer.setVisible(False)
+            
             self.container = self.getControl(40000)
             
             self.static = self.getControl(40001)
@@ -106,13 +108,17 @@ class Overlay(xbmcgui.WindowXML):
         
             # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
             # https://github.com/xbmc/xbmc/issues/19467
-            # self.videoWindow = self.getControl(41000)
+            # self.videoWindow  = self.getControl(41000)
             # self.videoWindow.setPosition(0, 0)
             # self.videoWindow.setHeight(self.videoWindow.getHeight())
             # self.videoWindow.setWidth(self.videoWindow.getWidth())
+            # self.videoOverlay = self.getControl(41005)
+            # self.videoOverlay.setPosition(0, 0)
+            # self.videoOverlay.setHeight(0)
+            # self.videoOverlay.setWidth(0)
             
             if self.load(): 
-                self.overlayToggle(True)
+                self.overlayLayer.setVisible(True)
                 if self.showChannelBug: self.bugToggle() #start bug timer
                 if self.showOnNext: self.onNextChk()#start onnext timer
             else: 
@@ -120,18 +126,6 @@ class Overlay(xbmcgui.WindowXML):
         except Exception as e: 
             self.log("onInit, Failed! " + str(e), xbmc.LOGERROR)
             self.closeOverlay()
-
-
-    def overlayToggle(self, state=True):
-        try:
-            self.log('overlayToggle, state = %s'%(state))
-            self.getControl(39999).setVisible(state)
-        except Exception as e: self.log("overlayToggle, Failed! " + str(e), xbmc.LOGERROR)
-        
-
-    def isoverlayVisible(self):
-        try:    return self.getControl(39999).isVisible()
-        except: return False
 
 
     def load(self):
@@ -225,7 +219,7 @@ class Overlay(xbmcgui.WindowXML):
                     self.onNextChkThread.join()
                 except: pass
             
-            if self.onNextToggleThread.is_alive() and not self.isoverlayVisible(): 
+            if self.onNextToggleThread.is_alive() and not self.overlayLayer.isVisible(): 
                 self.cancelOnNext()
             elif not self.onNextToggleThread.is_alive() and self.playerAssert():
                 self.onNextToggle()
@@ -271,7 +265,7 @@ class Overlay(xbmcgui.WindowXML):
                 offVAL = random.randint(300,600)
             else:
                 onVAL  = bugVal * 60
-                offVAL = onVAL
+                offVAL = round(onVAL // 2)
  
             wait = {True:float(onVAL),False:float(offVAL)}[state]
             self.log('bugToggle, state = %s, wait = %s'%(state,wait))
@@ -288,8 +282,9 @@ class Overlay(xbmcgui.WindowXML):
         threads = [self.bugToggleThread,self.onNextChkThread,self.onNextToggleThread]
         for thread_item in threads:
             if thread_item.is_alive(): 
-                thread_item.cancel()
-                try: thread_item.join(1.0)
+                try: 
+                    thread_item.cancel()
+                    thread_item.join(1.0)
                 except: pass
         self.close()
 
@@ -307,27 +302,6 @@ class Overlay(xbmcgui.WindowXML):
             # xbmc.executebuiltin("Action(Info)")
             
         # elif actionid == ACTION_SELECT_ITEM:
-            # if not self.openWindow('videoosd'): 
+            # if not self.service.writer.jsonRPC.openWindow('videoosd'): 
                 # return
         self.closeOverlay()
-
-        
-    def sendButton(self, id):
-        self.log('sendButton, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"Input.ButtonEvent","params":{"button":"%s","keymap":"KB"},"id":1}'%id)
-        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
-            return True
-        
-        
-    def sendAction(self, id):
-        self.log('sendAction, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"%s"},"id":1}'%id)
-        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
-            return True  
-            
-            
-    def openWindow(self, id):
-        self.log('openWindow, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
-        if 'OK' in self.service.writer.jsonRPC.sendJSON(json_query).get('result',''): 
-            return True

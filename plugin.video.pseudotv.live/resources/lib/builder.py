@@ -36,6 +36,10 @@ class Builder:
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         
+        self.progress         = 0
+        self.channelCount     = 0
+        self.chanName         = ''
+        self.chanError        = []
         self.ruleList         = {}
         self.filter           = {}
         self.sort             = {}
@@ -43,10 +47,6 @@ class Builder:
         self.loopback         = {}
         self.limit            = PAGE_LIMIT
         self.progDialog       = None
-        self.progress         = 0
-        self.channelCount     = 0
-        self.chanName         = ''
-        self.chanError        = []
         self.diaMSG           = LANGUAGE(30051)
         
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
@@ -74,7 +74,7 @@ class Builder:
         #check channel configuration, verify and update paths, logos.
         items = self.writer.channels.getChannels()
         for idx, item in enumerate(items):
-            if self.writer.monitor.waitForAbort(0.001): break
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened(): break
             if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
                 self.log('verifyChannelItems, skipping, missing channel path and/or channel name\n%s'%(item))
                 continue
@@ -118,7 +118,7 @@ class Builder:
         self.log('buildService, endTimes = %s'%(endTimes))
 
         for idx, channel in enumerate(channels):
-            if self.writer.monitor.waitForAbort(0.001): 
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened():
                 self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
                 self.log('buildService, interrupted')
                 return
@@ -345,7 +345,7 @@ class Builder:
         else:
             self.chanError.append(LANGUAGE(30317))
             
-        for idx, item in enumerate(json_response):
+        for idx, item in enumerate(json_response) or self.writer.monitor.isSettingsOpened():
             if self.writer.monitor.waitForAbort(0.001): break
 
             file     = item.get('file','')

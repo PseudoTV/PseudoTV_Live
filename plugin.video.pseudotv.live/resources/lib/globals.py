@@ -394,13 +394,31 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
+def isSettingDialog():
+    return (PROPERTIES.getPropertyBool('addonsettings') or xbmc.getCondVisibility("Window.IsVisible(addonsettings)"))
+    
+def setSettingDialog(state=True):
+    return PROPERTIES.setPropertyBool('addonsettings',state)
+    
+def isSelectDialog():
+    return (PROPERTIES.getPropertyBool('selectdialog') or xbmc.getCondVisibility("Window.IsVisible(selectdialog)"))
+
+def setSelectDialog(state=True):
+    return PROPERTIES.setPropertyBool('selectdialog',state)
+
+def isYesNoDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(yesnodialog)"))
+    
+def isKeyboardDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(virtualkeyboard)"))
+    
+def isFileDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(filebrowser)"))
+    
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
     PROPERTIES.clearProperty('utilities')
     return param
-    
-def setUtilities(key):
-    return PROPERTIES.setProperty('utilities',key)
 
 def isRestartRequired():
     state = PROPERTIES.getPropertyBool('restartRequired')
@@ -536,7 +554,6 @@ def openAddonSettings(ctl=(1,1),id=ADDON_ID):
     xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]+100))
     xbmc.sleep(100)
     xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]+80))
-    return True
    
 def getPluginMeta(id):
     try:

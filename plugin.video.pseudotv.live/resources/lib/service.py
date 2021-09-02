@@ -274,17 +274,8 @@ class Monitor(xbmc.Monitor):
         self.log("onNotification, sender %s - method: %s  - data: %s" % (sender, method, data))
             
             
-    def isSettingsOpened(self, aggressive=True):
-        windowIDS     = [ADDON_SETTINGS]
-        currentWindow = xbmcgui.getCurrentWindowDialogId()
-        if aggressive: windowIDS.extend([ADDON_DIALOG,FILE_MANAGER,YESNO_DIALOG,VIRTUAL_KEYBOARD,CONTEXT_MENU,
-                                         NUMERIC_INPUT,FILE_BROWSER,BUSY_DIALOG,BUSY_DIALOG_NOCANCEL,SELECT_DIALOG,OK_DIALOG])
-                                         
-        if currentWindow in windowIDS:
-            if currentWindow == ADDON_SETTINGS:
-                self.onSettingsChanged()
-            return True
-        return False
+    def isSettingsOpened(self):
+        return (isSettingDialog() | isSelectDialog() | isManagerRunning())
 
 
     def onSettingsChanged(self, wait=30.0):
@@ -318,11 +309,12 @@ class Monitor(xbmc.Monitor):
         self.log('chkSettings')
         PROPERTIES.setPropertyInt('Idle_Timer',SETTINGS.getSettingInt('Idle_Timer'))
         PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingBool('Enable_Client'))
+        SETTINGS.setSettingInt('Min_Days',(self.myService.writer.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or SETTINGS.getSetting('Min_Days')))
         SETTINGS.setSettingInt('Max_Days',(self.myService.writer.jsonRPC.getSettingValue('epg.futuredaystodisplay') or SETTINGS.getSetting('Max_Days')))
         #priority settings that trigger chkUpdate on change.
         #todo chk resource addon installed after change:
         # ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
-        
+        #todo proxy changes between ptvl and kodi pvr (past/future days) settings.
         return {'User_Import'         :{'setting':SETTINGS.getSetting('User_Import')         ,'action':None},
                 'Enable_Client'       :{'setting':SETTINGS.getSetting('Enable_Client')       ,'action':setRestartRequired},
                 'Import_M3U_TYPE'     :{'setting':SETTINGS.getSetting('Import_M3U_TYPE')     ,'action':None},
@@ -340,7 +332,9 @@ class Monitor(xbmc.Monitor):
                 'Select_Mixed'        :{'setting':SETTINGS.getSetting('Select_Mixed')        ,'action':None},
                 'Select_Music_Genres' :{'setting':SETTINGS.getSetting('Select_Music_Genres') ,'action':None},
                 'Select_Recommended'  :{'setting':SETTINGS.getSetting('Select_Recommended')  ,'action':None},
-                'Select_Imports'      :{'setting':SETTINGS.getSetting('Select_Imports')      ,'action':None}}
+                'Select_Imports'      :{'setting':SETTINGS.getSetting('Select_Imports')      ,'action':None},
+                'Min_Days'            :{'setting':SETTINGS.getSetting('Min_Days')            ,'action':None},
+                'Max_Days'            :{'setting':SETTINGS.getSetting('Max_Days')            ,'action':None}}
         
         
     def hasSettingsChanged(self): 
@@ -411,7 +405,7 @@ class Service:
                 
     def runServiceThread(self):
         if   isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
-        elif isClient(): self.startServiceThread(900.0) #wait and call again if isClient changes.
+        elif isClient(): return self.startServiceThread(600.0) #wait and call again if isClient changes.
         self.log('runServiceThread')
         setPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
@@ -451,7 +445,7 @@ class Service:
     def chkIdle(self):
         idleTime  = getIdleTime()
         sleepTime = PROPERTIES.getPropertyInt('Idle_Timer')
-        if self.player.isPseudoTV and sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments
+        if isPseudoTV() and sleepTime > 0 and idleTime > (sleepTime * 10800): #3hr increments
             if self.player.triggerSleep(): return
         
         if  idleTime > OVERLAY_DELAY:
@@ -523,7 +517,7 @@ class Service:
             return True
 
          
-    def run(self, silent=False):
+    def run(self):
         self.log('run')
         doRestart = False
         setBusy(False) #reset value on 1st run.
@@ -538,6 +532,8 @@ class Service:
         while not self.monitor.abortRequested():
             isMaster  = not isClient()
             doRestart = isRestartRequired()
+            setSelectDialog(xbmc.getCondVisibility("Window.IsVisible(selectdialog)"))
+            setSettingDialog(xbmc.getCondVisibility("Window.IsVisible(addonsettings)"))
                         
             if   self.writer.dialog.chkInfoMonitor():       continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
@@ -546,8 +542,7 @@ class Service:
             if   self.player.isPlaying(): self.chkIdle()
             elif isMaster:                self.chkRecommended()
                       
-            if   isBusy():                        continue
-            elif self.monitor.isSettingsOpened(): continue
+            if   isBusy() or self.monitor.isSettingsOpened(): continue
             elif isMaster: self.chkUpdate()
                 
         self.closeThreads()

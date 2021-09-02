@@ -98,7 +98,7 @@ class Resources:
         dirs, files = self.jsonRPC.getListDirectory(path,checksum,expiration)
         if self.TEXTURES in files: return _parseXBT()
         else: walk.setdefault(path,[]).extend(list(filter(lambda f:f.endswith(self.IMG_EXTS),files)))
-        for dir in dirs: walk.update(self.walkDirectory(os.path.join(path, dir)))
+        for dir in dirs: walk.update(self.walkDirectory(os.path.join(path, dir),checksum))
         return walk
             
             
