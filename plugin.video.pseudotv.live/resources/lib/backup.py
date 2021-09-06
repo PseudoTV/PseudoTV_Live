@@ -47,9 +47,7 @@ class Backup:
     def hasBackup(self):
         self.log('hasBackup')
         with busy():
-            if isClient(): 
-                self.writer.dialog.notificationDialog(LANGUAGE(30288))
-                return False
+            if isClient(): return False
             elif FileAccess.exists(CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
                 if not SETTINGS.getSetting('Backup_Channels'):

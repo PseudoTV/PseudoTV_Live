@@ -2,6 +2,7 @@ v.0.3.3
 -Fixed sleep idle timer.
 -Tweaked background service.
 -Improved Smartplaylist parsing.
+-Improved importing third-party xmltv meta.
 
 v.0.3.2
 -Added channel building error notification.

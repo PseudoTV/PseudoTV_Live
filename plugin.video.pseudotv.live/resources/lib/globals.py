@@ -205,7 +205,7 @@ def log(msg, level=xbmc.LOGDEBUG):
 def getUserFilePath(file=None):
     path = SETTINGS.getSetting('User_Folder')
     if not FileAccess.exists(path):
-        Dialog().notificationDialog(LANGUAGE(30326))
+        if not Dialog().yesnoDialog((LANGUAGE(30326)%path), autoclose=15000): return
         path = SETTINGS_LOC
         SETTINGS.setSetting('User_Folder',path)
     if file: return os.path.join(path,file)
@@ -314,7 +314,7 @@ def moveUser(oldFolder, newFolder): #todo finish
     CACHE_LOC = os.path.join(getUserFilePath(),'cache')
     log('globals: moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
     MoveLST = [CACHE_LOC,M3UFLE,XMLTVFLE,CHANNELFLE,LIBRARYFLE,GENREFLE]
-    if not Dialog().yesnoDialog('Centralized file location changed from\n%s to\%s move files?'%(oldFolder,newFolder)): return
+    if not Dialog().yesnoDialog(LANGUAGE(30336)%(oldFolder,newFolder)): return
     dia = Dialog().progressDialog(message='Preparing to move files...')
     for idx, file in enumerate(MoveLST):
         pnt = int(((idx+1)*100)//len(MoveLST))
@@ -485,7 +485,7 @@ def hasAddon(id):
     if not id: return True
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
-def hasVersionChanged(cleanStart=False):
+def hasVersionChanged():
     lastVersion = (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0')
     if ADDON_VERSION != lastVersion:
         SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)

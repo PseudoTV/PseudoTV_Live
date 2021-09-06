@@ -195,31 +195,40 @@ class XMLTV:
         return programmes
 
 
-    def importXMLTV(self, file, filters={}):
-        self.log('importXMLTV, file = %s, filters = %s'%(file,filters))
+    def importXMLTV(self, file, m3uChannels={}):
+        self.log('importXMLTV, file = %s, m3uChannels = %s'%(file,len(m3uChannels)))
+        def matchChannel(m3u):
+            for channel in channels:
+                try: 
+                    if m3u['id'] == channel['id']: return channel
+                except: pass
+            
+        def matchProgram(channel):
+            for program in importProgrammes:
+                try: 
+                    if channel['id'] == program['channel']: return program
+                except: pass
+            
         try:
             if file.startswith('http'):
                 url  = file
                 file = os.path.join(TEMP_LOC,'%s.xml'%(slugify(url)))
                 saveURL(url,file)
                 
-                
             importChannels, importProgrammes = [],[]
             channels, programmes = self.loadChannels(file), self.loadProgrammes(file)
             
-            for key, value in filters.items():
-                if key == 'slug' and value:
-                    importChannels, importProgrammes = self.cleanSelf(channels,'id',value), self.cleanSelf(programmes,'channel',value)
-            
-            #currently no provider filter for xmltv, include all guide meta; let m3u filter by provider.
-            if not importChannels and importProgrammes: 
-                importChannels, importProgrammes = channels, programmes
+            if m3uChannels: #filter imported programmes by m3u channels.
+                importChannels   = self.writer.pool.poolList(matchChannel,m3uChannels)
+                importProgrammes = self.writer.pool.poolList(matchProgram,importChannels)
+            else: #no filter, import everything!
+                importChannels   = channels
+                importProgrammes = programmes
                 
             importChannels, importProgrammes = self.chkImport(importChannels, importProgrammes)
             self.log('importXMLTV, found importChannels = %s, importProgrammes = %s'%(len(importChannels),len(importProgrammes)))
             self.writer.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
             self.writer.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
-                            
         except Exception as e: self.log("importXMLTV, failed! " + str(e), xbmc.LOGERROR)
         return True
 

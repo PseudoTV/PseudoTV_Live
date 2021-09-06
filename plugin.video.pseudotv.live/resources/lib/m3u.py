@@ -108,7 +108,8 @@ class M3U:
                              'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
                              'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
                              'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
-                             'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line)}
+                             'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line),
+                             'provider-countries':re.compile('provider-countries=\"(.*?)\"' , re.IGNORECASE).search(line)}
                     
                     item = self.writer.channels.getCitem()
                     item.update({'number' :chCount,
@@ -161,7 +162,6 @@ class M3U:
                         
                     self.log('loadM3U, item = %s'%item)
                     yield item
-        yield {}
         
 
     def saveM3U(self):
@@ -224,14 +224,13 @@ class M3U:
     def importM3U(self, file, filters={}, multiplier=1):
         self.log('importM3U, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))
         try:
+            importChannels = []
             if file.startswith('http'):
                 url  = file
                 file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
                 saveURL(url,file)
                 
-            importChannels = []
             channels = self.loadM3U(file)
-            
             for key, value in filters.items():
                 if key == 'slug' and value:
                     importChannels.extend(self.cleanSelf(channels,'id',value))
@@ -240,15 +239,12 @@ class M3U:
                         importChannels.extend(self.cleanSelf(channels,'provider',provider))
             
             #no filter found, import all channels.
-            if not importChannels: 
-                importChannels.extend(channels)
-                
-            importChannels = list(self.chkImport(importChannels,multiplier))
+            if not importChannels: importChannels.extend(channels)
+            importChannels = self.sortStations(list(self.chkImport(importChannels,multiplier)))
             self.log('importM3U, found import stations = %s'%(len(importChannels)))
-            self.writer.vault.m3uList.get('channels',[]).extend(self.sortStations(importChannels))
-                
+            self.writer.vault.m3uList.get('channels',[]).extend(importChannels)
         except Exception as e: self.log("importM3U, failed! " + str(e), xbmc.LOGERROR)
-        return True
+        return importChannels
         
         
     def chkImport(self, channels, multiplier=1):

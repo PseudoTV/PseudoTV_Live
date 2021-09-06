@@ -129,7 +129,7 @@ msgid "Channel Manager"
 msgstr ""
 
 msgctxt "#30028"
-msgid "Centralize file location"
+msgid "Centralized file location"
 msgstr ""
 
 msgctxt "#30029"
@@ -1317,7 +1317,7 @@ msgid "No Logo Found!"
 msgstr "" 
 
 msgctxt "#30326"
-msgid "Centralize file location not found, please reconfigure!"
+msgid "Centralized file location is unavailable\n%s\nWould you like to restore the default location?"
 msgstr "" 
 
 msgctxt "#30327"
@@ -1350,4 +1350,8 @@ msgstr ""
 
 msgctxt "#30335"
 msgid "Configure 'Past days to display' in Kodi PVR & LiveTV settings. (1-day Recommended)."
+msgstr ""
+
+msgctxt "#30336"
+msgid "Change centralized file location & move files?\nOld:%s\nNew:%s"
 msgstr ""

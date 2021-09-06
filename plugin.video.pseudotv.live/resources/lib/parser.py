@@ -93,9 +93,7 @@ class Writer:
                 filters  = {'slug'     :importItem.get('m3u',{}).get('slug',''),
                             'providers':importItem.get('m3u',{}).get('provider',[])}
                             
-                self.m3u.importM3U(m3ufle,filters,multiplier=idx)
-                self.xmltv.importXMLTV(xmlfle,filters)
-                
+                self.xmltv.importXMLTV(xmlfle,self.m3u.importM3U(m3ufle,filters,multiplier=idx))
                 if self.builder.progDialog is not None:
                     self.builder.progress += .1
                     self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
@@ -346,13 +344,13 @@ class Writer:
     def autoTune(self):
         if (isClient() | hasAutotuned()): return False #already ran or dismissed by user, check on next reboot.
         elif self.backup.hasBackup():
-            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211))
+            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=15000)
             if   retval == 2: return self.recoverChannelsFromBackup()
             elif retval != 1:
                 setAutoTuned()
                 return False
         else:
-            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286))): 
+            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=15000): 
                 setAutoTuned()
                 return False
        

@@ -500,7 +500,6 @@ class Service:
             self.writer.backup.recoverChannels()
         else:
             self.writer.selectPredefined(param.replace('_',' '))
-        openAddonSettings()
         
             
     def initialize(self):
