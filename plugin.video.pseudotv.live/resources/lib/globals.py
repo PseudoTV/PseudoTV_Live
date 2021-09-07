@@ -110,6 +110,7 @@ EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 OVERLAY_DELAY       = 15    #secs
 PROMPT_DELAY        = 4000  #msecs
 
+TIME_CHECK          = 90
 UPDATE_OFFSET       = 10800 #3hr in secs.
 LIBRARY_OFFSET      = 3600
 RECOMMENDED_OFFSET  = 900   #15mins in secs.

@@ -263,6 +263,8 @@ class Monitor(xbmc.Monitor):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
         self.lastSettings   = {}
+        self.lastTime       = None
+        
         self.onChangeThread = threading.Timer(30.0, self.onChange)
         
         
@@ -441,6 +443,15 @@ class Service:
             self.chkRecommended(lastUpdate=0)#Force Check with lastUpdate=0
             self.writer.library.fillLibraryItems()
 
+        
+    def chkTime(self, lastTime=None): #todo func. to catch daylight savings and correct Kodi PVR Time.
+        # lastTime = (self.monitor.lastTime or nowTime)
+        nowTime = time.time()
+        if lastTime is None: lastTime = nowTime
+        timeDiff = (nowTime - lastTime)
+        if timeDiff > (TIME_CHECK) or timeDiff < 0: brutePVR()
+        self.monitor.lastTime = nowTime
+        
         
     def chkIdle(self):
         idleTime  = getIdleTime()
