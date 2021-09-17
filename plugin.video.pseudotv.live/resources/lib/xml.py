@@ -324,7 +324,7 @@ class XMLTV:
                      'display-name' : [(self.cleanString(item['name']), LANG)],
                      'icon'         : [{'src':item['logo']}]})
         self.log('addChannel, citem = %s'%(citem))
-        idx, channel = self.findChannel(citem, channels=self.writer.vault.xmltvList['channels'])
+        idx, channel = self.writer.findChannel(citem, channels=self.getChannels())
         if idx is None: self.writer.vault.xmltvList['channels'].append(citem)
         else: self.writer.vault.xmltvList['channels'][idx] = citem # replace existing channel meta
         return True
@@ -415,14 +415,6 @@ class XMLTV:
         self.writer.vault.xmltvList['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
         self.log('removeBroadcasts, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.writer.vault.xmltvList['channels']),len(programmes),len(self.writer.vault.xmltvList['programmes'])))
         return True
-        
-        
-    def findChannel(self, citem, channels=None): #find existing channel id in xmltvList
-        if channels is None: channels = self.writer.vault.xmltvList['channels']
-        for idx, channel in enumerate(channels): 
-            if channel.get('id') == citem.get('id'): 
-                return idx, channel
-        return None, {}
 
 
     @staticmethod

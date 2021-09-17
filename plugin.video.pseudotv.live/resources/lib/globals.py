@@ -206,26 +206,43 @@ def log(msg, level=xbmc.LOGDEBUG):
 def getUserFilePath(file=None):
     path = SETTINGS.getSetting('User_Folder')
     if not FileAccess.exists(path):
-        if not Dialog().yesnoDialog((LANGUAGE(30326)%path), autoclose=15000): return
-        path = SETTINGS_LOC
-        SETTINGS.setSetting('User_Folder',path)
+        if not Dialog().yesnoDialog((LANGUAGE(30326)%path), autoclose=90000): 
+            return sys.exit("User_Folder Unavailable")
+        else:
+            path = SETTINGS_LOC
+            SETTINGS.setSetting('User_Folder',path)
     if file: return os.path.join(path,file)
     else:    return path
 
 def getPVRSettings():
-    return {'m3uRefreshMode':'1','m3uRefreshIntervalMins':'10','m3uRefreshHour':'0',
-            'logoPathType':'0','logoPath':os.path.join(getUserFilePath(),'cache','logos'),
-            'm3uPathType':'0','m3uPath':getUserFilePath(M3UFLE),
-            'epgPathType':'0','epgPath':getUserFilePath(XMLTVFLE),
-            'genresPathType':'0','genresPath':getUserFilePath(GENREFLE),
-            # 'tvGroupMode':'0','customTvGroupsFile':getUserFilePath(TVGROUPFLE),#todo
-            # 'radioGroupMode':'0','customRadioGroupsFile':getUserFilePath(RADIOGROUPFLE),#todo
-            'enableProviderMappings':'true','defaultProviderName':ADDON_NAME,'providerMappingFile':getUserFilePath(PROVIDERFLE),#todo
-            'useEpgGenreText':'true', 'logoFromEpg':'1',
-            'catchupEnabled':'true','allChannelsCatchupMode':'0',
-            'numberByOrder':'false','startNum':'1',
-            'epgTimeShift':'0','epgTSOverride':'false',
-            'useFFmpegReconnect':'true','useInputstreamAdaptiveforHls':'true'}
+    return {'m3uRefreshMode'              :'1',
+            'm3uRefreshIntervalMins'      :'10',
+            'm3uRefreshHour'              :'0',
+            'logoPathType'                :'0',
+            'logoPath'                    :os.path.join(getUserFilePath(),'cache','logos'),
+            'm3uPathType'                 :'0',
+            'm3uPath'                     :getUserFilePath(M3UFLE),
+            'epgPathType'                 :'0',
+            'epgPath'                     :getUserFilePath(XMLTVFLE),
+            'genresPathType'              :'0',
+            'genresPath'                  :getUserFilePath(GENREFLE),
+            # 'tvGroupMode'                 :'0',
+            # 'customTvGroupsFile'          :getUserFilePath(TVGROUPFLE),#todo
+            # 'radioGroupMode'              :'0',
+            # 'customRadioGroupsFile'       :getUserFilePath(RADIOGROUPFLE),#todo
+            'enableProviderMappings'      :'true',
+            'defaultProviderName'         :ADDON_NAME,
+            'providerMappingFile'         :getUserFilePath(PROVIDERFLE),#todo
+            'useEpgGenreText'             :'true',
+            'logoFromEpg'                 :'1',
+            'catchupEnabled'              :'true',
+            'allChannelsCatchupMode'      :'0',
+            'numberByOrder'               :'false',
+            'startNum'                    :'1',
+            'epgTimeShift'                :'0',
+            'epgTSOverride'               :'false',
+            'useFFmpegReconnect'          :'true',
+            'useInputstreamAdaptiveforHls':'true'}
                     
 @contextmanager
 def fileLocker(globalFileLock):
@@ -742,39 +759,20 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
                     match(item.getLabel2(),value)
             elif isinstance(item,dict):       
                 match(item.get(item_key,''),value)
-            else:                             
+            else: 
                 match(item,value)
-                
     log("findItemsInLST, matches = %s"%(matches))
     return matches
 
-def diffLST(old, new): 
-    return list(set(old) - set(new))
-    
-def diffLSTDICT(old,new):
-    return [i for i in old + new if i not in old or i not in new]
-    
-def diffDICT(old,new):
-    #(dict(diffDICT(old,new)))
-    intersec = list(set(list(old.keys()) +  list(new.keys())))
-    for inter in intersec:
-        if (hasattr(old.get(inter),'get')):
-            diff = (dict((set(chain(old.get(inter,{}).items(),new.get(inter,{}).items())) - set(old.get(inter,{}).items()))) or None)
-        else:
-            diff = (list((set(chain(old.get(inter,''),new.get(inter,''))) - set(old.get(inter,'')))) or None)
-        if diff: 
-            yield inter,diff
-
-def mergeDICT(dict1, dict2):
-    return [{**u, **v} for u, v in zip_longest(dict1, dict2, fillvalue={})]
-
-def removeDupDictFromList(list):
-    return [i for n, i in enumerate(list) if i not in list[n + 1:]]
-
 def setDictLST(lst):
-    sLST = [dumpJSON(d) for d in lst]
-    sLST = set(sLST)
-    return [loadJSON(s) for s in sLST]
+    sLST = set([dumpJSON(e) for e in lst])
+    return [loadJSON(e) for e in sLST]
+
+def diffLSTDICT(old, new):
+    sOLD = set([dumpJSON(e) for e in old])
+    sNEW = set([dumpJSON(e) for e in new])
+    sDIFF = sOLD.symmetric_difference(sNEW)
+    return setDictLST([loadJSON(e) for e in sDIFF])
 
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)

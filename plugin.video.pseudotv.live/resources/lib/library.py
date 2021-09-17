@@ -136,10 +136,8 @@ class Library:
         if items is None: items = self.getLibraryItems(type)
         self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
         for idx, item in enumerate(items):
-            if idx in selects: 
-                item['enabled'] = True
-            else: 
-                item['enabled'] = False
+            if idx in selects: item['enabled'] = True
+            else:              item['enabled'] = False
         return self.setLibraryItems(type,items)
         
 
@@ -199,8 +197,8 @@ class Library:
 
     def fillLibraryItems(self):
         self.log('fillLibraryItems')
-        ## parse kodi for items, convert to library item, parse for changed logo and vfs path. save to library.json
-        def fillType(type, busy):
+        ## parse kodi for items, convert to library item, update logo,vfs path. save to library.json
+        def fillType(type, pDialog):
             items      = self.fillTypeItems(type)
             existing   = self.getLibraryItems(type)
             enabled    = self.getEnabledItems(existing)
@@ -222,9 +220,9 @@ class Library:
 
                 for idx, item in enumerate(items):
                     if self.writer.monitor.waitForAbort(0.001): return
-                    fill = int((idx*100)//len(items))
-                    prog = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
-                    busy = self.writer.dialog.progressBGDialog(prog, busy, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
+                    fill    = int((idx*100)//len(items))
+                    pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
+                    pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
                     
                     if isinstance(item,dict):
                         name = (item.get('name','') or item.get('label',''))
@@ -234,12 +232,12 @@ class Library:
                         if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
                             logo = item.get('icon','')
                         else: 
-                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item, lookup=True)
+                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item)
                     else: 
                         name = item
                         try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
                         except: enabled_item = {}
-                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item, lookup=True)
+                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item)
 
                     tmpItem = {'enabled':len(enabled_item) > 0,
                                'name':name,
@@ -259,14 +257,12 @@ class Library:
                 PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
                         
-        busy = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
-        
+        pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
         for type in CHAN_TYPES: 
-            fillType(type,busy)
+            fillType(type,pDialog)
             if self.writer.monitor.waitForAbort(0.001): return
-                
-        busy = self.writer.dialog.progressBGDialog(100, busy, message=LANGUAGE(30053))
-        return self.writer.buildPredefinedChannels()
+        self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
+        # return self.writer.buildPredefinedChannels()
         
 
     def buildLibraryListitem(self, data):
@@ -373,7 +369,7 @@ class Recommended:
             addon = list(item.keys())[0]
             self.log('importSingles, adding %s'%(addon))
             if not addon in ignoreList:
-                if not self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,item[addon]['meta'].get('name',''))), autoclose=15000):  
+                if not self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,item[addon]['meta'].get('name',''))), autoclose=90000):  
                     self.addBlackList(addon)
                 else:
                     self.addWhiteList(addon)
@@ -390,7 +386,7 @@ class Recommended:
                 addons.append(item[addon]['meta'].get('name',''))
         
         if len(addons) > 0:
-            retval = self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,', '.join(addons))), customlabel=LANGUAGE(30214), autoclose=15000)
+            retval = self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,', '.join(addons))), customlabel=LANGUAGE(30214), autoclose=90000)
             self.log('importMulti, retval = %s'%(retval))
             if   retval == 1: return self.importSingles(recommendedAddons)
             elif retval == 2: 

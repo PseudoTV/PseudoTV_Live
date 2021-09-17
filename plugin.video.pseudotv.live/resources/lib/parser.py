@@ -94,14 +94,22 @@ class Writer:
                             'providers':importItem.get('m3u',{}).get('provider',[])}
                             
                 self.xmltv.importXMLTV(xmlfle,self.m3u.importM3U(m3ufle,filters,multiplier=idx))
-                if self.builder.progDialog is not None:
-                    self.builder.progress += .1
-                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
+                if self.builder.pDialog is not None:
+                    self.builder.pCount += .1
+                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
                     self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
             except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
         return True
 
-
+    
+    def findChannel(self, citem, channels=[]):
+        for idx, eitem in enumerate(channels):
+            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type','').lower() == eitem.get('type',str(random.random())).lower() and citem.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
+                self.log('findChannel, found citem = %s'%(citem))
+                return idx, eitem
+        return None, {}
+        
+        
     def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
         self.log('removeChannelLineup, citem = %s'%(citem))
         self.m3u.removeStation(citem)
@@ -131,9 +139,9 @@ class Writer:
             self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
             for leftover in abandoned:
                 self.removeChannelLineup(leftover)
-                if self.builder.progDialog is not None:
-                    self.builder.progress += .1
-                    self.builder.progDialog = self.dialog.progressBGDialog(self.builder.progress, self.builder.progDialog, message=leftover.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30327)))
+                if self.builder.pDialog is not None:
+                    self.builder.pCount += .1
+                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=leftover.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30327)))
                     self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
         return True
 
@@ -205,21 +213,13 @@ class Writer:
         self.log('buildPredefinedChannels, types = %s'%(types))
         
         # convert enabled library.json into channels.json items
-        def findChannel(citem):
-            for idx, eitem in enumerate(echannels):
-                if (citem['id'] == eitem['id']) or (citem['type'].lower() == eitem['type'].lower() and citem['name'].lower() == eitem['name'].lower()):
-                    return idx, eitem
-            return None, {}
-                
         def buildAvailableRange(enumbers):
             # create number array for given type, excluding existing channel numbers.
             start = ((CHANNEL_LIMIT+1)*(CHAN_TYPES.index(type)+1))
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildPredefinedChannels, type = %s, range = %s-%s, enumbers = %s'%(type,start,stop,enumbers))
             return [num for num in range(start,stop) if num not in enumbers]
-                  
-        addLST    = self.channels.getUserChannels()
-        removeLST = []    
+                    
         for type in types:
             if self.monitor.waitForAbort(0.001): return
             items = self.library.getLibraryItems(type, enabled=True)
@@ -228,10 +228,11 @@ class Writer:
             if type == LANGUAGE(30033): #convert enabled imports to channel items.
                 self.channels.setImports(items)
             else:
-                echannels = list(filter(lambda k:k['type'] == type, self.channels.getPredefinedChannels()))    # existing channels, avoid duplicates, aid in removal.
+                echannels = self.channels.getPredefinedChannelsByType(type) # existing channels, avoid duplicates, aid in removal.
                 enumbers  = [echannel.get('number') for echannel in echannels if echannel.get('number',0) > 0] # existing channel numbers
-                numbers   = iter(buildAvailableRange(enumbers)) #list of available channel numbers 
-                removeLST.extend(echannels.copy())
+                numbers   = iter(buildAvailableRange(enumbers)) #list of available channel numbers
+                addLST    = []
+                removeLST = echannels.copy()
 
                 for item in items:
                     if self.monitor.waitForAbort(0.001): return
@@ -245,24 +246,21 @@ class Writer:
                     citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
                     citem['catchup'] = ('vod' if not citem['radio'] else '')
                     
-                    match, eitem = findChannel(citem)
-                    if match is not None: #update new citems with existing values.
-                        try:   removeLST.remove(eitem)
-                        except: pass
-                            
-                        for key in ['id','rules','number','favorite']: #transfer static channels states.
-                            citem[key] = eitem[key]
-                    else: #add new channel
+                    match, eitem = self.findChannel(citem,echannels)
+                    if match is None:#add new channel
                         citem['number'] = next(numbers,0)
                         citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])
+                    else:#update new citems with existing values.
+                        if eitem in removeLST: removeLST.remove(eitem)
+                        for key in ['id','rules','number','favorite']: citem[key] = eitem[key] #transfer static channels values.
                     addLST.append(citem)
                 
-        if len(addLST) > 0 and (addLST != removeLST):
-            difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
-            for citem in difference: #add new, remove old.
-                if   citem.get('number',0) < CHANNEL_LIMIT: continue #unnecessary check to enforce only changes to predefined channels.
-                elif citem in addLST: self.channels.addChannel(citem)
-                else:                 self.channels.removeChannel(citem)
+                if len(addLST) > 0 and (addLST != removeLST):
+                    difference = sorted(diffLSTDICT(removeLST,addLST), key=lambda k: k['number'])
+                    for citem in difference: #add new, remove old.
+                        if   citem.get('number',0) < CHANNEL_LIMIT: continue #unnecessary check to enforce only changes to predefined channels.
+                        elif citem in addLST: self.channels.addChannel(citem)
+                        else:                 self.channels.removeChannel(citem)
                             
         self.log('buildPredefinedChannels, finished building')
         return self.channels.saveChannels()
@@ -283,32 +281,45 @@ class Writer:
             
         
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
-        self.log('recoverChannelsFromBackup, file = %s'%(file))
-        oldChannels = self.channels.getChannels().copy()
         newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP)
-        difference  = sorted(diffLSTDICT(oldChannels,newChannels), key=lambda k: k['number'])
+        difference  = sorted(diffLSTDICT(self.channels.getChannels(),newChannels), key=lambda k: k['number'])
+        self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
         
-        if   len(difference) == 0: return
-        elif self.channels.clearChannels():
-            self.log('recoverChannelsFromBackup, difference = %s'%(len(difference)))
-            [self.channels.addChannel(citem) if citem in newChannels else self.channels.removeChannel(citem) for citem in difference] #add new, remove old.
+        if len(difference) > 0:
+            self.channels.clearChannels()
+            pDialog = self.dialog.progressDialog(message=LANGUAGE(30338))
+            self.monitor.waitForAbort(0.1)
+            for idx, citem in enumerate(newChannels):
+                pCount  = int((idx*50)//len(newChannels))
+                pDialog = self.dialog.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(30338),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
+                self.monitor.waitForAbort(0.1)
+                self.channels.addChannel(citem)
+                    
+            pDialog = self.dialog.progressDialog(pCount,pDialog,message=LANGUAGE(30152))
             self.channels.saveChannels()
+            self.monitor.waitForAbort(0.1)
             
-        if self.recoverItemsFromChannels(self.channels.getPredefinedChannels()): #re-enable library (pre-defined) items
-            self.setPendingChangeTimer()
-     
+            if self.recoverItemsFromChannels(self.channels.getPredefinedChannels(),progBar): #re-enable library (pre-defined) items
+                self.setPendingChangeTimer()
+         
        
-    def recoverItemsFromChannels(self, predefined=None):
+    def recoverItemsFromChannels(self, predefined=None, pDialog=None):
         self.log('recoverItemsFromChannels') #re-enable library.json items from channels.json
         if predefined is None: predefined = self.channels.getPredefinedChannels()
-        for type in CHAN_TYPES: 
+        for type in CHAN_TYPES:
             items = self.library.getLibraryItems(type)
             if not items: continue #no library items, continue
+                
+            if pDialog is not None:
+                pCount = 50 + int((CHAN_TYPES.index(type)*50)//len(CHAN_TYPES))
+                pDialog = self.dialog.progressDialog(pCount,pDialog,message='%s: %s'%(LANGUAGE(30339),type))
+                self.monitor.waitForAbort(0.1)
                 
             channels = self.channels.getPredefinedChannelsByType(type, predefined)
             selects  = [idx for idx, item in enumerate(items) for channel in channels if channel.get('name','').lower() == item.get('name','').lower()]
             self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
             self.library.setEnableStates(type, selects, items)
+        if pDialog and pCount < 100: self.dialog.progressDialog(100,pDialog,message=LANGUAGE(30152))
         return True
         
 
@@ -344,24 +355,24 @@ class Writer:
     def autoTune(self):
         if (isClient() | hasAutotuned()): return False #already ran or dismissed by user, check on next reboot.
         elif self.backup.hasBackup():
-            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=15000)
+            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=90000)
             if   retval == 2: return self.recoverChannelsFromBackup()
             elif retval != 1:
                 setAutoTuned()
                 return False
         else:
-            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=15000): 
+            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=90000): 
                 setAutoTuned()
                 return False
        
-        busy   = self.dialog.progressBGDialog()
-        types  = CHAN_TYPES.copy()
+        pDialog = self.dialog.progressBGDialog()
+        types   = CHAN_TYPES.copy()
         types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
         for idx, type in enumerate(types):
             self.log('autoTune, type = %s'%(type))
-            busy = self.dialog.progressBGDialog((idx*100//len(types)), busy, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
+            pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
             self.selectPredefined(type,AUTOTUNE_LIMIT)
-        self.dialog.progressBGDialog(100, busy, '%s...'%(LANGUAGE(30053)))
+        self.dialog.progressBGDialog(100, pDialog, '%s...'%(LANGUAGE(30053)))
         setAutoTuned()
         return True
 
@@ -414,8 +425,11 @@ class Writer:
             
     def setPendingChangeTimer(self, wait=30.0):
         self.log('setPendingChangeTimer, wait = %s'%(wait))
+        if isPendingChange(): setPendingChange(False)
         if self.serviceThread.is_alive(): 
-            try: self.serviceThread.cancel()
+            try: 
+                self.serviceThread.cancel()
+                self.serviceThread.join()
             except: pass
         self.serviceThread = threading.Timer(wait, self.triggerPendingChange)
         self.serviceThread.name = "serviceThread"

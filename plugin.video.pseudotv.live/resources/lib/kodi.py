@@ -602,11 +602,11 @@ class Dialog:
         
         
     def notificationProgress(self, message, header=ADDON_NAME, wait=4):
-        dia = self.progressBGDialog(message=message,header=header)
+        pDialog = self.progressBGDialog(message=message,header=header)
         for idx in range(wait):
-            dia = self.progressBGDialog((((idx) * 100)//wait),control=dia,header=header)
+            pDialog = self.progressBGDialog((((idx) * 100)//wait),control=pDialog,header=header)
             if self.monitor.waitForAbort(1): break
-        return self.progressBGDialog(100,control=dia)
+        return self.progressBGDialog(100,control=pDialog)
 
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):

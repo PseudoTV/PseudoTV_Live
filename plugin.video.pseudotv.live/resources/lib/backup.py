@@ -65,7 +65,7 @@ class Backup:
     def backupChannels(self):
         self.log('backupChannels')
         if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
-        elif isBusy():   return self.writer.dialog.notificationDialog(LANGUAGE(30029))
+        elif isBusy():   return self.writer.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
         elif FileAccess.exists(CHANNELFLE_BACKUP):
             if not self.writer.dialog.yesnoDialog('%s\n%s?'%(LANGUAGE(30212),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
@@ -76,20 +76,21 @@ class Backup:
                 SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p')))
                 SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.loadChannels(CHANNELFLE_BACKUP))))
                 return self.writer.dialog.notificationDialog(LANGUAGE(30053))
-            else: self.hasBackup()
-            return False
+            else: 
+                self.hasBackup()
+                return False
         
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannels, file = %s'%(file))
         if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
         elif isBusy(): 
-            self.writer.dialog.notificationDialog(LANGUAGE(30029))
+            self.writer.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return False
         elif not self.writer.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
         
         with busy_dialog():
-            with busy():
+            with busy(): 
                 self.writer.recoverChannelsFromBackup(file)
         return True

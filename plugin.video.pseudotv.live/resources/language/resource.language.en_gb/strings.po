@@ -505,7 +505,7 @@ msgid "Select Channel %s"
 msgstr ""
 
 msgctxt "#30122"
-msgid "Edit Channel %s"
+msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see readme for details."
 msgstr ""
 
 msgctxt "#30123"
@@ -714,10 +714,6 @@ msgstr ""
 
 msgctxt "#30175"
 msgid "Show Channel Bug"
-msgstr ""
-
-msgctxt "#30175"
-msgid "Adding"
 msgstr ""
 
 msgctxt "#30176"
@@ -1354,4 +1350,16 @@ msgstr ""
 
 msgctxt "#30336"
 msgid "Change centralized file location & move files?\nOld:%s\nNew:%s"
+msgstr ""
+
+msgctxt "#30337"
+msgid "Adding Channel"
+msgstr ""
+
+msgctxt "#30338"
+msgid "Recovering Channel"
+msgstr ""
+
+msgctxt "#30339"
+msgid "Restoring Autotune"
 msgstr ""

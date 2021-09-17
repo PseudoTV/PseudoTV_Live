@@ -36,7 +36,7 @@ class Builder:
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         
-        self.progress         = 0
+        self.pCount           = 0
         self.channelCount     = 0
         self.chanName         = ''
         self.chanError        = []
@@ -46,8 +46,8 @@ class Builder:
         self.limits           = {}
         self.loopback         = {}
         self.limit            = PAGE_LIMIT
-        self.progDialog       = None
-        self.diaMSG           = LANGUAGE(30051)
+        self.pDialog          = None
+        self.pMSG             = ''
         
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
                                  "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split(',')},
@@ -109,8 +109,8 @@ class Builder:
         if not isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
             setLegacyPseudoTV(True)
             
-        self.progress     = 0
-        self.progDialog   = self.writer.dialog.progressBGDialog()
+        self.pCount       = 0
+        self.pDialog      = self.writer.dialog.progressBGDialog()
         self.channelCount = len(channels)
         self.ruleList     = self.writer.rules.loadRules(channels)
         start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
@@ -119,7 +119,7 @@ class Builder:
 
         for idx, channel in enumerate(channels):
             if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened():
-                self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30204))
+                self.pDialog = self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30204))
                 self.log('buildService, interrupted')
                 return
                 
@@ -128,12 +128,12 @@ class Builder:
             self.chanError  = []
             
             if endTimes.get(channel['id']):
-                self.diaMSG = LANGUAGE(30051) #Updating
+                self.pMSG   = LANGUAGE(30051) #Updating
             else:
-                self.diaMSG = LANGUAGE(30329) #Building
+                self.pMSG   = LANGUAGE(30329) #Building
         
-            self.progress   = int(idx*100//len(channels))
-            self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30331)))
+            self.pCount     = int(idx*100//len(channels))
+            self.pDialog    = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30331)))
 
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])#cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
             cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
@@ -144,14 +144,14 @@ class Builder:
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
-                self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
+                self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
                 self.writer.removeChannelLineup(channel)
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
                 
         if not self.writer.saveChannelLineup(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30001))
                      
-        self.progDialog = self.writer.dialog.progressBGDialog(100, self.progDialog, message=LANGUAGE(30053))
+        self.pDialog = self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30053))
            
         if isLegacyPseudoTV() and not self.writer.player.isPlaying():
             setLegacyPseudoTV(False)
@@ -379,24 +379,21 @@ class Builder:
                     title   = (item.get("title",'')     or item.get("label",'')       or dirItem.get('label',''))
                     tvtitle = (item.get("showtitle",'') or item.get("tvshowtitle",'') or dirItem.get('label',''))
 
-                    if tvtitle and (mType in TV_TYPES and (int(item.get("season","0")) > 0 and int(item.get("episode","0"))>0)):
+                    if (tvtitle and mType in TV_TYPES) or (tvtitle and (int(item.get("season","0")) > 0 and int(item.get("episode","0"))>0)):
                         # This is a TV show
-                        seasonval = int(item.get("season","0"))
-                        epval     = int(item.get("episode","0"))
-                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (seasonval == 0 or epval == 0) and item.get("episode",None) is not None: 
+                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (int(item.get("season","0")) == 0 or int(item.get("episode","0"))) == 0 and item.get("episode",None) is not None: 
                             self.log("buildList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
                             continue
 
                         label = tvtitle
                         item["tvshowtitle"]  = tvtitle
                         item["episodetitle"] = title
-                        item["episodelabel"] = '%s (%sx%s)'%(title,seasonval,str(epval).zfill(2))
+                        item["episodelabel"] = '%s (%sx%s)'%(title,int(item.get("season","0")),str(int(item.get("episode","0"))).zfill(2))
                         
                     else: # This is a Movie
                         label = title
                         item["episodetitle"] = item.get("tagline","")
                         item["episodelabel"] = item.get("tagline","")
-                        seasonval = None
             
                     if not label: continue
                     spTitle, spYear = splitYear(label)
@@ -407,15 +404,13 @@ class Builder:
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
                     item['art']  = (item.get('art',{})  or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
-                
-                    if self.progDialog is not None:
-                        chprog = int((len(fileList)*100)//page)
-                        self.progDialog = self.writer.dialog.progressBGDialog(self.progress, self.progDialog, message='%s: %s'%(self.chanName,chprog)+'%',header='%s, %s'%(ADDON_NAME,self.diaMSG))
-
-                    if sort.get("method","") == 'episode' and seasonval is not None: 
-                        seasoneplist.append([seasonval, epval, item])
+                    
+                    if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
+                        seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                     else: fileList.append(item)
                         
+                    if self.pDialog:
+                        self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.chanName,int((len(seasoneplist+fileList)*100)//page))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                 else: 
                     self.chanError.append(LANGUAGE(30314))
                     self.log("buildList, id: %s skipping no duration meta found!"%(citem['id']),xbmc.LOGINFO)

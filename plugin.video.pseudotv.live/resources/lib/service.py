@@ -230,6 +230,7 @@ class Player(xbmc.Player):
         elif not state and isOverlay():
             self.log("toggleOverlay, close")
             overlayWindow.close()
+            del overlayWindow
 
 
     def triggerSleep(self):
@@ -348,7 +349,8 @@ class Monitor(xbmc.Monitor):
             self.log('hasSettingsChanged, lastSettings not found returning')
             return False
             
-        differences = dict(diffDICT(self.lastSettings,currentSettings))
+        # differences = dict(diffDICT(self.lastSettings,currentSettings))
+        differences = None
         if differences: 
             self.chkPluginSettings()
             self.log('hasSettingsChanged, differences = %s'%(differences))
@@ -409,7 +411,7 @@ class Service:
         if   isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
         elif isClient(): return self.startServiceThread(600.0) #wait and call again if isClient changes.
         self.log('runServiceThread')
-        setPendingChange()
+        self.writer.setPendingChangeTimer()
         return self.startServiceThread(UPDATE_WAIT)
 
 
@@ -445,12 +447,14 @@ class Service:
 
         
     def chkTime(self, lastTime=None): #todo func. to catch daylight savings and correct Kodi PVR Time.
-        # lastTime = (self.monitor.lastTime or nowTime)
-        nowTime = time.time()
-        if lastTime is None: lastTime = nowTime
-        timeDiff = (nowTime - lastTime)
-        if timeDiff > (TIME_CHECK) or timeDiff < 0: brutePVR()
-        self.monitor.lastTime = nowTime
+        return False
+        # with busy():
+            # nowTime = time.time()
+            # if lastTime is None: lastTime = nowTime
+            # timeDiff = (nowTime - lastTime)
+            # self.monitor.lastTime = nowTime
+            # if timeDiff > (TIME_CHECK) or timeDiff < 0: 
+                # return brutePVR(True)
         
         
     def chkIdle(self):
@@ -473,12 +477,14 @@ class Service:
             conditions = [isPendingChange(),
                           chkUpdateTime('Last_Update',UPDATE_OFFSET,lastUpdate),
                           not FileAccess.exists(getUserFilePath(M3UFLE)),
-                          not FileAccess.exists(getUserFilePath(XMLTVFLE))]
+                          not FileAccess.exists(getUserFilePath(XMLTVFLE)),
+                          not FileAccess.exists(getUserFilePath(CHANNELFLE)),
+                          not FileAccess.exists(getUserFilePath(LIBRARYFLE))]
             
             if True in conditions:
                 self.log('chkUpdate, lastUpdate = %s, conditions = %s'%(lastUpdate,conditions))
+                if isPendingChange(): setPendingChange(False)
                 updateIPTVManager()
-                setPendingChange(False)
                 self.chkPredefined()
                 
                 channels = self.writer.channels.getChannels()
@@ -491,6 +497,7 @@ class Service:
                 if self.writer.builder.buildService():
                     self.log('chkUpdate, update finished')
                     brutePVR(override=True)
+                    
 
 
     def chkUtilites(self):
@@ -498,20 +505,20 @@ class Service:
         if not param: return
         self.log('chkLibraryItems, doUtilities = %s'%(param))
         if param.startswith('Channel_Manager'):
-            return self.openChannelManager()
+            self.openChannelManager()
         elif  param == 'Clear_Userdefined':
-            self.writer.clearUserChannels()
+            return self.writer.clearUserChannels()
         elif  param == 'Clear_Predefined':
-            self.writer.clearPredefined()
+            return self.writer.clearPredefined()
         elif  param == 'Clear_BlackList':
-            self.writer.clearBlackList()
+            return self.writer.clearBlackList()
         elif  param == 'Backup_Channels':
             self.writer.backup.backupChannels()
         elif  param == 'Recover_Channels':
-            self.writer.backup.recoverChannels()
+            return self.writer.backup.recoverChannels()
         else:
             self.writer.selectPredefined(param.replace('_',' '))
-        
+        openAddonSettings()
             
     def initialize(self):
         self.monitor.lastSettings = self.monitor.chkSettings()
@@ -548,10 +555,12 @@ class Service:
             if   self.writer.dialog.chkInfoMonitor():       continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break
                 
-            self.chkUtilites()
             if   self.player.isPlaying(): self.chkIdle()
             elif isMaster:                self.chkRecommended()
-                      
+                   
+            self.chkUtilites()
+            self.chkTime(self.monitor.lastTime)
+               
             if   isBusy() or self.monitor.isSettingsOpened(): continue
             elif isMaster: self.chkUpdate()
                 

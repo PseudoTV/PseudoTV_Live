@@ -33,7 +33,7 @@ class VideoParser:
         self.FLVExts   = ['.flv']
         self.TSExts    = ['.ts', '.m2ts']
         self.STRMExts  = ['.strm']
-        self.VFSPath   = ['resource://','plugin://','upnp://','pvr://']
+        self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
 
 
     def getVideoLength(self, filename, fileItem={}):
@@ -61,7 +61,7 @@ class VideoParser:
             self.parser = TSParser.TSParser()
         elif ext in self.STRMExts:
             self.parser = STRMParser.STRMParser()
-        elif filename.startswith(tuple(self.VFSPath)):
+        elif filename.startswith(tuple(self.VFSPaths)):
             self.parser = VFSParser.VFSParser(fileItem)
         else:
             log("VideoParser: getVideoLength, No parser found for extension " + ext)

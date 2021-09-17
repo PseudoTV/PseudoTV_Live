@@ -74,7 +74,6 @@ class Utilities:
             for key in keys: SETTINGS.setSetting(key,'')
             SETTINGS.setSetting('User_Import','false')
             self.dialog.notificationDialog(LANGUAGE(30053))
-            setPendingChange()
 
 
     def deleteFiles(self, msg, full=False):

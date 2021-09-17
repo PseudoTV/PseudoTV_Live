@@ -67,7 +67,7 @@ class Plugin:
 
 
     @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)#channel-surfing buffer
-    def parseBroadcasts(self, channelItem, channelLimit=2):
+    def parseBroadcasts(self, channelItem, channelLimit=PAGE_LIMIT):
         def _parseBroadcast(broadcast):
             if broadcast['progresspercentage'] > 0 and broadcast['progresspercentage'] != 100:
                 channelItem['broadcastnow'] = broadcast

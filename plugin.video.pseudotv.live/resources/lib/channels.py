@@ -148,7 +148,7 @@ class Channels:
     def getChannels(self):
         channels = self.sortChannels(self.writer.vault.channelList.get('channels',[]))
         self.log('getChannels, channels = %s'%(len(channels)))
-        return channels
+        return channels.copy()
 
 
     def getUserChannels(self):
@@ -177,7 +177,7 @@ class Channels:
 
     def addChannel(self, citem):
         self.log('addChannel, id = %s'%(citem['id']))
-        idx, channel = self.findChannel(citem)
+        idx, channel = self.writer.findChannel(citem, self.writer.vault.channelList.get('channels',[]))
         if idx is not None:
             for key in ['id','rules','number','favorite']: 
                 citem[key] = channel[key] # existing id found, reuse channel meta.
@@ -194,19 +194,10 @@ class Channels:
         
     def removeChannel(self, citem):
         self.log('removeChannel, id = %s'%(citem['id']))
-        idx, channel = self.findChannel(citem)
+        idx, channel = self.writer.findChannel(citem, self.writer.vault.channelList.get('channels',[]))
         if idx is not None: self.writer.vault.channelList['channels'].pop(idx)
         return True
 
-        
-    def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.writer.vault.channelList.get('channels',[])
-        for idx, channel in enumerate(channels):
-            if citem.get("id") == channel.get("id"):
-                self.log('findChannel, item = %s, found = %s'%(citem['id'],channel['id']))
-                return idx, channel
-        return None, {}
-        
     
     def deleteChannels(self):
         self.log('deleteChannels')

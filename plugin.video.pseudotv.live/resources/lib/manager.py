@@ -36,9 +36,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.cntrlStates   = {}
             self.showingList   = True
             self.madeChanges   = False
-            self.channelLimit  = CHANNEL_LIMIT
             
-            self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to index
+            self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to array index
             self.writer        = kwargs.get('writer')
             self.newChannel    = self.writer.channels.getCitem()
             self.channelList   = sorted(self.createChannelList(self.buildArray(), self.writer.channels.getChannels()), key=lambda k: k['number'])
@@ -74,7 +73,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def buildArray(self):
         self.log('buildArray')
         ## Create blank array of citem templates. 
-        for idx in range(self.channelLimit):
+        for idx in range(CHANNEL_LIMIT):
             newChannel = self.newChannel.copy()
             newChannel['number'] = idx + 1
             yield newChannel
@@ -97,11 +96,17 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.toggleSpinner(self.chanList,True)
         listitems = (self.writer.pool.poolList(self.buildChannelListItem,channelList))
         self.chanList.addItems(listitems)
-        if focus is None: 
-            self.chanList.selectItem(self.setFocusPOS(listitems))
-        else:
-            self.chanList.selectItem(focus)
+        
+        if focus is None: self.chanList.selectItem(self.setFocusPOS(listitems))
+        else:             self.chanList.selectItem(focus)
         self.toggleSpinner(self.chanList,False)
+
+
+    def toggleSpinner(self, ctrl, state):
+        self.setVisibility(self.spinner,state)
+        # getSpinControl() #todo when avail.
+        # https://codedocs.xyz/xbmc/xbmc/group__python__xbmcgui__control__list.html#ga9b9ac0cd03a6d14c732050f707943d42
+        # ctrl.setPageControlVisible(state)
 
 
     def togglechanList(self, state, focus=0, reset=False):
@@ -136,57 +141,56 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.setLabels(self.right_button3,'')
         
         
-    def toggleSpinner(self, ctrl, state):
-        self.setVisibility(self.spinner,state)
-        # getSpinControl() #todo when avail.
-        # https://codedocs.xyz/xbmc/xbmc/group__python__xbmcgui__control__list.html#ga9b9ac0cd03a6d14c732050f707943d42
-        # ctrl.setPageControlVisible(state)
-
-
     def toggleruleList(self, state, focus=0):
         self.log('toggleruleList, state = %s, focus = %s'%(state,focus))
         if self.isVisible(self.chanList): 
             return self.writer.dialog.notificationDialog(LANGUAGE(30001))
+        
         if state: # rulelist
             self.setVisibility(self.itemList,False)
             self.setVisibility(self.ruleList,True)
             self.ruleList.selectItem(focus)
             self.setFocus(self.ruleList)
-        else:
+        else: # channelitems
             self.setVisibility(self.ruleList,False)
             self.setVisibility(self.itemList,True)
             self.itemList.selectItem(focus)
             self.setFocus(self.itemList)
         
+        
+    def hasChannelContent(self, channelData):
+        paths = channelData.get('path')
+        for path in paths:
+            limits = (self.writer.jsonRPC.autoPagination(channelData.get('id'), path) or {})
+            if limits.get('end',0) > 0 and limits.get('total',0) > 0: return True
+        return False
+        
 
     def buildChannelListItem(self, channelData):
-        label      = str(channelData["number"])
-        label2     = channelData["name"]
-        predefined = channelData["number"] > CHANNEL_LIMIT
-
-        if predefined: 
-            laColor = 'dimgray'
-            if channelData.get('page',{}).get('end',0) == 0 and channelData.get('page',{}).get('total',0) == 0:
-                chColor = 'red'
-            else:
-                chColor = 'orange'
-        elif not label2: 
-            chColor = 'dimgray'
-            laColor = 'dimgray'
+        chnum        = channelData["number"]
+        chname       = channelData.get("name",'')
+        isPredefined = chnum > CHANNEL_LIMIT
+        
+        if isPredefined: 
+            labelColor = 'dimgray'
+            hasContent = self.hasChannelContent(channelData)
+            if hasContent: channelColor = 'orange'
+            else:          channelColor = 'red'
+        elif not chname: 
+            labelColor   = 'dimgray'
+            channelColor = 'dimgray'
         else:
-            if channelData['radio']:
-                chColor = 'cyan'
-            elif channelData.get('favorite',False):#todo
-                chColor = 'yellow'
-            else:
-                chColor = 'white'
-            laColor = 'white'
+            labelColor = 'white'
+            isFavorite = channelData.get('favorite',False)
+            if channelData['radio']: channelColor = 'cyan'
+            elif isFavorite:         channelColor = 'yellow'
+            else:                    channelColor = 'white'
             
-        label  = '[COLOR=%s][B]%s:[/COLOR][/B]'%(chColor,label)
-        if label2: label2 = '[COLOR=%s]%s[/COLOR]'%(laColor,label2)
+        label  = '[COLOR=%s][B]%s.[/COLOR][/B]'%(channelColor,chnum)
+        label2 = '[COLOR=%s]%s[/COLOR]'%(labelColor,chname)
         path   = '|'.join(channelData.get("path",[]))
-        prop   = {'description':LANGUAGE(30122)%(channelData['number']),'channelData':dumpJSON(channelData, sortkey=False),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
-        return self.writer.dialog.buildMenuListItem(label,label2,iconImage=channelData.get("logo",''),url=path,propItem=prop)
+        prop   = {'description':LANGUAGE(30122)%(chnum),'channelData':dumpJSON(channelData, sortkey=False),'chname':chname,'chnumber':chnum}
+        return self.writer.dialog.buildMenuListItem(str(chnum),chname,iconImage=channelData.get("logo",''),url=path,propItem=prop)
         
 
     def setDescription(self, stid):#todo use control id and label
@@ -444,7 +448,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         [self.writer.channels.addChannel(citem) if citem in self.newChannels else self.writer.channels.removeChannel(citem) for citem in difference] #add new, remove old.
         if self.writer.channels.saveChannels():
             self.writer.dialog.notificationDialog(LANGUAGE(30053))
-            setPendingChange()
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
             

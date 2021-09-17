@@ -1,3 +1,4 @@
+
 ![](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Artwork/master/PseudoTV%20Live/Flat/PTVL%20-%20Metro%20-%20Fanart%20(1).png)
 
 # PseudoTV Live for Kodi™ (Matrix):
@@ -121,7 +122,7 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 
 # Settings:
 
-## Playback Method: 
+## Playback Method: 
 
 1. PVR Callback - This method keeps Kodi believing you are using a Live feed from the PVR backend. Pros| Kodi PVR UI and Widget updates. Near infinite channel playback. Cons| Slower channel content changes. (1-60secs. depending on your system). If "Overlay" is enabled in settings; and active during content change you will be met with a custom background. (Currently static).
 
@@ -134,7 +135,7 @@ ex. If after a show ends your next show which should start at the beginning star
 
 ## Seek Threshold(Smart Seeking):
 
-Adjusting seek threshold(percentage). threshold to which the current content can be played back before dismissing for the next queue. Ex. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically. 100% disables threshold (content played till the end).
+Adjusting seek threshold(percentage). threshold to which the current content can be played back before dismissing for the next queue. Ex. The content you select to play maybe near the end instead of loading two seconds of credits; PseudoTV Live will tune the next show automatically. 100% disables threshold (content played till the end).
 
 ## Parse for Accurate Duration Meta:
 
@@ -201,13 +202,13 @@ If no logo is found, PseudoTV Live will parse for a matching logo in the followi
 
 ## - Channel Sharing (Multi-Room):
 
-For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your primary "server". Under PseudoTV Lives settings "Options" change the file location to a shared path. Client-side, install PseudoTV Live, Under PseudoTV Lives settings "Options" change the file location to a shared path. Enable "Client Mode" *Optional, PseudoTV can automatically detect client mode however, if you would like to force the mode, select in options. *All instances of Kodi must be configured for sharing. ie. Shared/Mapped Drives and Central Database. You can configure channel lineups from any instance of PseudoTV Live, however only your "Server" will build/update channels. 
+For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your primary "server". Under PseudoTV Lives settings "Options" change the file location to a shared path. Client-side, install PseudoTV Live, Under PseudoTV Lives settings "Options" change the file location to a shared path. Enable "Client Mode" *Optional, PseudoTV can automatically detect client mode however, if you would like to force the mode, select in options. *All instances of Kodi must be configured for sharing. ie. Shared/Mapped Drives and Central Database. You can configure channel lineups from any instance of PseudoTV Live, however only your "Server" will build/update channels. 
 
 1. https://kodi.wiki/view/MySQL 
 
 2. https://kodi.wiki/view/Path_substitution 
 
-After creating channels you will find a folder called "logos" in the same directory selected in settings. Place custom logos here!! They will override logos PseudoTV Live has found for you. The image must be *.png and is case sensitive to the channel name. ex. Channel "Foo Bar" searchs for a matching logo "Foo Bar.png"
+After creating channels you will find a folder called "logos" in the same directory selected in settings. Place custom logos here!! They will override logos PseudoTV Live has found for you. The image must be *.png and is case sensitive to the channel name. ex. Channel "Foo Bar" searchs for a matching logo "Foo Bar.png"
 
 ## - Channel Ordering (Numbering):
 
@@ -240,23 +241,33 @@ Each import is limited to 9999 (assuming each channel is an interger. Sub-Number
 If you want the exact channel numbers from PseudoTV Live to reflect onscreen, you will have to enable "Use channel order from backend". While in settings "Synchronize channel groups with backend" should also be enabled.
 *NOTE: changes will require users to clear data from the same PVR settings menu
 
+## - Channel Manager:
+
+### - Color Legend:
+- In-use (White) - Existing channel configuration.
+- Unused (Dim-Grey) - Available for configuration.
+- Favorite (Yellow) - User Favorites.
+- Radio (Cyan) - User-defined Radio/Music channel.
+-  Uneditable (Orange) - Pre-defined or Parental Locked channels are displayed as "Uneditable" within the manager.
+-  Warnings (Red) - Indicates either a new channel that hasn't populated (yet) or an existing channel without content (won't display in guide).
+
 ------------
 
 # FYI & Known Issues:
 
 - If content is ignored/not added to the guide or episodes start/end before their assigned EPG time ie. guide times are off. Under "Parse for Accurate Duration Meta" select "Prefer File Metadata". Kodis library usually contain rounded duration/runtime values which will yield inaccurate guide times. Parsing the file directly grabs the actual duration value. If content is ignored, it is usually because Kodis library contains no duration/runtime information. Again, parsing the file resolves this problem. If however both your library and file contain no duration meta content will remain be ignored.
 
-- Multiple PVR backends supported; However, you must set "Client Priorities"  under Kodis "PVR & LiveTV" settings. Follow the directions below to clear guide data after setting priority.
+- Multiple PVR backends supported; However, you must set "Client Priorities"  under Kodis "PVR & LiveTV" settings. Follow the directions below to clear guide data after setting priority.
 
 - Blank EPG cells; Kodis EPG data is malformed; Enter Kodis "PVR & LiveTV" settings, navigate to "Guide" and click "Clear data".
 
-- Context Menu may be unavailable while viewing EPG.  To enable go do Kodis "PVR & LiveTV" then "Guide" and changing the default select action to "show context menu".
+- Context Menu may be unavailable while viewing EPG.  To enable go do Kodis "PVR & LiveTV" then "Guide" and changing the default select action to "show context menu".
 
 - Some video sources (i.e. plugins, UPnP) do not support seeking, which could cause playback to fail. Try loading the content via Context Menu ("Play Programme","Play from here").
 
 - All content must include duration details either embedded into the file or via Kodis Library.
 
-- Settings are dim and unelectable. Some settings require content to operate (ex. Selecting TV Networks require your library have TV Content). There are also actions that can not simultaneously run while PseudoTV background tasks are performed (ie. If you wait for tasks to finish, settings will become selectable). If you experience an error message and your settings are now unselectable. Either reboot Kodi, or disable/enable PseudoTV Live to temporarily fix, and be sure to report your error with a log.
+- Settings are dim and unelectable. Some settings require content to operate (ex. Selecting TV Networks require your library have TV Content). There are also actions that can not simultaneously run while PseudoTV background tasks are performed (ie. If you wait for tasks to finish, settings will become selectable). If you experience an error message and your settings are now unselectable. Either reboot Kodi, or disable/enable PseudoTV Live to temporarily fix, and be sure to report your error with a log.
 
 - Enable "Channel surfing" (Only available in PVR Playback mode). Navigate Kodis settings, find PVR Live TV settings and Playback then disabled confirm channel switches by pressing "ok".
 
