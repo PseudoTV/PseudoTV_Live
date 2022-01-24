@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -31,7 +31,7 @@ class Channels:
         self.cache  = writer.cache
         
         if self.writer.vault.channelList is None: 
-            self._reload()
+            self._reload(forced=True)
         else: 
             self._withdraw()
             
@@ -46,10 +46,11 @@ class Channels:
         return self._deposit()
         
 
-    def _reload(self):
-        self.log('_reload')
-        self.writer.vault.channelList = self.getTemplate()
-        self.writer.vault.channelList.update(self.cleanSelf(self._load()))
+    def _reload(self, forced=False):
+        self.log('_reload, forced = %s'%(forced))
+        if forced: 
+            self.writer.vault.channelList = self.getTemplate()
+            self.writer.vault.channelList.update(self.cleanSelf(self._load()))
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
         self.chkClient()
         return self._deposit()
@@ -76,6 +77,7 @@ class Channels:
         
             
     def loadChannels(self, file=getUserFilePath(CHANNELFLE)):
+        #for use in recovery tools
         self.log('loadChannels, file = %s'%(file))
         return self.cleanSelf(self._load(file)).get('channels',[])
         

@@ -64,7 +64,7 @@ class VideoParser:
         elif filename.startswith(tuple(self.VFSPaths)):
             self.parser = VFSParser.VFSParser(fileItem)
         else:
-            log("VideoParser: getVideoLength, No parser found for extension " + ext)
+            log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
             return 0
             
         duration = int(self.parser.determineLength(filename))

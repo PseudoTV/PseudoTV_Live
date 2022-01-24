@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -440,7 +440,7 @@ class Builder:
                     'file'        : citem['path'],
                     'start'       : 0,
                     'stop'        : 0,
-                    'art'         : citem.get('art',{"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO})}
+                    'art'         : citem.get('art',{"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO})}
         return [tmpItem.copy() for idx in range(entries)]
         
         
@@ -448,7 +448,7 @@ class Builder:
         self.log("buildLocalTrailers, citem = %s, fileList = %s"%(citem,len(fileList)))
         def getItem(item):
             file = item.get('trailer','')
-            if file: return {'label':item['label'],'duration':self.writer.jsonRPC.parseDuration(file, item),'path':'','file':file}
+            if file: return {'label':item['label'],'duration':self.writer.jsonRPC.parseDuration(file, item),'path':'','file':file,'art':item.get('art',{})}
         return list(filter(None,list(set([getItem(fileItem) for fileItem in fileList]))))
     
     

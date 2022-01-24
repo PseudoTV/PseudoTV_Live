@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -30,7 +30,7 @@ class XMLTV:
         self.writer = writer
 
         if self.writer.vault.xmltvList is None:
-            self._reload()
+            self._reload(forced=True)
         else:
             self._withdraw()
                 
@@ -45,9 +45,12 @@ class XMLTV:
         return self._deposit()
         
 
-    def _reload(self):
-        self.log('_reload')
-        self.writer.vault.xmltvList = self._load()
+    def _reload(self, forced=False):
+        self.log('_reload, forced = %s'%(forced))
+        if forced: self.writer.vault.xmltvList = self._load()
+        else:      self.writer.vault.xmltvList = {'data'       : self.writer.vault.xmltvList['data'],
+                                                  'channels'   : self.sortChannels(self.cleanSelf(self.cleanChannels(self.writer.vault.xmltvList['channels'], self.writer.vault.xmltvList['programmes']),'id')),
+                                                  'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.writer.vault.xmltvList['programmes'],'channel')))}
         return self._deposit()
         
         
@@ -65,10 +68,9 @@ class XMLTV:
 
     def _load(self):
         self.log('_load')
-        xmltvList = {'data'       : self.loadData(),
-                     'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
-                     'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
-        return xmltvList
+        return {'data'       : self.loadData(),
+                'channels'   : self.sortChannels(self.cleanSelf(self.loadChannels(),'id')),
+                'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
         
         
     def loadData(self, file=getUserFilePath(XMLTVFLE)):
@@ -252,52 +254,63 @@ class XMLTV:
 
     def buildGenres(self):
         self.log('buildGenres') #todo user color selector.
-        proggenres = []
-        for program in self.writer.vault.xmltvList['programmes']:
-            group = []
-            for genre in program.get('category',[]):
-                group.append(genre[0])
-            proggenres.append(group)
-            
-        epggenres = {}
+        def parseGenres(plines):
+            epggenres = {}
+            for line in plines:
+                try:    
+                    names = line.childNodes[0].data
+                    items = names.split('/')
+                    data  = {'genre':names,'name':names,'genreId':line.attributes['genreId'].value}
+                    epggenres[names.lower()] = data
+                    for item in items:
+                        name = item.strip()
+                        if name and not epggenres.get(name.lower()):
+                            epgdata = data.copy()
+                            epgdata['name'] = name
+                            epggenres[name.lower()] = epgdata
+                except: continue
+            return epggenres
+
+        def matchGenres(programmes):
+            for program in programmes:
+                categories = [cat[0] for cat in program.get('category',[])]
+                catcombo   = '/'.join(categories)
+                for category in categories:
+                    match = epggenres.get(category.lower())
+                    if match and not epggenres.get(catcombo.lower()):
+                        epggenres[catcombo.lower()] = match
+                        break
+        
         if FileAccess.exists(GENREFLE_DEFAULT): 
             try:
-                dom   = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
-                lines = dom.getElementsByTagName('genre')
-                for line in lines: 
-                    items = line.childNodes[0].data.split('/')
-                    for item in items: epggenres[item.strip()] = line.attributes['genreId'].value
-            except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-        
-            for genres in proggenres:
-                for genre in genres:
-                    if genre and epggenres.get(genre,''): #{'Drama': '0x81'}
-                        genresLabel = (' / ').join(list(filter(None,genres)))
-                        if not epggenres.get(genre):       epggenres[genre]       = (epggenres.get(genre,'') or '0x00')
-                        if not epggenres.get(genresLabel): epggenres[genresLabel] = (epggenres.get(genre,'') or '0x00')
-                        [epggenres.update({gen:(epggenres.get(genre,'') or '0x00')}) for gen in genres if not epggenres.get(gen)]
+                dom       = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
+                
+                epggenres = parseGenres(dom.getElementsByTagName('genre'))
+                matchGenres(self.writer.vault.xmltvList['programmes'])     
+                epggenres = dict(sorted(sorted(epggenres.items(), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
+                
+                doc  = Document()
+                root = doc.createElement('genres')                
+                doc.appendChild(root)
+                name = doc.createElement('name')
+                name.appendChild(doc.createTextNode('%s'%(ADDON_NAME)))
+                root.appendChild(name)
+                
+                for key in epggenres:
+                    gen = doc.createElement('genre')
+                    gen.setAttribute('genreId',epggenres[key].get('genreId'))
+                    gen.appendChild(doc.createTextNode(key.title().replace('Tv','TV').replace('Nr','NR').replace('Na','NA')))
+                    root.appendChild(gen)
+                    
+                with fileLocker(self.writer.globalFileLock):
+                    try:
+                        xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
+                        xmlData.write(doc.toprettyxml(indent='\t'))
+                        xmlData.close()
+                    except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+                    return True
 
-            doc  = Document()
-            root = doc.createElement('genres')
-            doc.appendChild(root)
-            name = doc.createElement('name')
-            name.appendChild(doc.createTextNode('%s Genres using Hexadecimal for genreId'%(ADDON_NAME)))
-            root.appendChild(name)
-            [root.appendChild(line) for line in lines] #append org. genre.xml list
-            
-            for key in epggenres:
-                gen = doc.createElement('genre')
-                gen.setAttribute('genreId',epggenres[key])
-                gen.appendChild(doc.createTextNode(key))
-                root.appendChild(gen)
-            
-            with fileLocker(self.writer.globalFileLock):
-                try:
-                    xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
-                    xmlData.write(doc.toprettyxml(indent='\t'))
-                    xmlData.close()
-                except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-                return True
+            except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
 
 
     def getChannels(self):

@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -419,18 +419,14 @@ class Writer:
         
     def triggerPendingChange(self):
         self.log('triggerPendingChange')
-        if isBusy(): self.setPendingChangeTimer()
-        else:        setPendingChange()
+        if isBusy(): self.setPendingChangeTimer(15.0)
+        else:        setPendingChange(state=True)
             
             
     def setPendingChangeTimer(self, wait=30.0):
         self.log('setPendingChangeTimer, wait = %s'%(wait))
-        if isPendingChange(): setPendingChange(False)
-        if self.serviceThread.is_alive(): 
-            try: 
-                self.serviceThread.cancel()
-                self.serviceThread.join()
-            except: pass
+        if isPendingChange(): setPendingChange(state=False)
+        if self.serviceThread.is_alive(): self.serviceThread.cancel()
         self.serviceThread = threading.Timer(wait, self.triggerPendingChange)
         self.serviceThread.name = "serviceThread"
         self.serviceThread.start()

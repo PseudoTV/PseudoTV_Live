@@ -193,6 +193,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Movie_Studios)</data>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Mixed_Genres" type="string" label="30006" help="30242">
@@ -230,6 +231,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Mixed)</data>
+                        <close>true</close>
 					</control>
 				</setting>
 				<setting id="Select_Music_Genres" type="string" label="30097" help="30244">

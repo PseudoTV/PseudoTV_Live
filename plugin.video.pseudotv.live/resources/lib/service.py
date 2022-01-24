@@ -1,4 +1,4 @@
-  # Copyright (C) 2020 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -20,7 +20,6 @@
 from resources.lib.globals     import *
 from resources.lib.overlay     import Overlay
 from resources.lib.parser      import Writer
-from resources.lib.vault       import Vault
 
 class Player(xbmc.Player):
     
@@ -411,7 +410,7 @@ class Service:
         if   isBusy() or self.monitor.isSettingsOpened(): return self.startServiceThread()
         elif isClient(): return self.startServiceThread(600.0) #wait and call again if isClient changes.
         self.log('runServiceThread')
-        self.writer.setPendingChangeTimer()
+        self.writer.triggerPendingChange()
         return self.startServiceThread(UPDATE_WAIT)
 
 
@@ -549,8 +548,8 @@ class Service:
         while not self.monitor.abortRequested():
             isMaster  = not isClient()
             doRestart = isRestartRequired()
-            setSelectDialog(xbmc.getCondVisibility("Window.IsVisible(selectdialog)"))
-            setSettingDialog(xbmc.getCondVisibility("Window.IsVisible(addonsettings)"))
+            setSelectDialog(getSelectDialog())
+            setSettingDialog(getSettingDialog())
                         
             if   self.writer.dialog.chkInfoMonitor():       continue # aggressive polling required (bypass waitForAbort)!
             elif doRestart or self.monitor.waitForAbort(5): break

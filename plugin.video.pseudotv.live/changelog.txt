@@ -4,6 +4,9 @@ v.0.3.3
 -Improved Smartplaylist parsing.
 -Improved importing third-party xmltv meta.
 -Improved channel recovery.
+-Added Nexus support.
+-Improved file handling for offline paths.
+-Fixed Android Multithreading.
 
 v.0.3.2
 -Added channel building error notification.

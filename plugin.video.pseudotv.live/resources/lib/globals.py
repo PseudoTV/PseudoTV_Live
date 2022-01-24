@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -90,7 +90,7 @@ VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
-HOST_LOGO           = 'https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png'
+HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}&radio={radio}.pvr'
 
@@ -412,14 +412,20 @@ def isBusy():
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
 
+def getSettingDialog():
+    return xbmc.getCondVisibility("Window.IsVisible(addonsettings)")
+    
 def isSettingDialog():
-    return (PROPERTIES.getPropertyBool('addonsettings') or xbmc.getCondVisibility("Window.IsVisible(addonsettings)"))
+    return (PROPERTIES.getPropertyBool('addonsettings') or getSettingDialog())
     
 def setSettingDialog(state=True):
     return PROPERTIES.setPropertyBool('addonsettings',state)
-    
+
+def getSelectDialog():
+    return xbmc.getCondVisibility("Window.IsVisible(selectdialog)")
+        
 def isSelectDialog():
-    return (PROPERTIES.getPropertyBool('selectdialog') or xbmc.getCondVisibility("Window.IsVisible(selectdialog)"))
+    return (PROPERTIES.getPropertyBool('selectdialog') or getSelectDialog())
 
 def setSelectDialog(state=True):
     return PROPERTIES.setPropertyBool('selectdialog',state)

@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -169,9 +169,7 @@ class Plugin:
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
-        if self.currentChannel != id: 
-            self.currentChannel = id
-            
+        if self.currentChannel != id: self.currentChannel = id
         pvritem   = self.buildChannel(name, id, isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items

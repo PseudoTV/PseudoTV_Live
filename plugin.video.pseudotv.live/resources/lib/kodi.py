@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -160,7 +160,7 @@ class Settings:
         return self.property.getProperty(key)
     
     
-    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), json_data=False):
+    def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=timedelta(days=84), json_data=False):
         self.log('setCacheSetting, key = %s, value = %s'%(key,value))
         self.cache.set(key, value, checksum, life, json_data)
         

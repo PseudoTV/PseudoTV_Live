@@ -257,7 +257,7 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 
 - If content is ignored/not added to the guide or episodes start/end before their assigned EPG time ie. guide times are off. Under "Parse for Accurate Duration Meta" select "Prefer File Metadata". Kodis library usually contain rounded duration/runtime values which will yield inaccurate guide times. Parsing the file directly grabs the actual duration value. If content is ignored, it is usually because Kodis library contains no duration/runtime information. Again, parsing the file resolves this problem. If however both your library and file contain no duration meta content will remain be ignored.
 
-- Multiple PVR backends supported; However, you must set "Client Priorities"  under Kodis "PVR & LiveTV" settings. Follow the directions below to clear guide data after setting priority.
+- Multiple PVR backends supported.
 
 - Blank EPG cells; Kodis EPG data is malformed; Enter Kodis "PVR & LiveTV" settings, navigate to "Guide" and click "Clear data".
 

@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -29,7 +29,7 @@ class M3U:
         self.writer = writer
             
         if self.writer.vault.m3uList is None:
-            self._reload()
+            self._reload(forced=True)
         else:
             self._withdraw()
             
@@ -40,13 +40,16 @@ class M3U:
         
     def _clear(self):
         self.log('_clear')
-        self.writer.vault.m3uList  = {}
+        self.writer.vault.m3uList = {}
         return self._deposit()
         
         
-    def _reload(self):
-        self.log('reload')
-        self.writer.vault.m3uList = self._load()
+    def _reload(self, forced=False):
+        self.log('_reload, forced = %s'%(forced))
+        if forced:
+            self.writer.vault.m3uList = self._load()
+        else:
+            self.writer.vault.m3uList['channels'] = self.cleanSelf(self.writer.vault.m3uList['channels'])
         return self._deposit()
         
      
@@ -92,13 +95,13 @@ class M3U:
 
                 elif line.startswith('#EXTINF:'):
                     chCount += 1
-                    match = {'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                    match = {'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
                              'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
                              'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
-                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
                              'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
+                             'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),   
+                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),                          
                              'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
-                             'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
                              'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
@@ -108,8 +111,11 @@ class M3U:
                              'provider'          :re.compile('provider=\"(.*?)\"'           , re.IGNORECASE).search(line),
                              'provider-type'     :re.compile('provider-type=\"(.*?)\"'      , re.IGNORECASE).search(line),
                              'provider-logo'     :re.compile('provider-logo=\"(.*?)\"'      , re.IGNORECASE).search(line),
+                             'provider-countries':re.compile('provider-countries=\"(.*?)\"' , re.IGNORECASE).search(line),
                              'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line),
-                             'provider-countries':re.compile('provider-countries=\"(.*?)\"' , re.IGNORECASE).search(line)}
+                             'media'             :re.compile('media=\"(.*?)\"'              , re.IGNORECASE).search(line),
+                             'media-dir'         :re.compile('media-dir=\"(.*?)\"'          , re.IGNORECASE).search(line),
+                             'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line)}
                     
                     item = self.writer.channels.getCitem()
                     item.update({'number' :chCount,
@@ -139,8 +145,6 @@ class M3U:
                         try:
                             nline = lines[nidx].rstrip()
                             if   nline.startswith('#EXTINF:'): break
-                            # elif nline.startswith('#EXTVLCOPT'):
-                            # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
                             elif nline.startswith('#EXTGRP'):
                                 group = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
                                 if group: 
@@ -149,6 +153,8 @@ class M3U:
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
                                 if prop: item.setdefault('kodiprops',[]).append(prop.group(1))
+                            # elif nline.startswith('#EXTVLCOPT'):
+                            # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
                             elif nline.startswith('##'): continue
                             elif not nline: continue
                             else: item['url'] = nline
@@ -175,9 +181,9 @@ class M3U:
             keys = list(self.writer.channels.getCitem().keys())
             keys.extend(['kodiprops','label'])#add keys to ignore from optional.
             item  = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-            channels = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
+            self.writer.vault.m3uList['channels'] = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
             
-            for channel in channels:
+            for channel in self.writer.vault.m3uList['channels']:
                 optional = ''
                 if not channel: continue
                     
@@ -299,6 +305,7 @@ class M3U:
         
     def addStation(self, item):
         self.log('addStation, item = %s'%(item))
+        #item['media']         = 'True'
         item['provider']      = ADDON_NAME
         item['provider-type'] = 'local'
         item['provider-logo'] = HOST_LOGO

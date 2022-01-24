@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -26,10 +26,12 @@ from functools                 import partial, wraps
 from resources.lib.cache       import Cache, cacheit
 
 try:
-    # if xbmc.getCondVisibility('System.Platform.Android'): raise Exception('Using Android threading')
+    if xbmc.getCondVisibility('System.Platform.Android'): raise Exception('Using Android threading')
     USING_THREAD = xbmc.getCondVisibility('System.Platform.Windows') #multiprocessing takes foreground focus from windows, bug in python?
-    if USING_THREAD:    from multiprocessing.dummy import Pool as ThreadPool
-    else:               from multiprocessing.pool  import ThreadPool
+    if USING_THREAD: 
+        from multiprocessing.dummy import Pool as ThreadPool
+    else:               
+        from multiprocessing.pool  import ThreadPool
 except Exception as e:
     USING_THREAD = True
     from resources.lib._threadpool import ThreadPool
@@ -69,7 +71,7 @@ def log(msg, level=xbmc.LOGDEBUG):
 def getThreadMax():
     CORES = Cores().CPUcount()
     if USING_THREAD:
-        return CORES * 4
+        return CORES * 2
     return CORES
     
 class Concurrent:

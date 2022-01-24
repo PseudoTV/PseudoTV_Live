@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -33,7 +33,7 @@ class Library:
         self.cache  = writer.cache
         
         if self.writer.vault.libraryItems is None: 
-            self._reload()
+            self._reload(forced=True)
         else:
             self._withdraw()
             
@@ -51,10 +51,11 @@ class Library:
         return self._deposit()
         
 
-    def _reload(self):
-        self.log('_reload')
-        self.writer.vault.libraryItems = self.getTemplate()
-        self.writer.vault.libraryItems.update(self._load())
+    def _reload(self, forced=False):
+        self.log('_reload, forced = %s'%(forced))
+        if forced:
+            self.writer.vault.libraryItems = self.getTemplate()
+            self.writer.vault.libraryItems.update(self._load())
         return self._deposit()
         
         
@@ -198,13 +199,13 @@ class Library:
     def fillLibraryItems(self):
         self.log('fillLibraryItems')
         ## parse kodi for items, convert to library item, update logo,vfs path. save to library.json
-        def fillType(type, pDialog):
+        def fillType(type):
             items      = self.fillTypeItems(type)
             existing   = self.getLibraryItems(type)
             enabled    = self.getEnabledItems(existing)
             cacheName  = 'fillType.%s'%(type)
             cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
-
+            
             if existing: msg = LANGUAGE(30328)
             else:        msg = LANGUAGE(30159) 
                
@@ -218,9 +219,10 @@ class Library:
                     
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
 
+                pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
                 for idx, item in enumerate(items):
                     if self.writer.monitor.waitForAbort(0.001): return
-                    fill    = int((idx*100)//len(items))
+                    fill    = int(((idx+1)*100)//len(items))
                     pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
                     
@@ -252,16 +254,15 @@ class Library:
                 if results: #only cache found items.
                     self.setLibraryItems(type,results)
                     self.writer.cache.set(cacheName, results, checksum=cacheCHK, expiration=life, json_data=True)
+                self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
                     
             if not PROPERTIES.getPropertyBool('has.Predefined'): 
                 PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
-                        
-        pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
+                      
         for type in CHAN_TYPES: 
-            fillType(type,pDialog)
+            fillType(type)
             if self.writer.monitor.waitForAbort(0.001): return
-        self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
         # return self.writer.buildPredefinedChannels()
         
 

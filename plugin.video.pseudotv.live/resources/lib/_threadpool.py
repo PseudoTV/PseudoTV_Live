@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -50,7 +50,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     
 class ThreadPool:
     def __init__(self, cpuCount=4):
-        self.cpuCount = cpuCount
+        self.cpuCount = int(cpuCount)
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):

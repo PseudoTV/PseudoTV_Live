@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Jason Anderson, Lunatixz
+#   Copyright (C) 2022 Jason Anderson, Lunatixz
 #
 #
 # This file is part of PseudoTV.
