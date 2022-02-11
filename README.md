@@ -29,4 +29,27 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 - @IAmJayFord for awesome PseudoTV Live Icon/Fanart sets.
 - @preroller for fantastic PseudoTV Live Bumpers.
 
+### License
+
+* [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
+* Copyright 2009-2021
+
+------------
+
+## Contributors:
+
+This project exists thanks to all the people who contribute. [Contribute](CONTRIBUTING.md).
+
+## Backers:
+
+Thank you to all our backers! 🙏 [Become a backer]()
+
+## Sponsors:
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor]()
+
+## Mega Sponsors:
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a mega sponsor]()
+
 ------------
