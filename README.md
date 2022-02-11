@@ -1,6 +1,6 @@
 ![](https://raw.githubusercontent.com/PseudoTV/PseudoTV_Artwork/master/PseudoTV%20Live/Flat/PTVL%20-%20Metro%20-%20Fanart%20(1).png)
 
-# PseudoTV Live for Kodi™ (Matrix):
+# PseudoTV Live for Kodiâ„¢:
 
 ## What is it?:
 
