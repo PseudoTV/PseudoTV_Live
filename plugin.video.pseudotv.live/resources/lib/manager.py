@@ -250,7 +250,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                   
         listItems   = []
         channelProp = dumpJSON(channelData, sortkey=False)
-        for key, value in channelData.items():
+        for key in self.channels.getCitem().keys():
+            value = channelData.get(key)
             if   key in ["number","type","logo","id","page","catchup","limits"]: continue # keys to ignore, internal use only.
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(list(set(value)))
