@@ -26,16 +26,17 @@ from functools                 import partial, wraps
 from resources.lib.cache       import Cache, cacheit
 
 try:
-    if xbmc.getCondVisibility('System.Platform.Android'): raise Exception('Using Android threading')
-    USING_THREAD = xbmc.getCondVisibility('System.Platform.Windows') #multiprocessing takes foreground focus from windows, bug in python?
-    if USING_THREAD: 
+    if (xbmc.getCondVisibility('System.Platform.Android') or xbmc.getCondVisibility('System.Platform.Windows')):
         from multiprocessing.dummy import Pool as ThreadPool
-    else:               
+        USING_THREAD = True
+    else:
         from multiprocessing.pool  import ThreadPool
+        USING_THREAD = False
+    from _multiprocessing import SemLock, sem_unlink #hack to raise two python issues. _multiprocessing import error, sem_unlink missing from native python (android).
 except Exception as e:
+    from resources.lib._threadpool import ThreadPool 
     USING_THREAD = True
-    from resources.lib._threadpool import ThreadPool
-
+    
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
@@ -68,15 +69,10 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
-def getThreadMax():
-    CORES = Cores().CPUcount()
-    if USING_THREAD:
-        return CORES * 2
-    return CORES
     
 class Concurrent:
     def __init__(self):
-        self.cpuCount = getThreadMax()
+        self.cpuCount = Cores().CPUcount() * 2
         # https://pythonhosted.org/futures/
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
         
@@ -117,7 +113,7 @@ class Concurrent:
 
 class Parallel:
     def __init__(self):
-        self.cpuCount = getThreadMax()
+        self.cpuCount = Cores().CPUcount()
         # https://pythonhosted.org/futures/
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
         
@@ -154,63 +150,45 @@ class Parallel:
                     # self.log("executors, Failed! %s"%(e), xbmc.LOGERROR)
             try:    return list(filter(None,results))
             except: return list(results)
-
-
+                
+                
 class PoolHelper:
     def __init__(self):
-        self.cpuCount = getThreadMax()
+        self.cpuCount = Cores().CPUcount()
         if USING_THREAD: self.pool = Concurrent()
         else:            self.pool = Parallel()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
+ 
+ 
     def executor(self, func, args=None, kwargs=None, call=None):
         return self.pool.executor(func, args, kwargs, call)
-
-
-    @timeit
-    def poolList(self, func, items=[], args=None, kwargs=None, chunksize=None):
-        results = []
-        if len(items) == 0: return results
-        try:
-            if chunksize is None: chunksize = roundupDIV(len(items), Cores().CPUcount())
-            if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
-            self.log("poolList, chunksize = %s, items = %s"%(chunksize,len(items)))
             
-            pool = ThreadPool(self.cpuCount)
-            if kwargs and isinstance(kwargs,dict):
-                results = pool.imap(partial(func, **kwargs), items, chunksize)
-            else:
-                if args: items = zip(items,repeat(args))
-                results = pool.imap(func, items, chunksize)
+        
+    @timeit
+    def poolList(self, func, items=[], args=None, kwargs=None, timeout=300, chunksize=None): 
+        if chunksize is None: chunksize = roundupDIV(len(items), self.cpuCount)
+        if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
+        self.log("poolList, chunksize = %s, items = %s"%(chunksize,len(items)))
+        
+        if kwargs and isinstance(kwargs,dict): 
+            func = partial(func, **kwargs)
+        elif args: 
+            items = zip(items,repeat(args))
+            
+        try:    
+            pool = ThreadPool(processes=self.cpuCount)
+            results = pool.imap(func, items, chunksize)
             pool.close()
             pool.join()
         except Exception as e: 
             self.log("poolList, threadPool Failed! %s"%(e), xbmc.LOGERROR)
-            results = self.genList(func, items, args, kwargs)
-        
-        if results: 
-            try:    results = list(filter(None, results)) #catch pickle error if/when using processing
-            except: results = list(results)
-        return results
-        
-        
-    def genList(self, func, items=[], args=None, kwargs=None):
-        self.log("genList, %s"%(func.__name__))
-        try:
-            if kwargs and isinstance(kwargs,dict):
-                results = (partial(func, **kwargs)(item) for item in items)
-            elif args:
-                results = (func((item, args)) for item in items)
-            else:
-                results = (func(item) for item in items)
-            return list(filter(None, results))
-        except Exception as e: 
-            self.log("genList, Failed! %s"%(e), xbmc.LOGERROR)
-            return []
+            results = [results.append(func(i)) for i in items]
+
+        try:    return list(filter(None,results))
+        except: return list(results)
 
 
 class Cores:

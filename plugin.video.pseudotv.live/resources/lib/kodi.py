@@ -69,7 +69,7 @@ def getThumb(item,opt=0): #unify thumbnail artwork
         if art: return art
     return {0:FANART,1:COLOR_LOGO}[opt]
 
-class Settings:
+class Settings:   
     realSetting = REAL_SETTINGS
     
     def __init__(self):
@@ -80,7 +80,13 @@ class Settings:
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
-
+                
+    def updateSettings(self):
+        self.log('updateSettings')
+        #todo build json of addon settings
+        # self.pluginMeta.setdefault(addonID,{})['settings'] = [{'key':'value'}]
+ 
+        
     def getRealSettings(self):
         try:    return xbmcaddon.Addon(id=ADDON_ID)
         except: return self.realSetting
@@ -332,6 +338,8 @@ class Dialog:
     
     def __init__(self):
         self.infoMonitorThread = threading.Timer(0.5, self.doInfoMonitor)
+        self.okDialogThread    = threading.Timer(0.5, self.okDialog)
+        self.textviewerThread  = threading.Timer(0.5, self.textviewer)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -412,8 +420,6 @@ class Dialog:
         properties['citem']   = info.pop('citem'   ,{}) # write dump to single key
         properties['pvritem'] = info.pop('pvritem' ,{}) # write dump to single key
         
-        
-        
         if mType != 'video': #unify default artwork for music.
             art['thumb']  = getThumb(info,opt=1)
             art['fanart'] = getThumb(info)
@@ -437,7 +443,6 @@ class Dialog:
                             
                 if isinstance(ninfo[key],dict):
                     ninfo[key] = cleanInfo(ninfo[key])
-                    
             return ninfo
                 
         def cleanProp(pvalue):
@@ -469,13 +474,39 @@ class Dialog:
         if playable: listitem.setProperty("IsPlayable","true")
         return listitem
              
-         
-    def okDialog(self, msg, heading=ADDON_NAME):
-        return xbmcgui.Dialog().ok(heading, msg)
+        
+    def _okDialog(self, msg, heading):
+        if self.okDialogThread.is_alive():
+            try:
+                self.okDialogThread.cancel()
+                self.okDialogThread.join()
+            except: pass
+                
+        self.okDialogThread = threading.Timer(0.5, self.okDialog, [msg, heading])
+        self.okDialogThread.name = "okDialogThread"
+        self.okDialogThread.start()
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False):
-        return xbmcgui.Dialog().textviewer(heading, msg, usemono)
+    def okDialog(self, msg, heading=ADDON_NAME, usethread=False):
+        if usethread: return self._okDialog(msg, heading)
+        else:         return xbmcgui.Dialog().ok(heading, msg)
+        
+        
+    def _textviewer(self, msg, heading, usemono):
+        if self.textviewerThread.is_alive():
+            try:
+                self.textviewerThread.cancel()
+                self.textviewerThread.join()
+            except: pass
+                
+        self.textviewerThread = threading.Timer(0.5, self.textviewer, [msg, heading, usemono])
+        self.textviewerThread.name = "textviewerThread"
+        self.textviewerThread.start()
+        
+        
+    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, usethread=False):
+        if usethread: return self._textviewer(msg, heading, usemono)
+        else:         return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
     
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0): 
@@ -491,10 +522,8 @@ class Dialog:
         ## - xbmcgui.NOTIFICATION_INFO
         ## - xbmcgui.NOTIFICATION_WARNING
         ## - xbmcgui.NOTIFICATION_ERROR
-        try: 
-            xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
-        except Exception as e:
-            xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
+        try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
+        except: xbmc.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
         return True
              
              
@@ -509,6 +538,7 @@ class Dialog:
             if custom: ... #todo domodel custom selectDialog for library select.
             else:
                 select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
+                if select == -1:  select = None
         return select
       
       
@@ -519,23 +549,24 @@ class Dialog:
         ## - xbmcgui.INPUT_TIME (format: HH:MM)
         ## - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
         ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
-        retval = xbmcgui.Dialog().input(message, default, key, opt, close)
-        if retval: return retval
-        return None
+        return xbmcgui.Dialog().input(message, default, key, opt, close)
         
         
     def buildMenuListItem(self, label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=False, mType='video'):
         listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
         iconImage = (iconImage or COLOR_LOGO)
-        if propItem: listitem.setProperties(propItem)
-        if infoItem: listitem.setInfo(mType, infoItem)
+        if propItem: 
+            listitem.setProperties(propItem)
+        if infoItem: 
+            listitem.setInfo(mType, infoItem)
         else: 
             listitem.setInfo(mType, {'mediatype': 'video',
                                      'Label' : label1,
                                      'Label2': label2,
                                      'Title' : label1})
                                          
-        if artItem: listitem.setArt(artItem)
+        if artItem: 
+            listitem.setArt(artItem)
         else: 
             listitem.setArt({'thumb': iconImage,
                              'logo' : iconImage,
@@ -566,18 +597,19 @@ class Dialog:
                     
             listitems = self.pool.poolList(buildMenuItem,options)
             select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
-            if select is not None:
+            if not select is None:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS
                     # listitems = self.pool.poolList(buildMenuItem,options)
                     # select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
-                    # if select is not None:
+                    # if not select is None:
                 # else:    
                 shares    = options[select]['label'].lower().replace("network","")
                 mask      = options[select]['mask']
                 type      = options[select]['type']
                 multi     = options[select]['multi']
                 default   = options[select]['default']
-            
+            else: return
+                
         self.log('browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
         if monitor: self.toggleInfoMonitor(True)
         if multi == True:
@@ -595,13 +627,10 @@ class Dialog:
             ## 3	ShowAndGetWriteableDirectory
             retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         if monitor: self.toggleInfoMonitor(False)
-        if retval:
-            if prompt and retval == default: return None
-            return retval
-        return None
+        return retval
         
         
-    def notificationProgress(self, message, header=ADDON_NAME, wait=4):
+    def notificationWait(self, message, header=ADDON_NAME, wait=4):
         pDialog = self.progressBGDialog(message=message,header=header)
         for idx in range(wait):
             pDialog = self.progressBGDialog((((idx) * 100)//wait),control=pDialog,header=header)

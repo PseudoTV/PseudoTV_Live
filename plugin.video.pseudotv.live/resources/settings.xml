@@ -1,7 +1,6 @@
 <?xml version="1.0" ?>
 <settings version="1">
 	<section id="plugin.video.pseudotv.live">
-
 		<category id="channels" label="30018" help="">
 			<group id="1" label="30024">
 				<setting id="Select_Channels" type="string" label="30027" help="30229">
@@ -39,7 +38,7 @@
                         <close>true</close>
 					</control>
 				</setting>
-				<setting id="Recover_Channels" type="string" label="30216" help="30216" parent="Backup_Channels">
+				<setting id="Recover_Channels" type="string" label="30211" help="30211" parent="Backup_Channels">
 					<level>2</level>
 					<default></default>
 					<constraints>
@@ -59,7 +58,7 @@
 					</control>
 				</setting>
 			</group>
-			<group id="2" label="30312">
+			<group id="2" label="">
                 <setting id="Open_Node" type="action" label="30085" help="30303">
 					<level>1</level>
 					<default/>
@@ -96,7 +95,24 @@
                         <close>true</close>
                     </control>
 				</setting>
-            </group>
+			</group>
+			<group id="3" label="">
+                <setting id="BUSY" type="string" label="30357">
+                    <level>0</level>
+                    <default></default>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition on="property" name="InfoBool">String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.isClient))</condition>
+                        </dependency>
+                    </dependencies>
+                    <control type="edit" format="string">
+                        <heading>30357</heading>
+                    </control>
+                </setting>
+			</group>
 		</category>
     
 		<category id="autotune" label="30203" help="30230">
@@ -269,6 +285,7 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Recommended)</data>
+                        <close>true</close>
 					</control>
 				</setting>
                 <setting id="Select_Imports" type="string" label="30150" help="30246">
@@ -383,6 +400,7 @@
 					<dependencies>
 						<dependency type="visible">
 							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
                             </and>
 						</dependency>
@@ -404,6 +422,7 @@
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">0</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -422,6 +441,7 @@
 							<and>
 								<condition operator="is" setting="Import_M3U_TYPE">1</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -442,6 +462,7 @@
 						<dependency type="visible">
 							<and>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -462,6 +483,7 @@
 							<and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">0</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -480,6 +502,7 @@
                             <and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">1</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -497,6 +520,7 @@
 						<dependency type="visible">
                             <and>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -514,6 +538,7 @@
 						<dependency type="visible">
                             <and>
                                 <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
 						</dependency>
 					</dependencies>
@@ -625,7 +650,7 @@
 					<control type="spinner" format="string"/>
 				</setting>
 			</group>
-			<group id="2" label="30194">
+            <group id="2" label="30194">
 				<setting id="User_Folder" type="path" label="30028" help="30258">
 					<level>1</level>
 					<default>special://profile/addon_data/plugin.video.pseudotv.live/</default>
@@ -633,37 +658,155 @@
 						<sources>
 							<source>files</source>
 						</sources>
-						<writable>false</writable>
+						<writable>true</writable>
 					</constraints>
-					<dependencies>
-						<dependency type="enable">
-                            <and>
-                                <condition on="property" name="InfoBool">true</condition>
-                            </and>
-						</dependency>
-					</dependencies>
 					<control type="button" format="path">
 						<heading>30028</heading>
 					</control>
 				</setting>
-				<setting id="Enable_Client" type="boolean" label="30104" help="30259" parent="User_Folder">
-					<level>1</level>
-					<default>false</default>
-					<dependencies>
-						<dependency type="enable">
-                            <and>
-                                <condition operator="!is" setting="User_Folder">special://profile/addon_data/plugin.video.pseudotv.live/</condition>
+			</group>
+		</category>
+        
+		<category id="sharing" label="30346" help="30347">
+            <group id="1" label="30352">
+				<setting id="Remote_M3U" type="string" label="30034">
+					<level>0</level>
+                    <default></default>
+                    <enable>false</enable>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.M3U_URL),http)</condition>
                             </and>
 						</dependency>
+					</dependencies>
+                    <control type="edit" format="string">
+						<heading></heading>
+					</control>
+				</setting>
+				<setting id="Remote_XMLTV" type="string" label="30035">
+					<level>0</level>
+                    <default></default>
+                    <enable>false</enable>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <dependencies>
 						<dependency type="visible">
-							<condition operator="!is" setting="User_Folder">special://profile/addon_data/plugin.video.pseudotv.live/</condition>
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.XMLTV_URL),http)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
-					<control type="toggle"/>
+                    <control type="edit" format="string">
+						<heading></heading>
+					</control>
+				</setting>
+				<setting id="Remote_GENRE" type="string" label="30355">
+					<level>0</level>
+                    <default></default>
+                    <enable>false</enable>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.GENRE_URL),http)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+                    <control type="edit" format="string">
+						<heading></heading>
+					</control>
+				</setting>
+                <setting id="UDP_PORT" type="integer" label="30014" help="30015">
+					<level>3</level>
+                    <default>50000</default>
+					<constraints>
+						<allowempty>false</allowempty>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
+					</dependencies>
+                    <control type="edit" format="integer">
+						<heading>30359</heading>
+					</control>
+				</setting>
+				<setting id="TCP_PORT" type="integer" label="30013" help="30015">
+					<level>3</level>
+                    <default>50001</default>
+					<constraints>
+						<allowempty>false</allowempty>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
+					</dependencies>
+                    <control type="edit" format="integer">
+						<heading>40001</heading>
+					</control>
+				</setting>
+			</group>
+            
+            <group id="2" label="30353">
+                <setting id="Enable_Client" type="integer" label="30104" help="30259">
+					<level>0</level>
+					<default>0</default>
+					<constraints>
+						<options>
+							<option label="30220">0</option>
+							<option label="30349">1</option>
+							<option label="30350">2</option>
+						</options>
+					</constraints>
+					<control type="spinner" format="string"/>
+				</setting>
+                <setting id="Remote_URL" type="string" label="30349" help="" parent="Enable_Client">
+					<level>0</level>
+					<default></default>
+                    <enable>false</enable>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+                            <condition operator="is" setting="Enable_Client">1</condition>
+						</dependency>
+					</dependencies>
+                    <control type="edit" format="string">
+						<heading>30349</heading>
+					</control>
+				</setting>
+                <setting id="Network_Path" type="path" label="30350" help="30356" parent="Enable_Client">
+					<level>0</level>
+					<default>special://profile/addon_data/plugin.video.pseudotv.live/</default>
+                    <enable>false</enable>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Enable_Client">2</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="path">
+						<heading>30350</heading>
+					</control>
 				</setting>
 			</group>
 		</category>
-    
+        
+        
+        
 		<category id="tweaks" label="30048" help="">
 			<group id="1" label="30296">
 				<setting id="Playback_Method" type="integer" label="30045" help="30231">
@@ -1085,6 +1228,27 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+                <setting id="Debugging_Level" type="integer" label="30340" help="" parent="Enable_Debugging">
+					<level>2</level>
+					<default>0</default>
+                    <constraints>
+                        <options>
+                            <option label="30341">0</option>
+                            <option label="30342">1</option>
+                            <option label="30343">2</option>
+                            <option label="30344">3</option>
+                        </options>
+                    </constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Debugging">true</condition>
+                                <condition on="property" name="InfoBool">!System.HasAddon(script.kodi.loguploader)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+                    <control type="spinner" format="string"/>
+                </setting> 
                 <setting id="Install_Logger" type="action" label="30292" help="" parent="Enable_Debugging">
 					<level>0</level>
 					<default/>

@@ -1,3 +1,11 @@
+v.0.3.4
+-Refactored Background service.
+-Notice File Locations Changed! channels.json and library.json now stored locally. M3U/XMLTV by default stored locally or users can select a path via "Centralized File Location".
+-Added Moving existing files during "Centralized File Location" change.
+-Added HTTP file Server. M3U/XMLTV are shared via local network for clients. Check "Multi-Room" for information and see readme for details.
+-Added Automatic PseudoTV server detection via local UDP discovery. Set "Enable Client" to remote path for plugin and play configuration, see readme for details.
+-Added Favorite channel flagging and EPG Category "Favorites".
+
 v.0.3.3
 -Fixed sleep idle timer.
 -Tweaked background service.
@@ -6,7 +14,7 @@ v.0.3.3
 -Improved channel recovery.
 -Added Nexus support.
 -Improved file handling for offline paths.
--Fixed Android Multithreading.
+-Fixed Android Multi-threading.
 
 v.0.3.2
 -Added channel building error notification.

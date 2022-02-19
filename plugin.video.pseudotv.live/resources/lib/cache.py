@@ -63,7 +63,6 @@ class Cache:
     cache = SimpleCache() 
     
     def __init__(self, mem_cache=True, is_json=False):
-        self.log('__init__')
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
 

@@ -16,17 +16,26 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
 
-import resources.lib.globals as globals
 import os, shutil, codecs, threading, random
 
-from kodi_six import xbmc, xbmcvfs
+from kodi_six import xbmc, xbmcaddon, xbmcvfs
+
+ADDON_ID      = 'plugin.video.pseudotv.live'
+REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
+ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
+ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
+SETTINGS_LOC  = REAL_SETTINGS.getAddonInfo('profile')
 
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
 FILE_LOCK_NAME             = "FileLock.dat"
 DEFAULT_ENCODING           = "utf-8"
 
 def log(msg, level=xbmc.LOGDEBUG):
-    globals.log(msg,level)
+    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
+    if not isinstance(msg,str): msg = str(msg)
+    if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
 
 class FileAccess:
     @staticmethod
@@ -168,7 +177,7 @@ class FileAccess:
     def makedirs(directory):
         try:  
             os.makedirs(xbmcvfs.translatePath(directory))
-            return True
+            return os.path.exists(xbmcvfs.translatePath(directory))
         except:
             return FileAccess._makedirs(directory)
             
@@ -205,12 +214,8 @@ class VFSFile:
 
 
     def read(self, bytes=0):
-        try: 
-            data = self.currentFile.read(bytes)
-        except: 
-            log("VFSFile: Exception read, trying readBytes")
-            data = self.currentFile.readBytes(bytes)
-        return data
+        try:    return self.currentFile.read(bytes)
+        except: return self.currentFile.readBytes(bytes)
         
         
     def readBytes(self, bytes=0):
@@ -247,13 +252,7 @@ class VFSFile:
 class FileLock:
     def __init__(self):
         random.seed()        
-        self.LOCK_LOC = globals.getUserFilePath()
-        if not FileAccess.exists(self.LOCK_LOC): 
-            FileAccess.makedirs(self.LOCK_LOC)
-            
-        if not FileAccess.exists(FILE_LOCK_NAME):    
-            FileAccess.open(FILE_LOCK_NAME,'a').close()
-            
+        self.LOCK_LOC     = self.chkLOCK()
         self.monitor      = xbmc.Monitor()
         self.lockedList   = []
         self.isExiting    = False
@@ -265,6 +264,20 @@ class FileLock:
         self.grabSemaphore = threading.BoundedSemaphore()
         self.listSemaphore = threading.BoundedSemaphore()
         log("FileLock: instance")
+
+
+    def chkLOCK(self):
+        LOCK_LOC = os.path.join(REAL_SETTINGS.getSetting('User_Folder'),'cache')
+        if not FileAccess.exists(LOCK_LOC):    
+            if FileAccess.makedirs(LOCK_LOC):
+                return LOCK_LOC
+            LOCK_LOC = os.path.join(SETTINGS_LOC,'cache')
+            if not FileAccess.exists(LOCK_LOC):    
+                FileAccess.makedirs(LOCK_LOC)
+                
+        if not FileAccess.exists(FILE_LOCK_NAME):    
+            FileAccess.open(FILE_LOCK_NAME,'a').close()
+        return LOCK_LOC
 
 
     def close(self):

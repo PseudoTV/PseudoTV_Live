@@ -23,147 +23,94 @@ from resources.lib.globals     import *
 
 class Channels:
     def __init__(self, writer=None):
-        self.log('__init__')
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
+            
         self.writer = writer
         self.cache  = writer.cache
         
-        if self.writer.vault.channelList is None: 
-            self._reload(forced=True)
-        else: 
-            self._withdraw()
-            
-                
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
-
-    def _clear(self):
-        self.log('_clear')
-        self.writer.vault.channelList = {}
-        return self._deposit()
-        
-
-    def _reload(self, forced=False):
-        self.log('_reload, forced = %s'%(forced))
-        if forced: 
-            self.writer.vault.channelList = self.getTemplate()
-            self.writer.vault.channelList.update(self.cleanSelf(self._load()))
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
-        self.chkClient()
-        return self._deposit()
+    
+    def _withdraw(self):
+        channelList = self.writer.vault.get_channelList()
+        self.log('_withdraw, channels = %s'%(len(channelList)))
+        return channelList
         
         
     def _deposit(self):
         self.log('_deposit, channels = %s'%(len(self.writer.vault.channelList.get('channels',[]))))
         self.writer.vault.set_channelList(self.writer.vault.channelList)
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
         return True
         
-    
-    def _withdraw(self):
-        self.writer.vault.channelList = self.writer.vault.get_channelList()
-        self.log('_withdraw, channels = %s'%(len(self.writer.vault.channelList)))
-        return True
         
-
-    def _load(self, file=getUserFilePath(CHANNELFLE)):
-        self.log('_load, file = %s'%(file))
-        fle  = FileAccess.open(file, 'r')
-        data = (loadJSON(fle.read()) or {})
-        fle.close()
-        return data
-        
-            
-    def loadChannels(self, file=getUserFilePath(CHANNELFLE)):
-        #for use in recovery tools
-        self.log('loadChannels, file = %s'%(file))
-        return self.cleanSelf(self._load(file)).get('channels',[])
-        
+    def _clear(self):
+        self.log('_clear')
+        self.writer.vault.channelList = None
+        return self._deposit()
        
-    def saveChannels(self):
+       
+    def _save(self):
         with fileLocker(self.writer.globalFileLock):
-            filePath = getUserFilePath(CHANNELFLE)
+            filePath = CHANNELFLEPATH
             fle = FileAccess.open(filePath, 'w')
-            self.log('saveChannels, saving %s channels to %s'%(len(self.getChannels()),filePath))
+            self.log('_save, saving %s channels to %s'%(len(self.getChannels()),filePath))
             fle.write(dumpJSON(self.cleanSelf(self.writer.vault.channelList), idnt=4, sortkey=False))
             fle.close()
-        return self._reload()
+        return self._deposit()
 
-
-    @cacheit(checksum='%s.%s'%(ADDON_VERSION,getIP()),json_data=True)
-    def getTemplate(self):
-        self.log('getTemplate')
-        channelList = self._load(CHANNELFLE_DEFAULT)
-        channelList['uuid'] = self.getUUID(channelList)
-        return channelList
-
-
-    def getCitem(self):#channel schema
-        citem = self.getTemplate().get('channels',[{}])[0].copy()
-        citem['rules'] = []
-        return citem
-        
-  
+          
     def cleanSelf(self, channelList):
         channels = channelList.get('channels',[])
+        for citem in channels: citem['group'] = list(set(citem['group'])) #clean duplicates
         channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
+         # for rule in citem.get('rules',[]) if rule.get('id') != 0 #todo clean template rules
         self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList.get('channels',[]))))
         return channelList
-  
-  
+        
+        
     @staticmethod
     def sortChannels(channels):
         return sorted(channels, key=lambda k: k['number'])
 
-  
-    def getMYUUID(self):
-        uuid = SETTINGS.getCacheSetting('MY_UUID')
-        if not uuid: 
-            uuid = genUUID(seed=getIP())
-            SETTINGS.setCacheSetting('MY_UUID',uuid)
-        return uuid
-
-
-    def getUUID(self, channelList=None):
-        if channelList is None: 
-            channelList = self.writer.vault.channelList
-        uuid = channelList.get('uuid','')
-        if not uuid: 
-            uuid = self.getMYUUID()
-            channelList['uuid'] = uuid
-            self.writer.vault.channelList = channelList
-        return uuid
-            
-            
-    def chkClient(self):
-        isClient = (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingBool('Enable_Client'))
-        if not isClient:
-            isClient = self.getUUID() != self.getMYUUID()
-            PROPERTIES.setPropertyBool('isClient',isClient)
-            SETTINGS.setSettingBool('Enable_Client',isClient)
-        self.log('chkClient, isClient = %s'%(isClient))
-        return isClient
-
 
     def getChannels(self):
-        channels = self.sortChannels(self.writer.vault.channelList.get('channels',[]))
+        channels = self.cleanSelf(self.writer.vault.channelList).get('channels',[])
         self.log('getChannels, channels = %s'%(len(channels)))
         return channels.copy()
 
 
     def getUserChannels(self):
-        return self.sortChannels(list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.getChannels())))
+        return list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.getChannels()))
 
 
     def getPredefinedChannels(self):
-        return self.sortChannels(list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels())))
+        return list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels()))
 
 
     def getPredefinedChannelsByType(self, type, channels=None):
         if channels is None: channels = self.getPredefinedChannels()
-        return self.sortChannels(filter(lambda c:c.get('type') == type, channels))
+        return list(filter(lambda c:c.get('type') == type, channels))
+
+
+    @cacheit(json_data=True)
+    def getTemplate(self):
+        fle = FileAccess.open(CHANNELFLE_DEFAULT, 'r')
+        channelList = loadJSON(fle.read())
+        fle.close()
+        return channelList
+
+
+    def getCitem(self):#channel schema
+        return self.getTemplate().get('channels',[])[0].copy()
+        
+
+    def getRitem(self): #rule schema
+        return {"id": 0, "name": "", "description": "", "options": {}}
 
 
     def getImports(self):
@@ -203,16 +150,8 @@ class Channels:
     
     def deleteChannels(self):
         self.log('deleteChannels')
-        if FileAccess.delete(getUserFilePath(CHANNELFLE)):
+        if FileAccess.delete(CHANNELFLEPATH):
+            self._clear()
             return self.dialog.notificationDialog(LANGUAGE(30016)%('Channels'))
         return False
 
-
-    def clearChannels(self):
-        self.log('clearChannels')
-        return self._clear()
-
-
-    def getRitem(self):
-        self.log('getRitem') #rule schema
-        return self.getTemplate().get('channels',[{}])[0].get('rules',[])[0].copy()

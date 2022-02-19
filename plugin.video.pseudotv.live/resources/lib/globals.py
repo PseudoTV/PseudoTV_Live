@@ -20,34 +20,40 @@
 
 import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib
 import datetime, time, _strptime, base64, binascii, random, hashlib
-import json, codecs, collections, uuid
+import json, codecs, collections, uuid, queue
 
 from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from itertools                 import cycle, chain, zip_longest
-from six.moves                 import urllib
-from contextlib                import contextmanager
+from six.moves                 import urllib 
+from contextlib                import contextmanager, closing
 from xml.dom.minidom           import parse, Document
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
-from resources.lib.events      import logit
+from socket                    import gethostbyname, gethostname
 
-# Plugin Info
+#info
 ADDON_ID            = 'plugin.video.pseudotv.live'
 REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
 ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
-ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
 ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
+SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
+ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
+
+#
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
+SETTINGS            = Settings()
+PROPERTIES          = Properties()
 
 #folders
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
-TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
+CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
+PLS_LOC             = os.path.join(SETTINGS_LOC,'playlists')
+LOGO_LOC            = os.path.join(SETTINGS_LOC,'logos')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -59,17 +65,25 @@ TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
 
-OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
+#switches      
+USER_LOC            = SETTINGS.getSetting('User_Folder')     
+DEBUG_ENABLED       = SETTINGS.getSettingBool('Enable_Debugging')
+PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
+PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
+   
+CHANNELFLEPATH      = os.path.join(SETTINGS_LOC,CHANNELFLE)
+LIBRARYFLEPATH      = os.path.join(SETTINGS_LOC,LIBRARYFLE)
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
-COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
-MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 
-#docs
-README_FLE          = os.path.join(ADDON_PATH,'README.md')
-CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
-LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
+M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
+XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
+GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
+PROVIDERFLEPATH     = os.path.join(USER_LOC,PROVIDERFLE)
+
+UDP_PORT            = SETTINGS.getSettingInt('UDP_PORT')
+TCP_PORT            = SETTINGS.getSettingInt('TCP_PORT')
 
 #remotes
 IMPORT_ASSET        = os.path.join(ADDON_PATH,'remotes','asset.json')
@@ -79,86 +93,70 @@ CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',CHANNELFLE)
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes',GENREFLE)
 PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
 
-SETTINGS            = Settings()
-PROPERTIES          = Properties()
+#docs
+README_FLE          = os.path.join(ADDON_PATH,'README.md')
+CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
+LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
-PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
-MIN_ENTRIES         = int(PAGE_LIMIT//2)
+#resources
+OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
+COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
+MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 LOGO                = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
-
-VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
-MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
-IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
-
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}&radio={radio}.pvr'
 
-ADDON_REPOSITORY    = 'repository.pseudotv'
-PVR_CLIENT          = 'pvr.iptvsimple'
-PVR_MANAGER         = 'service.iptv.manager'
-
-LANG                = 'en' #todo
+#constants
+LANG                = 'en' #todo parse kodi region settings
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DEFAULT_ENCODING    = 'utf-8'
 
+RULES_PER_PAGE      = 10
 MAX_IMPORT          = 5
 CLOCK_SEQ           = 70420
 UPDATE_WAIT         = 3600  #1hr in secs.
 EPG_HRS             = 10800 #3hr in Secs., Min. EPG guidedata
 OVERLAY_DELAY       = 15    #secs
-PROMPT_DELAY        = 4000  #msecs
+MIN_ENTRIES         = int(PAGE_LIMIT//2)
 
 TIME_CHECK          = 90
-UPDATE_OFFSET       = 10800 #3hr in secs.
-LIBRARY_OFFSET      = 3600
-RECOMMENDED_OFFSET  = 900   #15mins in secs.
-PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
-
 RADIO_ITEM_LIMIT    = 250
 AUTOTUNE_LIMIT      = 3     #auto items per type.
 CHANNEL_LIMIT       = 999   #hard limit, do not exceed!
 
-CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),LANGUAGE(30033)]#Limit is 10
-GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
-BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
+UPDATE_OFFSET       = 10800 #3hr in secs.
+LIBRARY_OFFSET      = 3600
+RECOMMENDED_OFFSET  = 900   #15mins in secs.
+PROMPT_DELAY        = 4000  #msecs 
 
-PRE_ROLL            = ['bumpers','ratings']
-POST_ROLL           = ['commercials','trailers']
+VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
+MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
-# jsonrpc
-TV_TYPES            = ['episode','tvshow']
-MOVIE_TYPES         = ['movie','movies']
-MUSIC_TYPES         = ['songs','albums','artists','music']
-ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
-VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
-
-#per channel rule limit
-RULES_PER_PAGE                   = 10
 #builder
-RULES_ACTION_CHANNEL_CREATION    = 1 
-RULES_ACTION_START               = 2
-RULES_ACTION_CHANNEL_START       = 3
-RULES_ACTION_CHANNEL_JSON        = 4
-RULES_ACTION_CHANNEL_ITEM        = 5
-RULES_ACTION_CHANNEL_LIST        = 6
-RULES_ACTION_CHANNEL_STOP        = 7
-RULES_ACTION_CHANNEL_PRE_TIME    = 8
-RULES_ACTION_CHANNEL_POST_TIME   = 9
-RULES_ACTION_STOP                = 10
+RULES_ACTION_CHANNEL       = 1 
+RULES_ACTION_BUILD_START   = 2
+RULES_ACTION_CHANNEL_START = 3
+RULES_ACTION_CHANNEL_JSON  = 4
+RULES_ACTION_CHANNEL_ITEMS = 5
+RULES_ACTION_CHANNEL_STOP  = 6
+RULES_ACTION_PRE_TIME      = 7
+RULES_ACTION_POST_TIME     = 8
+RULES_ACTION_BUILD_STOP    = 9
 #player
-RULES_ACTION_PLAYBACK            = 11
-RULES_ACTION_PLAYER              = 12
+RULES_ACTION_PLAYBACK      = 11
+RULES_ACTION_PLAYER        = 12
 #overlay
-RULES_ACTION_OVERLAY             = 20
+RULES_ACTION_OVERLAY       = 21
 
 #overlay globals
-NOTIFICATION_CHECK_TIME          = 15.0 #seconds
-NOTIFICATION_TIME_REMAINING      = 900  #seconds
-NOTIFICATION_PLAYER_PROG         = 85   #percent
-NOTIFICATION_DISPLAY_TIME        = 30   #seconds
-CHANNELBUG_CHECK_TIME            = 15.0 #seconds
+NOTIFICATION_CHECK_TIME     = 15.0 #seconds
+NOTIFICATION_TIME_REMAINING = 900  #seconds
+NOTIFICATION_PLAYER_PROG    = 85   #percent
+NOTIFICATION_DISPLAY_TIME   = 30   #seconds
+CHANNELBUG_CHECK_TIME       = 15.0 #seconds
 
 # Actions
 ACTION_MOVE_LEFT     = 1
@@ -183,56 +181,68 @@ SELECT_DIALOG        = 12000
 OK_DIALOG            = 12002
 ADDON_DIALOG         = 13001
 
-MGR_SETTINGS     = {'refresh_interval'   :'1',
-                    'iptv_simple_restart':'false'}
+ADDON_REPOSITORY    = 'repository.pseudotv'
+PVR_CLIENT          = 'pvr.iptvsimple'
+PVR_MANAGER         = 'service.iptv.manager'
 
-JSON_SETTINGS    = {'pvrmanager.preselectplayingchannel' :'true',
-                    'pvrmanager.syncchannelgroups'       :'true',
-                    'pvrmanager.backendchannelorder'     :'true',
-                    'pvrmanager.usebackendchannelnumbers':'true',
-                    # 'pvrmenu.iconpath':'',
-                    # 'pvrplayback.switchtofullscreenchanneltypes':1,
-                    # 'pvrplayback.confirmchannelswitch':'true',
-                    # 'epg.selectaction':2,
-                    # 'epg.epgupdate':120,
-                    'pvrmanager.startgroupchannelnumbersfromone':'false'}
+GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
+BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
+PRE_ROLL            = ['bumpers','ratings']
+POST_ROLL           = ['commercials','trailers']
 
-def log(msg, level=xbmc.LOGDEBUG):
-    if not SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if not isinstance(msg,str): msg = str(msg)
-    if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+# jsonrpc
+TV_TYPES            = ['episode','tvshow']
+MOVIE_TYPES         = ['movie','movies']
+MUSIC_TYPES         = ['songs','albums','artists','music']
+ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
+VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
 
-def getUserFilePath(file=None):
-    path = SETTINGS.getSetting('User_Folder')
-    if not FileAccess.exists(path):
-        if not Dialog().yesnoDialog((LANGUAGE(30326)%path), autoclose=90000): 
-            return sys.exit("User_Folder Unavailable")
-        else:
-            path = SETTINGS_LOC
-            SETTINGS.setSetting('User_Folder',path)
-    if file: return os.path.join(path,file)
-    else:    return path
+MGR_SETTINGS        = {'refresh_interval'   :'1',
+                       'iptv_simple_restart':'false'}
+                    
+CHAN_TYPES          = [LANGUAGE(30002),LANGUAGE(30003),LANGUAGE(30004),
+                       LANGUAGE(30005),LANGUAGE(30007),LANGUAGE(30006),
+                       LANGUAGE(30080),LANGUAGE(30026),LANGUAGE(30097),
+                       LANGUAGE(30033)]#Limit is 10
+                       
+JSON_SETTINGS       = {'pvrmanager.preselectplayingchannel' :'true',
+                       'pvrmanager.syncchannelgroups'       :'true',
+                       'pvrmanager.backendchannelorder'     :'true',
+                       'pvrmanager.usebackendchannelnumbers':'true',
+                       # 'pvrmenu.iconpath':'',
+                       # 'pvrplayback.switchtofullscreenchanneltypes':1,
+                       # 'pvrplayback.confirmchannelswitch':'true',
+                       # 'epg.selectaction':2,
+                       # 'epg.epgupdate':120,
+                       'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
-def getPVRSettings():
+LOG_TYPE            = {0:{'level':xbmc.LOGDEBUG  ,'weight':4,'description':"In depth information about the status of Kodi. This information can pretty much only be deciphered by a developer or long time Kodi power user."},
+                       1:{'level':xbmc.LOGINFO   ,'weight':3,'description':"Something has happened. It's not a problem, we just thought you might want to know. Fairly excessive output that most people won't care about."},
+                       2:{'level':xbmc.LOGWARNING,'weight':2,'description':"Something potentially bad has happened. If Kodi did something you didn't expect, this is probably why. Watch for errors to follow."},
+                       3:{'level':xbmc.LOGERROR  ,'weight':1,'description':"This event is bad. Something has failed. You likely noticed problems with the application be it skin artifacts, failure of playback a crash, etc."}}
+
+def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'10',
+            'm3uRefreshIntervalMins'      :'5',
             'm3uRefreshHour'              :'0',
             'logoPathType'                :'0',
-            'logoPath'                    :os.path.join(getUserFilePath(),'cache','logos'),
-            'm3uPathType'                 :'0',
-            'm3uPath'                     :getUserFilePath(M3UFLE),
-            'epgPathType'                 :'0',
-            'epgPath'                     :getUserFilePath(XMLTVFLE),
-            'genresPathType'              :'0',
-            'genresPath'                  :getUserFilePath(GENREFLE),
+            'logoPath'                    :LOGO_LOC,
+            'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'm3uPath'                     :M3UFLEPATH,
+            'm3uUrl'                      :PROPERTIES.getProperty('M3U_URL'),
+            'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'epgPath'                     :XMLTVFLEPATH,
+            'epgUrl'                      :PROPERTIES.getProperty('XMLTV_URL'),
+            'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'genresPath'                  :GENREFLEPATH,
+            'genresUrl'                   :PROPERTIES.getProperty('GENRE_URL'),
             # 'tvGroupMode'                 :'0',
-            # 'customTvGroupsFile'          :getUserFilePath(TVGROUPFLE),#todo
+            # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
             # 'radioGroupMode'              :'0',
-            # 'customRadioGroupsFile'       :getUserFilePath(RADIOGROUPFLE),#todo
+            # 'customRadioGroupsFile'       :(RADIOGROUPFLE),#todo
             'enableProviderMappings'      :'true',
             'defaultProviderName'         :ADDON_NAME,
-            'providerMappingFile'         :getUserFilePath(PROVIDERFLE),#todo
+            'providerMappingFile'         :PROVIDERFLEPATH,#todo
             'useEpgGenreText'             :'true',
             'logoFromEpg'                 :'1',
             'catchupEnabled'              :'true',
@@ -243,7 +253,20 @@ def getPVRSettings():
             'epgTSOverride'               :'false',
             'useFFmpegReconnect'          :'true',
             'useInputstreamAdaptiveforHls':'true'}
-                    
+
+
+def getPTV_SETTINGS(): 
+    return {'User_Import'         :SETTINGS.getSetting('User_Import'),
+            'Enable_Client'       :SETTINGS.getSetting('Enable_Client'),
+            'Import_M3U_TYPE'     :SETTINGS.getSetting('Import_M3U_TYPE'),
+            'Import_M3U_FILE'     :SETTINGS.getSetting('Import_M3U_FILE'),
+            'Import_M3U_URL'      :SETTINGS.getSetting('Import_M3U_URL'),
+            'Import_Provider'     :SETTINGS.getSetting('Import_Provider'),
+            'User_Folder'         :SETTINGS.getSetting('User_Folder'),
+            'UDP_PORT'            :SETTINGS.getSetting('UDP_PORT'),
+            'TDP_PORT'            :SETTINGS.getSetting('TDP_PORT'),
+            'Select_Channels'     :SETTINGS.getSetting('Select_Channels')}
+             
 @contextmanager
 def fileLocker(globalFileLock):
     globalFileLock.lockFile("MasterLock")
@@ -257,22 +280,468 @@ def busy():
     if isBusy(): yield
     else:
         setBusy(True)
-        try: yield
-        finally: 
-            setBusy(False)
+        try:     yield
+        finally: setBusy(False)
 
 @contextmanager
 def busy_dialog():
     xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-    try: yield
-    finally:
-        xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+    try:     yield
+    finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+
+def log(event, level=xbmc.LOGDEBUG): #todo unifiy all logs to its own class to handle events/exceptions.
+    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
+    if not isinstance(event,str): msg = str(event)
+    if level == xbmc.LOGERROR: event = '%s\n%s'%((event),traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
+    
+def chkSettings(last,current):
+    changed = set()
+    for key,value in last.items():
+        if value != current[key]:
+            if key == 'User_Folder': 
+                moveUser(value,current[key])
+            elif key in ['UDP_PORT','UDP_PORT']: 
+                Dialog().notificationDialog(LANGUAGE(30183))
+                toggleADDON(ADDON_ID, state=False, reverse=True)
+                return False
+            changed.add(True)
+    if True in list(changed): return True
+       
+def initFolders():
+    [FileAccess.makedirs(dir) for dir in [SETTINGS_LOC,CACHE_LOC,PLS_LOC,LOGO_LOC] if not FileAccess.exists(dir)]
+ 
+def validateFiles():
+    initFolders()
+    results = [FileAccess.exists(path)      for path in [CHANNELFLEPATH, LIBRARYFLEPATH]]
+    results.extend([FileAccess.exists(path) for path in [M3UFLEPATH, XMLTVFLEPATH]])
+    if False in results: return True
+    else:                return False
+        
+def chkUpdateTime(key, wait, lastUpdate=None):
+    state = False
+    if lastUpdate is None: lastUpdate = float((SETTINGS.getCacheSetting(key,checksum=getInstanceID()) or 0))
+    epoch = time.time()
+    if (epoch >= (lastUpdate + wait)):
+        SETTINGS.setCacheSetting(key,int(epoch),checksum=getInstanceID())
+        state = True
+    log('globals: chkUpdateTime, key = %s, lastUpdate = %s, update now = %s'%(key,lastUpdate,state))
+    return state
+    
+def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
+    return PROPERTIES.getEXTProperty('PseudoTVRunning') == "True"
+
+def setLegacyPseudoTV(state):
+    return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
+    
+def setBusy(state):
+    return PROPERTIES.setPropertyBool("BUSY.WORKING",state)
+    
+def isBusy():
+    return PROPERTIES.getPropertyBool("BUSY.WORKING")
+    
+def isPaused():
+    return xbmc.getCondVisibility('Player.Paused')
+
+def hasLibraryRun():
+    return PROPERTIES.getEXTProperty('hasLibraryRun') == "True"
+
+def setLibraryRun(state):
+    return PROPERTIES.setEXTProperty('hasLibraryRun',state)
+    
+def isUpdatePending():
+    state = PROPERTIES.getPropertyBool('isUpdatePending')
+    PROPERTIES.clearProperty('isUpdatePending')
+    return state
+    
+def setUpdatePending(state=True):
+    return PROPERTIES.setPropertyBool('isUpdatePending',state)
+    
+def isRestartRequired():
+    state = PROPERTIES.getPropertyBool('restartRequired')
+    PROPERTIES.clearProperty('restartRequired')
+    return state
+        
+def setRestartRequired(state=True):
+    return PROPERTIES.setPropertyBool('restartRequired',state)
+       
+def isShutdownRequired():
+    state = PROPERTIES.getPropertyBool('shutdownRequired')
+    PROPERTIES.clearProperty('shutdownRequired')
+    return state
+                 
+def setServiceStop(state=True):
+    return PROPERTIES.setPropertyBool('shutdownRequired',state)
+         
+def hasAutotuned():
+    return PROPERTIES.getPropertyBool('hasAutotuned')
+    
+def setAutotuned(state=True):
+    return PROPERTIES.setPropertyBool('hasAutotuned',state)
+    
+def isOverlay():
+    return PROPERTIES.getPropertyBool('OVERLAY')
+
+def isManagerRunning():
+    return PROPERTIES.getPropertyBool('managerRunning')
+    
+def setManagerRunning(state=True):
+    return PROPERTIES.setPropertyBool('managerRunning',state)
+    
+def getSettingDialog():
+    return xbmc.getCondVisibility("Window.IsVisible(addonsettings)")
+    
+def isSettingDialog():
+    return (PROPERTIES.getPropertyBool('addonsettings') or getSettingDialog())
+    
+def setSettingDialog(state=True):
+    return PROPERTIES.setPropertyBool('addonsettings',state)
+
+def getSelectDialog():
+    return xbmc.getCondVisibility("Window.IsVisible(selectdialog)")
+        
+def isSelectDialog():
+    return (PROPERTIES.getPropertyBool('selectdialog') or getSelectDialog())
+
+def setSelectDialog(state=True):
+    return PROPERTIES.setPropertyBool('selectdialog',state)
+
+def isYesNoDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(yesnodialog)"))
+    
+def isKeyboardDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(virtualkeyboard)"))
+    
+def isFileDialog():
+    return (xbmc.getCondVisibility("Window.IsVisible(filebrowser)"))
+
+def hasPVR():
+    return xbmc.getCondVisibility('Pvr.HasTVChannels')
+    
+def hasMusic():
+    return xbmc.getCondVisibility('Library.HasContent(Music)')
+    
+def hasTV():
+    return xbmc.getCondVisibility('Library.HasContent(TVShows)')
+    
+def hasMovie():
+    return xbmc.getCondVisibility('Library.HasContent(Movies)')
+ 
+def hasPVRAddon():
+    return xbmc.getCondVisibility("System.HasPVRAddon")
+         
+def hasAddon(id):
+    if not id: return True
+    return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
+    
+def isClient():
+    return (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingInt('Enable_Client') > 0)
+    
+def doUtilities():
+    param = PROPERTIES.getProperty('utilities')
+    PROPERTIES.clearProperty('utilities')
+    return param
+    
+def getDiscovery():
+    return PROPERTIES.getProperty('discovery')
+
+def setDiscovery( value):
+    return PROPERTIES.setProperty('discovery',value)
+
+def setInstanceID():
+    PROPERTIES.setProperty('InstanceID',uuid.uuid4())
+
+def getInstanceID():
+    instanceID = PROPERTIES.getProperty('InstanceID') 
+    if not instanceID: setInstanceID()
+    return PROPERTIES.getProperty('InstanceID')
+  
+def getMD5(text):
+    if not isinstance(text,str): text = str(text)
+    hash_object = hashlib.md5(text.encode())
+    return hash_object.hexdigest()
+  
+def genUUID(seed=None):
+    if seed:
+        m = hashlib.md5()
+        m.update(seed.encode(DEFAULT_ENCODING))
+        return str(uuid.UUID(m.hexdigest()))
+    return str(uuid.uuid1(clock_seq=CLOCK_SEQ))
+
+def getIP(wait=5):
+    while not xbmc.Monitor().abortRequested() and wait > 0:
+        ip = (xbmc.getIPAddress() or gethostbyname(gethostname()))
+        if ip: return ip
+        elif (xbmc.Monitor().waitForAbort(1)): break
+        else: wait -= 1
+    return
             
+def getMYUUID():
+    uuid = SETTINGS.getCacheSetting('MY_UUID')
+    if not uuid: 
+        uuid = genUUID(seed=getIP())
+        SETTINGS.setCacheSetting('MY_UUID',uuid)
+    return uuid
+
+def getUUID(channelList={}):
+    return channelList.get('uuid',getMYUUID())
+        
+def chkDiscovery(SERVER_IP=None):
+    PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingInt('Enable_Client') > 0)
+    LOCAL_IP = '%s:%s'%(getIP(),TCP_PORT)
+    if not SERVER_IP: SERVER_IP = LOCAL_IP
+    if PROPERTIES.getProperty('SERVER_IP') != SERVER_IP:
+        SETTINGS.setSetting('Network_Path' ,USER_LOC)
+        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(SERVER_IP))
+        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(SERVER_IP,M3UFLE))
+        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(SERVER_IP,XMLTVFLE))
+        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(SERVER_IP,GENREFLE))
+        
+        PROPERTIES.setProperty('SERVER_IP',SERVER_IP)
+        PROPERTIES.setProperty('M3U_URL'  ,'http://%s/%s'%(SERVER_IP,M3UFLE))
+        PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_IP,XMLTVFLE))
+        PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_IP,GENREFLE))
+        log('global: chkDiscovery, isClient = %s, server = %s'%(isClient(),SERVER_IP))
+    return isClient()
+    
+def getIdle():
+    idleTime  = getIdleTime()
+    idleState = (idleTime > 0)
+    if (idleTime == 0 or idleTime <= 5): log("globals: getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
+    return idleState,idleTime
+    
+        
+def getIdleTime():
+    try: return (int(xbmc.getGlobalIdleTime()) or 0)
+    except: #Kodi raises error after sleep.
+        log('globals: getIdleTime, Kodi waking up from sleep...')
+        return 0
+ 
+def slugify(text):
+    non_url_safe = [' ','"', '#', '$', '%', '&', '+',',', '/', ':', ';', '=', '?','@', '[', '\\', ']', '^', '`','{', '|', '}', '~', "'"]
+    non_url_safe_regex = re.compile(r'[{}]'.format(''.join(re.escape(x) for x in non_url_safe)))
+    text = non_url_safe_regex.sub('', text).strip()
+    text = u'_'.join(re.split(r'\s+', text))
+    return text
+                   
 def unquote(text):
     return urllib.parse.unquote(text)
     
 def quote(text):
     return urllib.parse.quote(text)
+      
+def splitYear(label):
+    try:
+        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+        if match:
+            if match.group(2): return match.groups()
+    except: pass
+    return label, None
+   
+def getLabel(item):
+    label = (item.get('name','') or item.get('label','') or item.get('showtitle','') or item.get('title',''))
+    if not label: return ''
+    label, year = splitYear(label)
+    year = (item.get('year','') or year)
+    if year: return '%s (%s)'%(label, year)
+    return label
+    
+def dumpJSON(item, idnt=None, sortkey=True):
+    try: 
+        if not item:
+            return ''
+        elif hasattr(item, 'read'):
+            return json.dump(item, indent=idnt, sort_keys=sortkey)
+        elif not isinstance(item,str):
+            return json.dumps(item, indent=idnt, sort_keys=sortkey)
+        elif isinstance(item,str):
+            return item
+    except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
+    return ''
+    
+def loadJSON(item):
+    try: 
+        if not item:
+            return {}
+        elif hasattr(item, 'read'):
+            return json.load(item)
+        elif isinstance(item,str):
+            return json.loads(item)
+        elif isinstance(item,dict):
+            return item
+    except Exception as e: log("globals: loadJSON failed! %s"%(e), xbmc.LOGERROR)
+    return {}#except json.decoder.JSONDecodeError:,ValueError:
+
+def sendJSON(command):
+    log('globals: sendJSON, command = %s'%(command))
+    return loadJSON(xbmc.executeJSONRPC(command))
+
+def installAddon(id, silent=False):
+    if hasAddon(id):
+        if not addonEnabled(id): toggleADDON(id)
+    else:
+        xbmc.executebuiltin('InstallAddon("%s")'%(id))
+        if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
+
+def addonEnabled(id):
+    return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
+
+def getPluginMeta(id):
+    try:
+        if id.startswith(('plugin://','resource://')):
+            id =  splitall(id.replace('plugin://','').replace('resource://','')).strip()
+        pluginID = xbmcaddon.Addon(id)
+        meta = {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
+        log('globals: getPluginMeta, plugin meta = %s'%(meta))
+        return meta
+    except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
+    return {}
+
+def toggleADDON(id, state=True, reverse=False):
+    log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
+    sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
+    if reverse:
+        if id == ADDON_ID: 
+            xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({False:'EnableAddon',True:'DisableAddon'}[state],id))
+        else: 
+            xbmc.sleep(PROMPT_DELAY)
+            toggleADDON(id, not bool(state))
+    
+def getPlugin(id=PVR_CLIENT):
+    try: return xbmcaddon.Addon(id)
+    except: # backend disabled?
+        toggleADDON(id)
+        xbmc.sleep(2000)
+        try:    return xbmcaddon.Addon(id)
+        except: return None
+
+def chkRequiredSettings():
+    funcs = [chkPVR,chkMGR]
+    for func in funcs: func()
+
+def chkMGR():
+    return chkPluginSettings(PVR_MANAGER, MGR_SETTINGS)
+
+def chkPVR():
+    return chkPluginSettings(PVR_CLIENT, getPVR_SETTINGS())
+
+def chkPluginSettings(id, values):
+    log('globals: chkPluginSettings, id = %s'%(id))
+    addon = getPlugin(id)
+    if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
+    for setting, value in values.items():
+        if not str(addon.getSetting(setting)) == str(value): 
+            return setPlugin(id,values,SETTINGS.getSettingBool('Enable_Config'))
+    return True
+    
+def setPVR():
+    return setPlugin(PVR_CLIENT,getPVR_SETTINGS())
+    
+def setPlugin(id,values,override=False):
+    log('globals: setPlugin')
+    if not override:
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name','')))): return
+    try:
+        addon = getPlugin(id)
+        if addon  is None: return False
+        for setting, value in values.items(): 
+            addon.setSetting(setting, value)
+    except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
+    if override: return True
+    return True
+    
+def brutePVR(override=False):
+    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
+    elif not override:
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
+    toggleADDON(PVR_CLIENT,False,reverse=True)
+    return True
+    
+def refreshMGR():
+    if getPlugin(PVR_MANAGER):
+        xbmc.executebuiltin('RunScript(service.iptv.manager,refresh)')
+
+def chkResources(silent=True):
+    log('globals: chkResources, silent = %s'%(silent)) 
+    if hasAddon(ADDON_REPOSITORY): 
+        params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
+        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+        for addon in missing:
+            installAddon(addon, silent)
+            if xbmc.Monitor().waitForAbort(15): break
+    elif not silent: 
+        Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def chkFiles():
+    ...
+# not FileAccess.exists(getUserFilePath(M3UFLE)),
+# not FileAccess.exists(getUserFilePath(XMLTVFLE)),
+# not FileAccess.exists(getUserFilePath(CHANNELFLE)),
+# not FileAccess.exists(getUserFilePath(LIBRARYFLE))]
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+def hasVersionChanged():
+    if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
+        SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+        return True
 
 def cleanAbandonedLocks():
     ... #todo remove .locks
@@ -318,63 +787,22 @@ def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
     except ZeroDivisionError: return 0
 
-def initDirs():
-    USER_LOC  = getUserFilePath()
-    CACHE_LOC = os.path.join(USER_LOC,'cache')
-    PLS_LOC   = os.path.join(CACHE_LOC,'playlists')
-    LOGO_LOC  = os.path.join(CACHE_LOC,'logos')
-    dirs = [USER_LOC,CACHE_LOC,PLS_LOC,LOGO_LOC]
-    [FileAccess.makedirs(dir) for dir in dirs if not FileAccess.exists(dir)]
-    return True
-
-def moveUser(oldFolder, newFolder): #todo finish
-    if PROPERTIES.getPropertyBool('isClient'): return
-    CACHE_LOC = os.path.join(getUserFilePath(),'cache')
+def moveUser(oldFolder, newFolder):
+    if isClient(): return
     log('globals: moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
-    MoveLST = [CACHE_LOC,M3UFLE,XMLTVFLE,CHANNELFLE,LIBRARYFLE,GENREFLE]
-    if not Dialog().yesnoDialog(LANGUAGE(30336)%(oldFolder,newFolder)): return
-    dia = Dialog().progressDialog(message='Preparing to move files...')
-    for idx, file in enumerate(MoveLST):
-        pnt = int(((idx+1)*100)//len(MoveLST))
-        dia = Dialog().progressDialog(pnt, dia, message='Moving %s...'%(file))
+    files = [M3UFLE,XMLTVFLE,GENREFLE]
+    dia   = Dialog().progressDialog(message='Preparing to move files...')#todo move to string.po
+    for idx, file in enumerate(files):
+        pnt = int(((idx+1)*100)//len(files))
+        dia = Dialog().progressDialog(pnt, dia, message='%s %s'%('Moving',file))#todo move to string.po
         oldFilePath = os.path.join(oldFolder,file)
         newFilePath = os.path.join(newFolder,file)
         if FileAccess.exists(oldFilePath):
+            dia = Dialog().progressDialog(pnt, dia, messag='%s %s'%('Moving',file))#todo move to string.po
             if FileAccess.copy(oldFilePath,newFilePath):
-                dia = Dialog().progressDialog(pnt, dia, message='Moving %s complete'%(file))
+                dia = Dialog().progressDialog(pnt, dia, message='%s %s %s'%('Moving',file,LANGUAGE(30053)))#todo move to string.po
                 continue
-        dia = Dialog().progressDialog(pnt, dia, message='Moving %s failed!'%(file))
-    return Dialog().notificationDialog(LANGUAGE(30053))
-
-def dumpJSON(item, idnt=None, sortkey=True):
-    try: 
-        if not item:
-            return ''
-        elif hasattr(item, 'read'):
-            return json.dump(item, indent=idnt, sort_keys=sortkey)
-        elif not isinstance(item,str):
-            return json.dumps(item, indent=idnt, sort_keys=sortkey)
-        elif isinstance(item,str):
-            return item
-    except Exception as e: log("globals: dumpJSON failed! %s\n%s"%(e,item), xbmc.LOGERROR)
-    return ''
-    
-def loadJSON(item):
-    try: 
-        if not item:
-            return {}
-        elif hasattr(item, 'read'):
-            return json.load(item)
-        elif isinstance(item,str):
-            return json.loads(item)
-        elif isinstance(item,dict):
-            return item
-    except Exception as e: log("globals: loadJSON failed! %s"%(e), xbmc.LOGERROR)
-    return {}#except json.decoder.JSONDecodeError:,ValueError:
-    
-def sendJSON(command):
-    log('globals: sendJSON, command = %s'%(command))
-    return loadJSON(xbmc.executeJSONRPC(command))
+        dia = Dialog().progressDialog(pnt, dia, message='Moving %s failed!'%(file))#todo move to string.po
 
 def escapeDirJSON(path):
     mydir = path
@@ -389,142 +817,6 @@ def splitall(plugin):
         if not plugin[0]: break
     return last[0]
     
-def isSSD():
-    #TODO DETECT SSD/FLASH
-    return False
-
-def getIdleTime():
-    try: return (int(xbmc.getGlobalIdleTime()) or 0)
-    except: return 0 #Kodi raises error after sleep.
-
-def isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
-    return PROPERTIES.getEXTProperty('PseudoTVRunning') == "True"
-
-def setLegacyPseudoTV(state):
-    return PROPERTIES.setEXTProperty('PseudoTVRunning',state)
-
-def setBusy(state):
-    return PROPERTIES.setPropertyBool("BUSY.RUNNING",state)
-    
-def isBusy():
-    return PROPERTIES.getPropertyBool("BUSY.RUNNING")
-
-def isOverlay():
-    return PROPERTIES.getPropertyBool('OVERLAY')
-
-def getSettingDialog():
-    return xbmc.getCondVisibility("Window.IsVisible(addonsettings)")
-    
-def isSettingDialog():
-    return (PROPERTIES.getPropertyBool('addonsettings') or getSettingDialog())
-    
-def setSettingDialog(state=True):
-    return PROPERTIES.setPropertyBool('addonsettings',state)
-
-def getSelectDialog():
-    return xbmc.getCondVisibility("Window.IsVisible(selectdialog)")
-        
-def isSelectDialog():
-    return (PROPERTIES.getPropertyBool('selectdialog') or getSelectDialog())
-
-def setSelectDialog(state=True):
-    return PROPERTIES.setPropertyBool('selectdialog',state)
-
-def isYesNoDialog():
-    return (xbmc.getCondVisibility("Window.IsVisible(yesnodialog)"))
-    
-def isKeyboardDialog():
-    return (xbmc.getCondVisibility("Window.IsVisible(virtualkeyboard)"))
-    
-def isFileDialog():
-    return (xbmc.getCondVisibility("Window.IsVisible(filebrowser)"))
-    
-def doUtilities():
-    param = PROPERTIES.getProperty('utilities')
-    PROPERTIES.clearProperty('utilities')
-    return param
-
-def isRestartRequired():
-    state = PROPERTIES.getPropertyBool('restartRequired')
-    setRestartRequired(False)
-    return state
-        
-def setRestartRequired(state=True):
-    return PROPERTIES.setPropertyBool('restartRequired',state)
-       
-def isShutdownRequired():
-    state = PROPERTIES.getPropertyBool('shutdownRequired')
-    setServiceStop(False)
-    return state
-                 
-def setServiceStop(state=True):
-    return PROPERTIES.setPropertyBool('shutdownRequired',state)
-             
-def isServiceQuitting():
-    return PROPERTIES.getPropertyBool('serviceQuitting')
-                          
-def setServiceQuitting(state=True):
-    return PROPERTIES.setPropertyBool('serviceQuitting',state)
-
-def isManagerRunning():
-    return PROPERTIES.getPropertyBool('managerRunning')
-
-def setManagerRunning(state=True):
-    return PROPERTIES.setPropertyBool('managerRunning',state)
-    
-def isClient():
-    return PROPERTIES.getPropertyBool('isClient')
-
-def isPendingChange():
-    return PROPERTIES.getPropertyBool('pendingChange')
-    
-def setPendingChange(state=True):
-    return PROPERTIES.setPropertyBool('pendingChange',state)
-    
-def hasAutoTuned():
-    return PROPERTIES.getPropertyBool('autotuned')
-    
-def setAutoTuned(state=True):
-    return PROPERTIES.setPropertyBool('autotuned',state)
-    
-def hasAutotuned():
-    return PROPERTIES.getPropertyBool('autotuned')
-    
-def hasPVR():
-    return xbmc.getCondVisibility('Pvr.HasTVChannels')
-    
-def hasMusic():
-    return xbmc.getCondVisibility('Library.HasContent(Music)')
-    
-def hasTV():
-    return xbmc.getCondVisibility('Library.HasContent(TVShows)')
-    
-def hasMovie():
-    return xbmc.getCondVisibility('Library.HasContent(Movies)')
- 
-def hasPVRAddon():
-    return xbmc.getCondVisibility("System.HasPVRAddon")
-         
-def hasAddon(id):
-    if not id: return True
-    return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
-    
-def hasVersionChanged():
-    lastVersion = (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0')
-    if ADDON_VERSION != lastVersion:
-        SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
-        showChangelog()
-
-def chkUpdateTime(key, wait, lastUpdate=None):
-    state = False
-    epoch = time.time()
-    if lastUpdate is None: lastUpdate = float((SETTINGS.getCacheSetting(key,getInstanceID()) or 0))
-    if (epoch >= (lastUpdate + wait)):
-        SETTINGS.setCacheSetting(key,int(epoch),getInstanceID())
-        state = True
-    log('chkUpdateTime, key = %s, lastUpdate = %s, update now = %s'%(key,lastUpdate,state))
-    return state
-
 def updateIPTVManager():
     if getPluginMeta(PVR_MANAGER).get('version') == "0.2.3a+matrix.1":
         xbmc.executebuiltin("RunScript(%s,update)"%(PVR_MANAGER))
@@ -540,8 +832,11 @@ def showReadme():
         return markdown
         
     with busy_dialog(): 
-        readme = convertMD2TXT(xbmcvfs.File(README_FLE).read())
-        Dialog().textviewer(readme, heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        Dialog().textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()), heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+
+def chkVersion():
+    if hasVersionChanged():
+        showChangelog()
 
 def showChangelog():
     def addColor(text):
@@ -560,116 +855,30 @@ def showChangelog():
         return text
         
     with busy_dialog(): 
-        changelog = addColor(xbmcvfs.File(CHANGELOG_FLE).read())
-        Dialog().textviewer(changelog, heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        Dialog().textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
 
 def loadGuide():
     xbmc.executebuiltin("Dialog.Close(all)")
     xbmc.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s,return)"%(quote(ADDON_NAME)))
 
-def openAddonSettings(ctl=(1,1),id=ADDON_ID):
+def openAddonSettings(ctl=(0,1),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
-    ## ctl[1] is the Setting (Control) offset (0=first, 1=second, 2...etc)# addonId is the Addon ID
+    ## ctl[1] is the Setting (Control) offset (1=first, 2=second, 3...etc)# addonId is the Addon ID
     ## Example: openAddonSettings((2,3),'plugin.video.name')
     ## This will open settings dialog focusing on fourth setting (control) inside the third category (tab)
-    xbmc.executebuiltin('Addon.OpenSettings(%s)'%id)
-    xbmc.sleep(500)
-    xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]+100))
     xbmc.sleep(100)
-    xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]+80))
-   
-def getPluginMeta(id):
-    try:
-        if id.startswith(('plugin://','resource://')):
-            id =  splitall(id.replace('plugin://','').replace('resource://','')).strip()
-        pluginID = xbmcaddon.Addon(id)
-        meta = {'type':pluginID.getAddonInfo('type'),'label':pluginID.getAddonInfo('name'),'name':pluginID.getAddonInfo('name'), 'version':pluginID.getAddonInfo('version'), 'path':pluginID.getAddonInfo('path'), 'author':pluginID.getAddonInfo('author'), 'icon':pluginID.getAddonInfo('icon'), 'fanart':pluginID.getAddonInfo('fanart'), 'id':pluginID.getAddonInfo('id'), 'description':(pluginID.getAddonInfo('description') or pluginID.getAddonInfo('summary'))}
-        log('globals: getPluginMeta, plugin meta = %s'%(meta))
-        return meta
-    except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
-    return {}
-
-def installAddon(id, silent=False):
-    if hasAddon(id):
-        if not addonEnabled(id): toggleADDON(id)
-    else:
-        xbmc.executebuiltin('InstallAddon("%s")'%(id))
-        if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
- 
-def chkResources(silent=True):
-    log('globals: chkResources, silent = %s'%(silent)) 
-    if hasAddon(ADDON_REPOSITORY) and not isClient(): 
-        params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
-        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
-        for addon in missing:
-            installAddon(addon, silent)
-            if xbmc.Monitor().waitForAbort(15): break
-    elif not silent: 
-        Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
-
-def addonEnabled(id):
-    return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
-
-def toggleADDON(id, state=True, reverse=False):
-    log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
-    sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
-    if reverse:
-        if id == ADDON_ID: 
-            xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({'EnableAddon':False,'DisableAddon':True}[state],id))
-        else: 
-            xbmc.sleep(PROMPT_DELAY)
-            toggleADDON(id, not bool(state))
-    
-def brutePVR(override=False):
-    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Player.HasMedia")): return
-    elif not override:
-        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    # setInstanceID()
-    toggleADDON(PVR_CLIENT,False,reverse=True)
+    xbmc.executebuiltin('Addon.OpenSettings(%s)'%id)
+    xbmc.sleep(100)
+    xbmc.executebuiltin('SetFocus(%i)'%(ctl[0]-100))
+    xbmc.sleep(100)
+    xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]-80))
     return True
-
-def getPVR(id=PVR_CLIENT):
-    try: return xbmcaddon.Addon(id)
-    except: # backend disabled?
-        toggleADDON(id)
-        xbmc.sleep(2000)
-        try:    return xbmcaddon.Addon(id)
-        except: return None
+    
 
 def setJsonSettings():
     for key in JSON_SETTINGS.keys():
         JSON_SETTINGS[key]
-
-def chkMGR():
-    return chkPVR(PVR_MANAGER, MGR_SETTINGS)
-
-def chkPVR(id=PVR_CLIENT, values=getPVRSettings()):
-    log('globals: chkPVR, id = %s'%(id))
-    #check for min. settings' required
-    addon = getPVR(id)
-    if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
-    for setting, value in values.items():
-        if not str(addon.getSetting(setting)) == str(value): 
-            return configurePVR(id,values,SETTINGS.getSettingBool('Enable_Config'))
-    return True
-    
-def configurePVR(id=PVR_CLIENT,values=getPVRSettings(),override=False):
-    log('globals: configurePVR')
-    if not override:
-        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name','')))): return
-    try:
-        addon = getPVR(id)
-        if addon  is None: return False
-        for setting, value in values.items(): 
-            addon.setSetting(setting, value)
-    except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
-    if override: return True
-    return Dialog().notificationDialog(LANGUAGE(30053))
-
-def refreshMGR():
-    if getPVR(PVR_MANAGER):
-        xbmc.executebuiltin('RunScript(service.iptv.manager,refresh)')
 
 def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'): #convert json pvr datetime string to datetime obj, thread safe!
     try:              return datetime.datetime.strptime(datestring, format)
@@ -712,23 +921,7 @@ def stripRegion(label):
                 return match.group(1)
     except: pass
     return label
-    
-def splitYear(label):
-    try:
-        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
-        if match:
-            if match.group(2): return match.groups()
-    except: pass
-    return label, None
-        
-def getLabel(item):
-    label = (item.get('name','') or item.get('label','') or item.get('showtitle','') or item.get('title',''))
-    if not label: return ''
-    label, year = splitYear(label)
-    year = (item.get('year','') or year)
-    if year: return '%s (%s)'%(label, year)
-    return label
-    
+
 def getThumb(item,opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','folder','icon'],
             1:['poster','clearlogo','logo','landscape','fanart','thumb','thumbnail','folder','icon']}[opt]
@@ -825,34 +1018,6 @@ def getGroups(add=False):
     if SETTINGS.getSetting('User_Groups'): GROUP_TYPES.extend(SETTINGS.getSetting('User_Groups').split('|'))
     if add: GROUP_TYPES.insert(0,'+Add')
     return sorted(set(GROUP_TYPES))
-
-def getMD5(text):
-    if not isinstance(text,str): text = str(text)
-    hash_object = hashlib.md5(text.encode())
-    return hash_object.hexdigest()
-
-def setInstanceID():
-    PROPERTIES.setProperty('InstanceID',uuid.uuid4())
-
-def getInstanceID():
-    return (PROPERTIES.getProperty('InstanceID') or str(uuid.uuid4()))
-
-def genUUID(seed=None):
-    if seed:
-        m = hashlib.md5()
-        m.update(seed.encode(DEFAULT_ENCODING))
-        return str(uuid.UUID(m.hexdigest()))
-    return str(uuid.uuid1(clock_seq=CLOCK_SEQ))
-
-def getIP():
-    return (xbmc.getIPAddress() or None)
-
-def slugify(text):
-    non_url_safe = [' ','"', '#', '$', '%', '&', '+',',', '/', ':', ';', '=', '?','@', '[', '\\', ']', '^', '`','{', '|', '}', '~', "'"]
-    non_url_safe_regex = re.compile(r'[{}]'.format(''.join(re.escape(x) for x in non_url_safe)))
-    text = non_url_safe_regex.sub('', text).strip()
-    text = u'_'.join(re.split(r'\s+', text))
-    return text
 
 def saveURL(url, file):
     try:
@@ -967,3 +1132,16 @@ def quoteImage(imagestring):
     result = 'image://{0}/'.format(quote(imagestring, '()!'))
     result = re.sub(r'%[0-9A-F]{2}', lambda mo: mo.group().lower(), result)
     return result
+        
+
+# def syncCustom(): #todo sync user created smartplaylists/nodes for multi-room.
+    # for type in ['library','playlists']:
+        # for media in ['video','music','mixed']:
+            # path  = 'special://userdata/%s/%s/'%(type,media)
+            # files = FileAccess.listdir(path)[1]
+            # for file in files:
+                # orgpath  = os.path.join(path,file)
+                # copypath = os.path.join(getUserFilePath(),'cache','playlists',type,media,file)
+                # self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
+                # yield FileAccess.copy(orgpath, copypath)
+

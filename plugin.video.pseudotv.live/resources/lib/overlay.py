@@ -85,10 +85,7 @@ class Overlay(xbmcgui.WindowXML):
             self.staticOverlay  = SETTINGS.getSettingBool("Static_Overlay")
             self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
             self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
-            
-            self.overlayLayer   = self.getControl(39999)
-            self.overlayLayer.setVisible(False)
-            
+
             self.container = self.getControl(40000)
             
             self.static = self.getControl(40001)
@@ -102,6 +99,9 @@ class Overlay(xbmcgui.WindowXML):
             
             self.channelbug = self.getControl(41004)
             self.channelbug.setVisible(False)
+                        
+            self.overlayLayer   = self.getControl(39999)
+            self.overlayLayer.setVisible(False)
             
             self.myPlayer = Player()
             self.myPlayer.overlay = self
@@ -120,7 +120,7 @@ class Overlay(xbmcgui.WindowXML):
             if self.load(): 
                 self.overlayLayer.setVisible(True)
                 if self.showChannelBug: self.bugToggle() #start bug timer
-                if self.showOnNext: self.onNextChk()#start onnext timer
+                if self.showOnNext:     self.onNextChk()#start onnext timer
             else: 
                 self.closeOverlay()
         except Exception as e: 
@@ -213,12 +213,6 @@ class Overlay(xbmcgui.WindowXML):
 
     def onNextChk(self):
         try:
-            if self.onNextChkThread.is_alive(): 
-                try: 
-                    self.onNextChkThread.cancel()
-                    self.onNextChkThread.join()
-                except: pass
-            
             if self.onNextToggleThread.is_alive() and not self.overlayLayer.isVisible(): 
                 self.cancelOnNext()
             elif not self.onNextToggleThread.is_alive() and self.playerAssert():
@@ -233,12 +227,6 @@ class Overlay(xbmcgui.WindowXML):
     def onNextToggle(self, state=True):
         try:
             self.log('onNextToggle, state = %s'%(state))
-            if self.onNextToggleThread.is_alive(): 
-                try: 
-                    self.onNextToggleThread.cancel()
-                    self.onNextToggleThread.join()
-                except: pass
-                    
             wait   = {True:float(10),False:float(random.randint(180,300))}[state]
             nstate = not bool(state)
             self.onNext.setVisible(state)
@@ -250,18 +238,12 @@ class Overlay(xbmcgui.WindowXML):
             
     def bugToggle(self, state=True):
         try:
-            if self.bugToggleThread.is_alive(): 
-                try: 
-                    self.bugToggleThread.cancel()
-                    self.bugToggleThread.join()
-                except: pass
-                    
             bugVal  = SETTINGS.getSettingInt("Channel_Bug_Interval")
             if bugVal == -1: 
                 onVAL  = self.getTimeRemaining()
                 offVAL = .1
             elif bugVal == 0:  
-                onVAL  = random.randint(30,60)
+                onVAL  = random.randint(300,600)
                 offVAL = random.randint(300,600)
             else:
                 onVAL  = bugVal * 60

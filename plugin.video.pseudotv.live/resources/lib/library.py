@@ -25,121 +25,49 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Library:
     def __init__(self, writer=None):
-        self.log('__init__')
+        self.chkLibraryThread = threading.Timer(30.0, self.chkLibraryTimer)
         if writer is None:
             from resources.lib.parser import Writer
-            writer  = Writer()
-        self.writer = writer
-        self.cache  = writer.cache
-        
-        if self.writer.vault.libraryItems is None: 
-            self._reload(forced=True)
-        else:
-            self._withdraw()
+            writer = Writer()
+        else: self.chkLibraryThread.start()
             
-        self.predefined    = Predefined()
-        self.recommended   = Recommended(library=self)
-        
+        self.writer      = writer
+        self.cache       = writer.cache
+        self.pool        = writer.pool
+        self.channels    = writer.channels
+        self.predefined  = Predefined()
+        self.recommended = Recommended(library=self)
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
 
-    def _clear(self):
-        self.log('_clear')
-        self.writer.vault.libraryItems = {}
-        return self._deposit()
-        
 
-    def _reload(self, forced=False):
-        self.log('_reload, forced = %s'%(forced))
-        if forced:
-            self.writer.vault.libraryItems = self.getTemplate()
-            self.writer.vault.libraryItems.update(self._load())
-        return self._deposit()
-        
-        
+    def _withdraw(self):
+        self.log('_withdraw')
+        return self.writer.vault.get_libraryItems()
+     
+ 
     def _deposit(self):
         self.log('_deposit')
         self.writer.vault.set_libraryItems(self.writer.vault.libraryItems)
         return True
         
     
-    def _withdraw(self):
-        self.log('_withdraw')
-        return self.writer.vault.get_libraryItems()
-     
-
-    def _load(self, file=getUserFilePath(LIBRARYFLE)):
-        self.log('_load file = %s'%(file))
-        fle  = FileAccess.open(file, 'r')
-        data = (loadJSON(fle.read()) or {})
-        fle.close()
-        return data
+    def _clear(self):
+        self.log('_clear')
+        self.writer.vault.libraryItems = None
+        return self._deposit()
         
         
-    def save(self):
-        filePath = getUserFilePath(LIBRARYFLE)
-        self.log('save, saving to %s'%(filePath))
+    def _save(self):
+        filePath = LIBRARYFLEPATH
+        self.log('_save, saving to %s'%(filePath))
         with fileLocker(self.writer.globalFileLock):
             fle = FileAccess.open(filePath, 'w')
             fle.write(dumpJSON(self.writer.vault.libraryItems, idnt=4, sortkey=False))
             fle.close()
-        return self._reload()
-
-
-    @cacheit(json_data=True)
-    def getTemplate(self):
-        self.log('getTemplate')
-        return (self._load(LIBRARYFLE_DEFAULT) or {})
-
-        
-    def getLibraryItems(self, type, enabled=False):
-        self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
-        items = self.writer.vault.libraryItems.get('library',{}).get(type,[])
-        if enabled: return self.getEnabledItems(items)
-        return sorted(items, key=lambda k: k['name'])
-        
-
-    def getEnabledItems(self, items):
-        if not items: return []
-        self.log('getEnabledItems, items = %s'%(len(items)))
-        def chkEnabled(item):
-            if item.get('enabled',False): 
-                return item
-            else:
-                return None
-        return sorted(self.writer.pool.poolList(chkEnabled,items), key=lambda k: k['name'])
-        # return sorted(filter(lambda k:k.get('enabled',False) == True, items), key=lambda k: k.get('name'))
-
-
-    def setLibraryItems(self, type, items):
-        self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
-        self.writer.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
-        SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
-        return self.save()
-
-        
-    def clearLibraryItems(self, type=None):
-        self.log('clearLibraryItems, type = %s'%(type))
-        def setDisabled(item):
-            item['enabled'] = False
-            return item
-            
-        if type is None: types = CHAN_TYPES
-        else:            types = [type]
-        for type in types:
-            self.setLibraryItems(type,self.writer.pool.poolList(setDisabled,self.getLibraryItems(type)))
-        return True
-        
-        
-    def setEnableStates(self, type, selects, items=None):
-        if items is None: items = self.getLibraryItems(type)
-        self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
-        for idx, item in enumerate(items):
-            if idx in selects: item['enabled'] = True
-            else:              item['enabled'] = False
-        return self.setLibraryItems(type,items)
+        return self._deposit()
         
 
     @cacheit()
@@ -195,7 +123,25 @@ class Library:
                  LANGUAGE(30033):self.recommended.fillImports}
         return funcs[type]()
 
-
+            
+    def chkLibraryTimer(self, wait=LIBRARY_OFFSET):
+        self.log('chkLibraryTimer, wait = %s'%(wait))
+        if self.chkLibraryThread.is_alive(): 
+            try: 
+                self.chkLibraryThread.cancel()
+                self.chkLibraryThread.join()
+            except: pass
+                
+        if isBusy(): wait = 30.0
+        else: 
+            with busy(): 
+                self.fillLibraryItems()
+            
+        self.chkLibraryThread = threading.Timer(wait, self.chkLibraryTimer)
+        self.chkLibraryThread.name = "chkLibraryThread"
+        self.chkLibraryThread.start()
+                    
+                
     def fillLibraryItems(self):
         self.log('fillLibraryItems')
         ## parse kodi for items, convert to library item, update logo,vfs path. save to library.json
@@ -203,8 +149,9 @@ class Library:
             items      = self.fillTypeItems(type)
             existing   = self.getLibraryItems(type)
             enabled    = self.getEnabledItems(existing)
+            channels   = self.channels.getPredefinedChannelsByType(type)
             cacheName  = 'fillType.%s'%(type)
-            cacheCHK   = '%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)))
+            cacheCHK   = '%s.%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)),getMD5(dumpJSON(channels)))
             
             if existing: msg = LANGUAGE(30328)
             else:        msg = LANGUAGE(30159) 
@@ -218,7 +165,6 @@ class Library:
                     life = datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))
                     
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
-
                 pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
                 for idx, item in enumerate(items):
                     if self.writer.monitor.waitForAbort(0.001): return
@@ -226,19 +172,28 @@ class Library:
                     pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
                     
+                    name = item
                     if isinstance(item,dict):
                         name = (item.get('name','') or item.get('label',''))
-                        try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
-                        except: enabled_item = {}
-                        if not name: continue
+                    if not name: continue
+                        
+                    #enabled library item (same as existing, except only "enabled":True items).
+                    try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
+                    except: enabled_item = {}
+
+                    #channel item (fallback). Use channels.json to restore missing enabled library items.
+                    try:    channel_item = list(filter(lambda k:k['name'] == name, channels))[0]
+                    except: channel_item = {}
+                        
+                    if not enabled_item and channel_item:
+                        enabled_item = channel_item
+                         
+                    if isinstance(item,dict):
                         if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
                             logo = item.get('icon','')
                         else: 
                             logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item)
                     else: 
-                        name = item
-                        try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
-                        except: enabled_item = {}
                         logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item)
 
                     tmpItem = {'enabled':len(enabled_item) > 0,
@@ -259,23 +214,77 @@ class Library:
             if not PROPERTIES.getPropertyBool('has.Predefined'): 
                 PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
-                      
+           
         for type in CHAN_TYPES: 
-            fillType(type)
             if self.writer.monitor.waitForAbort(0.001): return
-        # return self.writer.buildPredefinedChannels()
+            fillType(type)
+            
+        setLibraryRun(True)
+        return self.writer.buildPredefinedChannels()
         
+
+    def setLibraryItems(self, type, items):
+        self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
+        self.writer.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
+        SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
+        return self._save()
+
+
+    def getLibraryItems(self, type, enabled=False):
+        self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
+        items = self.writer.vault.libraryItems.get('library',{}).get(type,[])
+        if enabled: return self.getEnabledItems(items)
+        return sorted(items, key=lambda k: k['name'])
+        
+        
+    def getEnabledItems(self, items):
+        if not items: return []
+        self.log('getEnabledItems, items = %s'%(len(items)))
+        def chkEnabled(item):
+            if item.get('enabled',False): 
+                return item
+            else:
+                return None
+        return sorted(self.pool.poolList(chkEnabled,items), key=lambda k: k['name'])
+        # return sorted(filter(lambda k:k.get('enabled',False) == True, items), key=lambda k: k.get('name'))
+
 
     def buildLibraryListitem(self, data):
         if isinstance(data,tuple): data = list(data)
         return self.writer.dialog.buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
 
 
+    def setEnableStates(self, type, selects, items=None):
+        if items is None: items = self.getLibraryItems(type)
+        self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
+        for idx, item in enumerate(items):
+            if idx in selects: item['enabled'] = True
+            else:              item['enabled'] = False
+        return self.setLibraryItems(type,items)
+
+        
+    def clearLibraryItems(self, type=None):
+        self.log('clearLibraryItems, type = %s'%(type))
+        def setDisabled(item):
+            item['enabled'] = False
+            return item
+            
+        if type is None: types = CHAN_TYPES
+        else:            types = [type]
+        for type in types:
+            self.setLibraryItems(type,self.pool.poolList(setDisabled,self.getLibraryItems(type)))
+        return True
+        
+
 class Recommended:
     def __init__(self, library):
-        self.log('__init__')
         self.library = library
         self.cache   = library.cache
+        self.pool    = library.pool
+        
+        if self.library.chkLibraryThread.is_alive(): 
+            self.chkRecommendedThread = threading.Timer(15.0, self.chkRecommendedTimer)
+            self.chkRecommendedThread.start()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -320,18 +329,34 @@ class Recommended:
         if self.library.save(): self.setBlackList(self.getBlackList())
         return True
         
+        
+    def chkRecommendedTimer(self, wait=RECOMMENDED_OFFSET):
+        self.log('chkRecommendedTimer, wait = %s'%(wait))
+        if self.chkRecommendedThread.is_alive(): 
+            try: 
+                self.chkRecommendedThread.cancel()
+                self.chkRecommendedThread.join()
+            except: pass
+                
+        if isBusy(): wait = 15.0
+        else: 
+            with busy(): 
+                self.importPrompt()
+            
+        self.chkRecommendedThread = threading.Timer(wait, self.chkRecommendedTimer)
+        self.chkRecommendedThread.name = "chkRecommendedThread"
+        self.chkRecommendedThread.start()
+                    
       
     def searchRecommendedAddons(self):
         if not SETTINGS.getSettingBool('Enable_Recommended'): return []
         blackList = self.getBlackList()
-        addonList = list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))
-        return (self.library.writer.pool.poolList(self.searchRecommendedAddon, addonList) or [])
+        addonList = [addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))]
+        return (self.pool.poolList(self.searchRecommendedAddon, addonList) or [])
         
         
-    @cacheit(expiration=datetime.timedelta(seconds=RECOMMENDED_OFFSET),json_data=True)
-    def searchRecommendedAddon(self, addon):
-        addonid   = addon.get('addonid','')
-        cacheName = 'searchRecommendedAddon.%s'%(addonid)
+    # @cacheit(expiration=datetime.timedelta(seconds=RECOMMENDED_OFFSET),json_data=True)
+    def searchRecommendedAddon(self, addonid):
         addonData = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
         if addonData:
             self.log('searchRecommendedAddon, found addonid = %s, payload = %s'%(addonid,addonData))
@@ -412,5 +437,5 @@ class Recommended:
         PROPERTIES.setPropertyBool('has.BlackList',len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         
-        if changed: self.library.save()
+        if changed: self.library._save()
         return changed

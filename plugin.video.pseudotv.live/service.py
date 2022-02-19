@@ -1,4 +1,4 @@
-  # Copyright (C) 2020 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -20,4 +20,4 @@
 # -entry point-
 from resources.lib.service import Service
 
-if __name__ == '__main__': Service().run()
+if __name__ == '__main__': Service()

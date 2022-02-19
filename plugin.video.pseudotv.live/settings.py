@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -18,10 +18,9 @@
 
 # -*- coding: utf-8 -*-
 # -entry point-
-from kodi_six import xbmcaddon
+from kodi_six                 import xbmcaddon
+from resources.lib.globals    import *
 
 if __name__ == '__main__': 
-    # Plugin Info
-    ADDON_ID      = 'plugin.video.pseudotv.live'
-    REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-    REAL_SETTINGS.openSettings() 
+    with busy_dialog():
+        openAddonSettings()

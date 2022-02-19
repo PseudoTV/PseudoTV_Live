@@ -22,12 +22,13 @@ from resources.lib.globals     import *
 
 class Builder:
     def __init__(self, writer=None):
-        self.log('__init__')
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
+            
         self.writer           = writer
         self.cache            = writer.cache
+        self.pool             = writer.pool
         
         #globals
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
@@ -72,42 +73,45 @@ class Builder:
 
     def verifyChannelItems(self):
         #check channel configuration, verify and update paths, logos.
-        items = self.writer.channels.getChannels()
-        for idx, item in enumerate(items):
-            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened(): break
-            if (not item.get('name','') or not item.get('path',None) or item.get('number',0) < 1): 
-                self.log('verifyChannelItems, skipping, missing channel path and/or channel name\n%s'%(item))
+        channels = self.writer.channels.getChannels()
+        for idx, citem in enumerate(channels):
+            if (self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened()): break
+                
+            #check min. meta.
+            if (not citem.get('name','') or not citem.get('path',None) or citem.get('number',0) < 1):
+                self.log('verifyChannelItems, skipping - missing channel path and/or channel name\n%s'%(citem))
                 continue
 
-            if item['number'] >= CHANNEL_LIMIT: #update dynamic pre-defined channels
-                item['logo'] = (self.writer.jsonRPC.resources.getLogo(item['name'],item['type'],item['path'],item, featured=True, lookup=True) or item.get('logo',LOGO)) #all logos are dynamic re-parse for changes.
-                # item['path'] = self.writer.library.predefined.pathTypes[item['type']](item['name'])
+            if not isinstance(citem.get('path',[]),list): citem['path'] = [citem['path']]
+            citem['id']      = (citem.get('id','')             or getChannelID(citem['name'],citem['path'],citem['number'])) # internal use only; create unique PseudoTV ID.
+            citem['radio']   = (citem.get('radio','')          or (citem['type'] == LANGUAGE(30097) or 'musicdb://' in citem['path']))
+            citem['catchup'] = (citem.get('catchup','')        or ('vod' if not citem['radio'] else ''))
+
+            if not SETTINGS.getSettingBool('Enable_Grouping'): 
+                citem['group'] = [ADDON_NAME]
+            else:
+                if ADDON_NAME not in citem['group']:
+                    citem['group'].append(ADDON_NAME)
+                    
+                if citem.get('favorite',False):
+                     if not LANGUAGE(30201) in citem['group']: 
+                        citem['group'].append(LANGUAGE(30201))
+                else:
+                     if LANGUAGE(30201) in citem['group']: 
+                         citem['group'].remove(LANGUAGE(30201))
+            citem['group'] = list(set(citem['group']))
             
-            if not isinstance(item.get('path',[]),list): 
-                item['path'] = [item['path']]
-                
-            item['id']      = (item.get('id','')             or getChannelID(item['name'], item['path'], item['number'])) # internal use only; create unique PseudoTV ID.
-            item['radio']   = (item.get('radio','')          or (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path']))
-            item['catchup'] = (item.get('catchup','')        or ('vod' if not item['radio'] else ''))
-            item['group']   = list(set((item.get('group',[]) or [])))
-            
-            self.log('verifyChannelItems, %s: %s'%(idx,item['id']))
-            yield self.runActions(RULES_ACTION_CHANNEL_CREATION, item, item)
+            self.log('verifyChannelItems, %s: %s'%(idx,citem['id']))
+            yield self.runActions(RULES_ACTION_CHANNEL, citem, citem)
 
 
     def buildService(self):
-        if isClient(): 
-            self.log('buildService, Client mode enabled/Settings Opened; returning!')
-            return False
-                       
         channels = sorted(self.verifyChannelItems(), key=lambda k: k['number'])
         self.log('buildService, channels = %s'%(len(channels)))
         if not channels:
             self.writer.dialog.notificationDialog(LANGUAGE(30056))
-            return
-
-        if not isLegacyPseudoTV(): # legacy setting to disable/enable support in third-party applications. 
-            setLegacyPseudoTV(True)
+            return False
+        if not isLegacyPseudoTV(): setLegacyPseudoTV(True) # legacy setting to disable/enable support in third-party applications. 
             
         self.pCount       = 0
         self.pDialog      = self.writer.dialog.progressBGDialog()
@@ -123,20 +127,18 @@ class Builder:
                 self.log('buildService, interrupted')
                 return
                 
-            channel         = self.runActions(RULES_ACTION_START, channel, channel)
+            channel         = self.runActions(RULES_ACTION_BUILD_START, channel, channel)
             self.chanName   = channel['name']
             self.chanError  = []
             
-            if endTimes.get(channel['id']):
-                self.pMSG   = LANGUAGE(30051) #Updating
-            else:
-                self.pMSG   = LANGUAGE(30329) #Building
+            if endTimes.get(channel['id']): self.pMSG   = LANGUAGE(30051) #Updating
+            else:                           self.pMSG   = LANGUAGE(30329) #Building
         
             self.pCount     = int(idx*100//len(channels))
             self.pDialog    = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30331)))
 
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])#cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
-            cacheResponse   = self.runActions(RULES_ACTION_STOP, channel, cacheResponse)
+            cacheResponse   = self.runActions(RULES_ACTION_BUILD_STOP, channel, cacheResponse)
 
             if cacheResponse:
                 self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio'])) #create m3u/xmltv station entry.
@@ -145,17 +147,16 @@ class Builder:
             else: 
                 self.log('buildService, In-Valid Channel (No guidedata) %s '%(channel['id']))
                 self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
-                self.writer.removeChannelLineup(channel)
+                # self.writer.removeChannelLineup(channel)
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
                 
         if not self.writer.saveChannelLineup(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30001))
                      
-        self.pDialog = self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30053))
-           
-        if isLegacyPseudoTV() and not self.writer.player.isPlaying():
+        if (isLegacyPseudoTV() and not self.writer.player.isPlaying()): 
             setLegacyPseudoTV(False)
             
+        self.pDialog = self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30053))
         self.log('buildService, finished')
         return True
 
@@ -224,7 +225,7 @@ class Builder:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
-                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_LIST, citem, cacheResponse)
+                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_ITEMS, citem, cacheResponse)
                 cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
@@ -239,7 +240,7 @@ class Builder:
                 
             self.runActions(RULES_ACTION_CHANNEL_STOP, citem)
             return sorted(cacheResponse, key=lambda k: k['start'])
-        except Exception as e: self.log("getFileList, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("getFileList, Failed! %s"%(e), xbmc.LOGERROR)
         return False
             
                 
@@ -259,7 +260,7 @@ class Builder:
         self.log("addScheduling; id = %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         #todo insert adv. scheduling rules here or move to adv. rules.py
         tmpList  = []
-        fileList = self.runActions(RULES_ACTION_CHANNEL_PRE_TIME, citem, fileList)
+        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList)
         for idx, item in enumerate(fileList):
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -270,7 +271,7 @@ class Builder:
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
-        return self.runActions(RULES_ACTION_CHANNEL_POST_TIME, citem, tmpList)
+        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList)
             
             
     def buildRadio(self, channel):
@@ -413,7 +414,7 @@ class Builder:
                         self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.chanName,int((len(seasoneplist+fileList)*100)//page))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                 else: 
                     self.chanError.append(LANGUAGE(30314))
-                    self.log("buildList, id: %s skipping no duration meta found!"%(citem['id']),xbmc.LOGINFO)
+                    self.log("buildList, id: %s skipping %s no duration meta found!"%(citem['id'],file),xbmc.LOGINFO)
             
         if sort.get("method","") == 'episode':
             seasoneplist.sort(key=lambda seep: seep[1])

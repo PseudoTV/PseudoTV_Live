@@ -23,14 +23,13 @@ from resources.lib             import xmltv
 
 class XMLTV:
     def __init__(self, writer=None):
-        self.log('__init__')
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
         self.writer = writer
 
         if self.writer.vault.xmltvList is None:
-            self._reload(forced=True)
+            self._reload()
         else:
             self._withdraw()
                 
@@ -45,12 +44,9 @@ class XMLTV:
         return self._deposit()
         
 
-    def _reload(self, forced=False):
-        self.log('_reload, forced = %s'%(forced))
-        if forced: self.writer.vault.xmltvList = self._load()
-        else:      self.writer.vault.xmltvList = {'data'       : self.writer.vault.xmltvList['data'],
-                                                  'channels'   : self.sortChannels(self.cleanSelf(self.cleanChannels(self.writer.vault.xmltvList['channels'], self.writer.vault.xmltvList['programmes']),'id')),
-                                                  'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.writer.vault.xmltvList['programmes'],'channel')))}
+    def _reload(self):
+        self.log('_reload')
+        self.writer.vault.xmltvList = self._load()
         return self._deposit()
         
         
@@ -73,7 +69,7 @@ class XMLTV:
                 'programmes' : self.sortProgrammes(self.cleanProgrammes(self.cleanSelf(self.loadProgrammes(),'channel')))}
         
         
-    def loadData(self, file=getUserFilePath(XMLTVFLE)):
+    def loadData(self, file=XMLTVFLEPATH):
         self.log('loadData')
         try: 
             return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
@@ -82,17 +78,17 @@ class XMLTV:
             return self.resetData()
 
 
-    def loadChannels(self, file=getUserFilePath(XMLTVFLE)):
+    def loadChannels(self, file=XMLTVFLEPATH):
         self.log('loadChannels, file = %s'%file)
         try:
-            return self.sortChannels(xmltv.read_channels(FileAccess.open(file, 'r')) or [])
+            return (xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
             self.log('loadChannels, failed! %s'%(e))
             return []
         
         
-    def loadProgrammes(self, file=getUserFilePath(XMLTVFLE)):
+    def loadProgrammes(self, file=XMLTVFLEPATH):
         self.log('loadProgrammes, file = %s'%file)
         try: 
             return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
@@ -118,8 +114,8 @@ class XMLTV:
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
 
 
-    def saveXMLTV(self, reset=True):
-        self.log('saveXMLTV')
+    def _save(self, reset=True):
+        self.log('_save')
         if reset: 
             data = self.resetData()
         else:     
@@ -139,8 +135,8 @@ class XMLTV:
             for channel in channels:   writer.addChannel(channel)
             for program in programmes: writer.addProgramme(program)
             
-            filePath = getUserFilePath(XMLTVFLE)
-            self.log('saveXMLTV, saving to %s'%(filePath))
+            filePath = XMLTVFLEPATH
+            self.log('_save, saving to %s'%(filePath))
             writer.write(FileAccess.open(filePath, "w"), pretty_print=True)
             self.buildGenres()
         return self._reload()
@@ -148,8 +144,9 @@ class XMLTV:
 
     def deleteXMLTV(self):
         self.log('deleteXMLTV')
-        if FileAccess.delete(getUserFilePath(XMLTVFLE)): #xmltv.xml
-            FileAccess.delete(getUserFilePath(GENREFLE)) #genre.xml
+        if FileAccess.delete(XMLTVFLEPATH): #xmltv.xml
+            FileAccess.delete(GENREFLEPATH) #genre.xml
+            self._clear()
             return self.writer.dialog.notificationDialog(LANGUAGE(30016)%('XMLTV'))
         return False
 
@@ -158,7 +155,7 @@ class XMLTV:
     def cleanSelf(items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         log('XMLTV: cleanSelf, key = %s'%(key))
         if not slug: return items
-        return list(filter(lambda item:item.get(key,'').endswith(slug), items))
+        return(list(filter(lambda item:item.get(key,'').endswith(slug), items)))
         
         
     @staticmethod
@@ -185,7 +182,6 @@ class XMLTV:
     def sortChannels(channels):
         try: channels.sort(key=lambda x:x.get('display-name'))
         except: pass
-        log('XMLTV: sortChannels, channels = %s'%(len(channels)))
         return channels
 
 
@@ -214,7 +210,7 @@ class XMLTV:
         try:
             if file.startswith('http'):
                 url  = file
-                file = os.path.join(TEMP_LOC,'%s.xml'%(slugify(url)))
+                file = os.path.join(USER_LOC,'%s.xml'%(slugify(url)))
                 saveURL(url,file)
                 
             importChannels, importProgrammes = [],[]
@@ -283,8 +279,7 @@ class XMLTV:
         
         if FileAccess.exists(GENREFLE_DEFAULT): 
             try:
-                dom       = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
-                
+                dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
                 epggenres = parseGenres(dom.getElementsByTagName('genre'))
                 matchGenres(self.writer.vault.xmltvList['programmes'])     
                 epggenres = dict(sorted(sorted(epggenres.items(), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
@@ -304,7 +299,7 @@ class XMLTV:
                     
                 with fileLocker(self.writer.globalFileLock):
                     try:
-                        xmlData = FileAccess.open(getUserFilePath(GENREFLE), "w")
+                        xmlData = FileAccess.open(GENREFLEPATH, "w")
                         xmlData.write(doc.toprettyxml(indent='\t'))
                         xmlData.close()
                     except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)

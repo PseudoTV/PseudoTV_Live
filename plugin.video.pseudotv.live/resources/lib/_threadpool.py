@@ -49,8 +49,8 @@ def log(msg, level=xbmc.LOGDEBUG):
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
 class ThreadPool:
-    def __init__(self, cpuCount=4):
-        self.cpuCount = int(cpuCount)
+    def __init__(self, processes=4):
+        self.cpuCount = int(processes)
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -82,16 +82,18 @@ class ThreadPool:
                         idx, item = queue.get(block=False)
                         try: 
                             results[idx] = func(item)
+                        except queue.Empty: pass
                         except Exception as e: 
-                            errors[idx] = sys.exc_info()
-                    except Empty: break
+                            errors[idx] = '%s\n%s\%s'%(e,sys.exc_info(),traceback.format_exc())
+                    except: break
 
         threads = [Worker() for _ in range(threadCount)]
         for t in threads: t.start()
         for t in threads: t.join()
 
         if errors:
-            if len(errors) > 1: self.log("imap, multiple errors: %d:\n%s"%(len(errors), errors), xbmc.LOGERROR)
+            if len(errors) > 1: 
+                self.log("imap, multiple errors: %d:\n%s"%(len(errors), errors), xbmc.LOGERROR)
             item_i = min(errors.keys())
             type, value, tb = errors[item_i]
             self.log("imap, exception on item %s:\n%s"%(item_i, "\n".join(traceback.format_tb(tb))), xbmc.LOGERROR)

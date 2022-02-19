@@ -21,4 +21,9 @@
 import sys
 from resources.lib.plugin import Plugin
 
-if __name__ == '__main__': Plugin(sys.argv).run()
+ADDON_ID = 'plugin.video.pseudotv.live'
+
+if __name__ == '__main__':
+    if not xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%ADDON_ID): 
+        xbmc.executebuiltin("EnableAddon(%s)"%ADDON_ID)
+    Plugin(sys.argv)

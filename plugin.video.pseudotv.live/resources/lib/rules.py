@@ -289,8 +289,9 @@ class BaseRule:
         if psel < 0:
             psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
             if not multi: psel = (psel[0] or -1)
-        select = self.inherited.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi)
-        if select is not None: self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
+        select = (self.inherited.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi) or -1)
+        if not select is None: 
+            self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           
     def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
@@ -334,7 +335,6 @@ class ShowChannelBug(BaseRule):
         self.actions      = [RULES_ACTION_OVERLAY]
         self.selectBoxOptions = [[True, False]]
 
-
     def copy(self):
         return ShowChannelBug()
 
@@ -353,7 +353,6 @@ class ShowChannelBug(BaseRule):
 
     def runAction(self, actionid, overlay, channeldata):
         if actionid == RULES_ACTION_OVERLAY:
-            self.storedLogoValue   = overlay.showChannelBug
             overlay.showChannelBug = self.optionValues[0]
             self.log("runAction, setting showChannelBug = %s"%(overlay.showChannelBug))
         return channeldata

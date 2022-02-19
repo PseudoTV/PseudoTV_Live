@@ -34,28 +34,12 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 * [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
 * Copyright 2009-2021
 
-------------
-
-## Contributors:
-
-This project exists thanks to all the people who contribute. [Contribute](CONTRIBUTING.md).
-
-## Backers:
-
-Thank you to all our backers! 🙏 [Become a backer]()
-
-## Sponsors:
-
-Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor]()
-
-## Mega Sponsors:
-
-Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a mega sponsor]()
 
 ------------
 
 # Features:
 - Predefined Channels based on your Kodi library content; categorized by: 
+
 
 - Automatic Channel logos, sourced from Kodi resource packs.
 
@@ -192,7 +176,7 @@ Imports are considered "third-party" and are not treated as "PseudoTV" channels.
 
 Logo's are cached and may not be refreshed immediately.... For immediate update use PseudoTV Lives channel manager to swap logo.
 
-Logo folder location -  `/userdata/plugin.video.pseudotv.live/cache/logos` (default  path shown,  configurable under settings ).
+Logo folder location -  `/userdata/plugin.video.pseudotv.live/cache/logos`.
 
 Logo's are cap-sensitive and must match the channel name exactly as it appears in the guide. Supported formats `*.jpg,*.png,*.gif`
 
@@ -204,13 +188,21 @@ If no logo is found, PseudoTV Live will parse for a matching logo in the followi
 
 ## - Channel Sharing (Multi-Room):
 
-For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your primary "server". Under PseudoTV Lives settings "Options" change the file location to a shared path. Client-side, install PseudoTV Live, Under PseudoTV Lives settings "Options" change the file location to a shared path. Enable "Client Mode" *Optional, PseudoTV can automatically detect client mode however, if you would like to force the mode, select in options. *All instances of Kodi must be configured for sharing. ie. Shared/Mapped Drives and Central Database. You can configure channel lineups from any instance of PseudoTV Live, however only your "Server" will build/update channels. 
+### Server:
 
-1. https://kodi.wiki/view/MySQL 
+For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your primary "server". *All instances of Kodi must be configured for sharing. ie. Shared/Mapped Drives and Central Database (mySQL). Only your "Server" instance of PseudoTV Live will build/update channels. 
 
-2. https://kodi.wiki/view/Path_substitution 
+	1 https://kodi.wiki/view/MySQL 
 
-After creating channels you will find a folder called "logos" in the same directory selected in settings. Place custom logos here!! They will override logos PseudoTV Live has found for you. The image must be *.png and is case sensitive to the channel name. ex. Channel "Foo Bar" searchs for a matching logo "Foo Bar.png"
+	1 https://kodi.wiki/view/Path_substitution 
+
+### Client:
+
+Enable under "Multi-Room", select between two options.
+
+	1 Remote Path - Use a remote url hosted by your server instance which is auto-detected. *http://localhost:50001/pseudotv.m3u **http://localhost:50001/pseudotv.xml ***http://localhost:50001/genres.xml
+
+	1 Network Path - Select a shared network path same as configure on the server instance.
 
 ## - Channel Ordering (Numbering):
 

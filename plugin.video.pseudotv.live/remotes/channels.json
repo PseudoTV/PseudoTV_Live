@@ -11,12 +11,7 @@
 		"favorite": false,
 		"path": [],
 		"group": [],
-		"rules": [{
-			"id": 0,
-			"name": "",
-			"description": "",
-			"options": {}
-		}]
+		"rules": []
 	}],
 	"imports": []
 }

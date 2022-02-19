@@ -69,15 +69,15 @@ msgid "Reconfigure %s"
 msgstr ""
 
 msgctxt "#30013"
-msgid "Open Settings"
+msgid "TCP Port:"
 msgstr ""
 
 msgctxt "#30014"
-msgid "View Channels"
+msgid "UDP Port:"
 msgstr ""
 
 msgctxt "#30015"
-msgid "Clear Channels"
+msgid "Change network port if a conflict exists."
 msgstr ""
 
 msgctxt "#30016"
@@ -85,7 +85,7 @@ msgid "%s file deleted"
 msgstr ""
 
 msgctxt "#30017"
-msgid "%s complete"
+msgid "Port %s already in-use!"
 msgstr ""
 
 msgctxt "#30018"
@@ -101,11 +101,11 @@ msgid "Miscellaneous"
 msgstr ""
 
 msgctxt "#30021"
-msgid "Refresh"
+msgid "Favorite"
 msgstr ""
 
 msgctxt "#30022"
-msgid "Pre-defined Channels"
+msgid "AutoTune Channels"
 msgstr ""
 
 msgctxt "#30023"
@@ -113,7 +113,7 @@ msgid "Recommended Channels"
 msgstr ""
 
 msgctxt "#30024"
-msgid "User-Defined Channels"
+msgid "Channel Utilities"
 msgstr ""
 
 msgctxt "#30025"
@@ -145,7 +145,7 @@ msgid "Unable to locate channel, try clearing PVR cache."
 msgstr ""
 
 msgctxt "#30032"
-msgid "Master Instance"
+msgid "Select Channel as a preferred favorite!"
 msgstr ""
 
 msgctxt "#30033"
@@ -357,11 +357,11 @@ msgid "Channel Name Missing..."
 msgstr ""
 
 msgctxt "#30085"
-msgid "Open Library Editor"
+msgid "Node Editor"
 msgstr ""
 
 msgctxt "#30086"
-msgid "Open Playlist Editor"
+msgid "Playlist Editor"
 msgstr ""
 
 msgctxt "#30087"
@@ -433,7 +433,7 @@ msgid "No %s found..."
 msgstr ""
 
 msgctxt "#30104"
-msgid "Enable Client Mode"
+msgid "Client Mode"
 msgstr ""
 
 msgctxt "#30105"
@@ -473,7 +473,7 @@ msgid "Path Verified."
 msgstr ""
 
 msgctxt "#30114"
-msgid "Radio Channel"
+msgid "Radio"
 msgstr ""
 
 msgctxt "#30115"
@@ -569,7 +569,7 @@ msgid "PseudoTV"
 msgstr ""
 
 msgctxt "#30139"
-msgid "Channel Configuration Invalid, Please finish & save configuration before creating rules."
+msgid "Please save changes before creating channel rules."
 msgstr ""
 
 msgctxt "#30140"
@@ -745,7 +745,7 @@ msgid "Refresh IPTV Manager"
 msgstr ""
 
 msgctxt "#30183"
-msgid "Please Reboot!\nPending Changes..."
+msgid "Changes Detected: Rebooting..."
 msgstr ""
 
 msgctxt "#30184"
@@ -813,11 +813,11 @@ msgid "Populating"
 msgstr ""
 
 msgctxt "#30200"
-msgid "Backup Channels"
+msgid "Backup"
 msgstr ""
 
 msgctxt "#30201"
-msgid "Recover Channels"
+msgid "Favorites"
 msgstr ""
 
 msgctxt "#30202"
@@ -865,7 +865,7 @@ msgid "Replace existing Backup from"
 msgstr ""
 
 msgctxt "#30213"
-msgid "Replace existing channels with %s\nfrom %s"
+msgid "Replace existing channels with %s\n%s"
 msgstr ""
 
 msgctxt "#30214"
@@ -877,7 +877,7 @@ msgid "Last Backup"
 msgstr ""
 
 msgctxt "#30216"
-msgid "Recover Channels"
+msgid "Restore"
 msgstr ""
 
 msgctxt "#30217"
@@ -1045,11 +1045,11 @@ msgid "Enter custom guidedata categories, used by the channel manager."
 msgstr ""
 
 msgctxt "#30258"
-msgid "Move critical files to a central location."
+msgid "Move critical files to a central location.\nPrevent  flash write thrashing by moving to HDD or Persistent (Restorable) RAMDISK"
 msgstr ""
 
 msgctxt "#30259"
-msgid "Denote this instance of PseudoTV Live as a client. (Multi-room sharing uses Master/Slave Model)."
+msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Path configure under options 'Centralized file location'."
 msgstr ""
 
 msgctxt "#30260"
@@ -1245,7 +1245,7 @@ msgid "Browse"
 msgstr ""
 
 msgctxt "#30309"
-msgid "Delete [M3U/XMLTV/Channels]"
+msgid "Delete [M3U/XMLTV/Channels/Library]"
 msgstr ""
 
 msgctxt "#30310"
@@ -1257,7 +1257,7 @@ msgid "Restart %s service"
 msgstr ""
 
 msgctxt "#30312"
-msgid "Editors"
+msgid "Shutting Down %s service"
 msgstr ""
 
 msgctxt "#30313"
@@ -1317,7 +1317,7 @@ msgid "Centralized file location is unavailable\n%s\nWould you like to restore t
 msgstr "" 
 
 msgctxt "#30327"
-msgid "Cleaning Channel"
+msgid "Cleaning abandoned channel lineup"
 msgstr "" 
 
 msgctxt "#30328"
@@ -1362,4 +1362,76 @@ msgstr ""
 
 msgctxt "#30339"
 msgid "Restoring Autotune"
+msgstr ""
+
+msgctxt "#30340"
+msgid "Debug Level"
+msgstr ""
+
+msgctxt "#30341"
+msgid "LOGDEBUG"
+msgstr ""
+
+msgctxt "#30342"
+msgid "LOGINFO"
+msgstr ""
+
+msgctxt "#30343"
+msgid "LOGWARNING"
+msgstr ""
+
+msgctxt "#30344"
+msgid "LOGERROR"
+msgstr ""
+
+msgctxt "#30345"
+msgid "LOGFATAL"
+msgstr ""
+
+msgctxt "#30346"
+msgid "Multi-room"
+msgstr ""
+
+msgctxt "#30347"
+msgid "Multi-room help"
+msgstr ""
+
+msgctxt "#30348"
+msgid "Discovered Server!"
+msgstr ""
+
+msgctxt "#30349"
+msgid "Remote Path"
+msgstr ""
+
+msgctxt "#30350"
+msgid "Network Path"
+msgstr ""
+
+msgctxt "#30351"
+msgid "Auto Discover"
+msgstr ""
+
+msgctxt "#30352"
+msgid "Server Information"
+msgstr ""
+
+msgctxt "#30353"
+msgid "Client Configuration"
+msgstr ""
+
+msgctxt "#30354"
+msgid "Server not detected!"
+msgstr ""
+
+msgctxt "#30355"
+msgid "Genre:"
+msgstr ""
+
+msgctxt "#30356"
+msgid "Changes Detected: Restarting..."
+msgstr ""
+
+msgctxt "#30357"
+msgid "[COLOR=red][B]Settings are disabled while initializing, try again later...[/B][/COLOR]"
 msgstr ""

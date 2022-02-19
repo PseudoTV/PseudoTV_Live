@@ -1,18 +1,18 @@
-#   Copyright (C) 2022 Lunatixz
-#
-#
+  # Copyright (C) 2022 Lunatixz
+
+
 # This file is part of PseudoTV Live.
-#
+
 # PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#
+
 # PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#
+
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
@@ -20,29 +20,37 @@
 from resources.lib.globals     import *
 
 class Manager(xbmcgui.WindowXMLDialog):
+    madeChanges = False
+    
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         if isClient():
             Dialog().notificationDialog(LANGUAGE(30288))
-            return openAddonSettings()
+            return openAddonSettings(0,1)
         elif isManagerRunning():
             Dialog().notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
-            return openAddonSettings()
+            return openAddonSettings(0,1)
         
         with busy_dialog():
             setManagerRunning(True)
             setLegacyPseudoTV(True)
             
-            self.cntrlStates   = {}
-            self.showingList   = True
-            self.madeChanges   = False
+            self.cntrlStates    = {}
+            self.showingList    = True
             
-            self.channel       = (kwargs.get('channel',1) - 1) #Convert from Channel to array index
-            self.writer        = kwargs.get('writer')
-            self.newChannel    = self.writer.channels.getCitem()
-            self.channelList   = sorted(self.createChannelList(self.buildArray(), self.writer.channels.getChannels()), key=lambda k: k['number'])
-            self.channelList.extend(self.writer.channels.getPredefinedChannels())
-            self.newChannels   = self.channelList.copy()
+            self.channel_idx    = (kwargs.get('channel',1) - 1) #Convert from Channel to array index
+            self.writer         = kwargs.get('writer')
+            self.cache          = self.writer.cache
+            self.pool           = self.writer.pool
+            self.dialog         = self.writer.dialog
+            self.channels       = self.writer.channels
+            self.jsonRPC        = self.writer.jsonRPC
+            self.rules          = self.writer.rules
+            
+            self.newChannel     = self.channels.getCitem()
+            self.channelList    = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+            self.channelList.extend(self.channels.getPredefinedChannels())
+            self.newChannels    = self.channelList.copy()
               
             try:    self.doModal()
             except: self.closeManager()
@@ -64,7 +72,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button2 = self.getControl(9002)
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
-            self.fillChanList(self.newChannels,focus=self.channel) #all changes made to self.newChannels before final save to self.channellist
+            self.fillChanList(self.newChannels,focus=self.channel_idx) #all changes made to self.newChannels before final save to self.channellist
         except Exception as e: 
             log("onInit, Failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
@@ -81,7 +89,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def createChannelList(self, channelArray, channelList):
         self.log('createChannelList')
-        ## Fill blank array with channels from json.
+        ## Fill blank array with citems from channels.json.
         for item in channelArray:
             for channel in channelList:
                 if item["number"] == channel["number"]:
@@ -94,7 +102,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         ## Fill chanList listitem for display. *reset draws new control list. *focus list index for channel position.
         self.togglechanList(True,reset=reset)
         self.toggleSpinner(self.chanList,True)
-        listitems = (self.writer.pool.poolList(self.buildChannelListItem,channelList))
+        listitems = (self.pool.poolList(self.buildChannelListItem,channelList))
         self.chanList.addItems(listitems)
         
         if focus is None: self.chanList.selectItem(self.setFocusPOS(listitems))
@@ -144,7 +152,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def toggleruleList(self, state, focus=0):
         self.log('toggleruleList, state = %s, focus = %s'%(state,focus))
         if self.isVisible(self.chanList): 
-            return self.writer.dialog.notificationDialog(LANGUAGE(30001))
+            return self.dialog.notificationDialog(LANGUAGE(30001))
         
         if state: # rulelist
             self.setVisibility(self.itemList,False)
@@ -159,10 +167,11 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         
     def hasChannelContent(self, channelData):
-        paths = channelData.get('path')
+        paths = channelData.get('path',[])
         for path in paths:
-            limits = (self.writer.jsonRPC.autoPagination(channelData.get('id'), path) or {})
-            if limits.get('end',0) > 0 and limits.get('total',0) > 0: return True
+            limits = (self.jsonRPC.autoPagination(channelData.get('id'), path) or {})
+            self.log('hasChannelContent, channel = %s, path = %s, limits = %s'%(channelData.get('id'),path,limits))
+            if limits.get('total',0) > 0: return True
         return False
         
 
@@ -170,27 +179,38 @@ class Manager(xbmcgui.WindowXMLDialog):
         chnum        = channelData["number"]
         chname       = channelData.get("name",'')
         isPredefined = chnum > CHANNEL_LIMIT
+        isFavorite   = channelData.get('favorite',False)
+        isRadio      = channelData.get('radio',False)
+        isLocked     = isPredefined #todo parse channel lock rule
+        hasContent   = self.hasChannelContent(channelData)
         
-        if isPredefined: 
-            labelColor = 'dimgray'
-            hasContent = self.hasChannelContent(channelData)
-            if hasContent: channelColor = 'orange'
-            else:          channelColor = 'red'
-        elif not chname: 
-            labelColor   = 'dimgray'
-            channelColor = 'dimgray'
-        else:
-            labelColor = 'white'
-            isFavorite = channelData.get('favorite',False)
-            if channelData['radio']: channelColor = 'cyan'
-            elif isFavorite:         channelColor = 'yellow'
-            else:                    channelColor = 'white'
-            
+        COLOR_UNAVAILABLE_CHANNEL = 'dimgray'
+        COLOR_AVAILABLE_CHANNEL   = 'white'
+        COLOR_LOCKED_CHANNEL      = 'orange'
+        COLOR_WARNING_CHANNEL     = 'red'
+        COLOR_RADIO_CHANNEL       = 'cyan'
+        COLOR_FAVORITE_CHANNEL    = 'yellow'
+        
+        channelColor = COLOR_UNAVAILABLE_CHANNEL
+        labelColor   = COLOR_UNAVAILABLE_CHANNEL
+        
+        if chname:
+            if isPredefined: 
+                channelColor = COLOR_LOCKED_CHANNEL
+            else:
+                labelColor   = COLOR_AVAILABLE_CHANNEL
+                
+                if not hasContent: channelColor = COLOR_WARNING_CHANNEL
+                elif isLocked:     channelColor = COLOR_LOCKED_CHANNEL
+                elif isFavorite:   channelColor = COLOR_FAVORITE_CHANNEL
+                elif isRadio:      channelColor = COLOR_RADIO_CHANNEL
+                else:              channelColor = COLOR_AVAILABLE_CHANNEL
+        
         label  = '[COLOR=%s][B]%s.[/COLOR][/B]'%(channelColor,chnum)
         label2 = '[COLOR=%s]%s[/COLOR]'%(labelColor,chname)
         path   = '|'.join(channelData.get("path",[]))
         prop   = {'description':LANGUAGE(30122)%(chnum),'channelData':dumpJSON(channelData, sortkey=False),'chname':chname,'chnumber':chnum}
-        return self.writer.dialog.buildMenuListItem(str(chnum),chname,iconImage=channelData.get("logo",''),url=path,propItem=prop)
+        return self.dialog.buildMenuListItem(label,label2,iconImage=channelData.get("logo",''),url=path,propItem=prop)
         
 
     def setDescription(self, stid):#todo use control id and label
@@ -212,31 +232,34 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.togglechanList(False)
         self.toggleSpinner(self.itemList,True)
         
-        LABEL  = {'name'  : LANGUAGE(30087),
-                  'path'  : LANGUAGE(30088),
-                  'group' : LANGUAGE(30089),
-                  'rules' : LANGUAGE(30090),
-                  'radio' : LANGUAGE(30114),
-                  'clear' : LANGUAGE(30092)}
+        LABEL  = {'name'    : LANGUAGE(30087),
+                  'path'    : LANGUAGE(30088),
+                  'group'   : LANGUAGE(30089),
+                  'rules'   : LANGUAGE(30090),
+                  'radio'   : LANGUAGE(30114),
+                  'favorite': LANGUAGE(30021),
+                  'clear'   : LANGUAGE(30092)}
                   
-        DESC   = {'name'  : LANGUAGE(30123),
-                  'path'  : LANGUAGE(30124),
-                  'group' : LANGUAGE(30125),
-                  'rules' : LANGUAGE(30126),
-                  'radio' : LANGUAGE(30127),
-                  'clear' : LANGUAGE(30128)}
+        DESC   = {'name'    : LANGUAGE(30123),
+                  'path'    : LANGUAGE(30124),
+                  'group'   : LANGUAGE(30125),
+                  'rules'   : LANGUAGE(30126),
+                  'radio'   : LANGUAGE(30127),
+                  'favorite': LANGUAGE(30032),
+                  'clear'   : LANGUAGE(30128)}
                   
         listItems   = []
         channelProp = dumpJSON(channelData, sortkey=False)
         for key, value in channelData.items():
-            if   key in ["number","type","logo","id","page","favorite","catchup"]: continue # keys to ignore, internal use only.
+            if   key in ["number","type","logo","id","page","catchup","limits"]: continue # keys to ignore, internal use only.
             elif isinstance(value,list): 
-                if   key == "group" :    value = ' / '.join(value)
+                if   key == "group" :    value = ' / '.join(list(set(value)))
                 elif key == "path"  :    value = '|'.join(value)
             elif isinstance(value,bool): value = str(value)
             value = (value or '')
-            listItems.append(self.writer.dialog.buildMenuListItem(LABEL.get(key,''),value,url='|'.join(channelData.get("path",[])),iconImage=channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC.get(key,''),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
-        listItems.append(self.writer.dialog.buildMenuListItem(LABEL['clear'],'',propItem={'key':'clear','channelData':channelProp,'description':DESC['clear']}))
+            listItems.append(self.dialog.buildMenuListItem(LABEL.get(key,''),value,url='|'.join(channelData.get("path",[])),iconImage=channelData.get("logo",COLOR_LOGO),propItem={'key':key,'value':value,'channelData':channelProp,'description':DESC.get(key,''),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}))
+        
+        listItems.append(self.dialog.buildMenuListItem(LABEL['clear'],'',propItem={'key':'clear','channelData':channelProp,'description':DESC['clear']}))
         self.toggleSpinner(self.itemList,False)
         self.itemList.addItems(listItems)
         self.itemList.selectItem([idx for idx, liz in enumerate(listItems) if liz.getProperty('key')== selkey][0])
@@ -248,17 +271,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         value = channelListItem.getProperty('value')
         channelData = loadJSON(channelListItem.getProperty('channelData'))
         self.log('itemInput, channelData = %s, value = %s, key = %s'%(channelData,value,key))
-        KEY_INPUT = {"name"  : {'func':self.writer.dialog.inputDialog  ,'kwargs':{'message':LANGUAGE(30123),'default':value}},
-                     "path"  : {'func':self.writer.dialog.browseDialog ,'kwargs':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
-                     "group" : {'func':self.writer.dialog.selectDialog ,'kwargs':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':findItemsInLST(getGroups(),value.split(' / ')),'useDetails':False}},
-                     "rules" : {'func':self.selectRules                ,'kwargs':{'channelData':channelData}},
-                     "radio" : {'func':self.toggleBool                 ,'kwargs':{'state':channelData.get('radio',False)}},
-                     "clear" : {'func':self.clearChannel               ,'kwargs':{'item':channelData}}}
+        KEY_INPUT = {"name"     : {'func':self.dialog.inputDialog  ,'kwargs':{'message':LANGUAGE(30123),'default':value}},
+                     "path"     : {'func':self.dialog.browseDialog ,'kwargs':{'heading':LANGUAGE(30124),'default':value,'monitor':True}},
+                     "group"    : {'func':self.dialog.selectDialog ,'kwargs':{'list':getGroups(),'header':LANGUAGE(30125),'preselect':findItemsInLST(getGroups(),value.split(' / ')),'useDetails':False}},
+                     "rules"    : {'func':self.selectRules                ,'kwargs':{'channelData':channelData}},
+                     "radio"    : {'func':self.toggleBool                 ,'kwargs':{'state':channelData.get('radio',False)}},
+                     "favorite" : {'func':self.toggleBool                 ,'kwargs':{'state':channelData.get('favorite',False)}},
+                     "clear"    : {'func':self.clearChannel               ,'kwargs':{'item':channelData}}}
            
         func   = KEY_INPUT[key.lower()]['func']
         kwargs = KEY_INPUT[key.lower()]['kwargs']
         retval, channelData = self.validateInput(func(**kwargs),key, channelData)
-        if retval is not None:
+        if not retval is None:
             self.madeChanges = True
             if isinstance(retval,list):
                 retval = [kwargs.get('list',[])[idx] for idx in retval]
@@ -286,13 +310,12 @@ class Manager(xbmcgui.WindowXMLDialog):
    
     def getChannelName(self, retval, channelData):
         self.log('getChannelName')
-        if not channelData.get('name',''): 
-            if retval.strip('/').endswith(('.xml','.xsp')):
-                channelData['name'] = self.getSmartPlaylistName(retval)
-            elif retval.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
-                channelData['name'] = self.getMontiorList().getLabel()
-            else:
-                channelData['name'] = os.path.basename(os.path.dirname(retval)).strip('/')
+        if retval.strip('/').endswith(('.xml','.xsp')):
+            channelData['name'] = self.getSmartPlaylistName(retval)
+        elif retval.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
+            channelData['name'] = self.getMontiorList().getLabel()
+        else:
+            channelData['name'] = os.path.basename(os.path.dirname(retval)).strip('/')
         return channelData
 
 
@@ -300,12 +323,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             def getItem(item):
-                return self.writer.dialog.buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
+                return self.dialog.buildMenuListItem(label1=item.get(key,''),iconImage=item.get('icon',COLOR_LOGO))
                 
-            infoList = self.writer.dialog.getInfoMonitor()
+            infoList = self.dialog.getInfoMonitor()
             itemList = [getItem(info) for info in infoList if info.get('label')]
-            select   = self.writer.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
-            if select is not None: return itemList[select]
+            select   = self.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
+            if not select is None: return itemList[select]
         except Exception as e: self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
 
 
@@ -326,14 +349,15 @@ class Manager(xbmcgui.WindowXMLDialog):
         return name
 
 
-    def getChannelIcon(self, channelData, path=None, name=None):
+    def getChannelIcon(self, channelData, path=None, name=None,force=False):
         self.log('getChannelIcon')
         if name is None: name = channelData.get('name','')
         if path is None: path = channelData.get('path','')
         if not name: return channelData
         logo = channelData.get('logo','')
+        if force: logo = ''
         if not logo or logo in [LOGO,COLOR_LOGO,MONO_LOGO,ICON]:
-            channelData['logo'] = self.writer.jsonRPC.resources.getLogo(name)
+            channelData['logo'] = self.jsonRPC.resources.getLogo(name)
         return channelData
         
     
@@ -352,7 +376,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif key == 'name':
             if not self.validateLabel(retval, key): 
                 return None, channelData
-            channelData = self.getChannelIcon(channelData, name=retval)
+            channelData = self.getChannelIcon(channelData, name=retval,force=True)
         channelData = self.getID(channelData)
         return retval, channelData
         
@@ -360,7 +384,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def validateLabel(self, label, key):
         self.log('validateLabel')
         if len(label) < 1 and len(label) > 128: 
-            self.writer.dialog.notificationDialog(LANGUAGE(30112)%key.title())
+            self.dialog.notificationDialog(LANGUAGE(30112)%key.title())
             return False
         else:
             return True
@@ -382,22 +406,22 @@ class Manager(xbmcgui.WindowXMLDialog):
         return path, channelData
 
 
-    def validatePath(self, channelData, path, key):
+    def validatePath(self, channelData, path, key, spinner=True):
         self.log('validatePath')
         found = False
         radio = (channelData.get('radio','') or (channelData['type'] == LANGUAGE(30097) or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
         channelData['radio'] = radio
         
-        self.toggleSpinner(self.itemList,True)
-        fitem = self.writer.jsonRPC.isVFSPlayable(path, media)
+        if spinner: self.toggleSpinner(self.itemList,True)
+        fitem = self.jsonRPC.isVFSPlayable(path, media)
         if fitem is None:
             path = None
-            self.writer.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115)))
+            self.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115)))
         else:
             seek = fitem.get('seek',False) #todo set adv. chan rule to disable seek if false.
             self.log('validatePath, path = %s, seek = %s'%(path,seek))
-        self.toggleSpinner(self.itemList,False)
+        if spinner: self.toggleSpinner(self.itemList,False)
         return path, channelData
         
         
@@ -422,7 +446,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def validateChannels(self, channelList):
         self.log('validateChannels')
-        return sorted(self.writer.pool.poolList(self.validateChannel,channelList), key=lambda k: k['number'])
+        return sorted(self.pool.poolList(self.validateChannel,channelList), key=lambda k: k['number'])
               
 
     def saveChannelItems(self, channelData, channelPOS):
@@ -433,28 +457,36 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def saveChanges(self):
         self.log("saveChanges")
-        if self.writer.dialog.yesnoDialog("Changes Detected, Do you want to save?"): return self.saveChannels() 
+        if self.dialog.yesnoDialog("Changes Detected, Do you want to save?"): return self.saveChannels() 
         else: self.closeManager()
 
 
     def saveChannels(self):
-        log('saveChannels')
         if   not self.madeChanges: return
-        elif not self.writer.dialog.yesnoDialog(LANGUAGE(30073)): return
+        elif not self.dialog.yesnoDialog(LANGUAGE(30073)): return
         self.toggleSpinner(self.chanList,True)
         self.newChannels = self.validateChannels(self.newChannels)
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
-        [self.writer.channels.addChannel(citem) if citem in self.newChannels else self.writer.channels.removeChannel(citem) for citem in difference] #add new, remove old.
-        if self.writer.channels.saveChannels():
-            self.writer.dialog.notificationDialog(LANGUAGE(30053))
+        log('saveChannels, difference = %s'%(len(difference)))
+        
+        pDialog = self.dialog.progressDialog(message=LANGUAGE(30152))
+        for idx, citem in enumerate(difference):
+            pCount = int(((idx + 1)*100)//len(difference))
+            if citem in self.channelList: 
+                self.channels.removeChannel(citem)
+            if citem in self.newChannels:
+                pDialog = self.dialog.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(30337),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
+                self.channels.addChannel(citem)
+
+        self.channels._save()
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
             
         
     def clearChannel(self, item, prompt=True):
         self.log('clearChannel')
-        if prompt and not self.writer.dialog.yesnoDialog(LANGUAGE(30092)): return item
+        if prompt and not self.dialog.yesnoDialog(LANGUAGE(30092)): return item
         self.madeChanges = True
         nitem = self.newChannel.copy()
         nitem['number'] = item['number'] #preserve channel number
@@ -464,8 +496,8 @@ class Manager(xbmcgui.WindowXMLDialog):
     def buildRuleItems(self, channelData, append=False):
         self.log('buildRuleItems, append = %s'%(append))
         self.toggleSpinner(self.ruleList,True)
-        ruleList      = self.writer.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
-        channelRules  = self.writer.rules.loadRules([channelData]).get(channelData['id'],[])     # chan rules
+        ruleList      = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
+        channelRules  = self.rules.loadRules([channelData]).get(channelData['id'],[])     # chan rules
         
         if not append:
             ruleInstances = channelRules.copy()
@@ -476,8 +508,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     if channelRule.get('id') == ruleInstance.get('id'):
                         ruleInstance.pop(idx)
                         
-        listitems = self.writer.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
-        if not append: listitems.insert(0,self.writer.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
+        listitems = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
+        if not append: listitems.insert(0,self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
         self.toggleSpinner(self.ruleList,False)        
         self.ruleList.reset()
         xbmc.sleep(100)
@@ -489,25 +521,25 @@ class Manager(xbmcgui.WindowXMLDialog):
         rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues,'title':ruleInstance.getTitle()}
         print(rule)
         prop = {'description':rule['description'],'rule':dumpJSON(rule),'channelData':dumpJSON(channelData),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
-        return self.writer.dialog.buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
+        return self.dialog.buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
 
 
     def selectRules(self, channelData):
         self.log('selectRules')
-        if not self.validateChannel(channelData): return self.writer.dialog.notificationDialog(LANGUAGE(30139))
+        if not self.validateChannel(channelData): return self.dialog.notificationDialog(LANGUAGE(30139))
         listitems = self.buildRuleItems(channelData)
         self.toggleruleList(True)
         self.ruleList.addItems(listitems)
         
-        # select = self.writer.dialog.selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
-        # if select is None: return self.writer.dialog.notificationDialog(LANGUAGE(30001))
+        # select = self.dialog.selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
+        # if select is None: return self.dialog.notificationDialog(LANGUAGE(30001))
         # print(listitems[select].getLabel())
         
         # self.ruleList.addItems(listitems)
         
         # return channelData
-        # select = self.writer.dialog.selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
-        # if select is None: return self.writer.dialog.notificationDialog(LANGUAGE(30001))
+        # select = self.dialog.selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
+        # if select is None: return self.dialog.notificationDialog(LANGUAGE(30001))
         # return listitems[select]
         
         # ruleid   = int(listitem.getPath())
@@ -515,8 +547,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             # rules    = sorted(self.fillRules(channelData), key=lambda k: k['id'])
             # listitem = self.buildRuleItems(rules, channelData)
             # ruleid   = int(listitem.getPath())
-        # ruleSelect = [idx for idx, rule in enumerate(self.writer.channels.ruleList) if rule['id'] == ruleid]
-        # self.selectRuleItems(channelData, rules, self.writer.channels.ruleList[ruleSelect[0]])
+        # ruleSelect = [idx for idx, rule in enumerate(self.channels.ruleList) if rule['id'] == ruleid]
+        # self.selectRuleItems(channelData, rules, self.channels.ruleList[ruleSelect[0]])
         # self.toggleruleList(False)
         return channelData['rules']
 
@@ -525,19 +557,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('selectRuleItems')
         channelData = loadJSON(item['item'].getProperty('channelData'))
         listitems   = self.buildRuleItems(channelData,append=True)
-        optionIDX   = self.writer.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
+        optionIDX   = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
         
         if optionIDX is not None:
             ruleSelect    = loadJSON(listitems[optionIDX].getProperty('rule'))
-            ruleInstances = self.writer.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
+            ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
             ruleInstance  = [ruleInstance for ruleInstance in ruleInstances if ruleInstance.myId == ruleSelect.get('id')][0]
             print(ruleSelect,ruleInstance)
         
             #todo create listitem using ruleInstance and rule.py action map.
-            listitems     = [self.writer.dialog.buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'channelData':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
+            listitems     = [self.dialog.buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'channelData':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
             self.ruleList.addItems(listitems)
             
-            # optionIDX    = self.writer.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
+            # optionIDX    = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
             # print(ruleSelect)
             # ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
             # print(ruleSelect)
@@ -550,16 +582,16 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             
     def fillRules(self, channelData): # prepare "new" rule list, remove existing.
-        chrules  = sorted(self.writer.channels.getChannelRules(channelData, self.newChannels), key=lambda k: k['id'])
-        ruleList = self.writer.channels.rules.copy()
-        for rule in ruleList:
-            for chrule in chrules:
-                if rule['id'] == chrule['id']: continue
-            yield rule
+        ...
+        # chrules  = sorted(self.channels.getChannelRules(channelData, self.newChannels), key=lambda k: k['id'])
+        # ruleList = self.channels.rules.copy()
+        # for rule in ruleList:
+            # for chrule in chrules:
+                # if rule['id'] == chrule['id']: continue
+            # yield rule
 
 
     def selectLogo(self, channelData, channelPOS):
-        LOGO_LOC  = os.path.join(getUserFilePath(),'cache','logos')
         def cleanLogo(chlogo):
             return unquoteImage(chlogo)
             #todo convert resource from vfs to fs
@@ -570,19 +602,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         if self.isVisible(self.ruleList): return
         chname = channelData.get('name')
         self.log('selectLogo, chname = %s'%(chname))
-        if not chname: return self.writer.dialog.notificationDialog(LANGUAGE(30084))
+        if not chname: return self.dialog.notificationDialog(LANGUAGE(30084))
             
         image  = None
-        retval = self.writer.dialog.yesnoDialog('%s Source'%LANGUAGE(30111), nolabel=LANGUAGE(30321), yeslabel=LANGUAGE(30308), customlabel=LANGUAGE(30322))
+        retval = self.dialog.yesnoDialog('%s Source'%LANGUAGE(30111), nolabel=LANGUAGE(30321), yeslabel=LANGUAGE(30308), customlabel=LANGUAGE(30322))
         if   retval == 0: image = self.matchLogo(chname)
         elif retval == 1: 
-            retval = self.writer.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+            retval = self.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
             chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
             
             print('matchLogo',retval,chlogo)
             if FileAccess.copy(cleanLogo(retval), chlogo): 
                 if FileAccess.exists(chlogo): image = chlogo
-        elif retval == 2: image = self.writer.jsonRPC.resources.getLogo(chname)
+        elif retval == 2: image = self.jsonRPC.resources.getLogo(chname)
             
         if image:
             self.madeChanges = True
@@ -591,18 +623,18 @@ class Manager(xbmcgui.WindowXMLDialog):
             else:
                 self.newChannels[channelPOS] = channelData
                 self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
-        else: self.writer.dialog.notificationDialog(LANGUAGE(30325))
+        else: self.dialog.notificationDialog(LANGUAGE(30325))
             
             
     def matchLogo(self, chname):
-        if not chname: return self.writer.dialog.notificationDialog(LANGUAGE(30084))
+        if not chname: return self.dialog.notificationDialog(LANGUAGE(30084))
         self.toggleSpinner(self.itemList,True)
-        logos = self.writer.jsonRPC.resources.findLogos(chname, LANGUAGE(30171))
-        listitems = [self.writer.dialog.buildMenuListItem(logo['label'],logo['label2'],iconImage=logo['path'],url=logo['path']) for logo in logos]
+        logos = self.jsonRPC.resources.findLogos(chname, LANGUAGE(30171))
+        listitems = [self.dialog.buildMenuListItem(logo['label'],logo['label2'],iconImage=logo['path'],url=logo['path']) for logo in logos]
         self.toggleSpinner(self.itemList,False)
         if listitems:
-            select = self.writer.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
-            if select >= 0:
+            select = self.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
+            if not select is None:
                 chlogo = listitems[select].getPath()
                 self.log('matchLogo, chname = %s, chlogo = %s'%(chname,chlogo))
                 return chlogo
@@ -652,6 +684,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('closeManager')
         setLegacyPseudoTV(False)
         setManagerRunning(False)
+        if self.madeChanges: 
+            setUpdatePending()
         self.close()
 
 
@@ -716,6 +750,9 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def onClick(self, controlId):
         items = self.getFocusVARS(controlId)
+        if controlId <= 9000 and items['number'] > CHANNEL_LIMIT: 
+            return self.dialog.notificationDialog(LANGUAGE(30110))
+            
         self.log('onClick: controlId = %s\nitems = %s'%(controlId,items))
         if self.isVisible(self.chanList):
             channelData = items['chanList']['citem'] 
@@ -723,14 +760,13 @@ class Manager(xbmcgui.WindowXMLDialog):
             channelData = items['itemList']['citem']
             
         if   controlId == 0: self.closeManager()
-        elif controlId == 5: self.buildChannelItem(channelData)
+        elif controlId == 5: 
+            self.buildChannelItem(channelData)
         elif controlId == 6:
-            if items['number'] > CHANNEL_LIMIT: return self.writer.dialog.notificationDialog(LANGUAGE(30110))
             self.buildChannelItem(self.itemInput(items['itemList']['item']),items['itemList']['item'].getProperty('key'))
         elif controlId == 7:
             self.selectRuleItems(items['ruleList'])
         elif controlId == 10: 
-            if items['number'] > CHANNEL_LIMIT: return self.writer.dialog.notificationDialog(LANGUAGE(30110))
             self.selectLogo(channelData,items['chanList']['position'] )
         elif controlId == 9001:
             if   items['label'] == LANGUAGE(30117):#'Close'
@@ -753,5 +789,4 @@ class Manager(xbmcgui.WindowXMLDialog):
                 else: 
                     self.togglechanList(True,focus=items['chanList']['position'] )
         elif controlId == 9003:
-            if items['number'] > CHANNEL_LIMIT: return self.writer.dialog.notificationDialog(LANGUAGE(30110))
             self.saveChannelItems(self.clearChannel(channelData),items['chanList']['position'])

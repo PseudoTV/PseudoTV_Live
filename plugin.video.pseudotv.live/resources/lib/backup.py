@@ -20,9 +20,10 @@
  
 from resources.lib.globals     import *
 
+BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
+
 class Backup:
     def __init__(self, writer=None):
-        self.log('__init__')
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
@@ -32,12 +33,12 @@ class Backup:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
-        
+
     def getFileDate(self, file):
         try:
-            fname = pathlib.Path(file)
+            fname = pathlib.Path(xbmcvfs.translatePath(file))
             mtime = datetime.datetime.fromtimestamp(fname.stat().st_mtime)
-            stime = mtime.strftime('%Y-%m-%d %I:%M %p')
+            stime = mtime.strftime(BACKUP_TIME_FORMAT)
             self.log('getFileDate, modified %s on %s'%(file,stime))
             return stime
         except:
@@ -45,21 +46,26 @@ class Backup:
         
         
     def hasBackup(self):
-        self.log('hasBackup')
         with busy():
-            if isClient(): return False
-            elif FileAccess.exists(CHANNELFLE_BACKUP):
+            self.log('hasBackup')
+            if FileAccess.exists(CHANNELFLE_BACKUP) and not isClient():
                 PROPERTIES.setPropertyBool('has.Backup',True)
-                if not SETTINGS.getSetting('Backup_Channels'):
+                backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
+                if backup_channel == 'Last Backup: Unknown':
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
-                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.loadChannels(CHANNELFLE_BACKUP))))
+                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30216),len(self.getChannels())))
                 return True
-            else:
-                PROPERTIES.setPropertyBool('has.Backup',False)
-                SETTINGS.setSetting('Backup_Channels'  ,'')
-                SETTINGS.setSetting('Recover_Channels' ,'')
-                return False
+
+            PROPERTIES.setPropertyBool('has.Backup',False)
+            SETTINGS.setSetting('Backup_Channels'  ,'')
+            SETTINGS.setSetting('Recover_Channels' ,'')
+            return False
+            
+            
+    def getChannels(self):
+        self.log('getChannels')
+        return self.writer.vault._load(CHANNELFLE_BACKUP).get('channels',[])
 
 
     def backupChannels(self):
@@ -71,14 +77,12 @@ class Backup:
                 return False
                 
         with busy():
-            if FileAccess.copy(getUserFilePath(CHANNELFLE),CHANNELFLE_BACKUP):
+            if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
-                SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p')))
-                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30211),len(self.writer.channels.loadChannels(CHANNELFLE_BACKUP))))
-                return self.writer.dialog.notificationDialog(LANGUAGE(30053))
-            else: 
-                self.hasBackup()
-                return False
+                SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
+                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30216),len(self.getChannels())))
+                return self.dialog.notificationDialog('%s %s'%(LANGUAGE(30200),LANGUAGE(30053)))
+        return self.hasBackup()
         
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
@@ -87,7 +91,7 @@ class Backup:
         elif isBusy(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
             return False
-        elif not self.writer.dialog.yesnoDialog('%s?'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30211),''),SETTINGS.getSetting('Backup_Channels')))): 
+        elif not self.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
         
         with busy_dialog():

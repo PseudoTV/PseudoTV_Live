@@ -32,11 +32,10 @@ class Resources:
     TEXTURES = 'Textures.xbt'
 
     def __init__(self, jsonRPC):
-        self.log('__init__')
         self.jsonRPC     = jsonRPC
         self.cache       = jsonRPC.cache
         self.pool        = jsonRPC.pool
-        self.LOGO_LOC    = os.path.join(getUserFilePath(),'cache','logos')
+        self.LOGO_LOC    = LOGO_LOC
         self.logoSets    = self.buildLogoResources()
         
         
@@ -266,7 +265,7 @@ class Resources:
     def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False, lookup=False):
         self.log('getLogo: chname = %s, type = %s, featured = %s'%(chname,type,featured)) 
         def cleanLogo(logo):
-            return logo.replace('\\','/')
+            return self.cleanLogoPath(logo.replace('\\','/'))
             
         logo = self.chkLocal(chname)
         if not logo:

@@ -34,7 +34,7 @@ class Plugin:
                             'numberlabel': xbmc.getInfoLabel('ListItem.ChannelNumberLabel'),
                             'uniqueid'   : xbmc.getInfoLabel('ListItem.UniqueID')}
                             
-        self.log('__init__, sysARG = %s, channel info = %s'%(sysARG,self.channelInfo))
+        self.log('__init__, sysARG = %s, channelInfo = %s'%(sysARG,self.channelInfo))
         self.setOffset  = False #todo adv. channel rule to disable seek 
         self.monitor    = xbmc.Monitor()
         self.player     = xbmc.Player()
@@ -93,6 +93,7 @@ class Plugin:
             if match: return match
                 
         if not second_attempt and brutePVR(override=True): 
+            self.dialog.notificationDialog(LANGUAGE(30059))
             return self.getChannel(chname, id, radio, second_attempt=True)
         return {}
         

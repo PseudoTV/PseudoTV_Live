@@ -22,7 +22,6 @@ from resources.lib.globals import *
 
 class Predefined:
     def __init__(self):
-        self.log('__init__')
         self.pathTypes  = {LANGUAGE(30002): self.createNetworkPlaylist,
                            LANGUAGE(30003): self.createShowPlaylist,
                            LANGUAGE(30004): self.createTVGenrePlaylist,
@@ -38,7 +37,7 @@ class Predefined:
                            LANGUAGE(30079): self.createPVRRecordings} # home for misc. predefined channel paths.
         
         self.exclude_specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
-        log('__init__, exclude_specials = %s'%(self.exclude_specials))
+        self.log('__init__, exclude_specials = %s'%(self.exclude_specials))
     
     
     def log(self, msg, level=xbmc.LOGDEBUG):

@@ -1,4 +1,4 @@
-#   Copyright (C) 2021 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -31,9 +31,14 @@ def run(sysARG):
     radio   = (params.get("radio",'')         or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
 
-    if   mode == 'guide':    loadGuide()
-    elif mode == 'settings': openAddonSettings()
-    elif mode == 'vod':      Plugin(sysARG).playVOD(name, id)
+    if   mode == 'guide':    
+        with busy_dialog(): 
+            loadGuide()
+    elif mode == 'settings': 
+        with busy_dialog():
+            openAddonSettings()
+    elif mode == 'vod':      
+        Plugin(sysARG).playVOD(name, id)
     elif mode == 'play':
         if radio: Plugin(sysARG).playRadio(name, id)
         else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))

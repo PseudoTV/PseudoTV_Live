@@ -22,14 +22,14 @@ from resources.lib.globals     import *
 
 class M3U:
     def __init__(self, writer=None):
-        self.log('__init__')
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
+            
         self.writer = writer
             
         if self.writer.vault.m3uList is None:
-            self._reload(forced=True)
+            self._reload()
         else:
             self._withdraw()
             
@@ -44,12 +44,9 @@ class M3U:
         return self._deposit()
         
         
-    def _reload(self, forced=False):
-        self.log('_reload, forced = %s'%(forced))
-        if forced:
-            self.writer.vault.m3uList = self._load()
-        else:
-            self.writer.vault.m3uList['channels'] = self.cleanSelf(self.writer.vault.m3uList['channels'])
+    def _reload(self):
+        self.log('_reload')
+        self.writer.vault.m3uList = self._load()
         return self._deposit()
         
      
@@ -67,15 +64,15 @@ class M3U:
 
     def _load(self):
         self.log('_load')
-        return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""',
+        return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 
                 'channels':self.cleanSelf(self.loadM3U())}
         
 
-    def loadM3U(self, file=getUserFilePath(M3UFLE)):
+    def loadM3U(self, file=M3UFLEPATH):
         self.log('loadM3U, file = %s'%file)
         if file.startswith('http'):
             url  = file
-            file = os.path.join(TEMP_LOC,slugify(url),'.m3u')
+            file = os.path.join(USER_LOC,slugify(url),'.m3u')
             saveURL(url,file)
             
         if FileAccess.exists(file): 
@@ -137,7 +134,6 @@ class M3U:
                             except: item[key] = float(item[key])
                         elif key == 'group':
                             item[key] = list(filter(None,list(set(item[key].split(';')))))
-                            if ADDON_NAME in item[key]: item[key].remove(ADDON_NAME)
                         elif key == 'radio':
                             item[key] = item[key].lower() == 'true'
 
@@ -162,6 +158,10 @@ class M3U:
                             
                     item['name']  = (item.get('name','')  or item.get('label',''))
                     item['label'] = (item.get('label','') or item.get('name',''))
+                    
+                    if LANGUAGE(30201) in item['group'] and not item.get('favorite',False):
+                        item['favorite'] = True
+                        
                     if not item.get('id','') or not item.get('name','') or not item.get('number',''): 
                         self.log('loadM3U, SKIPPED MISSING META item = %s'%item)
                         continue
@@ -170,12 +170,12 @@ class M3U:
                     yield item
         
 
-    def saveM3U(self):
-        self.log('saveM3U')
+    def _save(self):
+        self.log('_save')
         with fileLocker(self.writer.globalFileLock):
-            filePath = getUserFilePath(M3UFLE)
+            filePath = M3UFLEPATH
             fle = FileAccess.open(filePath, 'w')
-            self.log('saveM3U, saving to %s'%(filePath))
+            self.log('_save, saving to %s'%(filePath))
             fle.write('%s\n'%(self.writer.vault.m3uList['data']))
             
             keys = list(self.writer.channels.getCitem().keys())
@@ -211,7 +211,9 @@ class M3U:
         
     def deleteM3U(self):
         self.log('deleteM3U')
-        if FileAccess.delete(getUserFilePath(M3UFLE)): return self.writer.dialog.notificationDialog(LANGUAGE(30016)%('M3U'))
+        if FileAccess.delete(M3UFLEPATH): 
+            self._clear()
+            return self.writer.dialog.notificationDialog(LANGUAGE(30016)%('M3U'))
         return False
         
         
@@ -233,7 +235,7 @@ class M3U:
             importChannels = []
             if file.startswith('http'):
                 url  = file
-                file = os.path.join(TEMP_LOC,'%s.m3u'%(slugify(url)))
+                file = os.path.join(USER_LOC,'%s.m3u'%(slugify(url)))
                 saveURL(url,file)
                 
             channels = self.loadM3U(file)

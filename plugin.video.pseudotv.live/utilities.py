@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -22,4 +22,5 @@ from resources.lib.globals    import *
 from resources.lib.utilities  import Utilities
 
 if __name__ == '__main__': 
-        with busy_dialog(): Utilities(sys.argv).run()
+    with busy_dialog(): 
+        Utilities(sys.argv).run()

@@ -12,12 +12,21 @@
         <control type="group">
           <description>Background Dynamic</description>
           <control type="image"> 
+            <description>Hide Background</description>
             <width>auto</width>
             <height>auto</height>
-            <texture>backgrounds/background.gif</texture>
-            <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
+            <aspectratio>scale</aspectratio>
+            <align>center</align>
+            <aligny>center</aligny>
+            <colordiffuse>black</colordiffuse>
+            <texture>colors/white.png</texture>
           </control>
-          
+          <!-- <control type="image">  -->
+            <!-- <width>auto</width> -->
+            <!-- <height>auto</height> -->
+            <!-- <texture>backgrounds/background.gif</texture> -->
+            <!-- <aspectratio scalediffuse="false" align="center" aligny="center">keep</aspectratio> -->
+          <!-- </control> -->
           <control type="grouplist">
             <posx>1440</posx>
             <posy>850</posy>
@@ -32,18 +41,16 @@
                 <shadowcolor>text_shadow</shadowcolor>
                 <height>60</height>
                 <label>[B]$INFO[System.Time][/B]</label>
-                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
             </control>
             <control type="image">
                 <height>90</height>
                 <texture>splashtext.png</texture>
                 <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
-                <animation effect="fade" start="25" end="25" condition="True">Conditional</animation>
             </control>
           </control>
           
           <control type="grouplist">
-            <centertop>60%</centertop>
+            <centertop>65%</centertop>
             <centerleft>50%</centerleft>
             <width>960</width>
             <itemgap>5</itemgap>
@@ -51,7 +58,6 @@
             <control type="image"> 
                 <description>Background Logo</description>
                 <height>240</height>
-                <animation effect="fade" start="50" end="50" pulse="true" condition="True">Conditional</animation>
                 <aspectratio scalediffuse="true" align="center" aligny="top">keep</aspectratio>
                 <texture>$INFO[Container(40000).ListItem(0).Art(icon)]</texture>
             </control>
@@ -64,18 +70,10 @@
                 <aligny>center</aligny>
                 <textcolor>white</textcolor>
                 <shadowcolor>text_shadow</shadowcolor>
-                <animation effect="fade" start="50" end="50" condition="True">Conditional</animation>
                 <scrolltime>600</scrolltime>
                 <autoscroll delay="5000" time="1000">false</autoscroll>
                 <label>$INFO[Container(40000).ListItem(0).Property(name),[B]You're Watching:[/B] ,] [CR] $INFO[Container(40000).ListItem(1).Label,[B]Up Next:[/B] ,] $INFO[Container(40000).ListItem(1).Property(episodelabel), - ,] </label>
             </control>
-          </control>
-          
-          <control type="image"> 
-            <width>auto</width>
-            <height>auto</height>
-            <texture>overlays/vignette.png</texture>
-            <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
           </control>
         </control>
         

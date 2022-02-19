@@ -27,8 +27,11 @@ class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
 
-    def __init__(self, inherited=None):  
-        self.log('__init__')
+    def __init__(self, inherited=None):
+        if inherited is None:
+            from resources.lib.parser import Writer
+            inherited = Writer()
+        
         self.queueRunning = False
         self.writer       = inherited
         self.inherited    = inherited
@@ -140,7 +143,7 @@ class JSONRPC:
         
             
     def sendJSON(self, command):
-        if self.queueRunning: return self.inherited.pool.executor(sendJSON,command)
+        if self.queueRunning: return self.pool.executor(sendJSON,command)
         else:                 return sendJSON(command)
 
 
@@ -160,10 +163,14 @@ class JSONRPC:
         
 
     def startQueueThread(self): #start well after buildService.
-        if not self.queueThread.is_alive():
-            self.queueThread = threading.Timer(900.0, self.startQueueWorker)
-            self.queueThread.name = "queueThread"
-            self.queueThread.start()
+        if self.queueThread.is_alive(): 
+            try: 
+                self.queueThread.cancel()
+                self.queueThread.join()
+            except: pass
+        self.queueThread = threading.Timer(900.0, self.startQueueWorker)
+        self.queueThread.name = "queueThread"
+        self.queueThread.start()
 
 
     def startQueueWorker(self):
@@ -174,6 +181,7 @@ class JSONRPC:
             if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
             try: 
                 self.sendJSON(self.sendQueue.get()[1])
+            except self.sendQueue.Empty: pass
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
                 
@@ -215,6 +223,12 @@ class JSONRPC:
 
     def getResources(self,params='{"type":"kodi.resource.images","properties":["path","name","version","summary","description","thumbnail","fanart","author"]}',cache=True):
         return self.getAddons(params, cache)
+
+
+    def getAddon(self, addonid=ADDON_ID, params='{"addonid":"%s","properties":["name","version","summary","description","path","author","deprecated","installed","enabled","rating","extrainfo","broken","dependencies","fanart","disclaimer","thumbnail"]}',cache=True):
+        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddonDetails","params":%s,"id":1}'%(params%(addonid)))
+        if cache: return self.cacheJSON(json_query).get('result', {}).get('addon', {})
+        else:     return self.sendJSON(json_query).get('result', {}).get('addon', {})
 
 
     def getAddons(self,params='{"type":"xbmc.addon.video","enabled":true,"properties":["name","version","description","summary","path","author","thumbnail","disclaimer","fanart","dependencies","extrainfo"]}',cache=True):
@@ -361,16 +375,16 @@ class JSONRPC:
         if accurate is None: accurate = bool(SETTINGS.getSettingInt('Duration_Type'))
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
         duration = 0
-        runtime = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        runtime  = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')
         if (runtime == 0 or accurate):
-            if path.startswith(tuple(VFS_TYPES)):  # no additional parsing needed item(runtime) has only meta available.
-                duration = 0
-            elif isStack(path):  # handle "stacked" videos:
-                paths = splitStacks(path)
-                for file in paths: duration += self.parseDuration(file)
-            else:
-                duration = self.parseDuration(path, item)
-            if duration > 0: runtime = duration
+            if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
+                if isStack(path):# handle "stacked" videos
+                    paths = splitStacks(path)
+                    for file in paths: 
+                        duration += self.parseDuration(file)
+                else: 
+                    duration = self.parseDuration(path, item)
+                if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
         return runtime
 
@@ -388,7 +402,7 @@ class JSONRPC:
                 if duration > 0:
                     self.inherited.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
-                log("parseDuration, Failed! " + str(e), xbmc.LOGERROR)
+                log("parseDuration, Failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0
 
         ## duration diff. safe guard, how different are the two values? if > 45. don't save to Kodi.
@@ -408,9 +422,13 @@ class JSONRPC:
 
     def queDuration(self, media, dbid, dur):
         self.log('queDuration, media = %s, dbid = %s, dur = %s' % (media, dbid, dur))
-        param = {'movie'  : '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"  ,"params":{"movieid"   : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
-                 'episode': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails","params":{"episodeid" : %i, "runtime" : %i }, "id": 1}' % (dbid, dur)}
-        self.queueJSON(param[media],10)
+        param = {'movie'     : '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"      : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
+                 'episode'   : '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"    : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
+                 'musicvideo': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid" : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
+                 'song'      : '{"jsonrpc": "2.0", "method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"       : %i, "runtime" : %i }, "id": 1}' % (dbid, dur)}
+        try: self.queueJSON(param[media],10)
+        except Exception as e:
+            log("queDuration, Failed! %s"%(e), xbmc.LOGERROR)
         
         
     def autoPagination(self, id, path, limits={}, checksum='', life=datetime.timedelta(days=28)):
@@ -435,9 +453,9 @@ class JSONRPC:
       
 
     def requestList(self, citem, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        if self.writer.__class__.__name__ != 'Writer':
-            from resources.lib.parser import Writer
-            self.writer = Writer()
+        # if self.writer.__class__.__name__ != 'Writer':
+            # from resources.lib.parser import Writer
+            # self.writer = Writer()
 
         # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         id = citem['id']
@@ -490,7 +508,7 @@ class JSONRPC:
 
     def matchPVRPath(self, channelid=-1):
         self.log('matchPVRPath, channelid = %s' % (channelid))
-        pvrPaths = ['pvr://channels/tv/%s/'%(urllib.parse.quote(ADDON_NAME)),
+        pvrPaths = ['pvr://channels/tv/%s/'%(quote(ADDON_NAME)),
                     'pvr://channels/tv/All%20channels/',
                     'pvr://channels/tv/*']
 

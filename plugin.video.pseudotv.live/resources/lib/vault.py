@@ -27,7 +27,6 @@ class Vault:
     _vault = {}
     
     def __init__(self):
-        self.log('__init__')
         self.__dict__ = self._vault
 
             
@@ -35,6 +34,14 @@ class Vault:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def _load(self, file):
+        self.log('_load file = %s'%(file))
+        fle  = FileAccess.open(file, 'r')
+        data = (loadJSON(fle.read()) or {})
+        fle.close()
+        return data
+        
+        
     def set_m3uList(self, m3uList):
         self.log('set_m3uList, m3uList: channels = %s'%(len(m3uList.get('channels',[]))))
         self._m3uList = m3uList
@@ -59,7 +66,16 @@ class Vault:
 
 
     def get_channelList(self):
-        return getattr(self, '_channelList', None)
+        return getattr(self, '_channelList', self.load_channelList())
+        
+        
+    def load_channelList(self):
+        if getattr(self,'_channelList',None) is None:
+            channelList = self._load(CHANNELFLE_DEFAULT)
+            channelList.update(self._load(CHANNELFLEPATH))
+            channelList['uuid'] = getUUID(channelList)
+            self.set_channelList(channelList)
+            return channelList
 
 
     def set_libraryItems(self, libraryItems):
@@ -68,7 +84,16 @@ class Vault:
 
 
     def get_libraryItems(self):
-        return getattr(self, '_libraryItems', None)
+        return getattr(self,'_libraryItems', self.load_libraryItems())
+        
+        
+    def load_libraryItems(self):
+        if getattr(self,'_libraryItems',None) is None:
+            libraryItems = self._load(LIBRARYFLE_DEFAULT)
+            libraryItems.update(self._load(LIBRARYFLEPATH))
+            self.set_libraryItems(libraryItems)
+            return libraryItems
+        
 
     m3uList      = property(get_m3uList     , set_m3uList)
     xmltvList    = property(get_xmltvList   , set_xmltvList)

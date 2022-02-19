@@ -19,7 +19,6 @@
 
 from resources.lib.globals     import *
 from resources.lib.fileaccess  import FileLock
-from resources.lib.vault       import Vault
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 from resources.lib.channels    import Channels
@@ -32,134 +31,61 @@ from resources.lib.rules       import RulesList
 from resources.lib.library     import Library
 
 class Writer:
-    vault          = Vault()
     globalFileLock = FileLock()
     
     def __init__(self, service=None):
-        self.log('__init__')
         if service is None:
+            from resources.lib.vault import Vault
+            self.vault     = Vault()
             self.monitor   = xbmc.Monitor()
             self.player    = xbmc.Player()
         else:
+            self.vault     = service.vault
             self.monitor   = service.monitor
             self.player    = service.player
         
         self.cache         = Cache()
         self.dialog        = Dialog()
         self.pool          = PoolHelper()
+        self.jsonRPC       = JSONRPC(inherited=self)
         
         self.channels      = Channels(writer=self)
-        self.jsonRPC       = JSONRPC(inherited=self)
-        self.backup        = Backup(writer=self)
+        self.library       = Library(writer=self)
+        self.recommended   = self.library.recommended
+        
         self.builder       = Builder(writer=self)
         self.m3u           = M3U(writer=self)
         self.xmltv         = XMLTV(writer=self)
-        self.rules         = RulesList(inherited=self)
         
-        self.library       = Library(writer=self)
-        self.recommended   = self.library.recommended
-          
-        self.serviceThread = threading.Timer(0.5, self.triggerPendingChange)
+        self.backup        = Backup(writer=self)
+        self.rules         = RulesList(inherited=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def importSETS(self):
-        self.log('importSETS')
-        importLST = self.channels.getImports()
-        
-        if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
-            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE'),
-                                 1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
-                                 
-            Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),
-                                 1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
-
-            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV',
-                                      'm3u':{'path':Import_M3U_Path,'providers':SETTINGS.getSettingList('Import_Provider')},
-                                      'xmltv':{'path':Import_XMLTV_Path}}})
-        
-        for idx, item in enumerate(importLST):
-            try:
-                importItem = item.get('item',{})
-                if importItem.get('type','') != 'iptv': continue
-                self.log('importSETS, %s: importItem = %s'%(idx,importItem))
-                
-                idx += 1
-                m3ufle   = importItem.get('m3u'  ,{}).get('path','')
-                xmlfle   = importItem.get('xmltv',{}).get('path','')
-                filters  = {'slug'     :importItem.get('m3u',{}).get('slug',''),
-                            'providers':importItem.get('m3u',{}).get('provider',[])}
-                            
-                self.xmltv.importXMLTV(xmlfle,self.m3u.importM3U(m3ufle,filters,multiplier=idx))
-                if self.builder.pDialog is not None:
-                    self.builder.pCount += .1
-                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
-                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
-            except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
-        return True
-
-    
-    def findChannel(self, citem, channels=[]):
-        for idx, eitem in enumerate(channels):
-            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type','').lower() == eitem.get('type',str(random.random())).lower() and citem.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
-                self.log('findChannel, found citem = %s'%(citem))
-                return idx, eitem
-        return None, {}
-        
-        
-    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
-        self.log('removeChannelLineup, citem = %s'%(citem))
-        self.m3u.removeStation(citem)
-        self.xmltv.removeBroadcasts(citem)
-
-
-    def saveChannelLineup(self):
-        self.log('saveChannelLineup')
-        if self.cleanChannelLineup() and self.importSETS():
-            if False in [self.m3u.saveM3U(), 
-                         self.xmltv.saveXMLTV()]:
-                self.dialog.notificationDialog(LANGUAGE(30001))
-                return False
-        return True
-        
-        
-    def cleanChannelLineup(self):
-        # Clean M3U/XMLTV from abandoned channels.
-        channels    = self.channels.getChannels()
-        m3uChannels = self.m3u.getStations()
-        abandoned   = m3uChannels.copy() 
-        print('channels',len(channels))
-        print('m3uChannels',len(m3uChannels))
-        if (channels or m3uChannels) is None: return True
-        [abandoned.remove(m3u) for channel in channels for m3u in m3uChannels if channel.get('id') == m3u.get('id')]
-        if abandoned != m3uChannels:
-            self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
-            for leftover in abandoned:
-                self.removeChannelLineup(leftover)
-                if self.builder.pDialog is not None:
-                    self.builder.pCount += .1
-                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=leftover.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30327)))
-                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
-        return True
-
-        
     def addChannelLineup(self, citem, radio=False, catchup=True):
-        item = citem.copy()
-        item['label'] = (item.get('label','') or item['name'])
-        item['url']   = PVR_URL.format(addon=ADDON_ID,name=quote(item['name']),id=quote(item['id']),radio=str(item['radio']))
+        citem['label'] = (citem.get('label','') or citem['name'])
+        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))
         
         if not SETTINGS.getSettingBool('Enable_Grouping'): 
-            item['group'] = [ADDON_NAME]
+            citem['group'] = [ADDON_NAME]
         else:
-            item['group'].append(ADDON_NAME)
-        item['group'] = list(set(item['group']))
+            if ADDON_NAME not in citem['group']:
+                citem['group'].append(ADDON_NAME)
+                
+            if citem.get('favorite',False):
+                 if not LANGUAGE(30201) in citem['group']: 
+                    citem['group'].append(LANGUAGE(30201))
+            else:
+                 if LANGUAGE(30201) in citem['group']: 
+                     citem['group'].remove(LANGUAGE(30201))
+        citem['group'] = list(set(citem['group']))
         
-        self.log('addChannelLineup, item = %s, radio = %s, catchup = %s'%(item,radio,catchup))
-        self.m3u.addStation(item)
-        self.xmltv.addChannel(item)
+        self.log('addChannelLineup, citem = %s, radio = %s, catchup = %s'%(citem,radio,catchup))
+        self.m3u.addStation(citem)
+        self.xmltv.addChannel(citem)
     
 
     def addProgrammes(self, citem, fileList, radio=False, catchup=True):
@@ -203,9 +129,154 @@ class Writer:
                 item['subtitle'] = list(set([sub.get('language','') for sub in streamdetails.get('subtitle',[]) if sub.get('language')]))
                 item['language'] = ', '.join(list(set([aud.get('language','') for aud in streamdetails.get('audio',[]) if aud.get('language')])))
                 item['audio']    = True if True in list(set([aud.get('codec','') for aud in streamdetails.get('audio',[]) if aud.get('channels',0) >= 2])) else False
-                # item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','')   for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
+                item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','') for vid in streamdetails.get('video',[]) if vid.get('aspect','')]))
             self.xmltv.addProgram(citem['id'], item)
             
+
+    def removeChannelLineup(self, citem): #clean channel from m3u/xmltv
+        self.log('removeChannelLineup, citem = %s'%(citem))
+        self.m3u.removeStation(citem)
+        self.xmltv.removeBroadcasts(citem)
+        
+        
+    def cleanChannelLineup(self):
+        # Clean M3U/XMLTV from abandoned channels.
+        channels    = self.channels.getChannels()
+        m3uChannels = self.m3u.getStations()
+        abandoned   = m3uChannels.copy() 
+        
+        if (channels or m3uChannels) is None: return True
+        [abandoned.remove(m3u) for channel in channels for m3u in m3uChannels if channel.get('id') == m3u.get('id')]
+        if abandoned != m3uChannels:
+            self.log('cleanChannelLineup, abandoned from M3U = %s'%(len(abandoned)))
+            for leftover in abandoned:
+                self.removeChannelLineup(leftover)
+                if self.builder.pDialog is not None:
+                    self.builder.pCount += .1
+                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=leftover.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30327)))
+                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
+        return True
+ 
+ 
+    def saveChannelLineup(self):
+        self.log('saveChannelLineup')
+        if self.cleanChannelLineup() and self.importSETS():
+            if False in [self.m3u._save(), self.xmltv._save()]:
+                self.dialog.notificationDialog(LANGUAGE(30001))
+                return False
+        return True
+        
+
+    def importSETS(self):
+        self.log('importSETS')
+        importLST = self.channels.getImports()
+        
+        if SETTINGS.getSettingBool('User_Import'): #append user third-party m3u/xmltv to recommended import list.
+            Import_M3U_Path   = {0:SETTINGS.getSetting('Import_M3U_FILE'),
+                                 1:SETTINGS.getSetting('Import_M3U_URL')}[SETTINGS.getSettingInt('Import_M3U_TYPE')]
+                                 
+            Import_XMLTV_Path = {0:SETTINGS.getSetting('Import_XMLTV_FILE'),
+                                 1:SETTINGS.getSetting('Import_XMLTV_URL')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
+
+            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV',
+                                      'm3u':{'path':Import_M3U_Path,'providers':SETTINGS.getSettingList('Import_Provider')},
+                                      'xmltv':{'path':Import_XMLTV_Path}}})
+        
+        for idx, item in enumerate(importLST):
+            try:
+                importItem = item.get('item',{})
+                if importItem.get('type','') != 'iptv': continue
+                self.log('importSETS, %s: importItem = %s'%(idx,importItem))
+                
+                idx += 1
+                m3ufle   = importItem.get('m3u'  ,{}).get('path','')
+                xmlfle   = importItem.get('xmltv',{}).get('path','')
+                filters  = {'slug'     :importItem.get('m3u',{}).get('slug',''),
+                            'providers':importItem.get('m3u',{}).get('provider',[])}
+                            
+                self.xmltv.importXMLTV(xmlfle,self.m3u.importM3U(m3ufle,filters,multiplier=idx))
+                if self.builder.pDialog is not None:
+                    self.builder.pCount += .1
+                    self.builder.pDialog = self.dialog.progressBGDialog(self.builder.pCount, self.builder.pDialog, message=importItem.get('name'),header='%s, %s'%(ADDON_NAME,LANGUAGE(30151)))
+                    self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
+            except Exception as e: self.log("importSETS, Failed! %s"%(e), xbmc.LOGERROR)
+        return True
+
+
+    def findChannel(self, citem, channels=[]):
+        for idx, eitem in enumerate(channels):
+            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type','').lower() == eitem.get('type',str(random.random())).lower() and citem.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
+                self.log('findChannel, found citem = %s'%(citem))
+                return idx, eitem
+        return None, {}
+        
+
+    def autoTune(self):
+        if hasAutotuned(): return True#already ran or dismissed by user, check on next reboot.
+        elif self.backup.hasBackup():
+            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=90000)
+            if   retval == 2: return self.recoverChannelsFromBackup()
+            elif retval != 1: return True
+        else:
+            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=90000): 
+                return False
+       
+        pDialog = self.dialog.progressBGDialog()
+        types   = CHAN_TYPES.copy()
+        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
+        for idx, type in enumerate(types):
+            self.log('autoTune, type = %s'%(type))
+            pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
+            self.selectPredefined(type,AUTOTUNE_LIMIT)
+        self.dialog.progressBGDialog(100, pDialog, '%s...'%(LANGUAGE(30053)))
+        return True
+
+
+    def selectPredefined(self, type=None, autoTune=None):
+        self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
+        # if isClient(): return self.dialog.notificationDialog(LANGUAGE(30288))
+        with busy_dialog():
+            items = self.library.getLibraryItems(type)
+            if not items:
+                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
+                return
+                
+            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+            if autoTune:
+                if autoTune > len(items): autoTune = len(items)
+                select = random.sample(list(set(range(0,len(items)))),autoTune)
+                
+        if not autoTune:
+            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
+            
+        if not select is None:
+            with busy_dialog():
+                self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
+                self.buildPredefinedChannels(type)
+                setUpdatePending()
+
+
+    def matchLizIDX(self, listitems, selects, key='name', retval=False):
+        for select in selects:
+            for idx, listitem in enumerate(listitems):
+                if select.get(key) == listitem.getLabel():
+                    if retval: yield listitem
+                    else:      yield idx
+
+
+    def matchDictIDX(self, items, listitems, key='name', retval=False):
+        for listitem in listitems:
+            for idx, item in enumerate(items):
+                if listitem.getLabel() == item.get(key):
+                    if retval: yield item
+                    else:      yield idx
+
+    
+    # #### #update pre-defined channels, meta maybe dynamic parse for change.
+    # #### elif item['number'] >= CHANNEL_LIMIT:
+    # #### item['logo'] = (self.writer.jsonRPC.resources.getLogo(channel['name'],channel['type'],channel['path'],channel, featured=True, lookup=True) or channel.get('logo',LOGO))
+    # #### item['path'] = self.writer.library.predefined.pathTypes[channel['type']](cleanChannelSuffix(channel['name']))
+    
             
     def buildPredefinedChannels(self, type=None):
         if not type is None: types = [type]
@@ -237,11 +308,12 @@ class Writer:
                 for item in items:
                     if self.monitor.waitForAbort(0.001): return
                     citem = self.channels.getCitem()
-                    citem.update({'name'   :getChannelSuffix(item['name'], type),
-                                  'path'   :item['path'],
-                                  'type'   :item['type'],
-                                  'logo'   :item['logo'],
-                                  'group'  :[type]})
+                    citem.update({'name'     :getChannelSuffix(item['name'], type),
+                                  'path'     :item['path'],
+                                  'type'     :item['type'],
+                                  'logo'     :item['logo'],
+                                  'favorite' :item['favorite'],
+                                  'group'    :[type]})
                     citem['group']   = list(set(citem['group']))
                     citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
                     citem['catchup'] = ('vod' if not citem['radio'] else '')
@@ -263,7 +335,26 @@ class Writer:
                         else:                 self.channels.removeChannel(citem)
                             
         self.log('buildPredefinedChannels, finished building')
-        return self.channels.saveChannels()
+        return self.channels._save()
+
+        
+    def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
+        newChannels = self.vault._load(CHANNELFLE_BACKUP).get('channels',[])
+        difference  = sorted(diffLSTDICT(self.channels.getChannels(),newChannels), key=lambda k: k['number'])
+        self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
+        
+        if len(difference) > 0:
+            pDialog = self.dialog.progressDialog(message=LANGUAGE(30338))
+
+            for idx, citem in enumerate(difference):
+                pCount = int(((idx + 1)*100)//len(difference))
+                if citem in newChannels: 
+                    pDialog = self.dialog.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(30338),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
+                    self.channels.addChannel(citem)
+                else: 
+                    self.channels.removeChannel(citem)
+            setRestartRequired(self.channels._save())
+        return True
 
 
     def clearChannels(self, type='all'): #clear user-defined channels. all includes pre-defined
@@ -275,162 +366,9 @@ class Writer:
         for citem in channels: 
             if self.channels.removeChannel(citem):
                 self.removeChannelLineup(citem)
-                
-        if self.channels.saveChannels():
+        if self.channels._save():
             return self.saveChannelLineup()
             
-        
-    def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
-        newChannels = self.channels.loadChannels(CHANNELFLE_BACKUP)
-        difference  = sorted(diffLSTDICT(self.channels.getChannels(),newChannels), key=lambda k: k['number'])
-        self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
-        
-        if len(difference) > 0:
-            self.channels.clearChannels()
-            pDialog = self.dialog.progressDialog(message=LANGUAGE(30338))
-            self.monitor.waitForAbort(0.1)
-            for idx, citem in enumerate(newChannels):
-                pCount  = int((idx*50)//len(newChannels))
-                pDialog = self.dialog.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(30338),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
-                self.monitor.waitForAbort(0.1)
-                self.channels.addChannel(citem)
-                    
-            pDialog = self.dialog.progressDialog(pCount,pDialog,message=LANGUAGE(30152))
-            self.channels.saveChannels()
-            self.monitor.waitForAbort(0.1)
-            
-            if self.recoverItemsFromChannels(self.channels.getPredefinedChannels(),progBar): #re-enable library (pre-defined) items
-                self.setPendingChangeTimer()
-         
-       
-    def recoverItemsFromChannels(self, predefined=None, pDialog=None):
-        self.log('recoverItemsFromChannels') #re-enable library.json items from channels.json
-        if predefined is None: predefined = self.channels.getPredefinedChannels()
-        for type in CHAN_TYPES:
-            items = self.library.getLibraryItems(type)
-            if not items: continue #no library items, continue
-                
-            if pDialog is not None:
-                pCount = 50 + int((CHAN_TYPES.index(type)*50)//len(CHAN_TYPES))
-                pDialog = self.dialog.progressDialog(pCount,pDialog,message='%s: %s'%(LANGUAGE(30339),type))
-                self.monitor.waitForAbort(0.1)
-                
-            channels = self.channels.getPredefinedChannelsByType(type, predefined)
-            selects  = [idx for idx, item in enumerate(items) for channel in channels if channel.get('name','').lower() == item.get('name','').lower()]
-            self.log('recoverItemsFromChannels, type = %s, selects = %s'%(type,selects))
-            self.library.setEnableStates(type, selects, items)
-        if pDialog and pCount < 100: self.dialog.progressDialog(100,pDialog,message=LANGUAGE(30152))
-        return True
-        
-
-    def recoverChannelsFromM3U(self):
-        self.log('recoverChannelsFromM3U') #rebuild predefined channels from m3u. #todo reenable predefined. 
-        channels = self.channels.getChannels()
-        m3u      = self.m3u.getStations().copy()
-        if not channels and m3u:
-            self.log('recoverChannelsFromM3U, recovering %s m3u channels'%(m3u))
-            if not self.dialog.yesnoDialog('%s ?'%(LANGUAGE(30178))): return
-            for item in m3u: 
-                citem = self.channels.getCitem()
-                citem.update(item) #todo repair path.
-                self.channels.addChannel(citem)
-            return self.channels.saveChannels()
-        self.setPendingChangeTimer()
-        self.log('recoverChannelsFromM3U, finished')
-        return True
-        
-
-    def syncCustom(self): #todo sync user created smartplaylists/nodes for multi-room.
-        for type in ['library','playlists']:
-            for media in ['video','music','mixed']:
-                path  = 'special://userdata/%s/%s/'%(type,media)
-                files = FileAccess.listdir(path)[1]
-                for file in files:
-                    orgpath  = os.path.join(path,file)
-                    copypath = os.path.join(getUserFilePath(),'cache','playlists',type,media,file)
-                    self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
-                    yield FileAccess.copy(orgpath, copypath)
-
-
-    def autoTune(self):
-        if (isClient() | hasAutotuned()): return False #already ran or dismissed by user, check on next reboot.
-        elif self.backup.hasBackup():
-            retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=90000)
-            if   retval == 2: return self.recoverChannelsFromBackup()
-            elif retval != 1:
-                setAutoTuned()
-                return False
-        else:
-            if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=90000): 
-                setAutoTuned()
-                return False
-       
-        pDialog = self.dialog.progressBGDialog()
-        types   = CHAN_TYPES.copy()
-        types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
-        for idx, type in enumerate(types):
-            self.log('autoTune, type = %s'%(type))
-            pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
-            self.selectPredefined(type,AUTOTUNE_LIMIT)
-        self.dialog.progressBGDialog(100, pDialog, '%s...'%(LANGUAGE(30053)))
-        setAutoTuned()
-        return True
-
-
-    def matchLizIDX(self, listitems, selects, key='name', retval=False):
-        for select in selects:
-            for idx, listitem in enumerate(listitems):
-                if select.get(key) == listitem.getLabel():
-                    if retval: yield listitem
-                    else:      yield idx
-
-
-    def matchDictIDX(self, items, listitems, key='name', retval=False):
-        for listitem in listitems:
-            for idx, item in enumerate(items):
-                if listitem.getLabel() == item.get(key):
-                    if retval: yield item
-                    else:      yield idx
-
-
-    def selectPredefined(self, type=None, autoTune=None):
-        self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        if isClient(): return self.dialog.notificationDialog(LANGUAGE(30288))
-        with busy_dialog():
-            items = self.library.getLibraryItems(type)
-            if not items:
-                self.dialog.notificationDialog(LANGUAGE(30103)%(type))
-                return
-                
-            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
-            if autoTune:
-                if autoTune > len(items): autoTune = len(items)
-                select = random.sample(list(set(range(0,len(items)))),autoTune)
-                
-        if not autoTune:
-            select = self.dialog.selectDialog(listItems,LANGUAGE(30272)%(type),preselect=list(self.matchLizIDX(listItems,self.library.getEnabledItems(items))))
-            
-        if not select is None:
-            with busy_dialog():
-                self.library.setEnableStates(type,list(self.matchDictIDX(items,[listItems[idx] for idx in select])),items)
-                self.buildPredefinedChannels(type)
-                self.setPendingChangeTimer()
-        
-        
-    def triggerPendingChange(self):
-        self.log('triggerPendingChange')
-        if isBusy(): self.setPendingChangeTimer(15.0)
-        else:        setPendingChange(state=True)
-            
-            
-    def setPendingChangeTimer(self, wait=30.0):
-        self.log('setPendingChangeTimer, wait = %s'%(wait))
-        if isPendingChange(): setPendingChange(state=False)
-        if self.serviceThread.is_alive(): self.serviceThread.cancel()
-        self.serviceThread = threading.Timer(wait, self.triggerPendingChange)
-        self.serviceThread.name = "serviceThread"
-        self.serviceThread.start()
-        
 
     def clearPredefined(self):
         self.log('clearPredefined')
@@ -438,9 +376,8 @@ class Writer:
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30077))): return False
             if self.library.clearLibraryItems() and self.clearChannels('pre-defined'):
-                setAutoTuned(False)
-                self.setPendingChangeTimer()
-                return self.dialog.notificationDialog(LANGUAGE(30053))
+                setUpdatePending()
+                return self.dialog.notificationDialog('%s %s'%(LANGUAGE(30077),LANGUAGE(30053)))
 
 
     def clearUserChannels(self):
@@ -449,9 +386,8 @@ class Writer:
         with busy():
             if not self.dialog.yesnoDialog('%s?'%(LANGUAGE(30093))): return False
             if self.clearChannels('user-defined'):
-                setAutoTuned(False)
-                self.setPendingChangeTimer()
-                return self.dialog.notificationDialog(LANGUAGE(30053))
+                setUpdatePending()
+                return self.dialog.notificationDialog('%s %s'%(LANGUAGE(30093),LANGUAGE(30053)))
 
 
     def clearBlackList(self):
