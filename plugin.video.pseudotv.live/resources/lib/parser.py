@@ -274,8 +274,8 @@ class Writer:
     
     # #### #update pre-defined channels, meta maybe dynamic parse for change.
     # #### elif item['number'] >= CHANNEL_LIMIT:
-    # #### item['logo'] = (self.writer.jsonRPC.resources.getLogo(channel['name'],channel['type'],channel['path'],channel, featured=True, lookup=True) or channel.get('logo',LOGO))
-    # #### item['path'] = self.writer.library.predefined.pathTypes[channel['type']](cleanChannelSuffix(channel['name']))
+    # #### item['logo'] = (self.jsonRPC.resources.getLogo(channel['name'],channel['type'],channel['path'],channel, featured=True, lookup=True) or channel.get('logo',LOGO))
+    # #### item['path'] = self.library.predefined.pathTypes[channel['type']](cleanChannelSuffix(channel['name']))
     
             
     def buildPredefinedChannels(self, type=None):
@@ -292,7 +292,7 @@ class Writer:
             return [num for num in range(start,stop) if num not in enumbers]
                     
         for type in types:
-            if self.monitor.waitForAbort(0.001): return
+            if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): return
             items = self.library.getLibraryItems(type, enabled=True)
             self.log('buildPredefinedChannels, type = %s, enabled items = %s'%(type,len(items)))
 
@@ -306,13 +306,12 @@ class Writer:
                 removeLST = echannels.copy()
 
                 for item in items:
-                    if self.monitor.waitForAbort(0.001): return
+                    if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): return
                     citem = self.channels.getCitem()
                     citem.update({'name'     :getChannelSuffix(item['name'], type),
                                   'path'     :item['path'],
                                   'type'     :item['type'],
                                   'logo'     :item['logo'],
-                                  'favorite' :item.get('favorite',False),
                                   'group'    :[type]})
                                   
                     citem['group']   = list(set(citem['group']))
@@ -325,7 +324,9 @@ class Writer:
                         citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])
                     else:#update new citems with existing values.
                         if eitem in removeLST: removeLST.remove(eitem)
-                        for key in ['id','rules','number','favorite']: citem[key] = eitem[key] #transfer static channels values.
+                        for key in ['id','rules','number','favorite']: 
+                            if eitem.get(key):
+                                citem[key] = eitem[key] #transfer static channels values.
                     addLST.append(citem)
                 
                 if len(addLST) > 0 and (addLST != removeLST):

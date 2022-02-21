@@ -9,7 +9,7 @@
             "logo": "",
             "radio": false,
             "catchup": "vod",
-            "   ": false,
+            "favorite": false,
             "path": [],
             "group": [],
             "rules": []

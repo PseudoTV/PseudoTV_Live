@@ -299,7 +299,7 @@ class Builder:
         self.loopback = {}
         
         while not self.writer.monitor.abortRequested() and (len(fileList) < limit):
-            if self.writer.monitor.waitForAbort(0.001) or len(dirList) == 0: break
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or len(dirList) == 0: break
             dir = dirList.pop(0)
             try: 
                 if fileList[0] == {}: 
@@ -335,8 +335,8 @@ class Builder:
         else:
             self.chanError.append(LANGUAGE(30317))
             
-        for idx, item in enumerate(json_response) or self.writer.monitor.isSettingsOpened():
-            if self.writer.monitor.waitForAbort(0.001): break
+        for idx, item in enumerate(json_response):
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened(): break
 
             file     = item.get('file','')
             fileType = item.get('filetype','file')

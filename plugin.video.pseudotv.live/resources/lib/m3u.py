@@ -64,8 +64,7 @@ class M3U:
 
     def _load(self):
         self.log('_load')
-        return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 
-                'channels':self.cleanSelf(self.loadM3U())}
+        return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 'channels':self.cleanSelf(self.loadM3U())}
         
 
     def loadM3U(self, file=M3UFLEPATH):

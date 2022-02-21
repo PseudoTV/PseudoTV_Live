@@ -65,10 +65,12 @@ class Channels:
 
           
     def cleanSelf(self, channelList):
+        tempkeys = self.getCitem().keys()
         channels = channelList.get('channels',[])
-        for citem in channels: citem['group'] = list(set(citem['group'])) #clean duplicates
+        for citem in channels:
+            citem = dict([(key,value) for key, value in citem.items() if key in tempkeys]) #remove leftover m3u keys, only save citem elements #todo split channels.json and m3u elements the their own dataobject?
+            citem['group'] = list(set(citem['group'])) #clean duplicates, necessary?
         channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
-         # for rule in citem.get('rules',[]) if rule.get('id') != 0 #todo clean template rules
         self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList.get('channels',[]))))
         return channelList
         
@@ -97,7 +99,7 @@ class Channels:
         return list(filter(lambda c:c.get('type') == type, channels))
 
 
-    @cacheit(json_data=True)
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getTemplate(self):
         fle = FileAccess.open(CHANNELFLE_DEFAULT, 'r')
         channelList = loadJSON(fle.read())
@@ -129,7 +131,8 @@ class Channels:
         idx, channel = self.writer.findChannel(citem, self.writer.vault.channelList.get('channels',[]))
         if idx is not None:
             for key in ['id','rules','number','favorite']: 
-                citem[key] = channel[key] # existing id found, reuse channel meta.
+                if channel.get(key):
+                    citem[key] = channel[key] # existing id found, reuse channel meta.
             citem['group'] = list(set(citem.get('group',[])))
             self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
             self.writer.vault.channelList['channels'][idx] = citem #can't .update() must replace.

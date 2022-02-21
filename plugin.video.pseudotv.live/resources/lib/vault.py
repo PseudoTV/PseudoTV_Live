@@ -74,10 +74,6 @@ class Vault:
             channelList = self._load(CHANNELFLE_DEFAULT)
             channelList.update(self._load(CHANNELFLEPATH))
             channelList['uuid'] = getUUID(channelList)
-            
-            # citem = channelList['channels'].pop(0)
-            # for channel in channelList['channels']:
-                # channel = citem.copy().update(channel)
             self.set_channelList(channelList)
             return channelList
 

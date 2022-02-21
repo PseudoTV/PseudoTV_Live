@@ -181,7 +181,7 @@ SELECT_DIALOG        = 12000
 OK_DIALOG            = 12002
 ADDON_DIALOG         = 13001
 
-GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
+GROUP_TYPES         = ['Addon', 'Directory', LANGUAGE(30201), 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
 PRE_ROLL            = ['bumpers','ratings']
 POST_ROLL           = ['commercials','trailers']
