@@ -67,9 +67,10 @@ class Channels:
     def cleanSelf(self, channelList):
         tempkeys = self.getCitem().keys()
         channels = channelList.get('channels',[])
-        for citem in channels:
+        for idx, citem in enumerate(channels):
             citem = dict([(key,value) for key, value in citem.items() if key in tempkeys]) #remove leftover m3u keys, only save citem elements #todo split channels.json and m3u elements the their own dataobject?
             citem['group'] = list(set(citem['group'])) #clean duplicates, necessary?
+            channels[idx]  = citem
         channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
         self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList.get('channels',[]))))
         return channelList
@@ -117,7 +118,7 @@ class Channels:
 
     def getImports(self):
         self.log('getImports')
-        return self.writer.vault.channelList.get('imports',[])
+        return self.writer.vault.channelList.get('imports',[]).copy()
 
 
     def setImports(self, imports): #save called by config.
@@ -128,7 +129,7 @@ class Channels:
 
     def addChannel(self, citem):
         self.log('addChannel, id = %s'%(citem['id']))
-        idx, channel = self.writer.findChannel(citem, self.writer.vault.channelList.get('channels',[]))
+        idx, channel = self.writer.findChannel(citem, self.getChannels())
         if idx is not None:
             for key in ['id','rules','number','favorite']: 
                 if channel.get(key):
@@ -140,13 +141,13 @@ class Channels:
             citem['group'] = list(set(citem.get('group',[])))
             self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
             self.writer.vault.channelList.setdefault('channels',[]).append(citem)
-            self.log('addChannel, total channels = %s'%(len(self.writer.vault.channelList.get('channels',[]))))
+            self.log('addChannel, total channels = %s'%(len(self.getChannels())))
         return True
         
         
     def removeChannel(self, citem):
         self.log('removeChannel, id = %s'%(citem['id']))
-        idx, channel = self.writer.findChannel(citem, self.writer.vault.channelList.get('channels',[]))
+        idx, channel = self.writer.findChannel(citem, self.getChannels())
         if idx is not None: self.writer.vault.channelList['channels'].pop(idx)
         return True
 
