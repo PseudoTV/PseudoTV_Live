@@ -19,7 +19,8 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-from resources.lib.globals     import *
+from resources.lib.globals import *
+from resources.lib.rules   import RulesList
 
 class Player(xbmc.Player):
     def __init__(self):
@@ -47,7 +48,6 @@ class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.service            = kwargs.get('service')
-        self.ruleList           = {}
         self.pvritem            = {}
         self.citem              = {}
         self.nowitem            = {}
@@ -59,6 +59,8 @@ class Overlay(xbmcgui.WindowXML):
         self.showChannelBug     = False
         self.showOnNext         = False
         
+        self.runActions         = RulesList().runActions
+        
         self.bugToggleThread    = threading.Timer(5.0, self.bugToggle)
         self.onNextChkThread    = threading.Timer(5.0, self.onNextChk)
         self.onNextToggleThread = threading.Timer(5.0, self.onNextToggle)
@@ -66,17 +68,6 @@ class Overlay(xbmcgui.WindowXML):
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def runActions(self, action, citem, parameter=None):
-        self.log("runActions action = %s, channel = %s"%(action,citem))
-        if not citem.get('id',''): return parameter
-        ruleList = self.ruleList.get(citem['id'],[])
-        for rule in ruleList:
-            if action in rule.actions:
-                self.log("runActions performing channel rule: %s"%(rule.name))
-                return rule.runAction(action, self, parameter)
-        return parameter
 
 
     def onInit(self):
@@ -159,8 +150,7 @@ class Overlay(xbmcgui.WindowXML):
             xbmc.sleep(100)
             self.container.addItems(self.listitems)
                         
-            self.ruleList    = self.service.writer.rules.loadRules([self.citem])
-            self.runActions(RULES_ACTION_OVERLAY, self.citem)
+            self.runActions(RULES_ACTION_OVERLAY, self.citem, inherited=self)
             self.static.setVisible(self.staticOverlay)
             self.myPlayer.onPlayBackStarted()
             self.log('load finished')

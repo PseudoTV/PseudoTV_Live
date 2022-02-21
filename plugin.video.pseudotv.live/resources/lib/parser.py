@@ -44,6 +44,7 @@ class Writer:
             self.monitor   = service.monitor
             self.player    = service.player
         
+        self.rules         = RulesList()
         self.cache         = Cache()
         self.dialog        = Dialog()
         self.pool          = PoolHelper()
@@ -58,7 +59,6 @@ class Writer:
         self.xmltv         = XMLTV(writer=self)
         
         self.backup        = Backup(writer=self)
-        self.rules         = RulesList(inherited=self)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -234,7 +234,7 @@ class Writer:
 
     def selectPredefined(self, type=None, autoTune=None):
         self.log('selectPredefined, type = %s, autoTune = %s'%(type,autoTune))
-        # if isClient(): return self.dialog.notificationDialog(LANGUAGE(30288))
+        if isClient(): return self.dialog.notificationDialog(LANGUAGE(30288))
         with busy_dialog():
             items = self.library.getLibraryItems(type)
             if not items:
@@ -312,8 +312,9 @@ class Writer:
                                   'path'     :item['path'],
                                   'type'     :item['type'],
                                   'logo'     :item['logo'],
-                                  'favorite' :item['favorite'],
+                                  'favorite' :item.get('favorite',False),
                                   'group'    :[type]})
+                                  
                     citem['group']   = list(set(citem['group']))
                     citem['radio']   = (item['type'] == LANGUAGE(30097) or 'musicdb://' in item['path'])
                     citem['catchup'] = ('vod' if not citem['radio'] else '')

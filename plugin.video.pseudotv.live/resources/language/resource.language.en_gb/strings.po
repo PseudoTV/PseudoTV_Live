@@ -1237,7 +1237,7 @@ msgid "Utilities List"
 msgstr ""
 
 msgctxt "#30307"
-msgid "Please install the %s Repository..."
+msgid "Missing Resources, Please install the %s Repository..."
 msgstr ""
 
 msgctxt "#30308"

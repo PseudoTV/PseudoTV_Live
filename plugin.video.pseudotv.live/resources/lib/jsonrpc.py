@@ -409,8 +409,7 @@ class JSONRPC:
         rundiff = int(percentDiff(runtime, duration))
         runcond = [rundiff <= 45, rundiff != 0, rundiff != 100]
         runsafe = True if not False in runcond else False
-        self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s, safe = %s" % (
-        path, runtime, duration, rundiff, runsafe))
+        self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
         ## save parsed duration to Kodi database, if enabled.
         if save is None: save = SETTINGS.getSettingBool('Store_Duration')
         if save and runsafe and (item.get('id', -1) > 0):

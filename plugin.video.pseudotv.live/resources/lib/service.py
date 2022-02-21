@@ -26,7 +26,6 @@ from resources.lib.server      import Discovery, Announcement, HTTP
 class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
-        self.ruleList        = {}
         self.playingPVRitem  = {}
         self.isPseudoTV      = isPseudoTV()
         self.lastSubState    = isSubtitle()
@@ -35,17 +34,6 @@ class Player(xbmc.Player):
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
-        
-    def runActions(self, action, citem, parameter=None):
-        self.log("runActions action = %s, channel = %s"%(action,citem))
-        if citem.get('id',''):
-            ruleList = self.ruleList.get(citem['id'],[])
-            for rule in ruleList:
-                if action in rule.actions:
-                    self.log("runActions performing channel rule: %s"%(rule.name))
-                    return rule.runAction(action, self, parameter)
-        return parameter
         
         
     def getInfoTag(self):
@@ -174,10 +162,9 @@ class Player(xbmc.Player):
             self.log('playAction, channel changed')
             self.playingPVRitem = pvritem
             citem = self.getCitem()
-            self.ruleList = self.myService.writer.rules.loadRules([citem])
-            pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem)
+            pvritem = self.runActions(RULES_ACTION_PLAYER, citem, pvritem, inherited=self)
             
-            #temp workaround for long existing kodi subtitle seek bug. Some movies formats don't properly seek when subtitles are enabled.
+            #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
             self.lastSubState = isSubtitle()
             if self.lastSubState: self.setSubtitles(False)
         self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
@@ -322,7 +309,7 @@ class Service:
     player       = Player()
     http         = HTTP()
     announcement = Announcement(monitor)
-    discovery    = Discovery(monitor) #todo thread hanging?
+    discovery    = Discovery(monitor)
     
     def __init__(self):
         self.writer            = Writer(service=self)
@@ -343,6 +330,10 @@ class Service:
             from resources.lib.manager import Manager
             chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default",writer=self.writer,channel=chnum)
             del chmanager
+
+
+    def chkBackup(self):
+        return self.writer.backup.hasBackup()
 
 
     def chkUtilites(self):
@@ -388,9 +379,8 @@ class Service:
 
             
     def _initialize(self):
-        chkDiscovery(getDiscovery())
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [chkVersion,initFolders,setInstanceID,self.writer.backup.hasBackup,chkResources,chkRequiredSettings]
+        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkRequiredSettings,chkResources]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx+1)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()

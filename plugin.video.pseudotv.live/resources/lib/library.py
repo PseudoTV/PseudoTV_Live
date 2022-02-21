@@ -167,7 +167,7 @@ class Library:
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
                 pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
                 for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.001): return
+                    if self.writer.monitor.waitForAbort(0.001) or isClient(): return
                     fill    = int(((idx+1)*100)//len(items))
                     pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,fill)+'%',header='%s, %s'%(ADDON_NAME,msg))
@@ -216,7 +216,7 @@ class Library:
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
            
         for type in CHAN_TYPES: 
-            if self.writer.monitor.waitForAbort(0.001): return
+            if self.writer.monitor.waitForAbort(0.001) or isClient(): return
             fillType(type)
             
         setLibraryRun(True)
@@ -426,6 +426,7 @@ class Recommended:
 
 
     def importPrompt(self):
+        if isClient(): return
         recommendedAddons = self.searchRecommendedAddons()
         self.log('importPrompt, recommendedAddons = %s'%(len(recommendedAddons)))
         if len(recommendedAddons) > 1: 

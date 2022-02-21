@@ -22,9 +22,10 @@ from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
 
-HOST       = '0.0.0.0'
 IP         = getIP()
+HOST       = '0.0.0.0'
 CHUNK_SIZE = 64 * 1024
+LOCAL_HOST ='%s:%s'%(IP,TCP_PORT)
 
 def chkPort(port=0, redirect=False):
     return port
@@ -66,13 +67,18 @@ class Discovery:
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            try:    
-                data, addr = sock.recvfrom(1024) #wait for a packet
-                if data.startswith(ADDON_ID.encode()):
-                    response = data[len(ADDON_ID):]
-                    if response and (getDiscovery() != response.decode()): 
-                        self.log('_start, got service announcement from %s'%(response.decode()))
-                        setDiscovery(response.decode())
+            try:
+                discovery = getDiscovery()
+                if isClient():
+                    data, addr = sock.recvfrom(1024) #wait for a packet
+                    if data.startswith(ADDON_ID.encode()):
+                        response = data[len(ADDON_ID):]
+                        if response and (discovery != response.decode()): 
+                            self.log('_start, discovered remote host %s'%(response.decode()))
+                            setDiscovery(response.decode())
+                elif discovery != LOCAL_HOST: 
+                    self.log('_start, discovered local host %s'%(LOCAL_HOST))
+                    setDiscovery(LOCAL_HOST)
             except: pass
                 
             if (self.monitor.waitForAbort(1) or self.shutdown):
@@ -104,13 +110,13 @@ class Announcement:
         
     def _start(self):
         self.log('_start')
-        data = '%s%s:%s'%(ADDON_ID,IP,TCP_PORT)
+        data = '%s%s'%(ADDON_ID,LOCAL_HOST)
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))
         sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-        self.log('_start, sending service announcement: %s'%(data[len(ADDON_ID):]))
+        self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]))
         
         while not self.monitor.abortRequested():
             if not isClient():
@@ -185,7 +191,8 @@ class HTTP:
         try:
             #todo check port
             if (self.started or isClient()): return
-            self.log("_start, %s:%s"%(IP, TCP_PORT))
+            self.log("_start, %s"%(LOCAL_HOST))
+            PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
             self._server = ThreadedHTTPServer((IP, TCP_PORT), RequestHandler)
             self._server.allow_reuse_address = True
             self._httpd_thread = threading.Thread(target=self._server.serve_forever)

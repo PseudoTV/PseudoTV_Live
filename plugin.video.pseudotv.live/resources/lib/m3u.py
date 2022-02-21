@@ -156,10 +156,11 @@ class M3U:
                             else: item['url'] = nline
                         except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
                             
-                    item['name']  = (item.get('name','')  or item.get('label',''))
-                    item['label'] = (item.get('label','') or item.get('name',''))
+                    item['name']     = (item.get('name','')     or item.get('label',''))
+                    item['label']    = (item.get('label','')    or item.get('name',''))
+                    item['favorite'] = (item.get('favorite','') or False)
                     
-                    if LANGUAGE(30201) in item['group'] and not item.get('favorite',False):
+                    if LANGUAGE(30201) in item['group'] and not item['favorite']:
                         item['favorite'] = True
                         
                     if not item.get('id','') or not item.get('name','') or not item.get('number',''): 

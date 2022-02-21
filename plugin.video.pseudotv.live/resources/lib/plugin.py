@@ -42,7 +42,7 @@ class Plugin:
         self.dialog     = Dialog()
         self.pool       = PoolHelper()
         self.jsonRPC    = JSONRPC(inherited=self)
-        self.rules      = RulesList(inherited=self)
+        self.runActions = RulesList().runActions
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -53,17 +53,6 @@ class Plugin:
         if writer.get('writer',''):
             writer = getWriter(writer.get('writer',''))
         return self.dialog.buildItemListItem(writer, mType)
-
-
-    def runActions(self, action, citem, parameter=None):
-        self.log("runActions action = %s, channel = %s"%(action,citem))
-        if not citem.get('id',''): return parameter
-        ruleList = self.rules.loadRules([citem]).get(citem['id'],[])
-        for rule in ruleList:
-            if action in rule.actions:
-                self.log("runActions performing channel rule: %s"%(rule.name))
-                return rule.runAction(action, self, parameter)
-        return parameter
 
 
     @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)#channel-surfing buffer
@@ -128,7 +117,7 @@ class Plugin:
             
             if isPlaylist:
                 nowitem   = pvritem.get('broadcastnow',{})  # current item
-                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
+                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                 nextitems.insert(0,nowitem)
 
@@ -182,7 +171,7 @@ class Plugin:
         if nowitem:
             found = True
             if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'): #detect loopback
-                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
+                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 seekTLRNC = SETTINGS.getSettingInt('Seek_Tolerance')
                 seekTHLD  = SETTINGS.getSettingInt('Seek_Threshold%')
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
@@ -276,7 +265,7 @@ class Plugin:
         citem   = pvritem['citem']
         
         if nowitem:
-            nowitem  = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem)
+            nowitem  = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
             writer   = getWriter(nowitem.get('writer',{}))
             path     = writer.get('citem',{}).get('path','')
             

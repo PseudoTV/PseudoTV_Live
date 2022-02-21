@@ -51,9 +51,6 @@ PROPERTIES          = Properties()
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
-CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
-PLS_LOC             = os.path.join(SETTINGS_LOC,'playlists')
-LOGO_LOC            = os.path.join(SETTINGS_LOC,'logos')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -66,7 +63,7 @@ RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
 
 #switches      
-USER_LOC            = SETTINGS.getSetting('User_Folder')     
+USER_LOC            = (SETTINGS.getSetting('User_Folder') or os.path.join(SETTINGS_LOC,'cache'))
 DEBUG_ENABLED       = SETTINGS.getSettingBool('Enable_Debugging')
 PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
 PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
@@ -77,6 +74,9 @@ SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
 
+CACHE_LOC           = USER_LOC
+PLS_LOC             = os.path.join(USER_LOC,'playlists')
+LOGO_LOC            = os.path.join(USER_LOC,'logos')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
@@ -181,10 +181,6 @@ SELECT_DIALOG        = 12000
 OK_DIALOG            = 12002
 ADDON_DIALOG         = 13001
 
-ADDON_REPOSITORY    = 'repository.pseudotv'
-PVR_CLIENT          = 'pvr.iptvsimple'
-PVR_MANAGER         = 'service.iptv.manager'
-
 GROUP_TYPES         = ['Addon', 'Directory', 'Favorites', 'Mixed', LANGUAGE(30006), 'Mixed Movies', 'Mixed TV', LANGUAGE(30005), LANGUAGE(30007), 'Movies', 'Music', LANGUAGE(30097), 'Other', 'PVR', 'Playlist', 'Plugin', 'Radio', LANGUAGE(30026), 'Smartplaylist', 'TV', LANGUAGE(30004), LANGUAGE(30002), LANGUAGE(30003), 'UPNP', 'IPTV']
 BCT_TYPES           = ['bumpers','ratings','commercials','trailers']
 PRE_ROLL            = ['bumpers','ratings']
@@ -197,6 +193,9 @@ MUSIC_TYPES         = ['songs','albums','artists','music']
 ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
 VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
 
+ADDON_REPOSITORY    = ['repository.pseudotv','repository.lunatixz']
+PVR_CLIENT          = 'pvr.iptvsimple'
+PVR_MANAGER         = 'service.iptv.manager'
 MGR_SETTINGS        = {'refresh_interval'   :'1',
                        'iptv_simple_restart':'false'}
                     
@@ -225,15 +224,17 @@ def getPVR_SETTINGS():
     return {'m3uRefreshMode'              :'1',
             'm3uRefreshIntervalMins'      :'5',
             'm3uRefreshHour'              :'0',
+            'm3uCache'                    :'true',
             'logoPathType'                :'0',
             'logoPath'                    :LOGO_LOC,
-            'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'm3uPath'                     :M3UFLEPATH,
             'm3uUrl'                      :PROPERTIES.getProperty('M3U_URL'),
-            'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'epgPath'                     :XMLTVFLEPATH,
             'epgUrl'                      :PROPERTIES.getProperty('XMLTV_URL'),
-            'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Enable_Client') == 2 else '0'),
+            'epgCache'                    :'true',
+            'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'genresPath'                  :GENREFLEPATH,
             'genresUrl'                   :PROPERTIES.getProperty('GENRE_URL'),
             # 'tvGroupMode'                 :'0',
@@ -257,15 +258,14 @@ def getPVR_SETTINGS():
 
 def getPTV_SETTINGS(): 
     return {'User_Import'         :SETTINGS.getSetting('User_Import'),
-            'Enable_Client'       :SETTINGS.getSetting('Enable_Client'),
             'Import_M3U_TYPE'     :SETTINGS.getSetting('Import_M3U_TYPE'),
             'Import_M3U_FILE'     :SETTINGS.getSetting('Import_M3U_FILE'),
             'Import_M3U_URL'      :SETTINGS.getSetting('Import_M3U_URL'),
             'Import_Provider'     :SETTINGS.getSetting('Import_Provider'),
             'User_Folder'         :SETTINGS.getSetting('User_Folder'),
+            'Client_Mode'         :SETTINGS.getSetting('Client_Mode'),
             'UDP_PORT'            :SETTINGS.getSetting('UDP_PORT'),
-            'TDP_PORT'            :SETTINGS.getSetting('TDP_PORT'),
-            'Select_Channels'     :SETTINGS.getSetting('Select_Channels')}
+            'TDP_PORT'            :SETTINGS.getSetting('TDP_PORT')}
              
 @contextmanager
 def fileLocker(globalFileLock):
@@ -300,8 +300,11 @@ def chkSettings(last,current):
     for key,value in last.items():
         if value != current[key]:
             if key == 'User_Folder': 
-                moveUser(value,current[key])
-            elif key in ['UDP_PORT','UDP_PORT']: 
+                if moveUser(value,current[key]):
+                    Dialog().notificationDialog(LANGUAGE(30183))
+                    toggleADDON(ADDON_ID, state=False, reverse=True)
+                    return False
+            elif key in ['UDP_PORT','TCP_PORT']: 
                 Dialog().notificationDialog(LANGUAGE(30183))
                 toggleADDON(ADDON_ID, state=False, reverse=True)
                 return False
@@ -309,7 +312,7 @@ def chkSettings(last,current):
     if True in list(changed): return True
        
 def initFolders():
-    [FileAccess.makedirs(dir) for dir in [SETTINGS_LOC,CACHE_LOC,PLS_LOC,LOGO_LOC] if not FileAccess.exists(dir)]
+    [FileAccess.makedirs(dir) for dir in [SETTINGS_LOC,USER_LOC,PLS_LOC,LOGO_LOC] if not FileAccess.exists(dir)]
  
 def validateFiles():
     initFolders()
@@ -435,7 +438,7 @@ def hasAddon(id):
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def isClient():
-    return (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingInt('Enable_Client') > 0)
+    return (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingInt('Client_Mode') > 0)
     
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
@@ -486,24 +489,30 @@ def getMYUUID():
 def getUUID(channelList={}):
     return channelList.get('uuid',getMYUUID())
         
-def chkDiscovery(SERVER_IP=None):
-    PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingInt('Enable_Client') > 0)
-    LOCAL_IP = '%s:%s'%(getIP(),TCP_PORT)
-    if not SERVER_IP: SERVER_IP = LOCAL_IP
-    if PROPERTIES.getProperty('SERVER_IP') != SERVER_IP:
-        SETTINGS.setSetting('Network_Path' ,USER_LOC)
-        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(SERVER_IP))
-        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(SERVER_IP,M3UFLE))
-        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(SERVER_IP,XMLTVFLE))
-        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(SERVER_IP,GENREFLE))
+def chkDiscovery(SERVER_HOST=None):
+    PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingInt('Client_Mode') > 0)
+    CLIENT      = isClient()
+    SERVER_PAST = PROPERTIES.getProperty('SERVER_HOST')
+    LOCAL_HOST  = PROPERTIES.getProperty('LOCAL_HOST')
+    if not SERVER_HOST:
+        SERVER_HOST = (getDiscovery() or LOCAL_HOST)
         
-        PROPERTIES.setProperty('SERVER_IP',SERVER_IP)
-        PROPERTIES.setProperty('M3U_URL'  ,'http://%s/%s'%(SERVER_IP,M3UFLE))
-        PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_IP,XMLTVFLE))
-        PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_IP,GENREFLE))
-        log('global: chkDiscovery, isClient = %s, server = %s'%(isClient(),SERVER_IP))
-    return isClient()
-    
+    if not CLIENT and SERVER_PAST == LOCAL_HOST:
+        return CLIENT
+    elif SERVER_PAST != SERVER_HOST:
+        SETTINGS.setSetting('Network_Path',USER_LOC)
+        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(SERVER_HOST))
+        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(SERVER_HOST,M3UFLE))
+        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
+        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(SERVER_HOST,GENREFLE))
+        
+        PROPERTIES.setProperty('SERVER_HOST',SERVER_HOST)
+        PROPERTIES.setProperty('M3U_URL'  ,'http://%s/%s'%(SERVER_HOST,M3UFLE))
+        PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
+        PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_HOST,GENREFLE))
+        log('global: chkDiscovery, isClient = %s, server = %s'%(CLIENT,SERVER_HOST))
+    return CLIENT
+
 def getIdle():
     idleTime  = getIdleTime()
     idleState = (idleTime > 0)
@@ -663,7 +672,8 @@ def refreshMGR():
 
 def chkResources(silent=True):
     log('globals: chkResources, silent = %s'%(silent)) 
-    if hasAddon(ADDON_REPOSITORY): 
+    chkRepo = [hasAddon(repo) for repo in ADDON_REPOSITORY]
+    if True in chkRepo:
         params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
         missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
         for addon in missing:
@@ -792,18 +802,20 @@ def moveUser(oldFolder, newFolder):
     log('globals: moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
     files = [M3UFLE,XMLTVFLE,GENREFLE]
     dia   = Dialog().progressDialog(message='Preparing to move files...')#todo move to string.po
+    FileAccess.copy(os.path.join(oldFolder,'logos'),os.path.join(newFolder,'logos'))
     for idx, file in enumerate(files):
         pnt = int(((idx+1)*100)//len(files))
         dia = Dialog().progressDialog(pnt, dia, message='%s %s'%('Moving',file))#todo move to string.po
         oldFilePath = os.path.join(oldFolder,file)
         newFilePath = os.path.join(newFolder,file)
         if FileAccess.exists(oldFilePath):
-            dia = Dialog().progressDialog(pnt, dia, messag='%s %s'%('Moving',file))#todo move to string.po
+            dia = Dialog().progressDialog(pnt, dia, message='%s %s'%('Moving',file))#todo move to string.po
             if FileAccess.copy(oldFilePath,newFilePath):
                 dia = Dialog().progressDialog(pnt, dia, message='%s %s %s'%('Moving',file,LANGUAGE(30053)))#todo move to string.po
                 continue
         dia = Dialog().progressDialog(pnt, dia, message='Moving %s failed!'%(file))#todo move to string.po
-
+    return True
+    
 def escapeDirJSON(path):
     mydir = path
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")

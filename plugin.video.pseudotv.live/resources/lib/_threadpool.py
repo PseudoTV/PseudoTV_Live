@@ -50,7 +50,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     
 class ThreadPool:
     def __init__(self, processes=4):
-        self.cpuCount = int(processes)
+        self.cpuCount = int(processes) * 2
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -66,7 +66,7 @@ class ThreadPool:
 
 
     def imap(self, func, items=[], chunksize=1):
-        queue = Queue()                     
+        queue = Queue()
         threadCount = self.cpuCount
         for idx, item in enumerate(items): queue.put((idx, item))
             

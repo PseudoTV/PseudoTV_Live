@@ -29,6 +29,7 @@ class Builder:
         self.writer           = writer
         self.cache            = writer.cache
         self.pool             = writer.pool
+        self.runActions       = writer.rules.runActions
         
         #globals
         self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
@@ -41,7 +42,6 @@ class Builder:
         self.channelCount     = 0
         self.chanName         = ''
         self.chanError        = []
-        self.ruleList         = {}
         self.filter           = {}
         self.sort             = {}
         self.limits           = {}
@@ -58,18 +58,7 @@ class Builder:
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
 
-    def runActions(self, action, citem, parameter=None):
-        if not citem.get('id',''): return parameter
-        self.log("runActions action = %s, channel = %s"%(action,citem['id']))
-        ruleList = self.ruleList.get(citem['id'],[])
-        for rule in ruleList:
-            if action in rule.actions:
-                self.log("runActions performing channel rule: %s"%(rule.name))
-                return rule.runAction(action, self, parameter)
-        return parameter
-        
 
     def verifyChannelItems(self):
         #check channel configuration, verify and update paths, logos.
@@ -83,17 +72,18 @@ class Builder:
                 continue
 
             if not isinstance(citem.get('path',[]),list): citem['path'] = [citem['path']]
-            citem['id']      = (citem.get('id','')             or getChannelID(citem['name'],citem['path'],citem['number'])) # internal use only; create unique PseudoTV ID.
-            citem['radio']   = (citem.get('radio','')          or (citem['type'] == LANGUAGE(30097) or 'musicdb://' in citem['path']))
-            citem['catchup'] = (citem.get('catchup','')        or ('vod' if not citem['radio'] else ''))
-
-            if not SETTINGS.getSettingBool('Enable_Grouping'): 
+            citem['id']       = (citem.get('id','')             or getChannelID(citem['name'],citem['path'],citem['number'])) # internal use only; create unique PseudoTV ID.
+            citem['radio']    = (citem.get('radio','')          or (citem['type'] == LANGUAGE(30097) or 'musicdb://' in citem['path']))
+            citem['catchup']  = (citem.get('catchup','')        or ('vod' if not citem['radio'] else ''))
+            citem['favorite'] = (citem.get('favorite','')       or False)
+            
+            if not SETTINGS.getSettingBool('Enable_Grouping'):
                 citem['group'] = [ADDON_NAME]
             else:
                 if ADDON_NAME not in citem['group']:
                     citem['group'].append(ADDON_NAME)
                     
-                if citem.get('favorite',False):
+                if citem['favorite']:
                      if not LANGUAGE(30201) in citem['group']: 
                         citem['group'].append(LANGUAGE(30201))
                 else:
@@ -102,7 +92,7 @@ class Builder:
             citem['group'] = list(set(citem['group']))
             
             self.log('verifyChannelItems, %s: %s'%(idx,citem['id']))
-            yield self.runActions(RULES_ACTION_CHANNEL, citem, citem)
+            yield self.runActions(RULES_ACTION_CHANNEL, citem, citem, inherited=self)
 
 
     def buildService(self):
@@ -116,7 +106,6 @@ class Builder:
         self.pCount       = 0
         self.pDialog      = self.writer.dialog.progressBGDialog()
         self.channelCount = len(channels)
-        self.ruleList     = self.writer.rules.loadRules(channels)
         start             = roundTimeDown(getLocalTime(),offset=60)#offset time to start top of the hour
         endTimes          = dict(self.writer.xmltv.loadEndTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
         self.log('buildService, endTimes = %s'%(endTimes))
@@ -127,7 +116,7 @@ class Builder:
                 self.log('buildService, interrupted')
                 return
                 
-            channel         = self.runActions(RULES_ACTION_BUILD_START, channel, channel)
+            channel         = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
             self.chanName   = channel['name']
             self.chanError  = []
             
@@ -138,7 +127,7 @@ class Builder:
             self.pDialog    = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s'%(self.chanName),header='%s, %s'%(ADDON_NAME,LANGUAGE(30331)))
 
             cacheResponse   = self.getFileList(channel, endTimes.get(channel['id'], start) , channel['radio'])#cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)',False:'In-Valid Channel (No guidedata)',list:'fileList (guidedata)'}
-            cacheResponse   = self.runActions(RULES_ACTION_BUILD_STOP, channel, cacheResponse)
+            cacheResponse   = self.runActions(RULES_ACTION_BUILD_STOP, channel, cacheResponse, inherited=self)
 
             if cacheResponse:
                 self.writer.addChannelLineup(channel, radio=channel['radio'], catchup=not bool(channel['radio'])) #create m3u/xmltv station entry.
@@ -199,13 +188,13 @@ class Builder:
             self.limit    = PAGE_LIMIT
             
             valid         = False
-            self.runActions(RULES_ACTION_CHANNEL_START, citem)
+            self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
             
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
                 
-            citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem)
+            citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem, inherited=self)
             if isinstance(citem['path'], list): 
                 path = citem['path']
             else: 
@@ -225,7 +214,7 @@ class Builder:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
-                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_ITEMS, citem, cacheResponse)
+                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_ITEMS, citem, cacheResponse, inherited=self)
                 cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
@@ -238,7 +227,7 @@ class Builder:
             if self.fillBCTs and not citem.get('radio',False): 
                 cacheResponse = self.injectBCTs(citem, cacheResponse) 
                 
-            self.runActions(RULES_ACTION_CHANNEL_STOP, citem)
+            self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
             return sorted(cacheResponse, key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, Failed! %s"%(e), xbmc.LOGERROR)
         return False
@@ -260,7 +249,7 @@ class Builder:
         self.log("addScheduling; id = %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         #todo insert adv. scheduling rules here or move to adv. rules.py
         tmpList  = []
-        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList)
+        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList, inherited=self)
         for idx, item in enumerate(fileList):
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -271,7 +260,7 @@ class Builder:
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
-        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList)
+        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self)
             
             
     def buildRadio(self, channel):
@@ -298,7 +287,7 @@ class Builder:
             media, sort = self.parseSmartPlaylist(path)
         # elif path.endswith'.xml'): #nodes
         else:
-            # sort = self.runActions('', citem) #todo set secondary sort rules via adv. rules. ex. Mixed Path - TV (sort=episode) & Movies (sort=random).
+            # sort = self.runActions('', citem, inherited=self) #todo set secondary sort rules via adv. rules. ex. Mixed Path - TV (sort=episode) & Movies (sort=random).
             if not sort: #set fallback (defalut) sort method when none is provided.
                 if   path.startswith('videodb://tvshows'): sort = {"method": "episode"}
                 elif path.startswith('videodb://movies'):  sort = {"method": "random"}

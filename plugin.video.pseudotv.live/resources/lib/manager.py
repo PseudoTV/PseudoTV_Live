@@ -252,7 +252,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         channelProp = dumpJSON(channelData, sortkey=False)
         for key in self.channels.getCitem().keys():
             value = channelData.get(key)
-            if   key in ["number","type","logo","id","page","catchup","limits"]: continue # keys to ignore, internal use only.
+            print(key, value)
+            if   key in ["number","type","logo","id","catchup"]: continue # keys to ignore, internal use only.
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(list(set(value)))
                 elif key == "path"  :    value = '|'.join(value)
@@ -427,7 +428,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         
     def getID(self, channelData):
-        self.log('getID')
         if channelData.get('name','') and channelData.get('path',''): 
             channelData['id'] = getChannelID(channelData['name'], channelData['path'], channelData['number'])
             self.log('getID, id = %s'%(channelData['id']))
@@ -494,29 +494,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         return nitem
 
 
-    def buildRuleItems(self, channelData, append=False):
+    def buildRuleItems(self, channelData, append=True):
         self.log('buildRuleItems, append = %s'%(append))
         self.toggleSpinner(self.ruleList,True)
-        ruleList      = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
-        channelRules  = self.rules.loadRules([channelData]).get(channelData['id'],[])     # chan rules
-        
-        if not append:
-            ruleInstances = channelRules.copy()
-        else:    
-            ruleInstances = ruleList.copy()
-            for channelRule in channelRules:
-                for idx, ruleInstance in enumerate(ruleInstances):
-                    if channelRule.get('id') == ruleInstance.get('id'):
-                        ruleInstance.pop(idx)
-                        
-        listitems = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
-        if not append: listitems.insert(0,self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
-        self.toggleSpinner(self.ruleList,False)        
+        channelRules = self.rules.loadRules([channelData]).get(channelData['id'],[]) # all channel rule instances only.
+        listitems = self.pool.poolList(self.buildRuleListItem,channelRules,channelData)
+        if append: listitems.insert(0,self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
+        self.toggleSpinner(self.ruleList,False)
         self.ruleList.reset()
         xbmc.sleep(100)
         return listitems
         
-        
+
     def buildRuleListItem(self, data):
         ruleInstance, channelData = data
         rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues,'title':ruleInstance.getTitle()}
@@ -550,16 +539,36 @@ class Manager(xbmcgui.WindowXMLDialog):
             # ruleid   = int(listitem.getPath())
         # ruleSelect = [idx for idx, rule in enumerate(self.channels.ruleList) if rule['id'] == ruleid]
         # self.selectRuleItems(channelData, rules, self.channels.ruleList[ruleSelect[0]])
-        # self.toggleruleList(False)
+        
+        self.toggleruleList(False)
         return channelData['rules']
 
 
     def selectRuleItems(self, item):    
         self.log('selectRuleItems')
         channelData = loadJSON(item['item'].getProperty('channelData'))
-        listitems   = self.buildRuleItems(channelData,append=True)
-        optionIDX   = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
         
+        ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #all rule instances with channel settings applied
+        print(ruleInstances)
+        
+        listitems   = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
+        optionIDX   = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
+
+        # ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #all rule instances with channel settings applied
+        # print(ruleInstances)
+
+        # if not append:
+            # ruleInstances = channelRules.copy()
+        # else:    
+            # ruleInstances = ruleList.copy()
+            # for channelRule in channelRules:
+                # for idx, ruleInstance in enumerate(ruleInstances):
+                    # if channelRule.get('id') == ruleInstance.get('id'):
+                        # ruleInstance.pop(idx)
+                        
+        # listitems = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
+        
+
         if optionIDX is not None:
             ruleSelect    = loadJSON(listitems[optionIDX].getProperty('rule'))
             ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules

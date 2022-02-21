@@ -18,23 +18,19 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
-from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 
 # ''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
 
 class RulesList:
-    def __init__(self, inherited=None):  
+    pool = PoolHelper()
+    
+    def __init__(self):  
         self.log('__init__')
-        # if inherited.__class__.__name__ == 'Writer':
-            # self.writer  = inherited
-        self.writer    = inherited
-        self.inherited = inherited
-        
-        self.ruleList  = [BaseRule(writer=self.inherited),
-                          ShowChannelBug(),
-                          ShowOnNext(),
-                          DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
+        self.ruleList = [BaseRule(),
+                         ShowChannelBug(),
+                         ShowOnNext(),
+                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -48,7 +44,7 @@ class RulesList:
         chrules  = channel.get('rules',[])
         if not chid: return None
         for chrule in chrules:
-            if chrule.get('id',0) == 0: return None #template check
+            if chrule.get('id',0) == 0: return None #ignore template if exists
             for rule in tmpruleList:
                 if rule.myId == chrule['id']:
                     ruleInstance = rule.copy()
@@ -60,15 +56,15 @@ class RulesList:
         return ruleList
            
         
-    def loadRules(self, channels): #load channel rules and their instances.
+    def loadRules(self, channels=[]): #load channel rules and their instances.
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate
-        ruleList = dict(self.inherited.pool.poolList(self._loadRule,channels,tmpruleList))
+        ruleList = dict(self.pool.poolList(self._loadRule,channels,tmpruleList))
         self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
         return ruleList
         
         
-    def buildRuleList(self, channels): #load all rules and apply their per channel instances.
+    def buildRuleList(self, channels=[]): #load all rules and apply their per channel instances.
         ruleList = {}
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0)
@@ -80,8 +76,8 @@ class RulesList:
             for rule in tmpruleList:
                 ruleInstance = rule.copy()
                 for chrule in chrules:
-                    if   chrule.get('id',0) == 0: continue
-                    elif ruleInstance.myId == chrule['id']:
+                    if   chrule.get('id',0) == 0: continue #ignore template if exists
+                    elif ruleInstance.myId == chrule['id']:#match rule instance by id
                         options = chrule.get('options',[])
                         for key in options.keys():
                             ruleInstance.optionLabels[int(key)] = options[key].get('label')
@@ -92,6 +88,19 @@ class RulesList:
         return ruleList
         
         
+    def runActions(self, action, citem, parameter=None, inherited=None):
+        self.log("runActions action = %s, channel = %s"%(action,citem))
+        if inherited is None: inherited = self
+        # ruleList = self.loadRules([citem])
+        # if not citem.get('id',''): return parameter
+        # ruleList = self.ruleList.get(citem['id'],[])
+        # for rule in ruleList:
+            # if action in rule.actions:
+                # self.log("runActions performing channel rule: %s"%(rule.name))
+                # return rule.runAction(action, inherited, parameter)
+        return parameter
+
+
     # def addChannelRule(self, citem, ritem):
         # if channelkey is None:
             # channels = self.getChannels()
@@ -120,14 +129,16 @@ class RulesList:
         
  
 class BaseRule:
-    def __init__(self, writer):
-        self.inherited       = writer
+    dialog = Dialog()
+    
+    def __init__(self):
         self.myId         = 0
         self.name         = ""
         self.description  = ""
         self.optionLabels = []
         self.optionValues = []
         self.actions      = []
+        
 
 
     def getTitle(self):
@@ -265,19 +276,19 @@ class BaseRule:
 
 
     def onActionTextBox(self, optionindex):
-        value = self.inherited.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value
         
 
     def onActionDateBox(self, optionindex):
         log("onActionDateBox")
-        info =  self.inherited.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info =  self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None: self.optionValues[optionindex] = info
 
 
     def onActionTimeBox(self, optionindex):
         log("onActionTimeBox")
-        info = self.inherited.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        info = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
         if info != None:
             if info[0] == ' ': info = info[1:]
             if len(info) == 4: info = "0" + info
@@ -289,14 +300,14 @@ class BaseRule:
         if psel < 0:
             psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
             if not multi: psel = (psel[0] or -1)
-        select = (self.inherited.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi) or -1)
+        select = (self.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi) or -1)
         if not select is None: 
             self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           
     def onActionBrowse(self, optionindex, header=ADDON_NAME, multi=False, type=0, shares='', mask='', useThumbs=True, treatAsFolder=False, default='', prompt=False):
         log("onActionBrowse")
-        info = self.inherited.dialog.browseDialog(type, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
+        info = self.dialog.browseDialog(type, header, default, shares, mask, None, useThumbs, treatAsFolder, prompt, multi, monitor=False)
         if info is not None: self.optionValues[optionindex] = info 
                      
                 
@@ -317,12 +328,12 @@ class BaseRule:
 
     def onActionDaysofWeekBox(self, optionindex):
         log("onActionDaysofWeekBox")
-        value = self.inherited.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
+        value = self.dialog.inputDialog(self.name, default=self.optionValues[optionindex], key=xbmcgui.INPUT_ALPHANUM)
         if value: self.optionValues[optionindex] = value.upper()
 
 
     def onActionDigitBox(self, optionindex):
-        self.optionValues[optionindex] = self.inherited.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
+        self.optionValues[optionindex] = self.dialog.inputDialog(self.optionLabels[optionindex], default=self.optionValues[optionindex], key=xbmcgui.INPUT_NUMERIC)
 
 
 class ShowChannelBug(BaseRule):
