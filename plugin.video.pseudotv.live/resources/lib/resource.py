@@ -101,7 +101,7 @@ class Resources:
         return walk
             
             
-    def buildImagebase(self):
+    def buildImagebase(self): #todo host/use kodi webserver to share image files for remote m3u/xmltv
         port     = 80
         username = 'kodi'
         password = ''

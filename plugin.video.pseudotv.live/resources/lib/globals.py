@@ -229,14 +229,14 @@ def getPVR_SETTINGS():
             'logoPath'                    :LOGO_LOC,
             'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'm3uPath'                     :M3UFLEPATH,
-            'm3uUrl'                      :PROPERTIES.getProperty('M3U_URL'),
+            'm3uUrl'                      :SETTINGS.getSetting('Remote_M3U'),
             'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'epgPath'                     :XMLTVFLEPATH,
-            'epgUrl'                      :PROPERTIES.getProperty('XMLTV_URL'),
+            'epgUrl'                      :SETTINGS.getSetting('Remote_XMLTV'),
             'epgCache'                    :'true',
             'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
             'genresPath'                  :GENREFLEPATH,
-            'genresUrl'                   :PROPERTIES.getProperty('GENRE_URL'),
+            'genresUrl'                   :SETTINGS.getSetting('Remote_GENRE'),
             # 'tvGroupMode'                 :'0',
             # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
             # 'radioGroupMode'              :'0',
@@ -639,7 +639,8 @@ def chkPluginSettings(id, values):
     addon = getPlugin(id)
     if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
     for setting, value in values.items():
-        if not str(addon.getSetting(setting)) == str(value): 
+        if not str(addon.getSetting(setting)).lower() == str(value).lower(): 
+            log('globals: chkPluginSettings, found %s = %s! recommended = %s'%(setting, addon.getSetting(setting),value))
             return setPlugin(id,values,SETTINGS.getSettingBool('Enable_Config'))
     return True
     

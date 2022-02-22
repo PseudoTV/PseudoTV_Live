@@ -273,7 +273,6 @@ class Monitor(xbmc.Monitor):
             
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        #Egg timer, catch last call & ignore duplicate calls.
         if self.pendingChangeThread.is_alive(): 
             try: 
                 self.pendingChangeThread.cancel()
@@ -387,6 +386,19 @@ class Service:
         return True
 
 
+    def _tasks(self):
+        self.http._start()
+        chkRequiredSettings()
+        chkDiscovery(getDiscovery())
+        
+              
+    def _restart(self):
+        self.log('_restart')
+        self.http._stop()
+        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))     
+        self.__init__()
+        
+        
     def _startup(self, waitForAbort=5, waitForStartup=15):
         self.log('_startup')
         pendingStop    = isShutdownRequired()
@@ -399,9 +411,7 @@ class Service:
                 self._shutdown()
         
         while not self.monitor.abortRequested():
-            self.http._start()
-            chkDiscovery(getDiscovery())
-            
+            self._tasks()
             pendingStop    = isShutdownRequired()
             pendingRestart = isRestartRequired()
             
@@ -412,15 +422,14 @@ class Service:
             elif self.monitor.chkIdle(): 
                 self.chkUpdatePending()
             
-        self.http._stop()
         if pendingRestart:
-            self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))     
-            self.__init__()
+            self._restart()
         else: 
             self._shutdown()
               
-              
+          
     def _shutdown(self):
+        self.http._stop()
         self.discovery._stop()
         self.announcement._stop()
         for thread in threading.enumerate():

@@ -1,0 +1,104 @@
+{
+    "TV Networks": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "TV Networks",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "TV Shows": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "TV Shows",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "TV Genres": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "TV Genres",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Movie Genres": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Movie Genres",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Movie Studios": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Movie Studios",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Mixed Genres": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Mixed Genres",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Mixed": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Mixed",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Recommended": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Recommended",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Music Genres": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Music Genres",
+            "logo": "",
+            "path": []
+        }
+    ],
+    "Imports": [
+        {
+            "enabled": false,
+            "name": "",
+            "type": "Imports",
+            "logo": "",
+            "item": {
+                "type": "iptv",
+                "name": "",
+                "icon": "",
+                "m3u": {
+                    "path": "",
+                    "slug": ""
+                },
+                "xmltv": {
+                    "path": ""
+                },
+                "id": ""
+            }
+        }
+    ]
+}
