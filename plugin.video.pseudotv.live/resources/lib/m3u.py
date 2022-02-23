@@ -71,13 +71,12 @@ class M3U:
         self.log('loadM3U, file = %s'%file)
         if file.startswith('http'):
             url  = file
-            file = os.path.join(USER_LOC,slugify(url),'.m3u')
+            file = os.path.join(TEMP_LOC,slugify(url))
             saveURL(url,file)
             
         if FileAccess.exists(file): 
             fle   = FileAccess.open(file, 'r')
             lines = (fle.readlines())
-            data  = lines.pop(0)
             fle.close()
             
             chCount = 0
@@ -88,7 +87,12 @@ class M3U:
                     data = {'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
                             'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
                             'catchup-correction':re.compile('catchup-correction=\"(.*?)\"' , re.IGNORECASE).search(line)}
-
+                            
+                    if SETTINGS.getSettingInt('Import_XMLTV_TYPE') == 2 and file == os.path.join(TEMP_LOC,slugify(SETTINGS.getSetting('Import_M3U_URL'))):
+                        if data.get('x-tvg-url').group(1):
+                            self.log('loadM3U, using #EXTM3U "x-tvg-url"')
+                            SETTINGS.setSetting('Import_XMLTV_M3U',data.get('x-tvg-url').group(1))
+                           
                 elif line.startswith('#EXTINF:'):
                     chCount += 1
                     match = {'label'             :re.compile(',(.*)'                        , re.IGNORECASE).search(line),
@@ -99,7 +103,6 @@ class M3U:
                              'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),                          
                              'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
                              'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                             'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
                              'catchup-source'    :re.compile('catchup-source=\"(.*?)\"'     , re.IGNORECASE).search(line),
                              'catchup-days'      :re.compile('catchup-days=\"(.*?)\"'       , re.IGNORECASE).search(line),
@@ -119,9 +122,9 @@ class M3U:
                                  'catchup':''}) #set default fallbacks
                     
                     for key in match.keys():
-                        if not match[key]:
-                            if data.get(key):
-                                self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF')%(key)
+                        if match[key] is None:
+                            if not data.get(key) is None:
+                                self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF'%(key))
                                 match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
                             else: continue
                                 
@@ -141,13 +144,14 @@ class M3U:
                             nline = lines[nidx].rstrip()
                             if   nline.startswith('#EXTINF:'): break
                             elif nline.startswith('#EXTGRP'):
-                                group = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
-                                if group: 
+                                prop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
+                                if not prop is None: 
                                     item['group'].append(prop.group(1).split(';'))
                                     item['group'] = list(set(item['group']))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if prop: item.setdefault('kodiprops',[]).append(prop.group(1))
+                                if not prop is None: : 
+                                    item.setdefault('kodiprops',[]).append(prop.group(1))
                             # elif nline.startswith('#EXTVLCOPT'):
                             # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
                             elif nline.startswith('##'): continue
@@ -235,7 +239,7 @@ class M3U:
             importChannels = []
             if file.startswith('http'):
                 url  = file
-                file = os.path.join(USER_LOC,'%s.m3u'%(slugify(url)))
+                file = os.path.join(TEMP_LOC,'%s'%(slugify(url)))
                 saveURL(url,file)
                 
             channels = self.loadM3U(file)

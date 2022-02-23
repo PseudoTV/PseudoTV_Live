@@ -376,6 +376,7 @@ class Service:
                 if True in conditions:
                     with busy():
                         if self.writer.builder.buildService():
+                            chkRequiredSettings()
                             brutePVR(override=True)
             elif self.isFirstRun:
                 setAutotuned(self.writer.autoTune())
@@ -383,7 +384,7 @@ class Service:
             
     def _initialize(self):
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkRequiredSettings,chkResources]
+        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx+1)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()

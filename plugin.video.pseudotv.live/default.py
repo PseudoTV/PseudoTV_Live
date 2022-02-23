@@ -31,7 +31,7 @@ def run(sysARG):
     radio   = (params.get("radio",'')         or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
 
-    if   mode == 'guide':    
+    if mode == 'guide':    
         with busy_dialog(): 
             loadGuide()
     elif mode == 'settings': 

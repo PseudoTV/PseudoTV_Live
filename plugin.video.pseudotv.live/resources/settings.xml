@@ -76,7 +76,7 @@
                         <close>true</close>
 					</control>
 				</setting>
-				<setting id="Recover_Channels" type="string" label="30211" help="30211">
+				<setting id="Recover_Channels" type="string" label="30211" help="30211" parent="Backup_Channels">
 					<level>2</level>
 					<default></default>
 					<constraints>
@@ -456,6 +456,7 @@
 						<options>
 							<option label="30196">0</option>
 							<option label="30195">1</option>
+							<option label="30047">2</option>
 						</options>
 					</constraints>
 					<dependencies>
@@ -501,6 +502,26 @@
 						<dependency type="visible">
                             <and>
 								<condition operator="is" setting="Import_XMLTV_TYPE">1</condition>
+                                <condition operator="is" setting="User_Import">true</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="edit" format="string">
+						<heading>30035</heading>
+					</control>
+				</setting>
+				<setting id="Import_XMLTV_M3U" type="string" label="30035" help="" parent="Import_XMLTV_TYPE">
+					<level>1</level>
+                    <enable>false</enable>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+                            <and>
+								<condition operator="is" setting="Import_XMLTV_TYPE">2</condition>
                                 <condition operator="is" setting="User_Import">true</condition>
                                 <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>

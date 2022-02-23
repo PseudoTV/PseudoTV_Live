@@ -205,7 +205,7 @@ msgid "Open Settings (IPTV Simple)"
 msgstr ""
 
 msgctxt "#30047"
-msgid "Last Check Offset (Hours)"
+msgid "Use XMLTV from M3U (if Available)."
 msgstr ""
 
 msgctxt "#30048"

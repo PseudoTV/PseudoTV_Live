@@ -32,10 +32,11 @@ class AVIChunk:
 
     def read(self, thefile):
         data = thefile.readBytes(4)
-        try: self.size = struct.unpack('<i', data)[0]
+        try:    self.size = struct.unpack('<i', data)[0]
         except: self.size = 0
         # Putting an upper limit on the chunk size, in case the file is corrupt
-        if self.size > 0 and self.size < 10000: self.chunk = thefile.readBytes(self.size)
+        if self.size > 0 and self.size < 10000: 
+            self.chunk = thefile.readBytes(self.size)
         else:
             self.chunk = ''
             self.size = 0
@@ -55,7 +56,7 @@ class AVIList:
     def read(self, thefile):
         data = thefile.readBytes(4)
         self.size = struct.unpack('<i', data)[0]
-        try: self.size = struct.unpack('<i', data)[0]
+        try:    self.size = struct.unpack('<i', data)[0]
         except: self.size = 0
         self.fourcc = thefile.read(4)
 

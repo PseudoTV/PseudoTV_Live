@@ -1,5 +1,6 @@
 v.0.3.5
 -Notice Moved Cache folder incl. logo folder to "Centralized File Location". Default path changed to "special://profile/addon_data/plugin.video.pseudotv.live/cache".
+-Improved Third-Party playlist importing. New XMLTV Import type "Use XMLTV from M3U (if Available)." M3Us w/"x-tvg-url" meta will auto set provided xmltv data.
 
 v.0.3.4
 -Refactored Background service.

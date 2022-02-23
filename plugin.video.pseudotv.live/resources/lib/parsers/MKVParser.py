@@ -63,7 +63,8 @@ class MKVParser:
                     timecode = 0
 
                 if duration != 0 and timecode != 0:
-                        break
+                    break
+                    
             elif data == 0x4489:
                 try:
                     if datasize == 4:

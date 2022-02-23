@@ -77,6 +77,7 @@ CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
 
 PLS_LOC             = os.path.join(USER_LOC,'playlists')
 LOGO_LOC            = os.path.join(USER_LOC,'logos')
+TEMP_LOC            = os.path.join(USER_LOC,'temp')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
@@ -193,7 +194,7 @@ MUSIC_TYPES         = ['songs','albums','artists','music']
 ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
 VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
 
-ADDON_REPOSITORY    = ['repository.pseudotv','repository.lunatixz']
+ADDON_REPOSITORY    = ['repository.pseudotv']
 PVR_CLIENT          = 'pvr.iptvsimple'
 PVR_MANAGER         = 'service.iptv.manager'
 MGR_SETTINGS        = {'refresh_interval'   :'1',
@@ -261,6 +262,10 @@ def getPTV_SETTINGS():
             'Import_M3U_TYPE'     :SETTINGS.getSetting('Import_M3U_TYPE'),
             'Import_M3U_FILE'     :SETTINGS.getSetting('Import_M3U_FILE'),
             'Import_M3U_URL'      :SETTINGS.getSetting('Import_M3U_URL'),
+            'Import_XMLTV_TYPE'   :SETTINGS.getSetting('Import_XMLTV_TYPE'),
+            'Import_XMLTV_FILE'   :SETTINGS.getSetting('Import_XMLTV_FILE'),
+            'Import_XMLTV_URL'    :SETTINGS.getSetting('Import_XMLTV_URL'),
+            'Import_XMLTV_M3U'    :SETTINGS.getSetting('Import_XMLTV_M3U'),
             'Import_Provider'     :SETTINGS.getSetting('Import_Provider'),
             'User_Folder'         :SETTINGS.getSetting('User_Folder'),
             'Client_Mode'         :SETTINGS.getSetting('Client_Mode'),
@@ -299,20 +304,27 @@ def chkSettings(last,current):
     changed = set()
     for key,value in last.items():
         if value != current[key]:
+            changed.add(True)
             if key == 'User_Folder': 
                 if moveUser(value,current[key]):
                     Dialog().notificationDialog(LANGUAGE(30183))
+                    chkRequiredSettings()
                     toggleADDON(ADDON_ID, state=False, reverse=True)
                     return False
             elif key in ['UDP_PORT','TCP_PORT']: 
                 Dialog().notificationDialog(LANGUAGE(30183))
+                chkRequiredSettings()
                 toggleADDON(ADDON_ID, state=False, reverse=True)
                 return False
-            changed.add(True)
+            elif key in ['User_Import','Import_Provider',
+                         'Import_M3U_TYPE','Import_M3U_FILE','Import_M3U_URL',
+                         'Import_XMLTV_TYPE','Import_XMLTV_FILE','Import_XMLTV_URL','Import_XMLTV_M3U']:
+                setUpdatePending()
+                return False
     if True in list(changed): return True
        
 def initFolders():
-    [FileAccess.makedirs(dir) for dir in [SETTINGS_LOC,USER_LOC,PLS_LOC,LOGO_LOC] if not FileAccess.exists(dir)]
+    [FileAccess.makedirs(dir) for dir in [SETTINGS_LOC,USER_LOC,TEMP_LOC,PLS_LOC,LOGO_LOC] if not FileAccess.exists(dir)]
  
 def validateFiles():
     initFolders()
@@ -475,11 +487,11 @@ def genUUID(seed=None):
 
 def getIP(wait=5):
     while not xbmc.Monitor().abortRequested() and wait > 0:
-        ip = (xbmc.getIPAddress() or gethostbyname(gethostname()))
+        ip = xbmc.getIPAddress()
         if ip: return ip
         elif (xbmc.Monitor().waitForAbort(1)): break
         else: wait -= 1
-    return
+    return gethostbyname(gethostname())
             
 def getMYUUID():
     uuid = SETTINGS.getCacheSetting('MY_UUID')
@@ -513,6 +525,7 @@ def chkDiscovery(SERVER_HOST=None):
         PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
         PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_HOST,GENREFLE))
         log('global: chkDiscovery, isClient = %s, server = %s'%(CLIENT,SERVER_HOST))
+        chkRequiredSettings()
     return CLIENT
 
 def getIdle():
@@ -1040,6 +1053,7 @@ def saveURL(url, file):
         fle = FileAccess.open(file, 'w')
         fle.write(contents)
         fle.close()
+        return FileAccess.exists(file)
     except Exception as e: 
         log("saveURL, Failed! %s"%e, xbmc.LOGERROR)
     

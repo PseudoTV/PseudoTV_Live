@@ -436,5 +436,7 @@ class Recommended:
         PROPERTIES.setPropertyBool('has.BlackList',len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         
-        if changed: self.library._save()
+        if changed: 
+            self.library._save()
+            self.library.chkLibraryTimer()
         return changed

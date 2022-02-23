@@ -83,7 +83,7 @@ class Utilities:
     def clearImport(self):
         self.log('clearImport') 
         keys = ['Import_M3U','Import_M3U_FILE','Import_M3U_URL',
-                'Import_XMLTV','Import_XMLTV_FILE','Import_XMLTV_URL',
+                'Import_XMLTV','Import_XMLTV_FILE','Import_XMLTV_URL','Import_XMLTV_M3U'
                 'Import_Provider']
                 
         with busy_dialog():

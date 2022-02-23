@@ -17,11 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-import sys, time, re, os, traceback
+import sys, time, traceback
 
 from kodi_six                  import xbmc, xbmcaddon
-from itertools                 import repeat
-from functools                 import partial, wraps
+from functools                 import wraps
 from threading                 import Thread
 from queue                     import Queue, Empty
 
@@ -82,7 +81,7 @@ class ThreadPool:
                         idx, item = queue.get(block=False)
                         try: 
                             results[idx] = func(item)
-                        except queue.Empty: pass
+                        except Empty: pass
                         except Exception as e: 
                             errors[idx] = '%s\n%s\%s'%(e,sys.exc_info(),traceback.format_exc())
                     except: break
