@@ -1253,7 +1253,7 @@ msgid "Force PVR refresh"
 msgstr ""
 
 msgctxt "#30311"
-msgid "Restart %s service"
+msgid "Restarting %s service, Please wait..."
 msgstr ""
 
 msgctxt "#30312"

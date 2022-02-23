@@ -2,17 +2,17 @@
     "uuid": "",
     "channels": [
         {
-            "catchup": "vod",
-            "favorite": false,
-            "group": [],
             "id": "",
-            "logo": "",
-            "name": "",
+            "type": "",
             "number": 0,
+            "name": "",
+            "logo": "",
             "path": [],
-            "radio": false,
+            "group": [],
             "rules": [],
-            "type": ""
+            "catchup": "vod",
+            "radio": false,
+            "favorite": false
         }
     ],
     "imports": []

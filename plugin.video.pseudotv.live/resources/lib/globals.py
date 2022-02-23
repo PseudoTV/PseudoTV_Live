@@ -51,6 +51,7 @@ PROPERTIES          = Properties()
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
+CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -62,8 +63,8 @@ TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
 
-#switches      
-USER_LOC            = (SETTINGS.getSetting('User_Folder') or os.path.join(SETTINGS_LOC,'cache'))
+#settings
+USER_LOC            = SETTINGS.getSetting('User_Folder')
 DEBUG_ENABLED       = SETTINGS.getSettingBool('Enable_Debugging')
 PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
 PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
@@ -74,7 +75,6 @@ SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
 CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
 CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
 
-CACHE_LOC           = USER_LOC
 PLS_LOC             = os.path.join(USER_LOC,'playlists')
 LOGO_LOC            = os.path.join(USER_LOC,'logos')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
@@ -227,14 +227,14 @@ def getPVR_SETTINGS():
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
             'logoPath'                    :LOGO_LOC,
-            'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
+            'm3uPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 1 else '0'),
             'm3uPath'                     :M3UFLEPATH,
             'm3uUrl'                      :SETTINGS.getSetting('Remote_M3U'),
-            'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
+            'epgPathType'                 :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 1 else '0'),
             'epgPath'                     :XMLTVFLEPATH,
             'epgUrl'                      :SETTINGS.getSetting('Remote_XMLTV'),
             'epgCache'                    :'true',
-            'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 2 else '0'),
+            'genresPathType'              :'%s'%('1' if SETTINGS.getSettingInt('Client_Mode') == 1 else '0'),
             'genresPath'                  :GENREFLEPATH,
             'genresUrl'                   :SETTINGS.getSetting('Remote_GENRE'),
             # 'tvGroupMode'                 :'0',
@@ -366,6 +366,7 @@ def isRestartRequired():
     return state
         
 def setRestartRequired(state=True):
+    if state == True: Dialog().notificationDialog(LANGUAGE(30311)%(ADDON_NAME))
     return PROPERTIES.setPropertyBool('restartRequired',state)
        
 def isShutdownRequired():
@@ -374,6 +375,7 @@ def isShutdownRequired():
     return state
                  
 def setServiceStop(state=True):
+    if state == True: Dialog().notificationDialog(LANGUAGE(30312)%(ADDON_NAME))
     return PROPERTIES.setPropertyBool('shutdownRequired',state)
          
 def hasAutotuned():
@@ -555,7 +557,7 @@ def getLabel(item):
     if year: return '%s (%s)'%(label, year)
     return label
     
-def dumpJSON(item, idnt=None, sortkey=True):
+def dumpJSON(item, idnt=None, sortkey=False):
     try: 
         if not item:
             return ''
@@ -625,8 +627,8 @@ def getPlugin(id=PVR_CLIENT):
         except: return None
 
 def chkRequiredSettings():
-    funcs = [chkPVR,chkMGR]
-    for func in funcs: func()
+    chkPVR()
+    chkMGR()
 
 def chkMGR():
     return chkPluginSettings(PVR_MANAGER, MGR_SETTINGS)

@@ -93,22 +93,28 @@ class Utilities:
 
 
     def run(self):  
-        ctl = (0,0) #settings return focus
+        ctl = (8,3) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
         
-        if    param is None:                return self.buildMenu(param)
-        elif  param == 'Show_Readme':       return showReadme()
-        elif  param == 'Show_Changelog':    return showChangelog()
-        elif  param == 'User_Groups':       return self.userGroups()
-        elif  param == 'Clear_Import':      self.clearImport()
+        if param is None:
+            return self.buildMenu(param)
+        elif param == 'Show_Readme':  
+            return showReadme()
+        elif param == 'Show_Changelog':
+            return showChangelog()
+        elif param == 'User_Groups':
+            return self.userGroups()
+        elif param == 'Clear_Import':
+            ctl = (2,7)
+            self.clearImport()
         elif  param == 'Install_Resources': chkResources()
         else: 
             with busy_dialog():
                 PROPERTIES.setProperty('utilities',param)
                 return xbmc.Monitor().waitForAbort(2)
-        return openAddonSettings(8,3)
+        return openAddonSettings(ctl)
 
                 
 if __name__ == '__main__': Utilities(sys.argv).run()

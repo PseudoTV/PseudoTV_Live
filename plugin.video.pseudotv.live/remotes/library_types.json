@@ -2,8 +2,8 @@
     "TV Networks": [
         {
             "enabled": false,
-            "name": "",
             "type": "TV Networks",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -11,8 +11,8 @@
     "TV Shows": [
         {
             "enabled": false,
-            "name": "",
             "type": "TV Shows",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -20,8 +20,8 @@
     "TV Genres": [
         {
             "enabled": false,
-            "name": "",
             "type": "TV Genres",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -29,8 +29,8 @@
     "Movie Genres": [
         {
             "enabled": false,
-            "name": "",
             "type": "Movie Genres",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -38,8 +38,8 @@
     "Movie Studios": [
         {
             "enabled": false,
-            "name": "",
             "type": "Movie Studios",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -47,8 +47,8 @@
     "Mixed Genres": [
         {
             "enabled": false,
-            "name": "",
             "type": "Mixed Genres",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -56,8 +56,8 @@
     "Mixed": [
         {
             "enabled": false,
-            "name": "",
             "type": "Mixed",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -65,8 +65,8 @@
     "Recommended": [
         {
             "enabled": false,
-            "name": "",
             "type": "Recommended",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -74,8 +74,8 @@
     "Music Genres": [
         {
             "enabled": false,
-            "name": "",
             "type": "Music Genres",
+            "name": "",
             "logo": "",
             "path": []
         }
@@ -83,10 +83,11 @@
     "Imports": [
         {
             "enabled": false,
-            "name": "",
             "type": "Imports",
+            "name": "",
             "logo": "",
             "item": {
+                "id": "",
                 "type": "iptv",
                 "name": "",
                 "icon": "",
@@ -96,8 +97,7 @@
                 },
                 "xmltv": {
                     "path": ""
-                },
-                "id": ""
+                }
             }
         }
     ]

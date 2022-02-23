@@ -341,22 +341,27 @@ class Service:
         self.log('chkUtilites, doUtilities = %s'%(param))
         try:
             if param.startswith('Channel_Manager'):
+                ctl = (0,1)
                 self.openChannelManager()
             elif  param == 'Clear_Userdefined':
                 return self.writer.clearUserChannels()
             elif  param == 'Clear_Predefined':
-                return self.writer.clearPredefined()
+                ctl = (1,12)
+                self.writer.clearPredefined()
             elif  param == 'Clear_BlackList':
-                return self.writer.clearBlackList()
+                ctl = (1,12)
+                self.writer.clearBlackList()
             elif  param == 'Backup_Channels':
+                ctl = (0,4)
                 self.writer.backup.backupChannels()
             elif  param == 'Recover_Channels':
-                return self.writer.backup.recoverChannels()
+                ctl = (0,5)
+                self.writer.backup.recoverChannels()
             else:
                 ctl = (1,1)
                 self.writer.selectPredefined(param.replace('_',' '))
-            return openAddonSettings(ctl)
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
+        return openAddonSettings(ctl)
         
                        
     def chkUpdatePending(self):
@@ -388,7 +393,6 @@ class Service:
 
     def _tasks(self):
         self.http._start()
-        chkRequiredSettings()
         chkDiscovery(getDiscovery())
         
               

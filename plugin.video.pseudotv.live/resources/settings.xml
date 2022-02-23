@@ -20,46 +20,7 @@
                         <close>true</close>
 					</control>
 				</setting>
-				<setting id="Backup_Channels" type="string" label="30200" help="30200" parent="Select_Channels">
-					<level>2</level>
-					<default></default>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="enable">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Backup_Channels)</data>
-                        <close>true</close>
-					</control>
-				</setting>
-				<setting id="Recover_Channels" type="string" label="30211" help="30211" parent="Backup_Channels">
-					<level>2</level>
-					<default></default>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="visible">
-							<and>
-								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Recover_Channels)</data>
-                        <close>true</close>
-					</control>
-				</setting>
-			</group>
-			<group id="2" label="">
-                <setting id="Open_Node" type="action" label="30085" help="30303">
+                <setting id="Open_Node" type="action" label="30085" help="30303" parent="Select_Channels">
 					<level>1</level>
 					<default/>
 					<constraints>
@@ -77,7 +38,7 @@
 						<close>true</close>
 					</control>
 				</setting>
-                <setting id="Open_Editor" type="action" label="30086" help="30304">
+                <setting id="Open_Editor" type="action" label="30086" help="30304" parent="Select_Channels">
                     <level>1</level>
                     <default/>
                     <constraints>
@@ -94,6 +55,45 @@
                         <data>ActivateWindow(Videos,library://video/playlists.xml,return)</data>
                         <close>true</close>
                     </control>
+				</setting>
+			</group>
+			<group id="2" label="">
+				<setting id="Backup_Channels" type="string" label="30200" help="30200">
+					<level>2</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Backup_Channels)</data>
+                        <close>true</close>
+					</control>
+				</setting>
+				<setting id="Recover_Channels" type="string" label="30211" help="30211">
+					<level>2</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Recover_Channels)</data>
+                        <close>true</close>
+					</control>
 				</setting>
 			</group>
 			<group id="3" label="">

@@ -1,5 +1,6 @@
 {
     "iptv": {
+        "id": ""
         "type": "iptv",
         "name": "",
         "description": "",
@@ -12,26 +13,25 @@
         "xmltv": {
             "path": ""
         },
-        "id": ""
     },
     "vod": [
         {
+            "id": ""
             "type": "vod",
             "name": "",
             "description": "",
             "icon": "",
             "path": "",
-            "id": ""
         }
     ],
     "live": [
         {
+            "id": ""
             "type": "live",
             "name": "",
             "description": "",
             "icon": "",
             "path": "",
-            "id": ""
         }
     ]
 }
