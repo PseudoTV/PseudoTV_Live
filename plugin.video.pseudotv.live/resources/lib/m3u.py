@@ -150,7 +150,7 @@ class M3U:
                                     item['group'] = list(set(item['group']))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if not prop is None: : 
+                                if not prop is None:
                                     item.setdefault('kodiprops',[]).append(prop.group(1))
                             # elif nline.startswith('#EXTVLCOPT'):
                             # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):

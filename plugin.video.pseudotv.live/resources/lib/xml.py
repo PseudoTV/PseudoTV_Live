@@ -416,7 +416,7 @@ class XMLTV:
                  'desc'        : [(xbmc.getLocalizedString(161), LANG)],
                  'stop'        : ((start + datetime.timedelta(seconds=length)).strftime(DTFORMAT)),
                  'start'       : (start.strftime(DTFORMAT)),
-                 'icon'        : [{'src': channel.get('icon',[{}])[0].get('src')}],
+                 'icon'        : [{'src': (channel.get('icon','') or [{}])[0].get('src')}],
                  'length'      : {'units': 'seconds', 'length': str(length)}}
         self.log('addSingleEntry = %s'%(pitem))
         return pitem
