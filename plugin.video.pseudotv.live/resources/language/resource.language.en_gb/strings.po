@@ -465,7 +465,7 @@ msgid "Select Channel Logo"
 msgstr ""
 
 msgctxt "#30112"
-msgid "%s Configuration Invalid"
+msgid "%s Configuration Invalid, Try again..."
 msgstr ""
 
 msgctxt "#30113"

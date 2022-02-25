@@ -193,7 +193,9 @@ MOVIE_TYPES         = ['movie','movies']
 MUSIC_TYPES         = ['songs','albums','artists','music']
 ART_PARAMS          = ["thumb","icon","poster","fanart","banner","landscape","clearart","clearlogo"]
 VFS_TYPES           = ["plugin://","pvr://","upnp://","resource://"]
-
+CTL_PARAMS          = {'TV_Networks':1,'TV_Shows':2,'TV_Genres':3, 'Movie_Genres':4,'Movie_Studios':5,
+                       'Mixed_Genres':6,'Mixed':7,'Music_Genres':8,'Recommended':9,'Imports':10}
+                       
 ADDON_REPOSITORY    = ['repository.pseudotv']
 PVR_CLIENT          = 'pvr.iptvsimple'
 PVR_MANAGER         = 'service.iptv.manager'

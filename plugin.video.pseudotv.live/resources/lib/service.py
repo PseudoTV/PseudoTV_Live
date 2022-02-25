@@ -262,8 +262,8 @@ class Monitor(xbmc.Monitor):
             
             if idleTime > OVERLAY_DELAY:
                 self.myService.player.toggleOverlay(True)
-            # else: #unnecessary?
-                # self.myService.player.toggleOverlay(False)
+            else: 
+                self.myService.player.toggleOverlay(False)
         return isIdle
 
 
@@ -359,10 +359,7 @@ class Service:
                 self.writer.backup.recoverChannels()
             else:
                 self.writer.selectPredefined(param.replace('_',' '))
-                try:
-                    ctl = {'TV_Networks':1,'TV_Shows':2,'TV_Genres':3, 'Movie_Genres':4,'Movie_Studios':5,
-                           'Mixed_Genres':6,'Mixed':7,'Music_Genres':8,'Recommended':9,'Imports':10}[param]
-                    ctl = (1,ctl)
+                try:    ctl = (1,CTL_PARAMS[param])
                 except: ctl = (1,1)
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
@@ -380,7 +377,6 @@ class Service:
                 if True in conditions:
                     with busy():
                         if self.writer.builder.buildService():
-                            chkRequiredSettings()
                             brutePVR(override=True)
             elif self.isFirstRun:
                 setAutotuned(self.writer.autoTune())
@@ -388,7 +384,7 @@ class Service:
             
     def _initialize(self):
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [updateIPTVManager,chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources]
+        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources,chkRequiredSettings,updateIPTVManager]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx+1)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()
@@ -396,11 +392,6 @@ class Service:
         return True
 
 
-    def _tasks(self):
-        self.http._start()
-        chkDiscovery(getDiscovery())
-        
-              
     def _restart(self):
         self.log('_restart')
         self.http._stop()
@@ -408,6 +399,11 @@ class Service:
         self.__init__()
         
         
+    def _tasks(self):
+        self.http._start()
+        chkDiscovery(getDiscovery())
+        
+              
     def _startup(self, waitForAbort=5, waitForStartup=15):
         self.log('_startup')
         pendingStop    = isShutdownRequired()
@@ -421,19 +417,19 @@ class Service:
         
         while not self.monitor.abortRequested():
             self._tasks()
+            
+            isIdle         = self.monitor.chkIdle()
             pendingStop    = isShutdownRequired()
             pendingRestart = isRestartRequired()
             
-            if (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): 
-                break
-
-            if   self.monitor.isSettingsOpened() or self.chkUtilites(): continue
-            elif self.monitor.chkIdle(): 
+            if (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
+            elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
+            elif isIdle: 
                 self.chkUpdatePending()
             
-        if pendingRestart:
+        if pendingRestart: 
             self._restart()
-        else: 
+        else:              
             self._shutdown()
               
           

@@ -49,7 +49,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     
 class ThreadPool:
     def __init__(self, processes=4):
-        self.cpuCount = int(processes) * 2
+        self.cpuCount = int(processes)
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):

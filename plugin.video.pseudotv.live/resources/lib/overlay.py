@@ -262,13 +262,13 @@ class Overlay(xbmcgui.WindowXML):
 
 
     def onAction(self, act):
-        actionid = act.getId()
+        actionid = act.getId() #todo forward unused actions to executebuiltin to stop the need for double press.
         self.log('onAction, actionid = %s'%(actionid))
         if actionid == ACTION_MOVE_LEFT:
             xbmc.executebuiltin("ActivateWindowAndFocus(pvrosdchannels)")
         elif actionid == ACTION_MOVE_RIGHT:
             xbmc.executebuiltin("ActivateWindowAndFocus(pvrchannelguide)")
-        # elif actionid == ACTION_MOVE_UP:
+        # elif actionid == ACTION_MOVE_UP: #todo channel surf to avoid 2x press? or user info action?
             # xbmc.executebuiltin("Action(Info)")
         # elif actionid == ACTION_MOVE_DOWN:
             # xbmc.executebuiltin("Action(Info)")
