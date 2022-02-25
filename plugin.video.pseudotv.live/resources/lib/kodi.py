@@ -601,7 +601,7 @@ class Dialog:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS
                     # listitems = self.pool.poolList(buildMenuItem,options)
                     # select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
-                    # if not select is None:
+                    # if select is not None:
                 # else:    
                 shares    = options[select]['label'].lower().replace("network","")
                 mask      = options[select]['mask']

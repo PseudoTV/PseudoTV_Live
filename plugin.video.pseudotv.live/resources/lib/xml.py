@@ -135,10 +135,13 @@ class XMLTV:
             for channel in channels:   writer.addChannel(channel)
             for program in programmes: writer.addProgramme(program)
             
-            filePath = XMLTVFLEPATH
-            self.log('_save, saving to %s'%(filePath))
-            writer.write(FileAccess.open(filePath, "w"), pretty_print=True)
-            self.buildGenres()
+            try:
+                self.log('_save, saving to %s'%(XMLTVFLEPATH))
+                writer.write(FileAccess.open(XMLTVFLEPATH, "w"), pretty_print=True)
+                self.buildGenres()
+            except Exception as e:
+                self.log("_save, Failed!", xbmc.LOGERROR)
+                self.writer.dialog.notificationDialog(LANGUAGE(30001))
         return self._reload()
         
 
@@ -195,18 +198,10 @@ class XMLTV:
 
     def importXMLTV(self, file, m3uChannels={}):
         self.log('importXMLTV, file = %s, m3uChannels = %s'%(file,len(m3uChannels)))
-        def matchChannel(m3u):
-            for channel in channels:
-                try: 
-                    if m3u['id'] == channel['id']: return channel
-                except: pass
-            
-        def matchProgram(channel):
-            for program in importProgrammes:
-                try: 
-                    if channel['id'] == program['channel']: return program
-                except: pass
-            
+        def matchChannel(channel, channels, programmes):
+            importChannels.extend(list(filter(lambda chan:chan.get('id') == channel.get('id'), channels)))
+            importProgrammes.extend(list(filter(lambda prog:prog.get('channel') == channel.get('id'), programmes)))
+
         try:
             if file.startswith('http'):
                 files = []
@@ -222,9 +217,8 @@ class XMLTV:
                 importChannels, importProgrammes = [],[]
                 channels, programmes = self.loadChannels(file), self.loadProgrammes(file)
                 
-                if m3uChannels: #filter imported programmes by m3u channels.
-                    importChannels   = self.writer.pool.poolList(matchChannel,m3uChannels)
-                    importProgrammes = self.writer.pool.poolList(matchProgram,importChannels)
+                if m3uChannels: #filter imported programmes by m3uchannels list.
+                    self.writer.pool.poolList(matchChannel, m3uChannels, kwargs={'channels':channels,'programmes':programmes})
                 else: #no filter, import everything!
                     importChannels   = channels
                     importProgrammes = programmes
@@ -239,15 +233,15 @@ class XMLTV:
 
     def chkImport(self, channels, programmes): # parse for empty programmes, inject single cell entry.
         try:
-            def parsePrograms(channel):
+            def chkPrograms(channel):
                 for program in programmes:
                     if channel.get('id') == program.get('channel'):
-                        try: tmpChannels.remove(channel)
+                        try:    return tmpChannels.remove(channel)
                         except: continue
                           
             tmpChannels = channels.copy() 
-            self.writer.pool.poolList(parsePrograms,channels)
-            for channel in tmpChannels: programmes.append(self.addSingleEntry(channel))
+            self.writer.pool.poolList(chkPrograms,channels)
+            for channel in tmpChannels: programmes.append(self.addSingleEntry(channel)) #append single cell entry for channels missing programmes
             self.log("chkImport, added %s single entries"%(len(tmpChannels)))
         except Exception as e: 
             self.log("chkImport, Failed! %s"%(e), xbmc.LOGERROR)

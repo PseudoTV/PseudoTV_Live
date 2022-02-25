@@ -284,7 +284,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         func   = KEY_INPUT[key.lower()]['func']
         kwargs = KEY_INPUT[key.lower()]['kwargs']
         retval, channelData = self.validateInput(func(**kwargs),key, channelData)
-        if not retval is None:
+        if retval is not None:
             self.madeChanges = True
             if isinstance(retval,list):
                 retval = [kwargs.get('list',[])[idx] for idx in retval]
@@ -330,7 +330,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             infoList = self.dialog.getInfoMonitor()
             itemList = [getItem(info) for info in infoList if info.get('label')]
             select   = self.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
-            if not select is None: return itemList[select]
+            if select is not None: return itemList[select]
         except Exception as e: self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
 
 
@@ -644,7 +644,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.toggleSpinner(self.itemList,False)
         if listitems:
             select = self.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
-            if not select is None:
+            if select is not None:
                 chlogo = listitems[select].getPath()
                 self.log('matchLogo, chname = %s, chlogo = %s'%(chname,chlogo))
                 return chlogo

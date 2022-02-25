@@ -301,7 +301,7 @@ class BaseRule:
             psel = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
             if not multi: psel = (psel[0] or -1)
         select = (self.dialog.selectDialog(titleLabels(self.selectBoxOptions[optionindex]), header, preselect=psel, useDetails=False, multi=multi) or -1)
-        if not select is None: 
+        if select is not None: 
             self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
           

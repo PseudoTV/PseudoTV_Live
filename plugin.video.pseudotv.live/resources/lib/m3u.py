@@ -83,6 +83,7 @@ class M3U:
             data    = {}
             for idx, line in enumerate(lines):
                 line = line.rstrip()
+                
                 if line.startswith('#EXTM3U'):
                     data = {'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
                             'x-tvg-url'         :re.compile('x-tvg-url=\"(.*?)\"'          , re.IGNORECASE).search(line),
@@ -99,8 +100,8 @@ class M3U:
                              'id'                :re.compile('tvg-id=\"(.*?)\"'             , re.IGNORECASE).search(line),
                              'name'              :re.compile('tvg-name=\"(.*?)\"'           , re.IGNORECASE).search(line),
                              'group'             :re.compile('group-title=\"(.*?)\"'        , re.IGNORECASE).search(line),
-                             'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),   
-                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),                          
+                             'number'            :re.compile('tvg-chno=\"(.*?)\"'           , re.IGNORECASE).search(line),
+                             'logo'              :re.compile('tvg-logo=\"(.*?)\"'           , re.IGNORECASE).search(line),
                              'radio'             :re.compile('radio=\"(.*?)\"'              , re.IGNORECASE).search(line),
                              'tvg-shift'         :re.compile('tvg-shift=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'catchup'           :re.compile('catchup=\"(.*?)\"'            , re.IGNORECASE).search(line),
@@ -119,25 +120,28 @@ class M3U:
                     item = self.writer.channels.getCitem()
                     item.update({'number' :chCount,
                                  'logo'   :LOGO,
-                                 'catchup':''}) #set default fallbacks
+                                 'catchup':''}) #set default parameters
                     
-                    for key in match.keys():
-                        if match[key] is None:
-                            if not data.get(key) is None:
+                    for key, value in match.items():
+                        if value is None:
+                            if data.get(key,None) is not None:
                                 self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF'%(key))
-                                match[key] = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
+                                value = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
                             else: continue
-                                
-                        item[key] = match[key].group(1)
-                        if key == 'logo':
-                            item[key] = self.writer.jsonRPC.resources.cleanLogoPath(item[key])
+                        
+                        if value.group(1) is None:
+                            continue
+                        elif key == 'logo':
+                            item[key] = self.writer.jsonRPC.resources.cleanLogoPath(value.group(1))
                         elif key == 'number':
-                            try:    item[key] = int(item[key])
-                            except: item[key] = float(item[key])
+                            try:    item[key] = int(value.group(1))
+                            except: item[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
-                            item[key] = list(filter(None,list(set(item[key].split(';')))))
+                            item[key] = list(filter(None,list(set((value.group(1)).split(';')))))
                         elif key == 'radio':
-                            item[key] = item[key].lower() == 'true'
+                            item[key] = (value.group(1)).lower() == 'true'
+                        else:
+                            item[key] = value.group(1)
 
                     for nidx in range(idx+1,len(lines)):
                         try:
@@ -145,12 +149,12 @@ class M3U:
                             if   nline.startswith('#EXTINF:'): break
                             elif nline.startswith('#EXTGRP'):
                                 prop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
-                                if not prop is None: 
+                                if prop is not None: 
                                     item['group'].append(prop.group(1).split(';'))
                                     item['group'] = list(set(item['group']))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if not prop is None:
+                                if prop is not None:
                                     item.setdefault('kodiprops',[]).append(prop.group(1))
                             # elif nline.startswith('#EXTVLCOPT'):
                             # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):

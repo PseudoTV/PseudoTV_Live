@@ -24,7 +24,7 @@ NOTE: IF YOU MODIFY THIS FILE IT WILL BE OVERWRITTEN NEXT TIME THE ADDON IS STAR
 <providerMappings>
   <providerMapping mappedName="PseudoTV">
     <name>PseudoTV Live</name>
-    <type>addon</type>
+    <type>local</type>
     <iconPath>https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png</iconPath>
   </providerMapping>
 </providerMappings>

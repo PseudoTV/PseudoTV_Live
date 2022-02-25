@@ -77,12 +77,13 @@ def append_text(d, name, elem, with_lang=True):
     'with_lang' is 'True', a tuple of ('text', 'lang') is appended
     """
     for node in elem.findall(name):
-        if name not in d:
-            d[name] = []
-        if with_lang:
-            d[name].append((node.text, node.get('lang', '')))
-        else:
-            d[name].append(node.text)
+        if node is not None:
+            if name not in d:
+                d[name] = []
+            if with_lang:
+                d[name].append((node.text, node.get('lang', '')))
+            else:
+                d[name].append(node.text)
 
 def set_text(d, name, elem, with_lang=True):
     """

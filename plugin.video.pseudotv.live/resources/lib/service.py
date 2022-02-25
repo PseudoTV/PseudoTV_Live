@@ -358,8 +358,12 @@ class Service:
                 ctl = (0,5)
                 self.writer.backup.recoverChannels()
             else:
-                ctl = (1,1)
                 self.writer.selectPredefined(param.replace('_',' '))
+                try:
+                    ctl = {'TV_Networks':1,'TV_Shows':2,'TV_Genres':3, 'Movie_Genres':4,'Movie_Studios':5,
+                           'Mixed_Genres':6,'Mixed':7,'Music_Genres':8,'Recommended':9,'Imports':10}[param]
+                    ctl = (1,ctl)
+                except: ctl = (1,1)
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
         
@@ -380,11 +384,11 @@ class Service:
                             brutePVR(override=True)
             elif self.isFirstRun:
                 setAutotuned(self.writer.autoTune())
-
+            
             
     def _initialize(self):
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources]
+        funcs = [updateIPTVManager,chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx+1)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()

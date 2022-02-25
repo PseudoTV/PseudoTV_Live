@@ -179,7 +179,7 @@ class Writer:
                                  1:SETTINGS.getSetting('Import_XMLTV_URL'),
                                  2:SETTINGS.getSetting('Import_XMLTV_M3U')}[SETTINGS.getSettingInt('Import_XMLTV_TYPE')]
 
-            importLST.append({'item':{'type':'iptv','name':'User M3U/XMLTV',
+            importLST.append({'item':{'type':'iptv','name':'Third-Party M3U/XMLTV',
                                       'm3u':{'path':Import_M3U_Path,'providers':SETTINGS.getSettingList('Import_Provider')},
                                       'xmltv':{'path':Import_XMLTV_Path}}})
         

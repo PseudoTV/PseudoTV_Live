@@ -308,12 +308,10 @@ def chkSettings(last,current):
             if key == 'User_Folder': 
                 if moveUser(value,current[key]):
                     Dialog().notificationDialog(LANGUAGE(30183))
-                    chkRequiredSettings()
                     toggleADDON(ADDON_ID, state=False, reverse=True)
                     return False
             elif key in ['UDP_PORT','TCP_PORT']: 
                 Dialog().notificationDialog(LANGUAGE(30183))
-                chkRequiredSettings()
                 toggleADDON(ADDON_ID, state=False, reverse=True)
                 return False
             elif key in ['User_Import','Import_Provider',
@@ -511,7 +509,7 @@ def chkDiscovery(SERVER_HOST=None):
     if not SERVER_HOST:
         SERVER_HOST = (getDiscovery() or LOCAL_HOST)
         
-    if not CLIENT and SERVER_PAST == LOCAL_HOST:
+    if not CLIENT and (SERVER_PAST == LOCAL_HOST):
         return CLIENT
     elif SERVER_PAST != SERVER_HOST:
         SETTINGS.setSetting('Network_Path',USER_LOC)
@@ -525,7 +523,7 @@ def chkDiscovery(SERVER_HOST=None):
         PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
         PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_HOST,GENREFLE))
         log('global: chkDiscovery, isClient = %s, server = %s'%(CLIENT,SERVER_HOST))
-        chkRequiredSettings()
+        if CLIENT: chkRequiredSettings()
     return CLIENT
 
 def getIdle():
