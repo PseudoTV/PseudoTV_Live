@@ -167,8 +167,9 @@ class Plugin:
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
         
-        try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
-        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         
         if nowitem:
@@ -264,8 +265,9 @@ class Plugin:
         pvritem = self.buildChannel(name, id, isPlaylist=True, radio=True)
         nowitem = pvritem.get('broadcastnow',{})  # current item
         
-        try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
-        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         
         if nowitem:

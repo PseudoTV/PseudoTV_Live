@@ -149,7 +149,7 @@ class Player(xbmc.Player):
             self.log('playAction, returning missing pvritem or not PseudoTV!')
             return self.stopAction()
             
-        self.showOverlay  = SETTINGS.getSettingBool('Enable_Overlay')
+        self.showOverlay = SETTINGS.getSettingBool('Enable_Overlay')
         setLegacyPseudoTV(True)# legacy setting to disable/enable support in third-party applications. 
         if not pvritem.get('callback') or pvritem.get('callback','').endswith(('-1.pvr','None.pvr')):
             pvritem['callback'] = self.getCallback()
@@ -161,7 +161,7 @@ class Player(xbmc.Player):
         else:   
             self.log('playAction, channel changed')
             self.playingPVRitem = pvritem
-            citem = self.getCitem()
+            citem   = self.getCitem()
             pvritem = self.myService.writer.rules.runActions(RULES_ACTION_PLAYER, citem, pvritem, inherited=self)
             #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
             self.lastSubState = isSubtitle()

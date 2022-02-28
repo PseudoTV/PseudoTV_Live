@@ -403,7 +403,7 @@ class ShowOnNext(BaseRule):
         return channeldata
 
 
-class SetScreenOverlay(BaseRule):
+class SetScreenOverlay(BaseRule): #todo
     def __init__(self):
         self.myId         = 20
         self.name         = "Set Screen Overlay"
