@@ -69,32 +69,32 @@ class Predefined:
         
         
     def createNetworkPlaylist(self, network, method='episode'):
-        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quote(network),self.exclude_specials)]
+        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(network),self.exclude_specials)]
         
 
     def createShowPlaylist(self, show, method='episode'):
         match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
-        try:    return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"year","operator":"is","value":["%s"]},{"field":"tvshow","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,match.group(2),quote(match.group(1)),self.exclude_specials)]
-        except: return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,quote(show),self.exclude_specials)]
+        try:    return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"year","operator":"is","value":["%s"]},{"field":"tvshow","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,match.group(2),quoteString(match.group(1)),self.exclude_specials)]
+        except: return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(show),self.exclude_specials)]
 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
-        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quote(genre),self.exclude_specials)]
+        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(genre),self.exclude_specials)]
 
 
     @staticmethod
     def createMovieGenrePlaylist(genre, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quote(genre))]
+        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quoteString(genre))]
 
 
     @staticmethod
     def createStudioPlaylist(studio, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quote(studio))]
+        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quoteString(studio))]
 
 
     @staticmethod
     def createMusicGenrePlaylist(genre, method='random'):
-        return ['musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"music"}'%(method,quote(genre))]
+        return ['musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"music"}'%(method,quoteString(genre))]
 
 
     def createGenreMixedPlaylist(self, genre):

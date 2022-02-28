@@ -183,7 +183,7 @@ class Resources:
                     match = [fuzz for fuzz in fuzzy if fuzz[1] >= THLD]
                     if match: return match        
         except Exception as e: 
-            self.log("findFuzzyMatch, failed! %s"%str(e), xbmc.LOGERROR)
+            self.log("findFuzzyMatch, failed! %s"%(e), xbmc.LOGERROR)
 
 
     def fuzzyResource(self, chname, type):

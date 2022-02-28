@@ -422,7 +422,7 @@ class Service:
             pendingStop    = isShutdownRequired()
             pendingRestart = isRestartRequired()
             
-            if (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
+            if   (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
             elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
             elif isIdle: 
                 self.chkUpdatePending()

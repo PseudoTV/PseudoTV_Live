@@ -83,11 +83,10 @@ XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)
 PROVIDERFLEPATH     = os.path.join(USER_LOC,PROVIDERFLE)
 
-UDP_PORT            = SETTINGS.getSettingInt('UDP_PORT')
-TCP_PORT            = SETTINGS.getSettingInt('TCP_PORT')
-
 #remotes
 IMPORT_ASSET        = os.path.join(ADDON_PATH,'remotes','asset.json')
+RULEFLE_DEFAULT     = os.path.join(ADDON_PATH,'remotes','rule.json')
+M3UFLE_DEFAULT      = os.path.join(ADDON_PATH,'remotes','m3u.json')
 GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes','groups.xml')
 LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',LIBRARYFLE)
 CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',CHANNELFLE)
@@ -548,12 +547,20 @@ def slugify(text):
     text = u'_'.join(re.split(r'\s+', text))
     return text
                    
-def unquote(text):
+def unquoteString(text):
     return urllib.parse.unquote(text)
     
-def quote(text):
+def quoteString(text):
     return urllib.parse.quote(text)
-      
+
+def encodeString(text):
+    base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))
+    return base64_bytes.decode(DEFAULT_ENCODING)
+
+def decodeString(base64_bytes):
+    message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
+    return message_bytes.decode(DEFAULT_ENCODING)
+
 def splitYear(label):
     try:
         match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
@@ -692,9 +699,12 @@ def chkResources(silent=True):
     if True in chkRepo:
         params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
         missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+        log('globals: chkResources, missing = %s'%(missing))
         for addon in missing:
-            installAddon(addon, silent)
-            if xbmc.Monitor().waitForAbort(15): break
+            try:
+                installAddon(addon, silent)
+                if xbmc.Monitor().waitForAbort(15): break
+            except: break
     elif not silent: 
         Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
 
@@ -887,7 +897,7 @@ def showChangelog():
 
 def loadGuide():
     xbmc.executebuiltin("Dialog.Close(all)")
-    xbmc.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s,return)"%(quote(ADDON_NAME)))
+    xbmc.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s,return)"%(quoteString(ADDON_NAME)))
 
 def openAddonSettings(ctl=(0,1),id=ADDON_ID):
     log('openAddonSettings, ctl = %s, id = %s'%(ctl,id))
@@ -1034,14 +1044,6 @@ def getWriter(text):
 def setWriter(writer, fileItem):
     return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(fileItem)))
 
-def encodeString(text):
-    base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))
-    return base64_bytes.decode(DEFAULT_ENCODING)
-
-def decodeString(base64_bytes):
-    message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
-    return message_bytes.decode(DEFAULT_ENCODING)
-
 def getGroups(add=False):
     if SETTINGS.getSetting('User_Groups'): GROUP_TYPES.extend(SETTINGS.getSetting('User_Groups').split('|'))
     if add: GROUP_TYPES.insert(0,'+Add')
@@ -1151,14 +1153,14 @@ def unquoteImage(imagestring):
     # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
     # extracted thumbnail images need to keep their 'image://' encoding
     if imagestring.startswith('image://') and not imagestring.startswith(('image://video', 'image://music')):
-        return unquote(imagestring[8:-1])
+        return unquoteString(imagestring[8:-1])
     return imagestring
 
 def quoteImage(imagestring):
      # imagestring = http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F                                                   
     if imagestring.startswith('image://'): return imagestring
     # Kodi goes lowercase and doesn't encode some chars
-    result = 'image://{0}/'.format(quote(imagestring, '()!'))
+    result = 'image://{0}/'.format(quoteString(imagestring, '()!'))
     result = re.sub(r'%[0-9A-F]{2}', lambda mo: mo.group().lower(), result)
     return result
         

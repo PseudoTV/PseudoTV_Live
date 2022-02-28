@@ -456,8 +456,8 @@ class Dialog:
                 return pvalue
                 
         listitem = xbmcgui.ListItem(offscreen=oscreen)
-        if info.get('label'):  listitem.setLabel(info.get('label',''))
-        if info.get('label2'): listitem.setLabel2(info.get('label2',''))
+        if info.get('label'):  listitem.setLabel(info.pop('label',''))
+        if info.get('label2'): listitem.setLabel2(info.pop('label2',''))
         if info.get('file'):   listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
         
         listitem.setInfo(type=mType, infoLabels=cleanInfo(info))

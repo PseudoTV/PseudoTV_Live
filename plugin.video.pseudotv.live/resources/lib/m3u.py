@@ -27,6 +27,7 @@ class M3U:
             writer = Writer()
             
         self.writer = writer
+        self.cache  = writer.cache
             
         if self.writer.vault.m3uList is None:
             self._reload()
@@ -66,6 +67,14 @@ class M3U:
         self.log('_load')
         return {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 'channels':self.cleanSelf(self.loadM3U())}
         
+
+    @cacheit(checksum=getInstanceID(),json_data=True)
+    def getMitem(self): #m3u schema
+        fle = FileAccess.open(M3UFLE_DEFAULT, 'r')
+        m3u = loadJSON(fle.read())
+        fle.close()
+        return m3u.copy()
+
 
     def loadM3U(self, file=M3UFLEPATH):
         self.log('loadM3U, file = %s'%file)
@@ -117,10 +126,10 @@ class M3U:
                              'media-dir'         :re.compile('media-dir=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line)}
                     
-                    item = self.writer.channels.getCitem()
-                    item.update({'number' :chCount,
-                                 'logo'   :LOGO,
-                                 'catchup':''}) #set default parameters
+                    mitem = self.getMitem()
+                    mitem.update({'number' :chCount,
+                                  'logo'   :LOGO,
+                                  'catchup':''}) #set default parameters
                     
                     for key, value in match.items():
                         if value is None:
@@ -132,16 +141,16 @@ class M3U:
                         if value.group(1) is None:
                             continue
                         elif key == 'logo':
-                            item[key] = self.writer.jsonRPC.resources.cleanLogoPath(value.group(1))
+                            mitem[key] = self.writer.jsonRPC.resources.cleanLogoPath(value.group(1))
                         elif key == 'number':
-                            try:    item[key] = int(value.group(1))
-                            except: item[key] = float(value.group(1))#todo why was this needed?
+                            try:    mitem[key] = int(value.group(1))
+                            except: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
-                            item[key] = list(filter(None,list(set((value.group(1)).split(';')))))
+                            mitem[key] = list(filter(None,list(set((value.group(1)).split(';')))))
                         elif key == 'radio':
-                            item[key] = (value.group(1)).lower() == 'true'
+                            mitem[key] = (value.group(1)).lower() == 'true'
                         else:
-                            item[key] = value.group(1)
+                            mitem[key] = value.group(1)
 
                     for nidx in range(idx+1,len(lines)):
                         try:
@@ -150,45 +159,43 @@ class M3U:
                             elif nline.startswith('#EXTGRP'):
                                 prop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
                                 if prop is not None: 
-                                    item['group'].append(prop.group(1).split(';'))
-                                    item['group'] = list(set(item['group']))
+                                    mitem['group'].append(prop.group(1).split(';'))
+                                    mitem['group'] = list(set(mitem['group']))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
                                 if prop is not None:
-                                    item.setdefault('kodiprops',[]).append(prop.group(1))
+                                    mitem.setdefault('kodiprops',[]).append(prop.group(1))
                             # elif nline.startswith('#EXTVLCOPT'):
                             # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
                             elif nline.startswith('##'): continue
                             elif not nline: continue
-                            else: item['url'] = nline
+                            else: mitem['url'] = nline
                         except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
                             
-                    item['name']     = (item.get('name','')     or item.get('label',''))
-                    item['label']    = (item.get('label','')    or item.get('name',''))
-                    item['favorite'] = (item.get('favorite','') or False)
+                    mitem['name']     = (mitem.get('name','')     or mitem.get('label',''))
+                    mitem['label']    = (mitem.get('label','')    or mitem.get('name',''))
+                    mitem['favorite'] = (mitem.get('favorite','') or False)
                     
-                    if LANGUAGE(30201) in item['group'] and not item['favorite']:
-                        item['favorite'] = True
+                    if LANGUAGE(30201) in mitem['group'] and not mitem['favorite']:
+                        mitem['favorite'] = True
                         
-                    if not item.get('id','') or not item.get('name','') or not item.get('number',''): 
-                        self.log('loadM3U, SKIPPED MISSING META item = %s'%item)
+                    if not mitem.get('id','') or not mitem.get('name','') or not mitem.get('number',''): 
+                        self.log('loadM3U, SKIPPED MISSING META m3u item = %s'%mitem)
                         continue
                         
-                    self.log('loadM3U, item = %s'%item)
-                    yield item
+                    self.log('loadM3U, m3u item = %s'%mitem)
+                    yield mitem
         
-
+        
     def _save(self):
         self.log('_save')
         with fileLocker(self.writer.globalFileLock):
-            filePath = M3UFLEPATH
-            fle = FileAccess.open(filePath, 'w')
-            self.log('_save, saving to %s'%(filePath))
+            fle = FileAccess.open(M3UFLEPATH, 'w')
+            self.log('_save, saving to %s'%(M3UFLEPATH))
             fle.write('%s\n'%(self.writer.vault.m3uList['data']))
             
-            keys = list(self.writer.channels.getCitem().keys())
-            keys.extend(['kodiprops','label'])#add keys to ignore from optional.
-            item  = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            keys = list(self.getMitem().keys())
+            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             self.writer.vault.m3uList['channels'] = self.sortStations(self.writer.vault.m3uList.get('channels',[]))
             
             for channel in self.writer.vault.m3uList['channels']:
@@ -200,7 +207,7 @@ class M3U:
                     if key in keys: continue
                     elif value: optional += '%s="%s" '%(key,value)
                         
-                fle.write(item%(channel['number'],
+                fle.write(line%(channel['number'],
                                 channel['id'],
                                 channel['name'],
                                 channel['logo'],
@@ -259,7 +266,7 @@ class M3U:
             importChannels = self.sortStations(list(self.chkImport(importChannels,multiplier)))
             self.log('importM3U, found import stations = %s'%(len(importChannels)))
             self.writer.vault.m3uList.get('channels',[]).extend(importChannels)
-        except Exception as e: self.log("importM3U, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("importM3U, failed! %s"%(e), xbmc.LOGERROR)
         return importChannels
         
         
@@ -280,26 +287,26 @@ class M3U:
         leftovers = []
         self.log('chkImport, channels = %s, multiplier = %s, chstart = %s, chmin = %s, chmax = %s'%(len(channels),multiplier,chstart,chmin,chmax))
         ## check tvg-chno for conflict, use multiplier to modify org chnum.
-        for citem in channels:
+        for mitem in channels:
             if len(chrange) == 0:
                 self.log('chkImport, reached max import')
                 break
-            elif citem['number'] < CHANNEL_LIMIT: 
-                newnumber = (chmin+citem['number'])
+            elif mitem['number'] < CHANNEL_LIMIT: 
+                newnumber = (chmin+mitem['number'])
                 if newnumber in chrange:
                     chrange.remove(newnumber)
-                    citem['number'] = newnumber
-                    yield citem
-                else: leftovers.append(citem)
-            else: leftovers.append(citem)
+                    mitem['number'] = newnumber
+                    yield mitem
+                else: leftovers.append(mitem)
+            else: leftovers.append(mitem)
         
-        for citem in leftovers:
+        for mitem in leftovers:
             if len(chrange) == 0:
                 self.log('chkImport, reached max import')
                 break
             else:
-                citem['number'] = chrange.pop(0)
-                yield citem
+                mitem['number'] = chrange.pop(0)
+                yield mitem
             
             
     def getShift(self):
@@ -313,15 +320,16 @@ class M3U:
         return stations
         
         
-    def addStation(self, item):
-        self.log('addStation, item = %s'%(item))
-        #item['media']         = 'True'
-        item['provider']      = ADDON_NAME
-        item['provider-type'] = 'local'
-        item['provider-logo'] = HOST_LOGO
-        idx, line = self.findStation(item)
-        if idx is None: self.writer.vault.m3uList.get('channels',[]).append(item)
-        else: self.writer.vault.m3uList.get('channels',[])[idx] = item # replace existing channel
+    def addStation(self, citem):
+        self.log('addStation, channel item = %s'%(citem))
+        idx, line = self.findStation(citem)
+        mitem = self.getMitem()
+        mitem.update(citem)
+        mitem['provider']      = ADDON_NAME
+        mitem['provider-type'] = 'local'
+        mitem['provider-logo'] = HOST_LOGO
+        if idx is None:  self.writer.vault.m3uList.get('channels',[]).append(mitem)
+        else:            self.writer.vault.m3uList.get('channels',[])[idx] = mitem # replace existing channel
         return True
 
 

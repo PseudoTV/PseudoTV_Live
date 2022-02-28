@@ -67,7 +67,7 @@ class Writer:
 
     def addChannelLineup(self, citem, radio=False, catchup=True):
         citem['label'] = (citem.get('label','') or citem['name'])
-        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))
+        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
         
         if not SETTINGS.getSettingBool('Enable_Grouping'): 
             citem['group'] = [ADDON_NAME]
@@ -108,7 +108,7 @@ class Writer:
             item['date']        = file.get('premiered','')
             
             if catchup:
-                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=quote(item['title']),id=urllib.parse.quote(encodeString((file.get('originalfile','') or file.get('file','')))),channel=urllib.parse.quote(citem['id']),radio=str(item['radio']))
+                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=quoteString(item['title']),id=quoteString(encodeString((file.get('originalfile','') or file.get('file','')))),channel=quoteString(citem['id']),radio=str(item['radio']))
                 file['catchup-id'] = item['catchup-id']
                 
             if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
@@ -120,7 +120,7 @@ class Writer:
             item['writer']      = ', '.join(file.get('writer',[]))
             item['director']    = ', '.join(file.get('director',[]))
             item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role','')) for actor in file.get('cast',[]) if actor.get('name')]
-            
+
             file['citem']       = citem #channel item (stale data due to xmltv storage) use for reference.
             item['fitem']       = file  #raw kodi fileitem/listitem, contains citem both passed through 'writer' xmltv param.
             

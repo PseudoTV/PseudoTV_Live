@@ -175,7 +175,7 @@ class XMLTV:
             now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(days=min) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT) > now]
         except Exception as e: 
-            self.log("cleanProgrammes, Failed! " + str(e), xbmc.LOGERROR)
+            self.log("cleanProgrammes, Failed! %s"%(e), xbmc.LOGERROR)
             tmpProgrammes = programmes
         self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
@@ -227,7 +227,7 @@ class XMLTV:
                 self.log('importXMLTV, found importChannels = %s, importProgrammes = %s from %s'%(len(importChannels),len(importProgrammes),file))
                 self.writer.vault.xmltvList.get('channels',[]).extend(self.sortChannels(importChannels))
                 self.writer.vault.xmltvList.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
-        except Exception as e: self.log("importXMLTV, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("importXMLTV, failed! %s"%(e), xbmc.LOGERROR)
         return True
 
 

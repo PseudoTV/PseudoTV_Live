@@ -21,6 +21,7 @@ from resources.lib.globals     import *
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 from resources.lib.jsonrpc     import JSONRPC 
+from resources.lib.channels    import Channels
 from resources.lib.rules       import RulesList
 
 class Plugin:
@@ -42,6 +43,7 @@ class Plugin:
         self.dialog     = Dialog()
         self.pool       = PoolHelper()
         self.jsonRPC    = JSONRPC(inherited=self)
+        self.channels   = Channels()
         self.runActions = RulesList().runActions
         
         
@@ -134,7 +136,7 @@ class Plugin:
                 
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(citem['name']),id=quote(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))#pvritem.get('callback')
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 
@@ -165,7 +167,8 @@ class Plugin:
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
         
-        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with comprehensive meta
+        try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         
         if nowitem:
@@ -210,7 +213,7 @@ class Plugin:
             if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(name),id=quote(id),radio=str(False))
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(False))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem)
             
@@ -227,7 +230,7 @@ class Plugin:
             for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
 
             # if isStack(listitems[0].getPath()):
-                # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quote(listitems[0].getLabel()),quote(encodeString(listitems[0].getPath())),quote(citem['id']),'False')
+                # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quoteString(listitems[0].getLabel()),quoteString(encodeString(listitems[0].getPath())),quoteString(citem['id']),'False')
                 # self.log('playChannel, isStack calling playVOD url = %s'%(url))
                 # listitems[0].setPath(url) #test to see if stacks play better as playmedia.
                 # return self.player.play(listitems[0].getPath(),listitems[0])
@@ -261,8 +264,9 @@ class Plugin:
         pvritem = self.buildChannel(name, id, isPlaylist=True, radio=True)
         nowitem = pvritem.get('broadcastnow',{})  # current item
         
-        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with comprehensive meta
-        citem   = pvritem['citem']
+        try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        citem = pvritem['citem']
         
         if nowitem:
             nowitem  = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
@@ -282,7 +286,7 @@ class Plugin:
                 nowitem   = nextitems.pop(0)
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quote(name),id=quote(id),radio=str(True))
+                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(True))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem) #insert pvr callback
                 

@@ -681,7 +681,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
             cntrl.setLabel(str(label), str(label2))
             self.setVisibility(cntrl,(len(label) > 0 or len(label2) > 0))
-        except Exception as e: self.log("setLabels, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("setLabels, failed! %s"%(e), xbmc.LOGERROR)
     
     
     def getLabels(self, cntrl):
@@ -695,14 +695,15 @@ class Manager(xbmcgui.WindowXMLDialog):
         try: 
             if isinstance(cntrl, int): cntrl = self.getControl(cntrl)
             cntrl.setImage(image)
-        except Exception as e: self.log("setImages, failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("setImages, failed! %s"%(e), xbmc.LOGERROR)
  
 
     def closeManager(self):
         self.log('closeManager')
         setLegacyPseudoTV(False)
         setManagerRunning(False)
-        if self.madeChanges: 
+        if self.madeChanges:
+            setInstanceID()
             setUpdatePending()
         self.close()
 

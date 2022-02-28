@@ -1,4 +1,4 @@
-  # Copyright (C) 2021 Lunatixz
+  # Copyright (C) 2022 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -94,7 +94,7 @@ class Widgets(xbmcgui.WindowXML):
             # liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
             # liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
         # self.log('addLink, name = %s'%(name))
-        # u=self.sysARG[0]+"?url="+quote(path)+"&channel="+str(channel)+"&name="+quote(name)+"&mode="+str(mode)
+        # u=self.sysARG[0]+"?url="+quoteString(path)+"&channel="+str(channel)+"&name="+quoteString(name)+"&mode="+str(mode)
         # xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,totalItems=total)
 
 
@@ -105,7 +105,7 @@ class Widgets(xbmcgui.WindowXML):
             # liz.setInfo(type="Video", infoLabels={"mediatype":"video","label":name,"title":name})
             # liz.setArt({'thumb':icon,'logo':icon,'icon':icon})
         # liz.setProperty('IsPlayable', 'false')
-        # u=self.sysARG[0]+"?url="+quote(path)+"&channel="+str(channel)+"&name="+quote(name)+"&mode="+str(mode)
+        # u=self.sysARG[0]+"?url="+quoteString(path)+"&channel="+str(channel)+"&name="+quoteString(name)+"&mode="+str(mode)
         # xbmcplugin.addDirectoryItem(handle=int(self.sysARG[1]),url=u,listitem=liz,isFolder=True)
 
         

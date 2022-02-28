@@ -23,23 +23,24 @@ from resources.lib.plugin    import Plugin
 
 def run(sysARG):  
     params  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-    name    = (unquote(params.get("name",'')) or None)
-    channel = (params.get("channel",'')       or None)
-    url     = (params.get("url",'')           or None)
-    id      = (params.get("id",'')            or None)
-    mode    = (params.get("mode",'')          or 'guide')
-    radio   = (params.get("radio",'')         or 'False').lower() == "true"
+    name    = (unquoteString(params.get("name",'')) or None)
+    channel = (params.get("channel",'')             or None)
+    url     = (params.get("url",'')                 or None)
+    id      = (params.get("id",'')                  or None)
+    mode    = (params.get("mode",'')                or 'guide')
+    radio   = (params.get("radio",'')               or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
 
-    if mode == 'guide':    
-        with busy_dialog(): 
-            loadGuide()
+    if mode == 'guide':
+        loadGuide()
     elif mode == 'settings': 
-        with busy_dialog():
-            openAddonSettings()
+        openAddonSettings()
     elif mode == 'vod':      
         Plugin(sysARG).playVOD(name, id)
     elif mode == 'play':
+        if not xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%ADDON_ID): 
+            xbmc.executebuiltin("EnableAddon(%s)"%ADDON_ID)
+            
         if radio: Plugin(sysARG).playRadio(name, id)
         else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
 

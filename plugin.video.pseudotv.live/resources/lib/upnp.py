@@ -1,4 +1,4 @@
-# #   Copyright (C) 2020 Lunatixz
+# #   Copyright (C) 2022 Lunatixz
 # #
 # #
 # # This file is part of PseudoTV Live.
@@ -26,7 +26,7 @@
             # self.cache = Cache()
         # else: 
             # self.cache = cache
-        # self.jsonRPC = JSONRPC(cache=self.cache)
+        # self.jsonRPC = JSONRPC()
         
         
     # def log(self, msg, level=xbmc.LOGDEBUG):

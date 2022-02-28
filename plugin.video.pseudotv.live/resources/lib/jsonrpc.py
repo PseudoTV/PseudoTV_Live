@@ -96,12 +96,15 @@ class JSONRPC:
                     item['seek'] = self.isVFSSeekable(file, item['duration'])
                 return item
             else: dirs.append(file)
-        for dir in dirs: return self.isVFSPlayable(dir, media)
+                
+        for dir in dirs: 
+            result = self.isVFSPlayable(dir, media)
+            if result: return result
 
 
     def isVFSSeekable(self, file, dur):
         if not file.startswith(tuple(VFS_TYPES)): return True
-        elif self.inherited.player.isPlaying(): return True
+        elif self.inherited.player.isPlaying():   return True
         # todo test seek for support disable via adv. rule if fails.
         # todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
         
@@ -149,11 +152,11 @@ class JSONRPC:
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
         cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(command)))
-        cacheResponse = self.inherited.cache.get(cacheName, checksum=checksum, json_data=True)
+        cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)
             if cacheResponse.get('result',None):
-                self.inherited.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+                self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
@@ -395,12 +398,12 @@ class JSONRPC:
         runtime   = int(item.get('runtime', '') or item.get('duration', '') or
                        (item.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration', '') or '0')
                        
-        duration  = self.inherited.cache.get(cacheName, checksum=cacheCHK, json_data=False)
+        duration  = self.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:
                 duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item)
                 if duration > 0:
-                    self.inherited.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
+                    self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
                 log("parseDuration, Failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0
@@ -478,7 +481,6 @@ class JSONRPC:
 
         self.log('requestList, id = %s, path = %s, page = %s, limits= %s'%(id, path, page, limits))
         results = self.getDirectory(dumpJSON(params))
-        
         if 'filedetails' in results: key = 'filedetails'
         else:                        key = 'files'
             
@@ -507,7 +509,7 @@ class JSONRPC:
 
     def matchPVRPath(self, channelid=-1):
         self.log('matchPVRPath, channelid = %s' % (channelid))
-        pvrPaths = ['pvr://channels/tv/%s/'%(quote(ADDON_NAME)),
+        pvrPaths = ['pvr://channels/tv/%s/'%(quoteString(ADDON_NAME)),
                     'pvr://channels/tv/All%20channels/',
                     'pvr://channels/tv/*']
 

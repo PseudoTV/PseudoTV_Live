@@ -72,7 +72,7 @@ class Overlay(xbmcgui.WindowXML):
 
     def onInit(self):
         try:
-            self.log('onInit')            
+            self.log('onInit')
             self.staticOverlay  = SETTINGS.getSettingBool("Static_Overlay")
             self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
             self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
@@ -91,7 +91,7 @@ class Overlay(xbmcgui.WindowXML):
             self.channelbug = self.getControl(41004)
             self.channelbug.setVisible(False)
                         
-            self.overlayLayer   = self.getControl(39999)
+            self.overlayLayer = self.getControl(39999)
             self.overlayLayer.setVisible(False)
             
             self.myPlayer = Player()
@@ -110,12 +110,14 @@ class Overlay(xbmcgui.WindowXML):
             
             if self.load(): 
                 self.overlayLayer.setVisible(True)
+                self.log('showChannelBug = %s'%(self.showChannelBug))
+                self.log('showOnNext = %s'%(self.showOnNext))
                 if self.showChannelBug: self.bugToggle() #start bug timer
                 if self.showOnNext:     self.onNextChk()#start onnext timer
             else: 
                 self.closeOverlay()
         except Exception as e: 
-            self.log("onInit, Failed! " + str(e), xbmc.LOGERROR)
+            self.log("onInit, Failed! %s"%(e), xbmc.LOGERROR)
             self.closeOverlay()
 
 
@@ -156,7 +158,7 @@ class Overlay(xbmcgui.WindowXML):
             self.log('load finished')
             return True
         except Exception as e: 
-            self.log("load, Failed! " + str(e), xbmc.LOGERROR)
+            self.log("load, Failed! %s"%(e), xbmc.LOGERROR)
             return False
      
 
@@ -198,7 +200,7 @@ class Overlay(xbmcgui.WindowXML):
                     self.container.reset()
                     self.container.addItems(self.listitems)
                     return
-        except Exception as e: self.log("updateOnNext, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("updateOnNext, Failed! %s"%(e), xbmc.LOGERROR)
         
 
     def onNextChk(self):
@@ -211,7 +213,7 @@ class Overlay(xbmcgui.WindowXML):
             self.onNextChkThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
             self.onNextChkThread.name = "onNextChkThread"
             self.onNextChkThread.start()
-        except Exception as e: self.log("onNextChk, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("onNextChk, Failed! %s"%(e), xbmc.LOGERROR)
         
 
     def onNextToggle(self, state=True):
@@ -223,7 +225,7 @@ class Overlay(xbmcgui.WindowXML):
             self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [nstate])
             self.onNextToggleThread.name = "onNextToggleThread"
             self.onNextToggleThread.start()
-        except Exception as e: self.log("onNextToggle, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("onNextToggle, Failed! %s"%(e), xbmc.LOGERROR)
             
             
     def bugToggle(self, state=True):
@@ -246,7 +248,7 @@ class Overlay(xbmcgui.WindowXML):
             self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
             self.bugToggleThread.name = "bugToggleThread"
             self.bugToggleThread.start()
-        except Exception as e: self.log("bugToggle, Failed! " + str(e), xbmc.LOGERROR)
+        except Exception as e: self.log("bugToggle, Failed! %s"%(e), xbmc.LOGERROR)
 
       
     def closeOverlay(self):

@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -37,6 +37,31 @@ class RulesList:
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
+    def buildRuleList(self, channels=[]): #load all rules instances and apply their per channel settings.
+        ruleList = {}
+        tmpruleList = self.ruleList.copy() #base rule instances
+        tmpruleList.pop(0) #remove BaseRule()
+        for channel in channels:
+            chid = channel.get('id','')
+            if not chid: 
+                continue
+            ruleList[chid] = []
+            chrules = channel.get('rules',[])
+            for rule in tmpruleList:
+                ruleInstance = rule.copy()
+                for chrule in chrules:
+                    if   chrule.get('id',0) == 0: continue #ignore template if exists
+                    elif ruleInstance.myId == chrule['id']:#match rule instance by id
+                        options = chrule.get('options',[])
+                        for key in options.keys():
+                            ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
+                            ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
+                        break
+                ruleList[chid].append(ruleInstance)
+        self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
+        return ruleList
+        
+        
     def _loadRule(self, data):
         channel,tmpruleList = data
         ruleList = {}
@@ -50,54 +75,30 @@ class RulesList:
                     ruleInstance = rule.copy()
                     options = chrule.get('options',{})
                     for key in options.keys():
-                        ruleInstance.optionLabels[int(key)] = options[key].get('label')
-                        ruleInstance.optionValues[int(key)] = options[key].get('value')
+                        ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
+                        ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
                     ruleList.setdefault(chid,[]).append(ruleInstance)
         return ruleList
            
         
     def loadRules(self, channels=[]): #load channel rules and their instances.
         tmpruleList = self.ruleList.copy()
-        tmpruleList.pop(0) #remove boilerplate
-        ruleList = dict(self.pool.poolList(self._loadRule,channels,tmpruleList))
-        self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),ruleList))
-        return ruleList
-        
-        
-    def buildRuleList(self, channels=[]): #load all rules and apply their per channel instances.
-        ruleList = {}
-        tmpruleList = self.ruleList.copy()
-        tmpruleList.pop(0)
-        for channel in channels:
-            chid = channel.get('id','')
-            if not chid: continue
-            ruleList[chid] = []
-            chrules = channel.get('rules',[])
-            for rule in tmpruleList:
-                ruleInstance = rule.copy()
-                for chrule in chrules:
-                    if   chrule.get('id',0) == 0: continue #ignore template if exists
-                    elif ruleInstance.myId == chrule['id']:#match rule instance by id
-                        options = chrule.get('options',[])
-                        for key in options.keys():
-                            ruleInstance.optionLabels[int(key)] = options[key].get('label')
-                            ruleInstance.optionValues[int(key)] = options[key].get('value')
-                        break
-                ruleList[chid].append(ruleInstance)
-        self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
+        tmpruleList.pop(0) #remove boilerplate baseRule()
+        ruleList = (self.pool.poolList(self._loadRule,channels,tmpruleList))
+        self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),'\n'.join(ruleList)))
         return ruleList
         
         
     def runActions(self, action, citem, parameter=None, inherited=None):
-        self.log("runActions action = %s, channel = %s"%(action,citem))
+        if not citem.get('id',''): return parameter
         if inherited is None: inherited = self
-        # ruleList = self.loadRules([citem])
-        # if not citem.get('id',''): return parameter
-        # ruleList = self.ruleList.get(citem['id'],[])
-        # for rule in ruleList:
-            # if action in rule.actions:
-                # self.log("runActions performing channel rule: %s"%(rule.name))
-                # return rule.runAction(action, inherited, parameter)
+        self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
+        try:    ruleList = self.loadRules([citem])[0].get(citem['id'],[])
+        except: ruleList = []
+        for rule in ruleList:
+            if action in rule.actions:
+                self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
+                return rule.runAction(action, inherited, parameter)
         return parameter
 
 
@@ -113,8 +114,6 @@ class RulesList:
             # rules[idx].update(ritem)
         # self.channelList['channels']['rules'] = sorted(rules, key=lambda k: k['id'])
         # return True
-
-
 
 
     # def findChannelRule(self, citem, ritem):

@@ -25,17 +25,21 @@ from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, S
 IP         = getIP()
 HOST       = '0.0.0.0'
 CHUNK_SIZE = 64 * 1024
-LOCAL_HOST ='%s:%s'%(IP,TCP_PORT)
 
 def chkPort(port=0, redirect=False):
-    return port
-    # try: #todo check port if unused and redirect allowed substitute?
-        # with closing(socket(AF_INET, SOCK_STREAM)) as s:
-            # s.bind(('127.0.0.1', port))
-            # s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            # return s.getsockname()[1]
-    # except Exception as e: 
-        # log("chkPort, Failed! %s"%(e), xbmc.LOGERROR)
+    try:
+        with closing(socket(AF_INET, SOCK_STREAM)) as s:
+            s.bind(("127.0.0.1", port))
+            return port
+    except socket.error as e:
+        if redirect and (e.errno == errno.EADDRINUSE):
+            with closing(socket(AF_INET, SOCK_STREAM)) as s:
+                s.bind(("127.  0.0.1", 0))
+                s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                port = s.getsockname()[1]
+                log("server: chkPort, Port is already in-use: changing to %s"%(port))
+                return port
+        else: ("server: chkPort, Failed! %s"%(e), xbmc.LOGERROR)
         
 class Discovery:
     shutdown = False
@@ -62,6 +66,9 @@ class Discovery:
 
     def _start(self):
         self.log('_start')
+        UDP_PORT = SETTINGS.getSettingInt('UDP_PORT')
+        LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
+        
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', UDP_PORT))
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
@@ -110,7 +117,10 @@ class Announcement:
         
     def _start(self):
         self.log('_start')
+        UDP_PORT = SETTINGS.getSettingInt('UDP_PORT')
+        LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
         data = '%s%s'%(ADDON_ID,LOCAL_HOST)
+        
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))
         sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -189,11 +199,19 @@ class HTTP:
         
     def _start(self):
         try:
-            #todo check port
             if (self.started or isClient()): return
+            TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
+            port = chkPort(TCP_PORT,redirect=True)
+            if port is None:
+                raise Exception('Port In-Use!')
+            elif port != TCP_PORT:
+                SETTINGS.setSettingInt('TCP_PORT',port)
+                
+            LOCAL_HOST ='%s:%s'%(IP,port)
             self.log("_start, %s"%(LOCAL_HOST))
             PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
-            self._server = ThreadedHTTPServer((IP, TCP_PORT), RequestHandler)
+            
+            self._server = ThreadedHTTPServer((IP, port), RequestHandler)
             self._server.allow_reuse_address = True
             self._httpd_thread = threading.Thread(target=self._server.serve_forever)
             self._httpd_thread.start()

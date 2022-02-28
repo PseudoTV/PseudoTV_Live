@@ -80,6 +80,12 @@ class Channels:
     def sortChannels(channels):
         return sorted(channels, key=lambda k: k['number'])
 
+    
+    @cacheit(checksum=getInstanceID(),json_data=True)
+    def getChannel(self, id):
+        channels = self.getChannels()
+        return list(filter(lambda c:c.get('id') == id, channels))
+        
 
     def getChannels(self):
         channels = self.cleanSelf(self.writer.vault.channelList).get('channels',[])
@@ -112,8 +118,12 @@ class Channels:
         return self.getTemplate().get('channels',[])[0].copy()
         
 
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getRitem(self): #rule schema
-        return {"id": 0, "name": "", "description": "", "options": {}}
+        fle = FileAccess.open(RULEFLE_DEFAULT, 'r')
+        rule = loadJSON(fle.read())
+        fle.close()
+        return rule.copy()
 
 
     def getImports(self):

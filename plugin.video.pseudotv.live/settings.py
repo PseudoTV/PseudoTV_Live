@@ -21,6 +21,4 @@
 from kodi_six                 import xbmcaddon
 from resources.lib.globals    import *
 
-if __name__ == '__main__': 
-    with busy_dialog():
-        openAddonSettings()
+if __name__ == '__main__': openAddonSettings()
