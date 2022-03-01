@@ -21,7 +21,7 @@ from resources.lib.globals     import *
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 from resources.lib.jsonrpc     import JSONRPC 
-from resources.lib.channels    import Channels
+# from resources.lib.channels    import Channels
 from resources.lib.rules       import RulesList
 
 class Plugin:
@@ -43,7 +43,7 @@ class Plugin:
         self.dialog     = Dialog()
         self.pool       = PoolHelper()
         self.jsonRPC    = JSONRPC(inherited=self)
-        self.channels   = Channels()
+        # self.channels   = Channels()
         self.runActions = RulesList().runActions
         
         
@@ -167,6 +167,7 @@ class Plugin:
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
         
+        #todo to slow move to parser
         # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
         # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
@@ -265,6 +266,7 @@ class Plugin:
         pvritem = self.buildChannel(name, id, isPlaylist=True, radio=True)
         nowitem = pvritem.get('broadcastnow',{})  # current item
         
+        #todo to slow move to parser
         # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
         # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
