@@ -147,7 +147,8 @@ RULES_ACTION_POST_TIME     = 8
 RULES_ACTION_BUILD_STOP    = 9
 #player
 RULES_ACTION_PLAYBACK      = 11
-RULES_ACTION_PLAYER        = 12
+RULES_ACTION_PLAYER_START  = 12
+RULES_ACTION_PLAYER_STOP   = 13
 #overlay
 RULES_ACTION_OVERLAY       = 21
 
@@ -217,10 +218,10 @@ JSON_SETTINGS       = {'pvrmanager.preselectplayingchannel' :'true',
                        # 'epg.epgupdate':120,
                        'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
-LOG_TYPE            = {0:{'level':xbmc.LOGDEBUG  ,'weight':4,'description':"In depth information about the status of Kodi. This information can pretty much only be deciphered by a developer or long time Kodi power user."},
-                       1:{'level':xbmc.LOGINFO   ,'weight':3,'description':"Something has happened. It's not a problem, we just thought you might want to know. Fairly excessive output that most people won't care about."},
-                       2:{'level':xbmc.LOGWARNING,'weight':2,'description':"Something potentially bad has happened. If Kodi did something you didn't expect, this is probably why. Watch for errors to follow."},
-                       3:{'level':xbmc.LOGERROR  ,'weight':1,'description':"This event is bad. Something has failed. You likely noticed problems with the application be it skin artifacts, failure of playback a crash, etc."}}
+LOG_TYPE            = {0:{'level':xbmc.LOGDEBUG  ,'priority':3,'description':"In depth information about the status of Kodi. This information can pretty much only be deciphered by a developer or long time Kodi power user."},
+                       1:{'level':xbmc.LOGINFO   ,'priority':4,'description':"Something has happened. It's not a problem, we just thought you might want to know. Fairly excessive output that most people won't care about."},
+                       2:{'level':xbmc.LOGWARNING,'priority':2,'description':"Something potentially bad has happened. If Kodi did something you didn't expect, this is probably why. Watch for errors to follow."},
+                       3:{'level':xbmc.LOGERROR  ,'priority':1,'description':"This event is bad. Something has failed. You likely noticed problems with the application be it skin artifacts, failure of playback a crash, etc."}}
 
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
@@ -564,8 +565,7 @@ def decodeString(base64_bytes):
 def splitYear(label):
     try:
         match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
-        if match:
-            if match.group(2): return match.groups()
+        if match and match.group(2): return match.groups()
     except: pass
     return label, None
    

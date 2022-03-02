@@ -581,11 +581,11 @@ msgid "Seasonal"
 msgstr ""
 
 msgctxt "#30142"
-msgid "Plugin/UPNP Source Detected, Testing Seek Compatibility."
+msgid "Plugin/UPNP Source Detected, Testing Seek Compatibility"
 msgstr ""
 
 msgctxt "#30143"
-msgid "Passed!"
+msgid "Validating Path"
 msgstr ""
 
 msgctxt "#30144"

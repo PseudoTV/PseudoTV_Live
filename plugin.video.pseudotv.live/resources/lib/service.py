@@ -160,12 +160,11 @@ class Player(xbmc.Player):
             self.playingPVRitem = pvritem
         else:   
             self.log('playAction, channel changed')
-            self.playingPVRitem = pvritem
-            citem   = self.getCitem()
-            pvritem = self.myService.writer.rules.runActions(RULES_ACTION_PLAYER, citem, pvritem, inherited=self)
-            #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
             self.lastSubState = isSubtitle()
-            if self.lastSubState: self.setSubtitles(False)
+            citem = self.getCitem()
+            pvritem.get('citem').update(citem)
+            self.playingPVRitem = self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_START, citem, pvritem, inherited=self)
+            if self.lastSubState: self.setSubtitles(False) #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
         self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
         
                 
@@ -186,6 +185,7 @@ class Player(xbmc.Player):
         else:
             self.isPseudoTV = False
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+            self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem'), inherited=self)
             callback = self.playingPVRitem.get('callback','')
             self.log('changeAction, playing = %s'%(callback))
             xbmc.executebuiltin('PlayMedia(%s)'%callback)
@@ -195,6 +195,7 @@ class Player(xbmc.Player):
         self.log('stopAction')
         self.isPseudoTV = False
         self.toggleOverlay(False)
+        self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem'), inherited=self)
         if self.playingPVRitem.get('isPlaylist',False):
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.playingPVRitem = {}

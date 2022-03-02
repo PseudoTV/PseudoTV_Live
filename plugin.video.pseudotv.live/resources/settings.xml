@@ -857,8 +857,8 @@
 					<level>2</level>
 					<default>98</default>
 					<constraints>
-						<minimum>98</minimum>
-						<step>5</step>
+						<minimum>85</minimum>
+						<step>1</step>
 						<maximum>100</maximum>
 					</constraints>
 					<control type="slider" format="integer">

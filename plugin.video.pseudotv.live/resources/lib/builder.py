@@ -186,8 +186,8 @@ class Builder:
             self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
             self.limits   = {}#{"end":0,"start":0,"total":0}
             self.limit    = PAGE_LIMIT
-            
             valid         = False
+            
             self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
             
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.

@@ -82,49 +82,71 @@ class JSONRPC:
         return results
 
 
-    def isVFSPlayable(self, path, media='video', chkSeek=True):
+    def isVFSPlayable(self, path, media='video', chkSeek=True, dia=None):
         self.log('isVFSPlayable, path = %s, media = %s' % (path, media))
         dirs = []
         json_response = self.requestList({'id':str(random.random())}, path, media)
-        for item in json_response:
+
+        if dia is None:
+            dia = self.dialog.progressDialog(message='%s...\n%s'%(LANGUAGE(30143),path))
+        else:
+            dia = self.dialog.progressDialog(control=dia, message='%s...\n%s'%(LANGUAGE(30143),path))
+            
+        for idx, item in enumerate(json_response):
             file     = item.get('file', '')
             fileType = item.get('filetype', 'file')
             if fileType == 'file':
+                dia = self.dialog.progressDialog(int(((idx)*100)//len(json_response)),control=dia, message='%s...\n%s\n%s'%(LANGUAGE(30143),path,file))
                 item['duration'] = self.getDuration(file, item)
-                if   item['duration'] == 0: continue
+                if   dia is None: break
+                elif item['duration'] == 0: continue
                 elif chkSeek: 
-                    item['seek'] = self.isVFSSeekable(file, item['duration'])
+                    item['seek'], dia = self.isVFSSeekable(file, item['duration'], dia)
+                self.dialog.progressDialog(100,control=dia)
                 return item
             else: dirs.append(file)
                 
         for dir in dirs: 
-            result = self.isVFSPlayable(dir, media)
+            result = self.isVFSPlayable(dir, media, chkSeek, dia)
             if result: return result
-
-
-    def isVFSSeekable(self, file, dur):
-        if not file.startswith(tuple(VFS_TYPES)): return True
-        elif self.inherited.player.isPlaying():   return True
-        # todo test seek for support disable via adv. rule if fails.
-        # todo set seeklock rule if seek == False  #Player.SeekEnabled todo verify seek
+        self.dialog.progressDialog(100,control=dia)
         
-        self.dialog.notificationDialog(LANGUAGE(30142))
+
+    def isVFSSeekable(self, file, dur, dia=None):
+        if not file.startswith(tuple(VFS_TYPES)) and not file.endswith('.strm'): 
+            return True, dia
+        elif self.inherited.player.isPlaying():
+            return True, dia
+        # todo test seek for support disable via adv. rule if fails.
+        # todo set seeklock rule if seek == False
+        if dia is not None:
+            dia = self.dialog.progressDialog(control=dia, message='%s...'%(LANGUAGE(30142)))
+        
         liz = xbmcgui.ListItem('Seek Test', path=file)
-        seekvalue = int(dur/2)
         liz.setProperty('totaltime'  , str(dur))
-        liz.setProperty('resumetime' , str(seekvalue))
-        liz.setProperty('startoffset', str(seekvalue))
+        liz.setProperty('resumetime' , str(int(dur/2)))
+        liz.setProperty('startoffset', str(int(dur/2)))
         self.inherited.player.play(file, liz, windowed=True)
         
-        while not self.inherited.monitor.abortRequested() and not self.inherited.player.isPlaying():
-            if self.inherited.monitor.waitForAbort(.25): break
+        getTime  = 0
+        waitTime = 60
+        while not self.inherited.monitor.abortRequested() and getTime == 0:
+            if dia is not None:
+                dia = self.dialog.progressDialog(control=dia, message='%s\nWaiting for Playback (%ss)...'%(LANGUAGE(30142),waitTime))
+                if dia is None: break
+            if self.inherited.monitor.waitForAbort(1) or waitTime < 1: break
+            waitTime -= 1
+            isPlaying = self.inherited.player.isPlaying()
+            if isPlaying: getTime = int(self.inherited.player.getTime())
+            else: break
                 
         state = xbmc.getCondVisibility('Player.SeekEnabled')
-        if not state: state = int(self.inherited.player.getTime()) >= seekvalue
-        if state: self.dialog.notificationDialog(LANGUAGE(30143))
+        if not state: state = getTime >= int(dur/2)
+        if dia is not None:
+            dia = self.dialog.progressDialog(control=dia, message='%s\nStopping Playback\nSeekable? %s'%(LANGUAGE(30142),state))
         self.inherited.player.stop()
-        self.log('isVFSSeekable, path = %s, state = %s' % (file, state))
-        return state
+        self.log('isVFSSeekable, path = %s, seekable = %s' % (file, state))
+        return state, dia
         
 
     def sendButton(self, id):
@@ -408,7 +430,7 @@ class JSONRPC:
                 log("parseDuration, Failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0
 
-        ## duration diff. safe guard, how different are the two values? if > 45. don't save to Kodi.
+        ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
         rundiff = int(percentDiff(runtime, duration))
         runcond = [rundiff <= 45, rundiff != 0, rundiff != 100]
         runsafe = True if not False in runcond else False

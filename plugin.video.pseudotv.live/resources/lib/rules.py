@@ -18,19 +18,41 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
+from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 
 # ''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
-
+class ChannelList:
+    cache = Cache()
+    
+    @cacheit(checksum=getInstanceID(),json_data=True)
+    def _loadChannels(self):
+        with xbmcvfs.File(CHANNELFLEPATH, 'rb') as f:
+            return loadJSON(f.read()).get('channels',[])
+    
+    
+    def getChannel(self, id):
+        self.log('getChannel, id = %s'%(id))
+        channels = self._loadChannels()
+        return list(filter(lambda c:c.get('id') == id, channels))
+        
+    
+    def getChannelRules(self, id):
+        self.log('getChannelRules, id = %s'%(id))
+        return self.getChannel()[0].get('rules',[])
+        
+        
 class RulesList:
     pool = PoolHelper()
     
     def __init__(self):  
         self.log('__init__')
+        self.channels = ChannelList()
         self.ruleList = [BaseRule(),
                          ShowChannelBug(),
                          ShowOnNext(),
-                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),SeekLock()]
+                         ShowStaticOverlay(),
+                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),seekControl()]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -82,10 +104,10 @@ class RulesList:
            
         
     def loadRules(self, channels=[]): #load channel rules and their instances.
+        self.log('loadRules, channels = %s'%(channels))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = (self.pool.poolList(self._loadRule,channels,tmpruleList))
-        self.log('loadRules, channels = %s\nruleList = %s'%(len(channels),'\n'.join(ruleList)))
+        ruleList = self.pool.poolList(self._loadRule,channels,tmpruleList)
         return ruleList
         
         
@@ -136,9 +158,9 @@ class BaseRule:
         self.description  = ""
         self.optionLabels = []
         self.optionValues = []
+        self.storedValues = []
         self.actions      = []
         
-
 
     def getTitle(self):
         return self.name
@@ -183,7 +205,7 @@ class BaseRule:
         return self.myId
 
 
-    def runAction(self, actionid, method, param):
+    def runAction(self, actionid, inherited, param):
         return param
 
 
@@ -337,13 +359,15 @@ class BaseRule:
 
 class ShowChannelBug(BaseRule):
     def __init__(self):
-        self.myId         = 1
-        self.name         = "Show Channel Bug"
-        self.description  = ""
-        self.optionLabels = ['Show Channel Bug']
-        self.optionValues = [SETTINGS.getSettingBool('Enable_ChannelBug')]
-        self.actions      = [RULES_ACTION_OVERLAY]
-        self.selectBoxOptions = [[True, False]]
+        self.myId             = 1
+        self.name             = "Show Channel Bug & Interval"
+        self.description      = ""
+        self.optionLabels     = ['Show Channel Bug','Channel Bug Interval']
+        self.optionValues     = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval")]
+        self.actions          = [RULES_ACTION_OVERLAY]
+        self.selectBoxOptions = [[True, False],list(range(-1,17))]
+        #"Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
+        
 
     def copy(self):
         return ShowChannelBug()
@@ -357,25 +381,30 @@ class ShowChannelBug(BaseRule):
 
 
     def onAction(self, act, optionindex):
-        self.onActionToggleBool(optionindex)
+        if optionindex == 0:
+            self.onActionToggleBool(optionindex)
+        elif optionindex == 1:
+            self.onActionSelect(optionindex, 'Select Interval [-1 Indefinitely, 0 Random]',self.optionValues[optionindex])
         return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, overlay, channeldata):
         if actionid == RULES_ACTION_OVERLAY:
             overlay.showChannelBug = self.optionValues[0]
+            overlay.channelBugVal  = self.optionValues[1]            
             self.log("runAction, setting showChannelBug = %s"%(overlay.showChannelBug))
+            self.log("runAction, setting channelBugVal = %s"%(overlay.channelBugVal))
         return channeldata
 
 
 class ShowOnNext(BaseRule):
     def __init__(self):
-        self.myId         = 2
-        self.name         = "Show OnNext (pop-up)"
-        self.description  = ""
-        self.optionLabels = ["Show OnNext (pop-up)"]
-        self.optionValues = [SETTINGS.getSettingBool('Enable_OnNext')]
-        self.actions      = [RULES_ACTION_OVERLAY]
+        self.myId             = 2
+        self.name             = "Show OnNext"
+        self.description      = ""
+        self.optionLabels     = ["Show OnNext"]
+        self.optionValues     = [SETTINGS.getSettingBool('Enable_OnNext')]
+        self.actions          = [RULES_ACTION_OVERLAY]
         self.selectBoxOptions = [[True, False]]
 
 
@@ -385,9 +414,9 @@ class ShowOnNext(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Hide OnNext'
-        else:
             return 'Show OnNext'
+        else:
+            return 'Hide OnNext'
 
 
     def onAction(self, act, optionindex):
@@ -397,32 +426,65 @@ class ShowOnNext(BaseRule):
 
     def runAction(self, actionid, overlay, channeldata):
         if actionid == RULES_ACTION_OVERLAY:
-            self.storedOnNextValue   = overlay.showOnNext
             overlay.showOnNext = self.optionValues[0]
             self.log("runAction, setting showOnNext = %s"%(overlay.showOnNext))
         return channeldata
 
 
-class SetScreenOverlay(BaseRule): #todo
+class ShowStaticOverlay(BaseRule):
     def __init__(self):
-        self.myId         = 20
-        self.name         = "Set Screen Overlay"
-        self.description  = ""
-        self.optionLabels = ['Enable Overlay','Select Image','X-POS','Y-POS']
-        self.optionValues = [False,'',0,0]
-        self.actions      = [RULES_ACTION_OVERLAY]
+        self.myId             = 3
+        self.name             = "Show Static Overlay"
+        self.description      = ""
+        self.optionLabels     = ['Show Static Overlay']
+        self.optionValues     = [SETTINGS.getSettingBool('Static_Overlay')]
+        self.actions          = [RULES_ACTION_OVERLAY]
+        self.selectBoxOptions = [[True, False]]
+
+    def copy(self):
+        return ShowStaticOverlay()
+
+
+    def getTitle(self):
+        if self.optionValues[0]:
+            return 'Hide Static Overlay'
+        else:
+            return 'Show Static Overlay'
+
+
+    def onAction(self, act, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, overlay, channeldata):
+        if actionid == RULES_ACTION_OVERLAY:
+            overlay.staticOverlay = self.optionValues[0]
+            self.log("runAction, setting staticOverlay = %s"%(overlay.staticOverlay))
+        return channeldata
+
+
+class SetScreenOverlay(BaseRule): #todo requires Kodi core changes.
+    def __init__(self):
+        self.myId             = 20
+        self.name             = "Set Screen Overlay"
+        self.description      = ""
+        self.optionLabels     = ['Enable Overlay','Select Image','X-POS','Y-POS']
+        self.optionValues     = [False,'',0,0]
+        self.actions          = [RULES_ACTION_OVERLAY]
         self.selectBoxOptions = [[True, False],[],[],[]]
 
             
 class DisableOverlay(BaseRule):
     def __init__(self):
-        self.myId         = 21
-        self.name         = "Disable Overlay"
-        self.description  = ""
-        self.optionLabels = ['Disable Overlay']
-        self.optionValues = [not bool(SETTINGS.getSettingBool('Enable_Overlay'))]
-        self.actions      = [RULES_ACTION_PLAYER]
+        self.myId             = 21
+        self.name             = "Disable Overlay"
+        self.description      = ""
+        self.optionLabels     = ['Disable Overlay']
+        self.optionValues     = [not bool(SETTINGS.getSettingBool('Enable_Overlay'))]
+        self.actions          = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions = [[True, False]]
+        self.storedValues     = [self.optionValues[0]]
 
 
     def copy(self):
@@ -442,26 +504,66 @@ class DisableOverlay(BaseRule):
 
 
     def runAction(self, actionid, player, channeldata):
-        if actionid == RULES_ACTION_OVERLAY:
-            self.storedOverlayValue = player.showOverlay
+        if actionid == RULES_ACTION_PLAYER_START:
+            self.storedValues[0] = player.showOverlay
             player.showOverlay = self.optionValues[0]
-            self.log("runAction, setting showOverlay = %s"%(player.showOverlay))
+        elif actionid == RULES_ACTION_PLAYER_STOP:
+            player.showOverlay = self.storedValues[0]
+        self.log("runAction, setting showOverlay = %s"%(player.showOverlay))
+        return channeldata
+
+
+class ForceSubtitles(BaseRule):
+    def __init__(self):
+        self.myId             = 22
+        self.name             = "Force Subtitles"
+        self.description      = ""
+        self.optionLabels     = ['Force Subtitles']
+        self.optionValues     = [isSubtitle()]
+        self.actions          = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
+        self.selectBoxOptions = [[True, False]]
+        self.storedValues     = [self.optionValues[0]]
+
+
+    def copy(self):
+        return ForceSubtitles()
+
+
+    def getTitle(self):
+        if self.optionValues[0]:
+            return 'Show Subtitles'
+        else:
+            return 'Hide Subtitles'
+
+
+    def onAction(self, act, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, player, channeldata):
+        if actionid == RULES_ACTION_PLAYER_START:
+            self.storedValues[0] = player.lastSubState
+            player.lastSubState  = self.optionValues[0]
+        elif actionid == RULES_ACTION_PLAYER_STOP:
+            player.lastSubState = self.storedValues[0]
+        self.log("runAction, setting lastSubState = %s"%(player.lastSubState))
         return channeldata
 
  
-class SeekLock(BaseRule):
+class seekControl(BaseRule):
     def __init__(self):
-        self.myId         = 41
-        self.name         = "Disable Seeking"
-        self.description  = ''
-        self.optionLabels = ['Disable Seeking']
-        self.optionValues = [False]
-        self.actions = [RULES_ACTION_PLAYBACK]
-        self.selectBoxOptions = [[True,False]]
+        self.myId             = 41
+        self.name             = "Seek Control, Threshold & Tolerance"
+        self.description      = ''
+        self.optionLabels     = ['Disable Seeking','Threshold Percentage','Tolerance Seconds']
+        self.optionValues     = [False,SETTINGS.getSettingInt('Seek_Threshold%'),SETTINGS.getSettingInt('Seek_Tolerance')]
+        self.actions          = [RULES_ACTION_PLAYBACK]
+        self.selectBoxOptions = [[True,False],list(range(85,101)),list(range(0,901))]
         
 
     def copy(self):
-        return SeekLock()
+        return seekControl()
 
 
     def getTitle(self):
@@ -472,17 +574,34 @@ class SeekLock(BaseRule):
             
 
     def onAction(self, act, optionindex):
-        self.onActionSelectBox(act, optionindex)
+        if optionindex == 0:
+            self.onActionToggleBool(act, optionindex)
+        elif optionindex == 1:
+            self.onActionDigitBox(act, optionindex)
+        elif optionindex == 2:
+            self.onActionDigitBox(act, optionindex)
+        self.validate(optionindex)
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, Channels, nowitem):
+    def validate(self, optionindex):
+        if optionindex > 0:
+            self.validateDigitBox(optionindex,self.selectBoxOptions[optionindex][0],self.selectBoxOptions[optionindex][-1],self.optionValues[optionindex])
+            
+            
+    def runAction(self, actionid, plugin, nowitem):
         if actionid == RULES_ACTION_PLAYBACK:
-            self.log("setting Seek Lock to %s"%(self.optionValues[0]))
-            nowitem['progress'] = 0
-        return nowitem        
-               
-               
+            if self.optionValues[0]:
+                self.log("runAction, disabling seek progress")
+                nowitem['progress'] = 0
+                
+            plugin.seekTHLD  = self.optionValues[1]
+            plugin.seekTLRNC = self.optionValues[2]
+            self.log("runAction, setting seekTHLD = %s"%(plugin.seekTHLD))
+            self.log("runAction, setting seekTLRNC = %s"%(plugin.seekTLRNC))
+        return nowitem
+
+
 class HandleMethodOrder(BaseRule):
     def __init__(self):
         self.myId             = 61
@@ -492,7 +611,8 @@ class HandleMethodOrder(BaseRule):
         self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.jsonRPC.getENUM(JSON_METHOD), self.jsonRPC.getENUM(JSON_ORDER), [True, False]]
-
+        self.storedValues     = []
+        
         
     def copy(self):
         return HandleMethodOrder()
@@ -510,21 +630,17 @@ class HandleMethodOrder(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, Builder, channeldata):
-        #"sort": {"order": "ascending", "ignorefolders": "false", "method": "random"}
+    def runAction(self, actionid, builder, channeldata):
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedLimitValue = Builder.mediaLimit
-            self.storedSortValue  = Builder.fileListSort
-            sort = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": int(self.optionValues[2] == True)}
-            log("HandleMethodOrder sort = %s"%(sort))
-            for value in self.optionValues:
-                if len(value) == 0:
-                    return channeldata
-            Builder.mediaLimit   = self.optionValues[0]
-            Builder.fileListSort = sort
+            self.storedValues[0] = builder.limit
+            self.storedValues[1] = builder.sort #"sort": {"order": "ascending", "ignorefolders": "false", "method": "random"}
+            builder.limit = self.optionValues[0]
+            builder.sort  = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": int(self.optionValues[2] == True)}
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            Builder.mediaLimit    = self.storedLimitValue
-            Builder.fileListSort  = self.storedSortValue
+            builder.limit = self.storedValues[0]
+            builder.sort  = self.storedValues[1]
+        self.log("runAction, setting limit = %s"%(builder.limit))
+        self.log("runAction, setting sort = %s"%(builder.sort))
         return channeldata
 
 
@@ -537,6 +653,7 @@ class HandleFilter(BaseRule):
         self.optionLabels     = ['Field','Operator','Value']
         self.optionValues     = ['showtitle','contains','']
         self.selectBoxOptions = [self.jsonRPC.getENUM(JSON_FILE_ENUM), self.jsonRPC.getENUM(JSON_OPERATORS)]
+        self.storedValues     = []
         
 
     def copy(self): 
@@ -561,47 +678,14 @@ class HandleFilter(BaseRule):
             self.validateTextBox(0, 240)
 
 
-    def runAction(self, actionid, Builder, channeldata):
-        #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
-        if actionid == RULES_ACTION_CHANNEL_START: 
-            self.storedFilterValue = Builder.fileListFilter
-            filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": quote((self.optionValues[2]))}
-            log("Filter for HandleFilter is = " + str(filter))
-            for i in range(len(self.optionValues)):
-                if len(self.optionValues[i]) == 0:
-                    return channeldata
-            Builder.fileListFilter = filter
-        elif actionid == RULES_ACTION_CHANNEL_STOP:
-            Builder.fileListFilter = self.storedFilterValue
-        return channeldata
-           
-
-class UPNP(BaseRule):
-    def __init__(self):
-        self.myId         = 63
-        self.name         = "UPNP Lookup"
-        self.description  = ''
-        self.optionLabels = ['UPNP Lookup']
-        self.optionValues = [False]
-        self.actions = [RULES_ACTION_CHANNEL_JSON]
-        self.selectBoxOptions = [[False,True]]
+    def runAction(self, actionid, builder, channeldata):
         
-
-    def copy(self):
-        return UPNP()
-
-
-    def getTitle(self):
-        return 'UPNP Lookup %s'%({True:'Enabled',False:'Disabled'}[self.optionValues[0]])
+        if actionid == RULES_ACTION_CHANNEL_START: 
+            self.storedValues[0] = builder.filter #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
+            builder.filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": quote((self.optionValues[2]))}
+        elif actionid == RULES_ACTION_CHANNEL_STOP: 
+            builder.filter = self.storedValues[0]
+        self.log("runAction, setting filter = %s"%(builder.filter))
+        return channeldata
             
-
-    def onAction(self, act, optionindex):
-        self.onActionToggleBool(optionindex)
-        return self.optionValues[optionindex]
-
-
-    def runAction(self, actionid, Channels, Builder):
-        if actionid == RULES_ACTION_CHANNEL_JSON:
-            if channel['path'].startswith('upnp://'):
-                channel['path'] = Builder.jsonRPC.chkUPNP(channel['path'])
-        return channel
+            

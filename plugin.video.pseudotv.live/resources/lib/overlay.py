@@ -73,9 +73,10 @@ class Overlay(xbmcgui.WindowXML):
     def onInit(self):
         try:
             self.log('onInit')
-            self.staticOverlay  = SETTINGS.getSettingBool("Static_Overlay")
             self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
             self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
+            self.staticOverlay  = SETTINGS.getSettingBool("Static_Overlay")
+            self.channelBugVal  = SETTINGS.getSettingInt("Channel_Bug_Interval")
 
             self.container = self.getControl(40000)
             
@@ -230,15 +231,14 @@ class Overlay(xbmcgui.WindowXML):
             
     def bugToggle(self, state=True):
         try:
-            bugVal  = SETTINGS.getSettingInt("Channel_Bug_Interval")
-            if bugVal == -1: 
+            if self.channelBugVal == -1: 
                 onVAL  = self.getTimeRemaining()
                 offVAL = .1
-            elif bugVal == 0:  
+            elif self.channelBugVal == 0:  
                 onVAL  = random.randint(300,600)
                 offVAL = random.randint(300,600)
             else:
-                onVAL  = bugVal * 60
+                onVAL  = self.channelBugVal * 60
                 offVAL = round(onVAL // 2)
  
             wait = {True:float(onVAL),False:float(offVAL)}[state]

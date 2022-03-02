@@ -332,7 +332,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             itemList = [getItem(info) for info in infoList if info.get('label')]
             select   = self.dialog.selectDialog(itemList,LANGUAGE(30121)%(key.title()),useDetails=True,multi=False)
             if select is not None: return itemList[select]
-        except Exception as e: self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
+        except Exception as e: 
+            self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
+            return xbmcgui.ListItem()
 
 
     def getSmartPlaylistName(self, fle):
@@ -366,6 +368,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def validateInput(self, retval, key, channelData):
         self.log('validateInput')
+        print(retval, key)
         if retval is None:   return None  , channelData
         elif key == 'rules': return None  , channelData
         elif key == 'clear': return retval, channelData

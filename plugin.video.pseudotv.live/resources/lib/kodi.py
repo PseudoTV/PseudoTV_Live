@@ -474,6 +474,17 @@ class Dialog:
         if playable: listitem.setProperty("IsPlayable","true")
         return listitem
              
+             
+    def colorDialog(self, xml='', items=[], preselect=[], heading=ADDON_NAME):
+        # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga571ffd3c58c38b1f81d4f98eedb78bef
+        # <colors>
+          # <color name="white">ffffffff</color>
+          # <color name="grey">7fffffff</color>
+          # <color name="green">ff00ff7f</color>
+        # </colors>
+        # dialog.colorpicker('Select color', 'ff00ff00', 'os.path.join(xbmcaddon.Addon().getAddonInfo("path"),"colors.xml")')
+        return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
+             
         
     def _okDialog(self, msg, heading):
         if self.okDialogThread.is_alive():
@@ -627,6 +638,7 @@ class Dialog:
             ## 3	ShowAndGetWriteableDirectory
             retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
         if monitor: self.toggleInfoMonitor(False)
+        if options is not None and default == retval: return
         return retval
         
         

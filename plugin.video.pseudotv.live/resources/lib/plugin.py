@@ -21,8 +21,7 @@ from resources.lib.globals     import *
 from resources.lib.cache       import Cache
 from resources.lib.concurrency import PoolHelper
 from resources.lib.jsonrpc     import JSONRPC 
-# from resources.lib.channels    import Channels
-from resources.lib.rules       import RulesList
+from resources.lib.rules       import RulesList, ChannelList
 
 class Plugin:
     currentChannel  = ''
@@ -43,8 +42,12 @@ class Plugin:
         self.dialog     = Dialog()
         self.pool       = PoolHelper()
         self.jsonRPC    = JSONRPC(inherited=self)
-        # self.channels   = Channels()
-        self.runActions = RulesList().runActions
+        self.ruleList   = RulesList()
+        self.runActions = self.ruleList.runActions
+        self.chanList   = self.ruleList.channels
+        
+        self.seekTLRNC  = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.seekTHLD   = SETTINGS.getSettingInt('Seek_Threshold%')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -70,7 +73,7 @@ class Plugin:
 
 
     @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True)#channel-surfing buffer
-    def getChannel(self, chname, id, radio=False, second_attempt=False):
+    def matchChannel(self, chname, id, radio=False, second_attempt=False):
         def _matchChannel(channel):
             if channel.get('label') == chname:
                 for key in ['broadcastnow', 'broadcastnext']:
@@ -85,13 +88,14 @@ class Plugin:
                 
         if not second_attempt and brutePVR(override=True): 
             self.dialog.notificationDialog(LANGUAGE(30059))
-            return self.getChannel(chname, id, radio, second_attempt=True)
+            return self.matchChannel(chname, id, radio, second_attempt=True)
         return {}
         
-        
+
     @cacheit(checksum=getInstanceID(),json_data=True)
     def getChannelID(self, chname, id, radio=False): # Convert PseudoTV Live id into a Kodi channelID
-        channel = self.getChannel(chname, id, radio)
+        self.log('getChannelID, id = %s'%(id))
+        channel = self.matchChannel(chname, id, radio)
         return {'channelid':channel.get('channelid',-1),'uniqueid':channel.get('uniqueid',-1)}
         
 
@@ -167,28 +171,24 @@ class Plugin:
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
         
-        #todo to slow move to parser
-        # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
-        # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
-        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        try:    pvritem['citem'].update(self.chanList.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         
         if nowitem:
             found = True
             if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'): #detect loopback
                 nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
-                seekTLRNC = SETTINGS.getSettingInt('Seek_Tolerance')
-                seekTHLD  = SETTINGS.getSettingInt('Seek_Threshold%')
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
-                self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],seekTLRNC))
-                self.log('playChannel, progresspercentage = %s, Seek_Threshold = %s'%(nowitem['progresspercentage'],seekTHLD))
+                self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],self.seekTLRNC))
+                self.log('playChannel, progresspercentage = %s, Seek_Threshold = %s'%(nowitem['progresspercentage'],self.seekTHLD))
                 
-                if round(nowitem['progress']) <= seekTLRNC:
+                if round(nowitem['progress']) <= self.seekTLRNC: # near start or new content, play from the beginning.
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
                     
-                elif round(nowitem['progresspercentage']) > seekTHLD: # near end, avoid callback; override nowitem and queue next show.
+                elif round(nowitem['progresspercentage']) > self.seekTHLD: # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
             else: 
@@ -266,10 +266,8 @@ class Plugin:
         pvritem = self.buildChannel(name, id, isPlaylist=True, radio=True)
         nowitem = pvritem.get('broadcastnow',{})  # current item
         
-        #todo to slow move to parser
-        # try:    pvritem['citem'].update(self.channels.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
-        # except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
-        pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
+        try:    pvritem['citem'].update(self.chanList.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
+        except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         
         if nowitem:

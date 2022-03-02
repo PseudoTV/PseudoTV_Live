@@ -22,7 +22,7 @@ from resources.lib.parsers    import AVIParser
 from resources.lib.parsers    import MKVParser
 from resources.lib.parsers    import FLVParser
 from resources.lib.parsers    import TSParser
-from resources.lib.parsers    import STRMParser
+from resources.lib.parsers    import NFOParser
 from resources.lib.parsers    import VFSParser
  
 class VideoParser:
@@ -37,7 +37,7 @@ class VideoParser:
 
 
     def getVideoLength(self, filename, fileItem={}):
-        log("VideoParser: getVideoLength " + filename)
+        log("VideoParser: getVideoLength %s"%filename)
         if len(filename) == 0:
             log("VideoParser: getVideoLength, No file name specified")
             return 0
@@ -60,7 +60,7 @@ class VideoParser:
         elif ext in self.TSExts:
             self.parser = TSParser.TSParser()
         elif ext in self.STRMExts:
-            self.parser = STRMParser.STRMParser()
+            self.parser = NFOParser.NFOParser()
         elif filename.startswith(tuple(self.VFSPaths)):
             self.parser = VFSParser.VFSParser(fileItem)
         else:
@@ -68,5 +68,9 @@ class VideoParser:
             return 0
             
         duration = int(self.parser.determineLength(filename))
+        if duration == 0:
+            log("VideoParser: getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
+            self.parser = NFOParser.NFOParser()
+            duration = int(self.parser.determineLength(filename))
         log('VideoParser: getVideoLength, duration = %s'%(duration))
         return duration
