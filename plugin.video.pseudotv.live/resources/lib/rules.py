@@ -503,14 +503,14 @@ class DisableOverlay(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, player, channeldata):
+    def runAction(self, actionid, player, pvritem):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.showOverlay
             player.showOverlay = self.optionValues[0]
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.showOverlay = self.storedValues[0]
         self.log("runAction, setting showOverlay = %s"%(player.showOverlay))
-        return channeldata
+        return pvritem
 
 
 class ForceSubtitles(BaseRule):
@@ -541,14 +541,14 @@ class ForceSubtitles(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, player, channeldata):
+    def runAction(self, actionid, player, pvritem):
         if actionid == RULES_ACTION_PLAYER_START:
             self.storedValues[0] = player.lastSubState
             player.lastSubState  = self.optionValues[0]
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.lastSubState = self.storedValues[0]
         self.log("runAction, setting lastSubState = %s"%(player.lastSubState))
-        return channeldata
+        return pvritem
 
  
 class seekControl(BaseRule):
@@ -688,4 +688,9 @@ class HandleFilter(BaseRule):
         self.log("runAction, setting filter = %s"%(builder.filter))
         return channeldata
             
-            
+# todo control rules
+# self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
+# self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
+# self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
+# self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
+# self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))

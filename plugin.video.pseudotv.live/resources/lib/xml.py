@@ -356,10 +356,10 @@ class XMLTV:
             pitem['star-rating'] = [{'value': '%s/10'%(int(round(float(item['stars']))))}]
                       
         if item.get('director',''):
-            pitem['credits']['director'] = [self.cleanString(item['director'])]
+            pitem['credits']['director'] = [self.cleanString(director) for director in item['director']]
             
         if item.get('actor',''):
-            pitem['credits']['actor'] = item['actor']
+            pitem['credits']['actor'] = [self.cleanString(actor) for actor in item['actor']]
 
         if item.get('catchup-id',''):
             pitem['catchup-id'] = item['catchup-id']
@@ -371,12 +371,12 @@ class XMLTV:
         if item.get('new',False): 
             pitem['new'] = '' #write empty tag, tag == True
         
-        rating = item.get('rating','')
+        rating = item.get('rating','NA')
         if rating != 'NA':
             if rating.lower().startswith('tv'): 
                 pitem['rating'] = [{'system': 'VCHIP', 'value': rating}]
             else:  
-                pitem['rating'] = [{'system': 'MPAA', 'value': rating}]
+                pitem['rating'] = [{'system': 'MPAA', 'value': rating}] #todo support international rating systems
             
         if item.get('episode-num',{}): 
             pitem['episode-num'] = [(item['episode-num'].get('xmltv_ns',''), 'xmltv_ns'),
@@ -428,4 +428,4 @@ class XMLTV:
     @staticmethod
     def cleanString(text):
         if text == ', ' or not text: text = LANGUAGE(30161) #"Unavailable"
-        return text
+        return escape(text)

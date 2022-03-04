@@ -837,7 +837,7 @@ msgid "Show Static Effect"
 msgstr ""
 
 msgctxt "#30206"
-msgid "Half Cores"
+msgid "Artwork changes might propagate slowly over time."
 msgstr ""
 
 msgctxt "#30207"

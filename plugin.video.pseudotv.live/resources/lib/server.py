@@ -18,6 +18,7 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
+from resources.lib.fileaccess  import FileLock
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
@@ -139,6 +140,7 @@ class Announcement:
             
 class RequestHandler(BaseHTTPRequestHandler):
     monitor = xbmc.Monitor()
+    globalFileLock = FileLock()
     
     def __init__(self, request, client_address, server):
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
@@ -156,10 +158,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             content = "application/vnd.apple.mpegurl"
         elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
             path    = XMLTVFLEPATH
-            content = "text/xml"
+            content = "application/xml"
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
-            content = "text/xml"
+            content = "application/xml"
         else: return
             
         self.send_response(200)
@@ -167,11 +169,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
-        with xbmcvfs.File(path, 'rb') as f:
-            while not self.monitor.abortRequested():
-                chunk = f.read(CHUNK_SIZE).encode()
-                if not chunk: break
-                self.wfile.write(chunk)
+        with fileLocker(self.globalFileLock):
+            with xbmcvfs.File(path, 'rb') as f:
+                while not self.monitor.abortRequested():
+                    chunk = f.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
+                    if not chunk: break
+                    self.wfile.write(chunk)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):

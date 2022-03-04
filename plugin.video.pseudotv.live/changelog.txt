@@ -1,8 +1,9 @@
 v.0.3.6
+-Added limits on xmltv meta (Writers, Actors, Directors and Genres limited to 5 entries each).
 -Improved Channel manager path selection, content validation and seek checking.
 -Added Framework to introduce "Advanced Channel Rules".
 -Added Fallback .nfo duration parsing. If "Parse for Accurate Duration Meta" is enabled and both the Kodi Library and file are missing duration meta. A matching filename nfo will be parsed for meta.
--Notice if you are enjoying this project, please consider making a donation; See readme for details.
+-Notice If you are enjoying this project, please consider making a donation; See readme for details.
 
 v.0.3.5
 -Notice Moved Cache folder incl. logo folder to "Centralized File Location". Default path changed to "special://profile/addon_data/plugin.video.pseudotv.live/cache".

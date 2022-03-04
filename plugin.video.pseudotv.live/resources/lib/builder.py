@@ -152,9 +152,9 @@ class Builder:
 
     @cacheit(checksum=getInstanceID(),json_data=True)
     def parseSmartPlaylist(self, file):
+        sort  = {}
+        media = 'video'
         try: 
-            sort  = {}
-            media = 'video'
             xml   = FileAccess.open(file, "r")
             dom   = parse(xml)
             xml.close()
@@ -275,30 +275,21 @@ class Builder:
     def buildFileList(self, citem, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(citem['id'],path,limit,sort,filter,limits))
         if path.startswith(LANGUAGE(30174)):#seasonal
-            def getSeason():
-                try:    return {'September':'startrek',
-                                'October'  :'horror',
-                                'December' :'xmas',
-                                'May'      :'starwars'}[datetime.datetime.now().strftime('%B')]
-                except: return  'none'
-            path = path.format(list=getSeason(),limit=250)
-
-        if path.endswith('.xsp'): #smartplaylist
-            media, sort = self.parseSmartPlaylist(path)
-        # elif path.endswith'.xml'): #nodes
-        else:
-            # sort = self.runActions('', citem, inherited=self) #todo set secondary sort rules via adv. rules. ex. Mixed Path - TV (sort=episode) & Movies (sort=random).
-            if not sort: #set fallback (defalut) sort method when none is provided.
-                if   path.startswith('videodb://tvshows'): sort = {"method": "episode"}
-                elif path.startswith('videodb://movies'):  sort = {"method": "random"}
-                elif path.startswith('musicdb://songs'):   sort = {"method": "random"}
-                else:                                      sort = {"method": "random"}
+            path = path.format(list=SEASONS.get(datetime.datetime.now().strftime('%B'),'none'),limit=250)
+            
+        if not sort: #set fallback (default) sort methods when none is provided.
+            if   path.endswith('.xsp'): media, sort = self.parseSmartPlaylist(path) #smartplaylist
+            elif path.startswith('videodb://tvshows'): sort = {"method": "episode"} #tvshows
+            elif path.startswith('videodb://movies'):  sort = {"method": "random"}  #movies
+            elif path.startswith('musicdb://songs'):   sort = {"method": "random"}  #music
+            else:                                      sort = {"method": "random"}  #other
             
         fileList = []
         dirList  = [{'file':path}]
         self.loopback = {}
         
         while not self.writer.monitor.abortRequested() and (len(fileList) < limit):
+            #walk complete path until filelist limit is reached.
             if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or len(dirList) == 0: break
             dir = dirList.pop(0)
             try: 
@@ -397,7 +388,8 @@ class Builder:
                     
                     if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                         seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
-                    else: fileList.append(item)
+                    else: 
+                        fileList.append(item)
                         
                     if self.pDialog:
                         self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.chanName,int((len(seasoneplist+fileList)*100)//page))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))

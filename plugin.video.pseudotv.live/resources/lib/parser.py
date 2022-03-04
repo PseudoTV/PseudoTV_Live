@@ -100,7 +100,7 @@ class Writer:
             item['desc']        = file['plot']
             item['length']      = file['duration']
             item['sub-title']   = (file.get('episodetitle','') or '')
-            item['categories']  = (file.get('genre','')        or ['Undefined'])
+            item['categories']  = (file.get('genre','')        or ['Undefined'])[:5]
             item['type']        = file.get('type','video')
             item['new']         = int(file.get('playcount','1')) == 0
             item['thumb']       = getThumb(file,SETTINGS.getSettingInt('EPG_Artwork'))
@@ -117,9 +117,9 @@ class Writer:
 
             item['rating']      = cleanMPAA(file.get('mpaa','') or 'NA')
             item['stars']       = (file.get('rating','')        or '0')
-            item['writer']      = ', '.join(file.get('writer',[]))
-            item['director']    = ', '.join(file.get('director',[]))
-            item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role','')) for actor in file.get('cast',[]) if actor.get('name')]
+            item['writer']      = ', '.join(file.get('writer',[])[:5])
+            item['director']    = file.get('director',[])[:5]
+            item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role','')) for actor in file.get('cast',[])[:5] if actor.get('name')]
 
             file['citem']       = citem #channel item (stale data due to xmltv storage) use for reference.
             item['fitem']       = file  #raw kodi fileitem/listitem, contains citem both passed through 'writer' xmltv param.

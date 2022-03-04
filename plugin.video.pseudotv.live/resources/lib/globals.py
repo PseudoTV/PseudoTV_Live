@@ -27,6 +27,7 @@ from itertools                 import cycle, chain, zip_longest
 from six.moves                 import urllib 
 from contextlib                import contextmanager, closing
 from xml.dom.minidom           import parse, Document
+from xml.sax.saxutils          import escape, unescape
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
@@ -222,6 +223,11 @@ LOG_TYPE            = {0:{'level':xbmc.LOGDEBUG  ,'priority':3,'description':"In
                        1:{'level':xbmc.LOGINFO   ,'priority':4,'description':"Something has happened. It's not a problem, we just thought you might want to know. Fairly excessive output that most people won't care about."},
                        2:{'level':xbmc.LOGWARNING,'priority':2,'description':"Something potentially bad has happened. If Kodi did something you didn't expect, this is probably why. Watch for errors to follow."},
                        3:{'level':xbmc.LOGERROR  ,'priority':1,'description':"This event is bad. Something has failed. You likely noticed problems with the application be it skin artifacts, failure of playback a crash, etc."}}
+
+SEASONS             = {'September':'startrek',
+                       'October'  :'horror',
+                       'December' :'xmas',
+                       'May'      :'starwars'}
 
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
