@@ -86,9 +86,12 @@ class Plugin:
             match = _matchChannel(channel)
             if match: return match
                 
-        if not second_attempt and brutePVR(override=True): 
-            self.dialog.notificationDialog(LANGUAGE(30059))
-            return self.matchChannel(chname, id, radio, second_attempt=True)
+        if not second_attempt:
+            setInstanceID()
+            if brutePVR(override=True): 
+                self.dialog.notificationDialog(LANGUAGE(30059))
+                return self.matchChannel(chname, id, radio, second_attempt=True)
+        else: setRestartRequired()
         return {}
         
 
@@ -152,7 +155,10 @@ class Plugin:
                 listitems = [liz]
                 
             self.log('contextPlay, listitems size = %s'%(len(listitems)))
-            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
+            for idx,lz in enumerate(listitems):
+                path = lz.getPath()
+                if isStack(path): lz.setPath(translateStack(path))#translate vfs stacks to local..
+                self.channelPlaylist.add(lz.getPath(),lz,idx)
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             return self.player.play(self.channelPlaylist, startpos=0)
 
@@ -174,10 +180,12 @@ class Plugin:
         try:    pvritem['citem'].update(self.chanList.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
         except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
+        litem = PROPERTIES.getPropertyDict('Last_Played_NowItem')
+        print('litem',litem.get('broadcastid',random.random()),nowitem.get('broadcastid',-1))
         
         if nowitem:
             found = True
-            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'): #detect loopback
+            if nowitem.get('broadcastid',-1) != litem.get('broadcastid',random.random()): #detect loopback
                 nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -187,17 +195,27 @@ class Plugin:
                 if round(nowitem['progress']) <= self.seekTLRNC: # near start or new content, play from the beginning.
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
-                    
+                    self.log('playChannel, progress start at the beginning')
                 elif round(nowitem['progresspercentage']) > self.seekTHLD: # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
+            # elif litem.get('isStack',False):
+                # writer = getWriter(litem.get('writer',{}))
+                # if isStack(writer['file']):
+                    # writer['file'] = buildStack(splitStacks(writer['file'])[1:])
+                    # print('writer',writer)
+                    # litem['writer'] = setWriter(LANGUAGE(30161),litem)
+                    # print(litem)
+                # nowitem = litem
+                # self.log('playChannel, stack detected advancing queue to next stack')
             else: 
                 nowitem = nextitems.pop(0)
                 self.log('playChannel, loopback detected advancing queue to nextitem')
-            PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
             
             writer = getWriter(nowitem.get('writer',{}))
             liz    = self.dialog.buildItemListItem(writer)
+            path   = liz.getPath()
+            print('writer',writer,'path',path)
             self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
             
             if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
@@ -206,11 +224,13 @@ class Plugin:
                 liz.setProperty('resumetime' , str(nowitem['progress']))       #secs
                 liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                 
-                # url  = liz.getPath()
-                # file = writer.get('originalfile','')
-                # if isStack(url) and not hasStack(url,file):
-                    # self.log('playChannel, playing stack with url = %s'%(url))
-                    # liz.setPath('stack://%s'%(' , '.join(stripStack(url, file))))#remove pre-roll stack from seek offset video.
+                file = writer.get('originalfile','')
+                if isStack(path) and not hasStack(path,file):
+                    self.log('playChannel, nowitem isStack with path = %s'%(path))
+                    liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
+            elif isStack(path):
+                liz.setPath(translateStack(path))#translate vfs stacks to local..
+            self.log('playChannel, playing path = %s'%(liz.getPath()))
             
             if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
                 lastitem  = nextitems.pop(-1)
@@ -218,10 +238,12 @@ class Plugin:
                 lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(False))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem)
-            
+                
+            nowitem['isStack']       = isStack(liz.getPath())
             pvritem['broadcastnow']  = nowitem
             pvritem['broadcastnext'] = nextitems
             liz.setProperty('pvritem',dumpJSON(pvritem))
+            PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
             
             self.channelPlaylist.clear()
             xbmc.sleep(100)
@@ -231,32 +253,12 @@ class Plugin:
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
 
-            # if isStack(listitems[0].getPath()):
-                # url = 'plugin://%s/?mode=vod&name=%s&id=%s&channel=%s&radio=%s'%(ADDON_ID,quoteString(listitems[0].getLabel()),quoteString(encodeString(listitems[0].getPath())),quoteString(citem['id']),'False')
-                # self.log('playChannel, isStack calling playVOD url = %s'%(url))
-                # listitems[0].setPath(url) #test to see if stacks play better as playmedia.
-                # return self.player.play(listitems[0].getPath(),listitems[0])
-                
-            # listitems = []
-            # paths = splitStacks(liz.getPath())
-            # paths.append(pvritem['callback'])
-            # listitems[0].setPath('stack://%s'%(' , '.join(url)))
-            
-            # for idx,path in enumerate(paths):
-                # print(idx,path)
-                # lz = liz
-                # lz.setPath(path)
-                # listitems.append(lz)
-                # print(listitems)
-                # self.channelPlaylist.add(path,lz,idx)
-            # self.log('playChannel, set callback stack with paths = %s'%(paths))
-
             if isPlaylist:
                 self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
                 self.player.play(self.channelPlaylist)
                 xbmc.sleep(100)
-                return xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
-                
+                if isBusyDialog(): xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
+                return
         else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
@@ -301,8 +303,8 @@ class Plugin:
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                 return self.player.play(self.channelPlaylist)
-
-        else: self.playbackError()
+        else: 
+            self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
 
 
@@ -315,5 +317,4 @@ class Plugin:
 
 
     def playbackError(self):
-        setInstanceID()
         self.dialog.notificationDialog(LANGUAGE(30001))

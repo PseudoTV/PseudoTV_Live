@@ -20,8 +20,9 @@
  
 import os, json, traceback
 
-from kodi_six               import xbmc, xbmcaddon
-from datetime               import timedelta
+from kodi_six                  import xbmc, xbmcaddon
+from datetime                  import timedelta
+from contextlib                import contextmanager, closing
 
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
@@ -58,10 +59,21 @@ def cacheit(expiration=timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days')), 
         return decorated
     return decorator
 
-
 class Cache:
-    cache = SimpleCache() 
+    cache    = SimpleCache()
+    isLocked = False
     
+    @contextmanager
+    def cacheLocker(self): #simplecache not thread safe, threadlocks don't appear avoid collisions? Hack avoidance.
+        if self.isLocked:
+            while not xbmc.Monitor().abortRequested() and self.isLocked:
+                if xbmc.Monitor().waitForAbort(0.001): break
+        self.isLocked = True
+        try: yield
+        finally:
+            self.isLocked = False
+
+
     def __init__(self, mem_cache=True, is_json=False):
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
@@ -72,13 +84,16 @@ class Cache:
         
 
     def set(self, name, data, checksum=ADDON_VERSION, expiration=timedelta(minutes=15), json_data=False):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
-        self.log('set, name = %s, checksum = %s'%(name,checksum))
-        self.cache.set(name.lower(),data,checksum,expiration,json_data)
+        if data and data is not None:
+            if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
+            self.log('set, name = %s, checksum = %s'%(name,checksum))
+            with self.cacheLocker():
+                self.cache.set(name.lower(),data,checksum,expiration,json_data)
         return data
         
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False):
         if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         self.log('get, name = %s, checksum = %s'%(name,checksum))
-        return self.cache.get(name.lower(),checksum,json_data)
+        with self.cacheLocker():
+            return self.cache.get(name.lower(),checksum,json_data)

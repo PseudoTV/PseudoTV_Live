@@ -137,7 +137,7 @@ msgid "%s is busy, try again later..."
 msgstr ""
 
 msgctxt "#30030"
-msgid "Insert Fillers (not available in PVR Callback mode)"
+msgid "Insert Fillers"
 msgstr ""
 
 msgctxt "#30031"
@@ -249,7 +249,7 @@ msgid "Delete [M3U/XMLTV] Files?"
 msgstr ""
 
 msgctxt "#30058"
-msgid "Something went wrong, Lets try again..."
+msgid ""
 msgstr ""
 
 msgctxt "#30059"

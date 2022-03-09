@@ -569,12 +569,13 @@ class Dialog:
         if propItem: 
             listitem.setProperties(propItem)
         if infoItem: 
+            if infoItem.get('label'):  listitem.setLabel(infoItem.pop('label',''))
+            if infoItem.get('label2'): listitem.setLabel2(infoItem.pop('label2',''))
             listitem.setInfo(mType, infoItem)
         else: 
-            listitem.setInfo(mType, {'mediatype': 'video',
-                                     'Label' : label1,
-                                     'Label2': label2,
-                                     'Title' : label1})
+            listitem.setLabel(label1)
+            listitem.setLabel2(label2)
+            listitem.setInfo(mType, {'mediatype': 'video', 'Title' : label1})
                                          
         if artItem: 
             listitem.setArt(artItem)
@@ -608,7 +609,7 @@ class Dialog:
                     
             listitems = self.pool.poolList(buildMenuItem,options)
             select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
-            if not select is None:
+            if select is not None:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS
                     # listitems = self.pool.poolList(buildMenuItem,options)
                     # select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)

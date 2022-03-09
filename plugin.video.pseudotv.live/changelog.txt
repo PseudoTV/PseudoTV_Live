@@ -1,6 +1,14 @@
 v.0.3.6
+-Added Resource Pack enforcement to client instances.
+-Improved Channel Bug and "OnNext" notification timing.
+-Improved Global fillers framework. Feature Pending!
+-Improved Navigation while overlay is active.
+ -"Enter/OK/Select" Info.
+ -"Up/Down" Browse Channels.
+ -"Left" Channel List.
+ -"Right" Channel Guide.
 -Added limits on xmltv meta (Writers, Actors, Directors and Genres limited to 5 entries each).
--Improved Channel manager path selection, content validation and seek checking.
+-Improved Channel manager path selection, content validation and seek compatibility.
 -Added Framework to introduce "Advanced Channel Rules".
 -Added Fallback .nfo duration parsing. If "Parse for Accurate Duration Meta" is enabled and both the Kodi Library and file are missing duration meta. A matching filename nfo will be parsed for meta.
 -Notice If you are enjoying this project, please consider making a donation; See readme for details.

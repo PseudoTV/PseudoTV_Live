@@ -1047,7 +1047,6 @@
 					<dependencies>
 						<dependency type="enable">
                             <and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isPlaylist),true)</condition>
                                 <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                             </and>
                         </dependency>
@@ -1066,7 +1065,6 @@
 						<options>
 							<option label="30220">0</option>
 							<option label="30223">1</option>
-							<option label="30224">2</option>
 						</options>
 					</constraints>
                     <dependencies>
@@ -1085,7 +1083,6 @@
 						<options>
 							<option label="30220">0</option>
 							<option label="30223">1</option>
-							<option label="30224">2</option>
 						</options>
 					</constraints>
                     <dependencies>

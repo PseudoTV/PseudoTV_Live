@@ -49,7 +49,9 @@ class VideoParser:
         base, ext = os.path.splitext(filename)
         ext = ext.lower()
         
-        if ext in self.AVIExts:
+        if filename.startswith(tuple(self.VFSPaths)):
+            self.parser = VFSParser.VFSParser(fileItem)
+        elif ext in self.AVIExts:
             self.parser = AVIParser.AVIParser()
         elif ext in self.MP4Exts:
             self.parser = MP4Parser.MP4Parser()
@@ -61,14 +63,12 @@ class VideoParser:
             self.parser = TSParser.TSParser()
         elif ext in self.STRMExts:
             self.parser = NFOParser.NFOParser()
-        elif filename.startswith(tuple(self.VFSPaths)):
-            self.parser = VFSParser.VFSParser(fileItem)
         else:
             log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
             return 0
             
         duration = int(self.parser.determineLength(filename))
-        if duration == 0:
+        if duration == 0 and not filename.startswith(tuple(self.VFSPaths)):
             log("VideoParser: getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
             self.parser = NFOParser.NFOParser()
             duration = int(self.parser.determineLength(filename))

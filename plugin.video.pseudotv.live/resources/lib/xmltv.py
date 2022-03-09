@@ -349,7 +349,6 @@ class Writer:
                                    'generator-info-url'. *Optional*
 
         """
-        self.encoding = encoding
         self.data = {'date': date,
                      'source-info-url': source_info_url,
                      'source-info-name': source_info_name,
@@ -627,4 +626,4 @@ class Writer:
         if pretty_print:
             indent(self.root)
         et = ElementTree(self.root)
-        et.write(file, encoding=self.encoding, xml_declaration=True)
+        et.write(file, encoding=locale, xml_declaration=True)

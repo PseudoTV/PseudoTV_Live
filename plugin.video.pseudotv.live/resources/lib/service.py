@@ -180,7 +180,7 @@ class Player(xbmc.Player):
             return self.stopAction()
         
         if self.playingPVRitem.get('isPlaylist',False):
-            self.log('changeAction, playing playlist')
+            self.log('changeAction, playing playlist or stack')
             #todo pop broadcastnext? keep pvritem in sync with playlist pos?
         else:
             self.isPseudoTV = False
@@ -396,7 +396,7 @@ class Service:
     def _restart(self):
         self.log('_restart')
         self.http._stop()
-        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))     
+        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))
         self.__init__()
         
         

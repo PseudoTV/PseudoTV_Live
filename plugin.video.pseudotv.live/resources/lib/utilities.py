@@ -101,9 +101,11 @@ class Utilities:
         if param is None:
             return self.buildMenu(param)
         elif param == 'Show_Readme':  
-            return showReadme()
+            with busy_dialog():
+                return showReadme()
         elif param == 'Show_Changelog':
-            return showChangelog()
+            with busy_dialog():
+                return showChangelog()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Clear_Import':

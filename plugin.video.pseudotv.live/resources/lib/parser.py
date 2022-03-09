@@ -222,9 +222,9 @@ class Writer:
             if not self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30286)),autoclose=90000): 
                 return False
        
-        pDialog = self.dialog.progressBGDialog()
-        types   = CHAN_TYPES.copy()
+        types = CHAN_TYPES.copy()
         types.remove(LANGUAGE(30033)) #exclude Imports from auto tuning. ie. Recommended Services
+        pDialog = self.dialog.progressBGDialog()
         for idx, type in enumerate(types):
             self.log('autoTune, type = %s'%(type))
             pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))

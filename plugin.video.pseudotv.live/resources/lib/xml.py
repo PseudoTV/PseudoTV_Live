@@ -428,4 +428,4 @@ class XMLTV:
     @staticmethod
     def cleanString(text):
         if text == ', ' or not text: text = LANGUAGE(30161) #"Unavailable"
-        return escape(text)
+        return text

@@ -39,9 +39,32 @@ def chkPort(port=0, redirect=False):
                 s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
                 port = s.getsockname()[1]
                 log("server: chkPort, Port is already in-use: changing to %s"%(port))
-                return port
-        else: ("server: chkPort, Failed! %s"%(e), xbmc.LOGERROR)
+        else: log("server: chkPort, Failed! %s"%(e), xbmc.LOGERROR)
+        return port
         
+def getSettings():
+    return {'Select_Channels'     :SETTINGS.getSetting('Select_Channels'),
+            'Select_TV_Networks'  :SETTINGS.getSetting('Select_TV_Networks'),
+            'Select_TV_Shows'     :SETTINGS.getSetting('Select_TV_Shows'),
+            'Select_TV_Genres'    :SETTINGS.getSetting('Select_TV_Genres'),
+            'Select_Movie_Genres' :SETTINGS.getSetting('Select_Movie_Genres'),
+            'Select_Movie_Studios':SETTINGS.getSetting('Select_Movie_Studios'),
+            'Select_Mixed_Genres' :SETTINGS.getSetting('Select_Mixed_Genres'),
+            'Select_Mixed'        :SETTINGS.getSetting('Select_Mixed'),
+            'Select_Music_Genres' :SETTINGS.getSetting('Select_Music_Genres'),
+            'Select_Recommended'  :SETTINGS.getSetting('Select_Recommended'),
+            'Select_Imports'      :SETTINGS.getSetting('Select_Imports'),
+            'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
+            'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
+            'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
+            'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
+            'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
+    
+def setSettings(settings):
+    for key, value in settings.items():
+        try:    SETTINGS.setSettings(key, value)
+        except: pass
+    
 class Discovery:
     shutdown = False
     
@@ -80,10 +103,17 @@ class Discovery:
                 if isClient():
                     data, addr = sock.recvfrom(1024) #wait for a packet
                     if data.startswith(ADDON_ID.encode()):
-                        response = data[len(ADDON_ID):]
-                        if response and (discovery != response.decode()): 
-                            self.log('_start, discovered remote host %s'%(response.decode()))
-                            setDiscovery(response.decode())
+                        payload = data[len(ADDON_ID):]
+                        if payload:
+                            print('_start raw payload',payload)
+                            payload = loadJson((data[len(ADDON_ID):]).decode())
+                            print('_start json payload',payload)
+                            host = payload.get('host','')
+                            print('_start host, discovery',host,discovery)
+                            if discovery != host: 
+                                self.log('_start: discovered remote host = %s, payload = %s'%(host,payload))
+                                setDiscovery(host)
+                                setSettings(payload.get('settings',{}))
                 elif discovery != LOCAL_HOST: 
                     self.log('_start, discovered local host %s'%(LOCAL_HOST))
                     setDiscovery(LOCAL_HOST)
@@ -95,6 +125,7 @@ class Discovery:
 
 class Announcement:
     shutdown = False
+    settings = getSettings()
     
     def __init__(self, monitor=None):
         if monitor is None:
@@ -118,9 +149,10 @@ class Announcement:
         
     def _start(self):
         self.log('_start')
-        UDP_PORT = SETTINGS.getSettingInt('UDP_PORT')
+        UDP_PORT   = SETTINGS.getSettingInt('UDP_PORT')
         LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
-        data = '%s%s'%(ADDON_ID,LOCAL_HOST)
+        payload    = {'id':ADDON_ID,'version':ADDON_VERSION,'host':LOCAL_HOST,'settings':self.settings}
+        data       = '%s%s'%(ADDON_ID,dumpJSON(payload))
         
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))
@@ -158,10 +190,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             content = "application/vnd.apple.mpegurl"
         elif self.path.lower() == '/%s'%(XMLTVFLE.lower()):
             path    = XMLTVFLEPATH
-            content = "application/xml"
+            content = "text/xml"
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
-            content = "application/xml"
+            content = "text/xml"
         else: return
             
         self.send_response(200)

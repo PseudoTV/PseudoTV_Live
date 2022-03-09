@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
-    <backgroundcolor>0x00000000</backgroundcolor>
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY,True,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY,False,10000)</onunload> 
     <controls>

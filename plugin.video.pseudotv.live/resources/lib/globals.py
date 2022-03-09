@@ -18,7 +18,7 @@
 
 # -*- coding: utf-8 -*-
 
-import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib
+import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib, operator
 import datetime, time, _strptime, base64, binascii, random, hashlib
 import json, codecs, collections, uuid, queue
 
@@ -51,6 +51,7 @@ PROPERTIES          = Properties()
 #folders
 IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
 
@@ -101,6 +102,7 @@ LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
 #resources
 OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
+BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
 LOGO                = (COLOR_LOGO if bool(SETTINGS.getSettingInt('Color_Logos')) else MONO_LOGO).replace(ADDON_PATH,'special://home/addons/%s/'%(ADDON_ID)).replace('\\','/')
@@ -135,6 +137,7 @@ PROMPT_DELAY        = 4000  #msecs
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
+IMG_EXTS            = ['.png','.jpg','.gif']
 
 #builder
 RULES_ACTION_CHANNEL       = 1 
@@ -154,7 +157,7 @@ RULES_ACTION_PLAYER_STOP   = 13
 RULES_ACTION_OVERLAY       = 21
 
 #overlay globals
-NOTIFICATION_CHECK_TIME     = 15.0 #seconds
+NOTIFICATION_CHECK_TIME     = 30.0 #seconds
 NOTIFICATION_TIME_REMAINING = 900  #seconds
 NOTIFICATION_PLAYER_PROG    = 85   #percent
 NOTIFICATION_DISPLAY_TIME   = 30   #seconds
@@ -361,6 +364,9 @@ def setBusy(state):
 def isBusy():
     return PROPERTIES.getPropertyBool("BUSY.WORKING")
     
+def isBusyDialog():
+    return xbmc.getCondVisibility('Window.IsActive(busydialognocancel)')
+    
 def isPaused():
     return xbmc.getCondVisibility('Player.Paused')
 
@@ -468,8 +474,8 @@ def doUtilities():
 def getDiscovery():
     return PROPERTIES.getProperty('discovery')
 
-def setDiscovery( value):
-    return PROPERTIES.setProperty('discovery',value)
+def setDiscovery(host):
+    return PROPERTIES.setProperty('discovery',host)
 
 def setInstanceID():
     PROPERTIES.setProperty('InstanceID',uuid.uuid4())
@@ -874,9 +880,7 @@ def showReadme():
         markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
         markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
         return markdown
-        
-    with busy_dialog(): 
-        Dialog().textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()), heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+    Dialog().textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()), heading=(LANGUAGE(30273)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
 
 def chkVersion():
     if hasVersionChanged():
@@ -897,9 +901,7 @@ def showChangelog():
         text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
         text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
         return text
-        
-    with busy_dialog(): 
-        Dialog().textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+    Dialog().textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(30134)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
 
 def loadGuide():
     xbmc.executebuiltin("Dialog.Close(all)")
@@ -1064,45 +1066,46 @@ def saveURL(url, file):
         return FileAccess.exists(file)
     except Exception as e: 
         log("saveURL, Failed! %s"%e, xbmc.LOGERROR)
-    
-def interleave(*args): #interleave multi-lists, while preserving order
-    try:
-        iters = list(map(iter, args))
-        while not xbmc.Monitor().abortRequested() and iters:
-            it = random.choice(iters)
-            try: yield next(it)
-            except StopIteration:
-                iters.remove(it)
-    except Exception as e: 
-        log("interleave, Failed! %s"%(e), xbmc.LOGERROR)
-        yield list(chain.from_iterable(zip_longest(*args)))[0]
 
-def isStack(path,file=None):
+def isStack(path,file=None): #is path a stack
     if file is not None: 
         return path.startswith('stack://%s'%(file))
     else:
         return path.startswith('stack://')
 
-def hasStack(path,file=None):
-    if isStack(path,file): return splitStacks(path)
-    return None
+def hasStack(path,file=None): #does path has stack paths, return paths
+    log('hasStack, path = %s, file = %s'%(path,file))
+    if isStack(path,file): 
+        return splitStacks(path)
 
-def splitStacks(path): #split stack for indv. files.
+def splitStacks(path): #split stack path for indv. files.
     log('splitStacks, path = %s'%(path))
     return (path.split('stack://')[1]).split(' , ')
                                       
-def stripStack(path, file): #strip pre-rolls from stack, return file.
-    log('stripStack, path = %s, file = %s'%(path,file))
-    paths = path.split(' , ')
-    for idx, path in enumerate(paths.copy()):
-        if not path == file: paths.pop(idx)
-        elif path == file: break
-    return paths
+def stripPreroll(path, file): #strip prerolls from stack, return redacted paths.
+    log('stripPreroll, path = %s, file = %s'%(path,file))
+    paths = ((path.split('stack://')[1]).split(file)[1]).split(' , ')
+    paths.insert(0,file)
+    return buildStack(paths)
+
+def stripPostroll(path, file): #strip postrolls from stack, return redacted paths.
+    log('stripPostroll, path = %s, file = %s'%(path,file))
+    paths = ((path.split('stack://')[1]).split(file)[0]).split(' , ')
+    paths.insert(0,file)
+    return buildStack(paths)
+
+def buildStack(paths):#build paths list to stack string.
+    if len(paths) == 1: return paths[0]
+    else: return 'stack://%s'%(' , '.join(paths))
     
-def buildStack(paths):
-    stack = 'stack://%s'
-    return stack%(' , '.join(paths))
-    
+def translateStack(path):#translate vfs stacks to local
+    log('translateStack, path = %s'%(path))
+    paths = splitStacks(path)
+    for idx, file in enumerate(paths.copy()):
+        if file.lower().startswith("special://"):
+            paths[idx] = xbmcvfs.translatePath(file)
+    return buildStack(paths)
+
 def cleanMPAA(mpaa):
     mpaa = mpaa.lower()
     if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
@@ -1182,3 +1185,38 @@ def quoteImage(imagestring):
                 # self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
                 # yield FileAccess.copy(orgpath, copypath)
 
+def interleave(*seqs): 
+    #interleave multi-lists, while preserving seqs order
+    #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
+    return filter(None,chain.from_iterable(zip_longest(*seqs)))
+        
+def intersperse(*seqs):
+    #interleave multi-lists, while preserving order distribution
+    def distribute(seq):
+        for i, x in enumerate(seq, 1):
+            yield i/(len(seq) + 1), x
+    distributions = map(distribute, seqs)
+    #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
+    for _, x in sorted(chain(*distributions), key=operator.itemgetter(0)):
+        yield x
+        
+def distribute(*seq):
+    #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
+    iters = list(map(iter, seqs))
+    while not xbmc.Monitor().abortRequested() and iters:
+        it = random.choice(iters)
+        try:   yield next(it)
+        except StopIteration:
+            iters.remove(it)
+
+def splitFilename(filename):
+    # filename = 'wlogo.png' 
+    # return 'wlogo','png'
+    return os.path.splitext(filename)
+    
+def splitFilePath(filepath, translate=False):
+    # filepath = 'special://home/addons/plugin.video.pseudotv.live/resources/skins/default/media/wlogo.png' 
+    # return 'special://home/addons/plugin.video.pseudotv.live/resources/skins/default/media/','wlogo.png'
+    path, file = os.path.split(filepath)
+    if translate: path = xbmcvfs.translatePath(path)
+    return path, file

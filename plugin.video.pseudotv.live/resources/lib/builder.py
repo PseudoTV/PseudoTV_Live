@@ -19,13 +19,13 @@
 # -*- coding: utf-8 -*-
 
 from resources.lib.globals     import *
+from resources.lib.fillers     import Fillers
 
 class Builder:
     def __init__(self, writer=None):
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
-            
         self.writer           = writer
         self.cache            = writer.cache
         self.pool             = writer.pool
@@ -37,25 +37,27 @@ class Builder:
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
-        
+        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split('|')},
+                                 "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split('|')},
+                                 "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split('|')},
+                                 "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0   ,"paths":(SETTINGS.getSetting('Resource_Trailers')).split('|')}}
+                                
         self.pCount           = 0
         self.channelCount     = 0
+        self.pMSG             = ''
         self.chanName         = ''
         self.chanError        = []
+        self.loopback         = {}
         self.filter           = {}
         self.sort             = {}
         self.limits           = {}
-        self.loopback         = {}
         self.limit            = PAGE_LIMIT
         self.pDialog          = None
-        self.pMSG             = ''
+        self.fillers          = Fillers(self)
         
-        self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split(',')},
-                                 "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split(',')},
-                                 "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split(',')},
-                                 "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0   ,"paths":(SETTINGS.getSetting('Resource_Trailers')).split(',')}}#todo check adv. rules get settings
+        
 
-        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -176,19 +178,23 @@ class Builder:
         self.log('getFileList, id: %s, radio = %s'%(citem['id'],radio))
         try:
             # global values prior to channel rules
-            self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
-            self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
-            self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
-            self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
-            self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
+            # self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
+            # self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
+            # self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
+            # self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
+            # self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
+            # self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split('|')     ,"files":[]},
+                                     # "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split('|')     ,"files":[]},
+                                     # "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split('|') ,"files":[]},
+                                     # "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0   ,"paths":(SETTINGS.getSetting('Resource_Trailers')).split('|')    ,"files":[]}}
             
-            self.filter   = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
-            self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
-            self.limits   = {}#{"end":0,"start":0,"total":0}
-            self.limit    = PAGE_LIMIT
+            # self.filter   = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+            # self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
+            # self.limits   = {}#{"end":0,"start":0,"total":0}
+            # self.limit    = PAGE_LIMIT
             valid         = False
             
-            self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+            citem = self.runActions(RULES_ACTION_CHANNEL_START, citem, citem, inherited=self)
             
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
@@ -215,7 +221,7 @@ class Builder:
                     return False
                 
                 cacheResponse = self.runActions(RULES_ACTION_CHANNEL_ITEMS, citem, cacheResponse, inherited=self)
-                cacheResponse = list(interleave(*cacheResponse))# interleave multi-paths, while keeping filelist order.
+                cacheResponse = list(interleave(cacheResponse))[0]# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
                 
@@ -223,11 +229,10 @@ class Builder:
                     cacheResponse = self.fillCells(cacheResponse)
 
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
-            self.fillBCTs = False #temp debug force disabled
-            if self.fillBCTs and not citem.get('radio',False): 
-                cacheResponse = self.injectBCTs(citem, cacheResponse) 
+            # if self.fillBCTs and not citem.get('radio',False): 
+                # cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
                 
-            self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
+            cacheResponse = self.runActions(RULES_ACTION_CHANNEL_STOP, citem, cacheResponse, inherited=self)
             return sorted(cacheResponse, key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, Failed! %s"%(e), xbmc.LOGERROR)
         return False
@@ -351,8 +356,9 @@ class Builder:
                     item['streamdetails'] = self.writer.jsonRPC.getStreamDetails(file, media)
 
                 dur = self.writer.jsonRPC.getDuration(file, item, self.accurateDuration)
-                if dur > 0:
+                if dur > self.minDuration:
                     item['duration'] = dur
+                    item['originalpath'] = path
                     if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
                         item['year'] = 0
                         
@@ -424,176 +430,3 @@ class Builder:
                     'stop'        : 0,
                     'art'         : citem.get('art',{"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO})}
         return [tmpItem.copy() for idx in range(entries)]
-        
-        
-    def buildLocalTrailers(self, citem, fileList):
-        self.log("buildLocalTrailers, citem = %s, fileList = %s"%(citem,len(fileList)))
-        def getItem(item):
-            file = item.get('trailer','')
-            if file: return {'label':item['label'],'duration':self.writer.jsonRPC.parseDuration(file, item),'path':'','file':file,'art':item.get('art',{})}
-        return list(filter(None,list(set([getItem(fileItem) for fileItem in fileList]))))
-    
-    
-    def injectBCTs(self, citem, fileList):
-        self.log("injectBCTs, citem = %s, fileList = %s"%(citem,len(fileList)))
-        # # todo use zip to inject bcts?
-        # # for r, b, f, c, t in zip(ratings, bumpers, filelist, commercials, trailers):
-        
-        # #bctTypes ex. {"ratings" :{"min":1,"max":1,"enabled":True  ,"paths":[SETTINGS.getSetting('Resource_Ratings')]}}
-        # if not fileList: return fileList
-        # lstop            = 0
-        # nfileList        = list()
-        # bctItems         = {key:(self.writer.jsonRPC.resources.buildResourceType(key, self.bctTypes.get(key,{}).get("paths",[]))) for key in self.bctTypes.keys() if self.bctTypes.get(key,{}).get('enabled',False)}
-        # print('bctItems',bctItems)
-        
-        # chname           = citem.get('name','')
-        # chcats           = citem.get('groups',[])
-        # print('chname',chname,'chcats',chcats)
-        
-        # if 'ratings' in bctItems:
-            # ratings = bctItems.get('ratings',{})
-            # print('ratings',ratings)
-        # else: ratings = {}
-        
-        # if 'bumpers' in bctItems:
-            # bumpers = bctItems.get('bumpers',{}).get(chname.lower(),[])
-            # # bumpers = bctItems.get('bumpers',{})
-            # # if isinstance(bumpers,list): bumpers = bumpers[0].get(chname.lower(),[])
-            # bumpers.extend(bctItems.get('bumpers',{}).get('root',[]))
-            # print('bumpers',bumpers)
-        # else: bumpers = []
-        
-        # min_commercials  = self.bctTypes.get('commercials',{}).get('min',0) #0==Disabled,1==Auto
-        # max_commercials  = self.bctTypes.get('commercials',{}).get('max',4)
-        # auto_commercials = min_commercials == 1
-        # if 'commercials' in bctItems:
-            # commercials = bctItems.get('commercials',{}).get(chname.lower(),[])
-            # commercials.extend(bctItems.get('commercials',{}).get('root',[]))
-            # if isinstance(commercials,list) and len(commercials) > 0: random.shuffle(commercials)
-            # print('commercials',commercials)
-        # else: 
-            # commercials = []
-            # auto_commercials = False
-                  
-        # min_trailers  = self.bctTypes.get('trailers',{}).get('min',0) #0==Disabled,1==Auto
-        # max_trailers  = self.bctTypes.get('trailers',{}).get('max',4)
-        # auto_trailers = min_trailers == 1
-        # if 'trailers' in bctItems:  
-            # trailers = []   
-            # for chcat in chcats: trailers.extend(bctItems.get('trailers',{}).get(chcat.lower(),[]))
-            # trailers.extend(bctItems.get('trailers',{}).get('root',[]))
-            # trailers.extend(self.buildLocalTrailers(citem, fileList))
-            # if isinstance(trailers,list) and len(trailers) > 0: random.shuffle(trailers)
-            # print('trailers',trailers)
-        # else: 
-            # trailers = []
-            # auto_trailers = False
-        
-        # for idx,fileItem in enumerate(fileList):
-            # file = fileItem.get('file','')
-            # fileItem['originalfile'] = file
-            # fileItem['start'] = fileItem['start'] if lstop == 0 else lstop
-            # fileItem['stop']  = fileItem['start'] + fileItem['duration']
-            
-            # if not file.startswith(tuple(VFS_TYPES)): #stacks not compatible
-                # if isStack(file): 
-                    # paths = splitStacks(file)
-                # else: 
-                    # paths = [file]
-                    
-                # oPaths = paths.copy()
-                # stop   = fileItem['stop']
-                # end    = abs(roundTimeUp(stop) - stop) #auto mode
-                
-                # print('duration',fileItem['duration'])
-                # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-                # print('stop',datetime.datetime.fromtimestamp(stop))
-                # print('end',end)
-                
-                # #ratings (auto&max == 1)
-                # mpaa = cleanMPAA(fileItem.get('mpaa',''))
-                # if is3D(fileItem): mpaa += ' (3DSBS)'  
-                # rating = ratings.get(mpaa.lower(), {})
-                # if rating:
-                    # paths.insert(0,rating.get('file'))
-                    # end -= rating.get('duration')
-                    # print('end ratings', end)
-                    # print('mpaa',mpaa)  
-                    # print('rating',rating) 
-                    
-                # #bumpers(auto&max == 1)
-                # if bumpers:
-                    # bumper = random.choice(bumpers)
-                    # paths.insert(0,bumper.get('file'))
-                    # end -= bumper.get('duration')
-                    # print('end bumper', end)
-                    # print('chname',chname)
-                    # print('bumper',bumper)
-                    
-                # CTItems = set()
-                # cnt_commercials = 0
-                # cnt_trailers    = 0
-                # #commercials
-                # if commercials and not auto_commercials:
-                    # for cnt in range(min_commercials):
-                        # commercial = random.choice(commercials)
-                        # CTItems.add(commercial.get('file'))
-                        # end -= commercial.get('duration')
-                        # print('end commercial', end)
-                        # print('commercial',commercial)
-                            
-                # #trailers
-                # if trailers and not auto_trailers:
-                    # for cnt in range(min_trailers):
-                        # trailer = random.choice(trailers)
-                        # CTItems.add(trailer.get('file'))
-                        # end -= trailer.get('duration')
-                        # print('end trailer', end)
-                        # print('trailer',trailer)
-                        
-                # #auto fill POST_ROLL
-                # if auto_commercials | auto_trailers:
-                    # while end > 0 and not self.writer.monitor.abortRequested():
-                        # if self.writer.monitor.waitForAbort(0.001): break
-                        # print('autofill while loop',end)
-                        # stpos = end
-                        # if commercials and auto_commercials and cnt_commercials <= max_commercials:
-                            # commercial = random.choice(commercials)
-                            # CTItems.add(commercial.get('file'))
-                            # end -= commercial.get('duration')
-                            # print('end commercial', end)
-                            # print('commercial',commercial)
-                        
-                        # if trailers and auto_trailers and cnt_trailers <= max_trailers:
-                            # trailer = random.choice(trailers)
-                            # CTItems.add(trailer.get('file'))
-                            # end -= trailer.get('duration')
-                            # print('end trailer', end)
-                            # print('trailer',trailer)
-                            
-                        # if stpos == end: break #empty list
-                        
-                # CTItems = list(CTItems)
-                # print('CTItems',CTItems)
-                # if len(CTItems) > 0:
-                    # random.shuffle(CTItems)#shuffle, then random sample for increased diversity. 
-                    # paths.extend(random.sample(CTItems, len(CTItems)))
-                    
-                # #todo trailers, commercials when "Auto" loop fill till end time close to 0. else fill random min,max count.
-                # #trailers, commercials do not match by chname, random.choice from list, for variation users change resource folder in adv. rules.
-                # #trailers always incorporate local_trailers from the media in current fileList playlist.
-                
-                # print('oPaths',oPaths)
-                # print('paths',paths)
-                    
-                # if oPaths != paths:
-                    # fileItem['file'] = buildStack(paths)
-                    # fileItem['stop'] = abs(roundTimeUp(stop) - abs(end))
-                    # fileItem['duration'] = (datetime.datetime.fromtimestamp(fileItem['stop']) - datetime.datetime.fromtimestamp(fileItem['start'])).seconds
-                    # print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
-                    # print('fileItem',fileItem)
-
-            # lstop = fileItem['stop']  #new stop time, offset next start time.
-            # nfileList.append(fileItem)
-        # return nfileList
-        return fileList

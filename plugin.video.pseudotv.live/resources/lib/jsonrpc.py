@@ -26,6 +26,7 @@ except: from queue             import PriorityQueue
 class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
+    isLocked = False
 
     def __init__(self, inherited=None):
         if inherited is None:
@@ -48,6 +49,17 @@ class JSONRPC:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
+
+    
+    @contextmanager
+    def sendLocker(self):
+        if self.isLocked:
+            while not self.inherited.monitor.abortRequested() and self.isLocked:
+                if self.inherited.monitor.waitForAbort(0.001): break
+        self.isLocked = True
+        try: yield
+        finally:
+            self.isLocked = False
 
 
     @cacheit(checksum=xbmc.getInfoLabel('System.BuildVersion'),expiration=datetime.timedelta(days=28),json_data=True)
@@ -79,9 +91,32 @@ class JSONRPC:
                 self.cache.set(cacheName, results, checksum, expiration)
             except: 
                 results = [],[]
+        self.log('getListDirectory return dirs = %s, files = %s'%(len(results[0]), len(results[1])))
         return results
 
 
+    def getFileDirectory(self, path, media='video', ignoreDuration=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=28)):
+        self.log('getFileDirectory path = %s, checksum = %s'%(path, checksum))
+        cacheName = 'getFileDirectory.%s'%(path)
+        results   = self.cache.get(cacheName, checksum)
+        if not results:
+            try:    
+                results = []
+                json_response = self.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
+                for item in json_response:
+                    file = item['file']
+                    if item['filetype'] == 'file':
+                        dur = self.parseDuration(file, item)
+                        if dur == 0 and not ignoreDuration: continue
+                        results.append({'label': item['label'], 'duration': dur, 'path': path, 'file': file})
+                    else:
+                        results.extend(self.getFileDirectory(file, media, ignoreDuration, checksum, expiration))
+                self.cache.set(cacheName, results, checksum, expiration)
+            except Exception as e: self.log('getFileDirectory failed! %s'%(e))
+        self.log('getFileDirectory return results = %s'%(len(results)))
+        return results
+        
+        
     def isVFSPlayable(self, path, media='video', chkSeek=True, dia=None):
         self.log('isVFSPlayable, path = %s, media = %s' % (path, media))
         dirs = []
@@ -169,7 +204,9 @@ class JSONRPC:
             
     def sendJSON(self, command):
         if self.queueRunning: return self.pool.executor(sendJSON,command)
-        else:                 return sendJSON(command)
+        else:
+            with self.sendLocker():
+                return sendJSON(command)
 
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
@@ -432,8 +469,9 @@ class JSONRPC:
 
         ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
         rundiff = int(percentDiff(runtime, duration))
-        runcond = [rundiff <= 45, rundiff != 0, rundiff != 100]
-        runsafe = True if not False in runcond else False
+        runsafe = False
+        if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)):
+            runsafe = True
         self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
         ## save parsed duration to Kodi database, if enabled.
         if save is None: save = SETTINGS.getSettingBool('Store_Duration')

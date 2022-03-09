@@ -28,7 +28,6 @@ except:
     hasPillow = False
 
 class Resources:
-    IMG_EXTS = ('.png','.jpg','.gif') #todo convert all formats to png.
     TEXTURES = 'Textures.xbt'
 
     def __init__(self, jsonRPC):
@@ -80,11 +79,11 @@ class Resources:
                 LANGUAGE(30171):{"label":"Custom"       ,"packs":custom_pack}}
 
 
-    def walkResource(self, id): #convert path from id to vfs, include version checksum 4 cache expiration
-        return self.walkDirectory(os.path.join('special://home/addons/%s'%id,'resources'),self.jsonRPC.getPluginMeta(id).get('version',ADDON_VERSION))
+    def walkResource(self, id, exts=IMG_EXTS): #convert path from id to vfs, include version checksum 4 cache expiration
+        return self.walkDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts,checksum=self.jsonRPC.getPluginMeta(id).get('version',ADDON_VERSION))
 
 
-    def walkDirectory(self, path, checksum=ADDON_VERSION): #recursively walk all folders, parse xbt textures.
+    def walkDirectory(self, path, exts=IMG_EXTS, checksum=ADDON_VERSION): #recursively walk all folders, parse xbt textures.
         def _parseXBT():
             resource = path.replace('/resources','').replace('special://home/addons/','resource://')
             walk.setdefault(resource,[]).extend(self.jsonRPC.getListDirectory(resource,checksum,expiration)[1])
@@ -92,12 +91,12 @@ class Resources:
             
         walk = dict()
         path = path.replace('\\','/')
-        self.log('walkDirectory, path = %s'%(path))
+        self.log('walkDirectory, path = %s, exts = %s'%(path,exts))
         expiration  = datetime.timedelta(days=28)
         dirs, files = self.jsonRPC.getListDirectory(path,checksum,expiration)
-        if self.TEXTURES in files: return _parseXBT()
-        else: walk.setdefault(path,[]).extend(list(filter(lambda f:f.endswith(self.IMG_EXTS),files)))
-        for dir in dirs: walk.update(self.walkDirectory(os.path.join(path, dir),checksum))
+        if    self.TEXTURES in files: return _parseXBT()
+        else: walk.setdefault(path,[]).extend(list(filter(lambda f:f.endswith(tuple(exts)),files)))
+        for dir in dirs: walk.update(self.walkDirectory(os.path.join(path, dir),exts,checksum))
         return walk
             
             
@@ -228,7 +227,7 @@ class Resources:
         for chname in chnames:
             for id in ids:
                 if not id.startswith('resource'): continue
-                for ext in self.IMG_EXTS:
+                for ext in IMG_EXTS:
                     logo = 'resource://%s/%s%s'%(id,chname,ext)
                     if FileAccess.exists(logo):
                         self.log('chkResource: chname = %s, type = %s found = %s'%(name,type,logo))
@@ -248,7 +247,7 @@ class Resources:
         
     def chkLocal(self, chname):
         for path in [IMAGE_LOC,self.LOGO_LOC]:
-            for ext in self.IMG_EXTS:
+            for ext in IMG_EXTS:
                 logo = os.path.join(path,'%s%s'%(chname,ext))
                 if FileAccess.exists(logo):
                     self.log('chkLocal: chname = %s found = %s'%(chname,logo))

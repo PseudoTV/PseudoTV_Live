@@ -26,11 +26,13 @@ class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
         self.playingTitle = ""
+        self.OnNextWait   = 300
             
             
     def onPlayBackStarted(self):
         self.overlay.log('onPlayBackStarted')
         self.playingTitle = xbmc.getInfoLabel('Player.Title')
+        self.OnNextWait   = self.getOnNextInterval()
         
         
     def onPlayBackEnded(self):
@@ -42,6 +44,19 @@ class Player(xbmc.Player):
     def onPlayBackStopped(self):
         self.overlay.log('onPlayBackStopped')
         self.overlay.closeOverlay()
+                
+                
+    def getPlayerTime(self):
+        self.overlay.log('getPlayerTime')
+        try:    return self.getTotalTime()
+        except: return 0
+
+        
+    def getOnNextInterval(self,interval=3):
+        totalTime = self.getPlayerTime()
+        if totalTime == 0: return
+        remaining = ((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval))
+        return remaining // interval
         
         
 class Overlay(xbmcgui.WindowXML):
@@ -100,6 +115,7 @@ class Overlay(xbmcgui.WindowXML):
         
             # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
             # https://github.com/xbmc/xbmc/issues/19467
+            # xbmcgui.lock()
             # self.videoWindow  = self.getControl(41000)
             # self.videoWindow.setPosition(0, 0)
             # self.videoWindow.setHeight(self.videoWindow.getHeight())
@@ -108,6 +124,7 @@ class Overlay(xbmcgui.WindowXML):
             # self.videoOverlay.setPosition(0, 0)
             # self.videoOverlay.setHeight(0)
             # self.videoOverlay.setWidth(0)
+            # xbmcgui.unlock()
             
             if self.load(): 
                 self.overlayLayer.setVisible(True)
@@ -173,16 +190,12 @@ class Overlay(xbmcgui.WindowXML):
         except: return 0
    
    
-    def playerAssert(self):
-        try:    
-            titleAssert    = self.listitems[0].getLabel() == self.myPlayer.playingTitle
-            remainAssert   = self.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
-            progressAssert = self.getPlayerProgress() >= 75.0
-            return (titleAssert & remainAssert & progressAssert)
-        except: return False
-        
-        
-    def cancelOnNext(self):
+    def playSFX(self, filename, cached=True):
+        self.log('playSFX, filename = %s, cached = %s'%(filename,cached))
+        xbmc.playSFX(filename, useCached=cached)
+   
+   
+    def cancelOnNext(self): #channel changing and/or not playing cancel on next
         self.onNext.setVisible(False)
         if self.onNextToggleThread.is_alive(): 
             try: 
@@ -192,9 +205,9 @@ class Overlay(xbmcgui.WindowXML):
 
 
     def updateOnNext(self):
-        try:
+        try: #if playlist, pop older played item and refresh meta container.
             self.log('updateOnNext, isPlaylist = %s'%(self.isPlaylist))
-            self.cancelOnNext()            
+            self.cancelOnNext()
             if self.isPlaylist:
                 if len(self.listitems) > 0:
                     self.listitems.pop(0)
@@ -205,12 +218,23 @@ class Overlay(xbmcgui.WindowXML):
         
 
     def onNextChk(self):
+        def playerAssert():
+            try: #test playing item, contains title? remaining time / progress within parameters?
+                titleAssert    = self.listitems[0].getLabel() == self.myPlayer.playingTitle
+                remainAssert   = self.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
+                progressAssert = self.getPlayerProgress() >= 75.0
+                return (titleAssert & remainAssert & progressAssert)
+            except: 
+                return False
         try:
-            if self.onNextToggleThread.is_alive() and not self.overlayLayer.isVisible(): 
-                self.cancelOnNext()
-            elif not self.onNextToggleThread.is_alive() and self.playerAssert():
-                self.onNextToggle()
-            
+            if self.onNextToggleThread.is_alive():
+                if not self.overlayLayer.isVisible(): 
+                    self.cancelOnNext()
+            else:
+                if playerAssert(): 
+                    self.onNextToggle()
+                    
+             #poll player every XXsecs.
             self.onNextChkThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
             self.onNextChkThread.name = "onNextChkThread"
             self.onNextChkThread.start()
@@ -219,33 +243,33 @@ class Overlay(xbmcgui.WindowXML):
 
     def onNextToggle(self, state=True):
         try:
-            self.log('onNextToggle, state = %s'%(state))
-            wait   = {True:float(10),False:float(random.randint(180,300))}[state]
-            nstate = not bool(state)
+            self.playSFX(BING_WAV)
+            wait = {True:(NOTIFICATION_CHECK_TIME//2),False:float(self.myPlayer.OnNextWait)}[state]
+            self.log('onNextToggle, state = %s, wait = %s'%(state,wait))
             self.onNext.setVisible(state)
-            self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [nstate])
+            self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [not bool(state)])
             self.onNextToggleThread.name = "onNextToggleThread"
             self.onNextToggleThread.start()
         except Exception as e: self.log("onNextToggle, Failed! %s"%(e), xbmc.LOGERROR)
             
             
     def bugToggle(self, state=True):
-        try:
+        def getWait(state):
             if self.channelBugVal == -1: 
                 onVAL  = self.getTimeRemaining()
-                offVAL = .1
-            elif self.channelBugVal == 0:  
+                offVAL = 0.1
+            elif self.channelBugVal == 0:
                 onVAL  = random.randint(300,600)
                 offVAL = random.randint(300,600)
             else:
                 onVAL  = self.channelBugVal * 60
                 offVAL = round(onVAL // 2)
- 
-            wait = {True:float(onVAL),False:float(offVAL)}[state]
+            return {True:float(onVAL),False:float(offVAL)}[state]
+        try:   
+            wait = getWait(state)
             self.log('bugToggle, state = %s, wait = %s'%(state,wait))
-            nstate = not bool(state)
             self.channelbug.setVisible(state)
-            self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
+            self.bugToggleThread = threading.Timer(wait, self.bugToggle, [not bool(state)])
             self.bugToggleThread.name = "bugToggleThread"
             self.bugToggleThread.start()
         except Exception as e: self.log("bugToggle, Failed! %s"%(e), xbmc.LOGERROR)
@@ -253,7 +277,10 @@ class Overlay(xbmcgui.WindowXML):
       
     def closeOverlay(self):
         self.log('closeOverlay')
-        threads = [self.bugToggleThread,self.onNextChkThread,self.onNextToggleThread]
+        threads = [self.bugToggleThread,
+                   self.onNextChkThread,
+                   self.onNextToggleThread]
+                   
         for thread_item in threads:
             if thread_item.is_alive(): 
                 try: 
@@ -264,18 +291,19 @@ class Overlay(xbmcgui.WindowXML):
 
 
     def onAction(self, act):
-        actionid = act.getId() #todo forward unused actions to executebuiltin to stop the need for double press.
-        self.log('onAction, actionid = %s'%(actionid))
-        if actionid == ACTION_MOVE_LEFT:
+        actionID = act.getId()
+        actionBC = act.getButtonCode()
+        self.log('onAction, actionID = %s, actionBC = %s'%(actionID,actionBC))
+        if actionID == ACTION_PREVIOUS_MENU:
+            xbmc.executebuiltin("Action(PreviousMenu)")
+        elif actionID == ACTION_MOVE_LEFT:
             xbmc.executebuiltin("ActivateWindowAndFocus(pvrosdchannels)")
-        elif actionid == ACTION_MOVE_RIGHT:
+        elif actionID == ACTION_MOVE_RIGHT:
             xbmc.executebuiltin("ActivateWindowAndFocus(pvrchannelguide)")
-        # elif actionid == ACTION_MOVE_UP: #todo channel surf to avoid 2x press? or user info action?
-            # xbmc.executebuiltin("Action(Info)")
-        # elif actionid == ACTION_MOVE_DOWN:
-            # xbmc.executebuiltin("Action(Info)")
-            
-        # elif actionid == ACTION_SELECT_ITEM:
-            # if not self.service.writer.jsonRPC.openWindow('videoosd'): 
-                # return
+        elif actionID == ACTION_MOVE_UP:
+            self.service.writer.jsonRPC.sendButton('Up')
+        elif actionID == ACTION_MOVE_DOWN:
+            self.service.writer.jsonRPC.sendButton('Down')
+        elif actionID == ACTION_SELECT_ITEM:
+            self.service.writer.jsonRPC.sendButton('I')
         self.closeOverlay()
