@@ -470,13 +470,12 @@ class JSONRPC:
         ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
         rundiff = int(percentDiff(runtime, duration))
         runsafe = False
-        if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)):
+        if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime):
             runsafe = True
         self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
         ## save parsed duration to Kodi database, if enabled.
         if save is None: save = SETTINGS.getSettingBool('Store_Duration')
-        if save and runsafe and (item.get('id', -1) > 0):
-            self.queDuration(item['type'], item.get('id', -1), duration)
+        if save and runsafe and (item.get('id', -1) > 0): self.queDuration(item['type'], item.get('id', -1), duration)
         if runsafe: runtime = duration
         self.log("parseDuration, returning runtime = %s" % (runtime))
         return runtime

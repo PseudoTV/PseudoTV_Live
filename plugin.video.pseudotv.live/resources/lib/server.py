@@ -105,8 +105,7 @@ class Discovery:
                     if data.startswith(ADDON_ID.encode()):
                         payload = data[len(ADDON_ID):]
                         if payload:
-                            print('_start raw payload',payload)
-                            payload = loadJson((data[len(ADDON_ID):]).decode())
+                            payload = loadJson(decodeString(payload.decode()))
                             print('_start json payload',payload)
                             host = payload.get('host','')
                             print('_start host, discovery',host,discovery)
@@ -152,7 +151,7 @@ class Announcement:
         UDP_PORT   = SETTINGS.getSettingInt('UDP_PORT')
         LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
         payload    = {'id':ADDON_ID,'version':ADDON_VERSION,'host':LOCAL_HOST,'settings':self.settings}
-        data       = '%s%s'%(ADDON_ID,dumpJSON(payload))
+        data       = '%s%s'%(ADDON_ID,encodeString(dumpJSON(payload)))
         
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))

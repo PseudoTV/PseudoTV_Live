@@ -167,7 +167,7 @@ class Library:
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
                 pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
                 for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or isClient(): return
+                    if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or isClient(): break
                     pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,int(((idx+1)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,msg))
                     

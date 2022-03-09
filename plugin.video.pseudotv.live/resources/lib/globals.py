@@ -833,7 +833,7 @@ def padLST(lst, targetLen):
 
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
-    except ZeroDivisionError: return 0
+    except ZeroDivisionError: return -1
 
 def moveUser(oldFolder, newFolder):
     if isClient(): return
