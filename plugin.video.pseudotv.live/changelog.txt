@@ -1,4 +1,5 @@
 v.0.3.6
+-Fixed "Future Days to display*" PVR & LiveTV settings syncing.
 -Fixed Duration parsing logic.
 -Added Resource Pack enforcement to client instances.
 -Improved Channel Bug and "OnNext" notification timing.

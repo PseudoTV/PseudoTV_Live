@@ -242,11 +242,13 @@ class Player(xbmc.Player):
         return not bool(cnx)
 
         
-class Monitor(xbmc.Monitor):    
+class Monitor(xbmc.Monitor):
+    
     def __init__(self):
         xbmc.Monitor.__init__(self)
         self.lastSettings        = getPTV_SETTINGS()
         self.pendingChange       = False
+        self.shutdown            = False
         self.pendingChangeThread = threading.Timer(30.0, self._onSettingsChanged)
         
         
@@ -302,11 +304,12 @@ class Monitor(xbmc.Monitor):
 
   
 class Service:
+    isLocked     = False
     isFirstRun   = True
     vault        = Vault()
     monitor      = Monitor()
     player       = Player()
-    http         = HTTP()
+    http         = HTTP(monitor)
     announcement = Announcement(monitor)
     discovery    = Discovery(monitor)
     
@@ -314,6 +317,7 @@ class Service:
         self.writer            = Writer(service=self)
         self.player.myService  = self
         self.monitor.myService = self
+        self.chkUpdateThread   = threading.Timer(0.5, self.chkUpdatePending)
         
         if self._initialize():
             self._startup()
@@ -365,9 +369,23 @@ class Service:
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
         
-                       
-    def chkUpdatePending(self):
-        if not (isBusy() | isClient()) and hasLibraryRun():
+        
+    def _chkUpdatePending(self):
+        if self.chkUpdateThread.is_alive():
+            try:
+                self.chkUpdateThread.cancel()
+                self.chkUpdateThread.join()
+            except: pass
+                
+        self.chkUpdateThread = threading.Timer(0.5, self.chkUpdatePending)
+        self.chkUpdateThread.name = "chkUpdateThread"
+        self.chkUpdateThread.start()
+                 
+                 
+    def chkUpdatePending(self, usethread=False):
+        if usethread: return self._chkUpdatePending()
+        elif not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
+            self.isLocked = True
             hasChannels = len(self.writer.channels.getChannels()) > 0
             if hasChannels:
                 self.isFirstRun = False
@@ -381,30 +399,21 @@ class Service:
                             brutePVR(override=True)
             elif self.isFirstRun:
                 setAutotuned(self.writer.autoTune())
-            
-            
+            self.isLocked = False
+
+ 
     def _initialize(self):
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
         funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources,chkRequiredSettings,updateIPTVManager]
         for idx, func in enumerate(funcs):
-            dia = self.writer.dialog.progressBGDialog(int((idx+1)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
+            dia = self.writer.dialog.progressBGDialog(int((idx)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()
-            func()
+            try:    func()
+            except: pass
+        self.writer.dialog.progressBGDialog(100, dia)
         return True
 
 
-    def _restart(self):
-        self.log('_restart')
-        self.http._stop()
-        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))
-        self.__init__()
-        
-        
-    def _tasks(self):
-        self.http._start()
-        chkDiscovery(getDiscovery())
-        
-              
     def _startup(self, waitForAbort=5, waitForStartup=15):
         self.log('_startup')
         pendingStop    = isShutdownRequired()
@@ -417,7 +426,7 @@ class Service:
                 self._shutdown()
         
         while not self.monitor.abortRequested():
-            self._tasks()
+            chkDiscovery(getDiscovery())
             
             isIdle         = self.monitor.chkIdle()
             pendingStop    = isShutdownRequired()
@@ -426,18 +435,20 @@ class Service:
             if   (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
             elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
             elif isIdle: 
-                self.chkUpdatePending()
-            
-        if pendingRestart: 
-            self._restart()
-        else:              
-            self._shutdown()
+                self.chkUpdatePending(usethread=True)
+                
+        if pendingRestart: self._restart()
+        else:              self._shutdown()
               
-          
+              
+    def _restart(self):
+        self.log('_restart')
+        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))
+        self.__init__()
+        
+        
     def _shutdown(self):
-        self.http._stop()
-        self.discovery._stop()
-        self.announcement._stop()
+        self.monitor.shutdown = True
         for thread in threading.enumerate():
             try: 
                 if thread.name == "MainThread": continue

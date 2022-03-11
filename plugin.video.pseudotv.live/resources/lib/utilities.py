@@ -115,7 +115,8 @@ class Utilities:
         else: 
             with busy_dialog():
                 PROPERTIES.setProperty('utilities',param)
-                return xbmc.Monitor().waitForAbort(2)
+                xbmc.Monitor().waitForAbort(2)
+                return
         return openAddonSettings(ctl)
 
                 

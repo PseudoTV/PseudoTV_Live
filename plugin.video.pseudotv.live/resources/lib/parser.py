@@ -213,7 +213,7 @@ class Writer:
         
 
     def autoTune(self):
-        if hasAutotuned(): return True#already ran or dismissed by user, check on next reboot.
+        if hasAutotuned() or isClient(): return True#already ran or dismissed by user, check on next reboot.
         elif self.backup.hasBackup():
             retval = self.dialog.yesnoDialog(LANGUAGE(30132)%(ADDON_NAME,LANGUAGE(30287)), yeslabel=LANGUAGE(30203),customlabel=LANGUAGE(30211),autoclose=90000)
             if   retval == 2: return self.recoverChannelsFromBackup()
@@ -293,7 +293,10 @@ class Writer:
             return [num for num in range(start,stop) if num not in enumbers]
                     
         for type in types:
-            if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): return
+            if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): 
+                self.log('buildPredefinedChannels, interrupted')
+                return
+                
             items = self.library.getLibraryItems(type, enabled=True)
             self.log('buildPredefinedChannels, type = %s, enabled items = %s'%(type,len(items)))
 
@@ -307,7 +310,10 @@ class Writer:
                 removeLST = echannels.copy()
 
                 for item in items:
-                    if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): return
+                    if self.monitor.waitForAbort(0.001) or self.monitor.isSettingsOpened(): 
+                        self.log('buildPredefinedChannels, interrupted')
+                        return
+                        
                     citem = self.channels.getCitem()
                     citem.update({'name'     :getChannelSuffix(item['name'], type),
                                   'path'     :item['path'],

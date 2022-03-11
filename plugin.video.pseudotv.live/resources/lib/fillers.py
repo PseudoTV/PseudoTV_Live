@@ -192,7 +192,9 @@ class Fillers:
                 # #auto fill POST_ROLL
                 # if auto_commercials | auto_trailers:
                     # while end > 0 and not self.writer.monitor.abortRequested():
-                        # if self.writer.monitor.waitForAbort(0.001): break
+                        # if self.writer.monitor.waitForAbort(0.001): 
+                            # self.log('injectBCTs, interrupted')
+                            # break
                         # print('autofill while loop',end)
                         # stpos = end
                         # if commercials and auto_commercials and cnt_commercials <= max_commercials:

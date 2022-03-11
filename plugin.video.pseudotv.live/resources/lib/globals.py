@@ -460,7 +460,7 @@ def hasPVRAddon():
     return xbmc.getCondVisibility("System.HasPVRAddon")
          
 def hasAddon(id):
-    if not id: return True
+    if not id: return False
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def isClient():
@@ -620,12 +620,15 @@ def sendJSON(command):
     return loadJSON(xbmc.executeJSONRPC(command))
 
 def installAddon(id, silent=False):
-    if hasAddon(id):
+    if not id: return False
+    elif hasAddon(id):
         if not addonEnabled(id): toggleADDON(id)
     else:
         xbmc.executebuiltin('InstallAddon("%s")'%(id))
         if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
-
+        if xbmc.Monitor().waitForAbort(15): return False
+    return hasAddon(id)
+        
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
 
@@ -713,10 +716,8 @@ def chkResources(silent=True):
         missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
         log('globals: chkResources, missing = %s'%(missing))
         for addon in missing:
-            try:
-                installAddon(addon, silent)
-                if xbmc.Monitor().waitForAbort(15): break
-            except: break
+            try:    installAddon(addon, silent)
+            except: continue
     elif not silent: 
         Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
 

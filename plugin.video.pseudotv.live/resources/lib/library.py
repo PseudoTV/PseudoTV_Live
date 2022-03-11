@@ -132,10 +132,12 @@ class Library:
                 self.chkLibraryThread.join()
             except: pass
                 
-        if isBusy(): wait = 30.0
+        if isBusy(): 
+            wait = 30.0
         else: 
             with busy(): 
-                self.fillLibraryItems()
+                if not self.fillLibraryItems():
+                    wait = 30.0
             
         self.chkLibraryThread = threading.Timer(wait, self.chkLibraryTimer)
         self.chkLibraryThread.name = "chkLibraryThread"
@@ -167,7 +169,10 @@ class Library:
                 self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
                 pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
                 for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or isClient(): break
+                    if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or isClient(): 
+                        self.log('fillLibraryItems, interrupted')
+                        return self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
+                        
                     pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
                     pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,int(((idx+1)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,msg))
                     
@@ -214,11 +219,11 @@ class Library:
                 PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
             PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
            
-        for type in CHAN_TYPES: 
-            fillType(type)
-            
-        setLibraryRun(True)
-        return self.writer.buildPredefinedChannels()
+        if not isClient():
+            for type in CHAN_TYPES: 
+                fillType(type)
+            setLibraryRun(True)
+            return self.writer.buildPredefinedChannels()
         
 
     def setLibraryItems(self, type, items):

@@ -169,7 +169,11 @@ class JSONRPC:
             if dia is not None:
                 dia = self.dialog.progressDialog(control=dia, message='%s\nWaiting for Playback (%ss)...'%(LANGUAGE(30142),waitTime))
                 if dia is None: break
-            if self.inherited.monitor.waitForAbort(1) or waitTime < 1: break
+                    
+            if self.inherited.monitor.waitForAbort(1) or waitTime < 1:   
+                self.log('isVFSSeekable, interrupted')
+                break
+                
             waitTime -= 1
             isPlaying = self.inherited.player.isPlaying()
             if isPlaying: getTime = int(self.inherited.player.getTime())

@@ -171,7 +171,8 @@ class XMLTV:
         
     def cleanProgrammes(self, programmes): # remove expired content
         try:
-            min = (self.writer.jsonRPC.getSettingValue('epg.pastdaystodisplay')  or 1)
+            SETTINGS.setSettingInt('Max_Days',(self.writer.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3))
+            min = (self.writer.jsonRPC.getSettingValue('epg.pastdaystodisplay') or 1)
             now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(days=min) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if strpTime(program['stop'].rstrip(),DTFORMAT) > now]
         except Exception as e: 

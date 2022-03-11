@@ -559,7 +559,7 @@ class seekControl(BaseRule):
         self.optionLabels     = ['Disable Seeking','Threshold Percentage','Tolerance Seconds']
         self.optionValues     = [False,SETTINGS.getSettingInt('Seek_Threshold%'),SETTINGS.getSettingInt('Seek_Tolerance')]
         self.actions          = [RULES_ACTION_PLAYBACK]
-        self.selectBoxOptions = [[True,False],list(range(85,101)),list(range(0,901))]
+        self.selectBoxOptions = [[True,False],list(range(85,101)),list(range(0,901,5))]
         
 
     def copy(self):

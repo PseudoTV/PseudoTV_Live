@@ -66,7 +66,9 @@ class Builder:
         #check channel configuration, verify and update paths, logos.
         channels = self.writer.channels.getChannels()
         for idx, citem in enumerate(channels):
-            if (self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened()): break
+            if (self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened()): 
+                self.log('verifyChannelItems, interrupted')
+                break
                 
             #check min. meta.
             if (not citem.get('name','') or not citem.get('path',None) or citem.get('number',0) < 1):
@@ -114,9 +116,8 @@ class Builder:
 
         for idx, channel in enumerate(channels):
             if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened():
-                self.pDialog = self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30204))
                 self.log('buildService, interrupted')
-                return
+                return self.writer.dialog.progressBGDialog(100, self.pDialog, message=LANGUAGE(30204))
                 
             channel         = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
             self.chanName   = channel['name']
@@ -295,7 +296,10 @@ class Builder:
         
         while not self.writer.monitor.abortRequested() and (len(fileList) < limit):
             #walk complete path until filelist limit is reached.
-            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or len(dirList) == 0: break
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or len(dirList) == 0: 
+                self.log('buildFileList, interrupted')
+                break
+                
             dir = dirList.pop(0)
             try: 
                 if fileList[0] == {}: 
@@ -332,7 +336,9 @@ class Builder:
             self.chanError.append(LANGUAGE(30317))
             
         for idx, item in enumerate(json_response):
-            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened(): break
+            if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened():  
+                self.log('buildFileList, interrupted')
+                break
 
             file     = item.get('file','')
             fileType = item.get('filetype','file')

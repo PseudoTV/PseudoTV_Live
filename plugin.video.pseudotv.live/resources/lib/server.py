@@ -43,18 +43,7 @@ def chkPort(port=0, redirect=False):
         return port
         
 def getSettings():
-    return {'Select_Channels'     :SETTINGS.getSetting('Select_Channels'),
-            'Select_TV_Networks'  :SETTINGS.getSetting('Select_TV_Networks'),
-            'Select_TV_Shows'     :SETTINGS.getSetting('Select_TV_Shows'),
-            'Select_TV_Genres'    :SETTINGS.getSetting('Select_TV_Genres'),
-            'Select_Movie_Genres' :SETTINGS.getSetting('Select_Movie_Genres'),
-            'Select_Movie_Studios':SETTINGS.getSetting('Select_Movie_Studios'),
-            'Select_Mixed_Genres' :SETTINGS.getSetting('Select_Mixed_Genres'),
-            'Select_Mixed'        :SETTINGS.getSetting('Select_Mixed'),
-            'Select_Music_Genres' :SETTINGS.getSetting('Select_Music_Genres'),
-            'Select_Recommended'  :SETTINGS.getSetting('Select_Recommended'),
-            'Select_Imports'      :SETTINGS.getSetting('Select_Imports'),
-            'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
+    return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
             'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
             'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
             'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
@@ -103,12 +92,10 @@ class Discovery:
                 if isClient():
                     data, addr = sock.recvfrom(1024) #wait for a packet
                     if data.startswith(ADDON_ID.encode()):
-                        payload = data[len(ADDON_ID):]
-                        if payload:
-                            payload = loadJson(decodeString(payload.decode()))
-                            print('_start json payload',payload)
+                        response = data[len(ADDON_ID):]
+                        if response:
+                            payload = loadJSON(decodeString(response.decode()))
                             host = payload.get('host','')
-                            print('_start host, discovery',host,discovery)
                             if discovery != host: 
                                 self.log('_start: discovered remote host = %s, payload = %s'%(host,payload))
                                 setDiscovery(host)
@@ -118,7 +105,9 @@ class Discovery:
                     setDiscovery(LOCAL_HOST)
             except: pass
                 
-            if (self.monitor.waitForAbort(1) or self.shutdown):
+            if (self.monitor.waitForAbort(1) or self.shutdown or self.monitor.shutdown):
+                self.shutdown = False
+                self.log('_start, shutting down')
                 break
 
 
@@ -165,7 +154,9 @@ class Announcement:
                 try:    sock.sendto(data.encode(), ('<broadcast>',UDP_PORT))
                 except: pass
         
-            if (self.monitor.waitForAbort(5) or self.shutdown):
+            if (self.monitor.waitForAbort(5) or self.shutdown or self.monitor.shutdown):
+                self.shutdown = False
+                self.log('_start, shutting down')
                 break
 
             
@@ -213,42 +204,77 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 class HTTP:
-    started = False
+    started  = False
+    restart  = False
+    shutdown = False
     
+    def __init__(self, monitor=None):
+        if monitor is None:
+            self.monitor = xbmc.Monitor()
+        else:
+            self.monitor = monitor
+        self._start()
+        
+            
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def _restart(self):
+        self.log('_restart')
+        self.restart = True
+        
+
     def _stop(self):
-        if not self.started: return
-        try:
-            self._server.shutdown()
-            self._server.server_close()
-            self._server.socket.close()
-            self._httpd_thread.join()
-            self.started = False
-            self.log('_start, stopped!')
-        except: pass
+        self.log('_stop')
+        self.shutdown = True
         
         
     def _start(self):
-        try:
-            if (self.started or isClient()): return
-            TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
-            port = chkPort(TCP_PORT,redirect=True)
-            if port is None:
-                raise Exception('Port In-Use!')
-            elif port != TCP_PORT:
-                SETTINGS.setSettingInt('TCP_PORT',port)
+        port = SETTINGS.getSettingInt('TCP_PORT')
+        while not self.monitor.abortRequested():
+            try:
+                client   = isClient()
+                TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
+                if self.started: 
+                    if    client: break
+                    elif  port != TCP_PORT:
+                        self._restart()
+                        break
+                    else: return
+                elif client: return
+                    
+                port = chkPort(TCP_PORT,redirect=True)
+                if port is None:
+                    raise Exception('Port In-Use!')
+                elif port != TCP_PORT:
+                    SETTINGS.setSettingInt('TCP_PORT',port)
+                    
+                LOCAL_HOST ='%s:%s'%(IP,port)
+                self.log("_start, %s"%(LOCAL_HOST))
+                PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
                 
-            LOCAL_HOST ='%s:%s'%(IP,port)
-            self.log("_start, %s"%(LOCAL_HOST))
-            PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
+                self._server = ThreadedHTTPServer((IP, port), RequestHandler)
+                self._server.allow_reuse_address = True
+                self._httpd_thread = threading.Thread(target=self._server.serve_forever)
+                self._httpd_thread.start()
+                self.started = True
+            except Exception as e: 
+                self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+                
+            if (self.monitor.waitForAbort(5) or self.shutdown or self.monitor.shutdown):
+                self.shutdown = False
+                self.log('_start, shutting down')
+                break
+        try:
+            if self.started:
+                self._server.shutdown()
+                self._server.server_close()
+                self._server.socket.close()
+                self._httpd_thread.join()
+                self.started = False
+        except: pass
             
-            self._server = ThreadedHTTPServer((IP, port), RequestHandler)
-            self._server.allow_reuse_address = True
-            self._httpd_thread = threading.Thread(target=self._server.serve_forever)
-            self._httpd_thread.start()
-            self.started = True
-        except Exception as e: 
-            self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+        if self.restart:
+            self.restart = False
+            self._start()
