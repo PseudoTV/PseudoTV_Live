@@ -231,7 +231,13 @@ SEASONS             = {'September':'startrek',
                        'October'  :'horror',
                        'December' :'xmas',
                        'May'      :'starwars'}
-
+                       
+HTML_ESCAPE         = {"&": "&amp;",
+                       '"': "&quot;",
+                       "'": "&apos;",
+                       ">": "&gt;",
+                       "<": "&lt;"}
+                       
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
             'm3uRefreshIntervalMins'      :'5',
@@ -464,7 +470,10 @@ def hasAddon(id):
     return xbmc.getCondVisibility("System.HasAddon(%s)"%id)
     
 def isClient():
-    return (PROPERTIES.getPropertyBool('isClient') or SETTINGS.getSettingInt('Client_Mode') > 0)
+    return (PROPERTIES.getPropertyBool('isClient') or bool(SETTINGS.getSettingInt('Client_Mode')))
+   
+def setClient(state=True):
+    PROPERTIES.setPropertyBool('isClient',state)
     
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
@@ -516,7 +525,7 @@ def getUUID(channelList={}):
     return channelList.get('uuid',getMYUUID())
         
 def chkDiscovery(SERVER_HOST=None):
-    PROPERTIES.setPropertyBool('isClient',SETTINGS.getSettingInt('Client_Mode') > 0)
+    setClient(bool(SETTINGS.getSettingInt('Client_Mode')))
     CLIENT      = isClient()
     SERVER_PAST = PROPERTIES.getProperty('SERVER_HOST')
     LOCAL_HOST  = PROPERTIES.getProperty('LOCAL_HOST')
@@ -537,7 +546,9 @@ def chkDiscovery(SERVER_HOST=None):
         PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
         PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_HOST,GENREFLE))
         log('global: chkDiscovery, isClient = %s, server = %s'%(CLIENT,SERVER_HOST))
-        if CLIENT: chkRequiredSettings()
+        if CLIENT: 
+            chkRequiredSettings()
+            brutePVR(override=True)
     return CLIENT
 
 def getIdle():
@@ -559,7 +570,10 @@ def slugify(text):
     text = non_url_safe_regex.sub('', text).strip()
     text = u'_'.join(re.split(r'\s+', text))
     return text
-                   
+            
+def joinURL(base, url, frag=True):
+    return urllib.parse.urljoin(base, url, allow_fragments=frag)
+    
 def unquoteString(text):
     return urllib.parse.unquote(text)
     
@@ -573,6 +587,12 @@ def encodeString(text):
 def decodeString(base64_bytes):
     message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
     return message_bytes.decode(DEFAULT_ENCODING)
+
+def escapeString(text, table=HTML_ESCAPE):
+    return escape(text,table)
+    
+def unescapeString(text, table=HTML_ESCAPE):
+    return unescape(text,{v:k for k, v in table.items()})
 
 def splitYear(label):
     try:

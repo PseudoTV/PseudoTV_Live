@@ -8,8 +8,7 @@
         <posx>0</posx>
         <posy>0</posy>
         <description>Background !Playing</description>
-        <visible>!Player.HasVideo + !Player.Playing + !Player.Paused</visible>
-        <animation effect="fade" start="0" end="100" delay="500" condition="True">Conditional</animation>
+        <visible>!Player.HasVideo | !Player.Playing + !Player.Paused</visible>
         <control type="group">
           <description>Background Dynamic</description>
           <control type="image"> 
@@ -101,17 +100,17 @@
         <posx>0</posx>
         <posy>0</posy>
         <description>Background Playing</description>
-        <visible>Player.HasVideo + Player.Playing</visible>
-        <!-- <control type="image">  -->
-          <!-- <description>Hide Background</description> -->
-          <!-- <width>auto</width> -->
-          <!-- <height>auto</height> -->
-          <!-- <aspectratio>scale</aspectratio> -->
-          <!-- <align>center</align> -->
-          <!-- <aligny>center</aligny> -->
-          <!-- <colordiffuse>black</colordiffuse> -->
-          <!-- <texture>colors/white.png</texture> -->
-        <!-- </control> -->
+        <visible>Player.Playing</visible>
+        <control type="image"> 
+          <description>Hide Background</description>
+          <width>auto</width>
+          <height>auto</height>
+          <aspectratio>scale</aspectratio>
+          <align>center</align>
+          <aligny>center</aligny>
+          <colordiffuse>black</colordiffuse>
+          <texture>colors/white.png</texture>
+        </control>
         <control type="videowindow" id="41000">
           <description>Video Overlay</description>
           <posx>0</posx>
@@ -140,7 +139,6 @@
             <textoffsetx>256</textoffsetx>
             <textoffsety></textoffsety>
             <pulseonselect>true</pulseonselect>
-            <animation effect="fade" start="0" end="100" delay="500" condition="True">Conditional</animation>
           </control>
         </control>
         
@@ -157,7 +155,6 @@
             <aligny>center</aligny>
             <scrolltime>600</scrolltime>
             <autoscroll delay="5000" time="1000">true</autoscroll>
-            <animation effect="fade" start="0" end="100" delay="500" condition="True">Conditional</animation>
             <label>$INFO[Container(40000).ListItem(0).Label,[B]You're Watching:[/B] ,] [CR] $INFO[Container(40000).ListItem(1).Label,[B]Up Next:[/B] ,] $INFO[Container(40000).ListItem(1).Property(episodelabel), - ,] </label>
         </control>
       </control>

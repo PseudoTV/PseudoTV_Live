@@ -522,8 +522,10 @@ class Dialog:
     
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0): 
         if customlabel:
+            # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
             return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, autoclose)
         else: 
+            # Returns True if 'Yes' was pressed, else False.
             return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
 
 

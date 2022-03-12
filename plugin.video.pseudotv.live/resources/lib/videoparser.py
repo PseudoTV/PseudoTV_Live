@@ -36,7 +36,7 @@ class VideoParser:
         self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
 
 
-    def getVideoLength(self, filename, fileItem={}):
+    def getVideoLength(self, filename, fileItem={}, jsonRPC=None):
         log("VideoParser: getVideoLength %s"%filename)
         if len(filename) == 0:
             log("VideoParser: getVideoLength, No file name specified")
@@ -50,7 +50,7 @@ class VideoParser:
         ext = ext.lower()
         
         if filename.startswith(tuple(self.VFSPaths)):
-            self.parser = VFSParser.VFSParser(fileItem)
+            self.parser = VFSParser.VFSParser(fileItem, jsonRPC)
         elif ext in self.AVIExts:
             self.parser = AVIParser.AVIParser()
         elif ext in self.MP4Exts:

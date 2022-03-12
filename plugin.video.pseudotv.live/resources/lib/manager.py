@@ -168,6 +168,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def hasChannelContent(self, channelData):
         paths = channelData.get('path',[])
+        if not isinstance(paths,list): paths.split('|')
         for path in paths:
             limits = (self.jsonRPC.autoPagination(channelData.get('id'), path) or {})
             self.log('hasChannelContent, channel = %s, path = %s, limits = %s'%(channelData.get('id'),path,limits))
@@ -311,14 +312,14 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif '.xml' in path: return self.openNode(path,media)
        
    
-    def getChannelName(self, retval, channelData):
-        self.log('getChannelName')
-        if retval.strip('/').endswith(('.xml','.xsp')):
-            channelData['name'] = self.getSmartPlaylistName(retval)
-        elif retval.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
+    def getChannelName(self, path, channelData):
+        self.log('getChannelName, path = %s'%(path))
+        if path.strip('/').endswith(('.xml','.xsp')):
+            channelData['name'] = self.getSmartPlaylistName(path)
+        elif path.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
             channelData['name'] = self.getMontiorList().getLabel()
         else:
-            channelData['name'] = os.path.basename(os.path.dirname(retval)).strip('/')
+            channelData['name'] = os.path.basename(os.path.dirname(path)).strip('/')
         return channelData
 
 
@@ -348,42 +349,42 @@ class Manager(xbmcgui.WindowXMLDialog):
             if fle.endswith('xml'): key = 'label'
             else: key = 'name'
             match = re.compile('<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
-            if match: name = match.group(1)
+            if match: name =  unescapeString(match.group(1))
             log("getSmartPlaylistName fle = %s, name = %s"%(fle,name))
         except: log("getSmartPlaylistName return unable to parse %s"%(fle))
         return name
 
 
-    def getChannelIcon(self, channelData, path=None, name=None,force=False):
-        self.log('getChannelIcon')
+    def getChannelIcon(self, channelData, path=None, name=None, force=False):
+        self.log('getChannelIcon, path = %s'%(path))
         if name is None: name = channelData.get('name','')
         if path is None: path = channelData.get('path','')
         if not name: return channelData
-        logo = channelData.get('logo','')
         if force: logo = ''
+        else:     logo = channelData.get('logo','')
         if not logo or logo in [LOGO,COLOR_LOGO,MONO_LOGO,ICON]:
-            channelData['logo'] = self.jsonRPC.resources.getLogo(name)
+            type = channelData.get('type',LANGUAGE(30171))
+            channelData['logo'] = self.jsonRPC.resources.getLogo(name, type, path)
         return channelData
         
     
     def validateInput(self, retval, key, channelData):
-        self.log('validateInput')
+        self.log('validateInput, retval = %s'%(retval))
         print(retval, key)
         if retval is None:   return None  , channelData
         elif key == 'rules': return None  , channelData
         elif key == 'clear': return retval, channelData
         elif key == 'path':
             retval, channelData = self.validatePath(channelData, retval, key)
-            if not retval: return None, channelData
-            if retval.strip('/').endswith(('.xml','.xsp')):
-                retval, channelData = self.validatePlaylist(retval, channelData)
-            channelData = self.getChannelName(retval, channelData)
-            channelData = self.getChannelIcon(channelData, path=retval)
+            if retval is not None:
+                channelData = self.getChannelName(retval, channelData)
+                channelData = self.getChannelIcon(channelData, path=retval[0])
         elif key == 'name':
             if not self.validateLabel(key,retval): 
-                return None, channelData
-            channelData = self.getChannelIcon(channelData, name=retval,force=True)
-        channelData = self.getID(channelData)
+                retval = None
+            else:
+                channelData = self.getChannelIcon(channelData, name=retval,force=True)
+        if retval is not None: channelData = self.getID(channelData)
         return retval, channelData
         
         
@@ -399,38 +400,40 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     
     def validatePlaylist(self, path, channelData):
-        #todo cache only needed if multi-room editor is allowed.
+        self.log('validatePlaylist, path = %s'%(path))
+        #cache playlists to PLS_LOC?
         # if path.strip('/').endswith('.xml'):
             # newPath = path.strip('/').replace('library://','special://userdata/library/')
-            # # dir, file =(os.path.split(newPath))
-            # # dir = dir.replace('special://userdata/library',CACHE_LOC)
-            # # cachefile = os.path.join(dir,file)
+            # dir, file = (os.path.split(newPath))
+            # cachefile = os.path.join(dir.replace('special://userdata/library',PLS_LOC),file)
         # elif path.endswith('.xsp'):
-            # cachefile = os.path.join(CACHE_LOC,os.path.basename(path))
-        # else: return path, channelData
+            # cachefile = os.path.join(PLS_LOC,os.path.basename(path))
+        # else: 
+            # return path, channelData
         # self.log('validatePlaylist, path = %s, cachefile = %s'%(path,cachefile))
-        # if FileAccess.copy(path, cachefile): 
-            # return cachefile, channelData
-        return path, channelData
+        # FileAccess.copy(path, cachefile): 
 
 
     def validatePath(self, channelData, path, key, spinner=True):
-        self.log('validatePath')
-        found = False
+        self.log('validatePath, path = %s'%path)
+        if not path: return None, channelData
         radio = (channelData.get('radio','') or (channelData['type'] == LANGUAGE(30097) or path.startswith('musicdb://')))
         media = 'music' if radio else 'video'
         channelData['radio'] = radio
         
         if spinner: self.toggleSpinner(self.itemList,True)
         fitem = self.jsonRPC.isVFSPlayable(path, media)
-        if fitem is None:
-            path = None
-            self.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115)))
-        else:
+        if fitem is not None:
             seek = fitem.get('seek',False) #todo set adv. chan rule to disable seek if false.
             self.log('validatePath, path = %s, seek = %s'%(path,seek))
+            if path.strip('/').endswith(('.xml','.xsp')):
+                self.validatePlaylist(path, channelData)
+            if spinner: self.toggleSpinner(self.itemList,False)
+            return path, channelData
+           
+        self.dialog.notificationDialog('%s\n%s'%(LANGUAGE(30112)%key.title(),LANGUAGE(30115))) 
         if spinner: self.toggleSpinner(self.itemList,False)
-        return path, channelData
+        return None, channelData
         
         
     def getID(self, channelData):
@@ -479,6 +482,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         pDialog = self.dialog.progressDialog(message=LANGUAGE(30152))
         for idx, citem in enumerate(difference):
+            print('citem',citem)
             pCount = int(((idx + 1)*100)//len(difference))
             if citem in self.channelList: 
                 self.channels.removeChannel(citem)
@@ -612,7 +616,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             # yield rule
 
 
-    def selectLogo(self, channelData, channelPOS):
+    def getLogo(self, channelData, channelPOS):
         def cleanLogo(chlogo):
             return unquoteImage(chlogo)
             #todo convert resource from vfs to fs
@@ -620,46 +624,50 @@ class Manager(xbmcgui.WindowXMLDialog):
             # resource = path.replace('/resources','').replace(,)
             # resource://resource.images.studios.white/Amazon.png
         
+        def select(chname):
+            self.toggleSpinner(self.itemList,True)
+            logos = self.jsonRPC.resources.findLogos(chname, LANGUAGE(30171))
+            listitems = [self.dialog.buildMenuListItem(logo['label'],logo['label2'],iconImage=logo['path'],url=logo['path']) for logo in logos]
+            self.toggleSpinner(self.itemList,False)
+            if listitems:
+                select = self.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
+                if select is not None:
+                    return listitems[select].getPath()
+
+        def browse(chname):
+            retval = self.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
+            image  = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
+            if FileAccess.copy(cleanLogo(retval), image): 
+                if FileAccess.exists(image): 
+                    return image
+
+        def match(chname):
+            return self.jsonRPC.resources.getLogo(chname)
+
         if self.isVisible(self.ruleList): return
         chname = channelData.get('name')
-        self.log('selectLogo, chname = %s'%(chname))
         if not chname: return self.dialog.notificationDialog(LANGUAGE(30084))
             
-        image  = None
-        retval = self.dialog.yesnoDialog('%s Source'%LANGUAGE(30111), nolabel=LANGUAGE(30321), yeslabel=LANGUAGE(30308), customlabel=LANGUAGE(30322))
-        if   retval == 0: image = self.matchLogo(chname)
-        elif retval == 1: 
-            retval = self.dialog.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(30111),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
-            chlogo = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
-            
-            print('matchLogo',retval,chlogo)
-            if FileAccess.copy(cleanLogo(retval), chlogo): 
-                if FileAccess.exists(chlogo): image = chlogo
-        elif retval == 2: image = self.jsonRPC.resources.getLogo(chname)
-            
-        if image:
+        chlogo = None
+        retval = self.dialog.yesnoDialog('%s Source'%LANGUAGE(30111), 
+                                             nolabel=LANGUAGE(30321),     #Select
+                                             yeslabel=LANGUAGE(30308),    #Browse
+                                             customlabel=LANGUAGE(30322)) #Match
+                                             
+        if   retval == 0: chlogo = select(chname)
+        elif retval == 1: chlogo = browse(chname)
+        elif retval == 2: chlogo = match(chname)
+        else: self.dialog.notificationDialog(LANGUAGE(30325))
+        self.log('getLogo, chname = %s, chlogo = %s'%(chname,chlogo))
+        
+        if chlogo:
             self.madeChanges = True
-            channelData['logo'] = image
+            channelData['logo'] = chlogo
             if self.isVisible(self.itemList): self.buildChannelItem(channelData)
             else:
                 self.newChannels[channelPOS] = channelData
                 self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
-        else: self.dialog.notificationDialog(LANGUAGE(30325))
             
-            
-    def matchLogo(self, chname):
-        if not chname: return self.dialog.notificationDialog(LANGUAGE(30084))
-        self.toggleSpinner(self.itemList,True)
-        logos = self.jsonRPC.resources.findLogos(chname, LANGUAGE(30171))
-        listitems = [self.dialog.buildMenuListItem(logo['label'],logo['label2'],iconImage=logo['path'],url=logo['path']) for logo in logos]
-        self.toggleSpinner(self.itemList,False)
-        if listitems:
-            select = self.dialog.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
-            if select is not None:
-                chlogo = listitems[select].getPath()
-                self.log('matchLogo, chname = %s, chlogo = %s'%(chname,chlogo))
-                return chlogo
-
 
     def isVisible(self, cntrl):
         try: 
@@ -789,7 +797,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         elif controlId == 7:
             self.selectRuleItems(items['ruleList'])
         elif controlId == 10: 
-            self.selectLogo(channelData,items['chanList']['position'] )
+            self.getLogo(channelData,items['chanList']['position'] )
         elif controlId == 9001:
             if   items['label'] == LANGUAGE(30117):#'Close'
                 self.closeManager()

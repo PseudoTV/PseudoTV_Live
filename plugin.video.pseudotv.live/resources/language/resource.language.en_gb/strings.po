@@ -1405,7 +1405,7 @@ msgid "Remote Path"
 msgstr ""
 
 msgctxt "#30350"
-msgid "Network Path"
+msgid "Network Folder"
 msgstr ""
 
 msgctxt "#30351"
@@ -1433,5 +1433,5 @@ msgid "Changes Detected: Restarting..."
 msgstr ""
 
 msgctxt "#30357"
-msgid "[COLOR=red][B]Settings are disabled while initializing, try again later...[/B][/COLOR]"
+msgid "[COLOR=red][B]Settings disabled while initializing, try again later...[/B][/COLOR]"
 msgstr ""

@@ -19,12 +19,23 @@
 from resources.lib.globals import *
 
 class VFSParser:
-    def __init__(self, fileItem={}):
+    def __init__(self, fileItem={}, jsonRPC=None):
+        self.jsonRPC  = jsonRPC
         self.fileItem = fileItem
         
         
     def walkVFS(self, filename, originalPath):
+        log("VFSParser: walkVFS, originalPath = %s"%(originalPath))
         #todo parse json for item, walk dir.
+        # results = []
+        # json_response = self.jsonRPC.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
+        # for item in json_response:
+            # file = item['file']
+            # if item['filetype'] == 'file':
+                # results.append({'label': item['label'], 'duration': dur, 'path': path, 'file': file})
+            # else:
+                # results.extend(self.getFileDirectory(file, media, ignoreDuration, checksum, expiration))
+
         return {}
          
          

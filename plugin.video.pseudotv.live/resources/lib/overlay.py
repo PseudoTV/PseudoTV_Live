@@ -23,29 +23,17 @@ from resources.lib.globals import *
 from resources.lib.rules   import RulesList
 
 class Player(xbmc.Player):
-    def __init__(self):
+    def __init__(self, overlay):
         xbmc.Player.__init__(self)
-        self.playingTitle = ""
-        self.OnNextWait   = 300
-            
-            
-    def onPlayBackStarted(self):
-        self.overlay.log('onPlayBackStarted')
-        self.playingTitle = xbmc.getInfoLabel('Player.Title')
+        self.overlay      = overlay
+        self.playingTitle = self.getPlayerLabel()
         self.OnNextWait   = self.getOnNextInterval()
-        
-        
-    def onPlayBackEnded(self):
-        self.overlay.log('onPlayBackEnded')
-        self.playingTitle = ""
-        self.overlay.updateOnNext()
-    
-    
-    def onPlayBackStopped(self):
-        self.overlay.log('onPlayBackStopped')
-        self.overlay.closeOverlay()
-                
-                
+           
+           
+    def getPlayerLabel(self):
+        return (xbmc.getInfoLabel('Player.Title') or xbmc.getInfoLabel('Player.Label') or '')
+           
+           
     def getPlayerTime(self):
         self.overlay.log('getPlayerTime')
         try:    return self.getTotalTime()
@@ -54,11 +42,33 @@ class Player(xbmc.Player):
         
     def getOnNextInterval(self,interval=3):
         totalTime = self.getPlayerTime()
-        if totalTime == 0: return
+        if totalTime == 0: return 300
         remaining = ((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval))
         return remaining // interval
+            
+            
+    # def onPlayBackStarted(self):
+        # self.overlay.log('onPlayBackStarted')
+        # self.playingTitle = xbmc.getInfoLabel('Player.Title')
+        # self.OnNextWait   = self.getOnNextInterval()
         
         
+    def onAVStarted(self):
+        self.overlay.log('onAVStarted')
+        self.overlay.closeOverlay() #close and force reload of overlay and all meta on new content? simpler than updateOnNext()?
+        
+        
+    # def onPlayBackEnded(self):
+        # self.overlay.log('onPlayBackEnded')
+        # self.playingTitle = ""
+        # self.overlay.updateOnNext()
+    
+    
+    # def onPlayBackStopped(self):
+        # self.overlay.log('onPlayBackStopped')
+        # self.overlay.closeOverlay()
+                
+
 class Overlay(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
@@ -109,9 +119,6 @@ class Overlay(xbmcgui.WindowXML):
                         
             self.overlayLayer = self.getControl(39999)
             self.overlayLayer.setVisible(False)
-            
-            self.myPlayer = Player()
-            self.myPlayer.overlay = self
         
             # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
             # https://github.com/xbmc/xbmc/issues/19467
@@ -126,6 +133,8 @@ class Overlay(xbmcgui.WindowXML):
             # self.videoOverlay.setWidth(0)
             # xbmcgui.unlock()
             
+            self.myPlayer = Player(self)
+            
             if self.load(): 
                 self.overlayLayer.setVisible(True)
                 self.log('showChannelBug = %s'%(self.showChannelBug))
@@ -134,6 +143,7 @@ class Overlay(xbmcgui.WindowXML):
                 if self.showOnNext:     self.onNextChk()#start onnext timer
             else: 
                 self.closeOverlay()
+                
         except Exception as e: 
             self.log("onInit, Failed! %s"%(e), xbmc.LOGERROR)
             self.closeOverlay()
@@ -172,7 +182,7 @@ class Overlay(xbmcgui.WindowXML):
                         
             self.runActions(RULES_ACTION_OVERLAY, self.citem, inherited=self)
             self.static.setVisible(self.staticOverlay)
-            self.myPlayer.onPlayBackStarted()
+            # self.myPlayer.onPlayBackStarted()
             self.log('load finished')
             return True
         except Exception as e: 
@@ -242,12 +252,18 @@ class Overlay(xbmcgui.WindowXML):
         
 
     def onNextToggle(self, state=True):
+        if self.onNextToggleThread.is_alive():
+            try:
+                self.onNextToggleThread.cancel()
+                self.onNextToggleThread.join()
+            except: pass
         try:
             self.playSFX(BING_WAV)
-            wait = {True:(NOTIFICATION_CHECK_TIME//2),False:float(self.myPlayer.OnNextWait)}[state]
-            self.log('onNextToggle, state = %s, wait = %s'%(state,wait))
+            wait   = {True:(NOTIFICATION_CHECK_TIME//2),False:float(self.myPlayer.OnNextWait)}[state]
+            nstate = not bool(state)
             self.onNext.setVisible(state)
-            self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [not bool(state)])
+            self.log('onNextToggle, state %s wait %s to new state %s'%(state,wait,nstate))
+            self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [nstate])
             self.onNextToggleThread.name = "onNextToggleThread"
             self.onNextToggleThread.start()
         except Exception as e: self.log("onNextToggle, Failed! %s"%(e), xbmc.LOGERROR)
@@ -265,11 +281,18 @@ class Overlay(xbmcgui.WindowXML):
                 onVAL  = self.channelBugVal * 60
                 offVAL = round(onVAL // 2)
             return {True:float(onVAL),False:float(offVAL)}[state]
+            
+        if self.bugToggleThread.is_alive():
+            try:
+                self.bugToggleThread.cancel()
+                self.bugToggleThread.join()
+            except: pass
         try:   
-            wait = getWait(state)
-            self.log('bugToggle, state = %s, wait = %s'%(state,wait))
+            wait   = getWait(state)
+            nstate = not bool(state)
             self.channelbug.setVisible(state)
-            self.bugToggleThread = threading.Timer(wait, self.bugToggle, [not bool(state)])
+            self.log('bugToggle, state %s wait %s to new state %s'%(state,wait,nstate))
+            self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
             self.bugToggleThread.name = "bugToggleThread"
             self.bugToggleThread.start()
         except Exception as e: self.log("bugToggle, Failed! %s"%(e), xbmc.LOGERROR)

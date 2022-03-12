@@ -36,6 +36,7 @@ class Resources:
         self.pool        = jsonRPC.pool
         self.LOGO_LOC    = LOGO_LOC
         self.logoSets    = self.buildLogoResources()
+        self.webBase     = self.buildWebBase()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -100,7 +101,7 @@ class Resources:
         return walk
             
             
-    def buildImagebase(self): #todo host/use kodi webserver to share image files for remote m3u/xmltv
+    def buildWebBase(self):
         port     = 80
         username = 'kodi'
         password = ''
@@ -120,11 +121,14 @@ class Resources:
             elif setting['id'] == 'services.webserverssl' and setting['value']:
                 secure = True
             username = '{0}:{1}@'.format(username, password) if username and password else ''
-            
         if enabled:
             protocol = 'https' if secure else 'http'
-            return '{0}://{1}localhost:{2}/image/'.format(protocol, username, port)
-            # http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
+            return '{0}://{1}localhost:{2}/image/'.format(protocol, username, port) # http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
+            
+            
+    def buildWebImage(self, image):  #todo host/use kodi webserver to share image files for remote m3u/xmltv
+        if self.webBase is None: return image
+        return joinURL(self.webBase, quoteString(image))
             
             
     def getNamePatterns(self, chname, type):
@@ -152,14 +156,13 @@ class Resources:
                 results = _match(dir,meta,chname)
                 if results: return pack.get('id'),results
                     
-        chnames = self.getNamePatterns(name,type)
-        packs   = self.logoSets.get(type,{}).get('packs',[])
+        chnames    = self.getNamePatterns(name,type)
+        packs      = self.logoSets.get(type,{}).get('packs',[])
         cacheName  = 'findLogos.%s.%s'%(name,type)
         cacheCHK   = getMD5(dumpJSON(packs))
         matches    = self.cache.get(cacheName, checksum=cacheCHK)
         if not matches:
-            results = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames]
-            #results =  [[('resource.images.pseudotv.logos', ('special://home/addons/resource.images.pseudotv.logos/resources', [('Action Movies.png', 30), ('Action TV.png', 30), ('AMC Pictures.png', 30), ('Anonymous Content.png', 30), ('Biography Movies.png', 30)]))]]
+            results = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames] #results =  [[('resource.images.pseudotv.logos', ('special://home/addons/resource.images.pseudotv.logos/resources', [('Action Movies.png', 30), ('Action TV.png', 30), ('AMC Pictures.png', 30), ('Anonymous Content.png', 30), ('Biography Movies.png', 30)]))]]
             if results:
                 matches = []
                 results = sorted(results[0], key=lambda x: x[1][1]) #sort high-lowest match score.
@@ -275,7 +278,7 @@ class Resources:
                     logo = self.chkResource(chname, type)
                     if not logo and lookup: #parse all resources for match using channel name variations.
                         logo = self.parseLogo(chname, type)
-                        
+
         if logo: 
             logo = cleanLogo(logo)
             self.log('getLogo: found %s'%(logo))

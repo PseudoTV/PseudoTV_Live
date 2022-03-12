@@ -20,6 +20,7 @@
 
 from resources.lib.globals     import *
 from resources.lib.fillers     import Fillers
+from resources.lib.xsp         import XSP
 
 class Builder:
     def __init__(self, writer=None):
@@ -38,6 +39,7 @@ class Builder:
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
+        
         self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split('|')},
                                  "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split('|')},
                                  "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split('|')},
@@ -49,15 +51,15 @@ class Builder:
         self.chanName         = ''
         self.chanError        = []
         self.loopback         = {}
-        self.filter           = {}
-        self.sort             = {}
-        self.limits           = {}
+        self.filter           = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+        self.sort             = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
+        self.limits           = {}#{"end":0,"start":0,"total":0}
         self.limit            = PAGE_LIMIT
         self.pDialog          = None
         self.fillers          = Fillers(self)
+        self.xsp              = XSP(self)
         
         
-
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -153,48 +155,10 @@ class Builder:
         return True
 
 
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def parseSmartPlaylist(self, file):
-        sort  = {}
-        media = 'video'
-        try: 
-            xml   = FileAccess.open(file, "r")
-            dom   = parse(xml)
-            xml.close()
-            try:
-                pltype = dom.getElementsByTagName('smartplaylist')
-                mediatype = pltype[0].attributes['type'].value
-                media = 'music' if mediatype.lower() in MUSIC_TYPES else 'video'
-            except:pass
-            try:
-                sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()
-                sort["order"]  = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
-            except: pass
-        except: self.log("parseSmartPlaylist, Unable to open the smart playlist %s"%(file), xbmc.LOGERROR)
-        self.log("parseSmartPlaylist, file = %s, media = %s, sort = %s"%(file, media, sort))
-        return media, sort
-
-
     def getFileList(self, citem, start, radio=False):
         self.log('getFileList, id: %s, radio = %s'%(citem['id'],radio))
         try:
-            # global values prior to channel rules
-            # self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
-            # self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
-            # self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
-            # self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
-            # self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
-            # self.bctTypes         = {"ratings"    :{"min":SETTINGS.getSettingInt('Fillers_Ratings')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0    ,"paths":(SETTINGS.getSetting('Resource_Ratings')).split('|')     ,"files":[]},
-                                     # "bumpers"    :{"min":SETTINGS.getSettingInt('Fillers_Bumpers')    ,"max":1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0    ,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split('|')     ,"files":[]},
-                                     # "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split('|') ,"files":[]},
-                                     # "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":4,"enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0   ,"paths":(SETTINGS.getSetting('Resource_Trailers')).split('|')    ,"files":[]}}
-            
-            # self.filter   = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
-            # self.sort     = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
-            # self.limits   = {}#{"end":0,"start":0,"total":0}
-            # self.limit    = PAGE_LIMIT
-            valid         = False
-            
+            valid = False
             citem = self.runActions(RULES_ACTION_CHANNEL_START, citem, citem, inherited=self)
             
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
@@ -284,7 +248,7 @@ class Builder:
             path = path.format(list=SEASONS.get(datetime.datetime.now().strftime('%B'),'none'),limit=250)
             
         if not sort: #set fallback (default) sort methods when none is provided.
-            if   path.endswith('.xsp'): media, sort = self.parseSmartPlaylist(path) #smartplaylist
+            if   path.endswith('.xsp'): media, sort = self.xsp.parseSmartPlaylist(path) #smartplaylist
             elif path.startswith('videodb://tvshows'): sort = {"method": "episode"} #tvshows
             elif path.startswith('videodb://movies'):  sort = {"method": "random"}  #movies
             elif path.startswith('musicdb://songs'):   sort = {"method": "random"}  #music

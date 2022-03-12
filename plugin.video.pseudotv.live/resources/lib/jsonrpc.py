@@ -464,7 +464,7 @@ class JSONRPC:
         duration  = self.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:
-                duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item)
+                duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
                 if duration > 0:
                     self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:

@@ -181,12 +181,11 @@ class Plugin:
         except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
         litem = PROPERTIES.getPropertyDict('Last_Played_NowItem')
-        print('litem',litem.get('broadcastid',random.random()),nowitem.get('broadcastid',-1))
         
         if nowitem:
             found = True
-            if nowitem.get('broadcastid',-1) != litem.get('broadcastid',random.random()): #detect loopback
-                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
+            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):
+                nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
                 self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],self.seekTLRNC))
