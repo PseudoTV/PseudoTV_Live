@@ -180,12 +180,12 @@ class Plugin:
         try:    pvritem['citem'].update(self.chanList.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
         except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
-        litem = PROPERTIES.getPropertyDict('Last_Played_NowItem')
         
         if nowitem:
             found = True
             if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):
                 PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
+                
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -198,7 +198,9 @@ class Plugin:
                     self.log('playChannel, progress start at the beginning')
                 elif round(nowitem['progresspercentage']) > self.seekTHLD: # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
-                    nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order.
+                    nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order
+                    
+            # litem = PROPERTIES.getPropertyDict('Last_Played_NowItem').
             # elif litem.get('isStack',False):
                 # writer = getWriter(litem.get('writer',{}))
                 # if isStack(writer['file']):
@@ -208,6 +210,7 @@ class Plugin:
                     # print(litem)
                 # nowitem = litem
                 # self.log('playChannel, stack detected advancing queue to next stack')
+                
             else: 
                 nowitem = nextitems.pop(0)
                 self.log('playChannel, loopback detected advancing queue to nextitem')

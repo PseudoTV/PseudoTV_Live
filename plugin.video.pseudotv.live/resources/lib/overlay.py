@@ -47,26 +47,21 @@ class Player(xbmc.Player):
         return remaining // interval
             
             
-    # def onPlayBackStarted(self):
-        # self.overlay.log('onPlayBackStarted')
-        # self.playingTitle = xbmc.getInfoLabel('Player.Title')
-        # self.OnNextWait   = self.getOnNextInterval()
+    def onPlayBackStarted(self):
+        self.overlay.log('onPlayBackStarted')
+        self.playingTitle = xbmc.getInfoLabel('Player.Title')
+        self.OnNextWait   = self.getOnNextInterval()
+
         
-        
-    def onAVStarted(self):
-        self.overlay.log('onAVStarted')
-        self.overlay.closeOverlay() #close and force reload of overlay and all meta on new content? simpler than updateOnNext()?
-        
-        
-    # def onPlayBackEnded(self):
-        # self.overlay.log('onPlayBackEnded')
-        # self.playingTitle = ""
-        # self.overlay.updateOnNext()
+    def onPlayBackEnded(self):
+        self.overlay.log('onPlayBackEnded')
+        self.playingTitle = ""
+        self.overlay.updateOnNext()
     
     
-    # def onPlayBackStopped(self):
-        # self.overlay.log('onPlayBackStopped')
-        # self.overlay.closeOverlay()
+    def onPlayBackStopped(self):
+        self.overlay.log('onPlayBackStopped')
+        self.overlay.closeOverlay()
                 
 
 class Overlay(xbmcgui.WindowXML):

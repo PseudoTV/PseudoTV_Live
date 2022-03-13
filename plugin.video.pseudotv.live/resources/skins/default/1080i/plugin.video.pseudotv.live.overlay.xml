@@ -8,7 +8,7 @@
         <posx>0</posx>
         <posy>0</posy>
         <description>Background !Playing</description>
-        <visible>!Player.HasVideo | !Player.Playing + !Player.Paused</visible>
+        <visible>!Player.Playing + !Player.Paused</visible>
         <control type="group">
           <description>Background Dynamic</description>
           <control type="image"> 
@@ -100,7 +100,7 @@
         <posx>0</posx>
         <posy>0</posy>
         <description>Background Playing</description>
-        <visible>Player.Playing</visible>
+        <visible>Player.HasMedia + Player.Playing</visible>
         <control type="image"> 
           <description>Hide Background</description>
           <width>auto</width>

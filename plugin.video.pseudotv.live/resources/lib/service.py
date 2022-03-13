@@ -18,18 +18,18 @@
 
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
-from resources.lib.overlay     import Overlay
 from resources.lib.vault       import Vault
 from resources.lib.parser      import Writer
+from resources.lib.overlay     import Overlay
 from resources.lib.server      import Discovery, Announcement, HTTP
 
 class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
-        self.playingPVRitem    = {}
-        self.isPseudoTV        = isPseudoTV()
-        self.lastSubState      = isSubtitle()
-        self.showOverlay       = SETTINGS.getSettingBool('Enable_Overlay')
+        self.playingPVRitem = {}
+        self.isPseudoTV     = isPseudoTV()
+        self.lastSubState   = isSubtitle()
+        self.showOverlay    = SETTINGS.getSettingBool('Enable_Overlay')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -203,17 +203,19 @@ class Player(xbmc.Player):
         
         
     def toggleOverlay(self, state):
-        overlayWindow = Overlay(OVERLAY_FLE, ADDON_PATH, "default", service=self.myService)
+        self.overlayWindow = Overlay(OVERLAY_FLE, ADDON_PATH, "default", service=self.myService)
+        # from resources.lib.overlaynew import Overlay
+        # self.overlayWindow = Overlay() #new hijack method
         if state and not isOverlay():
             conditions = [self.showOverlay,self.isPlaying(),self.isPseudoTV]
             self.log("toggleOverlay, conditions = %s"%(conditions))
             if False in conditions: return
             self.log("toggleOverlay, show")
-            overlayWindow.show()
+            self.overlayWindow.show()
         elif not state and isOverlay():
             self.log("toggleOverlay, close")
-            overlayWindow.close()
-            del overlayWindow
+            self.overlayWindow.close()
+            del self.overlayWindow
 
         
     def triggerSleep(self):
@@ -317,7 +319,6 @@ class Service:
         self.writer            = Writer(service=self)
         self.player.myService  = self
         self.monitor.myService = self
-        self.chkUpdateThread   = threading.Timer(0.5, self.chkUpdatePending)
         
         if self._initialize():
             self._startup()
@@ -368,23 +369,10 @@ class Service:
                 except: ctl = (1,1)
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
-        
-        
-    def _chkUpdatePending(self):
-        if self.chkUpdateThread.is_alive():
-            try:
-                self.chkUpdateThread.cancel()
-                self.chkUpdateThread.join()
-            except: pass
-                
-        self.chkUpdateThread = threading.Timer(0.5, self.chkUpdatePending)
-        self.chkUpdateThread.name = "chkUpdateThread"
-        self.chkUpdateThread.start()
-                 
-                 
-    def chkUpdatePending(self, usethread=False):
-        if usethread: return self._chkUpdatePending()
-        elif not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
+
+
+    def chkUpdatePending(self):
+        if not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
             self.isLocked = True
             hasChannels = len(self.writer.channels.getChannels()) > 0
             if hasChannels:
@@ -434,8 +422,7 @@ class Service:
             
             if   (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
             elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
-            elif isIdle: 
-                self.chkUpdatePending(usethread=True)
+            elif isIdle: self.chkUpdatePending()
                 
         if pendingRestart: self._restart()
         else:              self._shutdown()
