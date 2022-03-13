@@ -185,6 +185,7 @@ class Plugin:
         if nowitem:
             found = True
             if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):
+                PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -242,7 +243,6 @@ class Plugin:
             pvritem['broadcastnow']  = nowitem
             pvritem['broadcastnext'] = nextitems
             liz.setProperty('pvritem',dumpJSON(pvritem))
-            PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
             
             self.channelPlaylist.clear()
             xbmc.sleep(100)
