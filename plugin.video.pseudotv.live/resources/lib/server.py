@@ -191,12 +191,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
-        with fileLocker(self.globalFileLock):
-            with xbmcvfs.File(path, 'rb') as f:
-                while not self.monitor.abortRequested():
-                    chunk = f.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
-                    if not chunk: break
-                    self.wfile.write(chunk)
+        with busy(), fileLocker(self.globalFileLock), xbmcvfs.File(path, 'rb') as f:
+            while not self.monitor.abortRequested():
+                chunk = f.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
+                if not chunk: break
+                self.wfile.write(chunk)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):

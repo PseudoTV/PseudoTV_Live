@@ -1,3 +1,6 @@
+v.0.3.7
+-Improved "Seasonal" channel , moved from third-party plugin to local code. Added additional holidays and weekly scheduling. 
+
 v.0.3.6
 -Fixed "Future Days to display" PVR & LiveTV settings syncing.
 -Fixed Duration parsing logic.

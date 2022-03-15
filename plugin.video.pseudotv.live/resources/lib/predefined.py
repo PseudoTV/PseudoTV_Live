@@ -21,6 +21,8 @@
 from resources.lib.globals import *
 
 class Predefined:
+    exclude_specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
+    
     def __init__(self):
         self.pathTypes  = {LANGUAGE(30002): self.createNetworkPlaylist,
                            LANGUAGE(30003): self.createShowPlaylist,
@@ -36,7 +38,6 @@ class Predefined:
                            LANGUAGE(30141): self.createSeasonal,
                            LANGUAGE(30079): self.createPVRRecordings} # home for misc. predefined channel paths.
         
-        self.exclude_specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
         self.log('__init__, exclude_specials = %s'%(self.exclude_specials))
     
     

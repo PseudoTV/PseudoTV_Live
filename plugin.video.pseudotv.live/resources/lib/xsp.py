@@ -53,4 +53,14 @@ class XSP:
         return media, sort
 
 
+    @cacheit(checksum=getInstanceID(),json_data=True)
+    def parseDynamicPlaylist(self, path):
+        media   = 'music' if path.lower().startswith('musicdb://') else 'video'
+        payload = loadJSON(path.split('?xsp=')[1])
+        if payload: sort = {'order':payload.get('order',{}).get('direction','ascending'), 'method':payload.get('order',{}).get('method','random')}
+        else:       sort = {}
+        self.log("parseDynamicPlaylist, media = %s, sort = %s"%(media, sort))
+        return media, sort
+        
+        
     #todo parse "Mixed" smart-playlist for indv. xsp. buildlist and interleave. 

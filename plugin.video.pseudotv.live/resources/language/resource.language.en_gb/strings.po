@@ -709,7 +709,7 @@ msgid "XMLTV"
 msgstr ""
 
 msgctxt "#30174"
-msgid "plugin://script.embuary.helper/?info=getseasonal&amp;list={list}&limit={limit}"
+msgid "{Seasonal}"
 msgstr ""
 
 msgctxt "#30175"

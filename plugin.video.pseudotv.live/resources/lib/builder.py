@@ -20,6 +20,7 @@
 
 from resources.lib.globals     import *
 from resources.lib.fillers     import Fillers
+from resources.lib.seasonal    import Seasonal
 from resources.lib.xsp         import XSP
 
 class Builder:
@@ -57,6 +58,7 @@ class Builder:
         self.limit            = PAGE_LIMIT
         self.pDialog          = None
         self.fillers          = Fillers(self)
+        self.seasonal         = Seasonal(self)
         self.xsp              = XSP(self)
         
         
@@ -161,6 +163,12 @@ class Builder:
             valid = False
             citem = self.runActions(RULES_ACTION_CHANNEL_START, citem, citem, inherited=self)
             
+            #globals
+            self.filter  = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+            self.sort    = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
+            self.limits  = {}#{"end":0,"start":0,"total":0}
+            self.limit   = PAGE_LIMIT
+
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
@@ -171,9 +179,12 @@ class Builder:
             else: 
                 path = [citem['path']]
                 
+            if path == [LANGUAGE(30174)]: #Seasonal
+                citem, path = self.seasonal.getPath(citem)
+                
             mixed  = len(path) > 1
             media  = 'music' if radio else 'video'
-            self.log('getFileList, id: %s, mixed = %s, media = %s'%(citem['id'],mixed,media),xbmc.LOGINFO)
+            self.log('getFileList, id: %s, mixed = %s, media = %s, path = %s'%(citem['id'],mixed,media,path),xbmc.LOGINFO)
             
             if radio:
                 cacheResponse = self.buildRadio(citem) #build radio as on-the-fly playlist que.
@@ -244,15 +255,13 @@ class Builder:
 
     def buildFileList(self, citem, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(citem['id'],path,limit,sort,filter,limits))
-        if path.startswith(LANGUAGE(30174)):#seasonal
-            path = path.format(list=SEASONS.get(datetime.datetime.now().strftime('%B'),'none'),limit=250)
-            
         if not sort: #set fallback (default) sort methods when none is provided.
-            if   path.endswith('.xsp'): media, sort = self.xsp.parseSmartPlaylist(path) #smartplaylist
-            elif path.startswith('videodb://tvshows'): sort = {"method": "episode"} #tvshows
-            elif path.startswith('videodb://movies'):  sort = {"method": "random"}  #movies
-            elif path.startswith('musicdb://songs'):   sort = {"method": "random"}  #music
-            else:                                      sort = {"method": "random"}  #other
+            if path.endswith('.xsp'):           media, sort = self.xsp.parseSmartPlaylist(path)   #smartplaylist
+            elif '?xsp=' in path:               media, sort = self.xsp.parseDynamicPlaylist(path) #dynamicplaylist
+            elif path.startswith('videodb://tvshows'): sort = {"method": "episode"}               #tvshows
+            elif path.startswith('videodb://movies'):  sort = {"method": "random"}                #movies
+            elif path.startswith('musicdb://songs'):   sort = {"method": "random"}                #music
+            else:                                      sort = {"method": "random"}                #other
             
         fileList = []
         dirList  = [{'file':path}]
@@ -359,6 +368,9 @@ class Builder:
                         item['year'] = spYear
                         
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
+                    if citem.get('holiday'): 
+                        item['plot'] = '[B]%s[/B]\n%s'%(citem['holiday'],item['plot'])
+                        
                     item['art']  = (item.get('art',{})  or dirItem.get('art',{}))
                     item.get('art',{})['icon'] = citem['logo']
                     

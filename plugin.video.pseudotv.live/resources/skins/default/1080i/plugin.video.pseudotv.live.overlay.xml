@@ -100,7 +100,8 @@
         <posx>0</posx>
         <posy>0</posy>
         <description>Background Playing</description>
-        <visible>Player.HasMedia + Player.Playing</visible>
+        <visible>Player.Playing</visible>
+        <!-- Player.HasMedia -->
         <control type="image"> 
           <description>Hide Background</description>
           <width>auto</width>

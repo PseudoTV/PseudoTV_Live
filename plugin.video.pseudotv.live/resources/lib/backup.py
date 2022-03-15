@@ -94,7 +94,6 @@ class Backup:
         elif not self.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
         
-        with busy_dialog():
-            with busy(): 
-                self.writer.recoverChannelsFromBackup(file)
+        with busy_dialog(), busy():
+            self.writer.recoverChannelsFromBackup(file)
         return True
