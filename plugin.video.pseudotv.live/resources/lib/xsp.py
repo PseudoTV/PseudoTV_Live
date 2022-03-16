@@ -35,32 +35,37 @@ class XSP:
     def parseSmartPlaylist(self, file):
         sort  = {}
         media = 'video'
+        paths = []
         try: 
-            xml   = FileAccess.open(file, "r")
-            dom   = parse(xml)
+            xml = FileAccess.open(file, "r")
+            dom = parse(xml)
             xml.close()
             try:
                 pltype = dom.getElementsByTagName('smartplaylist')
-                mediatype = pltype[0].attributes['type'].value
-                media = 'music' if mediatype.lower() in MUSIC_TYPES else 'video'
+                media  = 'music' if pltype[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
             except:pass
             try:
                 sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()
                 sort["order"]  = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
             except: pass
-        except: self.log("parseSmartPlaylist, Unable to open the smart playlist %s"%(file), xbmc.LOGERROR)
-        self.log("parseSmartPlaylist, file = %s, media = %s, sort = %s"%(file, media, sort))
-        return media, sort
+            # try:
+                # if dom.getElementsByTagName('rule')[0].getAttribute('field').lower() == "playlist":
+                    # value = dom.getElementsByTagName('rule')[0].childNodes[0].nodeValue.lower()
+                    # print(value, dom.getElementsByTagName('rule')[0].childNodes)
+            # except: pass
+            self.log("parseDynamicPlaylist, file = %s, sort = %s, paths = %s"%(file, sort, len(paths)))
+        except Exception as e: self.log("parseSmartPlaylist, failed! %s"%(e), xbmc.LOGERROR)
+        return paths, media, sort
 
 
     @cacheit(checksum=getInstanceID(),json_data=True)
     def parseDynamicPlaylist(self, path):
-        media   = 'music' if path.lower().startswith('musicdb://') else 'video'
-        payload = loadJSON(path.split('?xsp=')[1])
-        if payload: sort = {'order':payload.get('order',{}).get('direction','ascending'), 'method':payload.get('order',{}).get('method','random')}
-        else:       sort = {}
-        self.log("parseDynamicPlaylist, media = %s, sort = %s"%(media, sort))
-        return media, sort
-        
-        
-    #todo parse "Mixed" smart-playlist for indv. xsp. buildlist and interleave. 
+        sort   = {}
+        media  = 'video'
+        try:
+            media   = 'music' if path.lower().startswith('musicdb://') else 'video'
+            payload = loadJSON(path.split('?xsp=')[1])
+            if payload: sort = {'order':payload.get('order',{}).get('direction','ascending'), 'method':payload.get('order',{}).get('method','random')}
+            else:       sort = {}
+            self.log("parseDynamicPlaylist, path = %s, media = %s, sort = %s"%(path, media, sort))
+        except Exception as e: self.log("parseDynamicPlaylist, failed! %s"%(e), xbmc.LOGERROR)

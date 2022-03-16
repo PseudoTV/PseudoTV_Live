@@ -160,27 +160,26 @@ class Builder:
     def getFileList(self, citem, start, radio=False):
         self.log('getFileList, id: %s, radio = %s'%(citem['id'],radio))
         try:
-            valid = False
-            citem = self.runActions(RULES_ACTION_CHANNEL_START, citem, citem, inherited=self)
-            
             #globals
             self.filter  = {}#{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
             self.sort    = {}#{"order":"ascending","ignorefolders":"false","method":"random"}
             self.limits  = {}#{"end":0,"start":0,"total":0}
             self.limit   = PAGE_LIMIT
 
+            valid = False
+            start = self.runActions(RULES_ACTION_CHANNEL_START, citem, start, inherited=self)
             if start > (getLocalTime() + (SETTINGS.getSettingInt('Max_Days') * 86400)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceed MAX_DAYS: endtime = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
                 
-            citem = self.runActions(RULES_ACTION_CHANNEL_JSON, citem, citem, inherited=self)
+            citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
             if isinstance(citem['path'], list): 
                 path = citem['path']
             else: 
                 path = [citem['path']]
                 
             if path == [LANGUAGE(30174)]: #Seasonal
-                citem, path = self.seasonal.getPath(citem)
+                citem, path = self.seasonal.buildPath(citem)
                 
             mixed  = len(path) > 1
             media  = 'music' if radio else 'video'
@@ -196,7 +195,7 @@ class Builder:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
-                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_ITEMS, citem, cacheResponse, inherited=self)
+                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self)
                 cacheResponse = list(interleave(cacheResponse))[0]# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
@@ -256,7 +255,9 @@ class Builder:
     def buildFileList(self, citem, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(citem['id'],path,limit,sort,filter,limits))
         if not sort: #set fallback (default) sort methods when none is provided.
-            if path.endswith('.xsp'):           media, sort = self.xsp.parseSmartPlaylist(path)   #smartplaylist
+            if path.endswith('.xsp'):
+                paths, media, sort = self.xsp.parseSmartPlaylist(path)                                                  #smartplaylist - Music/Video
+                if paths: return [self.buildFileList(citem, path, media, limit, sort, filter, limits) for xsp in paths] #smartplaylist - w/playlists
             elif '?xsp=' in path:               media, sort = self.xsp.parseDynamicPlaylist(path) #dynamicplaylist
             elif path.startswith('videodb://tvshows'): sort = {"method": "episode"}               #tvshows
             elif path.startswith('videodb://movies'):  sort = {"method": "random"}                #movies
@@ -367,7 +368,7 @@ class Builder:
                     if item.get('year',0) == 0 and spYear: 
                         item['year'] = spYear
                         
-                    item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161))
+                    item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
                     if citem.get('holiday'): 
                         item['plot'] = '[B]%s[/B]\n%s'%(citem['holiday'],item['plot'])
                         

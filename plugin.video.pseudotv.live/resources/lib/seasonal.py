@@ -19,28 +19,27 @@
 #adapted from https://github.com/sualfred/script.embuary.helper/blob/matrix
 
 from resources.lib.globals     import *
-from math                      import ceil
-
-MOVIE_URL= 'videodb://movies/titles/?xsp=%s'
-TV_URL   = 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'
 
 # https://www.holidaysmart.com/holidays/daily/fandom
 # https://www.holidaysmart.com/holidays/daily/tv-movies
+
+MOVIE_URL= 'videodb://movies/titles/?xsp=%s'
+TV_URL   = 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'
 
 SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title','originaltitle','genre']        , 'logo':''},
                          2: {'name':'New Years Anthologies'                     ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title','originaltitle','genre']        , 'logo':''},
                          3: {'name':'Science Fiction Week'                      ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                                , 'logo':''},
                          4: {'name':'Science Fiction Week'                      ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                                , 'logo':''}},
                          
-            'February' :{1: {'name':'G.I. Joe Week'                             ,'keyword':'gijoe'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+            'February' :{1: {'name':'G.I. Joe Week'                             ,'keyword':'gijoe'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
                          2: {'name':'Love is in the air (Valentines Week)'      ,'keyword':'romance' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
                          3: {'name':'Love is in the air (Valentines Week)'      ,'keyword':'romance' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':'Pokémon Week'                              ,'keyword':'pokemon' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+                         4: {'name':'Pokémon Week'                              ,'keyword':'pokemon' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
             'March'    :{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
                          2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'J. R. R. Tolkien Week'                     ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'J. R. R. Tolkien Week'                     ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+                         3: {'name':'Red Nose Week'                             ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'J.R.R. Tolkien Week'                       ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
             
             'April'    :{1: {'name':'Live long and prosper (Star Trek Week)'    ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
                          2: {'name':'Live long and prosper (Star Trek Week)'    ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
@@ -59,7 +58,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     
                         
             'July'     :{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
                          2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Harry Potter Week'                         ,'keyword':'potter'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
                          4: {'name':'Harry Potter Week'                         ,'keyword':'potter'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
             'August'   :{1: {'name':'Spiderman Week'                            ,'keyword':'spider'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
@@ -79,7 +78,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     
                         
             'November' :{1: {'name':'Honoring all who served (Veterans Week)'   ,'keyword':'veterans','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
                          2: {'name':'Honoring all who served (Veterans Week)'   ,'keyword':'veterans','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Doctor Who Week'                           ,'keyword':'tardis  ','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
                          4: {'name':'Doctor Who Week'                           ,'keyword':'tardis'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
             'December' :{1: {'name':'Disney Week'                               ,'keyword':'disney'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','studio'], 'logo':''},
@@ -155,16 +154,15 @@ class Seasonal:
         holiday = {}
         month   = self.getMonth()
         week    = self.getWeek()
-        weeks   = [1,2,3,4][week:]
-        weeks.insert(0,week)
+        weeks   = [1,2,3,4][week-1:]
         for next in weeks:
             holiday = SEASONS.get(month,{}).get(next,{})
-            if holiday: break
+            if holiday.get('keyword'): break
         self.log('getNearestHoliday, month = %s, week = %s, found = %s'%(month, week, holiday))
         return holiday
 
 
-    def getPath(self, citem):
+    def buildPath(self, citem):
         url     = []
         filters = []
         season  = self.getNearestHoliday()
@@ -183,5 +181,6 @@ class Seasonal:
                     payload = {"order":{"direction":"ascending","ignorefolders":0,"method":"%s"%(method)},"rules":{"or":filters},"type":"%s"%(sort)}
                     if   type == 'tvshow': url.append(TV_URL%(dumpJSON(payload)))
                     elif type == 'movie':  url.append(MOVIE_URL%(dumpJSON(payload)))
-        self.log('getPath, returning url = %s'%(url))
+                        
+        self.log('buildPath, returning url = %s'%(url))
         return citem, url

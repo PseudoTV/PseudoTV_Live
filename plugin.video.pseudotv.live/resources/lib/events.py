@@ -83,6 +83,5 @@ def logit(label=None, level=None):
     
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
-    if not isinstance(event,str): msg = str(event)
-    if level == xbmc.LOGERROR: event = '%s\n%s'%((event),traceback.format_exc())
+    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)

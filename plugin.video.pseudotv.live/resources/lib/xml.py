@@ -20,7 +20,8 @@
 
 from resources.lib.globals     import *
 from resources.lib             import xmltv
-
+    
+    
 class XMLTV:
     def __init__(self, writer=None):
         if writer is None:
@@ -350,22 +351,22 @@ class XMLTV:
                       'icon'        : [{'src': item['thumb']}],
                       'length'      : {'units': 'seconds', 'length': str(item['length'])}}
                       
-        if item.get('sub-title',''):
+        if item.get('sub-title'):
             pitem['sub-title'] = [(self.cleanString(item['sub-title']), LANG)]
 
         if item.get('stars'):
             pitem['star-rating'] = [{'value': '%s/10'%(int(round(float(item['stars']))))}]
                       
-        if item.get('director',''):
+        if item.get('director'):
             pitem['credits']['director'] = [self.cleanString(director) for director in item['director']]
             
-        if item.get('actor',''):
+        if item.get('actor'):
             pitem['credits']['actor'] = [self.cleanString(actor) for actor in item['actor']]
 
-        if item.get('catchup-id',''):
+        if item.get('catchup-id'):
             pitem['catchup-id'] = item['catchup-id']
             
-        if item.get('date',''):
+        if item.get('date'):
             try: pitem['date'] = (strpTime(item['date'], '%Y-%m-%d')).strftime('%Y%m%d')
             except: pass
 
@@ -379,7 +380,7 @@ class XMLTV:
             else:  
                 pitem['rating'] = [{'system': 'MPAA', 'value': rating}] #todo support international rating systems
             
-        if item.get('episode-num',{}): 
+        if item.get('episode-num'): 
             pitem['episode-num'] = [(item['episode-num'].get('xmltv_ns',''), 'xmltv_ns'),
                                     (item['episode-num'].get('onscreen',''), 'onscreen')]
             
@@ -429,4 +430,4 @@ class XMLTV:
     @staticmethod
     def cleanString(text):
         if text == ', ' or not text: text = LANGUAGE(30161) #"Unavailable"
-        return text
+        return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')

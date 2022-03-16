@@ -32,6 +32,7 @@ from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
 from socket                    import gethostbyname, gethostname
+from math                      import ceil,  floor
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -143,8 +144,8 @@ IMG_EXTS            = ['.png','.jpg','.gif']
 RULES_ACTION_CHANNEL       = 1 
 RULES_ACTION_BUILD_START   = 2
 RULES_ACTION_CHANNEL_START = 3
-RULES_ACTION_CHANNEL_JSON  = 4
-RULES_ACTION_CHANNEL_ITEMS = 5
+RULES_ACTION_CHANNEL_CITEM = 4
+RULES_ACTION_CHANNEL_FLIST = 5
 RULES_ACTION_CHANNEL_STOP  = 6
 RULES_ACTION_PRE_TIME      = 7
 RULES_ACTION_POST_TIME     = 8
@@ -313,8 +314,7 @@ def busy_dialog():
 
 def log(event, level=xbmc.LOGDEBUG): #todo unifiy all logs to its own class to handle events/exceptions.
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
-    if not isinstance(event,str): msg = str(event)
-    if level == xbmc.LOGERROR: event = '%s\n%s'%((event),traceback.format_exc())
+    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
     
 def chkSettings(last,current):

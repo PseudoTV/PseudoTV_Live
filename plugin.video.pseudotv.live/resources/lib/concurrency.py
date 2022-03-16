@@ -65,8 +65,7 @@ def roundupDIV(p, q):
     
 def log(msg, level=xbmc.LOGDEBUG):
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if not isinstance(msg,str): msg = str(msg)
-    if level == xbmc.LOGERROR: msg = '%s\n%s'%((msg),traceback.format_exc())
+    if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
     
