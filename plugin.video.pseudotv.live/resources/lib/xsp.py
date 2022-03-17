@@ -35,7 +35,6 @@ class XSP:
     def parseSmartPlaylist(self, file):
         sort  = {}
         media = 'video'
-        paths = []
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
@@ -48,14 +47,9 @@ class XSP:
                 sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()
                 sort["order"]  = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
             except: pass
-            # try:
-                # if dom.getElementsByTagName('rule')[0].getAttribute('field').lower() == "playlist":
-                    # value = dom.getElementsByTagName('rule')[0].childNodes[0].nodeValue.lower()
-                    # print(value, dom.getElementsByTagName('rule')[0].childNodes)
-            # except: pass
-            self.log("parseDynamicPlaylist, file = %s, sort = %s, paths = %s"%(file, sort, len(paths)))
+            self.log("parseSmartPlaylist, file = %s, sort = %s"%(file, sort))
         except Exception as e: self.log("parseSmartPlaylist, failed! %s"%(e), xbmc.LOGERROR)
-        return paths, media, sort
+        return media, sort
 
 
     @cacheit(checksum=getInstanceID(),json_data=True)
@@ -69,3 +63,4 @@ class XSP:
             else:       sort = {}
             self.log("parseDynamicPlaylist, path = %s, media = %s, sort = %s"%(path, media, sort))
         except Exception as e: self.log("parseDynamicPlaylist, failed! %s"%(e), xbmc.LOGERROR)
+        return media, sort

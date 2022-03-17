@@ -255,9 +255,7 @@ class Builder:
     def buildFileList(self, citem, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(citem['id'],path,limit,sort,filter,limits))
         if not sort: #set fallback (default) sort methods when none is provided.
-            if path.endswith('.xsp'):
-                paths, media, sort = self.xsp.parseSmartPlaylist(path)                                                  #smartplaylist - Music/Video
-                if paths: return [self.buildFileList(citem, path, media, limit, sort, filter, limits) for xsp in paths] #smartplaylist - w/playlists
+            if path.endswith('.xsp'):           media, sort = self.xsp.parseSmartPlaylist(path)   #smartplaylist - Music/Video
             elif '?xsp=' in path:               media, sort = self.xsp.parseDynamicPlaylist(path) #dynamicplaylist
             elif path.startswith('videodb://tvshows'): sort = {"method": "episode"}               #tvshows
             elif path.startswith('videodb://movies'):  sort = {"method": "random"}                #movies
