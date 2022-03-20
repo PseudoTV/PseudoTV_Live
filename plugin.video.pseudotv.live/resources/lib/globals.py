@@ -718,11 +718,12 @@ def setPlugin(id,values,override=False):
     return True
     
 def brutePVR(override=False):
-    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
-    elif not override:
-        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    toggleADDON(PVR_CLIENT,False,reverse=True)
     return True
+    # if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
+    # elif not override:
+        # if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
+    # toggleADDON(PVR_CLIENT,False,reverse=True)
+    # return True
     
 def refreshMGR():
     if getPlugin(PVR_MANAGER):
