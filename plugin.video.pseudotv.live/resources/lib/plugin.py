@@ -120,7 +120,6 @@ class Plugin:
             pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
             pvritem['citem'].update(citem) #update citem with comprehensive meta
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
-            
             self.channelPlaylist.clear()
             xbmc.sleep(100)
             
@@ -172,7 +171,11 @@ class Plugin:
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
         if self.currentChannel != id: self.currentChannel = id
-        pvritem   = self.buildChannel(name, id, isPlaylist)
+            
+        lastPVRItem = PROPERTIES.getPropertyDict('Last_Played_PVRItem')
+        if lastPVRItem: pvritem = lastPVRItem
+        else:           pvritem = self.buildChannel(name, id, isPlaylist)
+            
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
@@ -183,9 +186,8 @@ class Plugin:
         
         if nowitem:
             found = True
-            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):
+            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):# and not nowitem.get('isStack',False):
                 PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
-                
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -196,22 +198,21 @@ class Plugin:
                     nowitem['progress']           = 0
                     nowitem['progresspercentage'] = 0
                     self.log('playChannel, progress start at the beginning')
+                    
                 elif round(nowitem['progresspercentage']) > self.seekTHLD: # near end, avoid callback; override nowitem and queue next show.
                     self.log('playChannel, progress near the end, queue nextitem')
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order
-                    
-            # litem = PROPERTIES.getPropertyDict('Last_Played_NowItem').
-            # elif litem.get('isStack',False):
-                # writer = getWriter(litem.get('writer',{}))
-                # if isStack(writer['file']):
-                    # writer['file'] = buildStack(splitStacks(writer['file'])[1:])
-                    # print('writer',writer)
-                    # litem['writer'] = setWriter(LANGUAGE(30161),litem)
-                    # print(litem)
-                # nowitem = litem
-                # self.log('playChannel, stack detected advancing queue to next stack')
                 
-            else: 
+            # elif nowitem.get('isStack',False):
+                # path = popStack(nowitem.get('playing'))
+                # nowitem['isStack'] = isStack(path)
+                # nowitem['playing'] = path
+                # nwriter = getWriter(nowitem.get('writer',{}))
+                # nwriter['file'] = path
+                # nowitem['writer'] = setWriter(LANGUAGE(30161),nwriter)
+                # self.log('playChannel, stack detected advancing...')
+                
+            else:
                 nowitem = nextitems.pop(0)
                 self.log('playChannel, loopback detected advancing queue to nextitem')
             
@@ -231,6 +232,7 @@ class Plugin:
                 if isStack(path) and not hasStack(path,file):
                     self.log('playChannel, nowitem isStack with path = %s'%(path))
                     liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
+                    
             elif isStack(path):
                 liz.setPath(translateStack(path))#translate vfs stacks to local..
             self.log('playChannel, playing path = %s'%(liz.getPath()))
@@ -241,12 +243,18 @@ class Plugin:
                 lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(False))
                 lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
                 nextitems.append(lastitem)
-                
-            nowitem['isStack']       = isStack(liz.getPath())
+
+            nowitem['playing']       = liz.getPath()
+            nowitem['isStack']       = isStack(nowitem['playing'])
             pvritem['broadcastnow']  = nowitem
             pvritem['broadcastnext'] = nextitems
             liz.setProperty('pvritem',dumpJSON(pvritem))
-            
+                            
+            # if nowitem['isStack']:
+                # PROPERTIES.setPropertyDict('Last_Played_PVRItem',pvritem)
+            # else:
+                # PROPERTIES.clearProperty('Last_Played_PVRItem')
+                
             self.channelPlaylist.clear()
             xbmc.sleep(100)
                 
@@ -261,6 +269,7 @@ class Plugin:
                 xbmc.sleep(100)
                 if isBusyDialog(): xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
                 return
+                
         else: self.playbackError()
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         

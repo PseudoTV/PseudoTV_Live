@@ -70,7 +70,6 @@ PROVIDERFLE         = 'providers.xml'
 USER_LOC            = SETTINGS.getSetting('User_Folder')
 DEBUG_ENABLED       = SETTINGS.getSettingBool('Enable_Debugging')
 PAGE_LIMIT          = SETTINGS.getSettingInt('Page_Limit')
-PREDEFINED_OFFSET   = ((SETTINGS.getSettingInt('Max_Days') * 60) * 60)
    
 CHANNELFLEPATH      = os.path.join(SETTINGS_LOC,CHANNELFLE)
 LIBRARYFLEPATH      = os.path.join(SETTINGS_LOC,LIBRARYFLE)
@@ -102,7 +101,6 @@ CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
 #resources
-OVERLAY_FLE         = "%s.overlay.xml"%(ADDON_ID)
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 MONO_LOGO           = os.path.join(MEDIA_LOC,'wlogo.png')
@@ -413,6 +411,9 @@ def hasAutotuned():
     
 def setAutotuned(state=True):
     return PROPERTIES.setPropertyBool('hasAutotuned',state)
+    
+def setOverlay(state=True):
+    PROPERTIES.setPropertyBool('OVERLAY',state)
     
 def isOverlay():
     return PROPERTIES.getPropertyBool('OVERLAY')
@@ -1096,38 +1097,45 @@ def isStack(path,file=None): #is path a stack
         return path.startswith('stack://')
 
 def hasStack(path,file=None): #does path has stack paths, return paths
-    log('hasStack, path = %s, file = %s'%(path,file))
     if isStack(path,file): 
         return splitStacks(path)
 
 def splitStacks(path): #split stack path for indv. files.
-    log('splitStacks, path = %s'%(path))
-    return (path.split('stack://')[1]).split(' , ')
+    if not isStack(path): return [path]
+    return list(filter(None,((path.split('stack://')[1]).split(' , '))))
                                       
 def stripPreroll(path, file): #strip prerolls from stack, return redacted paths.
-    log('stripPreroll, path = %s, file = %s'%(path,file))
     paths = ((path.split('stack://')[1]).split(file)[1]).split(' , ')
     paths.insert(0,file)
     return buildStack(paths)
 
 def stripPostroll(path, file): #strip postrolls from stack, return redacted paths.
-    log('stripPostroll, path = %s, file = %s'%(path,file))
     paths = ((path.split('stack://')[1]).split(file)[0]).split(' , ')
     paths.insert(0,file)
     return buildStack(paths)
 
+def popStack(path):
+    paths = splitStacks(path)
+    paths.pop(0)
+    return buildStack(paths)
+    
 def buildStack(paths):#build paths list to stack string.
-    if len(paths) == 1: return paths[0]
+    paths = list(filter(None,paths))
+    if   len(paths) == 0: return ''
+    elif len(paths) == 1: return paths[0]
     else: return 'stack://%s'%(' , '.join(paths))
     
-def translateStack(path):#translate vfs stacks to local
-    log('translateStack, path = %s'%(path))
-    paths = splitStacks(path)
+def translateStack(paths):#translate vfs stacks to local
+    print('translateStack paths in',paths)
+    if not isinstance(paths,list):
+        paths = splitStacks(paths)
     for idx, file in enumerate(paths.copy()):
         if file.lower().startswith("special://"):
             paths[idx] = xbmcvfs.translatePath(file)
-    return buildStack(paths)
-
+    paths = buildStack(paths)
+    print('translateStack paths out',paths)
+    return paths
+    
 def cleanMPAA(mpaa):
     mpaa = mpaa.lower()
     if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex

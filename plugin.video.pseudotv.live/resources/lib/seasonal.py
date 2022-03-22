@@ -38,7 +38,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     
                         
             'March'    :{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
                          2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Red Nose Week'                             ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         3: {'name':' '                                         ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
                          4: {'name':'J.R.R. Tolkien Week'                       ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
             
             'April'    :{1: {'name':'Live long and prosper (Star Trek Week)'    ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
@@ -122,8 +122,7 @@ KEYWORDS = {'newyear'  :['The Twilight Zone','Black-Mirror','Black Mirror','Oute
                          'fest der liebe', 'heilige nacht', 'heiliger abend', 'heiligabend', 'nikolaus', 'christkind', 'Noël',
                          'Meilleurs vœux', 'feliz navidad', 'joyeux noel', 'Natale', 'szczęśliwe święta', 'Veselé Vánoce',
                          'Vrolijk kerstfeest', 'Kerstmis', 'Boże Narodzenie', 'Kalėdos', 'Crăciun']}
-                         
-                         
+                                                
 EXCLUDE  = [{"field":"season" ,"operator":"greaterthan","value":"0"},
             {"field":"episode","operator":"greaterthan","value":"0"}]
     

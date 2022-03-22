@@ -26,6 +26,7 @@ from resources.lib.server      import Discovery, Announcement, HTTP
 class Player(xbmc.Player):
     def __init__(self):
         xbmc.Player.__init__(self)
+        self.playingFile    = ''
         self.playingPVRitem = {}
         self.isPseudoTV     = isPseudoTV()
         self.lastSubState   = isSubtitle()
@@ -43,24 +44,39 @@ class Player(xbmc.Player):
         elif self.isPlayingVideo():
             return self.getVideoInfoTag()
 
-    
-    def getPlayingFile(self):
-        self.log('getPlayingFile')
-        try:    return self.getPlayingFile()
-        except: return ''
-
+               
+    def getPlayerLabel(self):
+        return (xbmc.getInfoLabel('Player.Title') or xbmc.getInfoLabel('Player.Label') or '')
+           
+           
+    def getPlayerFile(self):
+        try:    file = self.getPlayingFile()
+        except: file = self.playingPVRitem.get('broadcastnow',{}).get('playing','')
+        self.log('getPlayingFile, file = %s'%(file))
+        return file
+        
         
     def getPlayerTime(self):
-        self.log('getPlayerTime')
-        try:    return self.getTotalTime()
+        try:    time = self.getTotalTime()
+        except: time = 0
+        self.log('getPlayerTime, time = %s'%(time))
+        return time
+                
+                
+    def getPlayerProgress(self):
+        try:    return float(xbmc.getInfoLabel('Player.Progress'))
+        except: return 0.0
+
+
+    def getTimeRemaining(self):
+        try:    return int(sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('Player.TimeRemaining(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
         except: return 0
-
-
+   
+   
     def getPVRTime(self):
         self.log('getPVRTime')
         try:    return (sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('PVR.EpgEventElapsedTime(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
         except: return 0
-
 
     def getPVRitem(self):
         try:    pvritem = self.getPlayingItem().getProperty('pvritem') #Kodi v20. todo
@@ -94,7 +110,7 @@ class Player(xbmc.Player):
         if (state and not hasSubtitle()): return
         elif self.isPseudoTV: self.showSubtitles(state)
 
-        
+
         """ Player() Trigger Order
         Player: onPlayBackStarted
         Player: onAVChange (if playing)
@@ -108,18 +124,23 @@ class Player(xbmc.Player):
     
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
-        self.isPseudoTV = isPseudoTV()
         self.playAction()
         
 
     def onAVChange(self):
         self.log('onAVChange')
-        self.isPseudoTV = isPseudoTV()
-        
+        self.isPseudoTV  = isPseudoTV()
+        self.playingFile = self.getPlayerFile()
+        # if self.playingFile != playerFile:
+            # self.playingFile = playerFile
+            # self.changeAction()
+            
         
     def onAVStarted(self):
         self.log('onAVStarted')
         self.isPseudoTV = isPseudoTV()
+        if not self.isPseudoTV:
+            self.toggleOverlay(False)
         self.setSubtitles(self.lastSubState)
 
 
@@ -156,16 +177,18 @@ class Player(xbmc.Player):
             self.log('playAction, updating callback to = %s'%(pvritem['callback']))
 
         if pvritem.get('channelid',-1) == self.playingPVRitem.get('channelid',random.random()):
-            self.log('playAction, no channel change')
+            self.log('playAction, No Channel Change')
             self.playingPVRitem = pvritem
         else:   
-            self.log('playAction, channel changed')
+            self.log('playAction, New Channel Started')
             self.lastSubState = isSubtitle()
             citem = self.getCitem()
             pvritem.get('citem',{}).update(citem)
             self.playingPVRitem = self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_START, citem, pvritem, inherited=self)
             if self.lastSubState: self.setSubtitles(False) #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
-        self.log('playAction, finished; isPlaylist = %s'%(self.playingPVRitem.get('isPlaylist',False)))
+
+        self.playingFile = self.getPlayerFile()
+        self.log('playAction, finished; isPlaylist = %s, isStack = %s'%(self.playingPVRitem.get('isPlaylist',False),self.playingPVRitem.get('broadcastnow',{}).get('isStack',False)))
         
                 
     def updatePVRItem(self, pvritem=None):
@@ -180,15 +203,24 @@ class Player(xbmc.Player):
             return self.stopAction()
         
         if self.playingPVRitem.get('isPlaylist',False):
-            self.log('changeAction, playing playlist or stack')
-            #todo pop broadcastnext? keep pvritem in sync with playlist pos?
-        else:
-            self.isPseudoTV = False
-            xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-            self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
-            callback = self.playingPVRitem.get('callback','')
-            self.log('changeAction, playing = %s'%(callback))
-            xbmc.executebuiltin('PlayMedia(%s)'%callback)
+            if self.playingPVRitem.get('broadcastnow',{}).get('isStack',False):
+                self.log('changeAction, playing stack playlist')
+                path = popStack(self.playingPVRitem.get('broadcastnow',{}).get('playing'))
+                self.playingPVRitem['broadcastnow']['isStack'] = isStack(path)
+                self.playingPVRitem['broadcastnow']['playing'] = path
+            else:
+                self.log('changeAction, playing playlist')
+                broadcastnext = self.playingPVRitem['broadcastnext']
+                self.playingPVRitem['broadcastnow']  = broadcastnext.pop(0)
+                self.playingPVRitem['broadcastnext'] = broadcastnext
+            return
+            
+        self.isPseudoTV = False
+        xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
+        callback = self.playingPVRitem.get('callback','')
+        self.log('changeAction, playing callback = %s'%(callback))
+        xbmc.executebuiltin('PlayMedia(%s)'%callback)
 
 
     def stopAction(self):
@@ -203,19 +235,14 @@ class Player(xbmc.Player):
         
         
     def toggleOverlay(self, state):
-        self.overlayWindow = Overlay(OVERLAY_FLE, ADDON_PATH, "default", service=self.myService)
-        # from resources.lib.overlaynew import Overlay
-        # self.overlayWindow = Overlay() #new hijack method
+        self.log("toggleOverlay, state = %s"%(state))
         if state and not isOverlay():
             conditions = [self.showOverlay,self.isPlaying(),self.isPseudoTV]
             self.log("toggleOverlay, conditions = %s"%(conditions))
             if False in conditions: return
-            self.log("toggleOverlay, show")
-            self.overlayWindow.show()
+            self.myService.overlayWindow.open()
         elif not state and isOverlay():
-            self.log("toggleOverlay, close")
-            self.overlayWindow.close()
-            del self.overlayWindow
+            self.myService.overlayWindow.close()
 
         
     def triggerSleep(self):
@@ -267,8 +294,8 @@ class Monitor(xbmc.Monitor):
             
             if idleTime > OVERLAY_DELAY:
                 self.myService.player.toggleOverlay(True)
-            else: 
-                self.myService.player.toggleOverlay(False)
+            # else: 
+                # self.myService.player.toggleOverlay(False)
         return isIdle
 
 
@@ -319,6 +346,7 @@ class Service:
         self.writer            = Writer(service=self)
         self.player.myService  = self
         self.monitor.myService = self
+        self.overlayWindow     = Overlay(service=self)
         
         if self._initialize():
             self._startup()

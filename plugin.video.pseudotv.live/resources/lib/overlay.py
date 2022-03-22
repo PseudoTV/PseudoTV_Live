@@ -22,306 +22,324 @@
 from resources.lib.globals import *
 from resources.lib.rules   import RulesList
 
+# class Video(xbmcgui.WindowXML):
+# todo adv. rule apply overlay ie. scanline, etc to videowindow.
+# xbmcgui.lock()
+# self.videoWindow  = self.getControl(41000)
+# self.videoWindow.setPosition(0, 0)
+# self.videoWindow.setHeight(self.videoWindow.getHeight())
+# self.videoWindow.setWidth(self.videoWindow.getWidth())
+# self.videoOverlay = self.getControl(41005)
+# self.videoOverlay.setPosition(0, 0)
+# self.videoOverlay.setHeight(0)
+# self.videoOverlay.setWidth(0)
+# xbmcgui.unlock()
+
+class Background(xbmcgui.WindowXML):
+    def __init__(self, *args, **kwargs):
+        xbmcgui.WindowXML.__init__(self, *args, **kwargs)
+        self.overlay = kwargs.get('overlay')
+        
+        
+    def onInit(self):
+        self.getControl(40001).setVisible(SETTINGS.getSettingBool("Static_Overlay"))
+        self.getControl(40002).setImage(self.overlay._getPlayingCitem().get('logo',LOGO))
+        self.getControl(40003).setText(self.overlay._onNext.getText())
+        
+
 class Player(xbmc.Player):
     def __init__(self, overlay):
         xbmc.Player.__init__(self)
-        self.overlay      = overlay
-        self.playingTitle = self.getPlayerLabel()
-        self.OnNextWait   = self.getOnNextInterval()
-           
-           
-    def getPlayerLabel(self):
-        return (xbmc.getInfoLabel('Player.Title') or xbmc.getInfoLabel('Player.Label') or '')
-           
-           
-    def getPlayerTime(self):
-        self.overlay.log('getPlayerTime')
-        try:    return self.getTotalTime()
-        except: return 0
+        self.overlay = overlay
 
+
+    def doBackground(self):
+        self.overlay.log('doBackground')
+        try:
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", overlay=self.overlay)
+            self.background.show()
+        except: self.closeBackground()
+
+
+    def closeBackground(self):
+        self.overlay.log('closeBackground')
+        try:
+            self.background.close()
+            del self.background
+            xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
+        except: pass
         
-    def getOnNextInterval(self,interval=3):
-        totalTime = self.getPlayerTime()
-        if totalTime == 0: return 300
-        remaining = ((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval))
-        return remaining // interval
-            
-            
+
+    def onAVChange(self):
+        self.overlay.log('onAVChange')
+        
+        
+    def onAVStarted(self):
+        self.overlay.log('onAVStarted')
+        self.closeBackground()
+        
+        
     def onPlayBackStarted(self):
         self.overlay.log('onPlayBackStarted')
-        self.playingTitle = xbmc.getInfoLabel('Player.Title')
-        self.OnNextWait   = self.getOnNextInterval()
-
+        if self.overlay._hasControl(self.overlay._channelBug):
+            self.overlay.setImage(self.overlay._channelBug,(self.overlay._getPlayingCitem().get('logo',LOGO)))
+        
         
     def onPlayBackEnded(self):
         self.overlay.log('onPlayBackEnded')
-        self.playingTitle = ""
-        self.overlay.updateOnNext()
+        self.doBackground()
     
     
     def onPlayBackStopped(self):
         self.overlay.log('onPlayBackStopped')
-        self.overlay.closeOverlay()
-                
+        
 
-class Overlay(xbmcgui.WindowXML):
-    def __init__(self, *args, **kwargs):
-        xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.service            = kwargs.get('service')
-        self.pvritem            = {}
-        self.citem              = {}
-        self.nowitem            = {}
-        self.nextitems          = [] 
-        self.listitems          = []
-        self.listcycle          = []
-        self.isPlaylist         = False
-        self.staticOverlay      = False
-        self.showChannelBug     = False
-        self.showOnNext         = False
+class Overlay():
+    controlManager = dict()
+    
+    def __init__(self, service):
+        self.service    = service
+        self.player     = service.player
+        self.myPlayer   = Player(self)
+        self.runActions = RulesList().runActions
         
-        self.runActions         = RulesList().runActions
+        #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
+        self.window   = xbmcgui.Window(12005) 
+        self.window_w = self.window.getWidth()
+        self.window_h = self.window.getHeight()
         
-        self.bugToggleThread    = threading.Timer(5.0, self.bugToggle)
-        self.onNextChkThread    = threading.Timer(5.0, self.onNextChk)
-        self.onNextToggleThread = threading.Timer(5.0, self.onNextToggle)
+        #init controls
+        self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')
+        self._channelBug = xbmcgui.ControlImage(1556, 920, 128, 128, 'None', aspectRatio=2)#todo user sets size & location 
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def onInit(self):
-        try:
-            self.log('onInit')
-            self.showChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
-            self.showOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
-            self.staticOverlay  = SETTINGS.getSettingBool("Static_Overlay")
-            self.channelBugVal  = SETTINGS.getSettingInt("Channel_Bug_Interval")
-
-            self.container = self.getControl(40000)
-            
-            self.static = self.getControl(40001)
-            self.static.setVisible(self.staticOverlay)
-            
-            self.startOver = self.getControl(41002)
-            self.startOver.setVisible(False)
-            
-            self.onNext = self.getControl(41003)
-            self.onNext.setVisible(False)
-            
-            self.channelbug = self.getControl(41004)
-            self.channelbug.setVisible(False)
-                        
-            self.overlayLayer = self.getControl(39999)
-            self.overlayLayer.setVisible(False)
         
-            # todo requires kodi core update. videowindow control requires setPosition,setHeight,setWidth functions.
-            # https://github.com/xbmc/xbmc/issues/19467
-            # xbmcgui.lock()
-            # self.videoWindow  = self.getControl(41000)
-            # self.videoWindow.setPosition(0, 0)
-            # self.videoWindow.setHeight(self.videoWindow.getHeight())
-            # self.videoWindow.setWidth(self.videoWindow.getWidth())
-            # self.videoOverlay = self.getControl(41005)
-            # self.videoOverlay.setPosition(0, 0)
-            # self.videoOverlay.setHeight(0)
-            # self.videoOverlay.setWidth(0)
-            # xbmcgui.unlock()
+    
+    def _getPVRItem(self):
+        return self.player.getPVRitem()
+    
+    
+    def _getPlayingCitem(self):
+        return self._getPVRItem().get('citem',{})
+        
+    
+    def _getNowItem(self):
+        return self._getPVRItem().get('broadcastnow',{})
+        
+        
+    def _getNextItems(self):
+        return self._getPVRItem().get('broadcastnext',[])
+        
+        
+    def _getItemWriter(self, item):
+        return getWriter(item.get('writer',''))
+        
+        
+    def _hasControl(self, control):
+        return control in self.controlManager
+        
+
+    def _getControl(self, control):
+        """ If control is not None  == Exists, 
+            If control is     True  == Visible, 
+            If control is     False == Hidden 
+        """
+        return self.controlManager.get(control,None)
+        
+        
+    def _setControl(self, control, state):
+        self.controlManager[control] = state
+        
+        
+    def _delControl(self, control):
+        if self._hasControl(control):
+            self.controlManager.pop(control)
+        
+        
+    def _addControl(self, control):
+        """ Create Control & Add to manager.
+        """
+        try:
+            self.log('_addControl, %s'%(control))
+            self.window.addControl(control)
+            self._setControl(control,self.setVisible(control, False))
+        except Exception as e: self.log('_addControl failed! %s'%(e))
+        
+        
+    def _removeControl(self, control):
+        """ Remove Control & Delete from manager.
+        """
+        try:
+            self.log('_removeControl, %s'%(control))
+            self.window.removeControl(control)
+            self._delControl(control)
+        except Exception as e: self.log('_removeControl failed! %s'%(e))
+        
+        
+    def setImage(self, control, image, cache=False):
+        try: control.setImage(image, useCache=cache)
+        except Exception as e: self.log('setImage failed! %s'%(e))
+        
+        
+    def setVisible(self, control, state):
+        try:
+            self._setControl(control,state)
+            control.setVisible(state)
+            self.log('setVisible, %s = %s'%(control,state))
+        except Exception('setVisible, failed! control does not exist'): pass
+        return state
+        
+        
+    def isVisible(self, control):
+        try:    return control.isVisible()
+        except: return (self._getControl(control) or False)
+        
+
+    def open(self):
+        self.log('open')
+        if isOverlay(): return self.close()
+        setOverlay(True)
+
+        self._chkonNextThread  = threading.Timer(1.0, self.chkOnNext)
+        self._onNextThread     = threading.Timer(5.0, self.toggleOnNext)
+        self._channelBugThread = threading.Timer(5.0, self.toggleBug)
+        
+        self._overlayThreads   = [self._channelBugThread,
+                                  self._chkonNextThread, 
+                                  self._onNextThread]
+                                  
+        # self.runActions(RULES_ACTION_OVERLAY, self.citem, inherited=self)
+        for thread_item in self._overlayThreads:
+            thread_item.start()
             
-            self.myPlayer = Player(self)
+
+    def close(self):
+        self.log('close')
+        for control, visible in list(self.controlManager.items()):
+            self._removeControl(control)
+
+        for thread_item in self._overlayThreads:
+            if thread_item.is_alive(): 
+                try: 
+                    self.log("close, joining thread %s"%(thread_item.name))
+                    thread_item.cancel()
+                    thread_item.join(1.0)
+                except: pass
+                    
+        self.myPlayer.closeBackground()
+        self.setImage(self._channelBug,'None')
+        self.window.clearProperties()
+        setOverlay(False)
+
+
+    def toggleBug(self, state=True):
+        def getWait(state):
+            _channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
+            if _channelBugInterval == -1: 
+                onVAL  = self.player.getTimeRemaining()
+                offVAL = 0.1
+            elif _channelBugInterval == 0:
+                onVAL  = random.randint(300,600)
+                offVAL = random.randint(300,600)
+            else:
+                onVAL  = _channelBugInterval * 60
+                offVAL = round(onVAL // 2)
+            return {True:float(onVAL),False:float(offVAL)}[state]
+
+        try:              
+            wait   = getWait(state)
+            nstate = not bool(state)
             
-            if self.load(): 
-                self.overlayLayer.setVisible(True)
-                self.log('showChannelBug = %s'%(self.showChannelBug))
-                self.log('showOnNext = %s'%(self.showOnNext))
-                if self.showChannelBug: self.bugToggle() #start bug timer
-                if self.showOnNext:     self.onNextChk()#start onnext timer
+            if state: 
+                if not self._hasControl(self._channelBug):
+                    self._addControl(self._channelBug)
+                    # self._channelBug.setColorDiffuse('0xC0FF0000') #todo user set diffuse color
+                    self._channelBug.setEnableCondition('[Player.HasMedia + Player.Playing]')
+                    
+                self.setImage(self._channelBug,(self._getPlayingCitem().get('logo',LOGO)))
+                self.setVisible(self._channelBug,True)
+                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
+                                                ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
-                self.closeOverlay()
+                self.setVisible(self._channelBug,False)
                 
-        except Exception as e: 
-            self.log("onInit, Failed! %s"%(e), xbmc.LOGERROR)
-            self.closeOverlay()
+            self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
+            self._channelBugThread = threading.Timer(wait, self.toggleBug, [nstate])
+            self._channelBugThread.name = "_channelBugThread"
+            self._channelBugThread.start()
+        except Exception as e: self.log("toggleBug, Failed! %s"%(e), xbmc.LOGERROR)
+           
 
-
-    def load(self):
-        try:
-            self.log('load')
-            self.pvritem = self.service.player.getPVRitem()
-            if not self.pvritem or not isPseudoTV(): 
-                return False
-
-            self.citem       = self.pvritem.get('citem',{})
-            self.channelbug.setImage(self.citem.get('logo',LOGO))
-
-            self.isPlaylist  = self.pvritem.get('isPlaylist',False)
-            self.nowitem     = self.pvritem.get('broadcastnow',{}) # current item
-            self.nextitems   = self.pvritem.get('broadcastnext',[])
-            del self.nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-                            
-            self.nowwriter   = getWriter(self.pvritem.get('broadcastnow',{}).get('writer',{}))
-            self.nowwriter.get('art',{})['thumb'] = getThumb(self.nowwriter) #unify artwork
-            
-            self.nextwriters = []
-            for nextitem in self.nextitems: 
-                nextitem = getWriter(nextitem.get('writer',{}))
-                nextitem.get('art',{})['thumb'] = getThumb(nextitem) #unify artwork
-                self.nextwriters.append(nextitem)
-
-            self.listitems   = [self.service.writer.dialog.buildItemListItem(self.nowwriter)]
-            self.listitems.extend([self.service.writer.dialog.buildItemListItem(nextwriter) for nextwriter in self.nextwriters])
-            
-            self.container.reset()
-            xbmc.sleep(100)
-            self.container.addItems(self.listitems)
-                        
-            self.runActions(RULES_ACTION_OVERLAY, self.citem, inherited=self)
-            self.static.setVisible(self.staticOverlay)
-            # self.myPlayer.onPlayBackStarted()
-            self.log('load finished')
-            return True
-        except Exception as e: 
-            self.log("load, Failed! %s"%(e), xbmc.LOGERROR)
-            return False
-     
-
-    def getPlayerProgress(self):
-        try:    return float(xbmc.getInfoLabel('Player.Progress'))
-        except: return 0.0
-
-
-    def getTimeRemaining(self):
-        try:    return int(sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('Player.TimeRemaining(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
-        except: return 0
-   
-   
-    def playSFX(self, filename, cached=True):
-        self.log('playSFX, filename = %s, cached = %s'%(filename,cached))
-        xbmc.playSFX(filename, useCached=cached)
-   
-   
-    def cancelOnNext(self): #channel changing and/or not playing cancel on next
-        self.onNext.setVisible(False)
-        if self.onNextToggleThread.is_alive(): 
-            try: 
-                self.onNextToggleThread.cancel()
-                self.onNextToggleThread.join()
-            except: pass
-
-
-    def updateOnNext(self):
-        try: #if playlist, pop older played item and refresh meta container.
-            self.log('updateOnNext, isPlaylist = %s'%(self.isPlaylist))
-            self.cancelOnNext()
-            if self.isPlaylist:
-                if len(self.listitems) > 0:
-                    self.listitems.pop(0)
-                    self.container.reset()
-                    self.container.addItems(self.listitems)
-                    return
-        except Exception as e: self.log("updateOnNext, Failed! %s"%(e), xbmc.LOGERROR)
-        
-
-    def onNextChk(self):
+    def chkOnNext(self):
         def playerAssert():
-            try: #test playing item, contains title? remaining time / progress within parameters?
-                titleAssert    = self.listitems[0].getLabel() == self.myPlayer.playingTitle
-                remainAssert   = self.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
-                progressAssert = self.getPlayerProgress() >= 75.0
+            """ #test playing item, contains title? remaining time / progress within parameters?
+            """
+            try: 
+                titleAssert    = self._getNowItem().get('label') == self.player.getPlayerLabel()
+                remainAssert   = self.player.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
+                progressAssert = self.player.getPlayerProgress() >= 75.0
                 return (titleAssert & remainAssert & progressAssert)
             except: 
                 return False
         try:
-            if self.onNextToggleThread.is_alive():
-                if not self.overlayLayer.isVisible(): 
-                    self.cancelOnNext()
-            else:
+            if self._onNextThread.is_alive():
+                # cancel onNext Toggle.
+                if not playerAssert(): 
+                    self.setVisible(self._onNext,False)
+                    try: 
+                        self._onNextThread.cancel()
+                        self._onNextThread.join()
+                    except: pass
+            else:# start onNext Toggle
                 if playerAssert(): 
-                    self.onNextToggle()
+                    self.toggleOnNext()
                     
              #poll player every XXsecs.
-            self.onNextChkThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.onNextChk)
-            self.onNextChkThread.name = "onNextChkThread"
-            self.onNextChkThread.start()
-        except Exception as e: self.log("onNextChk, Failed! %s"%(e), xbmc.LOGERROR)
-        
+            self._chkonNextThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.chkOnNext)
+            self._chkonNextThread.name = "chkonNextThread"
+            self._chkonNextThread.start()
+        except Exception as e: self.log("chkOnNext, Failed! %s"%(e), xbmc.LOGERROR)
 
-    def onNextToggle(self, state=True):
-        if self.onNextToggleThread.is_alive():
-            try:
-                self.onNextToggleThread.cancel()
-                self.onNextToggleThread.join()
-            except: pass
+    
+    def toggleOnNext(self, state=True):
+        def getOnNextInterval(interval=3):
+            totalTime = self.player.getPlayerTime()
+            if totalTime == 0: return 300
+            remaining = ((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval))
+            intRemain = remaining // interval
+            self.log('toggleOnNext, getOnNextInterval = %s'%(intRemain))
+            return intRemain
+
         try:
-            self.playSFX(BING_WAV)
-            wait   = {True:(NOTIFICATION_CHECK_TIME//2),False:float(self.myPlayer.OnNextWait)}[state]
+            wait   = {True:(NOTIFICATION_CHECK_TIME//2),False:float(getOnNextInterval())}[state]
             nstate = not bool(state)
-            self.onNext.setVisible(state)
-            self.log('onNextToggle, state %s wait %s to new state %s'%(state,wait,nstate))
-            self.onNextToggleThread = threading.Timer(wait, self.onNextToggle, [nstate])
-            self.onNextToggleThread.name = "onNextToggleThread"
-            self.onNextToggleThread.start()
-        except Exception as e: self.log("onNextToggle, Failed! %s"%(e), xbmc.LOGERROR)
             
+            if state: 
+                if not self._hasControl(self._onNext):
+                    self._addControl(self._onNext)
+                    self._onNext.setEnableCondition('[Player.HasMedia + Player.Playing]')
+
+                writer = self._getItemWriter(self._getNextItems()[0])
+                chname = self._getPlayingCitem().get('label',ADDON_NAME)
+                onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname)
+                onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))
+                self._onNext.setText('%s[CR]%s'%("[B]You're Watching:[/B] %s on %s"%(onNow,chname),
+                                                 "[B]Up Next:[/B] %s"%(onNext)))
+                self.setVisible(self._onNext,True)
+                self._onNext.autoScroll(6000, 3000, 5000)
+                self.playSFX(BING_WAV)
+            else: 
+                self.setVisible(self._onNext,False)
             
-    def bugToggle(self, state=True):
-        def getWait(state):
-            if self.channelBugVal == -1: 
-                onVAL  = self.getTimeRemaining()
-                offVAL = 0.1
-            elif self.channelBugVal == 0:
-                onVAL  = random.randint(300,600)
-                offVAL = random.randint(300,600)
-            else:
-                onVAL  = self.channelBugVal * 60
-                offVAL = round(onVAL // 2)
-            return {True:float(onVAL),False:float(offVAL)}[state]
-            
-        if self.bugToggleThread.is_alive():
-            try:
-                self.bugToggleThread.cancel()
-                self.bugToggleThread.join()
-            except: pass
-        try:   
-            wait   = getWait(state)
-            nstate = not bool(state)
-            self.channelbug.setVisible(state)
-            self.log('bugToggle, state %s wait %s to new state %s'%(state,wait,nstate))
-            self.bugToggleThread = threading.Timer(wait, self.bugToggle, [nstate])
-            self.bugToggleThread.name = "bugToggleThread"
-            self.bugToggleThread.start()
-        except Exception as e: self.log("bugToggle, Failed! %s"%(e), xbmc.LOGERROR)
+            self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
+            self._onNextThread = threading.Timer(wait, self.toggleOnNext, [nstate])
+            self._onNextThread.name = "onNextThread"
+            self._onNextThread.start()
+        except Exception as e: self.log("toggleOnNext, Failed! %s"%(e), xbmc.LOGERROR)
+    
 
-      
-    def closeOverlay(self):
-        self.log('closeOverlay')
-        threads = [self.bugToggleThread,
-                   self.onNextChkThread,
-                   self.onNextToggleThread]
-                   
-        for thread_item in threads:
-            if thread_item.is_alive(): 
-                try: 
-                    thread_item.cancel()
-                    thread_item.join(1.0)
-                except: pass
-        self.close()
-
-
-    def onAction(self, act):
-        actionID = act.getId()
-        actionBC = act.getButtonCode()
-        self.log('onAction, actionID = %s, actionBC = %s'%(actionID,actionBC))
-        if actionID == ACTION_PREVIOUS_MENU:
-            xbmc.executebuiltin("Action(PreviousMenu)")
-        elif actionID == ACTION_MOVE_LEFT:
-            xbmc.executebuiltin("ActivateWindowAndFocus(pvrosdchannels)")
-        elif actionID == ACTION_MOVE_RIGHT:
-            xbmc.executebuiltin("ActivateWindowAndFocus(pvrchannelguide)")
-        elif actionID == ACTION_MOVE_UP:
-            self.service.writer.jsonRPC.sendButton('Up')
-        elif actionID == ACTION_MOVE_DOWN:
-            self.service.writer.jsonRPC.sendButton('Down')
-        elif actionID == ACTION_SELECT_ITEM:
-            self.service.writer.jsonRPC.sendButton('I')
-        self.closeOverlay()
+    def playSFX(self, filename, cached=True):
+        self.log('playSFX, filename = %s, cached = %s'%(filename,cached))
+        xbmc.playSFX(filename, useCached=cached)

@@ -140,10 +140,10 @@ class Fillers:
                 stop   = fileItem['stop']
                 end    = abs(roundTimeUp(stop) - stop) #auto mode
                 
-                # print('duration',fileItem['duration'])
-                # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-                # print('stop',datetime.datetime.fromtimestamp(stop))
-                # print('end',end)
+                print('duration',fileItem['duration'])
+                print('start',datetime.datetime.fromtimestamp(fileItem['start']))
+                print('stop',datetime.datetime.fromtimestamp(stop))
+                print('end',end)
                 
                 #ratings (auto == 1)
                 mpaa = cleanMPAA(fileItem.get('mpaa',''))
@@ -152,18 +152,18 @@ class Fillers:
                 if rating:
                     paths.insert(0,rating.get('file'))
                     end -= rating.get('duration')
-                    # print('end ratings', end)
-                    # print('mpaa',mpaa)  
-                    # print('rating',rating) 
+                    print('end ratings', end)
+                    print('mpaa',mpaa)  
+                    print('rating',rating) 
                     
                 #bumpers (auto == 1)
                 if bumpers:
                     bumper = random.choice(bumpers)
                     paths.insert(0,bumper.get('file'))
                     end -= bumper.get('duration')
-                    # print('end bumper', end)
-                    # print('chname',chname)
-                    # print('bumper',bumper)
+                    print('end bumper', end)
+                    print('chname',chname)
+                    print('bumper',bumper)
                     
                 # CTItems = set()
                 # cnt_commercials = 0
@@ -230,8 +230,8 @@ class Fillers:
                     fileItem['file'] = buildStack(paths)
                     fileItem['stop'] = abs(roundTimeUp(stop) - abs(end))
                     fileItem['duration'] = (datetime.datetime.fromtimestamp(fileItem['stop']) - datetime.datetime.fromtimestamp(fileItem['start'])).seconds
-                    # print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
-                    # print('fileItem',fileItem)
+                    print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
+                    print('fileItem',fileItem)
 
             lstop = fileItem['stop']  #new stop time, offset next start time.
             nfileList.append(fileItem)

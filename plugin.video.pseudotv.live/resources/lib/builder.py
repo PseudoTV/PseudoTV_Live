@@ -67,19 +67,22 @@ class Builder:
 
 
     def verifyChannelItems(self):
-        #check channel configuration, verify and update paths, logos.
+        """ Check channel configuration, verify and update paths, logos and ID.
+        """
         channels = self.writer.channels.getChannels()
         for idx, citem in enumerate(channels):
             if (self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened()): 
                 self.log('verifyChannelItems, interrupted')
                 break
                 
-            #check min. meta.
+            #check min. meta required to create a channel.
             if (not citem.get('name','') or not citem.get('path',None) or citem.get('number',0) < 1):
                 self.log('verifyChannelItems, skipping - missing channel path and/or channel name\n%s'%(citem))
                 continue
 
-            if not isinstance(citem.get('path',[]),list): citem['path'] = [citem['path']]
+            if not isinstance(citem.get('path',[]),list): 
+                citem['path'] = [citem['path']]
+                
             citem['id']       = (citem.get('id','')             or getChannelID(citem['name'],citem['path'],citem['number'])) # internal use only; create unique PseudoTV ID.
             citem['radio']    = (citem.get('radio','')          or (citem['type'] == LANGUAGE(30097) or 'musicdb://' in citem['path']))
             citem['catchup']  = (citem.get('catchup','')        or ('vod' if not citem['radio'] else ''))
@@ -109,7 +112,9 @@ class Builder:
         if not channels:
             self.writer.dialog.notificationDialog(LANGUAGE(30056))
             return False
-        if not isLegacyPseudoTV(): setLegacyPseudoTV(True) # legacy setting to disable/enable support in third-party applications. 
+            
+        if not isLegacyPseudoTV(): 
+            setLegacyPseudoTV(True) # legacy setting to disable/enable support in third-party applications. 
             
         self.pCount       = 0
         self.pDialog      = self.writer.dialog.progressBGDialog()
@@ -143,7 +148,6 @@ class Builder:
             else: 
                 self.log('buildService, In-Valid Channel (No Media Found!) %s '%(channel['id']))
                 self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
-                # self.writer.removeChannelLineup(channel)
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
                 
         if not self.writer.saveChannelLineup(): 
@@ -195,9 +199,9 @@ class Builder:
                     self.log("getFileList, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
                     return False
                 
-                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self)
+                cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid interleave() below.
                 cacheResponse = list(interleave(cacheResponse))[0]# interleave multi-paths, while keeping filelist order.
-                cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, if empty element is adding during interleave or injection rules remove).
+                cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
                 
                 if len(cacheResponse) < self.limit:
@@ -213,23 +217,24 @@ class Builder:
         return False
             
                 
-    def fillCells(self, fileList):
-         # balance media limits, by filling randomly with duplicates to meet min guide hours (EPG_HRS).
-        self.log("fillCells; fileList = %s"%(len(fileList)))
+    def fillCells(self, fileList, minGuide=EPG_HRS):
+        """ Balance media limits, by filling epg randomly with duplicates to meet min. guide hours (minGuide).
+        """
+        self.log("fillCells; fileList In = %s"%(len(fileList)))
         totRuntime = sum([item.get('duration') for item in fileList])
         iters = cycle(fileList)
-        while not self.writer.monitor.abortRequested() and totRuntime < EPG_HRS:
+        while not self.writer.monitor.abortRequested() and totRuntime < minGuide:
             item = next(iters).copy()
             totRuntime += item.get('duration')
             fileList.append(item)
+        self.log("fillCells; fileList Out = %s"%(len(fileList)))
         return fileList
 
 
     def addScheduling(self, citem, fileList, start):
         self.log("addScheduling; id = %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
-        #todo insert adv. scheduling rules here or move to adv. rules.py
         tmpList  = []
-        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList, inherited=self)
+        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList, inherited=self) #adv. scheduling rules start here.
         for idx, item in enumerate(fileList):
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -240,7 +245,7 @@ class Builder:
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
-        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self)
+        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
             
             
     def buildRadio(self, channel):
@@ -255,12 +260,12 @@ class Builder:
     def buildFileList(self, citem, path, media='video', limit=PAGE_LIMIT, sort={}, filter={}, limits={}):
         self.log("buildFileList, id: %s, path = %s, limit = %s, sort = %s, filter = %s, limits = %s"%(citem['id'],path,limit,sort,filter,limits))
         if not sort: #set fallback (default) sort methods when none is provided.
-            if path.endswith('.xsp'):           media, sort = self.xsp.parseSmartPlaylist(path)   #smartplaylist - Music/Video
-            elif '?xsp=' in path:               media, sort = self.xsp.parseDynamicPlaylist(path) #dynamicplaylist
-            elif path.startswith('videodb://tvshows'): sort = {"method": "episode"}               #tvshows
-            elif path.startswith('videodb://movies'):  sort = {"method": "random"}                #movies
-            elif path.startswith('musicdb://songs'):   sort = {"method": "random"}                #music
-            else:                                      sort = {"method": "random"}                #other
+            if path.endswith('.xsp'):                media, sort = self.xsp.parseSmartPlaylist(path)   #smartplaylist
+            elif '?xsp=' in path:                    media, sort = self.xsp.parseDynamicPlaylist(path) #dynamicplaylist
+            elif path.startswith('musicdb://songs'): media, sort = ('music',{"method": "random"})      #music
+            elif path.startswith('videodb://tvshows'):      sort = {"method": "episode"}               #tvshows
+            elif path.startswith('videodb://movies'):       sort = {"method": "random"}                #movies
+            else:                                           sort = {"method": "random"}                #other
             
         fileList = []
         dirList  = [{'file':path}]
@@ -297,7 +302,7 @@ class Builder:
         seasoneplist  = []
         json_response = self.writer.jsonRPC.requestList(citem, path, media, page, sort, filter, limits)
         
-        # malformed vfs jsonrpc will return root response, catch a reparse of same folder and quit. 
+        # malformed vfs jsonrpc will return root response, catch a reparse of same folder and quit.
         if json_response == self.loopback:
             self.chanError.append(LANGUAGE(30318))
             self.log("buildList, loopback detected returning")
@@ -344,7 +349,7 @@ class Builder:
                     title   = (item.get("title",'')     or item.get("label",'')       or dirItem.get('label',''))
                     tvtitle = (item.get("showtitle",'') or item.get("tvshowtitle",'') or dirItem.get('label',''))
 
-                    if (tvtitle and mType in TV_TYPES) or (tvtitle and (int(item.get("season","0")) > 0 and int(item.get("episode","0"))>0)):
+                    if (tvtitle and mType in TV_TYPES) or (tvtitle and (int(item.get("season","0")) > 0 and int(item.get("episode","0")) > 0)):
                         # This is a TV show
                         if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (int(item.get("season","0")) == 0 or int(item.get("episode","0"))) == 0 and item.get("episode",None) is not None: 
                             self.log("buildList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)

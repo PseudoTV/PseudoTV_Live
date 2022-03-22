@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+    <backgroundcolor>0x00000000</backgroundcolor>
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,True,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,False,10000)</onunload> 
+    <controls>
+        <control type="group" id="40000">
+            <posx>0</posx>
+            <posy>0</posy>
+            <description>Background !Playing</description>
+            <control type="group">
+                <description>Background Dynamic</description>
+                <control type="image"> 
+                    <description>Hide Background</description>
+                    <width>auto</width>
+                    <height>auto</height>
+                    <aspectratio>scale</aspectratio>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <colordiffuse>black</colordiffuse>
+                    <texture>colors/white.png</texture>
+                </control>
+                <control type="grouplist">
+                    <posx>1440</posx>
+                    <posy>850</posy>
+                    <width>480</width>
+                    <itemgap>1</itemgap>
+                    <orientation>vertical</orientation>
+                    <control type="label">
+                        <description>Time</description>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <font>font_clock</font>
+                        <shadowcolor>text_shadow</shadowcolor>
+                        <height>60</height>
+                        <label>[B]$INFO[System.Time][/B]</label>
+                    </control>
+                    <control type="image">
+                        <height>90</height>
+                        <texture>splashtext.png</texture>
+                        <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                    </control>
+                </control>
+                <control type="grouplist">
+                    <centertop>65%</centertop>
+                    <centerleft>50%</centerleft>
+                    <width>960</width>
+                    <itemgap>5</itemgap>
+                    <orientation>vertical</orientation>
+                    <control type="image" id="40002">
+                        <description>Background Logo</description>
+                        <height>240</height>
+                        <aspectratio scalediffuse="true" align="center" aligny="top">keep</aspectratio>
+                        <texture></texture>
+                    </control>
+                    <control type="textbox" id="40003">
+                        <height>90</height>
+                        <width>auto</width>
+                        <font>font27</font>
+                        <scroll>true</scroll>
+                        <align>center</align>
+                        <aligny>center</aligny>
+                        <textcolor>white</textcolor>
+                        <shadowcolor>text_shadow</shadowcolor>
+                        <scrolltime>600</scrolltime>
+                        <autoscroll delay="5000" time="1000">false</autoscroll>
+                        <label></label>
+                    </control>
+                </control>
+            </control>
+
+            <control type="image" id="40001">
+                <description>Background Static</description>
+                <width>auto</width>
+                <height>auto</height>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <texture>backgrounds/static.gif</texture>
+            </control>
+            <control type="image">
+                <centertop>50%</centertop>
+                <centerleft>50%</centerleft>
+                <width>960</width>
+                <height>auto</height>
+                <texture>splashtext.png</texture>
+                <visible>Control.IsVisible(40001)</visible>
+                <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+            </control>
+        </control>
+    </controls>
+</window>
