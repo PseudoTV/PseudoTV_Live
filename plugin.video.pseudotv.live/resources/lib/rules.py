@@ -459,8 +459,8 @@ class ShowStaticOverlay(BaseRule):
 
     def runAction(self, actionid, overlay, channeldata):
         if actionid == RULES_ACTION_OVERLAY:
-            overlay.staticOverlay = self.optionValues[0]
-            self.log("runAction, setting staticOverlay = %s"%(overlay.staticOverlay))
+            overlay.showStatic = self.optionValues[0]
+            self.log("runAction, setting showStatic = %s"%(overlay.showStatic))
         return channeldata
 
 

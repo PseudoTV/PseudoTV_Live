@@ -52,7 +52,7 @@ class Utilities:
             PVR_NAME = getPluginMeta(PVR_CLIENT).get('name','')
             items    = [{'label':LANGUAGE(30010)              ,'label2':LANGUAGE(30011)             ,'icon':COLOR_LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30011), False)}, #"Rebuild M3U/XMLTV"
                         {'label':LANGUAGE(30096)              ,'label2':LANGUAGE(30309)             ,'icon':COLOR_LOGO,'func':self.deleteFiles,'args':(LANGUAGE(30096), True)},  #"Clean Start"
-                        {'label':LANGUAGE(30012)%(PVR_NAME)   ,'label2':LANGUAGE(30145)             ,'icon':COLOR_LOGO,'func':setPVR},                                     #"Reconfigure PVR for use with PTVL"
+                        {'label':LANGUAGE(30012)%(PVR_NAME)   ,'label2':LANGUAGE(30145)             ,'icon':COLOR_LOGO,'func':setPVR},                                           #"Reconfigure PVR for use with PTVL"
                         {'label':LANGUAGE(30065)%(PVR_NAME)   ,'label2':LANGUAGE(30310)             ,'icon':COLOR_LOGO,'func':brutePVR},                                         #"Force PVR reload"
                         {'label':LANGUAGE(30065)%(ADDON_NAME) ,'label2':LANGUAGE(30311)%(ADDON_NAME),'icon':COLOR_LOGO,'func':setRestartRequired}]                               #"Force PTVL reload"
 
@@ -91,6 +91,27 @@ class Utilities:
             SETTINGS.setSetting('User_Import','false')
             self.dialog.notificationDialog('%s %s'%(LANGUAGE(30037),LANGUAGE(30053)))
 
+    
+    def selectServer(self):
+        self.log('selectServer')
+        labels  = []
+        servers = getDiscovery()
+        epoch   = time.time()
+        current = SETTINGS.getSetting('Remote_URL').strip('http://')
+        
+        try:    idx = list(servers.keys()).index(current)
+        except: idx = 0
+            
+        for server in servers:
+            offline = '(Offline)' if epoch >= (servers[server].get('received',epoch) + UPDATE_WAIT) else ''
+            color   = 'dimgray' if offline else 'white'
+            labels.append('[COLOR=%s]%s %s[/COLOR]'%(color,servers[server].get('name'),offline))
+            
+        select = self.dialog.selectDialog(labels, header=LANGUAGE(30178), preselect=idx, useDetails=False, autoclose=90000, multi=False)
+        if select is not None:
+            server = list(servers.keys())[select]
+            chkDiscovery({server:servers[server]}, forced=True)
+
 
     def run(self):  
         ctl = (8,3) #settings return focus
@@ -111,7 +132,10 @@ class Utilities:
         elif param == 'Clear_Import':
             ctl = (2,7)
             self.clearImport()
-        elif  param == 'Install_Resources': chkResources()
+        elif param == 'Select_Server': 
+            ctl = (4,4)
+            self.selectServer()
+        elif param == 'Install_Resources': chkResources()
         else: 
             with busy_dialog():
                 PROPERTIES.setProperty('utilities',param)

@@ -50,22 +50,23 @@ class Player(xbmc.Player):
            
            
     def getPlayerFile(self):
-        try:    file = self.getPlayingFile()
-        except: file = self.playingPVRitem.get('broadcastnow',{}).get('playing','')
-        self.log('getPlayingFile, file = %s'%(file))
-        return file
+        try:    return self.getPlayingFile()
+        except: return self.playingPVRitem.get('broadcastnow',{}).get('playing','')
         
         
     def getPlayerTime(self):
-        try:    time = self.getTotalTime()
-        except: time = 0
-        self.log('getPlayerTime, time = %s'%(time))
-        return time
+        try:    return self.getTotalTime()
+        except: return 0
                 
                 
     def getPlayerProgress(self):
         try:    return float(xbmc.getInfoLabel('Player.Progress'))
         except: return 0.0
+
+
+    def getElapsedTime(self):
+        try:    return int(self.getTime() // 1000)
+        except: return 0
 
 
     def getTimeRemaining(self):
@@ -74,9 +75,9 @@ class Player(xbmc.Player):
    
    
     def getPVRTime(self):
-        self.log('getPVRTime')
         try:    return (sum(x*y for x, y in zip(map(float, xbmc.getInfoLabel('PVR.EpgEventElapsedTime(hh:mm:ss)').split(':')[::-1]), (1, 60, 3600, 86400))))
         except: return 0
+
 
     def getPVRitem(self):
         try:    pvritem = self.getPlayingItem().getProperty('pvritem') #Kodi v20. todo
@@ -121,6 +122,7 @@ class Player(xbmc.Player):
         Player: onPlayBackEnded
         Player: onPlayBackStopped
         """
+    
     
     def onPlayBackStarted(self):
         self.log('onPlayBackStarted')
@@ -400,6 +402,7 @@ class Service:
 
 
     def chkUpdatePending(self):
+        chkClient()
         if not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
             self.isLocked = True
             hasChannels = len(self.writer.channels.getChannels()) > 0
@@ -420,7 +423,7 @@ class Service:
  
     def _initialize(self):
         dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [chkVersion,chkDiscovery,initFolders,setInstanceID,self.chkBackup,chkResources,chkRequiredSettings,updateIPTVManager]
+        funcs = [chkVersion,chkClient,initFolders,setInstanceID,self.chkBackup,chkResources,chkRequiredSettings,updateIPTVManager]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()
@@ -442,8 +445,6 @@ class Service:
                 self._shutdown()
         
         while not self.monitor.abortRequested():
-            chkDiscovery(getDiscovery())
-            
             isIdle         = self.monitor.chkIdle()
             pendingStop    = isShutdownRequired()
             pendingRestart = isRestartRequired()

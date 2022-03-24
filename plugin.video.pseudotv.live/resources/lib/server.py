@@ -48,12 +48,7 @@ def getSettings():
             'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
             'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
             'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
-    
-def setSettings(settings):
-    for key, value in settings.items():
-        try:    SETTINGS.setSettings(key, value)
-        except: pass
-    
+
 class Discovery:
     shutdown = False
     
@@ -79,35 +74,37 @@ class Discovery:
 
     def _start(self):
         self.log('_start')
-        UDP_PORT = SETTINGS.getSettingInt('UDP_PORT')
-        LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
-        
-        sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-        sock.bind(('', UDP_PORT))
+        local ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
+        sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
+        sock.bind(('', SETTINGS.getSettingInt('UDP_PORT')))
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            try:
-                discovery = getDiscovery()
-                if isClient():
+            if isClient():
+                try:
                     data, addr = sock.recvfrom(1024) #wait for a packet
                     if data.startswith(ADDON_ID.encode()):
                         response = data[len(ADDON_ID):]
                         if response:
                             payload = loadJSON(decodeString(response.decode()))
                             host = payload.get('host','')
-                            if discovery != host: 
-                                self.log('_start: discovered remote host = %s, payload = %s'%(host,payload))
-                                setDiscovery(host)
-                                setSettings(payload.get('settings',{}))
-                elif discovery != LOCAL_HOST: 
-                    self.log('_start, discovered local host %s'%(LOCAL_HOST))
-                    setDiscovery(LOCAL_HOST)
-            except: pass
+                            if host != local:
+                                self.log('_start: discovered server @ host = %s'%(host))
+                                md5 = payload['md5']
+                                payload.update({'md5':'-1'})
+                                if md5 == getMD5(dumpJSON(payload)):
+                                    payload['received'] = time.time()
+                                    servers = getDiscovery()
+                                    if host not in servers:
+                                        Dialog().notificationDialog('%s - %s'%(LANGUAGE(30207),payload.get('name',host)))
+                                    servers[host] = payload
+                                    setDiscovery(servers)
+                                    chkDiscovery(servers)
+                except: pass
                 
             if (self.monitor.waitForAbort(1) or self.shutdown or self.monitor.shutdown):
-                self.shutdown = False
                 self.log('_start, shutting down')
+                self.shutdown = False
                 break
 
 
@@ -137,11 +134,15 @@ class Announcement:
         
     def _start(self):
         self.log('_start')
-        UDP_PORT   = SETTINGS.getSettingInt('UDP_PORT')
-        LOCAL_HOST ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
-        payload    = {'id':ADDON_ID,'version':ADDON_VERSION,'host':LOCAL_HOST,'settings':self.settings}
-        data       = '%s%s'%(ADDON_ID,encodeString(dumpJSON(payload)))
-        
+        payload = {'md5':'-1',
+                   'id':ADDON_ID,
+                   'version':ADDON_VERSION,
+                   'name':xbmc.getInfoLabel('System.FriendlyName'),
+                   'host':'%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT')),
+                   'settings':self.settings}
+                   
+        payload.update({'md5':getMD5(dumpJSON(payload))})
+        data = '%s%s'%(ADDON_ID,encodeString(dumpJSON(payload)))
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))
         sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -151,12 +152,12 @@ class Announcement:
         
         while not self.monitor.abortRequested():
             if not isClient():
-                try:    sock.sendto(data.encode(), ('<broadcast>',UDP_PORT))
+                try:    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
                 except: pass
         
             if (self.monitor.waitForAbort(5) or self.shutdown or self.monitor.shutdown):
-                self.shutdown = False
                 self.log('_start, shutting down')
+                self.shutdown = False
                 break
 
             

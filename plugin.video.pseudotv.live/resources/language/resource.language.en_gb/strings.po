@@ -725,7 +725,7 @@ msgid "Movie"
 msgstr ""
 
 msgctxt "#30178"
-msgid "No Channels Found, Would you like to recover channels from abandoned files?"
+msgid "Select Server"
 msgstr ""
 
 msgctxt "#30179"
@@ -777,11 +777,11 @@ msgid "Enable Commercials"
 msgstr ""
 
 msgctxt "#30191"
-msgid "Install Missing Resources"
+msgid "Select Diffuse Color"
 msgstr ""
 
 msgctxt "#30192"
-msgid "All Resources already installed"
+msgid "Select Color to apply to given setting."
 msgstr ""
 
 msgctxt "#30193"
@@ -837,11 +837,11 @@ msgid "Show Static Effect"
 msgstr ""
 
 msgctxt "#30206"
-msgid "Artwork changes might propagate slowly over time."
+msgid "Artwork changes will propagate slowly over time."
 msgstr ""
 
 msgctxt "#30207"
-msgid "Full Cores"
+msgid "New server discovered"
 msgstr ""
 
 msgctxt "#30208"

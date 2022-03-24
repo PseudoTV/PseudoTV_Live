@@ -1,7 +1,12 @@
+v.0.3.8
+-Improved Server discovery, Clients can select from multiple servers if available via settings..
+-Added User configurable channel bug diffuse color. Only available to "Prefer white" channel logos & Kodi v.20+
+-Tweaked M3U/XMLTV Artwork to enforce VFS paths for client support.
+
 v.0.3.7
 -Improved "Seasonal" channel , moved from third-party plugin to local code. Added additional holidays and weekly scheduling. 
 -Added "New" overlay technique.
--Removed Previously added overlay controls ie. (left/right/up/down/ok).  
+-Removed Previously added overlay controls ie. (left/right/up/down/ok).
 
 v.0.3.6
 -Fixed "Future Days to display" PVR & LiveTV settings syncing.

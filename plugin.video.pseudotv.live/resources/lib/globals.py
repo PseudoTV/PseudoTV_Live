@@ -158,6 +158,7 @@ RULES_ACTION_OVERLAY       = 21
 #overlay globals
 NOTIFICATION_CHECK_TIME     = 30.0 #seconds
 NOTIFICATION_TIME_REMAINING = 900  #seconds
+NOTIFICATION_MIN_TIME       = 300  #seconds
 NOTIFICATION_PLAYER_PROG    = 85   #percent
 NOTIFICATION_DISPLAY_TIME   = 30   #seconds
 CHANNELBUG_CHECK_TIME       = 15.0 #seconds
@@ -476,16 +477,13 @@ def isClient():
 def setClient(state=True):
     PROPERTIES.setPropertyBool('isClient',state)
     
+def chkClient():
+    setClient(bool(SETTINGS.getSettingInt('Client_Mode')))
+    
 def doUtilities():
     param = PROPERTIES.getProperty('utilities')
     PROPERTIES.clearProperty('utilities')
     return param
-    
-def getDiscovery():
-    return PROPERTIES.getProperty('discovery')
-
-def setDiscovery(host):
-    return PROPERTIES.setProperty('discovery',host)
 
 def setInstanceID():
     PROPERTIES.setProperty('InstanceID',uuid.uuid4())
@@ -524,33 +522,32 @@ def getMYUUID():
 
 def getUUID(channelList={}):
     return channelList.get('uuid',getMYUUID())
-        
-def chkDiscovery(SERVER_HOST=None):
-    setClient(bool(SETTINGS.getSettingInt('Client_Mode')))
-    CLIENT      = isClient()
-    SERVER_PAST = PROPERTIES.getProperty('SERVER_HOST')
-    LOCAL_HOST  = PROPERTIES.getProperty('LOCAL_HOST')
-    if not SERVER_HOST:
-        SERVER_HOST = (getDiscovery() or LOCAL_HOST)
-        
-    if not CLIENT and (SERVER_PAST == LOCAL_HOST):
-        return CLIENT
-    elif SERVER_PAST != SERVER_HOST:
-        SETTINGS.setSetting('Network_Path',USER_LOC)
-        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(SERVER_HOST))
-        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(SERVER_HOST,M3UFLE))
-        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
-        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(SERVER_HOST,GENREFLE))
-        
-        PROPERTIES.setProperty('SERVER_HOST',SERVER_HOST)
-        PROPERTIES.setProperty('M3U_URL'  ,'http://%s/%s'%(SERVER_HOST,M3UFLE))
-        PROPERTIES.setProperty('XMLTV_URL','http://%s/%s'%(SERVER_HOST,XMLTVFLE))
-        PROPERTIES.setProperty('GENRE_URL','http://%s/%s'%(SERVER_HOST,GENREFLE))
-        log('global: chkDiscovery, isClient = %s, server = %s'%(CLIENT,SERVER_HOST))
-        if CLIENT: 
-            chkRequiredSettings()
-            brutePVR(override=True)
-    return CLIENT
+         
+def getDiscovery():
+    return PROPERTIES.getPropertyDict('SERVER_DISCOVERY')
+
+def setDiscovery(servers):
+    return PROPERTIES.setPropertyDict('SERVER_DISCOVERY',servers)
+   
+def chkDiscovery(servers, forced=False):
+    log('globals: chkDiscovery, servers = %s'%(servers))
+    def setSettings(settings):
+        #Set resource settings on client.
+        for key, value in settings.items():
+            try:    SETTINGS.setSettings(key, value)
+            except: pass
+    
+    current_server = SETTINGS.getSetting('Remote_URL')
+    if (not current_server or forced) and len(servers.keys()) == 1:
+        server = list(servers.keys())[0]
+        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(server))
+        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
+        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
+        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
+        setSettings(servers[server].get('settings',{}))
+        chkRequiredSettings()
+        brutePVR(override=True)
+    log('globals: chkDiscovery, isClient = %s, server = %s'%(isClient(),SETTINGS.getSetting('Remote_URL')))
 
 def getIdle():
     idleTime  = getIdleTime()
@@ -719,7 +716,7 @@ def setPlugin(id,values,override=False):
     return True
     
 def brutePVR(override=False):
-    return True
+    return True #debug system crashes
     # if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
     # elif not override:
         # if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
@@ -742,72 +739,6 @@ def chkResources(silent=True):
             except: continue
     elif not silent: 
         Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def chkFiles():
-    ...
-# not FileAccess.exists(getUserFilePath(M3UFLE)),
-# not FileAccess.exists(getUserFilePath(XMLTVFLE)),
-# not FileAccess.exists(getUserFilePath(CHANNELFLE)),
-# not FileAccess.exists(getUserFilePath(LIBRARYFLE))]
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
 
 def hasVersionChanged():
     if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
@@ -1231,6 +1162,7 @@ def intersperse(*seqs):
         yield x
         
 def distribute(*seq):
+    #randomly distribute multi-lists of different sizes.
     #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
     iters = list(map(iter, seqs))
     while not xbmc.Monitor().abortRequested() and iters:

@@ -42,7 +42,7 @@ class Background(xbmcgui.WindowXML):
         
         
     def onInit(self):
-        self.getControl(40001).setVisible(SETTINGS.getSettingBool("Static_Overlay"))
+        self.getControl(40001).setVisible(self.overlay.showStatic)
         self.getControl(40002).setImage(self.overlay._getPlayingCitem().get('logo',LOGO))
         self.getControl(40003).setText(self.overlay._onNext.getText())
         
@@ -53,8 +53,8 @@ class Player(xbmc.Player):
         self.overlay = overlay
 
 
-    def doBackground(self):
-        self.overlay.log('doBackground')
+    def startBackground(self):
+        self.overlay.log('startBackground')
         try:
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", overlay=self.overlay)
             self.background.show()
@@ -87,7 +87,8 @@ class Player(xbmc.Player):
         
     def onPlayBackEnded(self):
         self.overlay.log('onPlayBackEnded')
-        self.doBackground()
+        self.overlay.cancelOnNext()
+        self.startBackground()
     
     
     def onPlayBackStopped(self):
@@ -102,6 +103,7 @@ class Overlay():
         self.player     = service.player
         self.myPlayer   = Player(self)
         self.runActions = RulesList().runActions
+        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
@@ -199,9 +201,14 @@ class Overlay():
 
     def open(self):
         self.log('open')
-        if isOverlay(): return self.close()
+        if isOverlay(): 
+            return self.close()
+            
         setOverlay(True)
-
+        self.showStatic      = SETTINGS.getSettingBool("Static_Overlay")
+        self.channelBugColor = '0x%s'%(SETTINGS.getSetting('DIFFUSE_LOGO')) #todo adv. channel rule for color selection.
+        self.runActions(RULES_ACTION_OVERLAY, self._getPlayingCitem(), inherited=self)
+        
         self._chkonNextThread  = threading.Timer(1.0, self.chkOnNext)
         self._onNextThread     = threading.Timer(5.0, self.toggleOnNext)
         self._channelBugThread = threading.Timer(5.0, self.toggleBug)
@@ -209,8 +216,7 @@ class Overlay():
         self._overlayThreads   = [self._channelBugThread,
                                   self._chkonNextThread, 
                                   self._onNextThread]
-                                  
-        # self.runActions(RULES_ACTION_OVERLAY, self.citem, inherited=self)
+
         for thread_item in self._overlayThreads:
             thread_item.start()
             
@@ -255,7 +261,8 @@ class Overlay():
             if state: 
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
-                    # self._channelBug.setColorDiffuse('0xC0FF0000') #todo user set diffuse color
+                    if not bool(SETTINGS.getSettingInt('Color_Logos')): #apply user diffuse color only to "prefer white".
+                        self._channelBug.setColorDiffuse(self.channelBugColor)
                     self._channelBug.setEnableCondition('[Player.HasMedia + Player.Playing]')
                     
                 self.setImage(self._channelBug,(self._getPlayingCitem().get('logo',LOGO)))
@@ -272,6 +279,14 @@ class Overlay():
         except Exception as e: self.log("toggleBug, Failed! %s"%(e), xbmc.LOGERROR)
            
 
+    def cancelOnNext(self):
+        self.setVisible(self._onNext,False)
+        try: 
+            self._onNextThread.cancel()
+            self._onNextThread.join()
+        except: pass
+
+
     def chkOnNext(self):
         def playerAssert():
             """ #test playing item, contains title? remaining time / progress within parameters?
@@ -287,11 +302,7 @@ class Overlay():
             if self._onNextThread.is_alive():
                 # cancel onNext Toggle.
                 if not playerAssert(): 
-                    self.setVisible(self._onNext,False)
-                    try: 
-                        self._onNextThread.cancel()
-                        self._onNextThread.join()
-                    except: pass
+                    self.cancelOnNext()
             else:# start onNext Toggle
                 if playerAssert(): 
                     self.toggleOnNext()
@@ -306,12 +317,10 @@ class Overlay():
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
             totalTime = self.player.getPlayerTime()
-            if totalTime == 0: return 300
-            remaining = ((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval))
-            intRemain = remaining // interval
-            self.log('toggleOnNext, getOnNextInterval = %s'%(intRemain))
-            return intRemain
-
+            intTime = abs(((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval)) // interval)
+            self.log('toggleOnNext, totalTime = %s, interval = %s, intTime = %s'%(totalTime,interval,intTime))
+            return intTime
+            
         try:
             wait   = {True:(NOTIFICATION_CHECK_TIME//2),False:float(getOnNextInterval())}[state]
             nstate = not bool(state)

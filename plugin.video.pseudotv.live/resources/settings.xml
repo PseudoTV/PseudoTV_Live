@@ -652,6 +652,19 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
+                <setting id="DIFFUSE_LOGO" type="string" label="30191" help="30192" parent="Color_Logos">
+                    <level>0</level>
+                    <default>FFFFFFFF</default>
+                    <control type="colorbutton" />
+                    <dependencies>
+						<dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Color_Logos">0</condition>
+                                <condition on="property" name="InfoBool">String.Contains(System.BuildVersion,20)</condition>
+                            </and>
+                        </dependency>
+					</dependencies>
+                </setting>
 				<setting id="EPG_Artwork" type="integer" label="30168" help="30206">
 					<level>0</level>
 					<default>0</default>
@@ -792,17 +805,20 @@
                 <setting id="Remote_URL" type="string" label="30349" help="" parent="Client_Mode">
 					<level>0</level>
 					<default></default>
-                    <enable>false</enable>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
+                        <dependency type="enable">
+                            <condition on="property" name="InfoBool">!String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.SERVER_DISCOVERY))</condition>
+						</dependency>
 						<dependency type="visible">
                             <condition operator="is" setting="Client_Mode">1</condition>
 						</dependency>
 					</dependencies>
-                    <control type="edit" format="string">
-						<heading>30349</heading>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Select_Server)</data>
+                        <close>true</close>
 					</control>
 				</setting>
                 <setting id="Network_Path" type="path" label="30350" help="30356" parent="Client_Mode">
@@ -819,8 +835,9 @@
                             </and>
 						</dependency>
 					</dependencies>
-					<control type="button" format="path">
-						<heading>30350</heading>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/utilities.py, Select_Server)</data>
+                        <close>true</close>
 					</control>
 				</setting>
 			</group>

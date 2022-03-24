@@ -139,7 +139,7 @@ If you have changes either create a PR containing the changes or an issue with d
   <genre genreId="0xF2"></genre>
   <genre genreId="0xF3"></genre>
     
-  <!-- below currently ignored by XBMC see http://trac.xbmc.org/ticket/13627 -->
+  <!-- IGNORED -->
   <genre genreId="0xF4"></genre>
   <genre genreId="0xF5"></genre>
   <genre genreId="0xF6"></genre>

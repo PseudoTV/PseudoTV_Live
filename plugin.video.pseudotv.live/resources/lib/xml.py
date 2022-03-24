@@ -332,7 +332,7 @@ class XMLTV:
     def addChannel(self, item):
         citem    = ({'id'           : item['id'],
                      'display-name' : [(self.cleanString(item['name']), LANG)],
-                     'icon'         : [{'src':item['logo']}]})
+                     'icon'         : [{'src':self.writer.jsonRPC.resources.cleanLogoPath(item['logo'])}]})
         self.log('addChannel, citem = %s'%(citem))
         idx, channel = self.writer.findChannel(citem, channels=self.getChannels())
         if idx is None: self.writer.vault.xmltvList['channels'].append(citem)
@@ -348,7 +348,7 @@ class XMLTV:
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
                       'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
                       'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
-                      'icon'        : [{'src': item['thumb']}],
+                      'icon'        : [{'src': self.writer.jsonRPC.resources.cleanLogoPath(item['thumb'])}],
                       'length'      : {'units': 'seconds', 'length': str(item['length'])}}
                       
         if item.get('sub-title'):

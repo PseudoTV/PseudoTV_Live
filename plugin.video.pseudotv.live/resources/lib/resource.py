@@ -36,7 +36,6 @@ class Resources:
         self.pool        = jsonRPC.pool
         self.LOGO_LOC    = LOGO_LOC
         self.logoSets    = self.buildLogoResources()
-        self.webBase     = self.buildWebBase()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -101,6 +100,7 @@ class Resources:
         return walk
             
             
+    @cacheit(checksum=getInstanceID())
     def buildWebBase(self):
         port     = 80
         username = 'kodi'
@@ -121,14 +121,12 @@ class Resources:
             elif setting['id'] == 'services.webserverssl' and setting['value']:
                 secure = True
             username = '{0}:{1}@'.format(username, password) if username and password else ''
-        if enabled:
-            protocol = 'https' if secure else 'http'
-            return '{0}://{1}localhost:{2}/image/'.format(protocol, username, port) # http://192.168.0.53:8080/image/image%3A%2F%2Fsmb%253a%252f%252f192.168.0.51%252fTV%252fCosmos%2520A%2520Space-Time%2520Odyssey%252fposter.jpg%2F
+        protocol = 'https' if secure else 'http'
+        return '{0}://{1}{2}:{3}/image/'.format(protocol,getIP(),username, port) 
             
             
     def buildWebImage(self, image):  #todo host/use kodi webserver to share image files for remote m3u/xmltv
-        if self.webBase is None: return image
-        return joinURL(self.webBase, quoteString(image))
+        return joinURL(self.buildWebBase(), quoteString('image://%s'%(quoteString(image))))
             
             
     def getNamePatterns(self, chname, type):
@@ -136,11 +134,17 @@ class Resources:
 
         
     def cleanLogoPath(self, logo):
-        if logo: #convert fs to kodi vfs.
+        self.log('cleanLogoPath, logo In = %s'%(logo))
+        if not logo.startswith(('image://','resource://','special://')):
             realPath = xbmcvfs.translatePath('special://home/addons/')
-            if logo.startswith(realPath): #convert real path. to vfs
+            if logo.startswith(realPath):# convert real path. to vfs
                 logo = logo.replace(realPath,'special://home/addons/').replace('\\','/')
-            return logo
+            elif logo.startswith(realPath.replace('\\','/')):
+                logo = logo.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+            else:# convert local art to webserver for clients.
+                logo = self.buildWebImage(logo)
+            self.log('cleanLogoPath, logo Out = %s'%(logo))
+        return logo
                
                
     def findLogos(self, name, type=LANGUAGE(30171)): #channel manager search
@@ -266,9 +270,6 @@ class Resources:
 
     def getLogo(self, chname, type=LANGUAGE(30171), path='', item={}, featured=False, lookup=False):
         self.log('getLogo: chname = %s, type = %s, featured = %s'%(chname,type,featured)) 
-        def cleanLogo(logo):
-            return self.cleanLogoPath(logo.replace('\\','/'))
-            
         logo = self.chkLocal(chname)
         if not logo:
             logo = self.chkItem(chname, item)
@@ -280,7 +281,7 @@ class Resources:
                         logo = self.parseLogo(chname, type)
 
         if logo: 
-            logo = cleanLogo(logo)
+            logo = self.cleanLogoPath(logo.replace('\\','/'))
             self.log('getLogo: found %s'%(logo))
             return logo
         return LOGO
