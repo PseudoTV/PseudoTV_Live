@@ -52,20 +52,24 @@ class Player(xbmc.Player):
         xbmc.Player.__init__(self)
         self.overlay = overlay
 
+    
+    def hasBackground(self):
+        return PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND')
+
 
     def startBackground(self):
-        self.overlay.log('startBackground')
-        try:
+        if not self.hasBackground() and self.overlay._isPseudoTV:
+            self.overlay.log('startBackground')
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", overlay=self.overlay)
             self.background.show()
-        except: self.closeBackground()
-
+            xbmc.sleep(2000)
+            
 
     def closeBackground(self):
-        self.overlay.log('closeBackground')
         try:
             self.background.close()
             del self.background
+            self.overlay.log('closeBackground')
             xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
         except: pass
         
@@ -87,8 +91,8 @@ class Player(xbmc.Player):
         
     def onPlayBackEnded(self):
         self.overlay.log('onPlayBackEnded')
-        self.overlay.cancelOnNext()
         self.startBackground()
+        self.overlay.cancelOnNext()
     
     
     def onPlayBackStopped(self):
@@ -101,7 +105,6 @@ class Overlay():
     def __init__(self, service):
         self.service    = service
         self.player     = service.player
-        self.myPlayer   = Player(self)
         self.runActions = RulesList().runActions
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
@@ -117,6 +120,10 @@ class Overlay():
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+        
+        
+    def _isPseudoTV(self):
+        return self.player.isPseudoTV
         
     
     def _getPVRItem(self):
@@ -201,6 +208,7 @@ class Overlay():
 
     def open(self):
         self.log('open')
+        self.myPlayer = Player(self)
         if isOverlay(): 
             return self.close()
             
@@ -234,10 +242,11 @@ class Overlay():
                     thread_item.join(1.0)
                 except: pass
                     
-        self.myPlayer.closeBackground()
         self.setImage(self._channelBug,'None')
         self.window.clearProperties()
+        self.myPlayer.closeBackground()
         setOverlay(False)
+        del self.myPlayer
 
 
     def toggleBug(self, state=True):

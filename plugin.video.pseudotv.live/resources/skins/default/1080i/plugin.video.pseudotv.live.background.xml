@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
-    <backgroundcolor>0xFF000000</backgroundcolor>
+    <backgroundcolor>0x00000000</backgroundcolor>
     <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,True,10000)</onload>
     <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_BACKGROUND,False,10000)</onunload> 
     <controls>
@@ -10,12 +10,24 @@
             <description>Background !Playing</description>
             <control type="group">
                 <description>Background Dynamic</description>
+                <visible>!Player.Playing + !Player.Paused</visible>
+                <control type="image"> 
+                    <description>Hide Background</description>
+                    <width>auto</width>
+                    <height>auto</height>
+                    <aspectratio>scale</aspectratio>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <colordiffuse>black</colordiffuse>
+                    <texture>colors/white.png</texture>
+                </control>
                 <control type="grouplist">
                     <posx>1440</posx>
                     <posy>850</posy>
                     <width>480</width>
                     <itemgap>1</itemgap>
                     <orientation>vertical</orientation>
+                    <visible>!Player.Playing + !Player.Paused</visible>
                     <control type="label">
                         <description>Time</description>
                         <align>center</align>
@@ -37,6 +49,7 @@
                     <width>960</width>
                     <itemgap>5</itemgap>
                     <orientation>vertical</orientation>
+                    <visible>!Player.Playing + !Player.Paused</visible>
                     <control type="image" id="40002">
                         <description>Background Logo</description>
                         <height>240</height>
@@ -58,13 +71,13 @@
                     </control>
                 </control>
             </control>
-
             <control type="image" id="40001">
                 <description>Background Static</description>
                 <width>auto</width>
                 <height>auto</height>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <texture>backgrounds/static.gif</texture>
+                <visible>!Player.Playing + !Player.Paused</visible>
             </control>
             <control type="image">
                 <centertop>50%</centertop>
