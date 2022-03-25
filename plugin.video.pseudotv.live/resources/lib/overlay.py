@@ -52,13 +52,13 @@ class Player(xbmc.Player):
         xbmc.Player.__init__(self)
         self.overlay = overlay
 
-    
-    def hasBackground(self):
+
+    def _hasBackground(self):
         return PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND')
 
 
     def startBackground(self):
-        if not self.hasBackground() and self.overlay._isPseudoTV:
+        if not self._hasBackground():
             self.overlay.log('startBackground')
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", overlay=self.overlay)
             self.background.show()
@@ -72,10 +72,6 @@ class Player(xbmc.Player):
             self.overlay.log('closeBackground')
             xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
         except: pass
-        
-
-    def onAVChange(self):
-        self.overlay.log('onAVChange')
         
         
     def onAVStarted(self):
@@ -93,11 +89,7 @@ class Player(xbmc.Player):
         self.overlay.log('onPlayBackEnded')
         self.startBackground()
         self.overlay.cancelOnNext()
-    
-    
-    def onPlayBackStopped(self):
-        self.overlay.log('onPlayBackStopped')
-        
+
 
 class Overlay():
     controlManager = dict()
@@ -120,12 +112,8 @@ class Overlay():
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-        
-        
-    def _isPseudoTV(self):
-        return self.player.isPseudoTV
-        
-    
+
+
     def _getPVRItem(self):
         return self.player.getPVRitem()
     
@@ -239,7 +227,7 @@ class Overlay():
                 try: 
                     self.log("close, joining thread %s"%(thread_item.name))
                     thread_item.cancel()
-                    thread_item.join(1.0)
+                    thread_item.join(0.5)
                 except: pass
                     
         self.setImage(self._channelBug,'None')
@@ -343,8 +331,7 @@ class Overlay():
                 chname = self._getPlayingCitem().get('label',ADDON_NAME)
                 onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname)
                 onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))
-                self._onNext.setText('%s[CR]%s'%("[B]You're Watching:[/B] %s on %s"%(onNow,chname),
-                                                 "[B]Up Next:[/B] %s"%(onNext)))
+                self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
                 self.setVisible(self._onNext,True)
                 self._onNext.autoScroll(6000, 3000, 5000)
                 self.playSFX(BING_WAV)
