@@ -218,7 +218,7 @@ class JSONRPC:
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(command)
-            if cacheResponse.get('result',None):
+            if cacheResponse.get('result',{}):
                 self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
@@ -245,8 +245,7 @@ class JSONRPC:
         
         while not self.inherited.monitor.abortRequested():
             if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
-            try: 
-                self.sendJSON(self.sendQueue.get()[1])
+            try: self.sendJSON(self.sendQueue.get()[1])
             except self.sendQueue.Empty: pass
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
@@ -259,6 +258,7 @@ class JSONRPC:
         return 1  # todo
 
 
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getActivePlayer(self, return_item=False):
         json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
         json_response = self.sendJSON(json_query)
@@ -578,7 +578,6 @@ class JSONRPC:
 
         for path in pvrPaths:
             json_response = self.getDirectory('{"directory":"%s","properties":["file"]}'%(path), cache=False).get('files', [])
-            if not json_response: continue
             item = list(filter(lambda k: k.get('id',random.random()) == channelid, json_response))
             if item:
                 self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))

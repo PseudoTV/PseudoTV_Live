@@ -134,7 +134,6 @@ class Resources:
 
         
     def cleanLogoPath(self, logo):
-        self.log('cleanLogoPath, logo In = %s'%(logo))
         if not logo.startswith(('image://','resource://','special://')):
             realPath = xbmcvfs.translatePath('special://home/addons/')
             if logo.startswith(realPath):# convert real path. to vfs

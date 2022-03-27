@@ -44,7 +44,12 @@ class Fillers:
 
 
     def buildBCTresource(self, type, path, media='video'):
-        self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))
+        self.log('buildBCTresource, type = %s, path = %s, media = %s'%(type,path,media))                
+        def cleanResourcePath(path):
+            if path.startswith('resource://'):
+                return (path.replace('resource://','special://home/addons/'))
+            return path
+
         if not path.startswith(('resource://')): checksum = ADDON_VERSION
         else: checksum = self.writer.jsonRPC.getPluginMeta(path).get('version',ADDON_VERSION)
         if type in PRE_ROLL: ignoreDuration = True

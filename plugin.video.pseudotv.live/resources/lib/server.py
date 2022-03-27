@@ -192,7 +192,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
-        with busy(), fileLocker(self.globalFileLock), xbmcvfs.File(path, 'rb') as f:
+        with busy(), xbmcvfs.File(path, 'rb') as f:#, fileLocker(self.globalFileLock)
             while not self.monitor.abortRequested():
                 chunk = f.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
                 if not chunk: break
@@ -262,7 +262,7 @@ class HTTP:
             except Exception as e: 
                 self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
                 
-            if (self.monitor.waitForAbort(5) or self.shutdown or self.monitor.shutdown):
+            if (self.monitor.waitForAbort(15) or self.shutdown or self.monitor.shutdown):
                 self.shutdown = False
                 self.log('_start, shutting down')
                 break

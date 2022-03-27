@@ -125,7 +125,6 @@ class Library:
 
             
     def chkLibraryTimer(self, wait=LIBRARY_OFFSET):
-        self.log('chkLibraryTimer, wait = %s'%(wait))
         if self.chkLibraryThread.is_alive(): 
             try: 
                 self.chkLibraryThread.cancel()
@@ -334,7 +333,6 @@ class Recommended:
         
         
     def chkRecommendedTimer(self, wait=RECOMMENDED_OFFSET):
-        self.log('chkRecommendedTimer, wait = %s'%(wait))
         if self.chkRecommendedThread.is_alive(): 
             try: 
                 self.chkRecommendedThread.cancel()

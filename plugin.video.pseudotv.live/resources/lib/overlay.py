@@ -202,7 +202,7 @@ class Overlay():
             
         setOverlay(True)
         self.showStatic      = SETTINGS.getSettingBool("Static_Overlay")
-        self.channelBugColor = '0x%s'%(SETTINGS.getSetting('DIFFUSE_LOGO')) #todo adv. channel rule for color selection.
+        self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.runActions(RULES_ACTION_OVERLAY, self._getPlayingCitem(), inherited=self)
         
         self._chkonNextThread  = threading.Timer(1.0, self.chkOnNext)
@@ -258,11 +258,12 @@ class Overlay():
             if state: 
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
-                    if not bool(SETTINGS.getSettingInt('Color_Logos')): #apply user diffuse color only to "prefer white".
-                        self._channelBug.setColorDiffuse(self.channelBugColor)
                     self._channelBug.setEnableCondition('[Player.HasMedia + Player.Playing]')
                     
                 self.setImage(self._channelBug,(self._getPlayingCitem().get('logo',LOGO)))
+                if not bool(SETTINGS.getSettingInt('Color_Logos')): #apply user diffuse color only to "prefer white".
+                    self._channelBug.setColorDiffuse(self.channelBugColor)
+                    
                 self.setVisible(self._channelBug,True)
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
@@ -286,13 +287,13 @@ class Overlay():
 
     def chkOnNext(self):
         def playerAssert():
-            """ #test playing item, contains title? remaining time / progress within parameters?
+            """ #test playing item, title match? remaining time / progress within parameters?
             """
             try: 
                 titleAssert    = self._getNowItem().get('label') == self.player.getPlayerLabel()
                 remainAssert   = self.player.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
                 progressAssert = self.player.getPlayerProgress() >= 75.0
-                return (titleAssert & remainAssert & progressAssert)
+                return (titleAssert & remainAssert & progressAssert & self.player.isPlaying() & self.player.isPseudoTV)
             except: 
                 return False
         try:
@@ -314,8 +315,13 @@ class Overlay():
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
             totalTime = self.player.getPlayerTime()
-            intTime = abs(((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval)) // interval)
-            self.log('toggleOnNext, totalTime = %s, interval = %s, intTime = %s'%(totalTime,interval,intTime))
+            remaining = self.player.getTimeRemaining()
+            if interval < 1: 
+                intTime = NOTIFICATION_MIN_TIME
+            else:
+                intTime = roundupDIV(abs((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval)),interval)
+                if (intTime * interval) < remaining: intTime = getOnNextInterval((interval - 1))
+            self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s'%(totalTime,interval,remaining,intTime))
             return intTime
             
         try:
@@ -327,7 +333,8 @@ class Overlay():
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.HasMedia + Player.Playing]')
 
-                writer = self._getItemWriter(self._getNextItems()[0])
+                try:    writer = self._getItemWriter(self._getNextItems()[0])
+                except: return self.cancelOnNext()
                 chname = self._getPlayingCitem().get('label',ADDON_NAME)
                 onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname)
                 onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))

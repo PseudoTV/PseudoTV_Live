@@ -273,7 +273,6 @@ def getPVR_SETTINGS():
             'useFFmpegReconnect'          :'true',
             'useInputstreamAdaptiveforHls':'true'}
 
-
 def getPTV_SETTINGS(): 
     return {'User_Import'         :SETTINGS.getSetting('User_Import'),
             'Import_M3U_TYPE'     :SETTINGS.getSetting('Import_M3U_TYPE'),
@@ -537,6 +536,7 @@ def chkDiscovery(servers, forced=False):
             try:    SETTINGS.setSettings(key, value)
             except: pass
     
+    chkClient()
     current_server = SETTINGS.getSetting('Remote_URL')
     if (not current_server or forced) and len(servers.keys()) == 1:
         server = list(servers.keys())[0]
@@ -555,7 +555,6 @@ def getIdle():
     if (idleTime == 0 or idleTime <= 5): log("globals: getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
     return idleState,idleTime
     
-        
 def getIdleTime():
     try: return (int(xbmc.getGlobalIdleTime()) or 0)
     except: #Kodi raises error after sleep.
@@ -661,6 +660,15 @@ def getPluginMeta(id):
     except Exception as e: log("globals: getPluginMeta, Failed! %s"%(e), xbmc.LOGERROR)
     return {}
 
+def stopScript(id):
+    xbmc.executebuiltin("StopScript(%s)"%(id))
+    
+def updateAddonRepos():
+    xbmc.executebuiltin("UpdateAddonRepos")
+    
+def updateLocalAddons():
+    xbmc.executebuiltin("UpdateLocalAddons")
+
 def toggleADDON(id, state=True, reverse=False):
     log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
     sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
@@ -716,12 +724,12 @@ def setPlugin(id,values,override=False):
     return True
     
 def brutePVR(override=False):
-    return True #debug system crashes
-    # if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
-    # elif not override:
-        # if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    # toggleADDON(PVR_CLIENT,False,reverse=True)
-    # return True
+    if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
+    elif not override:
+        if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
+    else: return #debug system crashes
+    toggleADDON(PVR_CLIENT,False,reverse=True)
+    return True
     
 def refreshMGR():
     if getPlugin(PVR_MANAGER):
@@ -875,7 +883,6 @@ def openAddonSettings(ctl=(0,1),id=ADDON_ID):
     xbmc.executebuiltin('SetFocus(%i)'%(ctl[1]-80))
     return True
     
-
 def setJsonSettings():
     for key in JSON_SETTINGS.keys():
         JSON_SETTINGS[key]
@@ -1080,11 +1087,6 @@ def cleanMPAA(mpaa):
         return text.strip()
     except: 
         return mpaa.strip()
-                
-def cleanResourcePath(path):
-    if path.startswith('resource://'):
-        return (path.replace('resource://','special://home/addons/'))
-    return path
 
 def hasSubtitle():
     state = xbmc.getCondVisibility('VideoPlayer.HasSubtitles')
@@ -1134,7 +1136,6 @@ def quoteImage(imagestring):
     result = re.sub(r'%[0-9A-F]{2}', lambda mo: mo.group().lower(), result)
     return result
         
-
 # def syncCustom(): #todo sync user created smartplaylists/nodes for multi-room.
     # for type in ['library','playlists']:
         # for media in ['video','music','mixed']:

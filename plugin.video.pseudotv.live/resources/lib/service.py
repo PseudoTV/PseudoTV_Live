@@ -133,9 +133,6 @@ class Player(xbmc.Player):
         self.log('onAVChange')
         self.isPseudoTV  = isPseudoTV()
         self.playingFile = self.getPlayerFile()
-        # if self.playingFile != playerFile:
-            # self.playingFile = playerFile
-            # self.changeAction()
             
         
     def onAVStarted(self):
@@ -292,12 +289,10 @@ class Monitor(xbmc.Monitor):
         sleepTime = SETTINGS.getSettingInt('Idle_Timer')
         if self.myService.player.isPseudoTV:
             if sleepTime > 0 and (idleTime > (sleepTime * 10800)): #3hr increments
-                if self.myService.player.triggerSleep(): return
+                if self.myService.player.triggerSleep(): return False
             
             if idleTime > OVERLAY_DELAY:
                 self.myService.player.toggleOverlay(True)
-            # else: 
-                # self.myService.player.toggleOverlay(False)
         return isIdle
 
 
@@ -349,6 +344,7 @@ class Service:
         self.player.myService  = self
         self.monitor.myService = self
         self.overlayWindow     = Overlay(service=self)
+        self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         
         if self._initialize():
             self._startup()
@@ -400,9 +396,19 @@ class Service:
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
 
-
+        
+    def startUpdatePending(self):
+        if self.chkUpdateThread.is_alive(): 
+            try: 
+                self.chkUpdateThread.cancel()
+                self.chkUpdateThread.join()
+            except: pass
+        self.chkUpdateThread = threading.Timer(0.5, self.chkUpdatePending)
+        self.chkUpdateThread.name = "chkUpdateThread"
+        self.chkUpdateThread.start()
+                
+                
     def chkUpdatePending(self):
-        chkClient()
         if not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
             self.isLocked = True
             hasChannels = len(self.writer.channels.getChannels()) > 0
@@ -451,7 +457,7 @@ class Service:
             
             if   (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
             elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
-            elif isIdle: self.chkUpdatePending()
+            elif isIdle and not self.isLocked: self.startUpdatePending()
                 
         if pendingRestart: self._restart()
         else:              self._shutdown()
