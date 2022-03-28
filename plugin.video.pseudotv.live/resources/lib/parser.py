@@ -157,7 +157,7 @@ class Writer:
                     self.monitor.waitForAbort((PROMPT_DELAY/2)/1000)
         return True
  
- 
+
     def saveChannelLineup(self):
         self.log('saveChannelLineup')
         if self.cleanChannelLineup() and self.importSETS():

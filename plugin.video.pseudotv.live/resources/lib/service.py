@@ -24,14 +24,15 @@ from resources.lib.overlay     import Overlay
 from resources.lib.server      import Discovery, Announcement, HTTP
 
 class Player(xbmc.Player):
-    def __init__(self):
+    def __init__(self, service=None):
         xbmc.Player.__init__(self)
+        self.service        = service
         self.playingFile    = ''
         self.playingPVRitem = {}
         self.isPseudoTV     = isPseudoTV()
         self.lastSubState   = isSubtitle()
         self.showOverlay    = SETTINGS.getSettingBool('Enable_Overlay')
-
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -39,12 +40,10 @@ class Player(xbmc.Player):
         
     def getInfoTag(self):
         self.log('getInfoTag')
-        if self.isPlayingAudio():
-            return self.getMusicInfoTag()
-        elif self.isPlayingVideo():
-            return self.getVideoInfoTag()
+        if self.isPlayingAudio():   return self.getMusicInfoTag()
+        elif self.isPlayingVideo(): return self.getVideoInfoTag()
 
-               
+              
     def getPlayerLabel(self):
         return (xbmc.getInfoLabel('Player.Title') or xbmc.getInfoLabel('Player.Label') or '')
            
@@ -79,14 +78,39 @@ class Player(xbmc.Player):
         except: return 0
 
 
+    # def getPlayerItem(self, playlist=False):
+        # def getActivePlayer(return_item=False):
+            # json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
+            # json_response = sendJSON(json_query)
+            # try:    id = json_response.get('result',[{'playerid':1}])[0].get('playerid',1)
+            # except: id = 1
+            # if return_item: return item
+            # return id
+        # if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}'%(self.getActivePlaylist())
+        # else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}'%(getActivePlayer())
+        # result = sendJSON(json_query).get('result', {})
+        # return (result.get('item', {}) or result.get('items', []))
+
+
     def getPVRitem(self):
-        try:    pvritem = self.getPlayingItem().getProperty('pvritem') #Kodi v20. todo
-        except: pvritem = self.myService.writer.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False)).get('customproperties',{}).get('pvritem',{})
+        try:    pvritem = self.getPlayingItem().getProperty('pvritem') #Kodi v20.
+        except: pvritem = self.service.writer.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False)).get('customproperties',{}).get('pvritem',{})
         self.log('getPVRitem, pvritem = %s'%(pvritem))
         if isinstance(pvritem,list): pvritem = pvritem[0] #playlists return list
         return loadJSON(pvritem)
         
+                
+    def updatePVRItem(self, pvritem=None):
+        if pvritem is None: pvritem = self.getPVRitem()
+        return self.service.writer.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
         
+        
+    def getPVRPath(self, pvritem=None):
+        if pvritem is None: pvritem = self.getPVRitem()
+        try:    return self.service.writer.jsonRPC.matchPVRPath(pvritem.get('channelid',-1))
+        except: return self.service.writer.jsonRPC.getPlayerItem(pvritem.get('isPlaylist',False)).get('mediapath','')
+
+
     def getCitem(self):
         self.log('getCitem')
         self.playingPVRitem.update(self.getPVRitem())
@@ -183,17 +207,11 @@ class Player(xbmc.Player):
             self.lastSubState = isSubtitle()
             citem = self.getCitem()
             pvritem.get('citem',{}).update(citem)
-            self.playingPVRitem = self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_START, citem, pvritem, inherited=self)
+            self.playingPVRitem = self.service.writer.rules.runActions(RULES_ACTION_PLAYER_START, citem, pvritem, inherited=self)
             if self.lastSubState: self.setSubtitles(False) #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
 
         self.playingFile = self.getPlayerFile()
         self.log('playAction, finished; isPlaylist = %s, isStack = %s'%(self.playingPVRitem.get('isPlaylist',False),self.playingPVRitem.get('broadcastnow',{}).get('isStack',False)))
-        
-                
-    def updatePVRItem(self, pvritem=None):
-        if pvritem is None: pvritem = self.playingPVRitem
-        return self.myService.writer.jsonRPC.getPVRposition(pvritem.get('name'), pvritem.get('id'), pvritem.get('isPlaylist'))
-        # (self.myService.writer.jsonRPC.matchPVRPath(pvritem.get('channelid',-1)) or self.myService.writer.jsonRPC.getPlayerItem().get('mediapath',''))})
 
 
     def changeAction(self):
@@ -216,7 +234,7 @@ class Player(xbmc.Player):
             
         self.isPseudoTV = False
         xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
+        self.service.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
         callback = self.playingPVRitem.get('callback','')
         self.log('changeAction, playing callback = %s'%(callback))
         xbmc.executebuiltin('PlayMedia(%s)'%callback)
@@ -226,7 +244,7 @@ class Player(xbmc.Player):
         self.log('stopAction')
         self.isPseudoTV = False
         self.toggleOverlay(False)
-        self.myService.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
+        self.service.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
         if self.playingPVRitem.get('isPlaylist',False):
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.playingPVRitem = {}
@@ -234,14 +252,16 @@ class Player(xbmc.Player):
         
         
     def toggleOverlay(self, state):
-        self.log("toggleOverlay, state = %s"%(state))
         if state and not isOverlay():
             conditions = [self.showOverlay,self.isPlaying(),self.isPseudoTV]
-            self.log("toggleOverlay, conditions = %s"%(conditions))
+            self.log("toggleOverlay, state = %s, conditions = %s"%(state,conditions))
             if False in conditions: return
-            self.myService.overlayWindow.open()
+            self.overlayWindow = Overlay(service=self.service)
+            self.overlayWindow.open()
         elif not state and isOverlay():
-            self.myService.overlayWindow.close()
+            self.log("toggleOverlay, state = %s"%(state))
+            self.overlayWindow.close()
+            del self.overlayWindow
 
         
     def triggerSleep(self):
@@ -258,15 +278,15 @@ class Player(xbmc.Player):
         sec = 0
         cnx = False
         inc = int(100/OVERLAY_DELAY)
-        dia = self.myService.writer.dialog.progressDialog(message=LANGUAGE(30281))
-        while not self.myService.monitor.abortRequested() and (sec < OVERLAY_DELAY):
+        dia = self.service.writer.dialog.progressDialog(message=LANGUAGE(30281))
+        while not self.service.monitor.abortRequested() and (sec < OVERLAY_DELAY):
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(30283),LANGUAGE(30284)%((OVERLAY_DELAY-sec)))
-            dia = self.myService.writer.dialog.progressDialog((inc*sec),dia, msg)
-            if self.myService.monitor.waitForAbort(1) or not dia:
+            dia = self.service.writer.dialog.progressDialog((inc*sec),dia, msg)
+            if self.service.monitor.waitForAbort(1) or not dia:
                 cnx = True
                 break
-        self.myService.writer.dialog.progressDialog(100,dia)
+        self.service.writer.dialog.progressDialog(100,dia)
         return not bool(cnx)
 
         
@@ -334,16 +354,15 @@ class Service:
     isFirstRun   = True
     vault        = Vault()
     monitor      = Monitor()
-    player       = Player()
     http         = HTTP(monitor)
     announcement = Announcement(monitor)
     discovery    = Discovery(monitor)
     
     def __init__(self):
+        self.player            = Player(service=self)
         self.writer            = Writer(service=self)
-        self.player.myService  = self
         self.monitor.myService = self
-        self.overlayWindow     = Overlay(service=self)
+        self.player.onPlayBackStarted()
         self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         
         if self._initialize():
@@ -417,8 +436,8 @@ class Service:
                 conditions = [validateFiles(),
                               isUpdatePending(),
                               chkUpdateTime('Last_Update',UPDATE_OFFSET)]
-                self.log('chkUpdatePending, conditions = %s'%(conditions))
                 if True in conditions:
+                    self.log('chkUpdatePending, conditions = %s'%(conditions))
                     with busy():
                         if self.writer.builder.buildService():
                             brutePVR(override=True)

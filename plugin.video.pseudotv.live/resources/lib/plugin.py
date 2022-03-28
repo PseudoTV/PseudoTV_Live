@@ -24,7 +24,6 @@ from resources.lib.jsonrpc     import JSONRPC
 from resources.lib.rules       import RulesList, ChannelList
 
 class Plugin:
-    currentChannel  = ''
     channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
     
     def __init__(self, sysARG=sys.argv):
@@ -170,12 +169,10 @@ class Plugin:
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
-        if self.currentChannel != id: self.currentChannel = id
-            
-        lastPVRItem = PROPERTIES.getPropertyDict('Last_Played_PVRItem')
-        if lastPVRItem: pvritem = lastPVRItem
-        else:           pvritem = self.buildChannel(name, id, isPlaylist)
-            
+        if PROPERTIES.getProperty('currentChannel') != id: 
+            PROPERTIES.setProperty('currentChannel',id)
+
+        pvritem   = self.buildChannel(name, id, isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
@@ -204,6 +201,7 @@ class Plugin:
                     nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order
                 
             # elif nowitem.get('isStack',False):
+                # pvritem = PROPERTIES.getPropertyDict('Last_Played_PVRItem')
                 # path = popStack(nowitem.get('playing'))
                 # nowitem['isStack'] = isStack(path)
                 # nowitem['playing'] = path

@@ -106,7 +106,7 @@ class Overlay():
         self.window_h = self.window.getHeight()
         
         #init controls
-        self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')
+        self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
         self._channelBug = xbmcgui.ControlImage(1556, 920, 128, 128, 'None', aspectRatio=2)#todo user sets size & location 
 
 
@@ -265,7 +265,7 @@ class Overlay():
                     self._channelBug.setColorDiffuse(self.channelBugColor)
                     
                 self.setVisible(self._channelBug,True)
-                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
+                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=True'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
                 self.setVisible(self._channelBug,False)
@@ -278,6 +278,7 @@ class Overlay():
            
 
     def cancelOnNext(self):
+        self.log('cancelOnNext')
         self.setVisible(self._onNext,False)
         try: 
             self._onNextThread.cancel()
@@ -340,6 +341,7 @@ class Overlay():
                 onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))
                 self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
                 self.setVisible(self._onNext,True)
+                self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                 self._onNext.autoScroll(6000, 3000, 5000)
                 self.playSFX(BING_WAV)
             else: 

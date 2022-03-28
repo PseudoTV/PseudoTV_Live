@@ -18,9 +18,12 @@
 
 # -*- coding: utf-8 -*-
 
-import os, sys, re, struct, shutil, traceback, threading, decimal, pathlib, operator
-import datetime, time, _strptime, base64, binascii, random, hashlib
-import json, codecs, collections, uuid, queue
+import os, sys, re, struct, shutil, traceback, pathlib
+import datetime, time, _strptime
+import json, codecs, collections
+import random, decimal, operator
+import uuid, base64, binascii, hashlib
+import threading, queue, asyncio
 
 from kodi_six                  import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from itertools                 import cycle, chain, zip_longest
