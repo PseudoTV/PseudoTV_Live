@@ -17,11 +17,11 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-import concurrent.futures
+import threading, concurrent.futures
 import sys, time, re, os, subprocess, traceback
 
 from kodi_six                  import xbmc, xbmcaddon
-from itertools                 import repeat
+from itertools                 import repeat, count
 from functools                 import partial, wraps
 from resources.lib.cache       import Cache, cacheit
 
@@ -32,6 +32,7 @@ try:
     else:
         from multiprocessing.pool  import ThreadPool
         USING_THREAD = False
+    from multiprocessing  import Process
     from _multiprocessing import SemLock, sem_unlink #hack to raise two python issues. _multiprocessing import error, sem_unlink missing from native python (android).
 except Exception as e:
     from resources.lib._threadpool import ThreadPool 
@@ -47,13 +48,40 @@ PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
 def timeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true": return
         start_time = time.time()
         result     = method(*args, **kwargs)
         end_time   = time.time()
-        log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
+        if REAL_SETTINGS.getSetting('Enable_Debugging') == "true":
+            log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper
+    
+def killit(timeout=15.0, default={}):
+    def internal(method):
+        @wraps(method)
+        def wrapper(*args, **kwargs):
+            class waiter(threading.Thread):
+                def __init__(self):
+                    threading.Thread.__init__(self)
+                    self.result = None
+                    self.error = None
+                
+                def run(self):
+                    try:    self.result = method(*args, **kwargs)
+                    except: self.error = sys.exc_info()[0]
+            
+            timer = waiter()
+            timer.start()
+            timer.join(timeout)
+            if timer.isAlive():
+                log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
+                return default
+            if timer.error:
+                log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),c.error))
+                return default
+            return timer.result
+        return wrapper
+    return internal
     
 def roundupDIV(p, q):
     try:
@@ -68,7 +96,7 @@ def log(msg, level=xbmc.LOGDEBUG):
     if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
     
-    
+   
 class Concurrent:
     def __init__(self):
         self.cpuCount = Cores().CPUcount() * 2

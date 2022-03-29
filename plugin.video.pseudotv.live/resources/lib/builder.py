@@ -183,7 +183,7 @@ class Builder:
                 path = [citem['path']]
                 
             if path == [LANGUAGE(30174)]: #Seasonal
-                citem, path = self.seasonal.buildPath(citem)
+                citem, path = self.seasonal.buildPath(citem, nearest=True)#todo add user setting to set fallback holidays (bool).
                 
             mixed  = len(path) > 1
             media  = 'music' if radio else 'video'

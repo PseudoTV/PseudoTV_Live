@@ -313,6 +313,8 @@ class Monitor(xbmc.Monitor):
             
             if idleTime > OVERLAY_DELAY:
                 self.myService.player.toggleOverlay(True)
+            else:
+                self.myService.player.toggleOverlay(False)
         return isIdle
 
 

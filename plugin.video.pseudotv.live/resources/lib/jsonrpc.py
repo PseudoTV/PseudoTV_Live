@@ -19,6 +19,7 @@
 from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
+from resources.lib.concurrency import killit
 
 try:    from multiprocessing   import PriorityQueue
 except: from queue             import PriorityQueue
@@ -205,7 +206,8 @@ class JSONRPC:
         json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
         if 'OK' in self.sendJSON(json_query).get('result',''): return True
         
-            
+        
+    @killit()
     def sendJSON(self, command):
         if self.queueRunning: return self.pool.executor(sendJSON,command)
         else:

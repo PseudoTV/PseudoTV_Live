@@ -81,14 +81,16 @@ class Player(xbmc.Player):
         
     def onPlayBackStarted(self):
         self.overlay.log('onPlayBackStarted')
-        if self.overlay._hasControl(self.overlay._channelBug):
-            self.overlay.setImage(self.overlay._channelBug,(self.overlay._getPlayingCitem().get('logo',LOGO)))
+        self.overlay.toggleBug()
+        # if self.overlay._hasControl(self.overlay._channelBug):
+            # self.overlay.setImage(self.overlay._channelBug,(self.overlay._getPlayingCitem().get('logo',LOGO)))
         
         
     def onPlayBackEnded(self):
         self.overlay.log('onPlayBackEnded')
         self.startBackground()
         self.overlay.cancelOnNext()
+        self.overlay.cancelChannelBug()
 
 
 class Overlay():
@@ -175,7 +177,7 @@ class Overlay():
         except Exception as e: self.log('_removeControl failed! %s'%(e))
         
         
-    def setImage(self, control, image, cache=False):
+    def setImage(self, control, image, cache=True):
         try: control.setImage(image, useCache=cache)
         except Exception as e: self.log('setImage failed! %s'%(e))
         
@@ -236,6 +238,15 @@ class Overlay():
         setOverlay(False)
         del self.myPlayer
 
+    
+    def cancelChannelBug(self):
+        self.log('cancelChannelBug')
+        self.setVisible(self._channelBug,False)
+        try: 
+            self._channelBugThread.cancel()
+            self._channelBugThread.join()
+        except: pass
+
 
     def toggleBug(self, state=True):
         def getWait(state):
@@ -251,7 +262,7 @@ class Overlay():
                 offVAL = round(onVAL // 2)
             return {True:float(onVAL),False:float(offVAL)}[state]
 
-        try:              
+        try:
             wait   = getWait(state)
             nstate = not bool(state)
             
@@ -265,7 +276,7 @@ class Overlay():
                     self._channelBug.setColorDiffuse(self.channelBugColor)
                     
                 self.setVisible(self._channelBug,True)
-                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=True'),
+                self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
                 self.setVisible(self._channelBug,False)

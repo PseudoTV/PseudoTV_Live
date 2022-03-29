@@ -173,7 +173,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-
+        
     def do_GET(self):
         self.log('do_GET, path = %s'%(self.path))
         if self.path.lower() == '/%s'%(M3UFLE.lower()):
@@ -198,6 +198,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if not chunk: break
                 self.wfile.write(chunk)
 
+    
+    def do_HEAD(self):
+        return
+        
+        
+    def do_POST(self):
+        return
+        
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True

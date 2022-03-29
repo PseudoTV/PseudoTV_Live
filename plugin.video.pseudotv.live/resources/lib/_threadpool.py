@@ -30,17 +30,6 @@ ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
 ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
 ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 
-def timeit(method):
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true": return
-        start_time = time.time()
-        result     = method(*args, **kwargs)
-        end_time   = time.time()
-        log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
-        return result
-    return wrapper
-    
 def log(msg, level=xbmc.LOGDEBUG):
     if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
     if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())

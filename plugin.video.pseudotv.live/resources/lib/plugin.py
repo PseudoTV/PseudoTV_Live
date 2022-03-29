@@ -183,7 +183,7 @@ class Plugin:
         
         if nowitem:
             found = True
-            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):# and not nowitem.get('isStack',False):
+            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):# and not nowitem.get('isStack',False): #new item to play
                 PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
@@ -210,9 +210,9 @@ class Plugin:
                 # nowitem['writer'] = setWriter(LANGUAGE(30161),nwriter)
                 # self.log('playChannel, stack detected advancing...')
                 
-            else:
+            elif round(nowitem['progresspercentage']) > self.seekTHLD: #duplicate item near end, avoid callback; override nowitem and queue next show.
                 nowitem = nextitems.pop(0)
-                self.log('playChannel, loopback detected advancing queue to nextitem')
+                self.log('playChannel, progress near the end -or- loopback detected advancing queue to nextitem')
             
             writer = getWriter(nowitem.get('writer',{}))
             liz    = self.dialog.buildItemListItem(writer)

@@ -26,65 +26,65 @@ from resources.lib.globals     import *
 MOVIE_URL= 'videodb://movies/titles/?xsp=%s'
 TV_URL   = 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'
 
-SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title','originaltitle','genre']        , 'logo':''},
-                         2: {'name':'New Years Anthologies'                     ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title','originaltitle','genre']        , 'logo':''},
-                         3: {'name':'Science Fiction Week'                      ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                                , 'logo':''},
-                         4: {'name':'Science Fiction Week'                      ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                                , 'logo':''}},
+SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                     ,'tagline':''                                            ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title','originaltitle','genre']        , 'logo':''},
+                         2: {'name':'Science Fiction Week'                      ,'tagline':''                                            ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                                , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
                          
-            'February' :{1: {'name':'G.I. Joe Week'                             ,'keyword':'gijoe'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':'Love is in the air (Valentines Week)'      ,'keyword':'romance' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Love is in the air (Valentines Week)'      ,'keyword':'romance' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':'Pokémon Week'                              ,'keyword':'pokemon' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+            'February' :{1: {'name':'G.I. Joe Week'                             ,'tagline':'A Real American Hero!'                       ,'keyword':'gijoe'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':'Valentines Week'                           ,'tagline':'Love is in the air!'                         ,'keyword':'romance' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':'Pokémon Week'                              ,'tagline':'Gotta Catch ''Em All'                        ,'keyword':'pokemon' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
-            'March'    :{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':' '                                         ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'J.R.R. Tolkien Week'                       ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+            'March'    :{1: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':' '                                         ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'J.R.R. Tolkien Week'                       ,'tagline':'One ring to rule them all.'                  ,'keyword':'lotr'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
             
-            'April'    :{1: {'name':'Live long and prosper (Star Trek Week)'    ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':'Live long and prosper (Star Trek Week)'    ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':'Alien Week'                                ,'keyword':'aliens'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle']                , 'logo':''}},
+            'April'    :{1: {'name':'Star Trek Week'                            ,'tagline':'To Boldly Go...'                             ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':'Star Trek Week'                            ,'tagline':'To Boldly Go...'                             ,'keyword':'startrek','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':'Alien Week'                                ,'tagline':'In space, no one can hear you scream.'       ,'keyword':'aliens'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle']                , 'logo':''}},
                         
-            'May'      :{1: {'name':'May the force be with you (Star Wars Week)','keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':'May the force be with you (Star Wars Week)','keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         3: {'name':'Sherlock Holmes Week'                      ,'keyword':'watson'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'Dracula Week'                              ,'keyword':'vampire' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+            'May'      :{1: {'name':'Star Wars Week'                            ,'tagline':'May the force be with you.'                  ,'keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':'Star Wars Week'                            ,'tagline':'May the force be with you.'                  ,'keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':'Sherlock Holmes Week'                      ,'tagline':'The Game is Afoot'                           ,'keyword':'watson'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'Dracula Week'                              ,'tagline':'Fidelis et mortem'                           ,'keyword':'vampire' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
-            'June'     :{1: {'name':'Ghostbusters Week'                         ,'keyword':'ghosts'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':'Superman Week'                             ,'keyword':'superman','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
+            'June'     :{1: {'name':'Ghostbusters Week'                         ,'tagline':'Who You Gonna Call?'                         ,'keyword':'ghosts'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':'Superman Week'                             ,'tagline':'Truth, justice, and the American way.'       ,'keyword':'superman','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
                         
-            'July'     :{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'Harry Potter Week'                         ,'keyword':'potter'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+            'July'     :{1: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'Harry Potter Week'                         ,'tagline':'Draco Dormiens Nunquam Titillandus'          ,'keyword':'potter'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
-            'August'   :{1: {'name':'Spiderman Week'                            ,'keyword':'spider'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
+            'August'   :{1: {'name':'Spiderman Week'                            ,'tagline':'with great power comes great responsibility.','keyword':'spider'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
                         
-            'September':{1: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         2: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Batman Week'                               ,'keyword':'batman'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'Comic Book Week'                           ,'keyword':'comic'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot','studio'], 'logo':''}},
+            'September':{1: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':'Batman Week'                               ,'tagline':'The Dark Knight'                             ,'keyword':'batman'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'Comic Book Week'                           ,'tagline':''                                            ,'keyword':'comic'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot','studio'], 'logo':''}},
                         
-            'October'  :{1: {'name':'Back to the Future Week'                   ,'keyword':'future'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         2: {'name':'Spooky Suggestions (Halloween)'            ,'keyword':'horror'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':'Spooky Suggestions (Halloween)'            ,'keyword':'horror'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         4: {'name':'Spooky Suggestions (Halloween)'            ,'keyword':'horror'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
+            'October'  :{1: {'name':'Back to the Future Week'                   ,'tagline':'Great Scott!'                                ,'keyword':'future'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':'Halloween Season'                          ,'tagline':'Spooky Suggestions'                          ,'keyword':'horror'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''}},
                         
-            'November' :{1: {'name':'Honoring all who served (Veterans Week)'   ,'keyword':'veterans','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         2: {'name':'Honoring all who served (Veterans Week)'   ,'keyword':'veterans','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
-                         3: {'name':''                                          ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'Doctor Who Week'                           ,'keyword':'tardis'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
+            'November' :{1: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         2: {'name':'Veterans Week'                             ,'tagline':'Honoring all who served'                     ,'keyword':'veterans','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         3: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
+                         4: {'name':'Doctor Who Week'                           ,'tagline':'Run!'                                        ,'keyword':'tardis'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}},
                         
-            'December' :{1: {'name':'Disney Week'                               ,'keyword':'disney'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','studio'], 'logo':''},
-                         2: {'name':'Christmas Holiday Season'                  ,'keyword':'xmas'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         3: {'name':'Christmas Holiday Season'                  ,'keyword':'xmas'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''},
-                         4: {'name':'Christmas Holiday Season'                  ,'keyword':'xmas'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}}}
+            'December' :{1: {'name':'Disney Week'                               ,'tagline':'Where Dreams Come True'                      ,'keyword':'disney'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','studio'], 'logo':''},
+                         2: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':''                                          ,'tagline':''                                            ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot','genre'] , 'logo':''},
+                         4: {'name':'Christmas Season'                          ,'tagline':"'Tis the season"                             ,'keyword':'xmas'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','originaltitle','plot']         , 'logo':''}}}
                           
                
 KEYWORDS = {'newyear'  :['The Twilight Zone','Black-Mirror','Black Mirror','Outer Limits','Amazing Stories','Tales from the Darkside','Tales from the crypt',
@@ -143,11 +143,15 @@ class Seasonal:
     def getWeek(self):
         dt = datetime.datetime.now()
         adjusted_dom = dt.day + dt.replace(day=1).weekday()
-        return int(ceil(adjusted_dom/7.0))
+        return int(floor(adjusted_dom/7.0))
 
 
     def getMonth(self):
         return datetime.datetime.now().strftime('%B')
+
+
+    def getCurrentHoliday(self):
+        return SEASONS.get(self.getMonth(),{}).get(self.getWeek(),{})
 
 
     def getNearestHoliday(self):
@@ -162,12 +166,15 @@ class Seasonal:
         return holiday
 
 
-    def buildPath(self, citem):
+    def buildPath(self, citem, nearest=True):
         url     = []
         filters = []
-        season  = self.getNearestHoliday()
+        
+        if nearest: season = self.getNearestHoliday()
+        else:       season = self.getCurrentHoliday()
+        
         keyword = season.get('keyword','')
-        citem['holiday'] = season.get('name','')
+        citem['holiday'] = '%s%s'%(season.get('name',''),(' - %s'%(season.get('tagline')) if season.get('tagline','') else ''))
         citem['logo']    = (season.get('logo','') or citem['logo'])
         
         if len(KEYWORDS.get(keyword,[])) > 0:
