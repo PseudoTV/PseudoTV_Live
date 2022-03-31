@@ -291,12 +291,12 @@ class Properties:
         
         
     def getEXTProperty(self, key):
-        return self.window.getProperty(key)
+        return xbmcgui.Window(10000).getProperty(key)
         
         
     def setEXTProperty(self, key, value):
         if not isinstance(value,str): value = str(value)
-        return self.window.setProperty(key,value)
+        return xbmcgui.Window(10000).setProperty(key,value)
         
         
     def setPropertyList(self, key, values):

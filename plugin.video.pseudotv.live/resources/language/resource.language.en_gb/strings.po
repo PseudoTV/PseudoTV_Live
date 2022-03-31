@@ -841,7 +841,7 @@ msgid "Artwork changes will propagate slowly over time."
 msgstr ""
 
 msgctxt "#30207"
-msgid "New server discovered"
+msgid "Server discovered"
 msgstr ""
 
 msgctxt "#30208"

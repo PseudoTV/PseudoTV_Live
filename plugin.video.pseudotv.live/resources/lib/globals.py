@@ -20,7 +20,7 @@
 
 import os, sys, re, struct, shutil, traceback, pathlib
 import datetime, time, _strptime
-import json, codecs, collections
+import json, codecs, collections, string
 import random, decimal, operator
 import uuid, base64, binascii, hashlib
 import threading, queue, asyncio
@@ -31,11 +31,13 @@ from six.moves                 import urllib
 from contextlib                import contextmanager, closing
 from xml.dom.minidom           import parse, Document
 from xml.sax.saxutils          import escape, unescape
+from socket                    import gethostbyname, gethostname
+from math                      import ceil,  floor
+
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
-from socket                    import gethostbyname, gethostname
-from math                      import ceil,  floor
+from resources.lib.concurrency import killit
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -309,9 +311,12 @@ def busy():
 
 @contextmanager
 def busy_dialog():
-    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-    try:     yield
-    finally: xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+    if not isBusyDialog():
+        xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+    try: yield
+    finally:
+        if isBusyDialog():
+            xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
 
 def log(event, level=xbmc.LOGDEBUG): #todo unifiy all logs to its own class to handle events/exceptions.
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
@@ -372,7 +377,7 @@ def isBusy():
     return PROPERTIES.getPropertyBool("BUSY.WORKING")
     
 def isBusyDialog():
-    return xbmc.getCondVisibility('Window.IsActive(busydialognocancel)')
+    return (xbmc.getCondVisibility('Window.IsActive(busydialognocancel)') | xbmc.getCondVisibility('Window.IsActive(busydialog)'))
     
 def isPaused():
     return xbmc.getCondVisibility('Player.Paused')
@@ -635,10 +640,12 @@ def loadJSON(item):
     except Exception as e: log("globals: loadJSON failed! %s"%(e), xbmc.LOGERROR)
     return {}#except json.decoder.JSONDecodeError:,ValueError:
 
+@killit(15,default={})
 def sendJSON(command):
     log('globals: sendJSON, command = %s'%(command))
     return loadJSON(xbmc.executeJSONRPC(command))
 
+@killit(45,default=False)
 def installAddon(id, silent=False):
     if not id: return False
     elif hasAddon(id):
@@ -705,6 +712,7 @@ def chkPluginSettings(id, values):
     addon = getPlugin(id)
     if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
     for setting, value in values.items():
+        if xbmc.Monitor().waitForAbort(.5): return False
         if not str(addon.getSetting(setting)).lower() == str(value).lower(): 
             log('globals: chkPluginSettings, found %s = %s! recommended = %s'%(setting, addon.getSetting(setting),value))
             return setPlugin(id,values,SETTINGS.getSettingBool('Enable_Config'))
@@ -721,9 +729,9 @@ def setPlugin(id,values,override=False):
         addon = getPlugin(id)
         if addon  is None: return False
         for setting, value in values.items(): 
+            if xbmc.Monitor().waitForAbort(.5): return False
             addon.setSetting(setting, value)
     except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
-    if override: return True
     return True
     
 def brutePVR(override=False):
@@ -745,9 +753,7 @@ def chkResources(silent=True):
         params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
         missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
         log('globals: chkResources, missing = %s'%(missing))
-        for addon in missing:
-            try:    installAddon(addon, silent)
-            except: continue
+        for addon in missing: installAddon(addon, silent)
     elif not silent: 
         Dialog().notificationDialog(LANGUAGE(30307)%(ADDON_NAME))
 

@@ -217,7 +217,6 @@ class Plugin:
             writer = getWriter(nowitem.get('writer',{}))
             liz    = self.dialog.buildItemListItem(writer)
             path   = liz.getPath()
-            print('writer',writer,'path',path)
             self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
             
             if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):

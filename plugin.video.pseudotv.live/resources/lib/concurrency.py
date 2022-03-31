@@ -64,16 +64,16 @@ def killit(timeout=15.0, default={}):
                 def __init__(self):
                     threading.Thread.__init__(self)
                     self.result = None
-                    self.error = None
+                    self.error  = None
                 
                 def run(self):
                     try:    self.result = method(*args, **kwargs)
-                    except: self.error = sys.exc_info()[0]
+                    except: self.error  = sys.exc_info()[0]
             
             timer = waiter()
             timer.start()
             timer.join(timeout)
-            if timer.isAlive():
+            if timer.is_alive():
                 log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
                 return default
             if timer.error:

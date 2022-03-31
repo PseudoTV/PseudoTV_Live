@@ -70,7 +70,7 @@ class Player(xbmc.Player):
             self.background.close()
             del self.background
             self.overlay.log('closeBackground')
-            xbmc.executebuiltin('ActivateWindow(fullscreenvideo)')
+            xbmc.executebuiltin('ReplaceWindow(fullscreenvideo)')
         except: pass
         
         
@@ -82,8 +82,6 @@ class Player(xbmc.Player):
     def onPlayBackStarted(self):
         self.overlay.log('onPlayBackStarted')
         self.overlay.toggleBug()
-        # if self.overlay._hasControl(self.overlay._channelBug):
-            # self.overlay.setImage(self.overlay._channelBug,(self.overlay._getPlayingCitem().get('logo',LOGO)))
         
         
     def onPlayBackEnded(self):
@@ -199,6 +197,7 @@ class Overlay():
     def open(self):
         self.log('open')
         self.myPlayer = Player(self)
+        
         if isOverlay(): 
             return self.close()
             
@@ -221,6 +220,9 @@ class Overlay():
 
     def close(self):
         self.log('close')
+        self.cancelOnNext()
+        self.cancelChannelBug()
+        
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
 
@@ -229,11 +231,10 @@ class Overlay():
                 try: 
                     self.log("close, joining thread %s"%(thread_item.name))
                     thread_item.cancel()
-                    thread_item.join(0.5)
+                    thread_item.join()
                 except: pass
                     
         self.setImage(self._channelBug,'None')
-        self.window.clearProperties()
         self.myPlayer.closeBackground()
         setOverlay(False)
         del self.myPlayer

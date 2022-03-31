@@ -164,7 +164,8 @@ class Player(xbmc.Player):
         self.isPseudoTV = isPseudoTV()
         if not self.isPseudoTV:
             self.toggleOverlay(False)
-        self.setSubtitles(self.lastSubState)
+        else:
+            self.setSubtitles(self.lastSubState)
 
 
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, limited to pvr?
@@ -232,6 +233,7 @@ class Player(xbmc.Player):
                 self.playingPVRitem['broadcastnext'] = broadcastnext
             return
             
+        if not self.isPseudoTV: return
         self.isPseudoTV = False
         xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.service.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
@@ -256,16 +258,14 @@ class Player(xbmc.Player):
             conditions = [self.showOverlay,self.isPlaying(),self.isPseudoTV]
             self.log("toggleOverlay, state = %s, conditions = %s"%(state,conditions))
             if False in conditions: return
-            self.overlayWindow = Overlay(service=self.service)
-            self.overlayWindow.open()
+            self.service.overlayWindow.open()
         elif not state and isOverlay():
             self.log("toggleOverlay, state = %s"%(state))
-            self.overlayWindow.close()
-            del self.overlayWindow
+            self.service.overlayWindow.close()
 
         
     def triggerSleep(self):
-        conditions = [not isPaused(),self.isPlaying(),self.isPseudoTV]
+        conditions = [not isPaused(),self.isPlaying(),isPseudoTV()]
         self.log("triggerSleep, conditions = %s"%(conditions))
         if False in conditions: return
         if self.sleepTimer():
@@ -307,10 +307,10 @@ class Monitor(xbmc.Monitor):
     def chkIdle(self):
         isIdle,idleTime = getIdle()
         sleepTime = SETTINGS.getSettingInt('Idle_Timer')
-        if self.myService.player.isPseudoTV:
+        if isPseudoTV():
             if sleepTime > 0 and (idleTime > (sleepTime * 10800)): #3hr increments
                 if self.myService.player.triggerSleep(): return False
-            
+        
             if idleTime > OVERLAY_DELAY:
                 self.myService.player.toggleOverlay(True)
             else:
@@ -359,14 +359,15 @@ class Service:
     http         = HTTP(monitor)
     announcement = Announcement(monitor)
     discovery    = Discovery(monitor)
-    
+        
     def __init__(self):
         self.player            = Player(service=self)
         self.writer            = Writer(service=self)
         self.monitor.myService = self
-        self.player.onPlayBackStarted()
+        self.overlayWindow     = Overlay(service=self)
         self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         
+        self.player.onPlayBackStarted()
         if self._initialize():
             self._startup()
         

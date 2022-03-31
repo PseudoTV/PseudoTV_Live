@@ -712,9 +712,7 @@
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.M3U_URL),http)</condition>
-                            </and>
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),true)</condition>
 						</dependency>
 					</dependencies>
                     <control type="edit" format="string">
@@ -730,9 +728,7 @@
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.XMLTV_URL),http)</condition>
-                            </and>
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),true)</condition>
 						</dependency>
 					</dependencies>
                     <control type="edit" format="string">
@@ -748,9 +744,7 @@
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.GENRE_URL),http)</condition>
-                            </and>
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),true)</condition>
 						</dependency>
 					</dependencies>
                     <control type="edit" format="string">
