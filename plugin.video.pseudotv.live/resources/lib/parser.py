@@ -20,7 +20,6 @@
 from resources.lib.globals     import *
 from resources.lib.fileaccess  import FileLock
 from resources.lib.cache       import Cache
-from resources.lib.concurrency import PoolHelper
 from resources.lib.channels    import Channels
 from resources.lib.jsonrpc     import JSONRPC 
 from resources.lib.backup      import Backup
@@ -47,7 +46,6 @@ class Writer:
         self.rules         = RulesList()
         self.cache         = Cache()
         self.dialog        = Dialog()
-        self.pool          = PoolHelper()
         self.jsonRPC       = JSONRPC(inherited=self)
         
         self.channels      = Channels(writer=self)
@@ -242,7 +240,7 @@ class Writer:
                 self.dialog.notificationDialog(LANGUAGE(30103)%(type))
                 return
                 
-            listItems = self.pool.poolList(self.library.buildLibraryListitem,items,type)
+            listItems = threadit(self.library.buildLibraryListitem)(items,type)
             if autoTune:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)

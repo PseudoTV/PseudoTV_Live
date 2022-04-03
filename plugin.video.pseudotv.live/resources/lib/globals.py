@@ -37,7 +37,7 @@ from math                      import ceil,  floor
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
-from resources.lib.concurrency import killit
+from resources.lib.pooler      import killit, timeit, threadit
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -48,8 +48,6 @@ ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
 ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
-
-#
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 SETTINGS            = Settings()
 PROPERTIES          = Properties()
@@ -793,10 +791,6 @@ def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
 
-def chunks(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
-
 def padLST(lst, targetLen):
     if len(lst) == 0: return lst
     lst.extend(list([random.choice(lst) for n in range(targetLen - len(lst))]))
@@ -1073,14 +1067,12 @@ def buildStack(paths):#build paths list to stack string.
     else: return 'stack://%s'%(' , '.join(paths))
     
 def translateStack(paths):#translate vfs stacks to local
-    print('translateStack paths in',paths)
     if not isinstance(paths,list):
         paths = splitStacks(paths)
     for idx, file in enumerate(paths.copy()):
         if file.lower().startswith("special://"):
             paths[idx] = xbmcvfs.translatePath(file)
     paths = buildStack(paths)
-    print('translateStack paths out',paths)
     return paths
     
 def cleanMPAA(mpaa):
@@ -1156,7 +1148,7 @@ def quoteImage(imagestring):
                 # self.log('copyNodes, orgpath = %s, copypath = %s'%(orgpath,copypath))
                 # yield FileAccess.copy(orgpath, copypath)
 
-def interleave(*seqs): 
+def interleave(seqs): 
     #interleave multi-lists, while preserving seqs order
     #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
     return filter(None,chain.from_iterable(zip_longest(*seqs)))
@@ -1181,6 +1173,10 @@ def distribute(*seq):
         except StopIteration:
             iters.remove(it)
 
+def chunkLst(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+        
 def splitFilename(filename):
     # filename = 'wlogo.png' 
     # return 'wlogo','png'

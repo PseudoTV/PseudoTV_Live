@@ -19,6 +19,7 @@
 from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
+from resources.lib.pooler      import Concurrent
 
 try:    from multiprocessing   import PriorityQueue
 except: from queue             import PriorityQueue
@@ -26,18 +27,18 @@ except: from queue             import PriorityQueue
 class JSONRPC:
     # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
     # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
-    isLocked = False
-
+    isLocked     = False
+    queueRunning = False
+    pool = Concurrent()
+    
     def __init__(self, inherited=None):
         if inherited is None:
             from resources.lib.parser import Writer
             inherited = Writer()
         
-        self.queueRunning = False
         self.writer       = inherited
         self.inherited    = inherited
         self.cache        = inherited.cache
-        self.pool         = inherited.pool
         self.dialog       = inherited.dialog
         
         self.sendQueue    = PriorityQueue()
@@ -207,7 +208,8 @@ class JSONRPC:
         
         
     def sendJSON(self, command):
-        if self.queueRunning: return self.pool.executor(sendJSON,command)
+        if self.queueRunning: 
+            return self.pool.executor(sendJSON,command)
         else:
             with self.sendLocker():
                 return sendJSON(command)
@@ -228,7 +230,7 @@ class JSONRPC:
         self.startQueueThread()
         
 
-    def startQueueThread(self): #start well after buildService.
+    def startQueueThread(self):
         if self.queueThread.is_alive(): 
             try: 
                 self.queueThread.cancel()
@@ -242,14 +244,12 @@ class JSONRPC:
     def startQueueWorker(self):
         self.log('startQueueWorker, starting thread worker')
         self.queueRunning = True
-        
         while not self.inherited.monitor.abortRequested():
             if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
-            try: self.sendJSON(self.sendQueue.get()[1])
+            try:   self.sendJSON(self.sendQueue.get()[1])
             except self.sendQueue.Empty: pass
             except Exception as e: 
                 self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
-                
         self.queueRunning = False
         self.log('startQueueWorker, finishing thread worker')
 

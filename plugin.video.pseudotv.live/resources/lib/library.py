@@ -33,7 +33,6 @@ class Library:
             
         self.writer      = writer
         self.cache       = writer.cache
-        self.pool        = writer.pool
         self.channels    = writer.channels
         self.predefined  = Predefined()
         self.recommended = Recommended(library=self)
@@ -247,10 +246,10 @@ class Library:
                 return item
             else:
                 return None
-        return sorted(self.pool.poolList(chkEnabled,items), key=lambda k: k['name'])
-        # return sorted(filter(lambda k:k.get('enabled',False) == True, items), key=lambda k: k.get('name'))
-
-
+                
+        return sorted(threadit(chkEnabled)(items), key=lambda k: k['name'])
+        
+        
     def buildLibraryListitem(self, data):
         if isinstance(data,tuple): data = list(data)
         return self.writer.dialog.buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
@@ -274,7 +273,7 @@ class Library:
         if type is None: types = CHAN_TYPES
         else:            types = [type]
         for type in types:
-            self.setLibraryItems(type,self.pool.poolList(setDisabled,self.getLibraryItems(type)))
+            self.setLibraryItems(type,(threadit(setDisabled)(self.getLibraryItems(type))))
         return True
         
 
@@ -282,7 +281,6 @@ class Recommended:
     def __init__(self, library):
         self.library = library
         self.cache   = library.cache
-        self.pool    = library.pool
         
         if self.library.chkLibraryThread.is_alive(): 
             self.chkRecommendedThread = threading.Timer(15.0, self.chkRecommendedTimer)
@@ -353,7 +351,7 @@ class Recommended:
         if not SETTINGS.getSettingBool('Enable_Recommended'): return []
         blackList = self.getBlackList()
         addonList = [addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))]
-        return (self.pool.poolList(self.searchRecommendedAddon, addonList) or [])
+        return threadit(self.searchRecommendedAddon)(addonList)
         
         
     # @cacheit(expiration=datetime.timedelta(seconds=RECOMMENDED_OFFSET),json_data=True)

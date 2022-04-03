@@ -30,7 +30,6 @@ class Builder:
             writer = Writer()
         self.writer           = writer
         self.cache            = writer.cache
-        self.pool             = writer.pool
         self.runActions       = writer.rules.runActions
         
         #globals
@@ -177,13 +176,11 @@ class Builder:
                 return True# prevent over-building
                 
             citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
-            if isinstance(citem['path'], list): 
-                path = citem['path']
-            else: 
-                path = [citem['path']]
+            if isinstance(citem['path'], list): path = citem['path']
+            else:                               path = [citem['path']]
                 
             if path == [LANGUAGE(30174)]: #Seasonal
-                citem, path = self.seasonal.buildPath(citem, nearest=True)#todo add user setting to set fallback holidays (bool).
+                citem, path = self.seasonal.buildPath(citem)
                 
             mixed  = len(path) > 1
             media  = 'music' if radio else 'video'
@@ -200,13 +197,13 @@ class Builder:
                     return False
                 
                 cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid interleave() below.
-                cacheResponse = list(interleave(cacheResponse))[0]# interleave multi-paths, while keeping filelist order.
+                cacheResponse = list(interleave(cacheResponse))# interleave multi-paths, while keeping filelist order.
                 cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
                 self.log('getFileList, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
                 
                 if len(cacheResponse) < self.limit:
                     cacheResponse = self.fillCells(cacheResponse)
-
+                    
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
             # if self.fillBCTs and not citem.get('radio',False): 
                 # cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)

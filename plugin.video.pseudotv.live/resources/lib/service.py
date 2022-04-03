@@ -352,20 +352,20 @@ class Monitor(xbmc.Monitor):
 
   
 class Service:
-    isLocked     = False
-    isFirstRun   = True
-    vault        = Vault()
-    monitor      = Monitor()
-    http         = HTTP(monitor)
-    announcement = Announcement(monitor)
-    discovery    = Discovery(monitor)
-        
+    isLocked      = False
+    isFirstRun    = True
+    vault         = Vault()
+    monitor       = Monitor()
+    http          = HTTP(monitor)
+    announcement  = Announcement(monitor)
+    discovery     = Discovery(monitor)
+    
     def __init__(self):
+        self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         self.player            = Player(service=self)
         self.writer            = Writer(service=self)
+        self.overlayWindow     = Overlay(player=self.player)
         self.monitor.myService = self
-        self.overlayWindow     = Overlay(service=self)
-        self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         
         self.player.onPlayBackStarted()
         if self._initialize():
@@ -486,24 +486,30 @@ class Service:
               
               
     def _restart(self):
-        self.log('_restart')
-        self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))
-        self.__init__()
+        self._shutdown(restart=True)
         
         
-    def _shutdown(self):
-        self.monitor.shutdown = True
-        for thread in threading.enumerate():
-            try: 
-                if thread.name == "MainThread": continue
-                self.log("_shutdown joining thread %s"%(thread.name))
+    def _shutdown(self, restart=False):
+        self.log('_shutdown, restart = %s'%(restart))
+        del self.player
+        del self.writer
+        del self.overlayWindow
+        if restart:
+            self.writer.dialog.notificationWait(LANGUAGE(30311)%(ADDON_NAME))
+            self.__init__()
+        else:
+            self.monitor.shutdown = True
+            for thread in threading.enumerate():
                 try: 
-                    thread.cancel()
-                    thread.join(1.0)
-                except: pass
-            except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
-        self.log('_shutdown finished, exiting %s...'%(ADDON_NAME))
-
+                    if thread.name == "MainThread": continue
+                    self.log("_shutdown joining thread %s"%(thread.name))
+                    try: 
+                        thread.cancel()
+                        thread.join(1.0)
+                    except: pass
+                except Exception as e: log("closeThreads, Failed! %s"%(e), xbmc.LOGERROR)
+            self.log('_shutdown finished, exiting %s...'%(ADDON_NAME))
+            
 if __name__ == '__main__': Service()
     
     

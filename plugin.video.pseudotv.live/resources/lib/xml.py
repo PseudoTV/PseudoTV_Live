@@ -220,7 +220,7 @@ class XMLTV:
                 channels, programmes = self.loadChannels(file), self.loadProgrammes(file)
                 
                 if m3uChannels: #filter imported programmes by m3uchannels list.
-                    self.writer.pool.poolList(matchChannel, m3uChannels, kwargs={'channels':channels,'programmes':programmes})
+                    threadit(matchChannel)(m3uChannels, kwargs={'channels':channels,'programmes':programmes})
                 else: #no filter, import everything!
                     importChannels   = channels
                     importProgrammes = programmes
@@ -242,7 +242,7 @@ class XMLTV:
                         except: continue
                           
             tmpChannels = channels.copy() 
-            self.writer.pool.poolList(chkPrograms,channels)
+            threadit(chkPrograms)(channels)
             for channel in tmpChannels: programmes.append(self.addSingleEntry(channel)) #append single cell entry for channels missing programmes
             self.log("chkImport, added %s single entries"%(len(tmpChannels)))
         except Exception as e: 

@@ -23,7 +23,6 @@ import os, json, traceback, threading
 from kodi_six                  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
 from datetime                  import timedelta
 from resources.lib.cache       import Cache
-from resources.lib.concurrency import PoolHelper
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -333,7 +332,6 @@ class Dialog:
     monitor    = xbmc.Monitor()
     settings   = Settings()
     properties = Properties()
-    pool       = PoolHelper()
     
     def __init__(self):
         self.infoMonitorThread = threading.Timer(0.5, self.doInfoMonitor)
@@ -608,7 +606,7 @@ class Dialog:
                     else:    type = 0
                     options.insert(0,{"label":"Existing Path", "label2":default, "default":default , "mask":"", "type":type, "multi":False})
                     
-            listitems = self.pool.poolList(buildMenuItem,options)
+            listitems = threadit(buildMenuItem)(options)
             select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
             if select is not None:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS

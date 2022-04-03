@@ -24,7 +24,6 @@ class XSP:
     def __init__(self, builder=None):
         if builder is None: return
         self.cache = builder.cache
-        self.pool  = builder.pool
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

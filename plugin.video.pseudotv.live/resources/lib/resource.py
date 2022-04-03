@@ -33,7 +33,6 @@ class Resources:
     def __init__(self, jsonRPC):
         self.jsonRPC     = jsonRPC
         self.cache       = jsonRPC.cache
-        self.pool        = jsonRPC.pool
         self.LOGO_LOC    = LOGO_LOC
         self.logoSets    = self.buildLogoResources()
         
@@ -165,7 +164,7 @@ class Resources:
         cacheCHK   = getMD5(dumpJSON(packs))
         matches    = self.cache.get(cacheName, checksum=cacheCHK)
         if not matches:
-            results = [self.pool.poolList(_parse,packs,kwargs={'chname':chname}) for chname in chnames] #results =  [[('resource.images.pseudotv.logos', ('special://home/addons/resource.images.pseudotv.logos/resources', [('Action Movies.png', 30), ('Action TV.png', 30), ('AMC Pictures.png', 30), ('Anonymous Content.png', 30), ('Biography Movies.png', 30)]))]]
+            results = [threadit(_parse)(packs,packs,kwargs={'chname':chname}) for chname in chnames]
             if results:
                 matches = []
                 results = sorted(results[0], key=lambda x: x[1][1]) #sort high-lowest match score.
@@ -209,7 +208,7 @@ class Resources:
         cacheCHK   = getMD5(dumpJSON(packs))
         matches    = self.cache.get(cacheName, checksum=cacheCHK)
         if not matches:
-            matches = self.pool.poolList(_match,packs)
+            matches = threadit(_match)(packs)
             # matches = [('D:/Kodi/portable_data/addons/plugin.video.pseudotv.live/resources/images',('Recently Added.png', 95))]
             if matches:
                 matches = (sorted(matches, key=lambda x: x[1][1])) #sort high-lowest match score.

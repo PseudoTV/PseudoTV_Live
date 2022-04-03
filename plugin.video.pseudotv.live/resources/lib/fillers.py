@@ -25,7 +25,6 @@ class Fillers:
         self.builder = builder
         self.writer  = builder.writer
         self.cache   = builder.cache
-        self.pool    = builder.pool
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

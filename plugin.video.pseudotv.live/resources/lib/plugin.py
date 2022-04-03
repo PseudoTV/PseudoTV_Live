@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
 from resources.lib.cache       import Cache
-from resources.lib.concurrency import PoolHelper
 from resources.lib.jsonrpc     import JSONRPC 
 from resources.lib.rules       import RulesList, ChannelList
 
@@ -39,7 +38,6 @@ class Plugin:
         self.player     = xbmc.Player()
         self.cache      = Cache()
         self.dialog     = Dialog()
-        self.pool       = PoolHelper()
         self.jsonRPC    = JSONRPC(inherited=self)
         self.ruleList   = RulesList()
         self.runActions = self.ruleList.runActions
@@ -67,7 +65,7 @@ class Plugin:
             elif broadcast['progresspercentage'] == 0 and len(channelItem.get('broadcastnext',[])) < channelLimit:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
                 
-        self.pool.poolList(_parseBroadcast, self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
+        threadit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
         return channelItem
 
 
@@ -146,7 +144,7 @@ class Plugin:
                 nextitems.append(lastitem) #insert pvr callback
                 
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+                listitems.extend(threadit(self.buildWriterItem)(nextitems))
             else:
                 liz = self.dialog.buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
@@ -256,7 +254,7 @@ class Plugin:
             xbmc.sleep(100)
                 
             listitems = [liz]
-            listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems))
+            listitems.extend(threadit(self.buildWriterItem)(nextitems))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
 
@@ -306,7 +304,7 @@ class Plugin:
                 liz.setProperty('pvritem', dumpJSON(pvritem))          
                 
                 listitems = [liz]
-                listitems.extend(self.pool.poolList(self.buildWriterItem,nextitems,kwargs={'mType':'song'}))
+                listitems.extend(threadit(self.buildWriterItem)(nextitems,kwargs={'mType':'song'}))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))

@@ -188,7 +188,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         else: return
             
         self.send_response(200)
-        self.send_header("Content-type", content)
+        self.send_header("Content-type",content)
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
@@ -204,7 +204,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         
         
     def do_POST(self):
-        return
+        return self.do_GET()
         
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):

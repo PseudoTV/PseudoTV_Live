@@ -94,9 +94,8 @@ class Player(xbmc.Player):
 class Overlay():
     controlManager = dict()
     
-    def __init__(self, service):
-        self.service    = service
-        self.player     = service.player
+    def __init__(self, player):
+        self.player     = player
         self.runActions = RulesList().runActions
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
@@ -327,18 +326,18 @@ class Overlay():
     
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
-            totalTime = self.player.getPlayerTime()
-            remaining = self.player.getTimeRemaining()
-            if interval < 1: 
-                intTime = NOTIFICATION_MIN_TIME
+            totalTime   = self.player.getPlayerTime()
+            remaining   = self.player.getTimeRemaining()
+            
+            if interval < 1: intTime = NOTIFICATION_MIN_TIME
             else:
-                intTime = roundupDIV(abs((totalTime - (totalTime * .75)) - ((NOTIFICATION_CHECK_TIME//2) * interval)),interval)
-                if (intTime * interval) < remaining: intTime = getOnNextInterval((interval - 1))
+                intTime = roundupDIV(abs((totalTime - (totalTime * .75)) - (NOTIFICATION_CHECK_TIME//2 * interval)),interval)
+                if remaining < (intTime * interval): intTime = getOnNextInterval((interval - 1))
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s'%(totalTime,interval,remaining,intTime))
             return intTime
             
         try:
-            wait   = {True:(NOTIFICATION_CHECK_TIME//2),False:float(getOnNextInterval())}[state]
+            wait   = {True:floor(NOTIFICATION_CHECK_TIME//2),False:float(getOnNextInterval())}[state]
             nstate = not bool(state)
             
             if state: 

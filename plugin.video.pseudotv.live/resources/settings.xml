@@ -683,6 +683,18 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
+				<setting id="NEAREST_SEASON" type="boolean" label="30208" help="30218">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="enable">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+				</setting>
 			</group>
             <group id="2" label="30194">
 				<setting id="User_Folder" type="path" label="30028" help="30258">

@@ -41,7 +41,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.channel_idx    = (kwargs.get('channel',1) - 1) #Convert from Channel to array index
             self.writer         = kwargs.get('writer')
             self.cache          = self.writer.cache
-            self.pool           = self.writer.pool
             self.dialog         = self.writer.dialog
             self.channels       = self.writer.channels
             self.jsonRPC        = self.writer.jsonRPC
@@ -102,7 +101,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         ## Fill chanList listitem for display. *reset draws new control list. *focus list index for channel position.
         self.togglechanList(True,reset=reset)
         self.toggleSpinner(self.chanList,True)
-        listitems = (self.pool.poolList(self.buildChannelListItem,channelList))
+        listitems = threadit(self.buildChannelListItem)(channelList)
         self.chanList.addItems(listitems)
         
         if focus is None: self.chanList.selectItem(self.setFocusPOS(listitems))
@@ -456,7 +455,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def validateChannels(self, channelList):
         self.log('validateChannels')
-        return sorted(self.pool.poolList(self.validateChannel,channelList), key=lambda k: k['number'])
+        return sorted(threadit(self.validateChannel)(channelList), key=lambda k: k['number'])
               
 
     def saveChannelItems(self, channelData, channelPOS):
@@ -514,9 +513,8 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:
             ruleInstances = [item['item']]
         
-        print(ruleInstances)
-        listitems   = self.pool.poolList(self.buildRuleListItem,ruleInstances,channelData)
-        optionIDX   = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
+        listitems = threadit(self.buildRuleListItem)(ruleInstances,channelData)
+        optionIDX = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
 
         # ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #all rule instances with channel settings applied
         # print(ruleInstances)
@@ -585,7 +583,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('buildRuleItems, append = %s'%(append))
         self.toggleSpinner(self.ruleList,True)
         channelRules = self.rules.loadRules([channelData]).get(channelData['id'],[]) # all channel rule instances only.
-        listitems = self.pool.poolList(self.buildRuleListItem,channelRules,channelData)
+        listitems = threadit(self.buildRuleListItem)(channelRules,channelData)
         if append: listitems.insert(0,self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
         self.toggleSpinner(self.ruleList,False)
         self.ruleList.reset()

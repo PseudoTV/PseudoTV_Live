@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 from resources.lib.globals     import *
 from resources.lib.cache       import Cache
-from resources.lib.concurrency import PoolHelper
 
 # ''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
 class ChannelList:
@@ -43,8 +42,6 @@ class ChannelList:
         
         
 class RulesList:
-    pool = PoolHelper()
-    
     def __init__(self):  
         self.log('__init__')
         self.channels = ChannelList()
@@ -107,7 +104,7 @@ class RulesList:
         self.log('loadRules, channels = %s'%(channels))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = self.pool.poolList(self._loadRule,channels,tmpruleList)
+        ruleList = threadit(self._loadRule)(channels,tmpruleList)
         return ruleList
         
         

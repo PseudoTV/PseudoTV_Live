@@ -845,7 +845,7 @@ msgid "Server discovered"
 msgstr ""
 
 msgctxt "#30208"
-msgid "CPU Multiprocessing"
+msgid "Enable Nearest Season"
 msgstr ""
 
 msgctxt "#30209"
@@ -885,7 +885,7 @@ msgid "Please Install & Enable %s to continue..."
 msgstr ""
 
 msgctxt "#30218"
-msgid "[COLOR=red][B]Setting Temporarily Disabled![/B][/COLOR]"
+msgid "Allow seasonal channel to advanced to nearest holiday within the month."
 msgstr ""
 
 msgctxt "#30219"
