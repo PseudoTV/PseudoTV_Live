@@ -313,7 +313,7 @@ def busy_dialog():
         xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        if isBusyDialog():
+        if xbmc.getCondVisibility('Window.IsActive(busydialognocancel)'):
             xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
 
 def log(event, level=xbmc.LOGDEBUG): #todo unifiy all logs to its own class to handle events/exceptions.
@@ -376,7 +376,7 @@ def isBusy():
     
 def isBusyDialog():
     return (xbmc.getCondVisibility('Window.IsActive(busydialognocancel)') | xbmc.getCondVisibility('Window.IsActive(busydialog)'))
-    
+
 def isPaused():
     return xbmc.getCondVisibility('Player.Paused')
 

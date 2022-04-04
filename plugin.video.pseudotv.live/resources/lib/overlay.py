@@ -195,48 +195,40 @@ class Overlay():
 
     def open(self):
         self.log('open')
-        self.myPlayer = Player(self)
-        
         if isOverlay(): 
             return self.close()
             
         setOverlay(True)
+        self.myPlayer        = Player(self)
         self.showStatic      = SETTINGS.getSettingBool("Static_Overlay")
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.runActions(RULES_ACTION_OVERLAY, self._getPlayingCitem(), inherited=self)
         
+        self._onNextThread     = threading.Timer(1.0, self.toggleOnNext)
+        self._channelBugThread = threading.Timer(1.0, self.toggleBug)
         self._chkonNextThread  = threading.Timer(1.0, self.chkOnNext)
-        self._onNextThread     = threading.Timer(5.0, self.toggleOnNext)
-        self._channelBugThread = threading.Timer(5.0, self.toggleBug)
-        
-        self._overlayThreads   = [self._channelBugThread,
-                                  self._chkonNextThread, 
-                                  self._onNextThread]
-
-        for thread_item in self._overlayThreads:
-            thread_item.start()
+        self._chkonNextThread.start()
+        self.myPlayer.onPlayBackStarted()
             
 
     def close(self):
         self.log('close')
+        if self._chkonNextThread.is_alive(): 
+            try: 
+                self._chkonNextThread.cancel()
+                self._chkonNextThread.join()
+            except: pass
+                  
         self.cancelOnNext()
         self.cancelChannelBug()
-        
+          
+        self.setImage(self._channelBug,'None')
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
 
-        for thread_item in self._overlayThreads:
-            if thread_item.is_alive(): 
-                try: 
-                    self.log("close, joining thread %s"%(thread_item.name))
-                    thread_item.cancel()
-                    thread_item.join()
-                except: pass
-                    
-        self.setImage(self._channelBug,'None')
         self.myPlayer.closeBackground()
-        setOverlay(False)
         del self.myPlayer
+        setOverlay(False)
 
     
     def cancelChannelBug(self):
@@ -266,10 +258,16 @@ class Overlay():
             wait   = getWait(state)
             nstate = not bool(state)
             
+            if self._channelBugThread.is_alive():
+                try: 
+                    self._channelBugThread.cancel()
+                    self._channelBugThread.join()
+                except: pass
+                
             if state: 
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
-                    self._channelBug.setEnableCondition('[Player.HasMedia + Player.Playing]')
+                    self._channelBug.setEnableCondition('[Player.Playing]')
                     
                 self.setImage(self._channelBug,(self._getPlayingCitem().get('logo',LOGO)))
                 if not bool(SETTINGS.getSettingInt('Color_Logos')): #apply user diffuse color only to "prefer white".
@@ -326,13 +324,10 @@ class Overlay():
     
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
-            totalTime   = self.player.getPlayerTime()
+            totalTime   = int(self.player.getPlayerTime())
             remaining   = self.player.getTimeRemaining()
-            
-            if interval < 1: intTime = NOTIFICATION_MIN_TIME
-            else:
-                intTime = roundupDIV(abs((totalTime - (totalTime * .75)) - (NOTIFICATION_CHECK_TIME//2 * interval)),interval)
-                if remaining < (intTime * interval): intTime = getOnNextInterval((interval - 1))
+            intTime     = roundupDIV(abs((totalTime - (totalTime * .75)) - (2 * (NOTIFICATION_CHECK_TIME//2 * interval))),interval)
+            if remaining < intTime: intTime = getOnNextInterval((interval + 1))
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s'%(totalTime,interval,remaining,intTime))
             return intTime
             
@@ -343,18 +338,19 @@ class Overlay():
             if state: 
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
-                    self._onNext.setEnableCondition('[Player.HasMedia + Player.Playing]')
-
+                    self._onNext.setEnableCondition('[Player.Playing]')
+                    
                 try:    writer = self._getItemWriter(self._getNextItems()[0])
                 except: return self.cancelOnNext()
+                
                 chname = self._getPlayingCitem().get('label',ADDON_NAME)
                 onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname)
                 onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))
                 self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
-                self.setVisible(self._onNext,True)
                 self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                 self._onNext.autoScroll(6000, 3000, 5000)
                 self.playSFX(BING_WAV)
+                self.setVisible(self._onNext,True)
             else: 
                 self.setVisible(self._onNext,False)
             
@@ -365,6 +361,6 @@ class Overlay():
         except Exception as e: self.log("toggleOnNext, Failed! %s"%(e), xbmc.LOGERROR)
     
 
-    def playSFX(self, filename, cached=True):
+    def playSFX(self, filename, cached=False):
         self.log('playSFX, filename = %s, cached = %s'%(filename,cached))
         xbmc.playSFX(filename, useCached=cached)

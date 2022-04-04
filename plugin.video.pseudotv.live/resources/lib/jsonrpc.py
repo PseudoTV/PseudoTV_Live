@@ -208,11 +208,8 @@ class JSONRPC:
         
         
     def sendJSON(self, command):
-        if self.queueRunning: 
-            return self.pool.executor(sendJSON,command)
-        else:
-            with self.sendLocker():
-                return sendJSON(command)
+        with self.sendLocker():
+            return sendJSON(command)
 
 
     def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
@@ -225,33 +222,36 @@ class JSONRPC:
         return cacheResponse
 
 
-    def queueJSON(self, param, heap=5):#heap = 1 top priority, heap = 10 lowest.
+    def queueJSON(self, param, heap=5):
+        #heap = 1 top priority, heap = 10 lowest.
         self.sendQueue.put((heap,param))
         self.startQueueThread()
         
 
-    def startQueueThread(self):
+    def startQueueThread(self, wait=600):
         if self.queueThread.is_alive(): 
             try: 
                 self.queueThread.cancel()
                 self.queueThread.join()
             except: pass
-        self.queueThread = threading.Timer(900.0, self.startQueueWorker)
+        self.queueThread = threading.Timer(wait, self.startQueueWorker)
         self.queueThread.name = "queueThread"
         self.queueThread.start()
 
 
     def startQueueWorker(self):
-        self.log('startQueueWorker, starting thread worker')
-        self.queueRunning = True
-        while not self.inherited.monitor.abortRequested():
-            if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
-            try:   self.sendJSON(self.sendQueue.get()[1])
-            except self.sendQueue.Empty: pass
-            except Exception as e: 
-                self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
-        self.queueRunning = False
-        self.log('startQueueWorker, finishing thread worker')
+        if isBusy(): return self.startQueueThread(300)
+        with busy():
+            self.queueRunning = True
+            self.log('startQueueWorker, starting thread worker')
+            while not self.inherited.monitor.abortRequested():
+                if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
+                try:   self.pool.executor(self.sendJSON,self.sendQueue.get()[1])
+                except self.sendQueue.Empty: pass
+                except Exception as e: 
+                    self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
+            self.queueRunning = False
+            self.log('startQueueWorker, finishing thread worker')
 
 
     def getActivePlaylist(self):

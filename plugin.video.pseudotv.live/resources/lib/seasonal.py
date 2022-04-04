@@ -156,7 +156,9 @@ class Seasonal:
     def getWeek(self):
         dt = datetime.datetime.now()
         adjusted_dom = dt.day + dt.replace(day=1).weekday()
-        return int(ceil(adjusted_dom/7.0))
+        week = (adjusted_dom/7.0)
+        if week > 4.0: return int(ceil(week))
+        else:          return int(floor(week))
 
 
     def getMonth(self):
