@@ -6,6 +6,7 @@ v.0.3.8
 -Added A JSONRPC timeout for unresponsive calls and hanging plugins.
 -Added More Seasons...
 -Added Setting "Nearest Season". When enabled and no season found, the nearest season within the month will be substituted.
+-Fixed "Play from here" not applying offset start position.
 
 v.0.3.7
 -Improved "Seasonal" channel , moved from third-party plugin to local code. Added additional holidays and weekly scheduling. 

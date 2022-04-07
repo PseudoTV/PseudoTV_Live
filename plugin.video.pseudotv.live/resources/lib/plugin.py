@@ -132,8 +132,13 @@ class Plugin:
                        
                 nowitem = nextitems.pop(0)
                 writer  = getWriter(nowitem.get('writer',{}))
-                liz = self.dialog.buildItemListItem(writer)         
-                liz.setProperty('pvritem', dumpJSON(pvritem))       
+                liz = self.dialog.buildItemListItem(writer)
+                liz.setProperty('pvritem', dumpJSON(pvritem))
+                if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                    self.log('contextPlay, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                    liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs
+                    liz.setProperty('resumetime' , str(nowitem['progress']))       #secs
+                    liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                 
                 lastitem  = nextitems.pop(-1)
                 lastwrite = getWriter(lastitem.get('writer',''))
