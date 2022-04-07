@@ -253,7 +253,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#30059"
-msgid "Something went wrong, Lets try to fix!"
+msgid "Something went wrong, Lets try again!"
 msgstr ""
 
 msgctxt "#30060"

@@ -251,15 +251,11 @@ class VFSFile:
 class FileLock:
     def __init__(self):
         random.seed()        
-        self.LOCK_LOC     = self.chkLOCK()
-        self.monitor      = xbmc.Monitor()
-        self.lockedList   = []
-        self.isExiting    = False
-        self.lockFileName = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
-        
-        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
-        self.refreshLocksTimer.name = "RefreshLocks"
-        
+        self.LOCK_LOC      = self.chkLOCK()
+        self.monitor       = xbmc.Monitor()
+        self.lockedList    = []
+        self.isExiting     = False
+        self.lockFileName  = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
         self.grabSemaphore = threading.BoundedSemaphore()
         self.listSemaphore = threading.BoundedSemaphore()
         log("FileLock: instance")
@@ -282,12 +278,11 @@ class FileLock:
     def close(self):
         log("FileLock: close")
         self.isExiting = True
-        if self.refreshLocksTimer.is_alive():
-            try: 
+        try: 
+            if self.refreshLocksTimer.is_alive():   
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
-            except: pass
-
+        except: pass
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
         for item in self.lockedList:
@@ -301,12 +296,11 @@ class FileLock:
                 return False
             self.lockFile(item, True)
             
-        if self.refreshLocksTimer.is_alive():
-            try: 
+        try: 
+            if self.refreshLocksTimer.is_alive():
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
-            except: pass
-                
+        except: pass
         self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
         if self.isExiting == False:

@@ -81,7 +81,6 @@ class Channels:
         return sorted(channels, key=lambda k: k['number'])
 
     
-    @cacheit(checksum=getInstanceID(),json_data=True)
     def getChannel(self, id):
         channels = self.getChannels()
         return list(filter(lambda c:c.get('id') == id, channels))

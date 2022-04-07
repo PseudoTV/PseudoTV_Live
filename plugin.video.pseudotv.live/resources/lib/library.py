@@ -25,11 +25,10 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Library:
     def __init__(self, writer=None):
-        self.chkLibraryThread = threading.Timer(30.0, self.chkLibraryTimer)
         if writer is None:
             from resources.lib.parser import Writer
             writer = Writer()
-        else: self.chkLibraryThread.start()
+        else: self.chkLibraryTimer(wait=-1)
             
         self.writer      = writer
         self.cache       = writer.cache
@@ -124,19 +123,17 @@ class Library:
 
             
     def chkLibraryTimer(self, wait=LIBRARY_OFFSET):
-        if self.chkLibraryThread.is_alive(): 
-            try: 
-                self.chkLibraryThread.cancel()
-                self.chkLibraryThread.join()
-            except: pass
-                
-        if isBusy(): 
+        if isBusy() or wait == -1: 
             wait = 30.0
         else: 
             with busy(): 
                 if not self.fillLibraryItems():
                     wait = 30.0
-            
+        try: 
+            if self.chkLibraryThread.is_alive(): 
+                self.chkLibraryThread.cancel()
+                self.chkLibraryThread.join()
+        except: pass
         self.chkLibraryThread = threading.Timer(wait, self.chkLibraryTimer)
         self.chkLibraryThread.name = "chkLibraryThread"
         self.chkLibraryThread.start()
@@ -281,12 +278,9 @@ class Recommended:
     def __init__(self, library):
         self.library = library
         self.cache   = library.cache
-        
-        if self.library.chkLibraryThread.is_alive(): 
-            self.chkRecommendedThread = threading.Timer(15.0, self.chkRecommendedTimer)
-            self.chkRecommendedThread.start()
-
-
+        self.chkRecommendedTimer()
+            
+            
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -330,18 +324,16 @@ class Recommended:
         return True
         
         
-    def chkRecommendedTimer(self, wait=RECOMMENDED_OFFSET):
-        if self.chkRecommendedThread.is_alive(): 
-            try: 
-                self.chkRecommendedThread.cancel()
-                self.chkRecommendedThread.join()
-            except: pass
-                
+    def chkRecommendedTimer(self, wait=RECOMMENDED_OFFSET): 
         if isBusy(): wait = 15.0
         else: 
             with busy(): 
                 self.importPrompt()
-            
+        try: 
+            if self.chkRecommendedThread.is_alive(): 
+                self.chkRecommendedThread.cancel()
+                self.chkRecommendedThread.join()
+        except: pass
         self.chkRecommendedThread = threading.Timer(wait, self.chkRecommendedTimer)
         self.chkRecommendedThread.name = "chkRecommendedThread"
         self.chkRecommendedThread.start()
@@ -354,7 +346,6 @@ class Recommended:
         return threadit(self.searchRecommendedAddon)(addonList)
         
         
-    # @cacheit(expiration=datetime.timedelta(seconds=RECOMMENDED_OFFSET),json_data=True)
     def searchRecommendedAddon(self, addonid):
         addonData = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
         if addonData:

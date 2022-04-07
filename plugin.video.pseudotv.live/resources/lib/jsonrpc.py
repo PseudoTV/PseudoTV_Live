@@ -44,8 +44,6 @@ class JSONRPC:
         self.sendQueue    = PriorityQueue()
         self.videoParser  = VideoParser()
         self.resources    = Resources(jsonRPC=self)
-        
-        self.queueThread  = threading.Timer(1.0, self.startQueueWorker)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -228,12 +226,12 @@ class JSONRPC:
         self.startQueueThread()
         
 
-    def startQueueThread(self, wait=600):
-        if self.queueThread.is_alive(): 
-            try: 
+    def startQueueThread(self, wait=900):
+        try: 
+            if self.queueThread.is_alive(): 
                 self.queueThread.cancel()
                 self.queueThread.join()
-            except: pass
+        except: pass
         self.queueThread = threading.Timer(wait, self.startQueueWorker)
         self.queueThread.name = "queueThread"
         self.queueThread.start()
@@ -254,6 +252,7 @@ class JSONRPC:
             self.log('startQueueWorker, finishing thread worker')
 
 
+    @cacheit(checksum=getInstanceID(),json_data=True)
     def getActivePlaylist(self):
         return 1  # todo
 
@@ -347,15 +346,17 @@ class JSONRPC:
             json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["size"]},"id":1}' % ((path), media))
             return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('size',0)
             
-
-    def getSetting(self, category, section):
+            
+    def getSetting(self, category, section, cache=False):
         json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettings","params":{"filter":{"category":"%s","section":"%s"}},"id":1}'%(category, section))
-        return self.sendJSON(json_query).get('result',{}).get('settings')
+        if cache: return self.cacheJSON(json_query).get('result',{}).get('settings',[])
+        else:     return self.sendJSON(json_query).get('result', {}).get('settings',[])
 
 
-    def getSettingValue(self, key):
+    def getSettingValue(self, key, cache=False):
         json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"%s"},"id":1}'%(key))
-        return self.sendJSON(json_query).get('result',{}).get('value')
+        if cache: return self.cacheJSON(json_query).get('result',{}).get('value','')
+        else:     return self.sendJSON(json_query).get('result',{}).get('value','')
 
 
     def setSettingValue(self, key, value):
@@ -518,10 +519,6 @@ class JSONRPC:
       
 
     def requestList(self, citem, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        # if self.writer.__class__.__name__ != 'Writer':
-            # from resources.lib.parser import Writer
-            # self.writer = Writer()
-
         # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         id = citem['id']
         if not limits: 
@@ -559,7 +556,7 @@ class JSONRPC:
             self.log('requestList, id = %s, resetting start to 0'%(id))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
             
-        # retry request
+        # retry request with fresh limits.
         if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
             self.log("requestList, id = %s, trying again with start at 0"%(id))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}

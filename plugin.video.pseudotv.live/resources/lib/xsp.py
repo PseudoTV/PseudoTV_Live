@@ -51,7 +51,6 @@ class XSP:
         return media, sort
 
 
-    @cacheit(checksum=getInstanceID(),json_data=True)
     def parseDynamicPlaylist(self, path):
         sort   = {}
         media  = 'video'

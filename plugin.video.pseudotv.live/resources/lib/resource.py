@@ -33,7 +33,6 @@ class Resources:
     def __init__(self, jsonRPC):
         self.jsonRPC     = jsonRPC
         self.cache       = jsonRPC.cache
-        self.LOGO_LOC    = LOGO_LOC
         self.logoSets    = self.buildLogoResources()
         
         
@@ -43,7 +42,7 @@ class Resources:
 
     def buildLogoResources(self):
         self.log('buildLogoResources')#build all logo resources into dict. array.
-        local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,self.LOGO_LOC]]#LOGO_LOC
+        local_folder = [{"id":pack,"version":getInstanceID(),"items":self.walkDirectory(pack,checksum=getInstanceID())} for pack in [IMAGE_LOC,LOGO_LOC]]#LOGO_LOC
 
         user_pack = local_folder.copy()
         user_pack.extend([{"id":pack,"version":ADDON_VERSION,"items":self.walkResource(pack)} for pack in SETTINGS.getSetting('Resource_Logos').split('|')])
@@ -106,7 +105,7 @@ class Resources:
         password = ''
         secure   = False
         enabled  = True
-        settings = (self.jsonRPC.getSetting('control','services') or [])
+        settings = self.jsonRPC.getSetting('control','services')
         for setting in settings:
             if setting['id'] == 'services.webserver' and not setting['value']:
                 enabled = False
@@ -218,7 +217,7 @@ class Resources:
         return matches
         
 
-    @cacheit()
+    @cacheit(checksum=getInstanceID())
     def parseLogo(self, chname, type):
         chnames = self.getNamePatterns(chname,type)
         for chname in chnames:
@@ -229,29 +228,30 @@ class Resources:
     def chkResource(self, name, type):
         chnames = self.getNamePatterns(name,type)
         ids     = [pack.get('id') for pack in self.logoSets.get(type,{}).get('packs',[])]
-        for chname in chnames:
-            for id in ids:
+        for id in ids:
+            for chname in chnames:
                 if not id.startswith('resource'): continue
                 for ext in IMG_EXTS:
                     logo = 'resource://%s/%s%s'%(id,chname,ext)
                     if FileAccess.exists(logo):
-                        self.log('chkResource: chname = %s, type = %s found = %s'%(name,type,logo))
+                        self.log('chkResource: type = %s, chname = %s found = %s'%(type,name,logo))
                         return logo
         
-
+        
     def chkTVShows(self, name):
         chnames = list(set([name,splitYear(name)[0]]))
         shows   = self.jsonRPC.getTVInfo().get('shows',[])
-        for chname in chnames:
-            for show in shows:
+        for show in shows:
+            for chname in chnames:
                 if chname.lower() == show.get('label','').lower():
                     logo = show.get('logo')
                     if FileAccess.exists(unquoteImage(logo)):
+                        self.log('chkTVShows: chname = %s found = %s'%(name,logo))
                         return logo
         
         
     def chkLocal(self, chname):
-        for path in [IMAGE_LOC,self.LOGO_LOC]:
+        for path in [IMAGE_LOC,LOGO_LOC]:
             for ext in IMG_EXTS:
                 logo = os.path.join(path,'%s%s'%(chname,ext))
                 if FileAccess.exists(logo):
@@ -261,8 +261,9 @@ class Resources:
 
     def chkItem(self, chname, item):
         logo = item.get('logo')
-        if logo and logo != LOGO and not logo.startswith(self.LOGO_LOC):
+        if logo and logo != LOGO and not logo.startswith(LOGO_LOC):
             if FileAccess.exists(unquoteImage(logo)): 
+                self.log('chkItem: chname = %s found = %s'%(chname,logo))
                 return logo
 
 

@@ -334,10 +334,7 @@ class Dialog:
     properties = Properties()
     
     def __init__(self):
-        self.infoMonitorThread = threading.Timer(0.5, self.doInfoMonitor)
-        self.okDialogThread    = threading.Timer(0.5, self.okDialog)
-        self.textviewerThread  = threading.Timer(0.5, self.textviewer)
-
+        ...
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -359,10 +356,14 @@ class Dialog:
         self.properties.setPropertyBool('chkInfoMonitor',state)
         if state: 
             self.properties.clearProperty('monitor.montiorList')
-            if not self.infoMonitorThread.is_alive():
-                self.infoMonitorThread = threading.Timer(.5, self.doInfoMonitor)
-                self.infoMonitorThread.name = "infoMonitorThread"
-                self.infoMonitorThread.start()
+            try: 
+                if self.infoMonitorThread.is_alive():
+                    self.infoMonitorThread.cancel()
+                    self.infoMonitorThread.join()
+            except: pass
+            self.infoMonitorThread = threading.Timer(.5, self.doInfoMonitor)
+            self.infoMonitorThread.name = "infoMonitorThread"
+            self.infoMonitorThread.start()
 
 
     def doInfoMonitor(self):
@@ -484,12 +485,11 @@ class Dialog:
              
         
     def _okDialog(self, msg, heading):
-        if self.okDialogThread.is_alive():
-            try:
+        try: 
+            if self.okDialogThread.is_alive():
                 self.okDialogThread.cancel()
                 self.okDialogThread.join()
-            except: pass
-                
+        except: pass
         self.okDialogThread = threading.Timer(0.5, self.okDialog, [msg, heading])
         self.okDialogThread.name = "okDialogThread"
         self.okDialogThread.start()
@@ -501,12 +501,11 @@ class Dialog:
         
         
     def _textviewer(self, msg, heading, usemono):
-        if self.textviewerThread.is_alive():
-            try:
+        try: 
+            if self.textviewerThread.is_alive():
                 self.textviewerThread.cancel()
                 self.textviewerThread.join()
-            except: pass
-                
+        except: pass
         self.textviewerThread = threading.Timer(0.5, self.textviewer, [msg, heading, usemono])
         self.textviewerThread.name = "textviewerThread"
         self.textviewerThread.start()
@@ -647,7 +646,8 @@ class Dialog:
         for idx in range(wait):
             pDialog = self.progressBGDialog((((idx) * 100)//wait),control=pDialog,header=header)
             if self.monitor.waitForAbort(1): break
-        return self.progressBGDialog(100,control=pDialog)
+        self.progressBGDialog(100,control=pDialog)
+        return True
 
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):

@@ -78,20 +78,6 @@ class Player(xbmc.Player):
         except: return 0
 
 
-    # def getPlayerItem(self, playlist=False):
-        # def getActivePlayer(return_item=False):
-            # json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
-            # json_response = sendJSON(json_query)
-            # try:    id = json_response.get('result',[{'playerid':1}])[0].get('playerid',1)
-            # except: id = 1
-            # if return_item: return item
-            # return id
-        # if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}'%(self.getActivePlaylist())
-        # else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}'%(getActivePlayer())
-        # result = sendJSON(json_query).get('result', {})
-        # return (result.get('item', {}) or result.get('items', []))
-
-
     def getPVRitem(self):
         try:    pvritem = self.getPlayingItem().getProperty('pvritem') #Kodi v20.
         except: pvritem = self.service.writer.jsonRPC.getPlayerItem(self.playingPVRitem.get('isPlaylist',False)).get('customproperties',{}).get('pvritem',{})
@@ -297,7 +283,6 @@ class Monitor(xbmc.Monitor):
         self.lastSettings        = getPTV_SETTINGS()
         self.pendingChange       = False
         self.shutdown            = False
-        self.pendingChangeThread = threading.Timer(30.0, self._onSettingsChanged)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -324,12 +309,11 @@ class Monitor(xbmc.Monitor):
             
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        if self.pendingChangeThread.is_alive(): 
-            try: 
+        try: 
+            if self.pendingChangeThread.is_alive(): 
                 self.pendingChangeThread.cancel()
                 self.pendingChangeThread.join()
-            except: pass
-                
+        except: pass
         self.pendingChangeThread = threading.Timer(15.0, self._onSettingsChanged)
         self.pendingChangeThread.name = "pendingChangeThread"
         self.pendingChangeThread.start()
@@ -361,7 +345,6 @@ class Service:
     discovery     = Discovery(monitor)
     
     def __init__(self):
-        self.chkUpdateThread   = threading.Timer(0.5, self.startUpdatePending)
         self.player            = Player(service=self)
         self.writer            = Writer(service=self)
         self.overlayWindow     = Overlay(player=self.player)
@@ -420,11 +403,11 @@ class Service:
 
         
     def startUpdatePending(self):
-        if self.chkUpdateThread.is_alive(): 
-            try: 
+        try: 
+            if self.chkUpdateThread.is_alive(): 
                 self.chkUpdateThread.cancel()
                 self.chkUpdateThread.join()
-            except: pass
+        except: pass
         self.chkUpdateThread = threading.Timer(0.5, self.chkUpdatePending)
         self.chkUpdateThread.name = "chkUpdateThread"
         self.chkUpdateThread.start()

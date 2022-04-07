@@ -327,13 +327,14 @@ class Builder:
                     self.chanError.append('%s STRM'%(LANGUAGE(30315)))
                     self.log("buildList, id: %s, IDX = %s skipping strm!"%(citem['id'],idx),xbmc.LOGINFO)
                     continue
-                elif (is3D(item) and not self.inc3D): 
+                    
+                if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
+                    item['streamdetails'] = self.writer.jsonRPC.getStreamDetails(file, media)
+
+                if (is3D(item) and not self.inc3D): 
                     self.chanError.append('%s 3D'%(LANGUAGE(30315)))
                     self.log("buildList, id: %s, IDX = %s skipping 3D!"%(citem['id'],idx),xbmc.LOGINFO)
                     continue
-
-                if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
-                    item['streamdetails'] = self.writer.jsonRPC.getStreamDetails(file, media)
 
                 dur = self.writer.jsonRPC.getDuration(file, item, self.accurateDuration)
                 if dur > self.minDuration:

@@ -50,7 +50,9 @@ class Background(xbmcgui.WindowXML):
 class Player(xbmc.Player):
     def __init__(self, overlay):
         xbmc.Player.__init__(self)
-        self.overlay = overlay
+        self.overlay       = overlay
+        self.playerLabel   = self.overlay.player.getPlayerLabel()
+        self.playerTotTime = self.overlay.player.getPlayerTime()
 
 
     def _hasBackground(self):
@@ -74,14 +76,25 @@ class Player(xbmc.Player):
         except: pass
         
         
-    def onAVStarted(self):
-        self.overlay.log('onAVStarted')
-        self.closeBackground()
-        
-        
     def onPlayBackStarted(self):
         self.overlay.log('onPlayBackStarted')
+        self.playerLabel   = self.overlay.player.getPlayerLabel()
+        self.playerTotTime = self.overlay.player.getPlayerTime()
+        self.overlay.chkOnNext()
         self.overlay.toggleBug()
+        
+        
+    def onAVChange(self):
+        self.log('onAVChange')
+        self.playerLabel   = self.overlay.player.getPlayerLabel()
+        self.playerTotTime = self.overlay.player.getPlayerTime()
+        
+        
+    def onAVStarted(self):
+        self.overlay.log('onAVStarted')
+        self.playerLabel   = self.overlay.player.getPlayerLabel()
+        self.playerTotTime = self.overlay.player.getPlayerTime()
+        self.closeBackground()
         
         
     def onPlayBackEnded(self):
@@ -200,25 +213,16 @@ class Overlay():
             
         setOverlay(True)
         self.myPlayer        = Player(self)
+        self._onNextThread   = threading.Timer(1.0, self.toggleOnNext)
         self.showStatic      = SETTINGS.getSettingBool("Static_Overlay")
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.runActions(RULES_ACTION_OVERLAY, self._getPlayingCitem(), inherited=self)
-        
-        self._onNextThread     = threading.Timer(1.0, self.toggleOnNext)
-        self._channelBugThread = threading.Timer(1.0, self.toggleBug)
-        self._chkonNextThread  = threading.Timer(1.0, self.chkOnNext)
-        self._chkonNextThread.start()
         self.myPlayer.onPlayBackStarted()
             
 
     def close(self):
         self.log('close')
-        if self._chkonNextThread.is_alive(): 
-            try: 
-                self._chkonNextThread.cancel()
-                self._chkonNextThread.join()
-            except: pass
-                  
+        self.cancelChkOnNext()
         self.cancelOnNext()
         self.cancelChannelBug()
           
@@ -258,11 +262,11 @@ class Overlay():
             wait   = getWait(state)
             nstate = not bool(state)
             
-            if self._channelBugThread.is_alive():
-                try: 
+            try: 
+                if self._channelBugThread.is_alive():
                     self._channelBugThread.cancel()
                     self._channelBugThread.join()
-                except: pass
+            except: pass
                 
             if state: 
                 if not self._hasControl(self._channelBug):
@@ -286,12 +290,12 @@ class Overlay():
         except Exception as e: self.log("toggleBug, Failed! %s"%(e), xbmc.LOGERROR)
            
 
-    def cancelOnNext(self):
-        self.log('cancelOnNext')
-        self.setVisible(self._onNext,False)
+    def cancelChkOnNext(self):
+        self.log('cancelChkOnNext')
         try: 
-            self._onNextThread.cancel()
-            self._onNextThread.join()
+            if self._chkonNextThread.is_alive():
+                self._chkonNextThread.cancel()
+                self._chkonNextThread.join()
         except: pass
 
 
@@ -300,41 +304,59 @@ class Overlay():
             """ #test playing item, title match? remaining time / progress within parameters?
             """
             try: 
-                titleAssert    = self._getNowItem().get('label') == self.player.getPlayerLabel()
-                remainAssert   = self.player.getTimeRemaining() <= NOTIFICATION_TIME_REMAINING
+                titleAssert    = self._getNowItem().get('label') == self.myPlayer.playerLabel
+                remainAssert   = self.player.getTimeRemaining() > NOTIFICATION_CHECK_TIME
                 progressAssert = self.player.getPlayerProgress() >= 75.0
                 return (titleAssert & remainAssert & progressAssert & self.player.isPlaying() & self.player.isPseudoTV)
             except: 
                 return False
+
         try:
+            self.cancelChkOnNext()
+            playingAssert = playerAssert()
             if self._onNextThread.is_alive():
                 # cancel onNext Toggle.
-                if not playerAssert(): 
+                if not playingAssert:
                     self.cancelOnNext()
             else:# start onNext Toggle
-                if playerAssert(): 
+                if playingAssert: 
                     self.toggleOnNext()
                     
-             #poll player every XXsecs.
+            #poll player every xxSecs.
             self._chkonNextThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.chkOnNext)
             self._chkonNextThread.name = "chkonNextThread"
             self._chkonNextThread.start()
         except Exception as e: self.log("chkOnNext, Failed! %s"%(e), xbmc.LOGERROR)
 
-    
+        
+    def cancelOnNext(self):
+        self.log('cancelOnNext')
+        self.setVisible(self._onNext,False)
+        try: 
+            self._onNextThread.cancel()
+            self._onNextThread.join()
+        except: pass
+        
+        
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
-            totalTime   = int(self.player.getPlayerTime())
-            remaining   = self.player.getTimeRemaining()
-            intTime     = roundupDIV(abs((totalTime - (totalTime * .75)) - (2 * (NOTIFICATION_CHECK_TIME//2 * interval))),interval)
-            if remaining < intTime: intTime = getOnNextInterval((interval + 1))
+            totalTime   = int(self.myPlayer.playerTotTime)
+            remaining   = floor(self.player.getTimeRemaining())
+            intTime     = roundupDIV(abs((totalTime - (totalTime * .75)) - (NOTIFICATION_DURATION * interval)),interval)
+            if remaining < intTime: return getOnNextInterval((interval + 1))
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s'%(totalTime,interval,remaining,intTime))
             return intTime
             
         try:
-            wait   = {True:floor(NOTIFICATION_CHECK_TIME//2),False:float(getOnNextInterval())}[state]
+            wait   = {True:NOTIFICATION_DURATION,False:float(getOnNextInterval())}[state]
             nstate = not bool(state)
-            
+                        
+            try: 
+                if self._onNextThread.is_alive():
+                    self._onNextThread.cancel()
+                    self._onNextThread.join()
+            except: pass
+                
             if state: 
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
@@ -344,8 +366,8 @@ class Overlay():
                 except: return self.cancelOnNext()
                 
                 chname = self._getPlayingCitem().get('label',ADDON_NAME)
-                onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname)
-                onNext = '%s - %s'%(writer.get('label',''), writer.get('episodelabel',''))
+                onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname) 
+                onNext = '%s %s'%(writer.get('label'),'- %s'%(writer.get('episodelabel','')) if writer.get('episodelabel') else '')
                 self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
                 self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                 self._onNext.autoScroll(6000, 3000, 5000)

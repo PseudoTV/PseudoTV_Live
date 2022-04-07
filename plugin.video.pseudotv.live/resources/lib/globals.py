@@ -160,8 +160,8 @@ RULES_ACTION_OVERLAY       = 21
 
 #overlay globals
 NOTIFICATION_CHECK_TIME     = 30.0 #seconds
+NOTIFICATION_DURATION       = 15.0
 NOTIFICATION_TIME_REMAINING = 900  #seconds
-NOTIFICATION_MIN_TIME       = 300  #seconds
 NOTIFICATION_PLAYER_PROG    = 85   #percent
 NOTIFICATION_DISPLAY_TIME   = 30   #seconds
 CHANNELBUG_CHECK_TIME       = 15.0 #seconds
@@ -243,7 +243,7 @@ HTML_ESCAPE         = {"&": "&amp;",
                        
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'5',
+            'm3uRefreshIntervalMins'      :'20',
             'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',

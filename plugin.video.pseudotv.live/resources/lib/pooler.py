@@ -76,8 +76,9 @@ def threadit(method):
         pool     = Concurrent(size)
         if cpucount > 1: results = pool.executors(method, items, args, kwargs, chunksize=size)
         if not results:  results = pool.generator(method, items, args, kwargs)
-        log('%s, %s return %s'%(method.__qualname__.replace('.',': '),pool.__class__.__name__,len(results)))
-        return results
+        log('%s, %s'%(method.__qualname__.replace('.',': '),pool.__class__.__name__))
+        try:    return list(filter(None,results))
+        except: return list(results)
     return wrapper
 
 def chunkLst(lst, n):
@@ -126,8 +127,7 @@ class Concurrent:
                     results = executor.map(func, items, timeout, chunksize)
                 except Exception as e:
                     for item in items: results.append(self.executor(func, item))
-            try:    return list(filter(None,results))
-            except: return list(results)
+            return results
 
 
     @timeit
@@ -138,8 +138,7 @@ class Concurrent:
             results = [results.append(partial(method, **kwargs)(i)) for i in items]
         elif args: 
             results = [results.append(method(i)) for i in zip(items,repeat(args))]
-        try:    return list(filter(None,results))
-        except: return list(results)
+        return results
 
 
 class Parallel:
@@ -179,8 +178,7 @@ class Parallel:
                     results = executor.map(func, items, timeout, chunksize)
                 except Exception as e:
                     for item in items: results.append(self.executor(func, item))
-            try:    return list(filter(None,results))
-            except: return list(results)
+            return results
 
 
     @timeit
@@ -191,8 +189,7 @@ class Parallel:
             results = [results.append(partial(method, **kwargs)(i)) for i in items]
         elif args: 
             results = [results.append(method(i)) for i in zip(items,repeat(args))]
-        try:    return list(filter(None,results))
-        except: return list(results)
+        return results
 
 
 class Cores:

@@ -63,7 +63,7 @@ class Cache:
     isLocked = False
     
     @contextmanager
-    def cacheLocker(self): #simplecache not thread safe, threadlocks don't appear avoid collisions? Hack avoidance.
+    def cacheLocker(self): #simplecache not thread safe, threadlocks don't avoid collisions? Hack avoidance.
         if self.isLocked:
             while not xbmc.Monitor().abortRequested() and self.isLocked:
                 if xbmc.Monitor().waitForAbort(0.001): break

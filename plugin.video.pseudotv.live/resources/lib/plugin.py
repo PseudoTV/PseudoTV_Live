@@ -64,7 +64,6 @@ class Plugin:
                 channelItem['broadcastnow'] = broadcast
             elif broadcast['progresspercentage'] == 0 and len(channelItem.get('broadcastnext',[])) < channelLimit:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
-                
         threadit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
         return channelItem
 
@@ -85,15 +84,14 @@ class Plugin:
                 
         if not second_attempt:
             setInstanceID()
-            if brutePVR(override=True): 
-                self.dialog.notificationDialog(LANGUAGE(30059))
+            if brutePVR(override=True):
+                self.dialog.notificationWait(LANGUAGE(30059),wait=OVERLAY_DELAY)
                 return self.matchChannel(chname, id, radio, second_attempt=True)
         else: setRestartRequired()
         return {}
         
 
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getChannelID(self, chname, id, radio=False): # Convert PseudoTV Live id into a Kodi channelID
+    def getChannelID(self, chname, id, radio=False): # Convert PseudoTV Live id into a Kodi PVR channelID
         self.log('getChannelID, id = %s'%(id))
         channel = self.matchChannel(chname, id, radio)
         return {'channelid':channel.get('channelid',-1),'uniqueid':channel.get('uniqueid',-1)}
@@ -153,7 +151,7 @@ class Plugin:
             self.log('contextPlay, listitems size = %s'%(len(listitems)))
             for idx,lz in enumerate(listitems):
                 path = lz.getPath()
-                if isStack(path): lz.setPath(translateStack(path))#translate vfs stacks to local..
+                # if isStack(path): lz.setPath(translateStack(path))#translate vfs stacks to local..
                 self.channelPlaylist.add(lz.getPath(),lz,idx)
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             return self.player.play(self.channelPlaylist, startpos=0)
@@ -224,12 +222,12 @@ class Plugin:
                 liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                 
                 file = writer.get('originalfile','')
-                if isStack(path) and not hasStack(path,file):
-                    self.log('playChannel, nowitem isStack with path = %s'%(path))
-                    liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
+                # if isStack(path) and not hasStack(path,file):
+                    # self.log('playChannel, nowitem isStack with path = %s'%(path))
+                    # liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
                     
-            elif isStack(path):
-                liz.setPath(translateStack(path))#translate vfs stacks to local..
+            # elif isStack(path):
+                # liz.setPath(translateStack(path))#translate vfs stacks to local..
             self.log('playChannel, playing path = %s'%(liz.getPath()))
             
             if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
@@ -240,7 +238,7 @@ class Plugin:
                 nextitems.append(lastitem)
 
             nowitem['playing']       = liz.getPath()
-            nowitem['isStack']       = isStack(nowitem['playing'])
+            # nowitem['isStack']       = isStack(nowitem['playing'])
             pvritem['broadcastnow']  = nowitem
             pvritem['broadcastnext'] = nextitems
             liz.setProperty('pvritem',dumpJSON(pvritem))
@@ -265,7 +263,9 @@ class Plugin:
                 if isBusyDialog(): xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
                 return
                 
-        else: self.playbackError()
+        else: 
+            if self.playbackError():
+                return self.playChannel(name, id, isPlaylist)
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
         
@@ -323,4 +323,6 @@ class Plugin:
 
 
     def playbackError(self):
-        self.dialog.notificationDialog(LANGUAGE(30001))
+        self.log('playbackError')
+        return self.dialog.notificationWait(LANGUAGE(30059),wait=OVERLAY_DELAY)
+        

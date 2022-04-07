@@ -969,8 +969,10 @@
                             <and>
                                 <condition operator="is" setting="Color_Logos">0</condition>
                                 <condition operator="is" setting="Enable_ChannelBug">true</condition>
-                                <condition on="property" name="InfoBool">String.Contains(System.BuildVersion,20)</condition>
                             </and>
+                        </dependency>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(System.BuildVersion,20)</condition>
                         </dependency>
 					</dependencies>
                 </setting>
