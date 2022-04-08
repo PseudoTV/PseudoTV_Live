@@ -22,7 +22,8 @@ import os, json, traceback, threading
 
 from kodi_six                  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
 from datetime                  import timedelta
-from resources.lib.cache       import Cache
+from resources.lib.cache       import Cache, cacheit
+from resources.lib.pooler      import killit, timeit, threadit
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)

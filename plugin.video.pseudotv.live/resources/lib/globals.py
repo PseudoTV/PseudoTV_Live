@@ -34,10 +34,10 @@ from xml.sax.saxutils          import escape, unescape
 from socket                    import gethostbyname, gethostname
 from math                      import ceil,  floor
 
-from resources.lib.fileaccess  import FileAccess
-from resources.lib.kodi        import Settings, Properties, Dialog
 from resources.lib.cache       import cacheit
 from resources.lib.pooler      import killit, timeit, threadit
+from resources.lib.fileaccess  import FileAccess
+from resources.lib.kodi        import Settings, Properties, Dialog
 
 #info
 ADDON_ID            = 'plugin.video.pseudotv.live'
@@ -996,6 +996,7 @@ def isPseudoTV(condition='VideoPlayer'):
     return isPseudoTV
 
 def hasChannelData(condition='ListItem'):
+    print('hasChannelData',getWriterfromString(condition))
     return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
 
 def getWriterfromString(condition='ListItem'):

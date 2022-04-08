@@ -109,11 +109,12 @@ class Plugin:
     def contextPlay(self, writer, isPlaylist=False):
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
-        citem     = writer.get('citem',{})
-        
-        if citem: 
-            pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
-            pvritem['citem'].update(citem) #update citem with comprehensive meta
+
+        if writer.get('citem',{}): 
+            pvritem = self.buildChannel(writer.get('citem').get('name'), writer.get('citem').get('id'), isPlaylist)
+            pvritem['citem'].update(writer.get('citem')) #update citem with comprehensive meta
+            citem = pvritem['citem']
+            
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
             self.channelPlaylist.clear()
             xbmc.sleep(100)
@@ -134,6 +135,7 @@ class Plugin:
                 writer  = getWriter(nowitem.get('writer',{}))
                 liz = self.dialog.buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
+                
                 if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
                     self.log('contextPlay, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
                     liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs

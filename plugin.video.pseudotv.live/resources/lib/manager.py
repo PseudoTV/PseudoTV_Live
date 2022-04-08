@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
 
-from resources.lib.globals     import *
+from resources.lib.globals import *
 
 class Manager(xbmcgui.WindowXMLDialog):
     madeChanges = False
