@@ -24,7 +24,9 @@ class Browse:
         log('Browse: __init__, sysARG = %s'%(sysARG))
         #todo create blank container control skin.
         # 'RunPlugin(plugin://script.embuary.helper/?info=getseasonepisodes&title=%s&dbid=%s&season=%s)'%(writer.get('showtitle'),writer.get('tvshowid'),writer.get('season'))
-if __name__ == '__main__': Browse(sys.argv,writer=getWriterfromString())
+if __name__ == '__main__': 
+    if not addonEnabled(ADDON_ID): toggleADDON(ADDON_ID)
+    Browse(sys.argv,writer=getWriterfromString())
     
 
 

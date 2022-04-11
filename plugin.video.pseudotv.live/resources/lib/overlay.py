@@ -85,7 +85,7 @@ class Player(xbmc.Player):
         
         
     def onAVChange(self):
-        self.log('onAVChange')
+        self.overlay.log('onAVChange')
         self.playerLabel   = self.overlay.player.getPlayerLabel()
         self.playerTotTime = self.overlay.player.getPlayerTime()
         
@@ -369,7 +369,7 @@ class Overlay():
                 onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname) 
                 onNext = '%s %s'%(writer.get('label'),'- %s'%(writer.get('episodelabel','')) if writer.get('episodelabel') else '')
                 self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
-                self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False')])
                 self._onNext.autoScroll(6000, 3000, 5000)
                 self.playSFX(BING_WAV)
                 self.setVisible(self._onNext,True)

@@ -23,7 +23,7 @@ import os, json, traceback, threading
 from kodi_six                  import xbmc, xbmcgui, xbmcvfs, xbmcaddon
 from datetime                  import timedelta
 from resources.lib.cache       import Cache, cacheit
-from resources.lib.pooler      import killit, timeit, threadit
+from resources.lib.pool        import killit, timeit, poolit, timerit, threadit
 
 ADDON_ID      = 'plugin.video.pseudotv.live'
 REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
@@ -157,8 +157,7 @@ class Settings:
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
-        value = self.cache.get(key, checksum, json_data)
-        return value
+        return self.cache.get(key, checksum, json_data)
         
         
     def getPropertySetting(self, key):
@@ -167,8 +166,8 @@ class Settings:
     
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=timedelta(days=84), json_data=False):
         self.log('setCacheSetting, key = %s, value = %s'%(key,value))
-        self.cache.set(key, value, checksum, life, json_data)
-        
+        return self.cache.set(key, value, checksum, life, json_data)
+            
             
     def setPropertySetting(self, key, value):
         return self.property.setProperty(key, value)
@@ -353,18 +352,11 @@ class Dialog:
         return self.properties.setPropertyDict('monitor.montiorList',{'info':setDictLST(items)})
 
 
-    def toggleInfoMonitor(self, state):
+    def toggleInfoMonitor(self, state, wait=0.5):
         self.properties.setPropertyBool('chkInfoMonitor',state)
         if state: 
             self.properties.clearProperty('monitor.montiorList')
-            try: 
-                if self.infoMonitorThread.is_alive():
-                    self.infoMonitorThread.cancel()
-                    self.infoMonitorThread.join()
-            except: pass
-            self.infoMonitorThread = threading.Timer(.5, self.doInfoMonitor)
-            self.infoMonitorThread.name = "infoMonitorThread"
-            self.infoMonitorThread.start()
+            timerit(self.doInfoMonitor)(wait)
 
 
     def doInfoMonitor(self):
@@ -485,35 +477,21 @@ class Dialog:
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
              
         
-    def _okDialog(self, msg, heading):
-        try: 
-            if self.okDialogThread.is_alive():
-                self.okDialogThread.cancel()
-                self.okDialogThread.join()
-        except: pass
-        self.okDialogThread = threading.Timer(0.5, self.okDialog, [msg, heading])
-        self.okDialogThread.name = "okDialogThread"
-        self.okDialogThread.start()
+    def _okDialog(self, msg, heading, wait):
+        timerit(self.okDialog)(wait,[msg, heading])
         
         
     def okDialog(self, msg, heading=ADDON_NAME, usethread=False):
-        if usethread: return self._okDialog(msg, heading)
+        if usethread: return self._okDialog(msg, heading, wait=0.5)
         else:         return xbmcgui.Dialog().ok(heading, msg)
         
         
-    def _textviewer(self, msg, heading, usemono):
-        try: 
-            if self.textviewerThread.is_alive():
-                self.textviewerThread.cancel()
-                self.textviewerThread.join()
-        except: pass
-        self.textviewerThread = threading.Timer(0.5, self.textviewer, [msg, heading, usemono])
-        self.textviewerThread.name = "textviewerThread"
-        self.textviewerThread.start()
+    def _textviewer(self, msg, heading, usemono, wait):
+        timerit(self.textviewer)(wait,[msg, heading, usemono])
         
         
     def textviewer(self, msg, heading=ADDON_NAME, usemono=False, usethread=False):
-        if usethread: return self._textviewer(msg, heading, usemono)
+        if usethread: return self._textviewer(msg, heading, usemono, wait=0.5)
         else:         return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
     
@@ -606,7 +584,7 @@ class Dialog:
                     else:    type = 0
                     options.insert(0,{"label":"Existing Path", "label2":default, "default":default , "mask":"", "type":type, "multi":False})
                     
-            listitems = threadit(buildMenuItem)(options)
+            listitems = poolit(buildMenuItem)(options)
             select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
             if select is not None:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS

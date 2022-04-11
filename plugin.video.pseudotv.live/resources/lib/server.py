@@ -90,8 +90,7 @@ class Discovery:
                             host = payload.get('host','')
                             if host != local:
                                 self.log('_start: discovered server @ host = %s'%(host))
-                                md5 = payload['md5']
-                                payload.update({'md5':'-1'})
+                                md5 = payload.pop('md5')
                                 if md5 == getMD5(dumpJSON(payload)):
                                     payload['received'] = time.time()
                                     servers = getDiscovery()
@@ -134,14 +133,13 @@ class Announcement:
         
     def _start(self):
         self.log('_start')
-        payload = {'md5':'-1',
-                   'id':ADDON_ID,
+        payload = {'id':ADDON_ID,
                    'version':ADDON_VERSION,
                    'name':xbmc.getInfoLabel('System.FriendlyName'),
                    'host':'%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT')),
                    'settings':self.settings}
                    
-        payload.update({'md5':getMD5(dumpJSON(payload))})
+        payload['md5'] = getMD5(dumpJSON(payload))
         data = '%s%s'%(ADDON_ID,encodeString(dumpJSON(payload)))
         sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', 0))
@@ -265,6 +263,7 @@ class HTTP:
                 self._server = ThreadedHTTPServer((IP, port), RequestHandler)
                 self._server.allow_reuse_address = True
                 self._httpd_thread = threading.Thread(target=self._server.serve_forever)
+                self._httpd_thread.daemon = True
                 self._httpd_thread.start()
                 self.started = True
             except Exception as e: 

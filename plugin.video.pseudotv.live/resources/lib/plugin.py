@@ -64,7 +64,7 @@ class Plugin:
                 channelItem['broadcastnow'] = broadcast
             elif broadcast['progresspercentage'] == 0 and len(channelItem.get('broadcastnext',[])) < channelLimit:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
-        threadit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
+        poolit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(channelItem.get('channelid')))
         return channelItem
 
 
@@ -83,10 +83,9 @@ class Plugin:
             if match: return match
                 
         if not second_attempt:
-            setInstanceID()
-            if brutePVR(override=True):
-                self.dialog.notificationWait(LANGUAGE(30059),wait=OVERLAY_DELAY)
-                return self.matchChannel(chname, id, radio, second_attempt=True)
+            if brutePVR(override=True): setInstanceID()
+            self.dialog.notificationWait(LANGUAGE(30059),wait=OVERLAY_DELAY)
+            return self.matchChannel(chname, id, radio, second_attempt=True)
         else: setRestartRequired()
         return {}
         
@@ -111,9 +110,10 @@ class Plugin:
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
 
         if writer.get('citem',{}): 
-            pvritem = self.buildChannel(writer.get('citem').get('name'), writer.get('citem').get('id'), isPlaylist)
-            pvritem['citem'].update(writer.get('citem')) #update citem with comprehensive meta
-            citem = pvritem['citem']
+            found = True
+            citem = writer.get('citem')
+            pvritem = self.buildChannel(citem.get('name'), citem.get('id'), isPlaylist)
+            pvritem['citem'].update(citem) #update citem with comprehensive meta
             
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
             self.channelPlaylist.clear()
@@ -136,6 +136,11 @@ class Plugin:
                 liz = self.dialog.buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
                 
+                if round(nowitem['progress']) <= self.seekTLRNC or round(nowitem['progresspercentage']) > self.seekTHLD:
+                    self.log('contextPlay, progress start at the beginning')
+                    nowitem['progress']           = 0
+                    nowitem['progresspercentage'] = 0
+                    
                 if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
                     self.log('contextPlay, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
                     liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs
@@ -149,7 +154,7 @@ class Plugin:
                 nextitems.append(lastitem) #insert pvr callback
                 
                 listitems = [liz]
-                listitems.extend(threadit(self.buildWriterItem)(nextitems))
+                listitems.extend(poolit(self.buildWriterItem)(nextitems))
             else:
                 liz = self.dialog.buildItemListItem(writer)
                 liz.setProperty('pvritem', dumpJSON(pvritem))
@@ -163,7 +168,7 @@ class Plugin:
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             return self.player.play(self.channelPlaylist, startpos=0)
 
-        else: self.playbackError()
+        else: return self.playbackError(id, playCount)
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
         
@@ -172,6 +177,10 @@ class Plugin:
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         
+        playCount = (SETTINGS.getCacheSetting('PLAYCHANNEL_ATTEMPT_COUNT',checksum=id) or 0)
+        playCount+=1
+        SETTINGS.setCacheSetting('PLAYCHANNEL_ATTEMPT_COUNT',playCount,checksum=id,life=datetime.timedelta(seconds=(OVERLAY_DELAY)))
+        
         if PROPERTIES.getProperty('currentChannel') != id: 
             PROPERTIES.setProperty('currentChannel',id)
 
@@ -179,15 +188,14 @@ class Plugin:
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-        
+                    
         try:    pvritem['citem'].update(self.chanList.getChannel(id)[0]) #update pvritem citem with comprehensive meta from channels.json
         except: pvritem['citem'].update(getWriter(nowitem.get('writer',{})).get('citem',{})) #update pvritem citem with stale meta from xmltv
         citem = pvritem['citem']
-        
+
         if nowitem:
             found = True
-            if nowitem != PROPERTIES.getPropertyDict('Last_Played_NowItem'):# and not nowitem.get('isStack',False): #new item to play
-                PROPERTIES.setPropertyDict('Last_Played_NowItem',nowitem)
+            if nowitem.get('broadcastid',random.random()) != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -213,66 +221,70 @@ class Plugin:
                 # nowitem['writer'] = setWriter(LANGUAGE(30161),nwriter)
                 # self.log('playChannel, stack detected advancing...')
                 
-            elif round(nowitem['progresspercentage']) > self.seekTHLD: #duplicate item near end, avoid callback; override nowitem and queue next show.
+            elif round(nowitem['progresspercentage']) > self.seekTHLD:
+                self.log('playChannel, progress near the end playing nextitem')
                 nowitem = nextitems.pop(0)
-                self.log('playChannel, progress near the end -or- loopback detected advancing queue to nextitem')
-            
-            writer = getWriter(nowitem.get('writer',{}))
-            liz    = self.dialog.buildItemListItem(writer)
-            path   = liz.getPath()
-            self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
-            
-            if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
-                liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs
-                liz.setProperty('resumetime' , str(nowitem['progress']))       #secs
-                liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                 
-                file = writer.get('originalfile','')
-                # if isStack(path) and not hasStack(path,file):
-                    # self.log('playChannel, nowitem isStack with path = %s'%(path))
-                    # liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
+            elif playCount > 2: 
+                found = False
+                self.playbackError(id, playCount)
+                
+            if found:
+                writer = getWriter(nowitem.get('writer',{}))
+                liz    = self.dialog.buildItemListItem(writer)
+                path   = liz.getPath()
+                self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
+                SETTINGS.setCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',nowitem.get('broadcastid',random.random()),checksum=id,life=datetime.timedelta(seconds=OVERLAY_DELAY-1))
+                
+                if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                    self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                    liz.setProperty('totaltime'  , str((nowitem['runtime'] * 60))) #secs
+                    liz.setProperty('resumetime' , str(nowitem['progress']))       #secs
+                    liz.setProperty('startoffset', str(nowitem['progress']))       #secs
                     
-            # elif isStack(path):
-                # liz.setPath(translateStack(path))#translate vfs stacks to local..
-            self.log('playChannel, playing path = %s'%(liz.getPath()))
-            
-            if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
-                lastitem  = nextitems.pop(-1)
-                lastwrite = getWriter(lastitem.get('writer',''))
-                lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(False))
-                lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
-                nextitems.append(lastitem)
-
-            nowitem['playing']       = liz.getPath()
-            # nowitem['isStack']       = isStack(nowitem['playing'])
-            pvritem['broadcastnow']  = nowitem
-            pvritem['broadcastnext'] = nextitems
-            liz.setProperty('pvritem',dumpJSON(pvritem))
-                            
-            # if nowitem['isStack']:
-                # PROPERTIES.setPropertyDict('Last_Played_PVRItem',pvritem)
-            # else:
-                # PROPERTIES.clearProperty('Last_Played_PVRItem')
+                    file = writer.get('originalfile','')
+                    # if isStack(path) and not hasStack(path,file):
+                        # self.log('playChannel, nowitem isStack with path = %s'%(path))
+                        # liz.setPath(translateStack(stripPreroll(path, file)))#remove pre-roll stack from seek offset video, translate vfs to local.
+                        
+                # elif isStack(path):
+                    # liz.setPath(translateStack(path))#translate vfs stacks to local..
+                self.log('playChannel, playing path = %s'%(liz.getPath()))
                 
-            self.channelPlaylist.clear()
-            xbmc.sleep(100)
-                
-            listitems = [liz]
-            listitems.extend(threadit(self.buildWriterItem)(nextitems))
-            if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
+                if nextitems:  #hijack last element in playlist, insert pvr callback to last item. experimental! 
+                    lastitem  = nextitems.pop(-1)
+                    lastwrite = getWriter(lastitem.get('writer',''))
+                    lastwrite['file']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(name),id=quoteString(id),radio=str(False))
+                    lastitem['writer'] = setWriter(LANGUAGE(30161),lastwrite)
+                    nextitems.append(lastitem)
 
-            if isPlaylist:
-                self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
-                self.player.play(self.channelPlaylist)
+                nowitem['playing']       = liz.getPath()
+                # nowitem['isStack']       = isStack(nowitem['playing'])
+                pvritem['broadcastnow']  = nowitem
+                pvritem['broadcastnext'] = nextitems
+                liz.setProperty('pvritem',dumpJSON(pvritem))
+                                
+                # if nowitem['isStack']:
+                    # PROPERTIES.setPropertyDict('Last_Played_PVRItem',pvritem)
+                # else:
+                    # PROPERTIES.clearProperty('Last_Played_PVRItem')
+                    
+                self.channelPlaylist.clear()
                 xbmc.sleep(100)
-                if isBusyDialog(): xbmc.executebuiltin("Action(Back)")#todo debug busy spinner.
-                return
+                    
+                listitems = [liz]
+                listitems.extend(poolit(self.buildWriterItem)(nextitems))
+                if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+                for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
+
+                if isPlaylist:
+                    self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
+                    self.player.play(self.channelPlaylist)
+                    xbmc.sleep(100)
+                    if isBusyDialog(): xbmc.executebuiltin("Action(Back)")#todo debug busy spinner from leftover waiting for setResolvedUrl.
+                    return
                 
-        else: 
-            if self.playbackError():
-                return self.playChannel(name, id, isPlaylist)
+        else: self.playbackError(id, playCount)
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitems[0])
         
         
@@ -311,13 +323,12 @@ class Plugin:
                 liz.setProperty('pvritem', dumpJSON(pvritem))          
                 
                 listitems = [liz]
-                listitems.extend(threadit(self.buildWriterItem)(nextitems,kwargs={'mType':'song'}))
+                listitems.extend(poolit(self.buildWriterItem)(nextitems,kwargs={'mType':'song'}))
                 for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                 if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                 self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                 return self.player.play(self.channelPlaylist)
-        else: 
-            self.playbackError()
+        else: return self.playbackError(id, playCount)
         return xbmcplugin.setResolvedUrl(int(self.sysARG[1]), False, xbmcgui.ListItem())
 
 
@@ -329,7 +340,12 @@ class Plugin:
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), True, liz)
 
 
-    def playbackError(self):
-        self.log('playbackError')
-        return self.dialog.notificationWait(LANGUAGE(30059),wait=OVERLAY_DELAY)
-        
+    def playbackError(self, id, attempt=0):
+        self.log('playbackError, id = %s, attempt = %s'%(id,attempt))
+        waitTime = OVERLAY_DELAY
+        if attempt == 3: 
+            if brutePVR(True): setInstanceID()
+        else: waitTime = floor(OVERLAY_DELAY//4)
+        with busy_dialog():
+            self.dialog.notificationWait(LANGUAGE(30059),wait=waitTime)
+        xbmc.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))

@@ -25,5 +25,8 @@ class Context:
             log('Context: __init__, sysARG = ' + str(sysARG))
             self.dialog = Dialog()
             self.dialog.infoDialog(self.dialog.buildItemListItem(writer))
-if __name__ == '__main__': Context(sys.argv,writer=getWriterfromString())
+            
+if __name__ == '__main__': 
+    if not addonEnabled(ADDON_ID): toggleADDON(ADDON_ID)
+    Context(sys.argv,writer=getWriterfromString())
 

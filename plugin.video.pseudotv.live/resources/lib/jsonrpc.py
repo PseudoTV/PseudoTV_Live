@@ -19,7 +19,7 @@
 from resources.lib.globals     import *
 from resources.lib.resource    import Resources
 from resources.lib.videoparser import VideoParser
-from resources.lib.pooler      import Concurrent
+from resources.lib.pool        import Concurrent
 
 try:    from multiprocessing   import PriorityQueue
 except: from queue             import PriorityQueue
@@ -227,14 +227,7 @@ class JSONRPC:
         
 
     def startQueueThread(self, wait=900):
-        try: 
-            if self.queueThread.is_alive(): 
-                self.queueThread.cancel()
-                self.queueThread.join()
-        except: pass
-        self.queueThread = threading.Timer(wait, self.startQueueWorker)
-        self.queueThread.name = "queueThread"
-        self.queueThread.start()
+        timerit(self.startQueueWorker)(wait)
 
 
     def startQueueWorker(self):

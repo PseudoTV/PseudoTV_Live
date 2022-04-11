@@ -104,7 +104,7 @@ class RulesList:
         self.log('loadRules, channels = %s'%(channels))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = threadit(self._loadRule)(channels,tmpruleList)
+        ruleList = poolit(self._loadRule)(channels,tmpruleList)
         return ruleList
         
         

@@ -38,10 +38,9 @@ def run(sysARG):
     elif mode == 'vod':      
         Plugin(sysARG).playVOD(name, id)
     elif mode == 'play':
-        if not xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%ADDON_ID): 
-            xbmc.executebuiltin("EnableAddon(%s)"%ADDON_ID)
-            
         if radio: Plugin(sysARG).playRadio(name, id)
         else:     Plugin(sysARG).playChannel(name, id, isPlaylist=bool(SETTINGS.getSettingInt('Playback_Method')))
 
-if __name__ == '__main__': run(sys.argv)
+if __name__ == '__main__': 
+    if not addonEnabled(ADDON_ID): toggleADDON(ADDON_ID)
+    run(sys.argv)

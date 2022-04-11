@@ -35,7 +35,7 @@ from socket                    import gethostbyname, gethostname
 from math                      import ceil,  floor
 
 from resources.lib.cache       import cacheit
-from resources.lib.pooler      import killit, timeit, threadit
+from resources.lib.pool        import killit, timeit, poolit, timerit, threadit
 from resources.lib.fileaccess  import FileAccess
 from resources.lib.kodi        import Settings, Properties, Dialog
 
@@ -243,7 +243,7 @@ HTML_ESCAPE         = {"&": "&amp;",
                        
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'20',
+            'm3uRefreshIntervalMins'      :'30',
             'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
@@ -498,10 +498,12 @@ def getInstanceID():
     if not instanceID: setInstanceID()
     return PROPERTIES.getProperty('InstanceID')
   
-def getMD5(text):
-    if not isinstance(text,str): text = str(text)
-    hash_object = hashlib.md5(text.encode())
-    return hash_object.hexdigest()
+def getMD5(text,hash=0,hexit=True):
+    if isinstance(text,dict):     text = json.dumps(text)
+    elif not isinstance(text,str):text = str(text)
+    for ch in text: hash = (hash*281 ^ ord(ch)*997) & 0xFFFFFFFF
+    if hexit: return hex(hash)[2:].upper().zfill(8)
+    else:     return hash
   
 def genUUID(seed=None):
     if seed:
@@ -636,26 +638,28 @@ def loadJSON(item):
         elif isinstance(item,dict):
             return item
     except Exception as e: log("globals: loadJSON failed! %s"%(e), xbmc.LOGERROR)
-    return {}#except json.decoder.JSONDecodeError:,ValueError:
+    return {}
 
 @killit(15,default={})
 def sendJSON(command):
     log('globals: sendJSON, command = %s'%(command))
     return loadJSON(xbmc.executeJSONRPC(command))
 
-@killit(45,default=False)
+@killit(35,default=False)
 def installAddon(id, silent=False):
     if not id: return False
     elif hasAddon(id):
         if not addonEnabled(id): toggleADDON(id)
     else:
         xbmc.executebuiltin('InstallAddon("%s")'%(id))
-        if not silent: Dialog().notificationDialog('%s %s...'%(LANGUAGE(30193),id))
-        if xbmc.Monitor().waitForAbort(15): return False
+        if not silent: Dialog().notificationWait('%s %s...'%(LANGUAGE(30193),id),wait=30)
     return hasAddon(id)
         
 def addonEnabled(id):
     return xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%id)
+    
+def enableAddon(id):
+    xbmc.executebuiltin("EnableAddon(%s)"%(id))
 
 def getPluginMeta(id):
     try:
@@ -682,11 +686,10 @@ def toggleADDON(id, state=True, reverse=False):
     sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
     if reverse:
         if id == ADDON_ID: 
-            xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:04)"%({False:'EnableAddon',True:'DisableAddon'}[state],id))
-        else: 
-            xbmc.sleep(PROMPT_DELAY)
-            toggleADDON(id, not bool(state))
-    
+            return xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:%s)"%({False:'EnableAddon',True:'DisableAddon'}[state],id,str(PROMPT_DELAY/1000).zfill(2)))
+        xbmc.Monitor().waitForAbort((PROMPT_DELAY/1000))
+        toggleADDON(id, not bool(state))
+
 def getPlugin(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)
     except: # backend disabled?
@@ -696,30 +699,24 @@ def getPlugin(id=PVR_CLIENT):
         except: return None
 
 def chkRequiredSettings():
-    chkPVR()
-    chkMGR()
-
-def chkMGR():
-    return chkPluginSettings(PVR_MANAGER, MGR_SETTINGS)
-
-def chkPVR():
-    return chkPluginSettings(PVR_CLIENT, getPVR_SETTINGS())
+    chkPluginSettings(PVR_CLIENT, getPVR_SETTINGS())
+    chkPluginSettings(PVR_MANAGER, MGR_SETTINGS)
 
 def chkPluginSettings(id, values):
     log('globals: chkPluginSettings, id = %s'%(id))
     addon = getPlugin(id)
     if addon  is None: return Dialog().notificationDialog(LANGUAGE(30217)%id)
     for setting, value in values.items():
-        if xbmc.Monitor().waitForAbort(.5): return False
+        if xbmc.Monitor().waitForAbort(0.001): return False
         if not str(addon.getSetting(setting)).lower() == str(value).lower(): 
             log('globals: chkPluginSettings, found %s = %s! recommended = %s'%(setting, addon.getSetting(setting),value))
-            return setPlugin(id,values,SETTINGS.getSettingBool('Enable_Config'))
+            return setPlugin(id,values)
     return True
     
 def setPVR():
     return setPlugin(PVR_CLIENT,getPVR_SETTINGS())
     
-def setPlugin(id,values,override=False):
+def setPlugin(id,values,override=SETTINGS.getSettingBool('Enable_Config')):
     log('globals: setPlugin')
     if not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30012)%(getPluginMeta(id).get('name','')))): return
@@ -732,11 +729,10 @@ def setPlugin(id,values,override=False):
     except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
     return True
     
-def brutePVR(override=False):
+def brutePVR(override=SETTINGS.getSettingBool('Enable_Config')):
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    else: return #debug system crashes
     toggleADDON(PVR_CLIENT,False,reverse=True)
     return True
     
@@ -749,7 +745,7 @@ def chkResources(silent=True):
     chkRepo = [hasAddon(repo) for repo in ADDON_REPOSITORY]
     if True in chkRepo:
         params  = ['Resource_Logos','Resource_Ratings','Resource_Bumpers','Resource_Commericals','Resource_Trailers']
-        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split(',') if not hasAddon(addon)]
+        missing = [addon for param in params for addon in SETTINGS.getSetting(param).split('|') if not hasAddon(addon)]
         log('globals: chkResources, missing = %s'%(missing))
         for addon in missing: installAddon(addon, silent)
     elif not silent: 
@@ -996,7 +992,6 @@ def isPseudoTV(condition='VideoPlayer'):
     return isPseudoTV
 
 def hasChannelData(condition='ListItem'):
-    print('hasChannelData',getWriterfromString(condition))
     return getWriterfromString(condition).get('citem',{}).get('number',-1) > 0
 
 def getWriterfromString(condition='ListItem'):

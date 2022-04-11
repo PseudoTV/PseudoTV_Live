@@ -123,20 +123,11 @@ class Library:
 
             
     def chkLibraryTimer(self, wait=LIBRARY_OFFSET):
-        if isBusy() or wait == -1: 
-            wait = 30.0
+        if isBusy() or wait == -1: wait = 30.0
         else: 
             with busy(): 
-                if not self.fillLibraryItems():
-                    wait = 30.0
-        try: 
-            if self.chkLibraryThread.is_alive(): 
-                self.chkLibraryThread.cancel()
-                self.chkLibraryThread.join()
-        except: pass
-        self.chkLibraryThread = threading.Timer(wait, self.chkLibraryTimer)
-        self.chkLibraryThread.name = "chkLibraryThread"
-        self.chkLibraryThread.start()
+                if not self.fillLibraryItems(): wait = 30.0
+        timerit(self.chkLibraryTimer)(wait)
                     
                 
     def fillLibraryItems(self):
@@ -244,7 +235,7 @@ class Library:
             else:
                 return None
                 
-        return sorted(threadit(chkEnabled)(items), key=lambda k: k['name'])
+        return sorted(poolit(chkEnabled)(items), key=lambda k: k['name'])
         
         
     def buildLibraryListitem(self, data):
@@ -270,7 +261,7 @@ class Library:
         if type is None: types = CHAN_TYPES
         else:            types = [type]
         for type in types:
-            self.setLibraryItems(type,(threadit(setDisabled)(self.getLibraryItems(type))))
+            self.setLibraryItems(type,(poolit(setDisabled)(self.getLibraryItems(type))))
         return True
         
 
@@ -329,21 +320,14 @@ class Recommended:
         else: 
             with busy(): 
                 self.importPrompt()
-        try: 
-            if self.chkRecommendedThread.is_alive(): 
-                self.chkRecommendedThread.cancel()
-                self.chkRecommendedThread.join()
-        except: pass
-        self.chkRecommendedThread = threading.Timer(wait, self.chkRecommendedTimer)
-        self.chkRecommendedThread.name = "chkRecommendedThread"
-        self.chkRecommendedThread.start()
+        timerit(self.chkRecommendedTimer)(wait)
                     
       
     def searchRecommendedAddons(self):
         if not SETTINGS.getSettingBool('Enable_Recommended'): return []
         blackList = self.getBlackList()
         addonList = [addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))]
-        return threadit(self.searchRecommendedAddon)(addonList)
+        return poolit(self.searchRecommendedAddon)(addonList)
         
         
     def searchRecommendedAddon(self, addonid):

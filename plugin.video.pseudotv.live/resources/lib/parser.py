@@ -240,7 +240,7 @@ class Writer:
                 self.dialog.notificationDialog(LANGUAGE(30103)%(type))
                 return
                 
-            listItems = threadit(self.library.buildLibraryListitem)(items,type)
+            listItems = poolit(self.library.buildLibraryListitem)(items,type)
             if autoTune:
                 if autoTune > len(items): autoTune = len(items)
                 select = random.sample(list(set(range(0,len(items)))),autoTune)

@@ -148,6 +148,7 @@ class Builder:
                 self.log('buildService, In-Valid Channel (No Media Found!) %s '%(channel['id']))
                 self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
+                self.writer.m3u.removeStation(channel)
                 
         if not self.writer.saveChannelLineup(): 
             self.writer.dialog.notificationDialog(LANGUAGE(30001))

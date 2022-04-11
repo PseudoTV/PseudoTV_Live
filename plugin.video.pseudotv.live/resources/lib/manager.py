@@ -101,7 +101,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         ## Fill chanList listitem for display. *reset draws new control list. *focus list index for channel position.
         self.togglechanList(True,reset=reset)
         self.toggleSpinner(self.chanList,True)
-        listitems = threadit(self.buildChannelListItem)(channelList)
+        listitems = poolit(self.buildChannelListItem)(channelList)
         self.chanList.addItems(listitems)
         
         if focus is None: self.chanList.selectItem(self.setFocusPOS(listitems))
@@ -455,7 +455,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def validateChannels(self, channelList):
         self.log('validateChannels')
-        return sorted(threadit(self.validateChannel)(channelList), key=lambda k: k['number'])
+        return sorted(poolit(self.validateChannel)(channelList), key=lambda k: k['number'])
               
 
     def saveChannelItems(self, channelData, channelPOS):
@@ -513,7 +513,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:
             ruleInstances = [item['item']]
         
-        listitems = threadit(self.buildRuleListItem)(ruleInstances,channelData)
+        listitems = poolit(self.buildRuleListItem)(ruleInstances,channelData)
         optionIDX = self.dialog.selectDialog(listitems,LANGUAGE(30135),multi=False)
 
         # ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #all rule instances with channel settings applied
@@ -583,7 +583,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('buildRuleItems, append = %s'%(append))
         self.toggleSpinner(self.ruleList,True)
         channelRules = self.rules.loadRules([channelData]).get(channelData['id'],[]) # all channel rule instances only.
-        listitems = threadit(self.buildRuleListItem)(channelRules,channelData)
+        listitems = poolit(self.buildRuleListItem)(channelRules,channelData)
         if append: listitems.insert(0,self.dialog.buildMenuListItem('','Add New Rule',url='-1',propItem={'channelData':dumpJSON(channelData)}))
         self.toggleSpinner(self.ruleList,False)
         self.ruleList.reset()

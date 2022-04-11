@@ -56,7 +56,6 @@ class Backup:
                 if not SETTINGS.getSetting('Recover_Channels'):
                     SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30216),len(self.getChannels())))
                 return True
-
             PROPERTIES.setPropertyBool('has.Backup',False)
             SETTINGS.setSetting('Backup_Channels'  ,'')
             SETTINGS.setSetting('Recover_Channels' ,'')

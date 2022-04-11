@@ -163,7 +163,7 @@ class Resources:
         cacheCHK   = getMD5(dumpJSON(packs))
         matches    = self.cache.get(cacheName, checksum=cacheCHK)
         if not matches:
-            results = [threadit(_parse)(packs,packs,kwargs={'chname':chname}) for chname in chnames]
+            results = [poolit(_parse)(packs,packs,kwargs={'chname':chname}) for chname in chnames]
             if results:
                 matches = []
                 results = sorted(results[0], key=lambda x: x[1][1]) #sort high-lowest match score.
@@ -207,7 +207,7 @@ class Resources:
         cacheCHK   = getMD5(dumpJSON(packs))
         matches    = self.cache.get(cacheName, checksum=cacheCHK)
         if not matches:
-            matches = threadit(_match)(packs)
+            matches = poolit(_match)(packs)
             # matches = [('D:/Kodi/portable_data/addons/plugin.video.pseudotv.live/resources/images',('Recently Added.png', 95))]
             if matches:
                 matches = (sorted(matches, key=lambda x: x[1][1])) #sort high-lowest match score.

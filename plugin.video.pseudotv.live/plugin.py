@@ -18,12 +18,9 @@
 
 # -*- coding: utf-8 -*-
 # -entry point-
-import sys
-from resources.lib.plugin import Plugin
-
-ADDON_ID = 'plugin.video.pseudotv.live'
+from resources.lib.globals import *
+from resources.lib.plugin  import Plugin
 
 if __name__ == '__main__':
-    if not xbmc.getCondVisibility("System.AddonIsEnabled(%s)"%ADDON_ID): 
-        xbmc.executebuiltin("EnableAddon(%s)"%ADDON_ID)
+    if not addonEnabled(ADDON_ID): toggleADDON(ADDON_ID)
     Plugin(sys.argv)

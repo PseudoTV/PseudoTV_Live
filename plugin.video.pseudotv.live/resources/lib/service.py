@@ -309,14 +309,7 @@ class Monitor(xbmc.Monitor):
             
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        try: 
-            if self.pendingChangeThread.is_alive(): 
-                self.pendingChangeThread.cancel()
-                self.pendingChangeThread.join()
-        except: pass
-        self.pendingChangeThread = threading.Timer(15.0, self._onSettingsChanged)
-        self.pendingChangeThread.name = "pendingChangeThread"
-        self.pendingChangeThread.start()
+        timerit(self._onSettingsChanged)(15.0)
                 
                 
     def _onSettingsChanged(self):
@@ -401,18 +394,7 @@ class Service:
         except Exception as e: log("chkUtilites, Failed! %s"%(e), xbmc.LOGERROR)
         return openAddonSettings(ctl)
 
-        
-    def startUpdatePending(self):
-        try: 
-            if self.chkUpdateThread.is_alive(): 
-                self.chkUpdateThread.cancel()
-                self.chkUpdateThread.join()
-        except: pass
-        self.chkUpdateThread = threading.Timer(0.5, self.chkUpdatePending)
-        self.chkUpdateThread.name = "chkUpdateThread"
-        self.chkUpdateThread.start()
-                
-                
+
     def chkUpdatePending(self):
         if not (isBusy() | isClient() | self.isLocked) and hasLibraryRun():
             self.isLocked = True
@@ -433,8 +415,8 @@ class Service:
 
  
     def _initialize(self):
-        dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))
-        funcs = [chkVersion,chkClient,initFolders,setInstanceID,self.chkBackup,chkResources,chkRequiredSettings,updateIPTVManager]
+        dia   = self.writer.dialog.progressBGDialog(message='%s...'%(LANGUAGE(30052)))#,chkResources
+        funcs = [chkVersion,chkClient,initFolders,setInstanceID,self.chkBackup,chkRequiredSettings,updateIPTVManager]
         for idx, func in enumerate(funcs):
             dia = self.writer.dialog.progressBGDialog(int((idx)*100//len(funcs)),dia,'%s...'%(LANGUAGE(30052)))
             self.chkUtilites()
@@ -462,7 +444,7 @@ class Service:
             
             if   (self.monitor.waitForAbort(waitForAbort) or pendingStop or pendingRestart): break
             elif (self.monitor.isSettingsOpened() or self.chkUtilites()): continue
-            elif isIdle and not self.isLocked: self.startUpdatePending()
+            elif isIdle and not self.isLocked: self.chkUpdatePending()
                 
         if pendingRestart: self._restart()
         else:              self._shutdown()
