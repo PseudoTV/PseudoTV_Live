@@ -27,23 +27,28 @@ class Player(xbmc.Player):
     def __init__(self, service=None):
         xbmc.Player.__init__(self)
         self.service        = service
-        self.playingFile    = ''
         self.playingPVRitem = {}
-        self.isPseudoTV     = isPseudoTV()
+        self.isPseudoTV     = False
         self.lastSubState   = isSubtitle()
         self.showOverlay    = SETTINGS.getSettingBool('Enable_Overlay')
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+          
+          
+    def verifyPseudoTV(self):
+        pseudotv = isPseudoTV() | self.playingPVRitem.get('citem',{}).get('number',-1) > 0
+        self.log('verifyPseudoTV = %s'%(pseudotv))
+        return pseudotv
         
         
     def getInfoTag(self):
         self.log('getInfoTag')
-        if self.isPlayingAudio():   return self.getMusicInfoTag()
+        if   self.isPlayingAudio(): return self.getMusicInfoTag()
         elif self.isPlayingVideo(): return self.getVideoInfoTag()
 
-              
+           
     def getPlayerLabel(self):
         return (xbmc.getInfoLabel('Player.Title') or xbmc.getInfoLabel('Player.Label') or '')
            
@@ -141,13 +146,10 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
-        self.isPseudoTV  = isPseudoTV()
-        self.playingFile = self.getPlayerFile()
             
         
     def onAVStarted(self):
         self.log('onAVStarted')
-        self.isPseudoTV = isPseudoTV()
         if not self.isPseudoTV:
             self.toggleOverlay(False)
         else:
@@ -174,10 +176,9 @@ class Player(xbmc.Player):
         
         
     def playAction(self):
-        self.isPseudoTV = isPseudoTV()
         pvritem = self.getPVRitem()
-        if not pvritem or not self.isPseudoTV: 
-            self.log('playAction, returning missing pvritem or not PseudoTV!')
+        if not pvritem: 
+            self.log('playAction, returning missing pvritem!')
             return self.stopAction()
             
         self.showOverlay = SETTINGS.getSettingBool('Enable_Overlay')
@@ -196,8 +197,7 @@ class Player(xbmc.Player):
             pvritem.get('citem',{}).update(citem)
             self.playingPVRitem = self.service.writer.rules.runActions(RULES_ACTION_PLAYER_START, citem, pvritem, inherited=self)
             if self.lastSubState: self.setSubtitles(False) #temp workaround for long existing kodi subtitle seek bug. Some movie formats don't properly seek when subtitles are enabled.
-
-        self.playingFile = self.getPlayerFile()
+        self.isPseudoTV = self.verifyPseudoTV()
         self.log('playAction, finished; isPlaylist = %s, isStack = %s'%(self.playingPVRitem.get('isPlaylist',False),self.playingPVRitem.get('broadcastnow',{}).get('isStack',False)))
 
 
@@ -219,8 +219,6 @@ class Player(xbmc.Player):
                 self.playingPVRitem['broadcastnext'] = broadcastnext
             return
             
-        if not self.isPseudoTV: return
-        self.isPseudoTV = False
         xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.service.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
         callback = self.playingPVRitem.get('callback','')
@@ -230,12 +228,12 @@ class Player(xbmc.Player):
 
     def stopAction(self):
         self.log('stopAction')
-        self.isPseudoTV = False
         self.toggleOverlay(False)
         self.service.writer.rules.runActions(RULES_ACTION_PLAYER_STOP, self.playingPVRitem.get('citem',{}), inherited=self)
-        if self.playingPVRitem.get('isPlaylist',False):
+        if self.playingPVRitem.get('isPlaylist',False): 
             xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.playingPVRitem = {}
+        self.isPseudoTV = False
         setLegacyPseudoTV(False)
         
         
@@ -251,7 +249,7 @@ class Player(xbmc.Player):
 
         
     def triggerSleep(self):
-        conditions = [not isPaused(),self.isPlaying(),isPseudoTV()]
+        conditions = [not isPaused(),self.isPlaying(),self.isPseudoTV]
         self.log("triggerSleep, conditions = %s"%(conditions))
         if False in conditions: return
         if self.sleepTimer():
@@ -292,7 +290,7 @@ class Monitor(xbmc.Monitor):
     def chkIdle(self):
         isIdle,idleTime = getIdle()
         sleepTime = SETTINGS.getSettingInt('Idle_Timer')
-        if isPseudoTV():
+        if self.myService.player.isPseudoTV:
             if sleepTime > 0 and (idleTime > (sleepTime * 10800)): #3hr increments
                 if self.myService.player.triggerSleep(): return False
         
