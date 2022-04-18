@@ -265,7 +265,7 @@ msgid "Play onDemand"
 msgstr ""
 
 msgctxt "#30062"
-msgid "Start Over"
+msgid "Reloading"
 msgstr ""
 
 msgctxt "#30063"
@@ -889,7 +889,7 @@ msgid "Allow seasonal channel to advanced to nearest holiday within the month."
 msgstr ""
 
 msgctxt "#30219"
-msgid "Single Core"
+msgid "Enabled"
 msgstr ""
 
 msgctxt "#30220"

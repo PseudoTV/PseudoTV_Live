@@ -145,8 +145,10 @@ class Builder:
                 if isinstance(cacheResponse,list) and len(cacheResponse) > 0: #write new lineup meta to xmltv
                     self.writer.addProgrammes(channel, cacheResponse, radio=channel['radio'], catchup=not bool(channel['radio']))
             else: 
-                self.log('buildService, In-Valid Channel (No Media Found!) %s '%(channel['id']))
-                self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s, %s'%(self.chanName,' | '.join(list(set(self.chanError)))),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
+                self.chanError.append(LANGUAGE(30317))
+                chanErrors = '' if len(list(set(self.chanError))) == 0 else ' , %s'%('| '.join(list(set(self.chanError))))
+                self.log('buildService, In-Valid Channel (%s) %s - %s'%(','.join(list(set(self.chanError))), channel['id'],self.chanName))
+                self.pDialog = self.writer.dialog.progressBGDialog(self.pCount, self.pDialog, message='%s%s'%(self.chanName,chanErrors),header='%s, %s'%(ADDON_NAME,LANGUAGE(30330)))
                 self.writer.monitor.waitForAbort(PROMPT_DELAY/1000)
                 self.writer.m3u.removeStation(channel)
                 

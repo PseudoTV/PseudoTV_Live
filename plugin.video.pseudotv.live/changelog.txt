@@ -1,4 +1,5 @@
 v.0.3.8
+-Improved error handling.
 -Tweaked Multi-threading.
 -Improved Server discovery, Clients can select from multiple servers if available via settings..
 -Added User configurable channel bug diffuse color. Only available to "Prefer white" channel logos & Kodi v.20+

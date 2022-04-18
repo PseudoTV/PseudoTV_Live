@@ -55,7 +55,6 @@ class Writer:
         self.builder       = Builder(writer=self)
         self.m3u           = M3U(writer=self)
         self.xmltv         = XMLTV(writer=self)
-        
         self.backup        = Backup(writer=self)
 
 
@@ -225,7 +224,7 @@ class Writer:
         pDialog = self.dialog.progressBGDialog()
         for idx, type in enumerate(types):
             self.log('autoTune, type = %s'%(type))
-            pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, '%s'%(type),header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
+            pDialog = self.dialog.progressBGDialog((idx*100//len(types)), pDialog, type, header='%s, %s'%(ADDON_NAME,LANGUAGE(30102)))
             self.selectPredefined(type,AUTOTUNE_LIMIT)
         self.dialog.progressBGDialog(100, pDialog, '%s...'%(LANGUAGE(30053)))
         return True

@@ -92,8 +92,6 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.overlay.log('onAVStarted')
-        self.playerLabel   = self.overlay.player.getPlayerLabel()
-        self.playerTotTime = self.overlay.player.getPlayerTime()
         self.closeBackground()
         
         

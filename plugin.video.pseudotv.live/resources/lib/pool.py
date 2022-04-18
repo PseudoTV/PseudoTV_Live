@@ -78,7 +78,7 @@ def poolit(method):
         pool = Concurrent(cpucount)
         if cpucount > 1: results = pool.executors(method, items, args, kwargs, chunksize=size)
         if not results:  results = pool.generator(method, items, args, kwargs)
-        log('%s, %s'%(method.__qualname__.replace('.',': '),pool.__class__.__name__))
+        log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         try:    return list(filter(None,results))
         except: return list(results)
     return wrapper
@@ -92,12 +92,12 @@ def timerit(method):
                 try: 
                     thread.cancel()
                     thread.join()
-                    log('%s, timerit canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
+                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
                 except: pass
         timer = Timer(wait, method, *args, **kwargs)
         timer.name = thread_name
         timer.start()
-        log('%s, timerit starting @ wait = %s'%(method.__qualname__.replace('.',': '),wait))
+        log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
         return timer
     return wrapper  
     
@@ -110,13 +110,13 @@ def threadit(method):
                 try: 
                     thread.cancel()
                     thread.join()
-                    log('%s, threadit canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
+                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
                 except: pass
         thread = Thread(target=method, *args, **kwargs)
         thread.daemon = True
         thread.name = thread_name
         thread.start()
-        log('%s, threadit starting'%(method.__qualname__.replace('.',': ')))
+        log('%s, starting %s'%(method.__qualname__.replace('.',': '),thread_name))
         return thread
     return wrapper
 

@@ -449,9 +449,9 @@ class JSONRPC:
         return runtime
 
 
-    def parseDuration(self, path, item={}, save=None):
-        cacheName = 'parseDuration.%s'%(getMD5(path))
+    def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         cacheCHK  = getMD5(path)
+        cacheName = 'parseDuration.%s'%(cacheCHK)
         runtime   = int(item.get('runtime', '') or item.get('duration', '') or
                        (item.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration', '') or '0')
                        
@@ -472,7 +472,6 @@ class JSONRPC:
             runsafe = True
         self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
         ## save parsed duration to Kodi database, if enabled.
-        if save is None: save = SETTINGS.getSettingBool('Store_Duration')
         if save and runsafe and (item.get('id', -1) > 0): self.queDuration(item['type'], item.get('id', -1), duration)
         if runsafe: runtime = duration
         self.log("parseDuration, returning runtime = %s" % (runtime))

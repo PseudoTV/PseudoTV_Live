@@ -243,7 +243,7 @@ HTML_ESCAPE         = {"&": "&amp;",
                        
 def getPVR_SETTINGS(): 
     return {'m3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'30',
+            'm3uRefreshIntervalMins'      :'10',
             'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
@@ -681,21 +681,26 @@ def updateAddonRepos():
 def updateLocalAddons():
     xbmc.executebuiltin("UpdateLocalAddons")
 
-def toggleADDON(id, state=True, reverse=False):
-    log('globals: toggleADDON, id = %s, state = %s, reverse = %s'%(id,state,reverse))
+def toggleADDON(id, state=True, reverse=False, waitTime=15):
+    log('globals: toggleADDON, id = %s, state = %s, reverse = %s, waitTime = %s'%(id,state,reverse,waitTime))
+    if not state: name = getPluginMeta(id).get('name',id)
     sendJSON('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
-    if reverse:
-        if id == ADDON_ID: 
-            return xbmc.executebuiltin("AlarmClock(Re-enable,%s(%s),00:%s)"%({False:'EnableAddon',True:'DisableAddon'}[state],id,str(PROMPT_DELAY/1000).zfill(2)))
-        xbmc.Monitor().waitForAbort((PROMPT_DELAY/1000))
-        toggleADDON(id, not bool(state))
-
+    if state: name = getPluginMeta(id).get('name',id)
+    if reverse: 
+        waitMSG = '%s: %s'%(LANGUAGE(30062),name)
+        timerit(toggleADDON)(waitTime,[id,not bool(state)])
+    else:
+        waitTime = int(PROMPT_DELAY/1000)
+        waitMSG  = '%s: %s'%(name,{True:LANGUAGE(30219),False:LANGUAGE(30220)}[state])
+    Dialog().notificationWait(waitMSG,wait=waitTime)
+        
 def getPlugin(id=PVR_CLIENT):
     try: return xbmcaddon.Addon(id)
     except: # backend disabled?
         toggleADDON(id)
-        xbmc.sleep(2000)
-        try:    return xbmcaddon.Addon(id)
+        try:
+            if xbmc.Monitor().waitForAbort(2): raise
+            return xbmcaddon.Addon(id)
         except: return None
 
 def chkRequiredSettings():
@@ -729,11 +734,13 @@ def setPlugin(id,values,override=SETTINGS.getSettingBool('Enable_Config')):
     except: return Dialog().notificationDialog(LANGUAGE(30049)%(id))
     return True
     
-def brutePVR(override=SETTINGS.getSettingBool('Enable_Config')):
+def brutePVR(override=SETTINGS.getSettingBool('Enable_Config'),waitTime=15):
+    log('globals: brutePVR, override = %s'%(override))
     if (xbmc.getCondVisibility("Pvr.IsPlayingTv") or xbmc.getCondVisibility("Pvr.IsPlayingRadio")): return
     elif not override:
         if not Dialog().yesnoDialog('%s ?'%(LANGUAGE(30065)%(getPluginMeta(PVR_CLIENT).get('name','')))): return
-    toggleADDON(PVR_CLIENT,False,reverse=True)
+    toggleADDON(PVR_CLIENT,False,True,waitTime)
+    if xbmc.Monitor().waitForAbort(waitTime): return False
     return True
     
 def refreshMGR():

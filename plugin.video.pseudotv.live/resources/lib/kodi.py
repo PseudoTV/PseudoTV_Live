@@ -381,8 +381,7 @@ class Dialog:
         return True
         
         
-    @staticmethod
-    def buildItemListItem(item, mType='video', oscreen=False, playable=True):
+    def buildItemListItem(self, item, mType='video', oscreen=False, playable=True):
         LISTITEM_TYPES = {'label': (str,list),'genre': (list,str),
                           'country': (str,list),'year': (int,),'episode': (int,),
                           'season': (int,),'sortepisode': (int,),'sortseason': (int,),
@@ -425,7 +424,8 @@ class Dialog:
                     continue
                     
                 elif not isinstance(value,types):# convert to schema type
-                    ninfo[key] = types[0](value)
+                    try: ninfo[key] = types[0](value)
+                    except Exception as e: self.log("buildItemListItem, cleanInfo error! %s\nkey = %s, value = %s, type = %s\n%s"%(e,key,value,types[0],ninfo), xbmc.LOGWARNING)
                     
                 if isinstance(ninfo[key],list):
                     for n in ninfo[key]:
@@ -451,7 +451,7 @@ class Dialog:
         if info.get('label2'): listitem.setLabel2(info.pop('label2',''))
         if info.get('file'):   listitem.setPath(item.get('file','')) # (item.get('file','') or item.get('url','') or item.get('path',''))
         
-        listitem.setInfo(type=mType, infoLabels=cleanInfo(info))
+        listitem.setInfo(type=mType, infoLabels=cleanInfo(info)) #todo move to InfoTagVideo
         listitem.setArt(art)
         listitem.setCast(cast)
         listitem.setUniqueIDs(uniqueid)
@@ -548,11 +548,11 @@ class Dialog:
         if infoItem: 
             if infoItem.get('label'):  listitem.setLabel(infoItem.pop('label',''))
             if infoItem.get('label2'): listitem.setLabel2(infoItem.pop('label2',''))
-            listitem.setInfo(mType, infoItem)
+            listitem.setInfo(mType, infoItem) #todo move to InfoTagVideo
         else: 
             listitem.setLabel(label1)
             listitem.setLabel2(label2)
-            listitem.setInfo(mType, {'mediatype': 'video', 'Title' : label1})
+            listitem.setInfo(mType, {'mediatype': 'video', 'Title' : label1}) #todo move to InfoTagVideo
                                          
         if artItem: 
             listitem.setArt(artItem)
@@ -619,25 +619,26 @@ class Dialog:
         if options is not None and default == retval: return
         return retval
         
-        
+
     def notificationWait(self, message, header=ADDON_NAME, wait=4):
+        if not isinstance(wait,int): wait = int(wait)
         pDialog = self.progressBGDialog(message=message,header=header)
         for idx in range(wait):
-            pDialog = self.progressBGDialog((((idx) * 100)//wait),control=pDialog,header=header)
-            if self.monitor.waitForAbort(1): break
-        self.progressBGDialog(100,control=pDialog)
+            pDialog = self.progressBGDialog((((idx+1) * 100)//wait),control=pDialog,header=header)
+            if pDialog is None or self.monitor.waitForAbort(1): break
         return True
 
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
         if not isinstance(percent,int): percent = int(percent)
-        if silent is None:
+        if silent is None: 
             silent = (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | xbmc.getCondVisibility('Player.Playing')))
         
-        if silent and hasattr(control, 'close'): 
-            control.close()
-            return
-        elif control is None and percent == 0:
+        if silent:
+            if hasattr(control, 'close'): control.close()
+            return 
+            
+        if control is None and percent == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
         elif control:

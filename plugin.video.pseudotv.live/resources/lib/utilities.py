@@ -143,7 +143,7 @@ class Utilities:
                 return
         return openAddonSettings(ctl)
 
-                
+        # ('ActivateWindow(pvrsettings)') #todo open pvr settings.
 if __name__ == '__main__': Utilities(sys.argv).run()
     
     
