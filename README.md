@@ -22,7 +22,6 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 [![Lunatixz Coffee](https://img.shields.io/badge/Buy%20%20Coffee-Lunatixz-blue.svg?style=flat-square)](https://www.buymeacoffee.com/Lunatixz)
 [![Lunatixz Patreon](https://img.shields.io/badge/Patreon-Lunatixz-blue.svg?style=flat-square)](https://www.patreon.com/pseudotv)
 [![Lunatixz Paypal](https://img.shields.io/badge/Paypal-Lunatixz-blue.svg?style=flat-square)](https://paypal.me/Lunatixz)
-[![Twitter URL](https://img.shields.io/twitter/follow/PseudoTV_Live.svg?color=blue&label=%40PseudoTV_Live&style=flat-square)](https://twitter.com/PseudoTV_Live)
 [![Feature Requests](https://feathub.com/PseudoTV/PseudoTV_Live?format=svg)](https://feathub.com/PseudoTV/PseudoTV_Live)
 
 # Special Thanks:
