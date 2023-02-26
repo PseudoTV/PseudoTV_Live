@@ -111,4 +111,23 @@
         </assets>
     </extension>
 </addon>
+
+<addon id="webinterface.pseudotv.live" version="0.0.1" name="PseudoTV Live" provider-name="Lunatixz">
+    <requires>
+        <import addon="xbmc.python" version="3.0.1"/>
+        <import addon="xbmc.json" version="6.0.0"/>
+        <import addon="xbmc.webinterface" version="1.0.0"/>
+        <import addon="plugin.video.pseudotv.live" version="0.4.0" />
+    </requires>
+<extension point="xbmc.webinterface" type="wsgi" library="app.py" entry="app"/>
+<extension point="xbmc.addon.metadata">
+    <summary lang="en"></summary>
+    <description lang="en"></description>
+    <platform>all</platform>
+    <assets>
+        <icon>resources/images/icon.png</icon>
+        <fanart>resources/images/fanart.jpg</fanart>
+    </assets>
+</extension>
+</addon>
 </addons>
