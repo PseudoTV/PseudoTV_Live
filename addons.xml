@@ -70,12 +70,17 @@
     </extension>
 </addon>
 
-<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.3" provider-name="Lunatixz">
+<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.4" provider-name="Lunatixz">
     <extension point="xbmc.addon.repository" name="PseudoTV Repository">
         <dir>
           <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml</info>
           <checksum>https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml.md5</checksum>
           <datadir zip="true">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/zips</datadir>
+        </dir>
+        <dir>
+          <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/matrix/addons.xml</info>
+          <checksum>https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/matrix/addons.xml.md5</checksum>
+          <datadir zip="true">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/matrix/zips</datadir>
         </dir>
         <dir>
           <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Resources/master/addons.xml</info>
@@ -94,22 +99,23 @@
     </extension>
 </addon>
 
-<addon id="script.module.fuzzywuzzy" version="0.18.0" name="fuzzywuzzy" provider-name="Lunatixz">
-    <requires>
-        <import addon="xbmc.python" version="3.0.0" />
-    </requires>
-    <extension library="lib" point="xbmc.python.module" />
-    <extension point="xbmc.addon.metadata">
-        <summary lang="en_GB">Packed for KODI from https://github.com/seatgeek/fuzzywuzzy</summary>
-        <description lang="en_GB">Packed for KODI from https://github.com/seatgeek/fuzzywuzzy</description>
-        <license>GPLv2</license>
-        <platform>all</platform>
-        <website>https://pypi.org/project/fuzzywuzzy/</website>
-        <source>https://github.com/Lunatixz/KODI_Addons/tree/master/script.module.fuzzywuzzy</source>
-        <assets>
-            <icon>icon.png</icon>
-        </assets>
-    </extension>
+<addon id="script.module.infotagger" name="InfoTagger" provider-name="jurialmunkey" version="0.0.5">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1"/>
+  </requires>
+  <extension point="xbmc.python.module" library="resources/modules" />
+  <extension point="xbmc.addon.metadata">
+    <platform>all</platform>
+    <summary lang="en_GB">Python wrapper for setInfo on Nexus InfoTags</summary>
+    <description lang="en_GB">Python wrapper for setInfo on Nexus InfoTags</description>
+    <license>GPL-3.0-or-later</license>
+    <website>https://github.com/jurialmunkey/script.module.infotagger</website>
+    <source>https://github.com/jurialmunkey/script.module.infotagger</source>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
+  </extension>
+
 </addon>
 
 <addon id="webinterface.pseudotv.live" version="0.0.1" name="PseudoTV Live" provider-name="Lunatixz">
