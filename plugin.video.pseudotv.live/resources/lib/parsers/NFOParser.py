@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from resources.lib.globals import *
-from xml.dom.minidom       import parse, parseString
+from globals         import *
+from xml.dom.minidom import parse, parseString
 
 class NFOParser:
+    ## NFO EXAMPLE ##
     ##<episodedetails>
     ##  <runtime>25</runtime>
     ##  <duration>1575</duration>

@@ -1,4 +1,4 @@
- #   Copyright (C) 2022 Lunatixz
+ #   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -18,18 +18,16 @@
 # https://github.com/kodi-community-addons/script.module.simplecache/blob/master/README.md
 # -*- coding: utf-8 -*-
  
-from resources.lib.globals     import *
+from globals    import *
+from channels   import Channels
 
 BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
 
 class Backup:
-    def __init__(self, writer=None):
-        if writer is None:
-            from resources.lib.parser import Writer
-            writer = Writer()
-        self.writer = writer
-        
-        
+    def __init__(self, sysARG=sys.argv):
+        self.sysARG   = sysARG
+        self.channels = Channels()
+    
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
@@ -42,19 +40,19 @@ class Backup:
             self.log('getFileDate, modified %s on %s'%(file,stime))
             return stime
         except:
-            return LANGUAGE(30285) #Unknown
+            return LANGUAGE(32105) #Unknown
         
         
     def hasBackup(self):
-        with busy():
+        with busy_dialog():
             self.log('hasBackup')
             if FileAccess.exists(CHANNELFLE_BACKUP) and not isClient():
                 PROPERTIES.setPropertyBool('has.Backup',True)
                 backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
                 if backup_channel == 'Last Backup: Unknown':
-                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),self.getFileDate(CHANNELFLE_BACKUP)))
+                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
-                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30216),len(self.getChannels())))
+                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return True
             PROPERTIES.setPropertyBool('has.Backup',False)
             SETTINGS.setSetting('Backup_Channels'  ,'')
@@ -62,37 +60,64 @@ class Backup:
             return False
             
             
-    def getChannels(self):
+    def getChannels(self, file=CHANNELFLE_BACKUP):
         self.log('getChannels')
-        return self.writer.vault._load(CHANNELFLE_BACKUP).get('channels',[])
+        return self.channels._load(file).get('channels',[])
 
 
     def backupChannels(self):
         self.log('backupChannels')
-        if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
-        elif isBusy():   return self.writer.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
         elif FileAccess.exists(CHANNELFLE_BACKUP):
-            if not self.writer.dialog.yesnoDialog('%s\n%s?'%(LANGUAGE(30212),SETTINGS.getSetting('Backup_Channels'))): 
+            if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
                 
-        with busy():
+        with busy_dialog():
             if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_BACKUP):
                 PROPERTIES.setPropertyBool('has.Backup',True)
-                SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(30215),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
-                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(30216),len(self.getChannels())))
-                return self.dialog.notificationDialog('%s %s'%(LANGUAGE(30200),LANGUAGE(30053)))
+                SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
+                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
+                return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
         return self.hasBackup()
         
         
     def recoverChannels(self, file=CHANNELFLE_BACKUP):
         self.log('recoverChannels, file = %s'%(file))
-        if   isClient(): return self.writer.dialog.notificationDialog(LANGUAGE(30288))
-        elif isBusy(): 
-            self.writer.dialog.notificationDialog(LANGUAGE(30029)%(ADDON_NAME))
+        if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
+        elif not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
-        elif not self.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30213)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
-            return False
-        
-        with busy_dialog(), busy():
-            self.writer.recoverChannelsFromBackup(file)
+        with busy_dialog():
+            self.recoverChannelsFromBackup(file)
         return True
+        
+        
+    def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
+        newChannels = self.getChannels()
+        difference  = sorted(diffLSTDICT(self.getChannels(CHANNELFLE_DEFAULT),newChannels), key=lambda k: k['number'])
+        self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
+        
+        if len(difference) > 0:
+            pDialog = DIALOG.progressDialog(message=LANGUAGE(32113))
+
+            for idx, citem in enumerate(difference):
+                pCount = int(((idx + 1)*100)//len(difference))
+                if citem in newChannels: 
+                    pDialog = DIALOG.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(32113),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
+                    self.channels.addChannel(citem)
+                else: 
+                    self.channels.delChannel(citem)
+            return self.channels._save()
+        return False
+
+       
+    def run(self):  
+        ctl = (0,2) #settings return focus
+        try:    param = self.sysARG[1]
+        except: param = None
+        self.log('run, param = %s'%(param))
+
+        if   param == 'Backup_Channels':  self.backupChannels()
+        elif param == 'Recover_Channels': self.recoverChannels()
+        return openAddonSettings(ctl)
+        
+if __name__ == '__main__': Backup(sys.argv).run()

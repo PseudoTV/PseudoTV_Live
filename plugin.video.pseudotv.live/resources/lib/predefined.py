@@ -18,84 +18,104 @@
 
 # -*- coding: utf-8 -*--
 
-from resources.lib.globals import *
+from globals    import *
 
 class Predefined:
-    exclude_specials = ',{"field":"season","operator":"greaterthan","value":"0"},{"field":"episode","operator":"greaterthan","value":"0"}'
+    EXC_EXTRAS = [{"field":"season" ,"operator":"greaterthan","value":"0"},
+                  {"field":"episode","operator":"greaterthan","value":"0"}]
     
     def __init__(self):
-        self.pathTypes  = {LANGUAGE(30002): self.createNetworkPlaylist,
-                           LANGUAGE(30003): self.createShowPlaylist,
-                           LANGUAGE(30004): self.createTVGenrePlaylist,
-                           LANGUAGE(30005): self.createMovieGenrePlaylist,
-                           LANGUAGE(30007): self.createStudioPlaylist,
-                           LANGUAGE(30006): self.createGenreMixedPlaylist,
-                           LANGUAGE(30080): self.createMixedOther,
-                           LANGUAGE(30026): self.createRECOMMENDED,
-                           LANGUAGE(30097): self.createMusicGenrePlaylist}
-                        
-        self.mixedPaths = {LANGUAGE(30078): self.createMixedRecent,
-                           LANGUAGE(30141): self.createSeasonal,
-                           LANGUAGE(30079): self.createPVRRecordings} # home for misc. predefined channel paths.
+        ...
         
-        self.log('__init__, exclude_specials = %s'%(self.exclude_specials))
-    
-    
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
 
-    def createMixedOther(self, type):
-        return self.mixedPaths[type]()
         
+    def getParams(self):
+        params = {}
+        params["order"] = {"direction"        :"ascending",
+                           "method"           :"random",
+                           "ignorearticle"    :True,
+                           "useartistsortname":True}
+        return params.copy()
+
         
     def createRECOMMENDED(self, type):
         return []
         
     
-    @staticmethod
-    def createPVRRecordings():
-        return ['pvr://recordings/tv/active/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
+    def createPVRRecordings(self):
+        return ['pvr://recordings/tv/active/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
-    @staticmethod
-    def createMixedRecent():
-        return ['videodb://recentlyaddedepisodes/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"episode"}}',
-                'videodb://recentlyaddedmovies/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
+    def createMixedRecent(self):
+        param = self.getParams()
+        param["order"]["method"] = "episode"
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(param)),
+                'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
-    @staticmethod
-    def createMusicRecent():
-        return ['musicdb://recentlyaddedalbums/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"random"}}']
+    def createMusicRecent(self):
+        return ['musicdb://recentlyaddedalbums/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
     def createNetworkPlaylist(self, network, method='episode'):
-        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(network),self.exclude_specials)]
-        
+        param = self.getParams()
+        param["type"] = "episodes"
+        param["order"]["method"] = method
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(network)]})
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+
 
     def createShowPlaylist(self, show, method='episode'):
-        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
-        try:    return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"year","operator":"is","value":["%s"]},{"field":"tvshow","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,match.group(2),quoteString(match.group(1)),self.exclude_specials)]
-        except: return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"tvshow","operator":"is","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(show),self.exclude_specials)]
+        param = self.getParams()
+        param["type"] = "episodes"
+        param["order"]["method"] = method
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        try:
+            match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
+            year, title = int(match.group(2)), match.group(1)
+            param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[quoteString(title)]}])
+        except:
+            param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[quoteString(show)]})
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
-        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}%s]},"type":"episodes"}'%(method,quoteString(genre),self.exclude_specials)]
+        param = self.getParams()
+        param["type"] = "episodes"
+        param["order"]["method"] = method
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
-    @staticmethod
-    def createMovieGenrePlaylist(genre, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quoteString(genre))]
+    def createMovieGenrePlaylist(self, genre, method='random'):
+        param = self.getParams()
+        param["type"] = "movies"
+        param["order"]["method"] = method
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
+        return ['videodb://movies/titles/?xsp=%s'%(dumpJSON(param))]
 
 
-    @staticmethod
-    def createStudioPlaylist(studio, method='random'):
-        return ['videodb://movies/titles/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"studio","operator":"contains","value":["%s"]}]},"type":"movies"}'%(method,quoteString(studio))]
+    def createStudioPlaylist(self, studio, method='random'):
+        param = self.getParams()
+        param["type"] = "movies"
+        param["order"]["method"] = method
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(studio)]})
+        return ['videodb://movies/titles/?xsp=%s'%(dumpJSON(param))]
 
 
-    @staticmethod
-    def createMusicGenrePlaylist(genre, method='random'):
-        return ['musicdb://songs/?xsp={"order":{"direction":"ascending","ignorefolders":0,"method":"%s"},"rules":{"and":[{"field":"genre","operator":"contains","value":["%s"]}]},"type":"music"}'%(method,quoteString(genre))]
+    def createMusicGenrePlaylist(self, genre, method='random'):
+        param = self.getParams()
+        param["type"] = "music"
+        param["order"]["method"] = method
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[(genre)]})
+        return ['musicdb://songs/?xsp=%s'%(dumpJSON(param))]
 
 
     def createGenreMixedPlaylist(self, genre):
@@ -104,6 +124,9 @@ class Predefined:
         return mixed
         
         
-    @staticmethod
-    def createSeasonal():
-        return [LANGUAGE(30174)]
+    def createSeasonal(self):
+        return ["{Seasonal}"]
+        
+        
+    def createProvisional(self, value):
+        return ["{%s}"%(value)]

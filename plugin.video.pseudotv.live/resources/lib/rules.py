@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -17,107 +17,106 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from resources.lib.globals     import *
-from resources.lib.cache       import Cache
+from globals     import *
 
 # ''''rules applied numerically by myID#. FileList manipulation must have a higher myID than applying settings.'''
-class ChannelList:
-    cache = Cache()
+# class ChannelList:
+    # cache = Cache()
     
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def _loadChannels(self):
-        with xbmcvfs.File(CHANNELFLEPATH, 'rb') as f:
-            return loadJSON(f.read()).get('channels',[])
+    # @cacheit(checksum=getInstanceID(),json_data=True)
+    # def _loadChannels(self):
+        # with xbmcvfs.File(CHANNELFLEPATH, 'rb') as f:
+            # return loadJSON(f.read()).get('channels',[])
     
     
-    def getChannel(self, id):
-        self.log('getChannel, id = %s'%(id))
-        channels = self._loadChannels()
-        return list(filter(lambda c:c.get('id') == id, channels))
+    # def getChannel(self, id):
+        # self.log('getChannel, id = %s'%(id))
+        # channels = self._loadChannels()
+        # return list(filter(lambda c:c.get('id') == id, channels))
         
     
-    def getChannelRules(self, id):
-        self.log('getChannelRules, id = %s'%(id))
-        return self.getChannel()[0].get('rules',[])
+    # def getChannelRules(self, id):
+        # self.log('getChannelRules, id = %s'%(id))
+        # return self.getChannel()[0].get('rules',[])
         
         
 class RulesList:
     def __init__(self):  
         self.log('__init__')
-        self.channels = ChannelList()
-        self.ruleList = [BaseRule(),
-                         ShowChannelBug(),
-                         ShowOnNext(),
-                         ShowStaticOverlay(),
-                         DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),seekControl()]
+        # self.channels = ChannelList()
+        # self.ruleList = [BaseRule(),
+                         # ShowChannelBug(),
+                         # ShowOnNext(),
+                         # ShowStaticOverlay(),
+                         # DisableOverlay()]#SetScreenOverlay(),HandleMethodOrder(),HandleFilter(),seekControl()]
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
-    def buildRuleList(self, channels=[]): #load all rules instances and apply their per channel settings.
-        ruleList = {}
-        tmpruleList = self.ruleList.copy() #base rule instances
-        tmpruleList.pop(0) #remove BaseRule()
-        for channel in channels:
-            chid = channel.get('id','')
-            if not chid: 
-                continue
-            ruleList[chid] = []
-            chrules = channel.get('rules',[])
-            for rule in tmpruleList:
-                ruleInstance = rule.copy()
-                for chrule in chrules:
-                    if   chrule.get('id',0) == 0: continue #ignore template if exists
-                    elif ruleInstance.myId == chrule['id']:#match rule instance by id
-                        options = chrule.get('options',[])
-                        for key in options.keys():
-                            ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
-                            ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
-                        break
-                ruleList[chid].append(ruleInstance)
-        self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
-        return ruleList
+    # def buildRuleList(self, channels=[]): #load all rules instances and apply their per channel settings.
+        # ruleList = {}
+        # tmpruleList = self.ruleList.copy() #base rule instances
+        # tmpruleList.pop(0) #remove BaseRule()
+        # for channel in channels:
+            # chid = channel.get('id','')
+            # if not chid: 
+                # continue
+            # ruleList[chid] = []
+            # chrules = channel.get('rules',[])
+            # for rule in tmpruleList:
+                # ruleInstance = rule.copy()
+                # for chrule in chrules:
+                    # if   chrule.get('id',0) == 0: continue #ignore template if exists
+                    # elif ruleInstance.myId == chrule['id']:#match rule instance by id
+                        # options = chrule.get('options',[])
+                        # for key in options.keys():
+                            # ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
+                            # ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
+                        # break
+                # ruleList[chid].append(ruleInstance)
+        # self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
+        # return ruleList
         
         
-    def _loadRule(self, data):
-        channel,tmpruleList = data
-        ruleList = {}
-        chid     = channel.get('id','')
-        chrules  = channel.get('rules',[])
-        if not chid: return None
-        for chrule in chrules:
-            if chrule.get('id',0) == 0: return None #ignore template if exists
-            for rule in tmpruleList:
-                if rule.myId == chrule['id']:
-                    ruleInstance = rule.copy()
-                    options = chrule.get('options',{})
-                    for key in options.keys():
-                        ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
-                        ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
-                    ruleList.setdefault(chid,[]).append(ruleInstance)
-        return ruleList
+    # def _loadRule(self, data):
+        # channel,tmpruleList = data
+        # ruleList = {}
+        # chid     = channel.get('id','')
+        # chrules  = channel.get('rules',[])
+        # if not chid: return None
+        # for chrule in chrules:
+            # if chrule.get('id',0) == 0: return None #ignore template if exists
+            # for rule in tmpruleList:
+                # if rule.myId == chrule['id']:
+                    # ruleInstance = rule.copy()
+                    # options = chrule.get('options',{})
+                    # for key in options.keys():
+                        # ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
+                        # ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
+                    # ruleList.setdefault(chid,[]).append(ruleInstance)
+        # return ruleList
            
         
-    def loadRules(self, channels=[]): #load channel rules and their instances.
-        self.log('loadRules, channels = %s'%(channels))
-        tmpruleList = self.ruleList.copy()
-        tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = poolit(self._loadRule)(channels,tmpruleList)
-        return ruleList
+    # def loadRules(self, channels=[]): #load channel rules and their instances.
+        # self.log('loadRules, channels = %s'%(channels))
+        # tmpruleList = self.ruleList.copy()
+        # tmpruleList.pop(0) #remove boilerplate baseRule()
+        # ruleList = poolit(self._loadRule)(channels,tmpruleList)
+        # return ruleList
         
         
     def runActions(self, action, citem, parameter=None, inherited=None):
-        if not citem.get('id',''): return parameter
-        if inherited is None: inherited = self
-        self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
-        try:    ruleList = self.loadRules([citem])[0].get(citem['id'],[])
-        except: ruleList = []
-        for rule in ruleList:
-            if action in rule.actions:
-                self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
-                return rule.runAction(action, inherited, parameter)
+        # if not citem.get('id',''): return parameter
+        # if inherited is None: inherited = self
+        # self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
+        # try:    ruleList = self.loadRules([citem])[0].get(citem['id'],[])
+        # except: ruleList = []
+        # for rule in ruleList:
+            # if action in rule.actions:
+                # self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
+                # return rule.runAction(action, inherited, parameter)
         return parameter
 
 
@@ -554,7 +553,7 @@ class seekControl(BaseRule):
         self.name             = "Seek Control, Threshold & Tolerance"
         self.description      = ''
         self.optionLabels     = ['Disable Seeking','Threshold Percentage','Tolerance Seconds']
-        self.optionValues     = [False,SETTINGS.getSettingInt('Seek_Threshold%'),SETTINGS.getSettingInt('Seek_Tolerance')]
+        self.optionValues     = [False,SETTINGS.getSettingInt('Seek_Threshold'),SETTINGS.getSettingInt('Seek_Tolerance')]
         self.actions          = [RULES_ACTION_PLAYBACK]
         self.selectBoxOptions = [[True,False],list(range(85,101)),list(range(0,901,5))]
         
@@ -605,7 +604,7 @@ class HandleMethodOrder(BaseRule):
         self.name             = "Limits & Sort Methods"
         self.description      = ""
         self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
-        self.optionValues     = [PAGE_LIMIT, 'random','ascending',False]
+        self.optionValues     = [int((REAL_SETTINGS.getSetting('Page_Limit') or "25")), 'random','ascending',False]
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.jsonRPC.getENUM(JSON_METHOD), self.jsonRPC.getENUM(JSON_ORDER), [True, False]]
         self.storedValues     = []
@@ -630,7 +629,7 @@ class HandleMethodOrder(BaseRule):
     def runAction(self, actionid, builder, channeldata):
         if actionid == RULES_ACTION_CHANNEL_START:
             self.storedValues[0] = builder.limit
-            self.storedValues[1] = builder.sort #"sort": {"order": "ascending", "ignorefolders": "false", "method": "random"}
+            self.storedValues[1] = builder.sort #"sort": {"order":"ascending","method":"random","ignorefolders":false,"ignorearticle":true,"useartistsortname":true}}
             builder.limit = self.optionValues[0]
             builder.sort  = {"method": self.optionValues[0].lower(), "order": self.optionValues[1].lower(), "ignorefolders": int(self.optionValues[2] == True)}
         elif actionid == RULES_ACTION_CHANNEL_STOP:

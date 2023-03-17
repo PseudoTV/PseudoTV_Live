@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -18,401 +18,421 @@
 
 # -*- coding: utf-8 -*-
 
-from resources.lib.globals     import *
-from resources.lib.predefined  import Predefined 
+from globals    import *
+from jsonrpc    import JSONRPC
+from predefined import Predefined
+from resources  import Resources
+from channels   import Channels
 
-REG_KEY = 'PseudoTV_Recommended.%s'
+#constants
+REG_KEY    = 'PseudoTV_Recommended.%s'
 
-class Library:
-    def __init__(self, writer=None):
-        if writer is None:
-            from resources.lib.parser import Writer
-            writer = Writer()
-        else: self.chkLibraryTimer(wait=-1)
+TYPE_TEMP  = {"enabled": False,
+			  "type"   : "",
+			  "name"   : "",
+			  "logo"   : "",
+			  "path"   : []}
             
-        self.writer      = writer
-        self.cache       = writer.cache
-        self.channels    = writer.channels
-        self.predefined  = Predefined()
-        self.recommended = Recommended(library=self)
-
+IMPORT_TEMP = {"enabled": False,
+			   "type"   : "",
+			   "name"   : "",
+			   "logo"   : "",
+			   "item"   : {"id"   : "",
+				           "type" : "",
+                           "name" : "",
+				           "icon" : "",
+				           "m3u"  : {"path": "",
+					                 "slug": ""},
+				           "xmltv": {"path": ""}}}
+    
+class Library:
+    def __init__(self):
+        self.cache      = Cache()
+        self.jsonRPC    = JSONRPC()
+        self.predefined = Predefined()
+        self.channels   = Channels()
+        self.resources  = Resources(self.jsonRPC,self.cache)
+        
+        self.libraryDATA = getJSON(LIBRARYFLE_DEFAULT)
+        self.libraryDATA.update(self._load())
+        
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-
-    def _withdraw(self):
-        self.log('_withdraw')
-        return self.writer.vault.get_libraryItems()
-     
- 
-    def _deposit(self):
-        self.log('_deposit')
-        self.writer.vault.set_libraryItems(self.writer.vault.libraryItems)
-        return True
-        
     
-    def _clear(self):
-        self.log('_clear')
-        self.writer.vault.libraryItems = None
-        return self._deposit()
-        
-        
+    def _load(self):
+        return getJSON(LIBRARYFLEPATH)
+    
+    
     def _save(self):
-        filePath = LIBRARYFLEPATH
-        self.log('_save, saving to %s'%(filePath))
-        with fileLocker(self.writer.globalFileLock):
-            fle = FileAccess.open(filePath, 'w')
-            fle.write(dumpJSON(self.writer.vault.libraryItems, idnt=4, sortkey=False))
-            fle.close()
-        return self._deposit()
-        
-
-    @cacheit()
-    def getNetworks(self):
-        return self.writer.jsonRPC.getTVInfo().get('studios',[])
+        return setJSON(LIBRARYFLEPATH,self.libraryDATA)
         
         
-    @cacheit()
-    def getTVGenres(self):
-        return self.writer.jsonRPC.getTVInfo().get('genres',[])
- 
- 
-    @cacheit(expiration=datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days')))
-    def getTVShows(self):
-        return self.writer.jsonRPC.getTVInfo().get('shows',[])
- 
- 
-    @cacheit()
-    def getMovieStudios(self):
-        return self.writer.jsonRPC.getMovieInfo().get('studios',[])
+    def getLibrary(self, type):
+        self.log('getLibrary, type = %s'%(type))
+        return self.libraryDATA.get('library',{}).get(type,[])
         
         
-    @cacheit()
-    def getMovieGenres(self):
-        return self.writer.jsonRPC.getMovieInfo().get('genres',[])
-              
- 
-    @cacheit()
-    def getMusicGenres(self):
-        return self.writer.jsonRPC.getMusicInfo().get('genres',[])
- 
-         
-    def getMixedGenres(self):
-        return [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.lower() == movie.lower()]
-
-
-    def getMixed(self):
-        return [LANGUAGE(30078),#"Recently Added"
-                LANGUAGE(30141),#"Seasonal"
-                LANGUAGE(30079)]#"PVR Recordings"
-
-
-    def fillTypeItems(self, type):
-        funcs = {LANGUAGE(30002):self.getNetworks,
-                 LANGUAGE(30003):self.getTVShows,
-                 LANGUAGE(30004):self.getTVGenres,
-                 LANGUAGE(30005):self.getMovieGenres,
-                 LANGUAGE(30007):self.getMovieStudios,
-                 LANGUAGE(30006):self.getMixedGenres,
-                 LANGUAGE(30080):self.getMixed,
-                 LANGUAGE(30097):self.getMusicGenres,
-                 LANGUAGE(30026):self.recommended.fillRecommended,
-                 LANGUAGE(30033):self.recommended.fillImports}
-        return funcs[type]()
-
-            
-    def chkLibraryTimer(self, wait=LIBRARY_OFFSET):
-        if isBusy() or wait == -1: wait = 30.0
-        else: 
-            with busy(): 
-                if not self.fillLibraryItems(): wait = 30.0
-        timerit(self.chkLibraryTimer)(wait)
-                    
-                
-    def fillLibraryItems(self):
-        self.log('fillLibraryItems')
-        ## parse kodi for items, convert to library item, update logo,vfs path. save to library.json
-        def fillType(type):
-            items      = self.fillTypeItems(type)
-            existing   = self.getLibraryItems(type)
-            enabled    = self.getEnabledItems(existing)
-            channels   = self.channels.getPredefinedChannelsByType(type)
-            cacheName  = 'fillType.%s'%(type)
-            cacheCHK   = '%s.%s.%s'%(getMD5(dumpJSON(items)),getMD5(dumpJSON(enabled)),getMD5(dumpJSON(channels)))
-            
-            if existing: msg = LANGUAGE(30328)
-            else:        msg = LANGUAGE(30159) 
-               
-            results = self.writer.cache.get(cacheName, checksum=cacheCHK, json_data=True)
-            if not results or not existing:
-                results  = []
-                if type == LANGUAGE(30003): #meta doesn't need active refresh, except for tv shows which may change more often than genres.
-                    life = datetime.timedelta(hours=REAL_SETTINGS.getSettingInt('Max_Days'))
-                else:
-                    life = datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))
-                    
-                self.log('fillType, type = %s, items = %s, existing = %s, enabled = %s'%(type, len(items),len(existing),len(enabled)))
-                pDialog = self.writer.dialog.progressBGDialog(header='%s, %s'%(ADDON_NAME,LANGUAGE(30332)))
-                for idx, item in enumerate(items):
-                    if self.writer.monitor.waitForAbort(0.001) or self.writer.monitor.isSettingsOpened() or isClient(): 
-                        self.log('fillLibraryItems, interrupted')
-                        return self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
-                        
-                    pCount  = int((CHAN_TYPES.index(type)*100)//len(CHAN_TYPES))
-                    pDialog = self.writer.dialog.progressBGDialog(pCount, pDialog, message='%s: %s'%(type,int(((idx+1)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,msg))
-                    
-                    name = item
-                    if isinstance(item,dict):
-                        name = (item.get('name','') or item.get('label',''))
-                    if not name: continue
-                        
-                    #enabled library item (same as existing, except only "enabled":True items).
-                    try:    enabled_item = list(filter(lambda k:k['name'] == name, enabled))[0]
-                    except: enabled_item = {}
-
-                    #channel item (fallback). Use channels.json to restore missing enabled library items.
-                    try:    channel_item = list(filter(lambda k:k['name'] == name, channels))[0]
-                    except: channel_item = {}
-                        
-                    if not enabled_item and channel_item:
-                        enabled_item = channel_item
-                         
-                    if isinstance(item,dict):
-                        if type in [LANGUAGE(30026),LANGUAGE(30033)]: 
-                            logo = item.get('icon','')
-                        else: 
-                            logo = self.writer.jsonRPC.resources.getLogo(name, type, item.get('file',''), item)
-                    else: 
-                        logo = self.writer.jsonRPC.resources.getLogo(name, type, item=enabled_item)
-
-                    tmpItem = {'enabled':len(enabled_item) > 0,
-                               'name':name,
-                               'type':type,
-                               'logo':logo}
-                               
-                    if    type == LANGUAGE(30026): tmpItem['path'] = item['path'] #Recommended
-                    elif  type == LANGUAGE(30033): tmpItem['item'] = item
-                    else: tmpItem['path'] = self.predefined.pathTypes[type](name) #Predefined
-                    results.append(tmpItem) 
-                    
-                if results: #only cache found items.
-                    self.setLibraryItems(type,results)
-                    self.writer.cache.set(cacheName, results, checksum=cacheCHK, expiration=life, json_data=True)
-                self.writer.dialog.progressBGDialog(100, pDialog, message=LANGUAGE(30053))
-                    
-            if not PROPERTIES.getPropertyBool('has.Predefined'): 
-                PROPERTIES.setPropertyBool('has.Predefined',(len(results) > 0))
-            PROPERTIES.setPropertyBool('has.%s'%(type.replace(' ','_')),(len(results) > 0))
-           
-        if not isClient():
-            for type in CHAN_TYPES: 
-                fillType(type)
-            setLibraryRun(True)
-            return self.writer.buildPredefinedChannels()
-        
-
-    def setLibraryItems(self, type, items):
-        self.log('setLibraryItems, type = %s, items = %s'%(type,len(items)))
-        self.writer.vault.libraryItems.get('library',{})[type] = sorted(items, key=lambda k:k['name'])
-        SETTINGS.setSetting('Select_%s'%(type.replace(' ','_')),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabledItems(items)),len(items)))
+    def setLibrary(self, type, data=[]):
+        self.libraryDATA['library'][type] = data
+        SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(data)))
         return self._save()
 
 
-    def getLibraryItems(self, type, enabled=False):
-        self.log('getLibraryItems, type = %s, enabled = %s'%(type,enabled))
-        items = self.writer.vault.libraryItems.get('library',{}).get(type,[])
-        if enabled: return self.getEnabledItems(items)
-        return sorted(items, key=lambda k: k['name'])
-        
-        
-    def getEnabledItems(self, items):
-        if not items: return []
-        self.log('getEnabledItems, items = %s'%(len(items)))
-        def chkEnabled(item):
-            if item.get('enabled',False): 
-                return item
-            else:
-                return None
-                
-        return sorted(poolit(chkEnabled)(items), key=lambda k: k['name'])
-        
-        
-    def buildLibraryListitem(self, data):
-        if isinstance(data,tuple): data = list(data)
-        return self.writer.dialog.buildMenuListItem(data[0]['name'],data[1],iconImage=data[0]['logo'])
+    def getEnabled(self, type):
+        return [item for item in self.getLibrary(type) if item.get('enabled',False)]
 
-
-    def setEnableStates(self, type, selects, items=None):
-        if items is None: items = self.getLibraryItems(type)
-        self.log('setEnableStates, type = %s, items = %s, selects = %s'%(type, len(items), selects))
-        for idx, item in enumerate(items):
-            if idx in selects: item['enabled'] = True
-            else:              item['enabled'] = False
-        return self.setLibraryItems(type,items)
-
-        
-    def clearLibraryItems(self, type=None):
-        self.log('clearLibraryItems, type = %s'%(type))
-        def setDisabled(item):
-            item['enabled'] = False
-            return item
-            
-        if type is None: types = CHAN_TYPES
-        else:            types = [type]
-        for type in types:
-            self.setLibraryItems(type,(poolit(setDisabled)(self.getLibraryItems(type))))
-        return True
-        
-
-class Recommended:
-    def __init__(self, library):
-        self.library = library
-        self.cache   = library.cache
-        self.chkRecommendedTimer()
-            
-            
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
     
+    @timeit
+    def fillItems(self):
+        dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+        for idx, type in enumerate(AUTOTUNE_TYPES):
+            with busyLocker():
+                dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+                yield (type,self.fillItem(type))
+                
+                
+    def fillItem(self, type):
+        funcs = {"TV Networks"  :self.getNetworks,
+                 "TV Shows"     :self.getTVShows,
+                 "TV Genres"    :self.getTVGenres,
+                 "Movie Genres" :self.getMovieGenres,
+                 "Movie Studios":self.getMovieStudios,
+                 "Mixed Genres" :self.getMixedGenres,
+                 "Playlists"    :self.getPlaylists,
+                 "Mixed"        :self.getMixed,
+                 "Recommended"  :self.getRecommend,
+                 "Services"     :self.getServices,
+                 "Music Genres" :self.getMusicGenres}
+        try: return funcs[type]()
+        except Exception as e: 
+            self.log('fillItem failed! %s'%(e))
+            return []
+        
+        
+    @timeit
+    def updateLibrary(self):
+        self.log('updateLibrary')
+        def _updateItem(item):
+            entry = TYPE_TEMP.copy()
+            entry.update(item)
+            #check existing library for enabled items
+            for item in enabledItems:
+                if entry.get('name').lower() == item.get('name').lower():
+                    entry['enabled'] = True
+            #check existing channels for enabled items
+            for channel in channels:
+                if entry.get('name').lower() == channel.get('name').lower():
+                    entry['enabled'] = True
+            return entry
+            
+        libraryItems = dict(self.fillItems())
+        dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
+        for idx,type in enumerate(AUTOTUNE_TYPES):
+            dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
+            if MONITOR.waitForAbort(0.001): 
+                self.log('updateLibrary, interrupted')
+                DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
+                break
 
-    def getRecommendedItems(self):
-        return self.library.writer.vault.libraryItems.get('recommended',{})
+            items = libraryItems.get(type,[])
+            enabledItems = self.getEnabled(type)
+            channels = self.channels.getType(type)
+            PROPERTIES.setProperty('has.%s'%(slugify(type)),len(items)>0)
+            self.setLibrary(type, [_updateItem(item) for item in items])
+        DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
+
+
+    @cacheit(json_data=True)
+    def getNetworks(self):
+        return self.getTVInfo().get('studios',[])
+        
+        
+    @cacheit(json_data=True)
+    def getTVGenres(self):
+        return self.getTVInfo().get('genres',[])
+ 
+ 
+    @cacheit(expiration=datetime.timedelta(hours=int(REAL_SETTINGS.getSetting('Max_Days'))),json_data=True)
+    def getTVShows(self):
+        return self.getTVInfo().get('shows',[])
+        
+        
+    @cacheit(json_data=True)
+    def getMovieStudios(self):
+        return self.getMovieInfo().get('studios',[])
+        
+        
+    @cacheit(json_data=True)
+    def getMovieGenres(self):
+        return self.getMovieInfo().get('genres',[])
+              
+ 
+    @cacheit(json_data=True)
+    def getMusicGenres(self):
+        return self.getMusicInfo().get('genres',[])
+ 
+         
+    @cacheit(json_data=True)
+    def getMixedGenres(self):
+        MixedGenreList = [{'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createProvisional(tv.get('name')),'logo':tv.get('logo')}
+        for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]
+        self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
+        return sorted(MixedGenreList,key=lambda x:x['name'])
+
+
+    @cacheit(json_data=True)
+    def getMixed(self):
+        def hasRecordings():
+            return len(self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/')[1]) > 0 #todo add infobool to Kodi core.
+               
+        MixedList = []
+        if hasTV() or hasMovie():
+            MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
+            MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed")}) #"Seasonal"
+        
+        if hasRecordings():
+            MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
+        
+        self.log('getMixed, mixed = %s' % (len(MixedList)))
+        return sorted(MixedList,key=lambda x:x['name'])
+    
+    
+    def getPlaylists(self):
+        PlayList = []
+        for type in ['video','mixed','music']:
+            results = self.jsonRPC.getDirectory(param={"directory":"special://profile/playlists/%s"%(type)})
+            for result in results.get('files',[]):
+                name = result.get('label')
+                if not name: continue
+                logo = result.get('thumbnail')
+                if not logo: logo = self.resources.getLogo(name,"Playlists")
+                PlayList.append({'name':name,'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
+        self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
+        PlayList = sorted(PlayList,key=lambda x:x['name'])
+        PlayList = sorted(PlayList,key=lambda x:x['type'])
+        return PlayList
+
+
+    def getTVInfo(self, sortbycount=True):
+        self.log('getTVInfo')
+        if hasTV():
+            NetworkList   = Counter()
+            ShowGenreList = Counter()
+            TVShows       = Counter()
+            json_response = self.jsonRPC.getTVshows()
+            
+            for info in json_response:
+                if MONITOR.waitForAbort(0.001):
+                    self.log('getTVInfo, interrupted')
+                    return {}
+                    
+                if not info.get('label'): continue
+                TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createProvisional(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
+                NetworkList.update([studio for studio in info.get('studio', [])])
+                ShowGenreList.update([genre for genre in info.get('genre', [])])
+
+            if sortbycount:
+                TVShows = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
+                NetworkList = [x[0] for x in sorted(NetworkList.most_common(50))]
+                ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
+            else:
+                TVShows = (sorted(map(json.loads, TVShows.keys()), key=lambda k: k['name']))
+                del TVShows[250:]
+                NetworkList = (sorted(set(list(NetworkList.keys()))))
+                del NetworkList[250:]
+                ShowGenreList = (sorted(set(list(ShowGenreList.keys()))))
+                
+            #search resources for studio/genre logos
+            NetworkList   = [{'name':network, 'type':"TV Networks", 'path': self.predefined.createProvisional(network),'logo':self.resources.getLogo(network,"TV Networks")} for network in NetworkList]
+            ShowGenreList = [{'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createProvisional(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres")}   for tvgenre in ShowGenreList]
+            
+        else: NetworkList = ShowGenreList = TVShows = []
+        self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShows)))
+        return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShows}
+
+
+    def getMovieInfo(self, sortbycount=True):
+        self.log('getMovieInfo')
+        if hasMovie():        
+            StudioList     = Counter()
+            MovieGenreList = Counter()
+            json_response  = self.jsonRPC.getMovies()
+
+            for info in json_response:
+                if MONITOR.waitForAbort(0.001):
+                    self.log('getMovieInfo, interrupted')
+                    return {}
+                    
+                StudioList.update([studio for studio in info.get('studio', [])])
+                MovieGenreList.update([genre for genre in info.get('genre', [])])
+
+            if sortbycount:
+                StudioList = [x[0] for x in sorted(StudioList.most_common(25))]
+                MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
+            else:
+                StudioList = (sorted(set(list(StudioList.keys()))))
+                del StudioList[250:]
+                MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
+                
+            #search resources for studio/genre logos
+            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createProvisional(studio) ,'logo':self.resources.getLogo(studio,"Movie Studios")} for studio in StudioList]
+            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createProvisional(genre)  ,'logo':self.resources.getLogo(genre ,"Movie Genres")} for genre in MovieGenreList]
+            
+        else: StudioList = MovieGenreList = []
+        self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
+        return {'studios':StudioList,'genres':MovieGenreList}
+        
+        
+    def getMusicInfo(self, sortbycount=True):
+        self.log('getMusicInfo')
+        if hasMusic():
+            MusicGenreList = Counter()
+            json_response  = self.jsonRPC.getMusicGenres()
+            
+            for info in json_response:
+                if MONITOR.waitForAbort(0.001):
+                    self.log('getMusicInfo, interrupted')
+                    return {}
+                    
+                MusicGenreList.update([genre for genre in info.get('label','').split(';')])
+            
+            if sortbycount:
+                MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(50))]
+            else:
+                MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
+                del MusicGenreList[250:]
+                MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
+
+            #search resources for studio/genre logos
+            MusicGenreList = [{'name':genre, 'type':"Music Genres", 'path': self.predefined.createMusicGenrePlaylist(genre),'logo':self.resources.getLogo(genre,"Music Genres")} for genre in MusicGenreList]
+
+        else: MusicGenreList = []
+        self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))
+        return {'genres':MusicGenreList}
+        
+        
+    def getRecommend(self):
+        self.log('getRecommend')
+        PluginList = []
+        WhiteList  = self.getWhiteList()
+        AddonsList = self.searchRecommended()
+        for addonid, item in AddonsList.items():
+            if addonid not in WhiteList: continue
+            items = item.get('data',{}).get('vod',[])
+            items.extend(item.get('data',{}).get('live',[]))
+            for vod in items:
+                path = vod.get('path')
+                if not isinstance(path,list): path = [path]
+                PluginList.append({'id':item['meta'].get('name'), 'name':vod.get('name'), 'type':"Recommended", 'path': path, 'logo':vod.get('icon',item['meta'].get('thumbnail'))})
+        self.log('getRecommend, found (%s) vod items.' % (len(PluginList)))
+        PluginList = sorted(PluginList,key=lambda x:x['name'])
+        PluginList = sorted(PluginList,key=lambda x:x['id'])
+        return PluginList
+            
+
+    def getRecommendInfo(self, addonid):
+        self.log('getRecommendInfo, addonid = %s'%(addonid))
+        return self.searchRecommended().get(addonid,{})
+        
+
+    def searchRecommended(self):
+        def _search(addonid):
+            cacheName = 'searchRecommended.%s'%(getMD5(addonid))
+            addonMeta = self.jsonRPC.getAddonDetails(addonid)
+            payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
+            if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
+                payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
+            else:
+                payload = loadJSON(payload)
+                self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))), json_data=True)
+            
+            if payload:
+                self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))
+                return addonid,{"data":payload,"meta":addonMeta}
+                
+        if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
+        addonList = list(set(filter(None,[addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in self.getBlackList(), self.jsonRPC.getAddons()))])))
+        return dict(filter(None,[_search(addonid) for addonid in addonList]))
+        # return dict(poolit(_search)(addonList))
+
+
+    def getServices(self):
+        self.log('getServices')
+        return []
 
 
     def getWhiteList(self):
         #whitelist - prompt shown, added to import list and/or manager dropdown.
-        return list(set(self.getRecommendedItems().get('whitelist',[])))
+        return self.libraryDATA.get('whitelist',[])
+        
+        
+    def setWhiteList(self, data=[]):
+        self.libraryDATA['whitelist'] = list(set(data))
+        return self._save()
         
         
     def getBlackList(self):
         #blacklist - plugin ignored for the life of the list.
-        return list(set(self.getRecommendedItems().get('blacklist',[])))
+        return self.libraryDATA.get('blacklist',[])
     
-    
+        
+    def setBlackList(self, data=[]):
+        self.libraryDATA['blacklist'] = list(set(data))
+        return self._save()
+        
+        
     def addWhiteList(self, addonid):
         self.log('addWhiteList, addonid = %s'%(addonid))
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
-        self.library.writer.vault.libraryItems.get('recommended',{})['whitelist'] = list(set(whiteList))
+        whiteList = list(set(whiteList))
         if len(whiteList) > 0: 
             PROPERTIES.setPropertyBool('has.WhiteList',len(whiteList) > 0)
-        return True
+        return self.setWhiteList(whiteList)
         
 
     def addBlackList(self, addonid):
         self.log('addBlackList, addonid = %s'%(addonid))
         blackList = self.getBlackList()
         blackList.append(addonid)
-        self.library.writer.vault.libraryItems.get('recommended',{})['blacklist'] = list(set(blackList))
-        self.setBlackList(self.library.writer.vault.libraryItems.get('recommended',{})['blacklist'])
-        return True
+        blackList = list(set(blackList))
+        return self.setBlackList(blackList)
 
 
     def clearBlackList(self):
-        self.library.writer.vault.libraryItems.get('recommended',{})['blacklist'] = []
-        if self.library.save(): self.setBlackList(self.getBlackList())
-        return True
-        
-        
-    def chkRecommendedTimer(self, wait=RECOMMENDED_OFFSET): 
-        if isBusy(): wait = 15.0
-        else: 
-            with busy(): 
-                self.importPrompt()
-        timerit(self.chkRecommendedTimer)(wait)
-                    
-      
-    def searchRecommendedAddons(self):
-        if not SETTINGS.getSettingBool('Enable_Recommended'): return []
-        blackList = self.getBlackList()
-        addonList = [addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in blackList, self.library.writer.jsonRPC.getAddons()))]
-        return poolit(self.searchRecommendedAddon)(addonList)
-        
-        
-    def searchRecommendedAddon(self, addonid):
-        addonData = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
-        if addonData:
-            self.log('searchRecommendedAddon, found addonid = %s, payload = %s'%(addonid,addonData))
-            return {addonid:{"id":addonid,"data":loadJSON(addonData),"meta":self.library.writer.jsonRPC.getPluginMeta(addonid)}}
-        
+        return self.setBlackList()
 
-    def findbyType(self, type='iptv'):
-        self.log('findbyType, type = %s'%(type))
-        whiteList = self.getWhiteList()
-        recommendedAddons = self.searchRecommendedAddons()
-        return sorted([item[addonid]['data'][type] for addonid in whiteList for item in recommendedAddons if item.get(addonid,{}).get('data',{}).get(type,[])],key=lambda x:x['name'])
-
-
-    def fillImports(self):
-        items = self.findbyType(type='iptv')
-        self.log('fillImports, found = %s'%(len(items)))
-        return items
-
-
-    def fillRecommended(self):
-        tmpLST = []
-        whiteList = self.getWhiteList()
-        recommendedAddons = self.searchRecommendedAddons()
-        items = sorted((item.get(addonid) for item in recommendedAddons for addonid in whiteList if item.get(addonid,{})),key=lambda x:x['id'])
-        [tmpLST.extend(item['data'][key]) for item in items for key in item['data'].keys() if key != 'iptv']
-        tmpLST = sorted(tmpLST,key=lambda x:x.get('name'))
-        tmpLST = sorted(tmpLST,key=lambda x:x['id'])
-        self.log('fillRecommended, found = %s'%(len(tmpLST)))
-        return tmpLST
-
-
-    def importSingles(self, recommendedAddons):
-        ignoreList = self.getWhiteList()
-        ignoreList.extend(self.getBlackList())
-        for item in recommendedAddons:
-            addon = list(item.keys())[0]
-            self.log('importSingles, adding %s'%(addon))
-            if not addon in ignoreList:
-                if not self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,item[addon]['meta'].get('name',''))), autoclose=90000):  
-                    self.addBlackList(addon)
-                else:
-                    self.addWhiteList(addon)
-        return True
-        
-
-    def importMulti(self, recommendedAddons):
-        addons     = []
-        ignoreList = self.getWhiteList()
-        ignoreList.extend(self.getBlackList())
-        for item in recommendedAddons: 
-            addon = list(item.keys())[0]
-            if not addon in ignoreList: 
-                addons.append(item[addon]['meta'].get('name',''))
-        
-        if len(addons) > 0:
-            retval = self.library.writer.dialog.yesnoDialog('%s'%(LANGUAGE(30147)%(ADDON_NAME,', '.join(addons))), customlabel=LANGUAGE(30214), autoclose=90000)
-            self.log('importMulti, retval = %s'%(retval))
-            if   retval == 1: return self.importSingles(recommendedAddons)
-            elif retval == 2: 
-                for item in recommendedAddons:
-                    addon = list(item.keys())[0]
-                    self.log('importMulti, adding %s'%(addon))
-                    self.addWhiteList(addon)
-                return True
-            else:
-                return False
-
-
+               
     def importPrompt(self):
         if isClient(): return
-        recommendedAddons = self.searchRecommendedAddons()
-        self.log('importPrompt, recommendedAddons = %s'%(len(recommendedAddons)))
-        if len(recommendedAddons) > 1: 
-            changed = self.importMulti(recommendedAddons)
-        else: 
-            changed = self.importSingles(recommendedAddons)
-            
+        addonList = self.searchRecommended()
+        ignoreList = self.getWhiteList()
+        ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
+        addonNames = list(set(filter(None,[item.get('meta',{}).get('name') for addonid, item in addonList.items() if not addonid in ignoreList])))
+        self.log('importPrompt, addonNames = %s'%(len(addonNames)))
+        
+        try:
+            if len(addonNames) > 1:
+                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90000)
+                self.log('importPrompt, prompt retval = %s'%(retval))
+                if   retval == 1: raise Exception('Single Entry')
+                elif retval == 2: 
+                    for addonid, item in addonList.items():
+                        if item.get('meta',{}).get('name') in addonNames:
+                            self.addWhiteList(addonid)
+            else: raise Exception('Single Entry')
+        except Exception as e:
+            self.log('importPrompt, %s'%(e))
+            for addonid, item in addonList.items():
+                if item.get('meta',{}).get('name') in addonNames:
+                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90000):
+                        self.addBlackList(addonid)
+                    else:
+                        self.addWhiteList(addonid)
+                
         PROPERTIES.setPropertyBool('has.WhiteList',len(self.getWhiteList()) > 0)
         PROPERTIES.setPropertyBool('has.BlackList',len(self.getBlackList()) > 0)
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         
-        if changed: 
-            self.library._save()
-            self.library.chkLibraryTimer()
-        return changed

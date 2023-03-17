@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<window>
+    <backgroundcolor>0x00000000</backgroundcolor>
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,True,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,False,10000)</onunload> 
+    <controls>
+        <control type="group" id="40000">
+            <posx>0</posx>
+            <posy>0</posy>
+            <control type="image"> 
+                <description>Hide Background</description>
+                <width>auto</width>
+                <height>auto</height>
+                <colordiffuse>black</colordiffuse>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <texture>colors/white.png</texture>
+                <visible>!Player.Playing</visible>
+            </control>
+            <control type="videowindow">
+                <width>auto</width>
+                <height>auto</height>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <visible>Player.Playing</visible>
+            </control>
+            <control type="image" id="40001">
+                <description>Background Ratio</description>
+                <width>auto</width>
+                <height>auto</height>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
+                <texture>backgrounds/ratio.png</texture>
+            </control>
+        </control>
+        <control type="image">
+            <posx>105</posx>
+            <posy>950</posy>
+            <width>auto</width> 
+            <height>50</height> 
+            <align>left</align>
+            <texture>buttons/dpad.png</texture>
+            <aspectratio scalediffuse="false">keep</aspectratio>
+            <animation effect="fade" start="100" end="0" time="15000" condition="True">Conditional</animation>
+        </control>
+        <control type="label">
+            <posx>105</posx>
+            <posy>1000</posy>
+            <align>left</align>
+            <width>auto</width>
+            <height>25</height>
+            <font>font10</font>
+            <textcolor>ffffffff</textcolor>
+            <shadowcolor>ff000000</shadowcolor>
+            <label>Move PseudoTV Logo...</label>
+            <animation effect="fade" start="100" end="0" time="15000" condition="True">Conditional</animation>
+        </control>
+    </controls>
+</window>

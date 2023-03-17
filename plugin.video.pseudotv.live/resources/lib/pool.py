@@ -1,37 +1,55 @@
-# Copyright (C) 2022 Lunatixz
-
+#   Copyright (C) 2022 Lunatixz
+#
+#
 # This file is part of PseudoTV Live.
-
+#
 # PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-
+#
 # -*- coding: utf-8 -*-
-import threading, sys, time, re, os, subprocess, traceback
+ 
+from globals            import *
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from threading          import Event, Thread, Timer, enumerate
+from itertools          import repeat, count
+from functools          import partial, wraps, reduce    
 
-from concurrent.futures        import ThreadPoolExecutor, ProcessPoolExecutor
-from threading                 import Event, Thread, Timer
-from kodi_six                  import xbmc, xbmcaddon
-from itertools                 import repeat, count
-from functools                 import partial, wraps
-from resources.lib.cache       import Cache, cacheit
+#info
+ADDON_ID            = 'plugin.video.pseudotv.live'
+REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
+ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
 
+#variables
+PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
+DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
 
-ADDON_ID      = 'plugin.video.pseudotv.live'
-REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-PAGE_LIMIT    = REAL_SETTINGS.getSettingInt('Page_Limit')
+def log(event, level=xbmc.LOGDEBUG):
+    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
+    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
+       
+def chunkLst(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+def roundupDIV(p, q):
+    try:
+        d, r = divmod(p, q)
+        if r: d += 1
+        return d
+    except ZeroDivisionError: 
+        return 1
         
 def timeit(method):
     @wraps(method)
@@ -39,7 +57,7 @@ def timeit(method):
         start_time = time.time()
         result     = method(*args, **kwargs)
         end_time   = time.time()
-        if REAL_SETTINGS.getSetting('Enable_Debugging') == "true":
+        if REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true':
             log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper
@@ -63,184 +81,123 @@ def killit(timeout=15.0, default={}):
                 log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
                 return default
             if timer.error:
-                log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),c.error))
+                log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),timer.error))
                 return default
             return timer.result
         return wrapper
     return internal
 
+
+def killJSON(method):
+    @wraps(method)
+    def wrapper(timeout, *args, **kwargs):
+        class waiter(Thread):
+            def __init__(self):
+                Thread.__init__(self)
+                self.result = None
+                self.error  = None
+            def run(self):
+                try:    self.result = method(*args, **kwargs)
+                except: self.error  = sys.exc_info()[0]
+        timer = waiter()
+        timer.start()
+        timer.join(timeout)
+        if timer.is_alive():
+            log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
+            return {'error':{'message':'JSONRPC timed out!'}}
+        if timer.error:
+            log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),timer.error))
+            return {'error':{'message':'JSONRPC timed out!'}}
+        return timer.result
+    return wrapper
+
+
 def poolit(method):
     @wraps(method)
-    def wrapper(items=[], args=None, kwargs=None):
+    def wrapper(items=[], *args, **kwargs):
         results  = []
         cpucount = Cores().CPUcount()
-        size = len(list(chunkLst(items,cpucount)))
         pool = Concurrent(cpucount)
-        if cpucount > 1: results = pool.executors(method, items, args, kwargs, chunksize=size)
-        if not results:  results = pool.generator(method, items, args, kwargs)
+        try:
+            if cpucount > 1 and len(items) > 1:
+                results = pool.executors(method, items, *args, **kwargs)
+            else: raise Exception('poolit, bypass executors for generator')
+        except Exception as e:
+            log('poolit, failed! %s'%(e))
+            results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
-        try:    return list(filter(None,results))
-        except: return list(results)
+        return list(filter(None,results))
     return wrapper
-         
+
+def threadit(method):
+    @wraps(method)
+    def wrapper(*args, **kwargs):
+        cpucount = Cores().CPUcount()
+        pool = Concurrent(roundupDIV(cpucount,2))
+        results = pool.executor(method, *args, **kwargs)
+        log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
+        return results
+    return wrapper
+
 def timerit(method):
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
-        for thread in threading.enumerate():
+        for thread in enumerate():
             if thread.name == thread_name:
                 try: 
                     thread.cancel()
                     thread.join()
                     log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
                 except: pass
-        timer = Timer(wait, method, *args, **kwargs)
-        timer.name = thread_name
-        timer.start()
+        threadTimer = Timer(wait, method, *args, **kwargs)
+        threadTimer.name = thread_name
+        threadTimer.start()
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
-        return timer
+        return threadTimer
     return wrapper  
-    
-def threadit(method):
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        thread_name = '%s.%s'%('threadit',method.__qualname__.replace('.',': '))
-        for thread in threading.enumerate():
-            if thread.name == thread_name:
-                try: 
-                    thread.cancel()
-                    thread.join()
-                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
-                except: pass
-        thread = Thread(target=method, *args, **kwargs)
-        thread.daemon = True
-        thread.name = thread_name
-        thread.start()
-        log('%s, starting %s'%(method.__qualname__.replace('.',': '),thread_name))
-        return thread
-    return wrapper
 
-def chunkLst(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
-        
-def log(msg, level=xbmc.LOGDEBUG):
-    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
-   
+
 class Concurrent:
     def __init__(self, cpuCount=None):
-        if cpuCount is None: cpuCount = Cores().CPUcount()
-        self.cpuCount = cpuCount
         # https://pythonhosted.org/futures/
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
+        if cpuCount is None: cpuCount = Cores().CPUcount()
+        self.cpuCount = cpuCount
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def executor(self, func, args=None, kwargs=None, call=None):
-        with ThreadPoolExecutor(self.cpuCount) as executor:
-            if   args:   future = executor.submit(func, args)
-            elif kwargs: future = executor.submit(func, kwargs)
-            else:        future = executor.submit(func)
-            if call: future.add_done_callback(call)
-            return future.result()
-            
-            
-    @timeit
-    def executors(self, func, items=[], args=None, kwargs=None, chunksize=None, timeout=300):
-        results = []
-        if chunksize is None: chunksize = len(list(chunkLst(items,self.cpuCount)))
-        if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
-        self.log("ThreadPoolExecutor executors, chunksize = %s, items = %s, threads = %s"%(chunksize,len(items),self.cpuCount))
-        
-        with ThreadPoolExecutor(self.cpuCount) as executor:
-            if kwargs and isinstance(kwargs,dict):
-                results = executor.map(partial(func, **kwargs), items, timeout, chunksize)
-            else:
-                if args: items = zip(items,repeat(args))
-                try:
-                    results = executor.map(func, items, timeout, chunksize)
-                except Exception as e:
-                    for item in items: results.append(self.executor(func, item))
-            return results
+    def executor(self, func, timeout=None, default=None, *args, **kwargs):
+        with ThreadPoolExecutor(roundupDIV(self.cpuCount,2)) as executor:
+            future = executor.submit(func, *args, **kwargs)
+            return future.result(timeout)
 
 
     @timeit
-    def generator(self, func, items=[], args=None, kwargs=None):
-        results = []
+    def executors(self, func, items=[], timeout=300, *args, **kwargs):
+        return [self.executor((partial(func, *args, **kwargs)), timeout, item) for item in items]
+
+
+    @timeit
+    def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
-        if kwargs and isinstance(kwargs,dict): 
-            results = [results.append(partial(method, **kwargs)(i)) for i in items]
-        elif args: 
-            results = [results.append(method(i)) for i in zip(items,repeat(args))]
-        return results
-
-
-class Parallel:
-    def __init__(self, cpuCount=None):
-        if cpuCount is None: cpuCount = Cores().CPUcount()
-        self.cpuCount = cpuCount
-        # https://pythonhosted.org/futures/
-        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
-        
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def executor(self, func, args=None, kwargs=None, call=None):
-        with ProcessPoolExecutor(self.cpuCount) as executor:
-            if   args:   future = executor.submit(func, args)
-            elif kwargs: future = executor.submit(func, kwargs)
-            else:        future = executor.submit(func)
-            if call: future.add_done_callback(call)
-            return future.result()
-            
-
-    @timeit
-    def executors(self, func, items=[], args=None, kwargs=None, chunksize=None, timeout=300):
-        results = []
-        if chunksize is None: chunksize = len(list(chunkLst(items,self.cpuCount)))
-        if len(items) == 0 or chunksize < 1: chunksize = 1 #set min. size
-        self.log("ProcessPoolExecutor executors, chunksize = %s, items = %s, cores = %s"%(chunksize,len(items),self.cpuCount))
-        
-        with ProcessPoolExecutor(self.cpuCount) as executor:
-            if kwargs and isinstance(kwargs,dict):
-                results = executor.map(partial(func, **kwargs), items, timeout, chunksize)
-            else:
-                if args: items = zip(items,repeat(args))
-                try:
-                    results = executor.map(func, items, timeout, chunksize)
-                except Exception as e:
-                    for item in items: results.append(self.executor(func, item))
-            return results
-
-
-    @timeit
-    def generator(self, func, items=[], args=None, kwargs=None):
-        results = []
-        self.log("generator, items = %s"%(len(items)))
-        if kwargs and isinstance(kwargs,dict): 
-            results = [results.append(partial(method, **kwargs)(i)) for i in items]
-        elif args: 
-            results = [results.append(method(i)) for i in zip(items,repeat(args))]
-        return results
+        return [partial(func, *args, **kwargs)(i) for i in items]
 
 
 class Cores:
     def __init__(self):
-        self.cache = Cache()
+        self.cache = Cache(mem_cache=True)
     
     
     @cacheit()
     def CPUcount(self):
         """ Number of available virtual or physical CPUs on this system, i.e.
         user/real as output by time(1) when called with an optimally scaling
-        userspace-only program"""
+        userspace-only program
+        """
         # cpuset
         # cpuset may restrict the number of *available* processors
         try:
@@ -314,7 +271,7 @@ class Cores:
                 dmesg = dmesgProcess.communicate()[0]
 
             res = 0
-            while not xbmc.Monitor().abortRequested() and '\ncpu%s:'%(res) in dmesg: res += 1
+            while not MONITOR.abortRequested() and '\ncpu%s:'%(res) in dmesg: res += 1
             if res > 0: return res
         except OSError: pass
         return 1

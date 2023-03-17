@@ -33,28 +33,29 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 ### License
 
 * [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
-* Copyright 2009-2021
+* Copyright 2009-2023
 
 
 ------------
 
 # Features:
-- Predefined Channels based on your Kodi library content; categorized by: 
+- "Autotuned" Channels based on your Kodi library; categorized by: `"TV Networks", "TV Shows", "TV Genres", "Movie Genres", "Movie Studios", "Mixed Genres", "Playlists", "Music Genres"`
 
+- Automatic Channel logos; sourced from Kodi resource packs.
 
-- Automatic Channel logos, sourced from Kodi resource packs.
-
-- Optional video overlay to display channel bug and other pending features.
+- Optional video overlay to display channel bug and other informative information.
 
 - IPTV-Simple VOD support. Watch any EPG event (Past/Present/Future) directly via "Play Programme" context menu option.
 
-- "Play from here" context menu  option queues channel as a playlist from any starting position.
+- "Play from here" context menu option; Queues channel content as a playlist from any starting position.
 
-- "More Info..." context menu option, displays detailed media information.
+- "More Info context menu option, displays detailed media information.
+
+- "Browse" context menu option, displays channel content through standard Kodi UI.
+
+- "Find" context menu option, searches Kodi Library for matching media.
 
 - Custom Channel grouping & genre colors.
-
-- Third-Party M3U/XMLTV Importing with channel number collision logic.
 
 - Efficient meta parsing & pagination.
 
@@ -64,25 +65,23 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 - "on the fly" channel creation, with automated background building.
 
-- Ease of use; User Interface provided by Kodis PVR frontend.
+- Ease of use; User Interface provided by Kodi PVR frontend.
 
 - Music Genre PVR "Radio" Channels.
 
 - Multi-Room channel configurations w/Automatic client detection.
 
-- "Auto Tuning" Automatic channel creation from "Pre-Defined" configurations.
-
 - Your choice of "Playback Methods". See post below for details.
 
 - Smart Seeking. See below for details.
 
-- "User-Defined" Channel Manager, create custom channels from any source available to Kodi. ie. Plugins, UPNP, Nodes, Smart playlists.
+- Channel Manager, create custom channels from any source available to Kodi. ie. Plugins, UPNP, Nodes, Smart playlists.
 
-- Seasonal Holiday Channel, See changelog above for details.
+- Seasonal Holiday Channel, See changelog for details.
 
 - "Recommended Channels" & "Recommended Services" Plugins preconfigured for easy import into PseudoTV Live.
 
-- Many more...
+- Much more...
 
 ------------
 
@@ -136,33 +135,12 @@ Adjusting seek threshold(percentage). threshold to which the current content can
 
 ## Save Accurate Duration to Kodis Library:
 
-- Inorder to reduce parsing times when using "Prefer File Metadata" PseudoTV Live can store the new accurate duration meta to Kodis library, there are no downsides to this process except for extra cpu usage. If you notice performance penalties when enabled, disable it... There is a fallback 28 day cache to avoid unnecessary file parsing. 
+- In-order to reduce parsing times when using "Prefer File Metadata" PseudoTV Live can store the new accurate duration meta to the Kodi library, there are no downsides. If you notice performance penalties when enabled, disable it... There is a fallback 28 day cache to avoid unnecessary file parsing. 
 
-## Imports:
+## Recommended Services:
 
-Imports are considered "third-party" and are not treated as "PseudoTV" channels. Channel configurations, channel numbering, onscreen overlays are all disabled. Imports are 1:1 m3u/xmltv imports with the exception of channel numbers which maybe altered as described below.
+Recommended Services are considered "third-party" and are not treated as "PseudoTV" channels. Channel configurations, channel numbering, onscreen overlays are all disabled. Imports are 1:1 m3u/xmltv imports with the exception of channel numbers which maybe altered as described below.
 
-### M3U
-- Supports all [common m3u paramters](https://github.com/kodi-pvr/pvr.iptvsimple#m3u-format-elements "common m3u paramters") including KODIPROP. File or URL must meet minimum requirements: 
-
-`#EXTINF:0 tvg-id="" tvg-name="" tvg-chno="" ,ChannelName`
-
-`http://path-to-stream/live/channel-feed`
-
-
-- "Filter channels using the `provider` parameter (Optional)." - In-order for this feature to work the provided m3u must contain the following example:
-
-1. `provider` ex. `provider=Locast`,`provider=PlutoTV`. If you would like to import only `PlutoTV` sources, enter `PlutoTV`. For multiples enter `Locast|PlutoTV`
-
-
-
-### XMLTV 
-- requires one of the two timestamps:
-	1. `%Y%m%d%H%M%S` - Local Time 
-
-	1. `%Y%m%d%H%M%S +%z` - UTC Time with Offset
-    
-    
 ## Options:
     
 - Centralized file location: Location to store PseudoTV Live M3U/XMLTV and other shared resources. ie. Playlists, Nodes and Channel Logos.
@@ -175,17 +153,21 @@ Imports are considered "third-party" and are not treated as "PseudoTV" channels.
 
 ## - Channel Logos:
 
-Logo's are cached and may not be refreshed immediately.... For immediate update use PseudoTV Lives channel manager to swap logo.
+Logo's are cached and may not be refreshed immediately....
 
-Logo folder location -  `/userdata/plugin.video.pseudotv.live/cache/logos`.
+Default Logo location - `/userdata/plugin.video.pseudotv.live/cache/logos`. *Location associated with Centralized File Location.
 
-Logo's are cap-sensitive and must match the channel name exactly as it appears in the guide. Supported formats `*.jpg,*.png,*.gif`
+Filenames must match the channel name exactly as it appears in the guide. Supported formats `*.jpg,*.png,*.gif`
 
-If no logo is found, PseudoTV Live will parse for a matching logo in the following folder order. `/addons/plugin.video.pseudotv.live/resources/images`, `*resource.images.pseudotv.logos`, ** [`resource.images.studios.white`, `resource.images.studios.coloured`], `resource.images.moviegenreicons.transparent`, `resource.images.musicgenreicons.text`
- *user selected "logo" resource pack (default shown). | **color preference selected in settings.
+If no logo is found, PseudoTV Live will parse for a matching logo in the following folder order.
 
-[Resource pack](https://github.com/PseudoTV/PseudoTV_Resources/blob/master/README.md) - Standard Kodi image resource packs. 
+    `/addons/plugin.video.pseudotv.live/resources/images`, 
 
+    `*resource.images.pseudotv.logos`, 
+
+    ** [`resource.images.studios.white`, `resource.images.studios.coloured`], `resource.images.moviegenreicons.transparent`, `resource.images.musicgenreicons.text`
+
+[Resource packs](https://github.com/PseudoTV/PseudoTV_Resources/blob/master/README.md) - Standard Kodi image resource packs. 
 
 ## - Channel Sharing (Multi-Room):
 
@@ -209,19 +191,19 @@ Enable under "Multi-Room", select between two options.
 
 ### - Number Assignment:
 
-For full control of channel numbering it is recommend users create "Custom" user-defined channels. Channels 1-999 are reserved to users, anything higher is reserved and auto assigned to pre-defined channels.
+For full control of channel numbering it is recommend users create "Custom" user-defined channels. Channels 1-999 are reserved to users, anything higher is reserved and auto assigned to "Autotuned" pre-defined channels.
 
 Pre-defined channels yield no control over numbering; numbers are auto assign by type (ranging from channels 1000-9999), using lowest available number by type.
 
-Imported M3Us and "Recommend Services" auto assigned by a multiplier based on the amount of imports staring at channel 10000, then appending the imports channel number. 
+"Recommend Services" auto assigned by a multiplier based on the amount of imports staring at channel 11000, then appending the imports channel number. 
 
-For example importing two M3Us/services. Import one will start at 10000, the other 20000. ex. If you are importing a m3u that contains channel 4.1, and 11. They will appear as 10004.1 and 10011. 
+For example importing two M3Us/services. Import one will start at 11000, the other 21000. ex. If you are importing a m3u that contains channel 4.1, and 11. They will appear as 11004.1 and 11011. 
 
 Each import is limited to 9999 (assuming each channel is an interger. Sub-Numbering, ie. floats ex. 4.1 extend the amount of possible imports) channels per import with a total of 9 total imports allowed.
 
 - Channel Range:
 -- `1-999` User-defined
--- `1000-9999` Pre-defined
+-- `1000-9999` Pre-defined (Autotuned)
 -- `10000-99999` Imports (Third-party m3u and recommend services)
 
 ### - EPG Ordering:
@@ -239,61 +221,107 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 ## - Channel Manager:
 
 ### - Color Legend:
-- In-use (White) - Existing channel configuration.
-- Unused (Dim-Grey) - Available for configuration.
-- Favorite (Yellow) - User Favorites.
-- Radio (Cyan) - User-defined Radio/Music channel.
--  Uneditable (Orange) - Pre-defined or Parental Locked channels are displayed as "Uneditable" within the manager.
--  Warnings (Red) - Indicates either a new channel that hasn't populated (yet) or an existing channel without content (won't display in guide).
+- In-use (White)      - Existing channel configuration.
+- Unused (Dim-Grey)   - Available for configuration.
+- Favorite (Yellow)   - User Favorites.
+- Radio (Cyan)        - User-defined Radio/Music channel.
+- Uneditable (Orange) - Pre-defined or Parental Locked channels are displayed as "Uneditable" within the manager.
+- Warnings (Red)      - Indicates either a new channel that hasn't populated or an existing channel without content.
 
 ------------
 
 # FYI & Known Issues:
 
-- If content is ignored/not added to the guide or episodes start/end before their assigned EPG time ie. guide times are off. Under "Parse for Accurate Duration Meta" select "Prefer File Metadata". Kodis library usually contain rounded duration/runtime values which will yield inaccurate guide times. Parsing the file directly grabs the actual duration value. If content is ignored, it is usually because Kodis library contains no duration/runtime information. Again, parsing the file resolves this problem. If however both your library and file contain no duration meta content will remain be ignored.
+- If you experience poor performance using PseudoTV Live; Try disabling "Accurate Duration" parsing, and setting "Playback Method" to playlists. 
+  It is recommend on low power devices like AndroidTV/AppleTV to outsource channel building to a "server" instance of Kodi running on a PC; then configure all other Kodi instances as a client.
 
-- Multiple PVR backends supported.
+- If content is ignored/not added to the guide or episodes start/end before their assigned EPG time ie. guide times are off. Navigate to "Parse for Accurate Duration Meta" settings and select "Prefer File Metadata". 
+  Media Meta sites like TMDB, TVDB usually contain rounded duration/runtime values which will yield inaccurate guide times. Parsing the file directly grabs the actual duration value. 
+  If content is ignored, it is usually due to no duration/runtime information. Parsing the file resolves this problem. If however both your library and file contain no duration meta content will remain ignored.
 
-- Blank EPG cells; Kodis EPG data is malformed; Enter Kodis "PVR & LiveTV" settings, navigate to "Guide" and click "Clear data".
+- Blank EPG cells; Either Kodi EPG data is malformed; Enter Kodi settings "PVR & LiveTV", navigate to "Guide" and click "Clear data". or
+  The xmltv file is outdated and PseudoTV Live will updated in the background in time...
 
-- Context Menu may be unavailable while viewing EPG.  To enable go do Kodis "PVR & LiveTV" then "Guide" and changing the default select action to "show context menu".
+- Context Menu may be unavailable while viewing EPG.  To enable go do Kodi "PVR & LiveTV" then "Guide" and changing the default select action to "show context menu".
 
-- Some video sources (i.e. plugins, UPnP) do not support seeking, which could cause playback to fail. Try loading the content via Context Menu ("Play Programme","Play from here").
+- Some video sources (i.e. plugins, UPnP) do not support seeking, which could cause playback to fail or always start at the beginning. Try loading the content via Context Menu ("Play Programme","Play from here").
 
-- All content must include duration details either embedded into the file or via Kodis Library.
+- All content must include duration details either embedded in the file or via Kodi Library.
 
-- Settings are dim and unelectable. Some settings require content to operate (ex. Selecting TV Networks require your library have TV Content). There are also actions that can not simultaneously run while PseudoTV background tasks are performed (ie. If you wait for tasks to finish, settings will become selectable). If you experience an error message and your settings are now unselectable. Either reboot Kodi, or disable/enable PseudoTV Live to temporarily fix, and be sure to report your error with a log.
+- Settings are dim and unelectable. Some settings require content to operate (ex. Selecting TV Networks require your library have TV Content). There are also actions that can not simultaneously run while PseudoTV background tasks are performed (ie. If you wait for tasks to finish, settings will become selectable).
 
-- Enable "Channel surfing" (Only available in PVR Playback mode). Navigate Kodis settings, find PVR Live TV settings and Playback then disabled confirm channel switches by pressing "ok".
+- Enable "Channel surfing" (Only available in PVR Playback mode). Navigate Kodi settings, find "PVR Live TV" settings and "Playback" then disabled "confirm channel switches by pressing "ok"".
 
-- "One Click" channel playback... Navigate to Kodis PRV & Live TV settings and change selection action.
+- "One Click" channel playback... Navigate to Kodi "PVR & Live TV" settings and change "selection action".
 
 - Channel Manager Colors, Dim = Unused, White = User-defined, Orange = Pre-defined, Red = Failed (Channel may not have content / appear in the guide and/or PseudoTV hasn't built the channel yet.)
 
-- You can not skip during playback... unless you are using the "Playlist" playback mode.
-  However, you can play any single show from the guide at any time or start playlist playback from any given position in the guide using the available context menu items.
-  Play programme == Play single show from the start.
-  Play from here == Queues guide content from this position and starts playback.
+- You can not skip ahead or time shift during linear playback... unless in "Playlist" playback.
+    However, you can play any single show from the guide at any time or start playlist playback from any given position in the guide using the available context menu items.
+    Play programme == Play single show from the start.
+    Play from here == Queues guide content from this position and starts playback.
 
-  ![Play Programme](https://i.imgur.com/ykLfzu6.png "Play Programme")
-  ![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
+    ![Play Programme](https://i.imgur.com/ykLfzu6.png "Play Programme")
+    ![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
 
-- Channel surfing only works while in PVR CallbacK mode and during linear playback; VOD playback exits PVR.
+- Channel surfing only works while in PVR CallbacK mode and during linear playback; VOD & Playlist playback exits the PVR.
+
+- Content ordering defaults to 'random' for all content except TV which defaults to 'episode' ordering. 'Mixed" content ordering defaults to 'year' for Movies. This only applies to channels configured without sort/order method. Multi-Path channels will default to using a standard interleaving distribution. *see below for details.
+ 
+    `#interleave multi-paths, while preserving sequence order`
+    
+    `#input  = [[1,2,3,4],[a,b,c,d],[A,B,C,D]]`
+ 
+    `#output = [1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D']`
+
+- "Mixed" Content ie. TV & Movie Smartplaylists are unsupported in Kodi and its given type was designed for "Music" media. PseudoTV Live can use the "Mixed" type to allow mixed content. Create a "Mixed" type smartplaylist and select the `path, playlist or virtual folder` you'd like to use.
+
+    #### How-To Create Mixed Smartplaylist:
+    ![How-To Create Mixed Smartplaylist](https://i.imgur.com/28mlM1P.gif)
+    
+    1. Open Smartplaylist editor, Select "Mixed" Type. Enter playlist name and when prompted save the file.
+
+	1. While in the "Mixed" smartplaylist navigate to playlist type select "TV", Enter a rule to select a "Path", "Virtualfolder" or "Playlist" with an inclusive operator of "is" or "contains".
+
+	1. Navigate again to playlist type select "Movie" and repeat the steps above. Before leaving the editor switch playlist type back to "Mixed" and save.
 
 ------------
 
-# Plugin Developer Integration.
+# Plugin Integration.
 - PseudoTV Live features two integration methods. 
 
-1. "Recommend Services" which is a full m3u/xmltv import provide by [IPTV Manager](https://github.com/add-ons/service.iptv.manager) or a local generated m3u/xmltv set. *see imports
+1. "Recommend Services" Full m3u/xmltv import provide by [IPTV Manager](https://github.com/add-ons/service.iptv.manager). *see imports
 
-2. "Recommend Channels" allows VOD content to fully intergrate into PseudoTV Live.
-Inorder for a plugin to announce itself to PseudoTV Live it must run a "Beacon" service. Examples can be found below. 
+    ![Recommend Services](https://i.imgur.com/YDcFfAn.png "Recommend Services")
+
+2. "Recommend Channels" Integrate plugin paths to PseudoTV Live.
+
+    In-order for a plugin to announce itself to PseudoTV Live; it must first run a "Beacon" service. Examples can be found below. 
+
+    ![Recommend Channels](https://i.imgur.com/AsCpirW.png "Recommend Channels")
 
 [Beacon Asset Example](https://github.com/PseudoTV/PseudoTV_Live/raw/master/plugin.video.pseudotv.live/asset.json)
-
-[Locast Example (Live)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.locast/pseudotv_recommended.py)
 
 [Crackle Example (VOD)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.crackle/pseudotv_recommended.py)
 
 [Pluto TV Example (Live & VOD)](https://github.com/Lunatixz/KODI_Addons/blob/master/plugin.video.plutotv/pseudotv_recommended.py)
+
+## M3U
+- Supports all [common m3u paramters](https://github.com/kodi-pvr/pvr.iptvsimple#m3u-format-elements "common m3u paramters") including KODIPROP. File or URL must meet minimum requirements: 
+
+`#EXTINF:0 tvg-id="" tvg-name="" tvg-chno="" ,ChannelName`
+
+`http://path-to-stream/live/channel-feed`
+
+
+- "Filter channels using the `provider` parameter (Optional)." - In-order for this feature to work the provided m3u must contain the following example:
+
+1. `provider` ex. `provider=Locast`,`provider=PlutoTV`. If you would like to import only `PlutoTV` sources, enter `PlutoTV`. For multiples enter `Locast|PlutoTV`
+
+## XMLTV 
+- requires one of the two timestamps:
+	1. `%Y%m%d%H%M%S` - Local Time 
+
+	1. `%Y%m%d%H%M%S +%z` - UTC Time with Offset
+    
+    

@@ -1,4 +1,5 @@
-#   Copyright (C) 2021 Jason Anderson, Lunatixz
+#   Copyright (C) 2011 Jason Anderson
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -16,14 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from resources.lib.globals    import *
-from resources.lib.parsers    import MP4Parser
-from resources.lib.parsers    import AVIParser
-from resources.lib.parsers    import MKVParser
-from resources.lib.parsers    import FLVParser
-from resources.lib.parsers    import TSParser
-from resources.lib.parsers    import NFOParser
-from resources.lib.parsers    import VFSParser
+from globals    import *
+from parsers    import MP4Parser
+from parsers    import AVIParser
+from parsers    import MKVParser
+from parsers    import FLVParser
+from parsers    import TSParser
+from parsers    import NFOParser
+from parsers    import VFSParser
  
 class VideoParser:
     def __init__(self):

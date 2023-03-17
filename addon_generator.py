@@ -32,7 +32,7 @@ CHKPATH    = 'C:/GitHub/addon-check/'
 GITPATH    = 'C:/GitHub/PseudoTV_Live/'
 ZIPPATH    = os.path.join(GITPATH,'zips','')
 DELETE_EXT = ('.pyc', '.pyo', '.db')
-DELETE_FOLDERS = ['__pycache__','.idea','Corel Auto-Preserve']
+DELETE_FOLDERS = ['__pycache__','.idea','Corel Auto-Preserve','venv']
 
 # Compatibility with 3.0, 3.1 and 3.2 not supporting u"" literals
 if sys.version < '3':

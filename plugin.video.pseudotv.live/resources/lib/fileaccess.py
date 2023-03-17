@@ -1,41 +1,51 @@
-#   Copyright (C) 2022 Jason Anderson, Lunatixz
+#   Copyright (C) 2022 Lunatixz
 #
 #
-# This file is part of PseudoTV.
+# This file is part of PseudoTV Live.
 #
-# PseudoTV is free software: you can redistribute it and/or modify
+# PseudoTV Live is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PseudoTV is distributed in the hope that it will be useful,
+# PseudoTV Live is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PseudoTV.  If not, see <http://www.gnu.org/licenses/>.
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+#
+# -*- coding: utf-8 -*-
 
-import os, shutil, codecs, threading, random
+from globals    import *
+from threading  import BoundedSemaphore, Timer
 
-from kodi_six import xbmc, xbmcaddon, xbmcvfs
+#info
+ADDON_ID            = 'plugin.video.pseudotv.live'
+REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
+ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
+ICON                = REAL_SETTINGS.getAddonInfo('icon')
+FANART              = REAL_SETTINGS.getAddonInfo('fanart')
+SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
+ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
+LANGUAGE            = REAL_SETTINGS.getLocalizedString
+COLOR_LOGO          = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
 
-ADDON_ID      = 'plugin.video.pseudotv.live'
-REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
-ADDON_PATH    = REAL_SETTINGS.getAddonInfo('path')
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-SETTINGS_LOC  = REAL_SETTINGS.getAddonInfo('profile')
-
+#constants 
+DEFAULT_ENCODING           = "utf-8"
 FILE_LOCK_MAX_FILE_TIMEOUT = 13
 FILE_LOCK_NAME             = "FileLock.dat"
-DEFAULT_ENCODING           = "utf-8"
 
-def log(msg, level=xbmc.LOGDEBUG):
-    if not REAL_SETTINGS.getSetting('Enable_Debugging') == "true" and level != xbmc.LOGERROR: return
-    if level == xbmc.LOGERROR: msg = '%s\n%s'%(msg,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,msg),level)
+#variables
+DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
 
+def log(event, level=xbmc.LOGDEBUG):
+    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
+    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
+    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
+    
 class FileAccess:
     @staticmethod
     def open(filename, mode, encoding=DEFAULT_ENCODING):
@@ -203,6 +213,8 @@ class VFSFile:
     def __init__(self, filename, mode):
         log("VFSFile: trying to open %s"%filename)
         if mode == 'w':
+            if not FileAccess.exists(filename): 
+                FileAccess.makedirs(os.path.split(filename)[0])
             self.currentFile = xbmcvfs.File(filename, 'wb')
         else:
             self.currentFile = xbmcvfs.File(filename, 'r')
@@ -252,17 +264,16 @@ class FileLock:
     def __init__(self):
         random.seed()        
         self.LOCK_LOC      = self.chkLOCK()
-        self.monitor       = xbmc.Monitor()
         self.lockedList    = []
         self.isExiting     = False
         self.lockFileName  = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
-        self.grabSemaphore = threading.BoundedSemaphore()
-        self.listSemaphore = threading.BoundedSemaphore()
+        self.grabSemaphore = BoundedSemaphore()
+        self.listSemaphore = BoundedSemaphore()
         log("FileLock: instance")
 
 
     def chkLOCK(self):
-        LOCK_LOC = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
+        LOCK_LOC = os.path.join(Settings().getSetting('User_Folder'))
         if not FileAccess.exists(LOCK_LOC):    
             if FileAccess.makedirs(LOCK_LOC):
                 return LOCK_LOC
@@ -283,7 +294,7 @@ class FileLock:
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
         except: pass
-        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
+        self.refreshLocksTimer = Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
         for item in self.lockedList:
             self.unlockFile(item)
@@ -301,7 +312,7 @@ class FileLock:
                 self.refreshLocksTimer.cancel()
                 self.refreshLocksTimer.join()
         except: pass
-        self.refreshLocksTimer = threading.Timer(4.0, self.refreshLocks)
+        self.refreshLocksTimer = Timer(4.0, self.refreshLocks)
         self.refreshLocksTimer.name = "RefreshLocks"
         if self.isExiting == False:
             self.refreshLocksTimer.start()
@@ -318,7 +329,7 @@ class FileLock:
         locked   = True
         lines    = []
 
-        while not self.monitor.abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
+        while not xbmc.Monitor().abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
             locked = False
             if curval > -1:
                 self.releaseLockFile()
@@ -397,7 +408,7 @@ class FileLock:
                 fle.close()
                 return True
             except: 
-                self.monitor.waitForAbort(.5)
+                xbmc.Monitor().waitForAbort(0.5)
 
         log("FileLock: Creating lock file")
         try:

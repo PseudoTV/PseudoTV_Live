@@ -16,423 +16,247 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 # -*- coding: utf-8 -*-
-from resources.lib.globals     import *
-from resources.lib.resource    import Resources
-from resources.lib.videoparser import VideoParser
-from resources.lib.pool        import Concurrent
 
-try:    from multiprocessing   import PriorityQueue
-except: from queue             import PriorityQueue
+from globals     import *
+from videoparser import VideoParser
+
+MIN_DIR_PARAMS = ["title", "showtitle", "episode", "season", "runtime", "duration",
+                  "streamdetails", "year", "plot", "plotoutline","description", 
+                  "art", "writer", "cast", "rating", "genre", "director", "mpaa",
+                  "premiered", "playcount", "studio"]
 
 class JSONRPC:
-    # todo proper dispatch queue with callback to handle multi-calls to rpc. Kodi is known to crash during a rpc collisions. *use concurrent futures and callback.
-    # https://codereview.stackexchange.com/questions/219148/json-messaging-queue-with-transformation-and-dispatch-rules
-    isLocked     = False
-    queueRunning = False
-    pool = Concurrent()
-    
-    def __init__(self, inherited=None):
-        if inherited is None:
-            from resources.lib.parser import Writer
-            inherited = Writer()
-        
-        self.writer       = inherited
-        self.inherited    = inherited
-        self.cache        = inherited.cache
-        self.dialog       = inherited.dialog
-        
-        self.sendQueue    = PriorityQueue()
-        self.videoParser  = VideoParser()
-        self.resources    = Resources(jsonRPC=self)
+    def __init__(self):
+        self.cache       = Cache()
+        self.videoParser = VideoParser()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s' % (self.__class__.__name__, msg), level)
-
+    
     
     @contextmanager
     def sendLocker(self):
-        if self.isLocked:
-            while not self.inherited.monitor.abortRequested() and self.isLocked:
-                if self.inherited.monitor.waitForAbort(0.001): break
-        self.isLocked = True
+        if PROPERTIES.getPropertyBool('sendLocker'):
+            while not MONITOR.abortRequested():
+                if MONITOR.waitForAbort(0.5): break
+                elif not PROPERTIES.getPropertyBool('sendLocker'): break
+        PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield
         finally:
-            self.isLocked = False
+            PROPERTIES.setPropertyBool('sendLocker',False)
 
 
-    @cacheit(checksum=xbmc.getInfoLabel('System.BuildVersion'),expiration=datetime.timedelta(days=28),json_data=True)
-    def getIntrospect(self, id):
-        json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params":{"filter":{"id":"%s","type":"method"}},"id":1}'%(id))
-        return self.sendJSON(json_query).get('result',{})
-
-
-    @cacheit(checksum=xbmc.getInfoLabel('System.BuildVersion'),expiration=datetime.timedelta(days=28),json_data=True)
-    def getEnums(self, id, type=''):
-        self.log('getEnums id = %s, type = %s' % (id, type))
-        json_query = ('{"jsonrpc":"2.0","method":"JSONRPC.Introspect","params": {"getmetadata": true, "filterbytransport": true,"filter": {"getreferences": false, "id":"%s","type":"type"}},"id":1}'%(id))
-        json_response = self.sendJSON(json_query).get('result',{}).get('types',{}).get(id,{})
-        return (json_response.get(type,{}).get('enums',[]) or json_response.get('enums',[]))
-
-
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getPluginMeta(self, plugin):
-        return getPluginMeta(plugin)
-
-
-    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=REAL_SETTINGS.getSettingInt('Max_Days'))):
-        self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
-        cacheName = 'getListDirectory.%s'%(path)
-        results   = self.cache.get(cacheName, checksum)
-        if not results:
-            try:    
-                results = FileAccess.listdir(path)
-                self.cache.set(cacheName, results, checksum, expiration)
-            except: 
-                results = [],[]
-        self.log('getListDirectory return dirs = %s, files = %s'%(len(results[0]), len(results[1])))
+    def _sendJSON(self, command):
+        self.log('_sendJSON, command = %s'%(command))
+        results = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
+        if not BUILTIN.getInfoBool('Platform.Windows','System'):
+            xbmc.sleep(SETTINGS.getSettingInt('JSONRPC_Delay')) #overcome overflow issue within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
         return results
 
 
-    def getFileDirectory(self, path, media='video', ignoreDuration=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=28)):
-        self.log('getFileDirectory path = %s, checksum = %s'%(path, checksum))
-        cacheName = 'getFileDirectory.%s'%(path)
-        results   = self.cache.get(cacheName, checksum)
-        if not results:
-            try:    
-                results = []
-                json_response = self.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
-                for item in json_response:
-                    file = item['file']
-                    if item['filetype'] == 'file':
-                        dur = self.parseDuration(file, item)
-                        if dur == 0 and not ignoreDuration: continue
-                        results.append({'label': item['label'], 'duration': dur, 'path': path, 'file': file})
-                    else:
-                        results.extend(self.getFileDirectory(file, media, ignoreDuration, checksum, expiration))
-                self.cache.set(cacheName, results, checksum, expiration)
-            except Exception as e: self.log('getFileDirectory failed! %s'%(e))
-        self.log('getFileDirectory return results = %s'%(len(results)))
-        return results
-        
-        
-    def isVFSPlayable(self, path, media='video', chkSeek=True, dia=None):
-        self.log('isVFSPlayable, path = %s, media = %s' % (path, media))
-        dirs = []
-        json_response = self.requestList({'id':str(random.random())}, path, media)
-
-        if dia is None:
-            dia = self.dialog.progressDialog(message='%s...\n%s'%(LANGUAGE(30143),path))
-        else:
-            dia = self.dialog.progressDialog(control=dia, message='%s...\n%s'%(LANGUAGE(30143),path))
-            
-        for idx, item in enumerate(json_response):
-            file     = item.get('file', '')
-            fileType = item.get('filetype', 'file')
-            if fileType == 'file':
-                dia = self.dialog.progressDialog(int(((idx)*100)//len(json_response)),control=dia, message='%s...\n%s\n%s'%(LANGUAGE(30143),path,file))
-                item['duration'] = self.getDuration(file, item)
-                if   dia is None: break
-                elif item['duration'] == 0: continue
-                elif chkSeek: 
-                    item['seek'], dia = self.isVFSSeekable(file, item['duration'], dia)
-                self.dialog.progressDialog(100,control=dia)
-                return item
-            else: dirs.append(file)
-                
-        for dir in dirs: 
-            result = self.isVFSPlayable(dir, media, chkSeek, dia)
-            if result: return result
-        self.dialog.progressDialog(100,control=dia)
-        
-
-    def isVFSSeekable(self, file, dur, dia=None):
-        if not file.startswith(tuple(VFS_TYPES)) and not file.endswith('.strm'): 
-            return True, dia
-        elif self.inherited.player.isPlaying():
-            return True, dia
-        # todo test seek for support disable via adv. rule if fails.
-        # todo set seeklock rule if seek == False
-        if dia is not None:
-            dia = self.dialog.progressDialog(control=dia, message='%s...'%(LANGUAGE(30142)))
-        
-        liz = xbmcgui.ListItem('Seek Test', path=file)
-        liz.setProperty('totaltime'  , str(dur))
-        liz.setProperty('resumetime' , str(int(dur/2)))
-        liz.setProperty('startoffset', str(int(dur/2)))
-        self.inherited.player.play(file, liz, windowed=True)
-        
-        getTime  = 0
-        waitTime = 60
-        while not self.inherited.monitor.abortRequested() and getTime == 0:
-            if dia is not None:
-                dia = self.dialog.progressDialog(control=dia, message='%s\nWaiting for Playback (%ss)...'%(LANGUAGE(30142),waitTime))
-                if dia is None: break
-                    
-            if self.inherited.monitor.waitForAbort(1) or waitTime < 1:   
-                self.log('isVFSSeekable, interrupted')
-                break
-                
-            waitTime -= 1
-            isPlaying = self.inherited.player.isPlaying()
-            if isPlaying: getTime = int(self.inherited.player.getTime())
-            else: break
-                
-        state = xbmc.getCondVisibility('Player.SeekEnabled')
-        if not state: state = getTime >= int(dur/2)
-        if dia is not None:
-            dia = self.dialog.progressDialog(control=dia, message='%s\nStopping Playback\nSeekable? %s'%(LANGUAGE(30142),state))
-        self.inherited.player.stop()
-        self.log('isVFSSeekable, path = %s, seekable = %s' % (file, state))
-        return state, dia
-        
-
-    def sendButton(self, id):
-        self.log('sendButton, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"Input.ButtonEvent","params":{"button":"%s","keymap":"KB"},"id":1}'%id)
-        if 'OK' in self.sendJSON(json_query).get('result',''): return True
-        
-        
-    def sendAction(self, id):
-        self.log('sendAction, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"Input.ExecuteAction","params":{"action":"%s"},"id":1}'%id)
-        if 'OK' in self.sendJSON(json_query).get('result',''):  return True  
-            
-            
-    def openWindow(self, id):
-        self.log('openWindow, id = %s'%(id))
-        json_query = ('{"jsonrpc":"2.0","method":"GUI.ActivateWindow","params":{"window":"%s"},"id":1}'%id)
-        if 'OK' in self.sendJSON(json_query).get('result',''): return True
-        
-        
-    def sendJSON(self, command):
+    def sendJSON(self, param, timeout=15): #todo dynamic timeout based on parmas and timeout history.
         with self.sendLocker():
-            return sendJSON(command)
+            self.log('sendJSON, timeout = %s'%(timeout))
+            command = param
+            command["jsonrpc"] = "2.0"
+            command["id"] = ADDON_ID
+            # response = killJSON(self._sendJSON)(timeout, command)
+            response = self._sendJSON(command)
+            if response.get('error'):
+                self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command))
+                
+        if response.get('error',{}).get('message','').startswith('JSONRPC timed out!'):
+            if   timeout <= 15: return self.sendJSON(param, timeout=30)
+            elif timeout >= 30: return self.queueJSON(param)
+        return response
 
 
-    def cacheJSON(self, command, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION):
-        cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(command)))
+    def queueJSON(self, param):
+        queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
+        params = queuePool.setdefault('params',[])
+        params.append(param)
+        queuePool['params'] = setDictLST(params)
+        self.log("queueJSON, queueing = %s"%(len(queuePool['params'])))
+        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+
+        
+    def cacheJSON(self, param, life=datetime.timedelta(minutes=15), checksum=ADDON_VERSION, timeout=15):
+        cacheName = 'cacheJSON.%s'%(getMD5(dumpJSON(param)))
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
-            cacheResponse = self.sendJSON(command)
+            cacheResponse = self.sendJSON(param,timeout)
             if cacheResponse.get('result',{}):
                 self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
-    def queueJSON(self, param, heap=5):
-        #heap = 1 top priority, heap = 10 lowest.
-        self.sendQueue.put((heap,param))
-        self.startQueueThread()
+    def walkListDirectory(self, path, depth=3, verify=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+        dirs  = [path]
+        files = []
+        for idx, dir in enumerate(dirs):
+            if MONITOR.waitForAbort(0.5) or idx > depth: break
+            ndirs, nfiles = self.getListDirectory(dir, checksum, expiration)
+            dirs.extend(ndirs)
+            files.extend(nfiles)
+            if verify:
+                for file in files:
+                    if self.getDuration(file): break
+        self.log('walkListDirectory, verify %s: return dirs = %s, files = %s\n%s'%(verify, len(dirs), len(files),path))
+        return dirs, files
+
         
-
-    def startQueueThread(self, wait=900):
-        timerit(self.startQueueWorker)(wait)
-
-
-    def startQueueWorker(self):
-        if isBusy(): return self.startQueueThread(300)
-        with busy():
-            self.queueRunning = True
-            self.log('startQueueWorker, starting thread worker')
-            while not self.inherited.monitor.abortRequested():
-                if self.inherited.monitor.waitForAbort(1) or self.sendQueue.empty(): break
-                try:   self.pool.executor(self.sendJSON,self.sendQueue.get()[1])
-                except self.sendQueue.Empty: pass
-                except Exception as e: 
-                    self.log("startQueueWorker, sendQueue Failed! %s"%(e), xbmc.LOGERROR)
-            self.queueRunning = False
-            self.log('startQueueWorker, finishing thread worker')
+    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+        cacheName = 'getListDirectory.%s'%(getMD5(path))
+        results   = self.cache.get(cacheName, checksum)
+        if not results:
+            try:    
+                results = FileAccess.listdir(path)
+                self.cache.set(cacheName, results, checksum, expiration)
+                self.log('getListDirectory path = %s, checksum = %s'%(path, checksum))
+            except: 
+                results = [],[]
+        self.log('getListDirectory return dirs = %s, files = %s\n%s'%(len(results[0]), len(results[1]),path))
+        return results
 
 
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getActivePlaylist(self):
-        return 1  # todo
+    @cacheit(checksum=BUILTIN.getInfoLabel('BuildVersion','System'),expiration=datetime.timedelta(days=28),json_data=True)
+    def getIntrospect(self, id):
+        param = {"method":"JSONRPC.Introspect","params":{"filter":{"id":id,"type":"method"}}}
+        return self.sendJSON(param).get('result',{})
 
 
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getActivePlayer(self, return_item=False):
-        json_query = ('{"jsonrpc":"2.0","method":"Player.GetActivePlayers","params":{},"id":1}')
-        json_response = self.sendJSON(json_query)
-        try:    id = json_response.get('result',[{'playerid':1}])[0].get('playerid',1)
-        except: id = 1
-        self.log("getActivePlayer, id = %s" % (id))
-        if return_item: return item
-        return id
+    @cacheit(checksum=BUILTIN.getInfoLabel('BuildVersion','System'),expiration=datetime.timedelta(days=28),json_data=True)
+    def getEnums(self, id, type=''):
+        self.log('getEnums id = %s, type = %s' % (id, type))
+        param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
+        json_response = self.sendJSON(param).get('result',{}).get('types',{}).get(id,{})
+        return (json_response.get(type,{}).get('enums',[]) or json_response.get('enums',[]))
+
+
+    def notifyAll(self, message, data, sender=ADDON_ID):
+        param = {"method":"JSONRPC.NotifyAll","params":{"sender":sender,"message":message,"data":[data]}}
+        return self.sendJSON(param).get('result') == 'OK'
+
+
+    def playerOpen(self, params={}):
+        param = {"method":"Player.Open","params":params}
+        return self.sendJSON(param).get('result') == 'OK'
+
+
+    def getSetting(self, category, section, cache=False):
+        param = {"method":"Settings.GetSettings","params":{"filter":{"category":category,"section":section}}}
+        if cache: return self.cacheJSON(param).get('result',{}).get('settings',[])
+        else:     return self.sendJSON(param).get('result', {}).get('settings',[])
+
+
+    def getSettingValue(self, key, cache=False):
+        param = {"method":"Settings.GetSettingValue","params":{"setting":key}}
+        if cache: return self.cacheJSON(param).get('result',{}).get('value','')
+        else:     return self.sendJSON(param).get('result',{}).get('value','')
+
+
+    def setSettingValue(self, key, value):
+        param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
+        self.queueJSON(param)
+
+
+    def getAddonDetails(self, addonid=ADDON_ID, cache=True):
+        param = {"method":"Addons.GetAddonDetails","params":{"addonid":addonid,"properties":self.getEnums("Addon.Fields", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('addon', {})
+        else:     return self.sendJSON(param).get('result', {}).get('addon', {})
+
+
+    def getAddons(self, param={"content":"video","enabled":True,"installed":True}, cache=True):
+        param["properties"] = self.getEnums("Addon.Fields", type='items')
+        param = {"method":"Addons.GetAddons","params":param}
+        if cache: return self.cacheJSON(param).get('result', {}).get('addons', [])
+        else:     return self.sendJSON(param).get('result', {}).get('addons', [])
+
+
+    def getSongs(self, cache=True):
+        param = {"method":"AudioLibrary.GetSongs","params":{"properties":self.getEnums("Audio.Fields.Song", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('songs', [])
+        else:     return self.sendJSON(param).get('result', {}).get('songs', [])
+
+
+    def getEpisodes(self, cache=True):
+        param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('tvshows', [])
+        else:     return self.sendJSON(param).get('result', {}).get('tvshows', [])
+
+
+    def getTVshows(self, cache=True):
+        param = {"method":"VideoLibrary.GetTVShows","params":{"properties":self.getEnums("Video.Fields.TVShow", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('tvshows', [])
+        else:     return self.sendJSON(param).get('result', {}).get('tvshows', [])
+
+
+    def getMovies(self, cache=True):
+        param = {"method":"VideoLibrary.GetMovies","params":{"properties":self.getEnums("Video.Fields.Movie", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('movies', [])
+        else:     return self.sendJSON(param).get('result', {}).get('movies', [])
+
+
+    def getVideoGenres(self, type="movie", cache=True): #type = "movie"/"tvshow"
+        param = {"method":"VideoLibrary.GetGenres","params":{"type":type,"properties":self.getEnums("Library.Fields.Genre", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('genres', [])
+        else:     return self.sendJSON(param).get('result', {}).get('genres', [])
+
+
+    def getMusicGenres(self, cache=True):
+        param = {"method":"AudioLibrary.GetGenres","params":{"properties":self.getEnums("Library.Fields.Genre", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('genres', [])
+        else:     return self.sendJSON(param).get('result', {}).get('genres', [])
+
+
+    def getDirectory(self, param={}, cache=True):
+        param["properties"] = self.getEnums("List.Fields.Files", type='items')
+        param = {"method":"Files.GetDirectory","params":param}
+        if cache: return self.cacheJSON(param).get('result', {})
+        else:     return self.sendJSON(param).get('result', {})
+        
+        
+    def getLibrary(self, method, param={}, cache=True):
+        param = {"method":method,"params":param}
+        if cache: return self.cacheJSON(param).get('result', {})
+        else:     return self.sendJSON(param).get('result', {})
+
+
+    def getStreamDetails(self, path, media='video'):
+        param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
+        return self.cacheJSON(param, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getPlayerItem(self, playlist=False):
         self.log('getPlayerItem, playlist = %s' % (playlist))
-        if playlist: json_query = '{"jsonrpc":"2.0","method":"Playlist.GetItems","params":{"playlistid":%s,"properties":["runtime","title","plot","genre","year","studio","mpaa","season","episode","showtitle","thumbnail","uniqueid","file","customproperties"]},"id":1}'%(self.getActivePlaylist())
-        else:        json_query = '{"jsonrpc":"2.0","method":"Player.GetItem","params":{"playerid":%s,"properties":["file","writer","channel","channels","channeltype","mediapath","uniqueid","customproperties"]}, "id": 1}'%(self.getActivePlayer())
-        result = self.sendJSON(json_query).get('result', {})
+        if playlist: param = {"method":"Playlist.GetItems","params":{"playlistid":self.getActivePlaylist(),"properties":self.getEnums("List.Fields.All", type='items')}}
+        else:        param = {"method":"Player.GetItem"   ,"params":{"playerid":self.getActivePlayer()    ,"properties":self.getEnums("List.Fields.All", type='items')}}
+        result = self.sendJSON(param).get('result', {})
         return (result.get('item', {}) or result.get('items', []))
 
 
     def getPVRChannels(self, radio=False):
-        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetChannels","params":{"channelgroupid":"%s","properties":["icon","channeltype","channelnumber","broadcastnow","broadcastnext","uniqueid"]}, "id": 1}'%({True:'allradio',False:'alltv'}[radio]))
-        return self.sendJSON(json_query).get('result', {}).get('channels', [])
+        param = {"method":"PVR.GetChannels","params":{"channelgroupid":{True:'allradio',False:'alltv'}[radio],"properties":self.getEnums("PVR.Fields.Channel", type='items')}}
+        return self.sendJSON(param).get('result', {}).get('channels', [])
+
+
+    def getPVRChannelsDetails(self, id):
+        param = {"method":"PVR.GetChannelDetails","params":{"channelid":id,"properties":self.getEnums("PVR.Fields.Channel", type='items')}}
+        return self.sendJSON(param).get('result', {}).get('channels', [])
 
 
     def getPVRBroadcasts(self, id):
-        json_query = ('{"jsonrpc":"2.0","method":"PVR.GetBroadcasts","params":{"channelid":%s,"properties":["title","plot","starttime","endtime","runtime","progress","progresspercentage","episodename","writer","director"]}, "id": 1}'%(id))
-        return self.sendJSON(json_query).get('result', {}).get('broadcasts', [])
+        param = {"method":"PVR.GetBroadcasts","params":{"channelid":id,"properties":self.getEnums("PVR.Fields.Broadcast", type='items')}}
+        return self.sendJSON(param).get('result', {}).get('broadcasts', [])
 
 
-    def getResources(self,params='{"type":"kodi.resource.images","properties":["path","name","version","summary","description","thumbnail","fanart","author"]}',cache=True):
-        return self.getAddons(params, cache)
+    def getPVRBroadcastDetails(self, id):
+        param = {"method":"PVR.GetBroadcastDetails","params":{"broadcastid":id,"properties":self.getEnums("PVR.Fields.Broadcast", type='items')}}
+        return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    def getAddon(self, addonid=ADDON_ID, params='{"addonid":"%s","properties":["name","version","summary","description","path","author","deprecated","installed","enabled","rating","extrainfo","broken","dependencies","fanart","disclaimer","thumbnail"]}',cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddonDetails","params":%s,"id":1}'%(params%(addonid)))
-        if cache: return self.cacheJSON(json_query).get('result', {}).get('addon', {})
-        else:     return self.sendJSON(json_query).get('result', {}).get('addon', {})
-
-
-    def getAddons(self,params='{"type":"xbmc.addon.video","enabled":true,"properties":["name","version","description","summary","path","author","thumbnail","disclaimer","fanart","dependencies","extrainfo"]}',cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"Addons.GetAddons","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query).get('result', {}).get('addons', [])
-        else:     return self.sendJSON(json_query).get('result', {}).get('addons', [])
-
-
-    def getSongs(self, params='{"properties":["genre"]}', cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"AudioLibrary.GetSongs","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query).get('result', {}).get('songs', [])
-        else:     return self.sendJSON(json_query).get('result', {}).get('songs', [])
-
-
-    def getTVshows(self, params='{"properties":["title","genre","year","studio","art","file","episode"]}', cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetTVShows","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query).get('result', {}).get('tvshows', [])
-        else:     return self.sendJSON(json_query).get('result', {}).get('tvshows', [])
-
-
-    def getMovies(self, params='{"properties":["title","genre","year","studio","art","file"]}', cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"VideoLibrary.GetMovies","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query).get('result', {}).get('movies', [])
-        else:     return self.sendJSON(json_query).get('result', {}).get('movies', [])
-
-
-    def getDirectory(self, params='', cache=True):
-        json_query = ('{"jsonrpc":"2.0","method":"Files.GetDirectory","params":%s,"id":1}' % (params))
-        if cache: return self.cacheJSON(json_query).get('result', {})
-        else:     return self.sendJSON(json_query).get('result', {})
-
-
-    def getStreamDetails(self, path, media='video'):
-        json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["streamdetails"]},"id":1}' % ((path), media))
-        return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
-
-
-    def getFileSize(self, path, media='video', real=False):
-        if   path.startswith(tuple(VFS_TYPES)): return 0
-        elif real:
-            try:
-                fle  = FileAccess.open(path,'r')
-                size = fle.size()
-                fle.close()
-                return size
-            except Exception as e: 
-                self.log("getFileSize, Failed! %s"%(e), xbmc.LOGERROR)
-                return 0
-        else:
-            json_query = ('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"%s","properties":["size"]},"id":1}' % ((path), media))
-            return self.cacheJSON(json_query, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('size',0)
-            
-            
-    def getSetting(self, category, section, cache=False):
-        json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettings","params":{"filter":{"category":"%s","section":"%s"}},"id":1}'%(category, section))
-        if cache: return self.cacheJSON(json_query).get('result',{}).get('settings',[])
-        else:     return self.sendJSON(json_query).get('result', {}).get('settings',[])
-
-
-    def getSettingValue(self, key, cache=False):
-        json_query = ('{"jsonrpc":"2.0","method":"Settings.GetSettingValue","params":{"setting":"%s"},"id":1}'%(key))
-        if cache: return self.cacheJSON(json_query).get('result',{}).get('value','')
-        else:     return self.sendJSON(json_query).get('result',{}).get('value','')
-
-
-    def setSettingValue(self, key, value):
-        json_query = ('{"jsonrpc":"2.0","method":"Settings.SetSettingValue","params":{"setting":"%s","value":%s},"id":1}'%(key,value))
-        return self.queueJSON(json_query,5)
-
-
-    def getMovieInfo(self, sortbycount=True):
-        self.log('getMovieInfo')
-        if hasMovie():
-            StudioList     = collections.Counter()
-            MovieGenreList = collections.Counter()
-            json_response  = self.getMovies()
-
-            for info in json_response:
-                StudioList.update([studio for studio in info.get('studio', [])])
-                MovieGenreList.update([genre for genre in info.get('genre', [])])
-
-            if sortbycount:
-                StudioList = [x[0] for x in sorted(StudioList.most_common(25))]
-                MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
-            else:
-                StudioList = (sorted(set(list(StudioList.keys()))))
-                del StudioList[250:]
-                MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
-                
-        else: StudioList = MovieGenreList = []
-        self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
-        return {'studios':StudioList,'genres':MovieGenreList}
-
-
-    def getTVInfo(self, sortbycount=True):
-        self.log('getTVInfo')
-        if hasTV():
-            NetworkList   = collections.Counter()
-            ShowGenreList = collections.Counter()
-            TVShows       = collections.Counter()
-            json_response = self.getTVshows()
-            
-            for info in json_response:
-                label = getLabel(info)
-                if not label: continue
-                TVShows.update({json.dumps({'label': label, 'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
-                NetworkList.update([studio for studio in info.get('studio', [])])
-                ShowGenreList.update([genre for genre in info.get('genre', [])])
-
-            if sortbycount:
-                TVShows = [json.loads(x[0]) for x in sorted(TVShows.most_common(250))]
-                NetworkList = [x[0] for x in sorted(NetworkList.most_common(50))]
-                ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
-            else:
-                TVShows = (sorted(map(json.loads, TVShows.keys()), key=lambda k: k['label']))
-                del TVShows[250:]
-                NetworkList = (sorted(set(list(NetworkList.keys()))))
-                del NetworkList[250:]
-                ShowGenreList = (sorted(set(list(ShowGenreList.keys()))))
-                
-        else: NetworkList = ShowGenreList = TVShows = []
-        self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShows)))
-        return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShows}
-
-
-    def getMusicInfo(self, sortbycount=True):
-        if hasMusic():
-            MusicGenreList = collections.Counter()
-            json_response = self.getSongs()
-
-            for info in json_response:
-                MusicGenreList.update([genre for genre in info.get('genre', [])])
-
-            if sortbycount:
-                MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(25))]
-            else:
-                MusicGenreList = (sorted(set(list(MusicGenreList.keys()))))
-                del MusicGenreList[250:]
-                
-        else: MusicGenreList = []
-        self.log('getMusicInfo, found genres = %s' % (len(MusicGenreList)))
-        return {'genres':MusicGenreList}
-
-
-    def getDuration(self, path, item={}, accurate=None):
-        if accurate is None: accurate = bool(SETTINGS.getSettingInt('Duration_Type'))
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
         duration = 0
         runtime  = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')
@@ -450,11 +274,10 @@ class JSONRPC:
 
 
     def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
+        self.log("parseDuration, path = %s, save = %s" % (path, save))
         cacheCHK  = getMD5(path)
         cacheName = 'parseDuration.%s'%(cacheCHK)
-        runtime   = int(item.get('runtime', '') or item.get('duration', '') or
-                       (item.get('streamdetails', {}).get('video', []) or [{}])[0].get('duration', '') or '0')
-                       
+        runtime   = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
         duration  = self.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:
@@ -477,18 +300,103 @@ class JSONRPC:
         self.log("parseDuration, returning runtime = %s" % (runtime))
         return runtime
   
-
+  
     def queDuration(self, media, dbid, dur):
         self.log('queDuration, media = %s, dbid = %s, dur = %s' % (media, dbid, dur))
-        param = {'movie'     : '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"      : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
-                 'episode'   : '{"jsonrpc": "2.0", "method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"    : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
-                 'musicvideo': '{"jsonrpc": "2.0", "method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid" : %i, "runtime" : %i }, "id": 1}' % (dbid, dur),
-                 'song'      : '{"jsonrpc": "2.0", "method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"       : %i, "runtime" : %i }, "id": 1}' % (dbid, dur)}
-        try: self.queueJSON(param[media],10)
-        except Exception as e:
-            log("queDuration, Failed! %s"%(e), xbmc.LOGERROR)
+        param = {'movie'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid":dbid, "runtime":dur}},
+                 'episode'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid":dbid, "runtime":dur}},
+                 'musicvideo': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":dbid, "runtime":dur}},
+                 'song'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid":dbid, "runtime":dur}}}
+        self.queueJSON(param[media])
         
         
+    def requestLibrary(self, citem, item, page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
+        if not limits: 
+            limits = self.autoPagination(citem['id'], filter.get('value')) #get
+            total  = limits.get('total',0)
+            if total > page and sort.get("method") == "random":
+                limits = self.randomPagination(page,total)
+                self.log('requestLibrary, id = %s generating random limits = %s'%(citem['id'],limits))
+
+        param = {}
+        param["properties"]      = self.getEnums(item['enum'], type='items')
+        param["limits"]          = {}
+        param["limits"]["start"] = limits.get('end', 0)
+        param["limits"]["end"]   = limits.get('end', 0) + page
+        
+        if sort:   param["sort"]   = sort
+        if filter: param["filter"] = filter
+            
+        self.log('requestLibrary, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
+        results = self.getLibrary(item['method'],param)
+        limits  = results.pop('limits') 
+        key     = list(results.keys())[0]
+        items   = results.get(key, [])
+        total   = limits.get('total',0)
+        self.log('requestLibrary, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+        
+        # restart page to 0, exceeding boundaries.
+        if (limits.get('end',0) >= total or limits.get('start',0) >= total):
+            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+            
+        # retry last request with fresh limits.
+        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
+            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
+            return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
+            
+        self.autoPagination(citem['id'], filter.get('value'), limits) #set 
+        self.log("requestLibrary, id = %s, return items = %s" % (citem['id'], len(items)))
+        return results
+        
+
+    def requestList(self, citem, path, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
+        self.log("requestList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],page,sort,filter,limits,path))
+        # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
+        if not limits: 
+            limits = self.autoPagination(citem['id'], path) #get
+            total  = limits.get('total',0)
+            if total > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
+                limits = self.randomPagination(page,total)
+                self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
+
+        param = {}
+        param["media"]           = media
+        param["directory"]       = escapeDirJSON(path)
+        param["properties"]      = self.getEnums("List.Fields.Files", type='items')
+        param["limits"]          = {}
+        param["limits"]["start"] = limits.get('end', 0)
+        param["limits"]["end"]   = limits.get('end', 0) + page
+        
+        if sort:   param["sort"]   = sort
+        if filter: param['filter'] = filter #convert db:// path to dynamic xsp, inject "rule"
+
+        self.log('requestList, id = %s, page = %s\nparam = %s'%(id, page, param))
+        results = self.getDirectory(param)
+
+        if 'filedetails' in results: key = 'filedetails'
+        else:                        key = 'files'
+            
+        items  = results.get(key, [])
+        limits = results.get('limits', param["limits"])
+        total  = limits.get('total',0)
+        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+        
+        # restart page to 0, exceeding boundaries.
+        if (limits.get('end',0) >= total or limits.get('start',0) >= total):
+            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+            
+        # retry last request with fresh limits.
+        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
+            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
+            return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
+            
+        self.autoPagination(citem['id'], path, limits) #set 
+        self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
+        return items
+
+
     def autoPagination(self, id, path, limits={}, checksum='', life=datetime.timedelta(days=28)):
         cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
         if not checksum: checksum = id
@@ -498,78 +406,57 @@ class JSONRPC:
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, checksum=checksum, expiration=life, json_data=True)
-        self.log("%s autoPagination; id = %s, path = %s, limits = %s"%(msg,id,path,limits))
+        self.log("%s autoPagination; id = %s, limits = %s\npath = %s"%(msg,id,limits,path))
         return limits
             
              
-    def randomPagination(self, page, total=0):
+    def randomPagination(self, page=int(REAL_SETTINGS.getSetting('Page_Limit')), total=0):
         if total > 0: start = random.randrange(0, total, page)
         else:         start = 0
         end = start + page
         if end > total: end = total
+        if start == total:
+            start = 0
+            end   = page
         return {"end": end, "start": start, "total":total}
-      
-
-    def requestList(self, citem, path, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
-        # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
-        id = citem['id']
-        if not limits: 
-            limits = self.autoPagination(id, path) #get
-            total  = limits.get('total',0)
-            if total > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
-                limits = self.randomPagination(page,total)
-                self.log('requestList, id = %s generating random limits = %s'%(id,limits))
-            
-        params                      = {}
-        params['limits']            = {}
-        params['directory']         = escapeDirJSON(path)
-        params['media']             = media
-        params['properties']        = self.getEnums(id="List.Fields.Files", type='items')
-        params['limits']['start']   = limits.get('end', 0)
-        params['limits']['end']     = limits.get('end', 0) + page
-
-        if sort:   params['sort']   = sort
-        if filter: params['filter'] = filter
-
-        self.log('requestList, id = %s, path = %s, page = %s, limits= %s'%(id, path, page, limits))
-        results = self.getDirectory(dumpJSON(params))
-        if 'filedetails' in results: key = 'filedetails'
-        else:                        key = 'files'
-            
-        items  = results.get(key, [])
-        # files  = list(filter(lambda f:f['filetype'] == 'file',items))
-        # dirs   = list(filter(lambda f:f['filetype'] == 'directory',items))
-        limits = results.get('limits', params['limits'])
-        total  = limits.get('total',0)
-        self.log('requestList, id = %s, items = %s, result limits = %s'%(id, len(items), limits))
         
-        # restart page to 0, exceeding boundaries.
-        if (limits.get('end',0) >= total or limits.get('start',0) > total):
-            self.log('requestList, id = %s, resetting start to 0'%(id))
-            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+
+    @cacheit(checksum=getInstanceID())
+    def buildWebBase(self, local=False):
+        port     = 80
+        username = 'kodi'
+        password = ''
+        secure   = False
+        enabled  = True
+        settings = self.getSetting('control','services')
+        for setting in settings:
+            if setting['id'] == 'services.webserver' and not setting['value']:
+                enabled = False
+                break
+            if setting['id'] == 'services.webserverusername':
+                username = setting['value']
+            elif setting['id'] == 'services.webserverport':
+                port = setting['value']
+            elif setting['id'] == 'services.webserverpassword':
+                password = setting['value']
+            elif setting['id'] == 'services.webserverssl' and setting['value']:
+                secure = True
+            username = '{0}:{1}@'.format(username, password) if username and password else ''
+        protocol = 'https' if secure else 'http'
+        if local: ip = 'localhost'
+        else:     ip = getIP()
+        return '{0}://{1}{2}:{3}'.format(protocol,ip,username, port) 
             
-        # retry request with fresh limits.
-        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
-            self.log("requestList, id = %s, trying again with start at 0"%(id))
-            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-            return self.requestList(citem, path, media, page, sort, filter, limits)
             
-        self.autoPagination(id, path, limits) #set 
-        self.log("requestList, id = %s, return items = %s" % (id, len(items)))
-        return items
-
-
-    def matchPVRPath(self, channelid=-1):
-        self.log('matchPVRPath, channelid = %s' % (channelid))
-        pvrPaths = ['pvr://channels/tv/%s/'%(quoteString(ADDON_NAME)),
-                    'pvr://channels/tv/All%20channels/',
-                    'pvr://channels/tv/*']
-
-        for path in pvrPaths:
-            json_response = self.getDirectory('{"directory":"%s","properties":["file"]}'%(path), cache=False).get('files', [])
-            item = list(filter(lambda k: k.get('id',random.random()) == channelid, json_response))
-            if item:
-                self.log('matchPVRPath, path found: %s'%(item[0].get('file','')))
-                return item[0].get('file', '')
-        self.log('matchPVRPath, path not found \n%s' % (dumpJSON(json_response)))
-        return ''
+    @cacheit(checksum=getInstanceID())
+    def buildProvisional(self, value, type):
+        self.log('buildProvisional, value = %s, type = %s'%(value,type))
+        paths   = []
+        for request in PROVISIONAL_TYPES.get(type,{}).get('path',[]):
+            items = self.getDirectory(param={"directory":request}, cache=False).get('files',[])
+            for item in items:
+                if item.get('label') == value:
+                    paths.append(item['file'])
+                    break
+        self.log('buildProvisional, return paths = %s'%(paths))
+        return paths

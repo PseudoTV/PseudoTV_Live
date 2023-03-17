@@ -1,4 +1,4 @@
-  # Copyright (C) 2022 Lunatixz
+  # Copyright (C) 2023 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -19,8 +19,11 @@
 # https://github.com/xbmc/xbmc/blob/master/xbmc/input/Key.h
 
 # -*- coding: utf-8 -*-
-from resources.lib.globals import *
-from resources.lib.rules   import RulesList
+from globals   import *
+from jsonrpc   import JSONRPC
+from rules     import RulesList
+from resources import Resources
+from threading import Timer, enumerate
 
 # class Video(xbmcgui.WindowXML):
 # todo adv. rule apply overlay ie. scanline, etc to videowindow.
@@ -38,77 +41,68 @@ from resources.lib.rules   import RulesList
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.overlay = kwargs.get('overlay')
+        self.player     = kwargs.get('player')
+        self.myPlayer   = Player(background=self)
+        self.runActions = RulesList().runActions
+        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
         
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
     def onInit(self):
-        self.getControl(40001).setVisible(self.overlay.showStatic)
-        self.getControl(40002).setImage(self.overlay._getPlayingCitem().get('logo',LOGO))
-        self.getControl(40003).setText(self.overlay._onNext.getText())
+        self.log('onInit')
+        try:
+            self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
+            self.runActions(RULES_ACTION_OVERLAY, self.player.playingItem.get('citem',{}), inherited=self)
+            self.getControl(40001).setVisible(self.showStatic)
+            self.getControl(40002).setImage(self.player.playingItem.get('icon',COLOR_LOGO))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.player.playingItem.get('label','')))
+        except: pass
         
 
 class Player(xbmc.Player):
-    def __init__(self, overlay):
+    def __init__(self, overlay=None, background=None):
         xbmc.Player.__init__(self)
-        self.overlay       = overlay
-        self.playerLabel   = self.overlay.player.getPlayerLabel()
-        self.playerTotTime = self.overlay.player.getPlayerTime()
+        self.overlay    = overlay
+        self.background = background
+
+        
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _hasBackground(self):
-        return PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND')
-
-
-    def startBackground(self):
-        if not self._hasBackground():
-            self.overlay.log('startBackground')
-            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", overlay=self.overlay)
-            self.background.show()
-            xbmc.sleep(2000)
+    def onAVStarted(self):
+        self.log('onAVStarted')
+        if self.overlay:
+            self.overlay.playerTotTime = self.overlay.player.getPlayerTime()
+            self.overlay.toggleBug()
+            self.overlay.toggleOnNext()
+        # if self.background:
+            # self.background.onInit()
             
 
-    def closeBackground(self):
-        try:
-            self.background.close()
-            del self.background
-            self.overlay.log('closeBackground')
-            xbmc.executebuiltin('ReplaceWindow(fullscreenvideo)')
-        except: pass
-        
-        
-    def onPlayBackStarted(self):
-        self.overlay.log('onPlayBackStarted')
-        self.playerLabel   = self.overlay.player.getPlayerLabel()
-        self.playerTotTime = self.overlay.player.getPlayerTime()
-        self.overlay.chkOnNext()
-        self.overlay.toggleBug()
-        
-        
-    def onAVChange(self):
-        self.overlay.log('onAVChange')
-        self.playerLabel   = self.overlay.player.getPlayerLabel()
-        self.playerTotTime = self.overlay.player.getPlayerTime()
-        
-        
-    def onAVStarted(self):
-        self.overlay.log('onAVStarted')
-        self.closeBackground()
-        
-        
+    def onPlayBackStopped(self):
+        self.log('onPlayBackStopped')
+        self.onPlayBackEnded()
+            
+
     def onPlayBackEnded(self):
-        self.overlay.log('onPlayBackEnded')
-        self.startBackground()
-        self.overlay.cancelOnNext()
-        self.overlay.cancelChannelBug()
+        self.log('onPlayBackEnded')
+        if self.overlay:
+            self.overlay.playerTotTime = 0
+            self.overlay.cancelOnNext()
+            self.overlay.cancelChannelBug()
 
 
 class Overlay():
+    playerTotTime  = 0
     controlManager = dict()
+    runActions = RulesList().runActions
     
     def __init__(self, player):
-        self.player     = player
-        self.runActions = RulesList().runActions
-        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
+        self.player   = player
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
@@ -116,34 +110,20 @@ class Overlay():
         self.window_h = self.window.getHeight()
         
         #init controls
-        self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
-        self._channelBug = xbmcgui.ControlImage(1556, 920, 128, 128, 'None', aspectRatio=2)#todo user sets size & location 
+        self._channelBugX, self._channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
+        self._channelBug     = xbmcgui.ControlImage(self._channelBugX, self._channelBugY, 128, 128, 'None', aspectRatio=2)
 
+        self._onNext         = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
+        self._onNextThread   = Timer(30, self.toggleOnNext)
+        
+        self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
+        self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _getPVRItem(self):
-        return self.player.getPVRitem()
-    
-    
-    def _getPlayingCitem(self):
-        return self._getPVRItem().get('citem',{})
-        
-    
-    def _getNowItem(self):
-        return self._getPVRItem().get('broadcastnow',{})
-        
-        
-    def _getNextItems(self):
-        return self._getPVRItem().get('broadcastnext',[])
-        
-        
-    def _getItemWriter(self, item):
-        return getWriter(item.get('writer',''))
-        
-        
     def _hasControl(self, control):
         return control in self.controlManager
         
@@ -210,25 +190,20 @@ class Overlay():
             return self.close()
             
         setOverlay(True)
-        self.myPlayer        = Player(self)
-        self._onNextThread   = threading.Timer(1.0, self.toggleOnNext)
-        self.showStatic      = SETTINGS.getSettingBool("Static_Overlay")
+        self.myPlayer        = Player(overlay=self)
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
-        self.runActions(RULES_ACTION_OVERLAY, self._getPlayingCitem(), inherited=self)
-        self.myPlayer.onPlayBackStarted()
+        self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
+        self.runActions(RULES_ACTION_OVERLAY, self.player.playingItem.get('citem',{}), inherited=self)
+        self.myPlayer.onAVStarted()
             
 
     def close(self):
         self.log('close')
-        self.cancelChkOnNext()
-        self.cancelOnNext()
-        self.cancelChannelBug()
-          
+        self.cancelChannelBug()          
         self.setImage(self._channelBug,'None')
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
 
-        self.myPlayer.closeBackground()
         del self.myPlayer
         setOverlay(False)
 
@@ -249,8 +224,8 @@ class Overlay():
                 onVAL  = self.player.getTimeRemaining()
                 offVAL = 0.1
             elif _channelBugInterval == 0:
-                onVAL  = random.randint(300,600)
-                offVAL = random.randint(300,600)
+                onVAL  = random.randint(300,900)
+                offVAL = random.randint(300,900)
             else:
                 onVAL  = _channelBugInterval * 60
                 offVAL = round(onVAL // 2)
@@ -265,16 +240,31 @@ class Overlay():
                     self._channelBugThread.cancel()
                     self._channelBugThread.join()
             except: pass
-                
+                  
+            try: 
+                self._channelBugX, self._channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
+                self.log('toggleBug, channelbug POSXX (%s,%s)'%(self._channelBugX, self._channelBugY))
+                self._channelBug.setPosition(self._channelBugX, self._channelBugY)
+            except: pass
+            
             if state: 
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
-                    
-                self.setImage(self._channelBug,(self._getPlayingCitem().get('logo',LOGO)))
-                if not bool(SETTINGS.getSettingInt('Color_Logos')): #apply user diffuse color only to "prefer white".
-                    self._channelBug.setColorDiffuse(self.channelBugColor)
-                    
+
+                if self.player.isPseudoTV: logo = self.player.playingItem.get('citem',{}).get('logo',LOGO)
+                else:                      logo = (BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
+                self.log('toggleBug, channelbug logo = %s)'%(logo))
+                self.setImage(self._channelBug,logo)
+                
+                if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
+                elif BUILTIN.getInfoBool('HasAddon(script.module.pil)','System'):
+                    jsonRPC   = JSONRPC()
+                    resources = Resources(jsonRPC,jsonRPC.cache)
+                    if resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
+                    del resources
+                    del jsonRPC
+                
                 self.setVisible(self._channelBug,True)
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
@@ -282,105 +272,106 @@ class Overlay():
                 self.setVisible(self._channelBug,False)
                 
             self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
-            self._channelBugThread = threading.Timer(wait, self.toggleBug, [nstate])
+            self._channelBugThread = Timer(wait, self.toggleBug, [nstate])
             self._channelBugThread.name = "_channelBugThread"
             self._channelBugThread.start()
         except Exception as e: self.log("toggleBug, Failed! %s"%(e), xbmc.LOGERROR)
-           
+          
+          
+    def toggleOnNext(self, state=True):
+        def getOnNextInterval(interval=3):
+            totalTime   = int(self.playerTotTime)
+            remaining   = floor(self.player.getTimeRemaining())
+            intTime     = roundupDIV(abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval),interval)
+            if remaining < intTime: return getOnNextInterval((interval + 1))
+            showTime = floor(self.player.getTimeRemaining()) <= (intTime *interval)
+            self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showTime = %s'%(totalTime,interval,remaining,intTime,showTime))
+            return showTime, intTime
 
-    def cancelChkOnNext(self):
-        self.log('cancelChkOnNext')
-        try: 
-            if self._chkonNextThread.is_alive():
-                self._chkonNextThread.cancel()
-                self._chkonNextThread.join()
-        except: pass
-
-
-    def chkOnNext(self):
-        def playerAssert():
-            """ #test playing item, title match? remaining time / progress within parameters?
-            """
-            try: 
-                titleAssert    = self._getNowItem().get('label') == self.myPlayer.playerLabel
-                remainAssert   = self.player.getTimeRemaining() > NOTIFICATION_CHECK_TIME
-                progressAssert = self.player.getPlayerProgress() >= 75.0
-                return (titleAssert & remainAssert & progressAssert & self.player.isPlaying() & self.player.isPseudoTV)
-            except: 
-                return False
-
-        try:
-            self.cancelChkOnNext()
-            playingAssert = playerAssert()
-            if self._onNextThread.is_alive():
-                # cancel onNext Toggle.
-                if not playingAssert:
-                    self.cancelOnNext()
-            else:# start onNext Toggle
-                if playingAssert: 
-                    self.toggleOnNext()
+        if BUILTIN.getInfoBool('HasAddon(service.upnext)','System') and self.player.playingItem.get('citem',{}).get('isPlaylist',False):
+            self.updateUpNext(self.player.playingItem)
+        else:
+            try:
+                showTime, intTime = getOnNextInterval()
+                wait   = {True:OVERLAY_DELAY,False:float(intTime)}[state]
+                nstate = not bool(state)
+                try: 
+                    if self._onNextThread.is_alive():
+                        self._onNextThread.cancel()
+                        self._onNextThread.join()
+                except: pass
                     
-            #poll player every xxSecs.
-            self._chkonNextThread = threading.Timer(NOTIFICATION_CHECK_TIME, self.chkOnNext)
-            self._chkonNextThread.name = "chkonNextThread"
-            self._chkonNextThread.start()
-        except Exception as e: self.log("chkOnNext, Failed! %s"%(e), xbmc.LOGERROR)
+                if state and showTime: 
+                    if not self._hasControl(self._onNext):
+                        self._addControl(self._onNext)
+                        self._onNext.setEnableCondition('[Player.Playing]')
+                        
+                    nowItem  = self.player.playingItem.get('broadcastnow',{})       # current item
+                    nextitem = self.player.playingItem.get('broadcastnext',[{}])[0] # upcoming items
+                    chname   = self.player.playingItem.get('label',ADDON_NAME)
+                    onNow    = '%son %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem['episodename']) if nextitem['episodename'] else ''), chname)
+                    onNext   = '%s %s'%(nextitem['title'],'- %s'%(nextitem['episodename']) if nextitem['episodename'] else '')
+                    
+                    self._onNext.setText('%s %s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                    self._onNext.autoScroll(6000, 3000, 5000)
+                    playSFX(BING_WAV)
+                    self.setVisible(self._onNext,True)
+                else: 
+                    self.setVisible(self._onNext,False)
+                
+                self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
+                self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
+                self._onNextThread.name = "onNextThread"
+                self._onNextThread.start()
+            except Exception as e: self.log("toggleOnNext, Failed! %s"%(e), xbmc.LOGERROR)
 
-        
+
     def cancelOnNext(self):
         self.log('cancelOnNext')
         self.setVisible(self._onNext,False)
-        try: 
+        if self._onNextThread.is_alive():
             self._onNextThread.cancel()
             self._onNextThread.join()
-        except: pass
-        
-        
-    def toggleOnNext(self, state=True):
-        def getOnNextInterval(interval=3):
-            totalTime   = int(self.myPlayer.playerTotTime)
-            remaining   = floor(self.player.getTimeRemaining())
-            intTime     = roundupDIV(abs((totalTime - (totalTime * .75)) - (NOTIFICATION_DURATION * interval)),interval)
-            if remaining < intTime: return getOnNextInterval((interval + 1))
-            self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s'%(totalTime,interval,remaining,intTime))
-            return intTime
-            
-        try:
-            wait   = {True:NOTIFICATION_DURATION,False:float(getOnNextInterval())}[state]
-            nstate = not bool(state)
-                        
-            try: 
-                if self._onNextThread.is_alive():
-                    self._onNextThread.cancel()
-                    self._onNextThread.join()
-            except: pass
-                
-            if state: 
-                if not self._hasControl(self._onNext):
-                    self._addControl(self._onNext)
-                    self._onNext.setEnableCondition('[Player.Playing]')
-                    
-                try:    writer = self._getItemWriter(self._getNextItems()[0])
-                except: return self.cancelOnNext()
-                
-                chname = self._getPlayingCitem().get('label',ADDON_NAME)
-                onNow  = (self._getNowItem().get('label','') or self._getNowItem().get('title','') or chname) 
-                onNext = '%s %s'%(writer.get('label'),'- %s'%(writer.get('episodelabel','')) if writer.get('episodelabel') else '')
-                self._onNext.setText("[B]You're Watching:[/B] %s %s[CR][B]Up Next:[/B] %s"%(onNow,('' if chname.lower().startswith(onNow.lower()) else 'on %s'%(chname)),onNext))
-                self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=False')])
-                self._onNext.autoScroll(6000, 3000, 5000)
-                self.playSFX(BING_WAV)
-                self.setVisible(self._onNext,True)
-            else: 
-                self.setVisible(self._onNext,False)
-            
-            self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
-            self._onNextThread = threading.Timer(wait, self.toggleOnNext, [nstate])
-            self._onNextThread.name = "onNextThread"
-            self._onNextThread.start()
-        except Exception as e: self.log("toggleOnNext, Failed! %s"%(e), xbmc.LOGERROR)
-    
 
-    def playSFX(self, filename, cached=False):
-        self.log('playSFX, filename = %s, cached = %s'%(filename,cached))
-        xbmc.playSFX(filename, useCached=cached)
+    
+    def updateUpNext(self, playingItem={}):
+        self.log('updateUpNext')
+        try:
+            # https://github.com/im85288/service.upnext/wiki/Example-source-code
+            data            = {"notification_time": 600}
+            nowItem         = decodeWriter(playingItem['broadcastnow'].get('writer',{}))       
+            current_episode = {"current_episode":{"episodeid" :(nowItem.get("id"           ,"") or ""),
+                                                  "tvshowid"  :(nowItem.get("tvshowid"     ,"") or ""),
+                                                  "title"     :(nowItem.get("title"        ,"") or ""),
+                                                  "art"       :(nowItem.get("art"          ,"") or ""),
+                                                  "season"    :(nowItem.get("season"       ,"") or ""),
+                                                  "episode"   :(nowItem.get("episode"      ,"") or ""),
+                                                  "showtitle" :(nowItem.get("tvshowtitle"  ,"") or ""),
+                                                  "plot"      :(nowItem.get("plot"         ,"") or ""),
+                                                  "playcount" :(nowItem.get("playcount"    ,"") or ""),
+                                                  "rating"    :(nowItem.get("rating"       ,"") or ""),
+                                                  "firstaired":(nowItem.get("firstaired"   ,"") or ""),
+                                                  "runtime"   :(nowItem.get("runtime"      ,"") or "")}}
+            data.update(current_episode)
+        except: pass
+        try:
+            nextItem        = decodeWriter(playingItem['broadcastnext'][0].get('writer',{}))
+            next_episode    = {"next_episode"   :{"episodeid" :(nextItem.get("id"          ,"") or ""),
+                                                  "tvshowid"  :(nextItem.get("tvshowid"    ,"") or ""),
+                                                  "title"     :(nextItem.get("title"       ,"") or ""),
+                                                  "art"       :(nextItem.get("art"         ,"") or ""),
+                                                  "season"    :(nextItem.get("season"      ,"") or ""),
+                                                  "episode"   :(nextItem.get("episode"     ,"") or ""),
+                                                  "showtitle" :(nextItem.get("tvshowtitle" ,"") or ""),
+                                                  "plot"      :(nextItem.get("plot"        ,"") or ""),
+                                                  "playcount" :(nextItem.get("playcount"   ,"") or ""),
+                                                  "rating"    :(nextItem.get("rating"      ,"") or ""),
+                                                  "firstaired":(nextItem.get("firstaired"  ,"") or ""),
+                                                  "runtime"   :(nextItem.get("runtime"     ,"") or "")}}
+            data.update(next_episode)
+        except: pass
+        jsonRPC = JSONRPC()
+        jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))
+        del jsonRPC
+        

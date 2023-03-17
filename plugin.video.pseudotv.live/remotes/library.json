@@ -1,7 +1,17 @@
 {
-    "library": {},
-    "recommended": {
-        "whitelist": [],
-        "blacklist": []
-    }
+	"library": {
+		"TV Networks": [],
+		"TV Shows": [],
+		"TV Genres": [],
+		"Movie Genres": [],
+		"Movie Studios": [],
+		"Mixed Genres": [],
+		"Mixed": [],
+		"Playlists": [],
+		"Recommended": [],
+		"Services": [],
+		"Music Genres": []
+	},
+	"whitelist": [],
+	"blacklist": []
 }

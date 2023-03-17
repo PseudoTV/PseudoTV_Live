@@ -15,50 +15,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-
+#
 # -*- coding: utf-8 -*-
-from resources.lib.globals     import *
-from resources.lib.fileaccess  import FileLock
+from globals                   import *
+from threading                 import Thread
+from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
 
-IP         = getIP()
-HOST       = '0.0.0.0'
-CHUNK_SIZE = 64 * 1024
-
-def chkPort(port=0, redirect=False):
-    try:
-        with closing(socket(AF_INET, SOCK_STREAM)) as s:
-            s.bind(("127.0.0.1", port))
-            return port
-    except socket.error as e:
-        if redirect and (e.errno == errno.EADDRINUSE):
-            with closing(socket(AF_INET, SOCK_STREAM)) as s:
-                s.bind(("127.  0.0.1", 0))
-                s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-                port = s.getsockname()[1]
-                log("server: chkPort, Port is already in-use: changing to %s"%(port))
-        else: log("server: chkPort, Failed! %s"%(e), xbmc.LOGERROR)
-        return port
-        
-def getSettings():
-    return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
-            'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
-            'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
-            'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
-            'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
-
 class Discovery:
-    shutdown = False
+    isRunning = False
     
-    def __init__(self, monitor=None):
-        if monitor is None:
-            self.monitor = xbmc.Monitor()
-        else:
-            self.monitor = monitor
-            
-        self.startThread = threading.Thread(target=self._start)
+    def __init__(self, monitor):
+        delServerSettings()
+        self.monitor = monitor
+        self.startThread = Thread(target=self._start)
         self.startThread.daemon = True
         self.startThread.start()
         
@@ -67,14 +39,10 @@ class Discovery:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _stop(self):
-        self.log('_stop')
-        self.shutdown = True
-
-
     def _start(self):
         self.log('_start')
-        local ='%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT'))
+        self.isRunning = True
+        local ='%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT'))
         sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
         sock.bind(('', SETTINGS.getSettingInt('UDP_PORT')))
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
@@ -94,30 +62,25 @@ class Discovery:
                                 if md5 == getMD5(dumpJSON(payload)):
                                     payload['received'] = time.time()
                                     servers = getDiscovery()
-                                    if host not in servers:
-                                        Dialog().notificationDialog('%s - %s'%(LANGUAGE(30207),payload.get('name',host)))
+                                    if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
+                                        DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
                                     servers[host] = payload
                                     setDiscovery(servers)
                                     chkDiscovery(servers)
-                except: pass
+                except Exception as e: self.log('_start failed! %s'%(e))
                 
-            if (self.monitor.waitForAbort(1) or self.shutdown or self.monitor.shutdown):
-                self.log('_start, shutting down')
-                self.shutdown = False
+            if self.monitor.waitForAbort(1) or self.monitor.chkRestart():
+                self.log('_start, interrupted')
                 break
+        self.isRunning = False
 
 
 class Announcement:
-    shutdown = False
-    settings = getSettings()
+    isRunning = False
     
-    def __init__(self, monitor=None):
-        if monitor is None:
-            self.monitor = xbmc.Monitor()
-        else:
-            self.monitor = monitor
-           
-        self.startThread = threading.Thread(target=self._start)
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.startThread = Thread(target=self._start)
         self.startThread.daemon = True
         self.startThread.start()
         
@@ -126,18 +89,22 @@ class Announcement:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
         
-    def _stop(self):
-        self.log('_stop')
-        self.shutdown = True
-        
-        
+    def getSettings(self):
+        return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
+                'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
+                'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
+                'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
+                'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
+
+
     def _start(self):
         self.log('_start')
+        self.isRunning = True
         payload = {'id':ADDON_ID,
                    'version':ADDON_VERSION,
-                   'name':xbmc.getInfoLabel('System.FriendlyName'),
-                   'host':'%s:%s'%(IP,SETTINGS.getSettingInt('TCP_PORT')),
-                   'settings':self.settings}
+                   'name':BUILTIN.getInfoLabel('FriendlyName','System'),
+                   'host':'%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT')),
+                   'settings':self.getSettings()}
                    
         payload['md5'] = getMD5(dumpJSON(payload))
         data = '%s%s'%(ADDON_ID,encodeString(dumpJSON(payload)))
@@ -151,22 +118,22 @@ class Announcement:
         while not self.monitor.abortRequested():
             if not isClient():
                 try:    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
-                except: pass
-        
-            if (self.monitor.waitForAbort(5) or self.shutdown or self.monitor.shutdown):
-                self.log('_start, shutting down')
-                self.shutdown = False
-                break
-
+                except Exception as e: self.log('_start failed! %s'%(e))
             
+            if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
+                self.log('_start, interrupted')
+                break
+        self.isRunning = False
+
+
 class RequestHandler(BaseHTTPRequestHandler):
-    monitor = xbmc.Monitor()
-    globalFileLock = FileLock()
+    CHUNK_SIZE = 64 * 1024
     
-    def __init__(self, request, client_address, server):
+    def __init__(self, request, client_address, server, monitor):
+        self.monitor = monitor
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
         except (IOError, OSError) as e: pass
-
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -190,12 +157,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
-        with busy(), xbmcvfs.File(path, 'rb') as f:#, fileLocker(self.globalFileLock)
+        with fileLocker(GLOBAL_FILELOCK):
+            fle = FileAccess.open(path, "r")
             while not self.monitor.abortRequested():
-                chunk = f.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
+                chunk = fle.read(self.CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
                 if not chunk: break
                 self.wfile.write(chunk)
-
+            fle.close()
+            
     
     def do_HEAD(self):
         return
@@ -204,84 +173,87 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         return self.do_GET()
         
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    daemon_threads = True
-
-
+        
 class HTTP:
-    started  = False
-    restart  = False
-    shutdown = False
+    isRunning = False
     
     def __init__(self, monitor=None):
-        if monitor is None:
-            self.monitor = xbmc.Monitor()
-        else:
-            self.monitor = monitor
-        self._start()
-        
-            
+        delServerSettings()
+        self.monitor = monitor
+        timerit(self._start)(5)
+
+                    
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _restart(self):
-        self.log('_restart')
-        self.restart = True
-        
+    def chkPort(self, port=0, redirect=False):
+        try:
+            state = False
+            with closing(socket(AF_INET, SOCK_STREAM)) as s:
+                s.bind(("127.0.0.1", port))
+                state = True
+        except socket.error as e:
+            if redirect and (e.errno == errno.EADDRINUSE):
+                with closing(socket(AF_INET, SOCK_STREAM)) as s:
+                    s.bind(("127.  0.0.1", 0))
+                    s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                    port  = s.getsockname()[1]
+                    state = True
+            else: port = None
+        self.log("chkPort, port = %s, available = %s"%(port,state))
+        return port
 
-    def _stop(self):
-        self.log('_stop')
-        self.shutdown = True
-        
-        
+
     def _start(self):
         port = SETTINGS.getSettingInt('TCP_PORT')
         while not self.monitor.abortRequested():
             try:
-                client   = isClient()
+                CLIENT   = isClient()
                 TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
-                if self.started: 
-                    if    client: break
-                    elif  port != TCP_PORT:
-                        self._restart()
-                        break
-                    else: return
-                elif client: return
+                if self.isRunning:
+                    if port != TCP_PORT or CLIENT: 
+                        self._stop()#port changed restart server.
+                        return self.__init__(self.monitor)
+                elif not CLIENT:
+                    port = self.chkPort(TCP_PORT,redirect=True)
+                    if port is None: raise Exception('Port In-Use!')
+                    elif port != TCP_PORT:
+                        SETTINGS.setSettingInt('TCP_PORT',port)
+                        
+                    IP = getIP()
+                    LOCAL_HOST ='%s:%s'%(IP,port)
+                    self.log("_start, starting server @ %s"%(LOCAL_HOST))
+                    PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
+                    setServerSettings(LOCAL_HOST)
                     
-                port = chkPort(TCP_PORT,redirect=True)
-                if port is None:
-                    raise Exception('Port In-Use!')
-                elif port != TCP_PORT:
-                    SETTINGS.setSettingInt('TCP_PORT',port)
-                    
-                LOCAL_HOST ='%s:%s'%(IP,port)
-                self.log("_start, %s"%(LOCAL_HOST))
-                PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
-                
-                self._server = ThreadedHTTPServer((IP, port), RequestHandler)
-                self._server.allow_reuse_address = True
-                self._httpd_thread = threading.Thread(target=self._server.serve_forever)
-                self._httpd_thread.daemon = True
-                self._httpd_thread.start()
-                self.started = True
+                    self._server = ThreadedHTTPServer((IP, port), partial(RequestHandler,monitor=self.monitor))
+                    self._server.allow_reuse_address = True
+                    self._httpd_thread = Thread(target=self._server.serve_forever)
+                    self._httpd_thread.daemon = True
+                    self._httpd_thread.start()
+                    self.isRunning = True
             except Exception as e: 
                 self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
                 
-            if (self.monitor.waitForAbort(15) or self.shutdown or self.monitor.shutdown):
-                self.shutdown = False
-                self.log('_start, shutting down')
+            if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
+                self.log('_start, interrupted')
                 break
+        self._stop()
+        
+        
+    def _stop(self):
         try:
-            if self.started:
+            if self.isRunning:
+                self.log('_stop, shutting server down')
                 self._server.shutdown()
                 self._server.server_close()
                 self._server.socket.close()
                 self._httpd_thread.join()
-                self.started = False
+                self.isRunning = False
         except: pass
-            
-        if self.restart:
-            self.restart = False
-            self._start()
+
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+

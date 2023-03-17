@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -15,156 +15,118 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
-# https://github.com/kodi-pvr/pvr.iptvsimple/blob/Matrix/README.md#m3u-format-elements
-# https://raw.githubusercontent.com/XMLTV/xmltv/master/xmltv.dtd
+
 # -*- coding: utf-8 -*-
 
-from resources.lib.globals     import *
+from globals    import *
 
 class Channels:
-    def __init__(self, writer=None):
-        if writer is None:
-            from resources.lib.parser import Writer
-            writer = Writer()
-            
-        self.writer = writer
-        self.cache  = writer.cache
+             
+    def __init__(self):
+        self.cache       = Cache()
+        self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
+        self.channelTEMP = self.channelDATA.get('channels',[]).pop(0)
+        self.channelDATA.update(self._load())
         
-
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
-    
-    
-    def _withdraw(self):
-        channelList = self.writer.vault.get_channelList()
-        self.log('_withdraw, channels = %s'%(len(channelList)))
-        return channelList
-        
-        
-    def _deposit(self):
-        self.log('_deposit, channels = %s'%(len(self.writer.vault.channelList.get('channels',[]))))
-        self.writer.vault.set_channelList(self.writer.vault.channelList)
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.getChannels())))
-        return True
-        
-        
-    def _clear(self):
-        self.log('_clear')
-        self.writer.vault.channelList = None
-        return self._deposit()
-       
-       
-    def _save(self):
-        with fileLocker(self.writer.globalFileLock):
-            filePath = CHANNELFLEPATH
-            fle = FileAccess.open(filePath, 'w')
-            self.log('_save, saving %s channels to %s'%(len(self.getChannels()),filePath))
-            fle.write(dumpJSON(self.cleanSelf(self.writer.vault.channelList), idnt=4, sortkey=False))
-            fle.close()
-        return self._deposit()
-
-          
-    def cleanSelf(self, channelList):
-        tempkeys = self.getCitem().keys()
-        channels = channelList.get('channels',[])
-        for idx, citem in enumerate(channels):
-            citem = dict([(key,value) for key, value in citem.items() if key in tempkeys]) #remove leftover m3u keys, only save citem elements #todo split channels.json and m3u elements the their own dataobject?
-            citem['group'] = list(set(citem['group'])) #clean duplicates, necessary?
-            channels[idx]  = citem
-        channelList['channels'] = self.sortChannels([citem for citem in channels if citem['number'] > 0])
-        self.log('cleanSelf, before = %s, after = %s'%(len(channels),len(channelList.get('channels',[]))))
-        return channelList
-        
-        
-    @staticmethod
-    def sortChannels(channels):
-        return sorted(channels, key=lambda k: k['number'])
 
     
-    def getChannel(self, id):
-        channels = self.getChannels()
-        return list(filter(lambda c:c.get('id') == id, channels))
-        
+    def _load(self, file=CHANNELFLEPATH):
+        return getJSON(file)
+    
+    
+    def _save(self, file=CHANNELFLEPATH):
+        self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=lambda k: k['number'])
+        return setJSON(file,self.channelDATA)
 
+        
+    def getTemplate(self):
+        return self.channelTEMP.copy()
+        
+        
     def getChannels(self):
-        channels = self.cleanSelf(self.writer.vault.channelList).get('channels',[])
-        self.log('getChannels, channels = %s'%(len(channels)))
-        return channels.copy()
-
-
-    def getUserChannels(self):
-        return list(filter(lambda citem:citem.get('number') <= CHANNEL_LIMIT, self.getChannels()))
-
+        return self.channelDATA.get('channels',[])
+        
 
     def getPredefinedChannels(self):
         return list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels()))
 
-
-    def getPredefinedChannelsByType(self, type, channels=None):
-        if channels is None: channels = self.getPredefinedChannels()
-        return list(filter(lambda c:c.get('type') == type, channels))
-
-
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getTemplate(self):
-        fle = FileAccess.open(CHANNELFLE_DEFAULT, 'r')
-        channelList = loadJSON(fle.read())
-        fle.close()
-        return channelList
-
-
-    def getCitem(self):#channel schema
-        return self.getTemplate().get('channels',[])[0].copy()
-        
-
-    @cacheit(checksum=getInstanceID(),json_data=True)
-    def getRitem(self): #rule schema
-        fle = FileAccess.open(RULEFLE_DEFAULT, 'r')
-        rule = loadJSON(fle.read())
-        fle.close()
-        return rule.copy()
-
-
-    def getImports(self):
-        self.log('getImports')
-        return self.writer.vault.channelList.get('imports',[]).copy()
-
-
-    def setImports(self, imports): #save called by config.
-        self.log('setImports, imports = %s'%(imports))
-        self.writer.vault.channelList['imports'] = imports
-        return True
-
-
-    def addChannel(self, citem):
-        self.log('addChannel, id = %s'%(citem['id']))
-        idx, channel = self.writer.findChannel(citem, self.getChannels())
-        if idx is not None:
-            for key in ['id','rules','number','favorite']: 
-                if channel.get(key):
-                    citem[key] = channel[key] # existing id found, reuse channel meta.
-            citem['group'] = list(set(citem.get('group',[])))
-            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
-            self.writer.vault.channelList['channels'][idx] = citem #can't .update() must replace.
-        else:
-            citem['group'] = list(set(citem.get('group',[])))
-            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
-            self.writer.vault.channelList.setdefault('channels',[]).append(citem)
-            self.log('addChannel, total channels = %s'%(len(self.getChannels())))
-        return True
+                
+    def popChannels(self, type, channels=[]):
+        return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list(filter(lambda c:c.get('type') == type, channels))]
         
         
-    def removeChannel(self, citem):
-        self.log('removeChannel, id = %s'%(citem['id']))
-        idx, channel = self.writer.findChannel(citem, self.getChannels())
-        if idx is not None: self.writer.vault.channelList['channels'].pop(idx)
-        return True
+    def getAutotuned(self):
+        return list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels()))
+        
+
+    def getChannelbyID(self, id):
+        channels = self.getChannels()
+        return list(filter(lambda c:c.get('id') == id, channels))
+        
+        
+    def getType(self, type):
+        return list(filter(lambda citem:citem.get('type') == type, self.getChannels()))
+
+
+    def setChannels(self, channels=[]):
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+        return self._save()
 
     
-    def deleteChannels(self):
-        self.log('deleteChannels')
-        if FileAccess.delete(CHANNELFLEPATH):
-            self._clear()
-            return self.dialog.notificationDialog(LANGUAGE(30016)%('Channels'))
-        return False
+    def getImports(self):
+        return self.channelDATA.get('imports',[])
+        
+        
+    def setImports(self, data=[]):
+        self.channelDATA['imports'] = data
+        return self._save()
+        
+        
+    def getUUID(self):
+        return (self.channelDATA.get('uuid','') or self.getMYUUID())
+        
+        
+    def setUUID(self, data=[]):
+        self.channelDATA['uuid'] = data
+        return self._save()
+         
+    
+    # def getChannel(self, item):
+        # if item.get('id')
 
+    def delChannel(self, citem):
+        self.log('delChannel, id = %s'%(citem['id']))
+        idx, channel = self.findChannel(citem)
+        if idx is not None: self.channelDATA['channels'].pop(idx)
+        return True
+    
+    
+    def addChannel(self, citem):
+        self.log('addChannel, id = %s'%(citem['id']))
+        idx, channel   = self.findChannel(citem)
+        if idx is not None:
+            for key in ['id','rules','number','favorite','logo']: 
+                if channel.get(key): citem[key] = channel[key] # existing id found, reuse channel meta.
+                
+            if citem.get('favorite',False):
+                citem['group'].append(LANGUAGE(32019))
+                citem['group'] = list(set(citem['group']))
+                
+            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
+            self.channelDATA['channels'][idx] = citem
+        else:
+            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
+            self.channelDATA.setdefault('channels',[]).append(citem)
+        return True
+        
+        
+    def findChannel(self, citem, channels=[]):
+        if len(channels) == 0: channels = self.getChannels()
+        for idx, eitem in enumerate(channels):
+            if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name').lower() == eitem.get('name',str(random.random())).lower()):
+                return idx, eitem
+        return None, {}
+            

@@ -16,1422 +16,1204 @@ msgstr ""
 "Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# Settings - strings 30000 thru 30999 reserved for plugins and plugin settings
 msgctxt "#30000"
-msgid "Enable Debugging [Log errors]"
-msgstr ""
-
-msgctxt "#30001"
-msgid "Something went wrong, Try again..."
-msgstr ""
-
-msgctxt "#30002"
-msgid "TV Networks"
-msgstr ""
-
-msgctxt "#30003"
-msgid "TV Shows"
-msgstr ""
-
-msgctxt "#30004"
-msgid "TV Genres"
-msgstr ""
-
-msgctxt "#30005"
-msgid "Movie Genres"
-msgstr ""
-
-msgctxt "#30006"
-msgid "Mixed Genres"
-msgstr ""
-
-msgctxt "#30007"
-msgid "Movie Studios"
-msgstr ""
-
-msgctxt "#30008"
-msgid "Utilities"
-msgstr ""
-
-msgctxt "#30009"
-msgid "Channels"
-msgstr ""
-
-msgctxt "#30010"
-msgid "Rebuild M3U/XMLTV"
-msgstr ""
-
-msgctxt "#30011"
-msgid "Delete [M3U/XMLTV]"
-msgstr ""
-
-msgctxt "#30012"
-msgid "Reconfigure %s"
-msgstr ""
-
-msgctxt "#30013"
-msgid "TCP Port:"
-msgstr ""
-
-msgctxt "#30014"
-msgid "UDP Port:"
-msgstr ""
-
-msgctxt "#30015"
-msgid "Change network port if a conflict exists."
-msgstr ""
-
-msgctxt "#30016"
-msgid "%s file deleted"
-msgstr ""
-
-msgctxt "#30017"
-msgid "Port %s already in-use!"
-msgstr ""
-
-msgctxt "#30018"
-msgid "Channels"
-msgstr ""
-
-msgctxt "#30019"
-msgid "Enable Automatic PVR Grouping"
-msgstr ""
-
-msgctxt "#30020"
 msgid "Miscellaneous"
 msgstr ""
 
-msgctxt "#30021"
-msgid "Favorite"
+msgctxt "#30001"
+msgid "Enable Debugging [Log errors]"
 msgstr ""
 
-msgctxt "#30022"
-msgid "AutoTune Channels"
-msgstr ""
-
-msgctxt "#30023"
-msgid "Recommended Channels"
-msgstr ""
-
-msgctxt "#30024"
-msgid "Channel Utilities"
-msgstr ""
-
-msgctxt "#30025"
-msgid "Options"
-msgstr ""
-
-msgctxt "#30026"
-msgid "Recommended"
-msgstr ""
-
-msgctxt "#30027"
-msgid "Channel Manager"
-msgstr ""
-
-msgctxt "#30028"
-msgid "Centralized file location"
-msgstr ""
-
-msgctxt "#30029"
-msgid "%s is busy, try again later..."
-msgstr ""
-
-msgctxt "#30030"
-msgid "Insert Fillers"
-msgstr ""
-
-msgctxt "#30031"
-msgid "Unable to locate channel, try clearing PVR cache."
-msgstr ""
-
-msgctxt "#30032"
-msgid "Select Channel as a preferred favorite!"
-msgstr ""
-
-msgctxt "#30033"
-msgid "Imports"
-msgstr ""
-
-msgctxt "#30034"
-msgid "M3U:"
-msgstr ""
-
-msgctxt "#30035"
-msgid "XMLTV:"
-msgstr ""
-
-msgctxt "#30036"
-msgid "Enable Import"
-msgstr ""
-
-msgctxt "#30037"
-msgid "Clear Import"
-msgstr ""
-
-msgctxt "#30038"
-msgid "Pagination Size"
-msgstr ""
-
-msgctxt "#30039"
-msgid "Future days to build (PVR & LiveTV Setting)."
-msgstr ""
-
-msgctxt "#30040"
-msgid "Playback Seek Tolerance (Seconds)"
-msgstr ""
-
-msgctxt "#30041"
-msgid "Parse for Accurate Duration Meta"
-msgstr ""
-
-msgctxt "#30042"
-msgid "Save Accurate Duration to Kodi's Library"
-msgstr ""
-
-msgctxt "#30043"
-msgid "Only use Accurate Duration Meta."
-msgstr ""
-
-msgctxt "#30044"
-msgid "Channel Logo"
-msgstr ""
-
-msgctxt "#30045"
-msgid "Playback Method"
-msgstr ""
-
-msgctxt "#30046"
-msgid "Open Settings (IPTV Simple)"
-msgstr ""
-
-msgctxt "#30047"
-msgid "Use XMLTV from M3U (if Available)."
-msgstr ""
-
-msgctxt "#30048"
-msgid "Tweaks"
-msgstr ""
-
-msgctxt "#30049"
-msgid "%s not found, Please Install"
-msgstr ""
-
-msgctxt "#30050"
-msgid "Building"
-msgstr ""
-
-msgctxt "#30051"
-msgid "Updating Channel"
-msgstr ""
-
-msgctxt "#30052"
-msgid "Initializing"
-msgstr ""
-
-msgctxt "#30053"
-msgid "Complete"
-msgstr ""
-
-msgctxt "#30054"
-msgid "Enable Overlay"
-msgstr ""
-
-msgctxt "#30055"
-msgid "Globals"
-msgstr ""
-
-msgctxt "#30056"
-msgid "No Channels Found, Please Configure."
-msgstr ""
-
-msgctxt "#30057"
-msgid "Delete [M3U/XMLTV] Files?"
-msgstr ""
-
-msgctxt "#30058"
-msgid ""
-msgstr ""
-
-msgctxt "#30059"
-msgid "Something went wrong! wait while we try again..."
-msgstr ""
-
-msgctxt "#30060"
-msgid "Play from here"
-msgstr ""
-
-msgctxt "#30061"
-msgid "Play onDemand"
-msgstr ""
-
-msgctxt "#30062"
-msgid "Reloading"
-msgstr ""
-
-msgctxt "#30063"
-msgid "Update"
-msgstr ""
-
-msgctxt "#30064"
-msgid "Build"
-msgstr ""
-
-msgctxt "#30065"
-msgid "Force %s to reload"
-msgstr ""
-
-msgctxt "#30066"
-msgid "Logo"
-msgstr ""
-
-msgctxt "#30067"
-msgid "Logos"
-msgstr ""
-
-msgctxt "#30068"
-msgid "Bumpers"
-msgstr ""
-
-msgctxt "#30069"
-msgid "Ratings"
-msgstr ""
-
-msgctxt "#30070"
-msgid "Commercials"
-msgstr ""
-
-msgctxt "#30071"
-msgid "Trailers"
-msgstr ""
-
-msgctxt "#30072"
-msgid "Channel Manager"
-msgstr ""
-
-msgctxt "#30073"
-msgid "Save All Channel Changes?"
-msgstr ""
-
-msgctxt "#30074"
-msgid "Play from here"
-msgstr ""
-
-msgctxt "#30075"
-msgid "Enter Custom Channel Groups"
-msgstr ""
-
-msgctxt "#30076"
-msgid "Enter Custom Groups\nSeparate by '|' ex. Action|Comedy"
-msgstr ""
-
-msgctxt "#30077"
-msgid "Clear Pre-defined Channels"
-msgstr ""
-
-msgctxt "#30078"
-msgid "Recently Added"
-msgstr ""
-
-msgctxt "#30079"
-msgid "PVR Recordings"
-msgstr ""
-
-msgctxt "#30080"
-msgid "Mixed"
-msgstr ""
-
-msgctxt "#30081"
-msgid "View Friendly User-Log"
-msgstr ""
-
-msgctxt "#30082"
-msgid "Select Custom Channel Groups"
-msgstr ""
-
-msgctxt "#30083"
-msgid "Select Content Path"
-msgstr ""
-
-msgctxt "#30084"
-msgid "Channel Name Missing..."
-msgstr ""
-
-msgctxt "#30085"
-msgid "Node Editor"
-msgstr ""
-
-msgctxt "#30086"
-msgid "Playlist Editor"
-msgstr ""
-
-msgctxt "#30087"
-msgid "Channel Name"
-msgstr ""
-
-msgctxt "#30088"
-msgid "Content Path"
-msgstr ""
-
-msgctxt "#30089"
-msgid "Content Group"
-msgstr ""
-
-msgctxt "#30090"
-msgid "Channel Rules"
-msgstr ""
-
-msgctxt "#30091"
-msgid "Save Changes?"
-msgstr ""
-
-msgctxt "#30092"
-msgid "Clear Configurations?"
-msgstr ""
-
-msgctxt "#30093"
-msgid "Clear User-Defined Channels"
-msgstr ""
-
-msgctxt "#30094"
-msgid "Include Specials/Extras"
-msgstr ""
-
-msgctxt "#30095"
-msgid "Include STRMs"
-msgstr ""
-
-msgctxt "#30096"
-msgid "Clean Start"
-msgstr ""
-
-msgctxt "#30097"
-msgid "Music Genres"
-msgstr ""
-
-msgctxt "#30098"
-msgid "Listen to %s Radio..."
-msgstr ""
-
-msgctxt "#30099"
-msgid "Client Mode"
-msgstr ""
-
-msgctxt "#30100"
-msgid "Running in Client Mode"
-msgstr ""
-
-msgctxt "#30101"
-msgid "Starting Service"
-msgstr ""
-
-msgctxt "#30102"
-msgid "Auto Tuning"
-msgstr ""
-
-msgctxt "#30103"
-msgid "No %s found..."
-msgstr ""
-
-msgctxt "#30104"
-msgid "Client Mode"
-msgstr ""
-
-msgctxt "#30105"
-msgid "We will Be Right Back."
-msgstr ""
-
-msgctxt "#30106"
-msgid "Up Next"
-msgstr ""
-
-msgctxt "#30107"
-msgid "You are Watching"
-msgstr ""
-
-msgctxt "#30108"
-msgid "Stay Tuned"
-msgstr ""
-
-msgctxt "#30109"
-msgid "Later Today"
-msgstr ""
-
-msgctxt "#30110"
-msgid "Pre-defined Channels are currently not configurable."
-msgstr ""
-
-msgctxt "#30111"
-msgid "Select Channel Logo"
-msgstr ""
-
-msgctxt "#30112"
-msgid "%s Configuration Invalid, Try again..."
-msgstr ""
-
-msgctxt "#30113"
-msgid "Path Verified."
-msgstr ""
-
-msgctxt "#30114"
-msgid "Radio"
-msgstr ""
-
-msgctxt "#30115"
-msgid "No Duration Meta found!"
-msgstr ""
-
-msgctxt "#30116"
-msgid "Select Source Type"
-msgstr ""
-
-msgctxt "#30117"
-msgid "Close"
-msgstr ""
-
-msgctxt "#30118"
-msgid "OK"
-msgstr ""
-
-msgctxt "#30119"
-msgid "Save"
-msgstr ""
-
-msgctxt "#30120"
-msgid "Cancel"
-msgstr ""
-
-msgctxt "#30121"
-msgid "Select Channel %s"
-msgstr ""
-
-msgctxt "#30122"
-msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see readme for details."
-msgstr ""
-
-msgctxt "#30123"
-msgid "Enter Channel Name"
-msgstr ""
-
-msgctxt "#30124"
-msgid "Select Content Path"
-msgstr ""
-
-msgctxt "#30125"
-msgid "Select Channel Groups"
-msgstr ""
-
-msgctxt "#30126"
-msgid "Create Advanced Channel Rules"
-msgstr ""
-
-msgctxt "#30127"
-msgid "Is this a Radio/Music Channel?"
-msgstr ""
-
-msgctxt "#30128"
-msgid "Clear this Channels Configurations"
-msgstr ""
-
-msgctxt "#30129"
-msgid "Adjust Seek Threshold (Percentage)"
-msgstr ""
-
-msgctxt "#30130"
-msgid "Settings"
-msgstr ""
-
-msgctxt "#30131"
-msgid "More Info..."
-msgstr ""
-
-msgctxt "#30132"
-msgid "Welcome to %s!\nNo Channels were found...\n%s"
-msgstr ""
-
-msgctxt "#30133"
-msgid "Delete"
-msgstr ""
-
-msgctxt "#30134"
-msgid "%s - Changelog v.%s"
-msgstr ""
-
-msgctxt "#30135"
-msgid "Select Channel Rule"
-msgstr ""
-
-msgctxt "#30137"
-msgid "PseudoRadio"
-msgstr ""
-
-msgctxt "#30138"
-msgid "PseudoTV"
-msgstr ""
-
-msgctxt "#30139"
-msgid "Please save changes before creating channel rules."
-msgstr ""
-
-msgctxt "#30140"
-msgid "Channel Rules"
-msgstr ""
-
-msgctxt "#30141"
-msgid "Seasonal"
-msgstr ""
-
-msgctxt "#30142"
-msgid "Plugin/UPNP Source Detected, Testing Seek Compatibility"
-msgstr ""
-
-msgctxt "#30143"
-msgid "Validating Path"
-msgstr ""
-
-msgctxt "#30144"
-msgid "Select %s"
-msgstr ""
-
-msgctxt "#30145"
-msgid "Allow this plugin to automatically configure Third-Party plugin settings?"
-msgstr ""
-
-msgctxt "#30146"
-msgid "Import Set"
-msgstr ""
-
-msgctxt "#30147"
-msgid "%s compatible plugin found!\nWould you like to add [B]%s[/B] to your recommended list?"
-msgstr ""
-
-msgctxt "#30148"
-msgid "Detect Compatible Kodi Plugins?"
-msgstr ""
-
-msgctxt "#30149"
-msgid "Ignoring"
-msgstr ""
-
-msgctxt "#30150"
-msgid "Recommended Services"
-msgstr ""
-
-msgctxt "#30151"
-msgid "Importing"
-msgstr ""
-
-msgctxt "#30152"
-msgid "Saving..."
-msgstr ""
-
-msgctxt "#30153"
-msgid "Show On Next"
-msgstr ""
-
-msgctxt "#30154"
-msgid "Clear Recommended Blacklist"
-msgstr ""
-
-msgctxt "#30155"
-msgid "TV"
-msgstr ""
-
-msgctxt "#30156"
-msgid "Movies"
-msgstr ""
-
-msgctxt "#30157"
-msgid "Music"
-msgstr ""
-
-msgctxt "#30158"
-msgid "Parsing Kodi Library"
-msgstr ""
-
-msgctxt "#30159"
-msgid "Populating AutoTune"
-msgstr ""
-
-msgctxt "#30160"
-msgid "Parsing Kodi Library"
-msgstr ""
-
-msgctxt "#30161"
-msgid "Unavailable"
-msgstr ""
-
-msgctxt "#30162"
-msgid "PVR Callback"
-msgstr ""
-
-msgctxt "#30163"
-msgid "Playlist"
-msgstr ""
-
-msgctxt "#30164"
-msgid "Prefer Kodi Library"
-msgstr ""
-
-msgctxt "#30165"
-msgid "Prefer File Metadata"
-msgstr ""
-
-msgctxt "#30166"
-msgid "Prefer White"
-msgstr ""
-
-msgctxt "#30167"
-msgid "Prefer Color"
-msgstr ""
-
-msgctxt "#30168"
-msgid "EPG Artwork"
-msgstr ""
-
-msgctxt "#30169"
-msgid "Prefer Landscape"
-msgstr ""
-
-msgctxt "#30170"
-msgid "Prefer Poster"
-msgstr ""
-
-msgctxt "#30171"
-msgid "Custom"
-msgstr ""
-
-msgctxt "#30172"
-msgid "M3U"
-msgstr ""
-
-msgctxt "#30173"
-msgid "XMLTV"
-msgstr ""
-
-msgctxt "#30174"
-msgid "{Seasonal}"
-msgstr ""
-
-msgctxt "#30175"
-msgid "Show Channel Bug"
-msgstr ""
-
-msgctxt "#30176"
-msgid "Silence Notifications during Playback"
-msgstr ""
-
-msgctxt "#30177"
-msgid "Movie"
-msgstr ""
-
-msgctxt "#30178"
-msgid "Select Server"
-msgstr ""
-
-msgctxt "#30179"
-msgid "Library"
-msgstr ""
-
-msgctxt "#30180"
-msgid "Resources"
-msgstr ""
-
-msgctxt "#30181"
-msgid "Open Settings (IPTV Manager)"
-msgstr ""
-
-msgctxt "#30182"
-msgid "Refresh IPTV Manager"
-msgstr ""
-
-msgctxt "#30183"
-msgid "Changes Detected: Rebooting..."
-msgstr ""
-
-msgctxt "#30184"
-msgid "Filter channels using the m3u provider parameter (Optional)."
-msgstr ""
-
-msgctxt "#30185"
-msgid "Include 3D Media"
-msgstr ""
-
-msgctxt "#30186"
-msgid "Fillers"
-msgstr ""
-
-msgctxt "#30187"
-msgid "Enable Ratings"
-msgstr ""
-
-msgctxt "#30188"
-msgid "Enable Bumpers"
-msgstr ""
-
-msgctxt "#30189"
-msgid "Enable Trailers"
-msgstr ""
-
-msgctxt "#30190"
-msgid "Enable Commercials"
-msgstr ""
-
-msgctxt "#30191"
-msgid "Select Diffuse Color"
-msgstr ""
-
-msgctxt "#30192"
-msgid "Select Color to apply to given setting."
-msgstr ""
-
-msgctxt "#30193"
-msgid "Installing"
-msgstr ""
-
-msgctxt "#30194"
-msgid "[COLOR=red][B]Warning!! [/B]Recommend users using Flash/SSD change path to HDD or RAMDISK.[/COLOR]"
-msgstr ""
-
-msgctxt "#30195"
-msgid "URL"
-msgstr ""
-
-msgctxt "#30196"
-msgid "File"
-msgstr ""
-
-msgctxt "#30197"
-msgid "Select M3U Type"
-msgstr ""
-
-msgctxt "#30198"
-msgid "Select XMLTV Type"
-msgstr ""
-
-msgctxt "#30199"
-msgid "Populating"
-msgstr ""
-
-msgctxt "#30200"
-msgid "Backup"
-msgstr ""
-
-msgctxt "#30201"
-msgid "Favorites"
-msgstr ""
-
-msgctxt "#30202"
-msgid "Coming Soon!"
-msgstr ""
-
-msgctxt "#30203"
-msgid "AutoTune"
-msgstr ""
-
-msgctxt "#30204"
-msgid "Exiting"
-msgstr ""
-
-msgctxt "#30205"
-msgid "Show Static Effect"
-msgstr ""
-
-msgctxt "#30206"
-msgid "Artwork changes will propagate slowly over time."
-msgstr ""
-
-msgctxt "#30207"
-msgid "Server discovered"
-msgstr ""
-
-msgctxt "#30208"
-msgid "Enable Nearest Season"
-msgstr ""
-
-msgctxt "#30209"
-msgid "Import"
-msgstr ""
-
-msgctxt "#30210"
-msgid "Third-Party M3U/XMLTV Import"
-msgstr ""
-
-msgctxt "#30211"
-msgid "Recover"
-msgstr ""
-
-msgctxt "#30212"
-msgid "Replace existing Backup from"
-msgstr ""
-
-msgctxt "#30213"
-msgid "Replace existing channels with %s\n%s"
-msgstr ""
-
-msgctxt "#30214"
-msgid "Yes to all"
-msgstr ""
-
-msgctxt "#30215"
-msgid "Last Backup"
-msgstr ""
-
-msgctxt "#30216"
-msgid "Restore"
-msgstr ""
-
-msgctxt "#30217"
-msgid "Please Install & Enable %s to continue..."
-msgstr ""
-
-msgctxt "#30218"
-msgid "Allow seasonal channel to advanced to nearest holiday within the month."
-msgstr ""
-
-msgctxt "#30219"
-msgid "Enabled"
-msgstr ""
-
-msgctxt "#30220"
-msgid "Disabled"
-msgstr ""
-
-msgctxt "#30221"
-msgid "Start Over Threshold (Percent)"
-msgstr ""
-
-msgctxt "#30222"
-msgid "Third-Party (Settings)"
-msgstr ""
-
-msgctxt "#30223"
-msgid "Auto"
-msgstr ""
-
-msgctxt "#30224"
-msgid "One Insert"
-msgstr ""
-
-msgctxt "#30225"
-msgid "Two Inserts"
-msgstr ""
-
-msgctxt "#30226"
-msgid "Three Inserts"
-msgstr ""
-
-msgctxt "#30227"
-msgid "Four Inserts"
-msgstr ""
-
-msgctxt "#30228"
-msgid "[COLOR=red][B]Setting Temporarily Disabled![/B][/COLOR] Running background task, Settings will be enabled on completion. Try again later..."
-msgstr ""
-
-msgctxt "#30229"
-msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
-msgstr ""
-
-msgctxt "#30230"
-msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running, no media found or system configured as a client!\nClose settings to resume background tasks."
-msgstr ""
-
-msgctxt "#30231"
-msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see readme for details."
-msgstr ""
-
-msgctxt "#30232"
-msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see readme for details."
-msgstr ""
-
-msgctxt "#30233"
-msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see readme for details."
-msgstr ""
-
-msgctxt "#30234"
-msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see readme for details."
-msgstr ""
-
-msgctxt "#30235"
-msgid "Prefer Kodi Library - Use less accurate runtimes from metadata providers.\nPrefer File Metadata - Parse file for accurate runtimes. *see readme for details."
-msgstr ""
-
-msgctxt "#30236"
-msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
-msgstr ""
-
-msgctxt "#30237"
-msgid "AutoTune from Pre-defined TV Networks collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30238"
-msgid "AutoTune from Pre-defined TV Shows collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30239"
-msgid "AutoTune from Pre-defined TV Genres collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30240"
-msgid "AutoTune from Pre-defined Movie Genres collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30241"
-msgid "AutoTune from Pre-defined Movie Studios collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30242"
-msgid "AutoTune from Pre-defined Mixed TV/Movie Genres collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30243"
-msgid "AutoTune from Pre-defined Mixed Miscellaneous Content collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30244"
-msgid "AutoTune from Pre-defined Music Genres collected from your Kodi Library."
-msgstr ""
-
-msgctxt "#30245"
-msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
-msgstr ""
-
-msgctxt "#30246"
-msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
-msgstr ""
-
-msgctxt "#30247"
-msgid "Force refresh IPTV Manager (Optional). IPTV Manager automatically updates hourly."
-msgstr ""
-
-msgctxt "#30248"
-msgid "Clear all Pre-defined selections and remove their channels."
-msgstr ""
-
-msgctxt "#30249"
-msgid "Clear Plugin Blacklist. Blacklisted plugins are ignored in Recommended list."
-msgstr ""
-
-msgctxt "#30250"
-msgid "Import Third-Party M3U/XMLTV sets."
-msgstr ""
-
-msgctxt "#30251"
-msgid "Enable Import"
-msgstr ""
-
-msgctxt "#30252"
-msgid "Select File or Enter URL"
-msgstr ""
-
-msgctxt "#30253"
-msgid "Filter imports by 'Provider'. *see readme for details."
-msgstr ""
-
-msgctxt "#30254"
-msgid "Disable and Clear all import settings."
-msgstr ""
-
-msgctxt "#30255"
-msgid "Disable notification during playback."
-msgstr ""
-
-msgctxt "#30256"
-msgid "Group guidedata by category."
-msgstr ""
-
-msgctxt "#30257"
-msgid "Enter custom guidedata categories, used by the channel manager."
-msgstr ""
-
-msgctxt "#30258"
-msgid "Move critical files to a central location.\nPrevent  flash write thrashing by moving to HDD or Persistent (Restorable) RAMDISK"
-msgstr ""
-
-msgctxt "#30259"
-msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Path configure under options 'Centralized file location'."
-msgstr ""
-
-msgctxt "#30260"
-msgid "CPU Pinning, Select the amount of cores used for concurrent/parallel operations.\n[Full ONLY Recommended on PC]"
-msgstr ""
-
-msgctxt "#30261"
-msgid "Pagination Limit, How many entries are requested and parsed per call. [25 Default]\n[Lower == Better Performance]"
-msgstr ""
-
-msgctxt "#30263"
-msgid "Configure 'Future days to display' in Kodi PVR & LiveTV settings. (3-days Recommended).\n[Lower == Fresh Data]"
-msgstr ""
-
-msgctxt "#30264"
-msgid "Include Specials and Extras.\nSeason 00 & Movie Extras"
-msgstr ""
-
-msgctxt "#30265"
-msgid "Include .strm files *see readme for details."
-msgstr ""
-
-msgctxt "#30266"
-msgid "Include 3D content."
-msgstr ""
-
-msgctxt "#30267"
-msgid "Include content fillers (Ratings/Bumpers/Commercials/Trailers). *see readme for details."
-msgstr ""
-
-msgctxt "#30268"
-msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]\nGlobal Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
-msgstr ""
-
-msgctxt "#30269"
-msgid "Required for debugging operations."
-msgstr ""
-
-msgctxt "#30270"
-msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
-msgstr ""
-
-msgctxt "#30271"
-msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Manager) for optimal usage.\nOptimal changes will be reinforced automatically."
-msgstr ""
-
-msgctxt "#30272"
-msgid "Select One or More %s"
-msgstr ""
-
-msgctxt "#30273"
-msgid "%s - Readme v.%s"
-msgstr ""
-
-msgctxt "#30274"
-msgid "Show Readme"
-msgstr ""
-
-msgctxt "#30275"
-msgid "Show Changelog"
-msgstr ""
-
-msgctxt "#30276"
-msgid "Documents"
-msgstr ""
-
-msgctxt "#30277"
-msgid "3 Hours"
-msgstr ""
-
-msgctxt "#30278"
-msgid "6 Hours"
-msgstr ""
-
-msgctxt "#30279"
-msgid "12 Hours"
-msgstr ""
-
-msgctxt "#30280"
-msgid "24 Hours"
-msgstr ""
-
-msgctxt "#30281"
-msgid "Idle Timer"
-msgstr ""
-
-msgctxt "#30282"
-msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdown."
-msgstr ""
-
-msgctxt "#30283"
-msgid "Are You Still Watching?"
-msgstr ""
-
-msgctxt "#30284"
-msgid "Stopping Playback in [B]%s[/B] seconds.\n[B]Cancel[/B] to continue watching."
-msgstr ""
-
-msgctxt "#30285"
-msgid "Unknown"
-msgstr ""
-
-msgctxt "#30286"
-msgid "AutoTune sample channels?"
-msgstr ""
-
-msgctxt "#30287"
-msgid "Autotune or Recover from last Backup?"
-msgstr ""
-
-msgctxt "#30288"
-msgid "Not Available in Client Mode"
-msgstr ""
-
-msgctxt "#30289"
-msgid "Stay tuned for more..."
-msgstr ""
-
-msgctxt "#30290"
-msgid "[B]You're Watching:[/B]"
-msgstr ""
-
-msgctxt "#30291"
-msgid "[B]Up Next:[/B]"
-msgstr ""
-
-msgctxt "#30292"
-msgid "Install Log Uploader"
-msgstr ""
-
-msgctxt "#30293"
-msgid "Open Log Uploader"
-msgstr ""
-
-msgctxt "#30294"
-msgid "Advanced"
-msgstr ""
-
-msgctxt "#30295"
-msgid "General"
-msgstr ""
-
-msgctxt "#30296"
-msgid "Playback"
-msgstr ""
-
-msgctxt "#30297"
-msgid "Parsing"
-msgstr ""
-
-msgctxt "#30298"
-msgid "Overlay"
-msgstr ""
-
-msgctxt "#30299"
-msgid "Display coming up next meta"
-msgstr ""
-
-msgctxt "#30300"
-msgid "Display emulated static between broadcasts for a retro experience."
-msgstr ""
-
-msgctxt "#30301"
-msgid "Display the channel logo at the bottom corner of your screen."
-msgstr ""
-
-msgctxt "#30302"
-msgid "Enable visual features."
-msgstr ""
-
-msgctxt "#30303"
-msgid "Manage Library Nodes."
-msgstr ""
-
-msgctxt "#30304"
-msgid "Manage Smartplaylists."
-msgstr ""
-
-msgctxt "#30305"
-msgid "Utilities Menu"
-msgstr ""
-
-msgctxt "#30306"
-msgid "Utilities List"
-msgstr ""
-
-msgctxt "#30307"
-msgid "Missing Resources, Please install the %s Repository..."
-msgstr ""
-
-msgctxt "#30308"
-msgid "Browse"
-msgstr ""
-
-msgctxt "#30309"
-msgid "Delete [M3U/XMLTV/Channels/Library]"
-msgstr ""
-
-msgctxt "#30310"
-msgid "Force PVR refresh"
-msgstr ""
-
-msgctxt "#30311"
-msgid "Restarting %s service, Please wait..."
-msgstr ""
-
-msgctxt "#30312"
-msgid "Shutting Down %s service"
-msgstr ""
-
-msgctxt "#30313"
-msgid "Removing Channel"
-msgstr ""
-
-msgctxt "#30314"
-msgid "No Duration Found!"
-msgstr ""
-
-msgctxt "#30315"
-msgid "Skipping"
-msgstr ""
-
-msgctxt "#30316"
-msgid "Missing Playable File"
-msgstr ""
-
-msgctxt "#30317"
-msgid "No Content Found!"
-msgstr ""
-
-msgctxt "#30318"
-msgid "In-Valid Path!"
-msgstr ""
-
-msgctxt "#30319"
-msgid "PseudoTV Live"
-msgstr ""
-
-msgctxt "#30320"
-msgid "Local"
-msgstr ""
-
-msgctxt "#30321"
-msgid "Select"
-msgstr ""
-
-msgctxt "#30322"
-msgid "Match"
-msgstr ""
-
-msgctxt "#30323"
-msgid "Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
-msgstr ""
-
-msgctxt "#30324"
-msgid "Channel bug visibility Interval"
-msgstr "" 
-
-msgctxt "#30325"
-msgid "No Logo Found!"
-msgstr "" 
-
-msgctxt "#30326"
-msgid "Centralized file location is unavailable\n%s\nWould you like to restore the default location?"
-msgstr "" 
-
-msgctxt "#30327"
-msgid "Cleaning abandoned channel lineup"
-msgstr "" 
-
-msgctxt "#30328"
-msgid "Updating AutoTune"
-msgstr ""
-
-msgctxt "#30329"
-msgid "Building Channel"
-msgstr ""
-
-msgctxt "#30330"
-msgid "Skipping Channel"
-msgstr ""
-
-msgctxt "#30331"
-msgid "Checking Channel"
-msgstr ""
-
-msgctxt "#30332"
-msgid "Checking AutoTune"
-msgstr ""
-
-msgctxt "#30334"
-msgid "Past days to include (PVR & LiveTV Setting)."
-msgstr ""
-
-msgctxt "#30335"
-msgid "Configure 'Past days to display' in Kodi PVR & LiveTV settings. (1-day Recommended)."
-msgstr ""
-
-msgctxt "#30336"
-msgid "Change centralized file location & move files?\nOld:%s\nNew:%s"
-msgstr ""
-
-msgctxt "#30337"
-msgid "Adding Channel"
-msgstr ""
-
-msgctxt "#30338"
-msgid "Recovering Channel"
-msgstr ""
-
-msgctxt "#30339"
-msgid "Restoring Autotune"
-msgstr ""
-
-msgctxt "#30340"
+msgctxt "#30002"
 msgid "Debug Level"
 msgstr ""
 
-msgctxt "#30341"
+msgctxt "#30003"
 msgid "LOGDEBUG"
 msgstr ""
 
-msgctxt "#30342"
+msgctxt "#30004"
 msgid "LOGINFO"
 msgstr ""
 
-msgctxt "#30343"
+msgctxt "#30005"
 msgid "LOGWARNING"
 msgstr ""
 
-msgctxt "#30344"
+msgctxt "#30006"
 msgid "LOGERROR"
 msgstr ""
 
-msgctxt "#30345"
+msgctxt "#30007"
 msgid "LOGFATAL"
 msgstr ""
 
-msgctxt "#30346"
+msgctxt "#30008"
+msgid "Install Log Uploader"
+msgstr ""
+
+msgctxt "#30009"
+msgid "Submit Log"
+msgstr ""
+
+msgctxt "#30010"
+msgid "Options"
+msgstr ""
+
+msgctxt "#30011"
+msgid "[COLOR=red][B]Warning!! [/B]Recommend Flash/SSD users change path to HDD or RAMDISK.[/COLOR]"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Centralized file location"
+msgstr "
+
+msgctxt "#30013"
+msgid "Tweaks"
+msgstr ""
+
+msgctxt "#30014"
+msgid "Parsing"
+msgstr ""
+
+msgctxt "#30015"
+msgid "Pagination Size"
+msgstr ""
+
+msgctxt "#30016"
+msgid "Fillers"
+msgstr ""
+
+msgctxt "#30017"
+msgid "Enable Ratings"
+msgstr ""
+
+msgctxt "#30018"
+msgid "Enable Bumpers"
+msgstr ""
+
+msgctxt "#30019"
+msgid "Enable Commercials"
+msgstr ""
+
+msgctxt "#30020"
+msgid "Enable Trailers"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Disabled"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Auto"
+msgstr ""
+
+msgctxt "#30023"
+msgid "One Insert"
+msgstr ""
+
+msgctxt "#30024"
+msgid "Two Inserts"
+msgstr ""
+
+msgctxt "#30025"
+msgid "Three Inserts"
+msgstr ""
+
+msgctxt "#30026"
+msgid "Four Inserts"
+msgstr ""
+
+msgctxt "#30027"
+msgid "Logos"
+msgstr ""
+
+msgctxt "#30028"
+msgid "Ratings"
+msgstr ""
+
+msgctxt "#30029"
+msgid "Bumpers"
+msgstr ""
+
+msgctxt "#30030"
+msgid "Commercials"
+msgstr ""
+
+msgctxt "#30031"
+msgid "Trailers"
+msgstr ""
+
+msgctxt "#30032"
+msgid "Resources"
+msgstr ""
+
+msgctxt "#30033"
+msgid ""
+msgstr ""
+
+msgctxt "#30034"
+msgid ""
+msgstr ""
+
+msgctxt "#30035"
+msgid ""
+msgstr ""
+
+msgctxt "#30036"
+msgid "Minimum Guide Days"
+msgstr ""
+
+msgctxt "#30037"
+msgid "Maximum Guide Days"
+msgstr ""
+
+msgctxt "#30038"
+msgid "AutoTune"
+msgstr ""
+
+msgctxt "#30039"
+msgid "Clear Recommended Blacklist"
+msgstr ""
+
+msgctxt "#30040"
+msgid "Clear Pre-defined Channels"
+msgstr ""
+
+msgctxt "#30041"
+msgid "Globals"
+msgstr ""
+
+msgctxt "#30042"
+msgid "Enable Overlay"
+msgstr ""
+
+msgctxt "#30043"
+msgid "Show Channel Bug"
+msgstr ""
+
+msgctxt "#30044"
+msgid "Select Diffuse Color"
+msgstr ""
+
+msgctxt "#30045"
+msgid "Show On Next"
+msgstr ""
+
+msgctxt "#30046"
+msgid "Show Static (TV) Effect"
+msgstr ""
+
+msgctxt "#30047"
+msgid ""
+msgstr ""
+
+msgctxt "#30048"
+msgid "Overlay"
+msgstr ""
+
+msgctxt "#30049"
+msgid "Parse for Accurate Duration Meta"
+msgstr ""
+
+msgctxt "#30050"
+msgid "Prefer Kodi Library"
+msgstr ""
+
+msgctxt "#30051"
+msgid "Prefer File Metadata"
+msgstr ""
+
+msgctxt "#30052"
+msgid "Save Accurate Duration to Kodi's Library"
+msgstr ""
+
+msgctxt "#30053"
+msgid "Include Specials/Extras"
+msgstr ""
+
+msgctxt "#30054"
+msgid "Include STRMs"
+msgstr ""
+
+msgctxt "#30055"
+msgid "Include 3D Media."
+msgstr ""
+
+msgctxt "#30056"
+msgid "Insert Fillers"
+msgstr ""
+
+msgctxt "#30057"
+msgid "Playback"
+msgstr ""
+
+msgctxt "#30058"
+msgid "Playback Method"
+msgstr ""
+
+msgctxt "#30059"
+msgid "PVR Callback"
+msgstr ""
+
+msgctxt "#30060"
+msgid "Playlist"
+msgstr ""
+
+msgctxt "#30061"
+msgid "Playback Seek Tolerance (Seconds)"
+msgstr ""
+
+msgctxt "#30062"
+msgid "Adjust Seek Threshold (Percentage)"
+msgstr ""
+
+msgctxt "#30063"
+msgid "Enable Automatic PVR Grouping"
+msgstr ""
+
+msgctxt "#30064"
+msgid "Enter Custom Channel Groups"
+msgstr ""
+
+msgctxt "#30065"
+msgid "EPG Artwork"
+msgstr ""
+
+msgctxt "#30066"
+msgid "Prefer Landscape"
+msgstr ""
+
+msgctxt "#30067"
+msgid "Prefer Poster"
+msgstr ""
+
+msgctxt "#30068"
+msgid "Enable Nearest Holiday"
+msgstr ""
+
+msgctxt "#30069"
+msgid "Third-Party (Settings)"
+msgstr ""
+
+msgctxt "#30070"
+msgid "Automatically Apply Recommended Third-Party plugin settings?"
+msgstr ""
+
+msgctxt "#30071"
+msgid "Open Settings [IPTV Simple]"
+msgstr ""
+
+msgctxt "#30072"
+msgid "Debugging"
+msgstr ""
+
+msgctxt "#30073"
+msgid "Open Settings [IPTV Manager]"
+msgstr ""
+
+msgctxt "#30074"
+msgid "Manually Apply Recommended Third-Party plugin settings."
+msgstr ""
+
+msgctxt "#30075"
+msgid "More Info"
+msgstr ""
+
+msgctxt "#30076"
+msgid "Play from here"
+msgstr ""
+
+msgctxt "#30077"
+msgid "Play programme"
+msgstr ""
+
+msgctxt "#30078"
+msgid "Idle Timer"
+msgstr ""
+
+msgctxt "#30079"
+msgid "Disabled"
+msgstr ""
+
+msgctxt "#30080"
+msgid "3 Hours"
+msgstr ""
+
+msgctxt "#30081"
+msgid "6 Hours"
+msgstr ""
+
+msgctxt "#30082"
+msgid "12 Hours"
+msgstr ""
+
+msgctxt "#30083"
+msgid "24 Hours"
+msgstr ""
+
+msgctxt "#30084"
+msgid "Disable Cache while Debugging"
+msgstr ""
+
+msgctxt "#30085"
+msgid ""
+msgstr ""
+
+msgctxt "#30086"
+msgid "Channel Bug visibility Interval"
+msgstr "" 
+
+msgctxt "#30087"
+msgid "Browse"
+msgstr ""
+
+msgctxt "#30088"
+msgid "Documents"
+msgstr ""
+
+msgctxt "#30089"
+msgid "Show Readme"
+msgstr ""
+
+msgctxt "#30090"
+msgid "Show Changelog"
+msgstr ""
+
+msgctxt "#30091"
+msgid "Find More"
+msgstr ""
+
+msgctxt "#30092"
 msgid "Multi-room"
 msgstr ""
 
-msgctxt "#30347"
-msgid "Multi-room help"
-msgstr ""
-
-msgctxt "#30348"
-msgid "Discovered Server!"
-msgstr ""
-
-msgctxt "#30349"
-msgid "Remote Path"
-msgstr ""
-
-msgctxt "#30350"
-msgid "Network Folder"
-msgstr ""
-
-msgctxt "#30351"
-msgid "Auto Discover"
-msgstr ""
-
-msgctxt "#30352"
+msgctxt "#30093"
 msgid "Server Information"
 msgstr ""
 
-msgctxt "#30353"
-msgid "Client Configuration"
+msgctxt "#30094"
+msgid "M3U:"
 msgstr ""
 
-msgctxt "#30354"
-msgid "Server not detected!"
+msgctxt "#30095"
+msgid "XMLTV:"
 msgstr ""
 
-msgctxt "#30355"
+msgctxt "#30096"
 msgid "Genre:"
 msgstr ""
 
-msgctxt "#30356"
-msgid "Changes Detected: Restarting..."
+msgctxt "#30097"
+msgid "UDP Port:"
 msgstr ""
 
-msgctxt "#30357"
-msgid "[COLOR=red][B]Settings disabled while initializing, try again later...[/B][/COLOR]"
+msgctxt "#30098"
+msgid "TCP Port:"
+msgstr ""
+
+msgctxt "#30099"
+msgid "Client Configuration"
+msgstr 
+
+msgctxt "#30100"
+msgid "Client Mode"
+msgstr ""
+
+msgctxt "#30101"
+msgid "Remote Server"
+msgstr ""
+
+msgctxt "#30102"
+msgid "Network Folder"
+msgstr ""
+
+msgctxt "#30103"
+msgid "Ports"
+msgstr ""
+
+msgctxt "#30104"
+msgid "SmartPlaylists"
+msgstr ""
+
+msgctxt "#30105"
+msgid "Detect Compatible Kodi Plugins?"
+msgstr ""
+
+msgctxt "#30106"
+msgid "Utilities"
+msgstr ""
+
+msgctxt "#30107"
+msgid "Channel Manager"
+msgstr ""
+
+msgctxt "#30108"
+msgid "Channels"
+msgstr ""
+
+msgctxt "#30109"
+msgid "Edit Channel %s\n[COLOR=white][B]In-use[/B][/COLOR] | [COLOR=dimgray][B]Unused[/B][/COLOR] | [COLOR=yellow][B]Favorite[/B][/COLOR] | [COLOR=cyan][B]Radio[/B][/COLOR] | [COLOR=orange][B]Uneditable[/B][/COLOR] | [COLOR=red][B]Warning[/B][/COLOR] *see readme for details."
+msgstr ""
+
+msgctxt "#30110"
+msgid "JSONRPC Delay"
+msgstr ""
+
+msgctxt "#30111"
+msgid "Expert Options"
+msgstr ""
+
+msgctxt "#30112"
+msgid "Channel Bug Position"
+msgstr ""
+
+msgctxt "#30113"
+msgid "Force Diffuse Color"
+msgstr ""
+
+
+
+
+
+
+
+
+
+
+
+
+# Skin - strings 31000 thru 31999 reserved for skins
+
+
+
+# Labels - strings 32000 thru 32999 reserved for scripts
+msgctxt "#32000"
+msgid "Something went wrong, Try again..."
+msgstr ""
+
+msgctxt "#32001"
+msgid "Recently Added"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Seasonal"
+msgstr ""
+
+msgctxt "#32003"
+msgid "PVR Recordings"
+msgstr ""
+
+msgctxt "#32004"
+msgid "TV Networks"
+msgstr ""
+
+msgctxt "#32005"
+msgid "TV Shows"
+msgstr ""
+
+msgctxt "#32006"
+msgid "TV Genres"
+msgstr ""
+
+msgctxt "#32007"
+msgid "Movie Genres"
+msgstr ""
+
+msgctxt "#32008"
+msgid "Movie Studios"
+msgstr ""
+
+msgctxt "#32009"
+msgid "Mixed Genres"
+msgstr ""
+
+msgctxt "#32010"
+msgid "Mixed"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Music Genres"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Recommended"
+msgstr ""
+
+msgctxt "#32013"
+msgid "Services"
+msgstr ""
+
+msgctxt "#32014"
+msgid "TV"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Movies"
+msgstr ""
+
+msgctxt "#32016"
+msgid "Music"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Select One or More %s"
+msgstr ""
+
+msgctxt "#32018"
+msgid "No %s found..."
+msgstr ""
+
+msgctxt "#32019"
+msgid "Favorites"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Unavailable"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Building"
+msgstr ""
+
+msgctxt "#32022"
+msgid "Updating"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Channel"
+msgstr ""
+
+msgctxt "#32024"
+msgid "Initializing"
+msgstr ""
+
+msgctxt "#32025"
+msgid "Complete"
+msgstr ""
+
+msgctxt "#32026"
+msgid "No Content Found!"
+msgstr ""
+
+msgctxt "#32027"
+msgid "Skipping"
+msgstr ""
+
+msgctxt "#32028"
+msgid "Checking"
+msgstr ""
+
+msgctxt "#32029"
+msgid "Listen to %s Radio..."
+msgstr ""
+
+msgctxt "#32030"
+msgid "In-Valid Path!"
+msgstr ""
+
+msgctxt "#32031"
+msgid "No Media Found!"
+msgstr ""
+
+msgctxt "#32032"
+msgid "No Duration Found!"
+msgstr ""
+               
+msgctxt "#32033"
+msgid ""
+msgstr ""
+
+msgctxt "#32034"
+msgid "%s not found, Please Install!"
+msgstr ""
+
+msgctxt "#32035"
+msgid "[COLOR=yellow][B]Notice!! [/B]The following changes will be applied to [B]%s[/B] if you select [B]'YES'![/B][/COLOR]"
+msgstr ""
+
+msgctxt "#32036"
+msgid "Apply Changes to %s?"
+msgstr ""
+
+msgctxt "#32037"
+msgid "%s settings updated."
+msgstr ""
+
+msgctxt "#32038"
+msgid "Something went wrong! wait while we try again..."
+msgstr ""
+
+msgctxt "#32039"
+msgid "Are You Still Watching?"
+msgstr ""
+
+msgctxt "#32040"
+msgid "Stopping Playback in [B]%s[/B] seconds.\n[B]Cancel[/B] to continue watching."
+msgstr ""
+
+msgctxt "#32041"
+msgid "Library"
+msgstr ""
+
+msgctxt "#32042"
+msgid "Welcome to %s!\nNo Channels found, Would you like to\nAutoTune sample channels?"
+msgstr ""
+
+msgctxt "#32043"
+msgid "%s - Readme v.%s"
+msgstr ""
+
+msgctxt "#32044"
+msgid "Enter Custom Groups\nSeparate by '|' ex. Action|Comedy"
+msgstr ""
+
+msgctxt "#32045"
+msgid "%s - Changelog v.%s"
+msgstr ""
+
+msgctxt "#32046"
+msgid "No Changes to Apply..."
+msgstr ""
+
+msgctxt "#32047"
+msgid "Discovered Server"
+msgstr ""
+
+msgctxt "#32048"
+msgid "Select Server"
+msgstr ""
+
+msgctxt "#32049"
+msgid "Restarting %s..."
+msgstr ""
+
+msgctxt "#32050"
+msgid "Preparing to move files"
+msgstr ""
+
+msgctxt "#32051"
+msgid "Moving"
+msgstr ""
+
+msgctxt "#32052"
+msgid "Moving %s Failed!"
+msgstr ""
+
+msgctxt "#32053"
+msgid "Settings"
+msgstr ""
+
+msgctxt "#32054"
+msgid "Initializing"
+msgstr ""
+
+msgctxt "#32055"
+msgid "%s compatible plugin found!\nWould you like to add [B]%s[/B] to your recommended list?"
+msgstr ""
+
+msgctxt "#32056"
+msgid "Yes to all"
+msgstr ""
+
+msgctxt "#32057"
+msgid "%s is busy, try again later..."
+msgstr ""
+
+msgctxt "#32058"
+msgid "Not Available in Client Mode"
+msgstr ""
+
+msgctxt "#32059"
+msgid "Save"
+msgstr ""
+
+msgctxt "#32060"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "#32061"
+msgid "Delete"
+msgstr ""
+
+msgctxt "#32062"
+msgid "Close"
+msgstr ""
+
+msgctxt "#32063"
+msgid "OK"
+msgstr ""
+
+msgctxt "#32064"
+msgid "Pre-defined Channels are currently not configurable."
+msgstr ""
+
+msgctxt "#32065"
+msgid "Channel Name Missing..."
+msgstr ""
+
+msgctxt "#32066"
+msgid "Select Channel Logo"
+msgstr ""
+
+msgctxt "#32067"
+msgid "Select"
+msgstr ""
+
+msgctxt "#32068"
+msgid "Browse"
+msgstr ""
+
+msgctxt "#32069"
+msgid "Match"
+msgstr ""
+
+msgctxt "#32070"
+msgid "No Logo Found!"
+msgstr "" 
+
+msgctxt "#32071"
+msgid "Please save changes before creating channel rules."
+msgstr ""
+
+msgctxt "#32072"
+msgid "Select Channel Rule"
+msgstr ""
+
+msgctxt "#32073"
+msgid "Clear Configurations?"
+msgstr ""
+
+msgctxt "#32074"
+msgid "Adding Channel"
+msgstr ""
+
+msgctxt "#32075"
+msgid "Saving..."
+msgstr ""
+
+msgctxt "#32076"
+msgid "Save All Channel Changes?"
+msgstr ""
+
+msgctxt "#32077"
+msgid "%s Configuration Invalid, Try again..."
+msgstr ""
+
+msgctxt "#32078"
+msgid "Select Channel %s"
+msgstr ""
+
+msgctxt "#32079"
+msgid "Enter Channel Name"
+msgstr ""
+
+msgctxt "#32080"
+msgid "Select Content Path"
+msgstr ""
+
+msgctxt "#32081"
+msgid "Select Channel Groups"
+msgstr ""
+
+msgctxt "#32082"
+msgid "Clear this Channels Configurations"
+msgstr ""
+
+msgctxt "#32083"
+msgid "Select Channel as a preferred favorite!"
+msgstr ""
+
+msgctxt "#32084"
+msgid "Is this a Radio/Music Channel?"
+msgstr ""
+
+msgctxt "#32085"
+msgid "Enter Channel Name"
+msgstr ""
+
+msgctxt "#32086"
+msgid "Select Content Path"
+msgstr ""
+
+msgctxt "#32087"
+msgid "Select Channel Groups"
+msgstr ""
+
+msgctxt "#32088"
+msgid "Create Advanced Channel Rules"
+msgstr ""
+
+msgctxt "#32089"
+msgid "Clear Configurations?"
+msgstr ""
+
+msgctxt "#32090"
+msgid "Favorite"
+msgstr ""
+
+msgctxt "#32091"
+msgid "Radio"
+msgstr ""
+
+msgctxt "#32092"
+msgid "Channel Name"
+msgstr ""
+
+msgctxt "#32093"
+msgid "Content Path"
+msgstr ""
+
+msgctxt "#32094"
+msgid "Content Group"
+msgstr ""
+
+msgctxt "#32095"
+msgid "Channel Rules"
+msgstr ""
+
+msgctxt "#32096"
+msgid "Position Changed, Do you want to save?\n(%s,%s)"
+msgstr ""
+
+msgctxt "#32097"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi is in Windowed Display!\nIt's recommend you switch to Fullscreen.\nCurrent Resolution (%s)"
+msgstr ""
+
+msgctxt "#32098"
+msgid "Validating"
+msgstr ""
+
+msgctxt "#32099"
+msgid "This may take a moment."
+msgstr ""
+
+msgctxt "#32100"
+msgid "-Add Path"
+msgstr ""
+
+msgctxt "#32101"
+msgid "-Save Paths"
+msgstr ""
+
+msgctxt "#32102"
+msgid "Remove Path"
+msgstr ""
+
+msgctxt "#32103"
+msgid "Edit Path"
+msgstr ""
+
+msgctxt "#32104"
+msgid "[B]You're Watching:[/B] %s"
+msgstr ""
+
+msgctxt "#32105"
+msgid "Unknown"
+msgstr ""
+
+msgctxt "#32106"
+msgid "Last Backup"
+msgstr ""
+
+msgctxt "#32107"
+msgid "Restore"
+msgstr ""
+
+msgctxt "#32108"
+msgid "Replace existing Backup from"
+msgstr ""
+
+msgctxt "#32109"
+msgid "Replace existing channels with %s\n%s"
+msgstr ""
+
+msgctxt "#32110"
+msgid "Backup"
+msgstr ""
+
+msgctxt "#32111"
+msgid "Recover Channels from a backup?"
+msgstr ""
+
+msgctxt "#32112"
+msgid "Recover"
+msgstr ""
+
+msgctxt "#32113"
+msgid "Recovering Channel"
+msgstr ""
+
+msgctxt "#32114"
+msgid ""
+msgstr ""
+
+msgctxt "#32115"
+msgid "%s, Running as client..."
+msgstr ""
+
+msgctxt "#32116"
+msgid "[B]Next:[/B] %s"
+msgstr ""
+
+msgctxt "#32117"
+msgid "Delete M3U/XMLTV"
+msgstr ""
+
+msgctxt "#32118"
+msgid "Clean Start"
+msgstr ""
+
+msgctxt "#32119"
+msgid "Remove all files and configurations"
+msgstr ""
+
+msgctxt "#32120"
+msgid "Remove m3u and xmltv files"
+msgstr ""
+
+msgctxt "#32121"
+msgid "Force PVR to reload"
+msgstr ""
+
+msgctxt "#32122"
+msgid "Warning System can become unresponsive."
+msgstr ""
+
+msgctxt "#32123"
+msgid "Force background service to reload."
+msgstr ""
+
+msgctxt "#32124"
+msgid "Shutdown background service and restart."
+msgstr ""
+
+msgctxt "#32125"
+msgid "Reloading"
+msgstr ""
+
+msgctxt "#32126"
+msgid "Select Utility to perform"
+msgstr ""
+
+msgctxt "#32127"
+msgid "Deleting %s"
+msgstr ""
+
+
+
+
+# Help - strings 33000 thru 33999 reserved for common strings used in add-ons
+
+msgctxt "#33001"
+msgid "Only enable for short DEBUGGING sessions. The Kodi log will be spammed; You may experience poor system performance while enabled."
+msgstr ""
+
+msgctxt "#33003"
+msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#33004"
+msgid "AutoTune from Pre-defined TV Networks collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33005"
+msgid "AutoTune from Pre-defined TV Shows collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33006"
+msgid "AutoTune from Pre-defined TV Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33007"
+msgid "AutoTune from Pre-defined Movie Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33008"
+msgid "AutoTune from Pre-defined Movie Studios collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33009"
+msgid "AutoTune from Pre-defined Mixed TV/Movie Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33010"
+msgid "AutoTune from Pre-defined Mixed Miscellaneous Content collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33011"
+msgid "AutoTune from Pre-defined Music Genres collected from your Kodi Library."
+msgstr ""
+
+msgctxt "#33012"
+msgid "Move critical files to a central location.\nPrevent storage thrashing by moving to HDD or Persistent (Restorable) RAMDISK"
+msgstr ""
+
+msgctxt "#33013"
+msgid "AutoTune from Recommended (Supported) services installed on Kodi and supplied by IPTV Manager.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#33015"
+msgid "Pagination Limit, How many entries are requested and parsed per call. [25 Default]\n[Lower == Better Performance]"
+msgstr ""
+
+msgctxt "#33016"
+msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]\nGlobal Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
+msgstr ""
+
+msgctxt "#33022"
+msgid "Artwork changes will propagate slowly over time and are not instantaneous."
+msgstr ""
+
+msgctxt "#33036"
+msgid "Set in Kodi's PVR & LiveTV Settings"
+msgstr ""
+
+msgctxt "#33038"
+msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running, no media found or system configured as a client!\nClose settings to resume background tasks."
+msgstr ""
+
+msgctxt "#33039"
+msgid "Clear Plugin Blacklist. Blacklisted plugins are ignored in Recommended list."
+msgstr ""
+
+msgctxt "#33040"
+msgid "Clear all Pre-defined selections and remove their channels."
+msgstr ""
+
+msgctxt "#33041"
+msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for all channels."
+msgstr ""
+
+msgctxt "#33042"
+msgid "Enable visual features."
+msgstr ""
+
+msgctxt "#33043"
+msgid "Display the channel logo at the bottom corner of your screen."
+msgstr ""
+
+msgctxt "#33044"
+msgid "Select Color to apply to channel logo [#FFFFFFFF Default]"
+msgstr ""
+
+msgctxt "#33045"
+msgid "Display coming up next meta"
+msgstr ""
+
+msgctxt "#33046"
+msgid "Display emulated static between broadcasts for a retro experience."
+msgstr ""
+
+msgctxt "#33049"
+msgid "Prefer Kodi Library - Use less accurate runtimes from metadata providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see readme for details."
+msgstr ""
+
+msgctxt "#33052"
+msgid "Save parsed file duration meta to the Kodi library. Improves runtime accuracy. *see readme for details."
+msgstr ""
+
+msgctxt "#33053"
+msgid "Include Specials and Extras.\nSeason 00 & Movie Extras"
+msgstr ""
+
+msgctxt "#33054"
+msgid "Include .strm files *see readme for details."
+msgstr ""
+
+msgctxt "#33056"
+msgid "Include content fillers (Ratings/Bumpers/Commercials/Trailers). *see readme for details."
+msgstr ""
+
+msgctxt "#33058"
+msgid "PVR Callback - Play channel as if from a PVR backend.\nPlaylist - Queue channel as a Playlist *see readme for details."
+msgstr ""
+
+msgctxt "#33061"
+msgid "Adjust (in seconds) to ignore differentials between load times and live offset. [60secs Default] *see readme for details."
+msgstr ""
+
+msgctxt "#33062"
+msgid "Adjust (by percentage) to ignore loading content near the end of its runtime. [98% Default] / [100% Disables]. *see readme for details."
+msgstr ""
+
+msgctxt "#33063"
+msgid "Group guide data by category."
+msgstr ""
+
+msgctxt "#33064"
+msgid "Enter custom guide data categories, used by the channel manager."
+msgstr ""
+
+msgctxt "#33068"
+msgid "Allow the Holiday Seasonal Channel to advance nearest holiday within the month."
+msgstr ""
+
+msgctxt "#33070"
+msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Manager) for optimal usage.\nOptimal changes will be reinforced automatically without a user prompt!"
+msgstr ""
+
+msgctxt "#33074"
+msgid "Manually apply recommend settings to Third-Party plugins (IPTV Simple/IPTV Manager)"
+msgstr ""
+
+msgctxt "#33078"
+msgid "Stop Playback when Idle for x Hours.\nCancelable with prompt and countdown."
+msgstr ""
+
+msgctxt "#33084"
+msgid "Not recommend!! Only disable if you understand the impact of theses changes."
+msgstr ""
+
+msgctxt "#33085"
+msgid "Display channel logo for non-PseudoTV Channels."
+msgstr ""
+
+msgctxt "#33086"
+msgid "Interval between channel Bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
+msgstr ""
+
+msgctxt "#33092"
+msgid "Multi-room help"
+msgstr ""
+
+msgctxt "#33097"
+msgid "Only recommend you change port if a conflict exists."
+msgstr ""
+
+msgctxt "#33100"
+msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Path configure under options 'Centralized file location'."
+msgstr ""
+
+msgctxt "#33104"
+msgid "AutoTune from SmartPlaylists from Kodi."
+msgstr ""
+
+msgctxt "#33105"
+msgid "Scan Kodi for Recommended (Supported) Plugins.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
+msgstr ""
+
+msgctxt "#33107"
+msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
+msgstr ""
+
+msgctxt "#33110"
+msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes on non-windows platforms.\nReducing number improves performance; while adding instability. [2000 Default]"
+msgstr ""
+
+msgctxt "#33111"
+msgid "Apply Diffuse Color channel bug."
+msgstr ""
+
+msgctxt "#33112"
+msgid "Change the onscreen Channel Bug position. [(1556,920) Default]"
+msgstr ""
+
+msgctxt "#33113"
+msgid "Add more channel paths to channel"
+msgstr ""
+
+msgctxt "#33114"
+msgid "Save channel path settings"
 msgstr ""

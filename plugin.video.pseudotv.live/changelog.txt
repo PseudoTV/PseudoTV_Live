@@ -1,3 +1,16 @@
+v.0.4.0
+-Major code refactoring to improve memory usage/stability.
+-Added "Browse" context menu item. Browses channel media for VOD selection.
+-Added "Find" content menu item. Search Kodi for related media.
+-Removed Third-Party M3U/XMLTV imports; no longer needed IPTV-Simple supports multi-instances. 
+-Added "SmartPlaylist" to Autotuning list & Improved "Recommended" imports.
+-Added Unofficial Kodi support for "Mixed" content SmartPlaylists; See readme for details.
+-Added Visual Channel Bug Position utility in global settings.
+-Added Multi-Path channel configurations to the channel manager; See readme for details.
+-Added Support for upcoming WebUI Channel Manager.
+-Added UpNext Service support for playlist playback (Experimental).
+-Added Smart monochromatic logo detection; Logo diffusion color will only apply to "white" logos (Experimental; currently only supports local images).
+
 v.0.3.8
 -Improved error handling.
 -Tweaked Multi-threading.
