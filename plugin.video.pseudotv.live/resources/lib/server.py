@@ -40,7 +40,6 @@ class Discovery:
 
 
     def _start(self):
-        self.log('_start')
         self.isRunning = True
         local ='%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT'))
         sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
@@ -57,7 +56,7 @@ class Discovery:
                             payload = loadJSON(decodeString(response.decode()))
                             host = payload.get('host','')
                             if host != local:
-                                self.log('_start: discovered server @ host = %s'%(host))
+                                self.log('_start: discovered server @ host = %s'%(host),xbmc.LOGINFO)
                                 md5 = payload.pop('md5')
                                 if md5 == getMD5(dumpJSON(payload)):
                                     payload['received'] = time.time()
@@ -67,10 +66,10 @@ class Discovery:
                                     servers[host] = payload
                                     setDiscovery(servers)
                                     chkDiscovery(servers)
-                except Exception as e: self.log('_start failed! %s'%(e))
+                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
                 
             if self.monitor.waitForAbort(1) or self.monitor.chkRestart():
-                self.log('_start, interrupted')
+                self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self.isRunning = False
 
@@ -98,7 +97,6 @@ class Announcement:
 
 
     def _start(self):
-        self.log('_start')
         self.isRunning = True
         payload = {'id':ADDON_ID,
                    'version':ADDON_VERSION,
@@ -113,15 +111,15 @@ class Announcement:
         sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-        self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]))
+        self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
         
         while not self.monitor.abortRequested():
             if not isClient():
                 try:    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
-                except Exception as e: self.log('_start failed! %s'%(e))
+                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
             
             if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
-                self.log('_start, interrupted')
+                self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self.isRunning = False
 
@@ -223,7 +221,7 @@ class HTTP:
                         
                     IP = getIP()
                     LOCAL_HOST ='%s:%s'%(IP,port)
-                    self.log("_start, starting server @ %s"%(LOCAL_HOST))
+                    self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
                     PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
                     setServerSettings(LOCAL_HOST)
                     
@@ -237,7 +235,7 @@ class HTTP:
                 self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
                 
             if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
-                self.log('_start, interrupted')
+                self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self._stop()
         
@@ -245,7 +243,7 @@ class HTTP:
     def _stop(self):
         try:
             if self.isRunning:
-                self.log('_stop, shutting server down')
+                self.log('_stop, shutting server down',xbmc.LOGINFO)
                 self._server.shutdown()
                 self._server.server_close()
                 self._server.socket.close()

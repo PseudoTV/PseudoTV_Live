@@ -1,3 +1,6 @@
+v.0.4.1
+- Improved Playback error detection.
+
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.
 -Added "Browse" context menu item. Browses channel media for VOD selection.

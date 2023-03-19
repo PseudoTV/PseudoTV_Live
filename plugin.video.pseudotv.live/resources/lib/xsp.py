@@ -32,7 +32,6 @@ class XSP:
     
 
     def getSmartPlaylistName(self, fle):
-        self.log('getSmartPlaylistName')
         try:
             name = ''
             fle = fle.strip('/').replace('library://','special://userdata/library/')
@@ -44,7 +43,7 @@ class XSP:
             match = re.compile('<%s>(.*?)\</%s>'%(key,key), re.IGNORECASE).search(string)
             if match: name =  unescapeString(match.group(1))
             self.log("getSmartPlaylistName fle = %s, name = %s"%(fle,name))
-        except: self.log("getSmartPlaylistName return unable to parse %s"%(fle))
+        except: self.log("getSmartPlaylistName return unable to parse %s"%(fle), xbmc.LOGERROR)
         return name
 
 

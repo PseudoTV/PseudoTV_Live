@@ -60,7 +60,7 @@ class XMLTVS:
                 self.log('_save, saving to %s'%(file))
                 writer.write(FileAccess.open(file, "w"), pretty_print=True)
             except Exception as e:
-                self.log("_save, Failed!", xbmc.LOGERROR)
+                self.log("_save, failed!", xbmc.LOGERROR)
                 DIALOG.notificationDialog(LANGUAGE(32000))
             self.buildGenres()
         return True
@@ -71,7 +71,7 @@ class XMLTVS:
         try: 
             return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
         except Exception as e: 
-            self.log('loadData, failed! %s'%(e))
+            self.log('loadData, failed! %s'%(e), xbmc.LOGERROR)
             return self.resetData()
 
 
@@ -81,7 +81,7 @@ class XMLTVS:
             return (xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
-            self.log('loadChannels, failed! %s'%(e))
+            self.log('loadChannels, failed! %s'%(e), xbmc.LOGWARNING)
             return []
         
         
@@ -91,7 +91,7 @@ class XMLTVS:
             return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
             if 'no element found: line 1, column 0' in str(e): return [] #new file error
-            self.log('loadProgrammes, failed! %s'%(e))
+            self.log('loadProgrammes, failed! %s'%(e), xbmc.LOGWARNING)
             return []
 
             
@@ -106,7 +106,7 @@ class XMLTVS:
                 self.log('loadStopTimes, channel = %s, stopString = %s'%(channel['id'],stopString))
                 yield channel['id'],datetime.datetime.timestamp(strpTime(stopString, DTFORMAT))
             except Exception as e:
-                self.log("loadStopTimes, Failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGERROR)
+                self.log("loadStopTimes, failed!\n%s\nRemoving malformed XMLTV channel/programmes %s"%(e,channel.get('id')), xbmc.LOGWARNING)
                 # self.removeBroadcasts(channel) #something went wrong; remove existing xmltv; force fresh rebuild.
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
                 
@@ -341,7 +341,7 @@ class XMLTVS:
             for channel in tmpChannels: programmes.append(addSingleEntry(channel)) #append single cell entry for channels missing programmes
             self.log("chkImport, added %s single entries"%(len(tmpChannels)))
         except Exception as e: 
-            self.log("chkImport, Failed! %s"%(e), xbmc.LOGERROR)
+            self.log("chkImport, failed! %s"%(e), xbmc.LOGERROR)
         return channels, programmes
 
 

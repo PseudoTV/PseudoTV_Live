@@ -107,7 +107,7 @@ class Library:
                  "Music Genres" :self.getMusicGenres}
         try: return funcs[type]()
         except Exception as e: 
-            self.log('fillItem failed! %s'%(e))
+            self.log('fillItem failed! %s'%(e), xbmc.LOGERROR)
             return []
         
         

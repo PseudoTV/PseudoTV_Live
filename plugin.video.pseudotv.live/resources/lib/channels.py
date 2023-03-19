@@ -98,14 +98,13 @@ class Channels:
         # if item.get('id')
 
     def delChannel(self, citem):
-        self.log('delChannel, id = %s'%(citem['id']))
+        self.log('delChannel, id = %s'%(citem['id']), xbmc.LOGINFO)
         idx, channel = self.findChannel(citem)
         if idx is not None: self.channelDATA['channels'].pop(idx)
         return True
     
     
     def addChannel(self, citem):
-        self.log('addChannel, id = %s'%(citem['id']))
         idx, channel   = self.findChannel(citem)
         if idx is not None:
             for key in ['id','rules','number','favorite','logo']: 
@@ -115,10 +114,10 @@ class Channels:
                 citem['group'].append(LANGUAGE(32019))
                 citem['group'] = list(set(citem['group']))
                 
-            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]))
+            self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]), xbmc.LOGINFO)
             self.channelDATA['channels'][idx] = citem
         else:
-            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]))
+            self.log('addChannel, adding channel %s, id %s'%(citem["number"],citem["id"]), xbmc.LOGINFO)
             self.channelDATA.setdefault('channels',[]).append(citem)
         return True
         

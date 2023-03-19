@@ -47,7 +47,7 @@ class Utilities:
             markdown = '\n'.join(list(filter(lambda filelist:filelist[:2] not in ['![','[!','!.','!-','ht'], markdown.split('\n'))))
             return markdown
         try: DIALOG.textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
-        except Exception as e: self.log('showReadme failed! %s'%(e))
+        except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    
     def showChangelog(self):
@@ -66,7 +66,7 @@ class Utilities:
             text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
             return text        
         try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
-        except Exception as e: self.log('showChangelog failed! %s'%(e))
+        except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
     def openChannelManager(self, chnum=1):
@@ -85,10 +85,10 @@ class Utilities:
 
     def buildMenu(self, select=None):
         with busy_dialog():
-            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},                  #"Rebuild M3U/XMLTV"
-                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},                   #"Clean Start"
-                        {'label':LANGUAGE(32121),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                   #"Force PVR reload"
-                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPropertyBool, 'args':('pendingRestart',True)}] #"Force PTVL reload"
+            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)}, #"Rebuild M3U/XMLTV"
+                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},  #"Clean Start"
+                        {'label':LANGUAGE(32121),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                  #"Force PVR reload"
+                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPropertyBool,'args':('pendingRestart',True)}] #"Force PTVL reload"
 
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
             if select is None: 
@@ -103,7 +103,7 @@ class Utilities:
                     else: 
                         selectItem['func']()
                 except Exception as e: 
-                    self.log("buildMenu, Failed! %s"%(e), xbmc.LOGERROR)
+                    self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                     return DIALOG.notificationDialog(LANGUAGE(32000))
 
 

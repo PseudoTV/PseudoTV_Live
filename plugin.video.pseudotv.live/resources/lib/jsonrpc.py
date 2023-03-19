@@ -64,7 +64,7 @@ class JSONRPC:
             # response = killJSON(self._sendJSON)(timeout, command)
             response = self._sendJSON(command)
             if response.get('error'):
-                self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command))
+                self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
                 
         if response.get('error',{}).get('message','').startswith('JSONRPC timed out!'):
             if   timeout <= 15: return self.sendJSON(param, timeout=30)
@@ -285,7 +285,7 @@ class JSONRPC:
                 if duration > 0:
                     self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
-                log("parseDuration, Failed! %s"%(e), xbmc.LOGERROR)
+                log("parseDuration, failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0
 
         ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.

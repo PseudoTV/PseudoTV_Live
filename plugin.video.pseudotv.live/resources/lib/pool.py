@@ -81,7 +81,7 @@ def killit(timeout=15.0, default={}):
                 log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
                 return default
             if timer.error:
-                log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),timer.error))
+                log('%s, failed! %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
                 return default
             return timer.result
         return wrapper
@@ -106,7 +106,7 @@ def killJSON(method):
             log('%s, Timed out!'%(method.__qualname__.replace('.',': ')))
             return {'error':{'message':'JSONRPC timed out!'}}
         if timer.error:
-            log('%s, Failed! %s'%(method.__qualname__.replace('.',': '),timer.error))
+            log('%s, failed! %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
             return {'error':{'message':'JSONRPC timed out!'}}
         return timer.result
     return wrapper
@@ -123,7 +123,7 @@ def poolit(method):
                 results = pool.executors(method, items, *args, **kwargs)
             else: raise Exception('poolit, bypass executors for generator')
         except Exception as e:
-            log('poolit, failed! %s'%(e))
+            log('poolit, failed! %s'%(e), xbmc.LOGERROR)
             results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return list(filter(None,results))

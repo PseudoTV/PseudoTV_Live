@@ -152,7 +152,7 @@ class Overlay():
             self.log('_addControl, %s'%(control))
             self.window.addControl(control)
             self._setControl(control,self.setVisible(control, False))
-        except Exception as e: self.log('_addControl failed! %s'%(e))
+        except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
         
         
     def _removeControl(self, control):
@@ -162,12 +162,12 @@ class Overlay():
             self.log('_removeControl, %s'%(control))
             self.window.removeControl(control)
             self._delControl(control)
-        except Exception as e: self.log('_removeControl failed! %s'%(e))
+        except Exception as e: self.log('_removeControl failed! %s'%(e), xbmc.LOGERROR)
         
         
     def setImage(self, control, image, cache=True):
         try: control.setImage(image, useCache=cache)
-        except Exception as e: self.log('setImage failed! %s'%(e))
+        except Exception as e: self.log('setImage failed! %s'%(e), xbmc.LOGERROR)
         
         
     def setVisible(self, control, state):
@@ -275,7 +275,7 @@ class Overlay():
             self._channelBugThread = Timer(wait, self.toggleBug, [nstate])
             self._channelBugThread.name = "_channelBugThread"
             self._channelBugThread.start()
-        except Exception as e: self.log("toggleBug, Failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: self.log("toggleBug, failed! %s"%(e), xbmc.LOGERROR)
           
           
     def toggleOnNext(self, state=True):
@@ -324,7 +324,7 @@ class Overlay():
                 self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
                 self._onNextThread.name = "onNextThread"
                 self._onNextThread.start()
-            except Exception as e: self.log("toggleOnNext, Failed! %s"%(e), xbmc.LOGERROR)
+            except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
 
 
     def cancelOnNext(self):

@@ -352,7 +352,7 @@ def setURL(url, file):
         fle.close()
         return FileAccess.exists(file)
     except Exception as e: 
-        log("saveURL, Failed! %s"%e, xbmc.LOGERROR)
+        log("saveURL, failed! %s"%e, xbmc.LOGERROR)
 
 def setDictLST(lst=[]):
     sLST = [dumpJSON(d) for d in lst]
@@ -596,22 +596,31 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             # 'useFFmpegReconnect'          :'true',
             # 'useInputstreamAdaptiveforHls':'true'
             }
-            
-def toggleADDON(id, state=True, reverse=False, waitTime=15):
-    log('globals: toggleADDON, id = %s, state = %s, reverse = %s, waitTime = %s'%(id,state,reverse,waitTime))
-    try:    name = xbmcaddon.Addon(id).getAddonInfo('name')
-    except: name = id
-    xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(id,str(state).lower()))
+
+def chkPVREnabled():
+    if PROPERTIES.getPropertyBool('%s.Disabled'%(PVR_CLIENT)):
+        togglePVR(True,False)
+         
+def togglePVR(state=True, reverse=False, waitTime=15):
+    log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))
+    try:    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
+    except: name = PVR_CLIENT
+    PROPERTIES.setPropertyBool('%s.Disabled'%(PVR_CLIENT),not bool(state))
+    xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,str(state).lower()))
     waitMSG = '%s: %s'%(LANGUAGE(32125),name)
-    if reverse: timerit(toggleADDON)(waitTime,[id,not bool(state)])
+    if reverse: timerit(togglePVR)(waitTime,[not bool(state)])
     else: waitTime = int(PROMPT_DELAY/1000)
     DIALOG.notificationWait(waitMSG,wait=waitTime)
               
+def forceBrute(msg=''):
+    if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = '%s. %s'%(msg,LANGUAGE(32128))
+    if DIALOG.yesnoDialog('%s\n%s'%((LANGUAGE(32129)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name'))),msg)):
+        brutePVR(True)
+              
 def brutePVR(override=False, waitTime=15):
-    if override and (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): return
-    elif not override:
-        if not DIALOG.yesnoDialog('%s ?'%(LANGUAGE(32121))): return
-    toggleADDON(PVR_CLIENT,False,True,waitTime)
+    if not override:
+        if not DIALOG.yesnoDialog('%s ?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')))): return
+    togglePVR(False,True,waitTime)
     if MONITOR.waitForAbort(waitTime): return False
     return True
     

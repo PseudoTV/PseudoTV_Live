@@ -66,9 +66,11 @@ class Producer():
 
     def _startProcess(self): #first processes before service loop starts. Only runs once per instance.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
+        self._chkVersion()
         self._chkFiles()
         setClient(isClient(),silent=False)
         Backup().hasBackup()
+        chkPVREnabled()
 
 
     def _chkFiles(self):
@@ -101,11 +103,11 @@ class Producer():
 
     def updateRecommended(self):
         self.log('updateRecommended')
-        # try:
-        library = Library()
-        library.searchRecommended()
-        del library
-        # except Exception as e: self.log('updateRecommended failed! %s'%(e))
+        try:
+            library = Library()
+            library.searchRecommended()
+            del library
+        except Exception as e: self.log('updateRecommended failed! %s'%(e), xbmc.LOGERROR)
 
 
     def updateLibrary(self):
@@ -117,7 +119,7 @@ class Producer():
             del library
 
             if not hasAutotuned(): self.updateAutoTune()
-        except Exception as e: self.log('updateLibrary failed! %s'%(e))
+        except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
     
     def updateSettings(self):
@@ -134,7 +136,7 @@ class Producer():
                 setClient(isClient())
                 SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
                 del jsonRPC
-        except Exception as e: self.log('updateSettings failed! %s'%(e))
+        except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
     
         
     def _chkAutotune(self): #force rebuild to predefined autotuned channels
@@ -148,7 +150,7 @@ class Producer():
             autotune = Autotune()
             autotune._runTune(samples=True,rebuild=False)
             del autotune
-        except Exception as e: self.log('updateAutoTune failed! %s'%(e))
+        except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
         
     def updateChannels(self):
@@ -157,7 +159,7 @@ class Producer():
             builder = Builder(self.service)
             builder.build()
             del builder
-        except Exception as e: self.log('updateChannels failed! %s'%(e))
+        except Exception as e: self.log('updateChannels failed! %s'%(e), xbmc.LOGERROR)
         
     
     def getChannels(self):
@@ -168,7 +170,7 @@ class Producer():
             del builder
             return list(channels)
         except Exception as e: 
-            self.log('getChannels failed! %s'%(e))
+            self.log('getChannels failed! %s'%(e), xbmc.LOGERROR)
             return []
         
         
@@ -264,4 +266,10 @@ class Producer():
             SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
             self.queueRunning = False
 
+
+    def _chkVersion(self):
+        if ADDON_VERSION != SETTINGS.getCacheSetting('lastVersion', default='v.0.0.0'):
+            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+            BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
+        
 #todo check between kodi json pvr channels return and channels.json, if difference trigger user prompt to reboot kodi or brutepvr update.

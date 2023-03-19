@@ -136,7 +136,7 @@ class Builder:
                     citem, citem['path'] = Seasonal().buildPath(citem) #Seasonal
                 elif provisional and citem['type'] in PROVISIONAL_TYPES.keys():
                     citem['provisional'] = {'value':provisional[0],'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisional(provisional[0],citem['type'])} #Autotune
-        except Exception as e: self.log("getProvisional, Failed! %s"%(e))
+        except Exception as e: self.log("getProvisional, failed! %s"%(e), xbmc.LOGERROR)
         return citem
 
 
@@ -169,7 +169,7 @@ class Builder:
             if self.fillBCTs and not citem.get('radio',False): cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
             cacheResponse = self.runActions(RULES_ACTION_CHANNEL_STOP, citem, cacheResponse, inherited=self)
             return sorted(cacheResponse, key=lambda k: k['start'])
-        except Exception as e: self.log("getFileList, Failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
 
 

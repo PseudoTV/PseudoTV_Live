@@ -133,7 +133,7 @@ class Manager(xbmcgui.WindowXMLDialog):
               
         try: self.doModal()
         except Exception as e: 
-            self.log('Manager failed! %s'%(e))
+            self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
             self.closeManager()
 
 
@@ -155,7 +155,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button4 = self.getControl(9004)
             self.fillChanList(self.newChannels,focus=self.channel_idx) #all changes made to self.newChannels before final save to self.channellist
         except Exception as e: 
-            log("onInit, Failed! %s"%(e), xbmc.LOGERROR)
+            log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
         
         
@@ -432,7 +432,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             select   = DIALOG.selectDialog(itemList,LANGUAGE(32078)%(key.title()),useDetails=True,multi=False)
             if select is not None: return itemList[select]
         except Exception as e: 
-            self.log("getMontiorList, Failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
+            self.log("getMontiorList, failed! %s\ninfoList = %s"%(e,infoList), xbmc.LOGERROR)
             return xbmcgui.ListItem()
 
 

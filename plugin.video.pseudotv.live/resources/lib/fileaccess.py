@@ -126,13 +126,13 @@ class FileAccess:
             if xbmcvfs.rename(path, newpath):
                 return True
         except Exception as e: 
-            log("FileAccess: rename, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: rename, failed! %s"%(e), xbmc.LOGERROR)
 
         try:
             if FileAccess.move(path, newpath):
                 return True
         except Exception as e: 
-            log("FileAccess: move, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: move, failed! %s"%(e), xbmc.LOGERROR)
            
         if path[0:6].lower() == 'smb://' or newpath[0:6].lower() == 'smb://':
             if os.name.lower() == 'nt':
@@ -151,14 +151,14 @@ class FileAccess:
             os.rename(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
         except Exception as e: 
-            log("FileAccess: os.rename, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: os.rename, failed! %s"%(e), xbmc.LOGERROR)
  
         try:
             log("FileAccess: shutil.move")
             shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
             return True
         except Exception as e: 
-            log("FileAccess: shutil.move, Failed! %s"%(e), xbmc.LOGERROR)
+            log("FileAccess: shutil.move, failed! %s"%(e), xbmc.LOGERROR)
 
         log("FileAccess: OSError")
         raise OSError()
@@ -178,7 +178,7 @@ class FileAccess:
                 os.rmdir(xbmcvfs.translatePath(path))
                 if os.path.exists(xbmcvfs.translatePath(path)):
                     return True
-            except: log("FileAccess: removedirs failed!")
+            except: log("FileAccess: removedirs failed!", xbmc.LOGERROR)
             return False
             
             

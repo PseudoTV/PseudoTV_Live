@@ -130,7 +130,7 @@ class Autotune:
                           "rules"   : [],
                           "catchup" : ('vod' if not music else ''),
                           "radio"   : music,
-                          "favorite": False})
+                          "favorite": True})
                           
             match, eitem = self.channels.findChannel(citem, channels=existingAUTOTUNE)
             if match is None:

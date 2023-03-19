@@ -135,7 +135,7 @@ class Settings:
             # self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             return value
         except Exception as e: 
-            self.log("_getSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
+            self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
       
       
     def getSetting(self, key):
@@ -199,7 +199,7 @@ class Settings:
             self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             return func(key, value)
         except Exception as e: 
-            self.log("_setSetting, Failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
+            self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
             return False
             
         

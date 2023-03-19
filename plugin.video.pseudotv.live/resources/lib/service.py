@@ -142,6 +142,9 @@ class Player(xbmc.Player):
         pvritem = self.getPlayerPVRitem()
         pvritem.update({'citem':self.getPlayerCitem()})
         if pvritem.get('citem',{}).get('id') != self.playingItem.get('citem',{}).get('id',random.random()): #playing new channel
+            if not pvritem.get('callback',None):
+                forceBrute()
+                return self._onStop()
             self.playingItem = self.runActions(RULES_ACTION_PLAYER_START, pvritem.get('citem'), pvritem, inherited=self)
             # self.setSubtitles(self.lastSubState)
 
@@ -303,9 +306,8 @@ class Service():
     
     def __init__(self):
         self.log('__init__')
-        with sudo_dialog('%s...'%(LANGUAGE(32054))):
-            if self.monitor.waitForAbort(30): return  #startup delay; give Kodi PVR time to initialize. 
-            
+        DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=30)#startup delay; give Kodi PVR time to initialize. 
+        
         if self.player.isPlaying(): 
             self.player.onAVStarted()
             
@@ -351,7 +353,7 @@ class Service():
                     thread.cancel()
                     thread.join(1.0)
                 except: pass
-            except Exception as e: log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+            except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
         
         
