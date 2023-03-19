@@ -187,7 +187,7 @@ class Builder:
     def buildChannel(self, citem):
         # build multi-paths as individual arrays for easier interleaving.
         if citem.get('provisional',None):
-            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), item, roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for item in citem['provisional'].get('json',[])]
+            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[])]
         else:
             cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path']]
         valid = list(filter(lambda k:k, cacheResponse)) #check that at least one filelist array contains meta.
@@ -257,13 +257,13 @@ class Builder:
         return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         
-    def buildLibraryList(self, citem, value, item, page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
-        self.log("buildLibraryList; id = %s, provisional value = %s\nitem = %s"%(citem['id'],value,item))
+    def buildLibraryList(self, citem, value, query, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
+        self.log("buildLibraryList; id = %s, provisional value = %s\nquery = %s"%(citem['id'],value,query))
         fileList      = []
         seasoneplist  = []
-        if not sort:   sort   = {"ignorearticle":True,"method":item.get('sort'),"order":"ascending","useartistsortname":True}
-        if not filter: filter = {"and":[{"field":item.get('field'),"operator":item.get('operator'),"value":[value]}]}
-        json_response = self.jsonRPC.requestLibrary(citem, item, page, sort, filter, limits)
+        if not sort:   sort   = {"ignorearticle":True,"method":query.get('sort'),"order":"ascending","useartistsortname":True}
+        if not filter: filter = {"and":[{"field":query.get('field'),"operator":query.get('operator'),"value":[value]}]}
+        json_response = self.jsonRPC.requestLibrary(citem, query, page, sort, filter, limits)
         key     = list(json_response.keys())[0]
         results = json_response.get(key, [])
         
@@ -299,7 +299,7 @@ class Builder:
                 dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
                 if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
                     item['duration']     = dur
-                    item['media']        = 'video'
+                    item['media']        = media
                     item['originalpath'] = file
                     if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
                         item['year'] = 0

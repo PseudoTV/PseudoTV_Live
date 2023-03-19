@@ -57,7 +57,7 @@ class Autotune:
                 else: return
                 
         for idx, type in enumerate(AUTOTUNE_TYPES): 
-            if samples: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+            if samples: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,type,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
             self.selectAUTOTUNE(type, samples, rebuild)
         if samples: setAutotuned()
         
