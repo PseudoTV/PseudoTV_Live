@@ -1,5 +1,7 @@
 v.0.4.1
 - Improved Playback error detection.
+- Autotuned channels added to "Favorite" group.
+- Miscellaneous Tweaks.
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.

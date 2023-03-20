@@ -73,13 +73,13 @@ RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3
 
-AUTOTUNE_TYPES      = ["TV Networks",
+AUTOTUNE_TYPES      = ["Playlists",
+                       "TV Networks",
                        "TV Shows",
                        "TV Genres",
                        "Movie Genres",
                        "Movie Studios",
                        "Mixed Genres",
-                       "Playlists",
                        "Mixed",
                        "Recommended",
                        "Services",
@@ -613,13 +613,14 @@ def togglePVR(state=True, reverse=False, waitTime=15):
     DIALOG.notificationWait(waitMSG,wait=waitTime)
               
 def forceBrute(msg=''):
-    if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = '%s. %s'%(msg,LANGUAGE(32128))
-    if DIALOG.yesnoDialog('%s\n%s'%((LANGUAGE(32129)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name'))),msg)):
+    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
+    if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = LANGUAGE(32128)
+    if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(name),(LANGUAGE(32121)%(name)),msg)):
         brutePVR(True)
               
 def brutePVR(override=False, waitTime=15):
     if not override:
-        if not DIALOG.yesnoDialog('%s ?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')))): return
+        if not DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')))): return
     togglePVR(False,True,waitTime)
     if MONITOR.waitForAbort(waitTime): return False
     return True
@@ -699,19 +700,20 @@ def hasAutotuned():
     
 def setAutotuned(state=True):
     return PROPERTIES.setPropertyBool('hasAutotuned',state)
-        
+
 def isClient():
-    return (PROPERTIES.getPropertyBool('isClient') | bool(SETTINGS.getSettingInt('Client_Mode')))
+    client = PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.isClient') == "true"
+    return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
    
 def setClient(state=False,silent=True):
-    if not silent and state: DIALOG.notificationDialog(LANGUAGE(32115)%(ADDON_ID))
-    PROPERTIES.setPropertyBool('isClient',state)
+    if not silent and state: DIALOG.notificationDialog(LANGUAGE(32115)%(ADDON_NAME))
+    PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
            
 def getDiscovery():
-    return PROPERTIES.getPropertyDict('SERVER_DISCOVERY')
+    return loadJSON(PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.SERVER_DISCOVERY'))
 
 def setDiscovery(servers):
-    return PROPERTIES.setPropertyDict('SERVER_DISCOVERY',servers)
+    return PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.SERVER_DISCOVERY',dumpJSON(servers))
 
 def chkDiscovery(servers, forced=False):
     def setResourceSettings(settings):
@@ -759,3 +761,9 @@ def roundupDIV(p, q):
                 
 def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
+    
+    
+def isLowPower():
+    if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
+        return False
+    return True

@@ -121,7 +121,8 @@ def poolit(method):
         try:
             if cpucount > 1 and len(items) > 1:
                 results = pool.executors(method, items, *args, **kwargs)
-            else: raise Exception('poolit, bypass executors for generator')
+            else:
+                results = pool.generator(method, items, *args, **kwargs)
         except Exception as e:
             log('poolit, failed! %s'%(e), xbmc.LOGERROR)
             results = pool.generator(method, items, *args, **kwargs)

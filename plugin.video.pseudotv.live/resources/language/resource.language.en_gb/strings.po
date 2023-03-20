@@ -974,7 +974,7 @@ msgid "Remove m3u and xmltv files"
 msgstr ""
 
 msgctxt "#32121"
-msgid "Force PVR to reload"
+msgid "Force %s to reload"
 msgstr ""
 
 msgctxt "#32122"
@@ -1000,6 +1000,23 @@ msgstr ""
 msgctxt "#32127"
 msgid "Deleting %s"
 msgstr ""
+
+msgctxt "#32128"
+msgid "Player will be stop!"
+msgstr ""
+
+msgctxt "#32129"
+msgid "Error detected! %s is out of sync with Kodi."
+msgstr ""
+
+msgctxt "#32130"
+msgid "Warning!! File caching disabled\nIt's recommended you re-enable when finished debugging"
+msgstr ""
+
+
+
+
+
 
 
 

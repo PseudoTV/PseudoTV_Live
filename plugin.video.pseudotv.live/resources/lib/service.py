@@ -142,9 +142,6 @@ class Player(xbmc.Player):
         pvritem = self.getPlayerPVRitem()
         pvritem.update({'citem':self.getPlayerCitem()})
         if pvritem.get('citem',{}).get('id') != self.playingItem.get('citem',{}).get('id',random.random()): #playing new channel
-            if not pvritem.get('callback',None):
-                forceBrute()
-                return self._onStop()
             self.playingItem = self.runActions(RULES_ACTION_PLAYER_START, pvritem.get('citem'), pvritem, inherited=self)
             # self.setSubtitles(self.lastSubState)
 
@@ -338,8 +335,7 @@ class Service():
                 continue
                 
             isIdle = self.monitor.chkIdle()
-            if not (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.Linux','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
-                setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+            if isLowPower(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
             if not isClient(): self.producer._chkProcesses()
         self._stop()
             

@@ -94,13 +94,13 @@ class Library:
                 
                 
     def fillItem(self, type):
-        funcs = {"TV Networks"  :self.getNetworks,
+        funcs = {"Playlists"    :self.getPlaylists,
+                 "TV Networks"  :self.getNetworks,
                  "TV Shows"     :self.getTVShows,
                  "TV Genres"    :self.getTVGenres,
                  "Movie Genres" :self.getMovieGenres,
                  "Movie Studios":self.getMovieStudios,
                  "Mixed Genres" :self.getMixedGenres,
-                 "Playlists"    :self.getPlaylists,
                  "Mixed"        :self.getMixed,
                  "Recommended"  :self.getRecommend,
                  "Services"     :self.getServices,
@@ -139,7 +139,7 @@ class Library:
             items = libraryItems.get(type,[])
             enabledItems = self.getEnabled(type)
             channels = self.channels.getType(type)
-            PROPERTIES.setProperty('has.%s'%(slugify(type)),len(items)>0)
+            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
             self.setLibrary(type, [_updateItem(item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
 
@@ -355,7 +355,6 @@ class Library:
         if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
         addonList = list(set(filter(None,[addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in self.getBlackList(), self.jsonRPC.getAddons()))])))
         return dict(filter(None,[_search(addonid) for addonid in addonList]))
-        # return dict(poolit(_search)(addonList))
 
 
     def getServices(self):
@@ -432,7 +431,7 @@ class Library:
                     else:
                         self.addWhiteList(addonid)
                 
-        PROPERTIES.setPropertyBool('has.WhiteList',len(self.getWhiteList()) > 0)
-        PROPERTIES.setPropertyBool('has.BlackList',len(self.getBlackList()) > 0)
+        PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',str(len(self.getWhiteList()) > 0).lower())
+        PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.BlackList',str(len(self.getBlackList()) > 0).lower())
         SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         

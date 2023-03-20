@@ -64,6 +64,25 @@
         
 		<category id="autotune" label="30038" help="33038">
 			<group id="1" label="30038">
+				<setting id="Select_Playlists" type="string" label="30104" help="33009">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<and>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Playlists),true)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Playlists)</data>
+                        <close>true</close>
+					</control>
+				</setting>
 				<setting id="Select_TV_Networks" type="string" label="32004" help="33004">
 					<level>0</level>
 					<default/>
@@ -197,44 +216,6 @@
                         <close>true</close>
 					</control>
 				</setting>
-				<setting id="Select_Playlists" type="string" label="30104" help="33009">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="enable">
-							<and>
-								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Playlists),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Playlists)</data>
-                        <close>true</close>
-					</control>
-				</setting>
-				<setting id="Select_Music_Genres" type="string" label="32011" help="33011">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="enable">
-							<and>
-								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Music_Genres)</data>
-                        <close>true</close>
-					</control>
-				</setting>
 				<setting id="Select_Recommended" type="string" label="32012" help="33003">
 					<level>0</level>
 					<default/>
@@ -270,6 +251,25 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Services)</data>
+                        <close>true</close>
+					</control>
+				</setting>
+				<setting id="Select_Music_Genres" type="string" label="32011" help="33011">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<and>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Music_Genres)</data>
                         <close>true</close>
 					</control>
 				</setting>
@@ -1047,9 +1047,16 @@
 					<control type="toggle"/>
 				</setting>
 				<setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Enable_Debugging">
-					<level>1</level>
+					<level>3</level>
 					<default>false</default>
 					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Debugging">true</condition>
+							</and>
+						</dependency>
+					</dependencies>
 				</setting>
                 <setting id="Debugging_Level" type="integer" label="30002" help="" parent="Enable_Debugging">
 					<level>2</level>
@@ -1090,7 +1097,7 @@
 						<close>true</close>
 					</control>
                 </setting> 
-                <setting id="Run_Logger" type="action" label="30009" help="33009" parent="Enable_Debugging">
+                <setting id="Run_Logger" type="action" label="30009" help="" parent="Enable_Debugging">
 					<level>1</level>
 					<default/>
 					<constraints>

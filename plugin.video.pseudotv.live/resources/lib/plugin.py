@@ -27,8 +27,6 @@ SEEK_TOLER = SETTINGS.getSettingInt('Seek_Tolerance')
 SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
 class Plugin:
-    sendState = PROPERTIES.getPropertyBool('sendLocker')
-    
     def __init__(self, sysARG=sys.argv):
         self.cache   = Cache(mem_cache=True)
         self.jsonRPC    = JSONRPC()
@@ -56,16 +54,24 @@ class Plugin:
         return LISTITEMS.buildItemListItem(decodeWriter(item.get('writer','')), media)
 
 
-    def getCallback(self, chname, id):
+    def getCallback(self, chname, id, radio=False):
+        self.log('getCallback, id = %s, radio = %s'%(id,radio))
         def _match():
-            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/tv/All%20channels/"}, cache=False).get('files',[])
+            dir = quoteString('radio/%s (Radio)'%(ADDON_NAME) if radio else 'tv/%s'%(ADDON_NAME))
+            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
+            print(results)
             for result in results:
+                print(result)
                 if result.get('label','').lower() == chname.lower() and result.get('uniqueid','') == id:
-                    return result.get('file','pvr://channels/tv/All%20channels/pvr.iptvsimple_{id}.pvr'.format(id=id))
+                    self.log('getCallback, found = %s'%(result.get('file')))
+                    return result.get('file')
 
         cacheName = 'getCallback.%s.%s'%(chname,id)
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID())
-        if not cacheResponse: cacheResponse = self.cache.set(cacheName, _match(), checksum=getInstanceID(), expiration=datetime.timedelta(minutes=15))
+        if not cacheResponse:
+            callback = _match()
+            if callback is None: return forceBrute()
+            cacheResponse = self.cache.set(cacheName, callback, checksum=getInstanceID(), expiration=datetime.timedelta(minutes=OVERLAY_DELAY))
         return cacheResponse
         
         
@@ -84,7 +90,10 @@ class Plugin:
         
         cacheName = 'matchChannel.%s.%s'%(chname,id)
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True)
-        if not cacheResponse: cacheResponse = self.cache.set(cacheName, _match(), checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+        if not cacheResponse:
+            pvritem = _match()
+            if pvritem is None: return forceBrute()
+            cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
 
@@ -99,10 +108,6 @@ class Plugin:
         poolit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid')))
         pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
         return pvritem
-
-
-    def resolveURL(self, found, listitem):
-        xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
 
 
     def playVOD(self, name, id):
@@ -121,16 +126,15 @@ class Plugin:
         pvritem = self.matchChannel(name,id)
         if pvritem is None: return self.playError()
         
-        pvritem['isPlaylist']  = isPlaylist
-        pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
+        pvritem['isPlaylist'] = isPlaylist
+        pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
         
         try:    pvritem['epgurl']  = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1)) #"pvr://guide/1197/2022-02-14 18:22:24.epg"
         except: pvritem['epgurl']  = ''
             
         pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
         pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
-        if isPlaylist: 
-            pvritem = self.extendProgrammes(pvritem)
+        if isPlaylist: pvritem = self.extendProgrammes(pvritem)
 
         citem     = pvritem['citem']
         nowitem   = pvritem.get('broadcastnow',{})  # current item
@@ -203,7 +207,7 @@ class Plugin:
         if pvritem is None: return self.playError()
         
         pvritem['isPlaylist']  = True
-        pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
+        pvritem['callback']    = '%s%s'%(self.sysARG[0],self.sysARG[2])
         pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
         pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
 
@@ -249,8 +253,7 @@ class Plugin:
             pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
             pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
             pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
-            if isPlaylist: 
-                pvritem = self.extendProgrammes(pvritem)
+            if isPlaylist: pvritem = self.extendProgrammes(pvritem)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
 
             if isPlaylist:
@@ -311,9 +314,15 @@ class Plugin:
         pvritem['playcount'] = channelPlaycount
         SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=self.sysARG[1], life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         self.log('playError, id = %s, attempt = %s'%(pvritem.get('id','-1'),channelPlaycount))
+        if channelPlaycount == 1: setInstanceID() #reset instance and force cache flush.
         if channelPlaycount <= 2:
             with busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038),wait=OVERLAY_DELAY)
             BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
         elif channelPlaycount == 3: forceBrute()
         else: DIALOG.notificationWait(LANGUAGE(32000))
+
+
+    def resolveURL(self, found, listitem):
+        xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
+

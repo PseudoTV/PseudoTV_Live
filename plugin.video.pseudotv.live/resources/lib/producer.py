@@ -67,11 +67,18 @@ class Producer():
     def _startProcess(self): #first processes before service loop starts. Only runs once per instance.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
         self._chkVersion()
+        self._chkDebugging()
         self._chkFiles()
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
-
+        
+        
+    def _chkDebugging(self):
+        DEBUG_CACHE = (SETTINGS.getSettingBool('Enable_Debugging') & SETTINGS.getSettingBool('Disable_Cache'))
+        if DEBUG_CACHE: 
+            DIALOG.okDialog(LANGUAGE(32130))
+    
 
     def _chkFiles(self):
         files = {LIBRARYFLEPATH:self.updateLibrary, #"Library"
@@ -186,7 +193,7 @@ class Producer():
         
     def getSettings(self):
         self.log('getSettings')
-        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL']
+        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
         for setting in settings:
             yield (setting,SETTINGS.getSetting(setting))
                
@@ -195,11 +202,12 @@ class Producer():
         self.log('chkSettingsChange')
         with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(self.getSettings())
-            actions   = {'User_Folder':self.moveUser,
-                         'UDP_PORT'   :self.serviceRestart,
-                         'TCP_PORT'   :self.serviceRestart,
-                         'Client_Mode':self.serviceRestart,
-                         'Remote_URL' :self.serviceRestart}
+            actions   = {'User_Folder'  :self.moveUser,
+                         'UDP_PORT'     :self.serviceRestart,
+                         'TCP_PORT'     :self.serviceRestart,
+                         'Client_Mode'  :self.serviceRestart,
+                         'Remote_URL'   :self.serviceRestart,
+                         'Disable_Cache':self.serviceRestart}
             
             for setting, value in settings.items():
                 if nSettings.get(setting) != value and actions.get(setting):

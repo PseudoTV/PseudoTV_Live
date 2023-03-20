@@ -87,7 +87,7 @@ class Utilities:
         with busy_dialog():
             items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)}, #"Rebuild M3U/XMLTV"
                         {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},  #"Clean Start"
-                        {'label':LANGUAGE(32121),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                  #"Force PVR reload"
+                        {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                  #"Force PVR reload"
                         {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPropertyBool,'args':('pendingRestart',True)}] #"Force PTVL reload"
 
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
@@ -105,6 +105,8 @@ class Utilities:
                 except Exception as e: 
                     self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                     return DIALOG.notificationDialog(LANGUAGE(32000))
+            else: openAddonSettings((7,1))
+                
 
 
     def deleteFiles(self, msg, full=False):
@@ -157,13 +159,13 @@ class Utilities:
 
 
     def run(self):  
-        ctl = (8,3) #settings return focus
+        ctl = (7,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
         
         if param == 'Apply_Settings':
-            ctl = (8,9)
+            ctl = (7,9)
             chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS(),silent=False)
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
@@ -175,8 +177,7 @@ class Utilities:
             with busy_dialog():
                 return self.showReadme()
         elif param == 'Show_Changelog':
-            with busy_dialog():
-                return self.showChangelog()
+            return self.showChangelog()
         elif param == 'User_Groups':
             return self.userGroups()
         elif param == 'Utilities':

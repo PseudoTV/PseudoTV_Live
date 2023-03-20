@@ -47,14 +47,14 @@ class Backup:
         with busy_dialog():
             self.log('hasBackup')
             if FileAccess.exists(CHANNELFLE_BACKUP) and not isClient():
-                PROPERTIES.setPropertyBool('has.Backup',True)
+                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"true")
                 backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
                 if backup_channel == 'Last Backup: Unknown':
                     SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(CHANNELFLE_BACKUP)))
                 if not SETTINGS.getSetting('Recover_Channels'):
                     SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return True
-            PROPERTIES.setPropertyBool('has.Backup',False)
+            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"false")
             SETTINGS.setSetting('Backup_Channels'  ,'')
             SETTINGS.setSetting('Recover_Channels' ,'')
             return False
@@ -74,7 +74,7 @@ class Backup:
                 
         with busy_dialog():
             if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_BACKUP):
-                PROPERTIES.setPropertyBool('has.Backup',True)
+                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"true")
                 SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
                 SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))

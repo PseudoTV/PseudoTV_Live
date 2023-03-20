@@ -75,8 +75,7 @@ def busy_dialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
-            Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
 
 def setDictLST(lst=[]):
     sLST = [dumpJSON(d) for d in lst]
@@ -132,7 +131,7 @@ class Settings:
     def _getSetting(self, func, key):
         try: 
             value = func(key)
-            # self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
+            self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
             return value
         except Exception as e: 
             self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
@@ -272,10 +271,12 @@ class Properties:
         return self.getEXTProperty('InstanceID')
       
 
-    def getKey(self, key, md5=False):
+    def getKey(self, key, instance=False):
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
-            if md5: return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.getInstanceID()))
-            else:   return '%s.%s'%(ADDON_ID,key)
+            if instance:
+                return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.getInstanceID()))
+            else:
+                return '%s.%s'%(ADDON_ID,key)
         return key
 
 
@@ -310,7 +311,7 @@ class Properties:
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
-        # self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
+        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         return value
         
         

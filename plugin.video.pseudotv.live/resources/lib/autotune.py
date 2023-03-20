@@ -47,7 +47,7 @@ class Autotune:
             else:
                 opt = ''
                 msg = (LANGUAGE(32042)%ADDON_NAME)
-                if PROPERTIES.getPropertyBool('has.Backup'):
+                if PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.has.Backup') == "true":
                     opt = LANGUAGE(32112)
                     msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
                 retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90000)

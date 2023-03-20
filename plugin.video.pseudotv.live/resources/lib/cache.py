@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 
-from globals    import *
+from globals     import *
 
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
@@ -87,5 +87,6 @@ class Cache:
         if not DEBUG_CACHE:
             if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
             with self.cacheLocker():
-                # self.log('get, name = %s, checksum = %s'%(name,checksum))
+                self.log('get, name = %s, checksum = %s, default = %s'%(name,checksum,default))
                 return (self.cache.get(name.lower(),checksum,json_data) or default)
+        return default
