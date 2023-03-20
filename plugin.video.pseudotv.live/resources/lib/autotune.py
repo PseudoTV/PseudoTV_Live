@@ -66,7 +66,6 @@ class Autotune:
         self.log('selectAUTOTUNE, type = %s'%(type))
         if isClient(): return
         def _build(item):
-            print(item)
             return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
         
         def _match(enabledItems):
@@ -84,7 +83,6 @@ class Autotune:
             self.library.setLibrary(type, items)
            
         items = self.library.getLibrary(type)
-        print(items)
         if len(items) == 0 and (not rebuildChannels and not autoSelect): 
             return DIALOG.notificationDialog(LANGUAGE(32018)%(type))
         

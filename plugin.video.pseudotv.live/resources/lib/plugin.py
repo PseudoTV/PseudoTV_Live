@@ -59,9 +59,7 @@ class Plugin:
         def _match():
             dir = quoteString('radio/%s (Radio)'%(ADDON_NAME) if radio else 'tv/%s'%(ADDON_NAME))
             results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
-            print(results)
             for result in results:
-                print(result)
                 if result.get('label','').lower() == chname.lower() and result.get('uniqueid','') == id:
                     self.log('getCallback, found = %s'%(result.get('file')))
                     return result.get('file')
@@ -133,7 +131,7 @@ class Plugin:
         except: pvritem['epgurl']  = ''
             
         pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
-        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
+        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
         if isPlaylist: pvritem = self.extendProgrammes(pvritem)
 
         citem     = pvritem['citem']
@@ -184,7 +182,7 @@ class Plugin:
                 liz.setProperty('pvritem',dumpJSON(pvritem))
                 listitems = [liz]
                 listitems.extend(poolit(self.buildWriterItem)(nextitems))
-                SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=self.sysARG[1], life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+                SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
                 
                 if isPlaylist:
                     for idx,lz in enumerate(listitems):
@@ -209,7 +207,7 @@ class Plugin:
         pvritem['isPlaylist']  = True
         pvritem['callback']    = '%s%s'%(self.sysARG[0],self.sysARG[2])
         pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
-        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
+        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
 
         citem   = pvritem['citem']
         nowitem = pvritem.get('broadcastnow',{})  # current item
@@ -252,7 +250,7 @@ class Plugin:
             pvritem['isPlaylist']  = isPlaylist
             pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
             pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
-            pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={}).get('playcount',0)
+            pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
             if isPlaylist: pvritem = self.extendProgrammes(pvritem)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
 
@@ -299,7 +297,7 @@ class Plugin:
                 
             self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=self.sysARG[1], life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+            SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
             return PLAYER.play(self.channelPlaylist, startpos=0)
             
         else: return self.playError(pvritem)
@@ -308,11 +306,11 @@ class Plugin:
 
     def playError(self, pvritem={}):
         self.resolveURL(False, xbmcgui.ListItem())
-        if not pvritem: pvritem = SETTINGS.getCacheSetting('playingPVRITEM', checksum=self.sysARG[1], json_data=True, default={})
+        if not pvritem: pvritem = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={})
         channelPlaycount = pvritem.get('playcount',0)
         channelPlaycount += 1
         pvritem['playcount'] = channelPlaycount
-        SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=self.sysARG[1], life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+        SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         self.log('playError, id = %s, attempt = %s'%(pvritem.get('id','-1'),channelPlaycount))
         if channelPlaycount == 1: setInstanceID() #reset instance and force cache flush.
         if channelPlaycount <= 2:
