@@ -371,7 +371,7 @@ class JSONRPC:
         if sort:   param["sort"]   = sort
         if filter: param['filter'] = filter #convert db:// path to dynamic xsp, inject "rule"
 
-        self.log('requestList, id = %s, page = %s\nparam = %s'%(id, page, param))
+        self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         results = self.getDirectory(param)
 
         if 'filedetails' in results: key = 'filedetails'
@@ -402,7 +402,7 @@ class JSONRPC:
         if not checksum: checksum = id
         if not limits:
             msg = 'get'
-            limits = (self.cache.get(cacheName, checksum=checksum, json_data=True) or {"end": 0, "start": 0, "total":0})
+            limits = self.cache.get(cacheName, checksum=checksum, json_data=True, default={"end": 0, "start": 0, "total":0})
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, checksum=checksum, expiration=life, json_data=True)
@@ -411,14 +411,9 @@ class JSONRPC:
             
              
     def randomPagination(self, page=int(REAL_SETTINGS.getSetting('Page_Limit')), total=0):
-        if total > 0: start = random.randrange(0, total, page)
-        else:         start = 0
-        end = start + page
-        if end > total: end = total
-        if start == total:
-            start = 0
-            end   = page
-        return {"end": end, "start": start, "total":total}
+        if total > page: start = random.choice(range(0, (total-page)))
+        else:            start = 0
+        return {"end": start, "start": start, "total":total}
         
 
     @cacheit(checksum=getInstanceID())
@@ -432,6 +427,7 @@ class JSONRPC:
         for setting in settings:
             if setting['id'] == 'services.webserver' and not setting['value']:
                 enabled = False
+                DIALOG.notificationDialog(LANGUAGE(32131))
                 break
             if setting['id'] == 'services.webserverusername':
                 username = setting['value']

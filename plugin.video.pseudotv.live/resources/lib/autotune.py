@@ -86,7 +86,7 @@ class Autotune:
         if len(items) == 0 and (not rebuildChannels and not autoSelect): 
             return DIALOG.notificationDialog(LANGUAGE(32018)%(type))
         
-        lizlst = poolit(_build)(items)
+        lizlst = [_build(item) for item in items]
         if rebuildChannels:#rebuild channels.json entries
             selects = list(_match(self.library.getEnabled(type)))
         elif autoSelect:#build sample channels

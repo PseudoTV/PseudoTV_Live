@@ -2,6 +2,8 @@ v.0.4.1
 - Improved Playback error detection.
 - Autotuned channels added to "Favorite" group.
 - Miscellaneous Tweaks.
+- Fixed "library" content not respecting "specials" & "extras" exclusion. 
+- Improved "Random" limits.
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.

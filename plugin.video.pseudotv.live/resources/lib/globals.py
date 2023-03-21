@@ -109,7 +109,9 @@ VFS_TYPES           = ["plugin://",
                        "resource://"]
                        
 TV_TYPES            = ['episode',
-                       'tvshow']
+                       'episodes',
+                       'tvshow',
+                       'tvshows']
                        
 MOVIE_TYPES         = ['movie',
                        'movies']

@@ -27,6 +27,7 @@ from jsonrpc    import JSONRPC
 from xsp        import XSP
 from m3u        import M3U
 from fillers    import Fillers
+from resources  import Resources
 
 class Builder:
     loopback = {}
@@ -62,6 +63,7 @@ class Builder:
         self.xsp        = XSP()
         self.m3u        = M3U()
         self.fillers    = Fillers(self)
+        self.resources  = Resources(self.jsonRPC,self.cache)
            
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -304,11 +306,13 @@ class Builder:
                     if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
                         item['year'] = 0
                         
-                    title   = (item.get("title",'')     or item.get("label",''))
+                    title   = (item.get("title",'') or item.get("label",''))
                     tvtitle = item.get("showtitle",'')
-
-                    if (tvtitle and item['type'].startswith(tuple(TV_TYPES))) or (tvtitle and (int(item.get("season","0")) > 0 and int(item.get("episode","0")) > 0)):# This is a TV show
-                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (int(item.get("season","0")) == 0 or int(item.get("episode","0"))) == 0 and item.get("episode",None) is not None: 
+                    
+                    if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
+                        season  = int(item.get("season","0"))
+                        episode = int(item.get("episode","0"))
+                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
                             self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
                             self.log("buildLibraryList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
                             continue
@@ -316,8 +320,7 @@ class Builder:
                         label = tvtitle
                         item["tvshowtitle"]  = tvtitle
                         item["episodetitle"] = title
-                        item["episodelabel"] = '%s (%sx%s)'%(title,int(item.get("season","0")),str(int(item.get("episode","0"))).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                        
+                        item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
                     else: # This is a Movie
                         label = title
                         item["episodetitle"] = item.get("tagline","")
@@ -480,17 +483,18 @@ class Builder:
                         title   = (item.get("title",'')     or item.get("label",'')       or dirItem.get('label',''))
                         tvtitle = (item.get("showtitle",'') or dirItem.get('label',''))
 
-                        if (tvtitle and item['type'].startswith(tuple(TV_TYPES))) or (tvtitle and (int(item.get("season","0")) > 0 and int(item.get("episode","0")) > 0)):# This is a TV show
-                            if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (int(item.get("season","0")) == 0 or int(item.get("episode","0"))) == 0 and item.get("episode",None) is not None: 
+                        if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
+                            season  = int(item.get("season","0"))
+                            episode = int(item.get("episode","0"))
+                            if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
                                 self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                                self.log("buildList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
+                                self.log("buildLibraryList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
                                 continue
 
                             label = tvtitle
                             item["tvshowtitle"]  = tvtitle
                             item["episodetitle"] = title
-                            item["episodelabel"] = '%s (%sx%s)'%(title,int(item.get("season","0")),str(int(item.get("episode","0"))).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                            
+                            item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
                         else: # This is a Movie
                             label = title
                             item["episodetitle"] = item.get("tagline","")
@@ -601,11 +605,34 @@ class Builder:
             if art: return art
         return {0:FANART,1:COLOR_LOGO}[opt]
              
+              
+    def cleanImage(self, image):
+        orgIMG = image
+        self.log('cleanImage, image In = %s'%(image))
+        if image is None: image = LOGO
+        if not image.startswith(('image://','resource://','special://')):
+            realPath = xbmcvfs.translatePath('special://home/addons/')
+            if image.startswith(realPath):# convert real path. to vfs
+                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
+            elif image.startswith(realPath.replace('\\','/')):
+                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+            else:# convert local art to webserver for clients.
+                image = self.resources.buildWebImage(image)
+        #todo fix issue with resources with space.
+        # path, file = os.path.split(image)
+        # if " " in file: 
+            #image = '%s/%s'%(path,quoteString(file))
+            # image = xbmcvfs.translatePath(image)
+            # image = 'image://%s'%(quoteString(xbmcvfs.translatePath(image)))
+        if image != orgIMG: self.log('cleanImage, image Out = %s'%(image))
+        return image
                
+                
     def addChannelStation(self, citem):
         self.log('addChannelStation, id = %s'%(citem['id']))
         citem['url'] = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
         citem = self.cleanGroups(citem)
+        citem['logo'] = self.cleanImage(citem['logo'])
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
         
@@ -629,7 +656,7 @@ class Builder:
             item['categories']  = (file.get('genre','')        or ['Undefined'])[:5]
             item['type']        = file.get('type','video')
             item['new']         = int(file.get('playcount','1')) == 0
-            item['thumb']       = self.getThumb(file,self.epgArt)            #unify thumbnail by user preference 
+            item['thumb']       = self.cleanImage(self.getThumb(file,self.epgArt)) #unify thumbnail by user preference 
             file['art']['thumb']= self.getThumb(file,{0:1,1:0}[self.epgArt]) #unify thumbnail artwork, opposite of EPG_Artwork
             item['date']        = file.get('premiered','')
             

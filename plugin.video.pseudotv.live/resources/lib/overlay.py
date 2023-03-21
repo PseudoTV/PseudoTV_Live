@@ -309,10 +309,10 @@ class Overlay():
                     nowItem  = self.player.playingItem.get('broadcastnow',{})       # current item
                     nextitem = self.player.playingItem.get('broadcastnext',[{}])[0] # upcoming items
                     chname   = self.player.playingItem.get('label',ADDON_NAME)
-                    onNow    = '%son %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem['episodename']) if nextitem['episodename'] else ''), chname)
+                    onNow    = '%s on %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem['episodename']) if nextitem['episodename'] else ''), chname)
                     onNext   = '%s %s'%(nextitem['title'],'- %s'%(nextitem['episodename']) if nextitem['episodename'] else '')
                     
-                    self._onNext.setText('%s %s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                    self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                     self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                     self._onNext.autoScroll(6000, 3000, 5000)
                     playSFX(BING_WAV)

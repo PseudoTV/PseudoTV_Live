@@ -468,9 +468,9 @@ class ListItems:
         properties['pvritem'] = info.pop('pvritem',{}) # write dump to single key
         
         if media != 'video': #unify default artwork for music.
-            art['thumb']  = getThumb(info,opt=1)
+            art['poster'] = getThumb(info,opt=1)
             art['fanart'] = getThumb(info)
-        
+            
         def cleanInfo(ninfo):
             tmpInfo = ninfo.copy()
             for key, value in tmpInfo.items():

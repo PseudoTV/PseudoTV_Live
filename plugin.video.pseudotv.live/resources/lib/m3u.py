@@ -219,12 +219,7 @@ class M3U:
         if not slug: return channels
         return list(filter(lambda line:line.get(key,'').endswith(slug), self._verify(channels)))
         
-        
-    def cleanLogo(self, logo):
-        self.log('cleanLogo, logo Out = %s'%(logo))
-        return logo
-               
-               
+
     def sortStations(self, channels):
         return sorted(channels, key=lambda k: k['number'])
         
@@ -259,7 +254,7 @@ class M3U:
         mitem = self.getMitem()
         mitem.update(citem)
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
-        mitem['logo']          = self.cleanLogo(citem['logo'])
+        mitem['logo']          = citem['logo']
         mitem['provider']      = ADDON_NAME
         mitem['provider-type'] = 'local'
         mitem['provider-logo'] = HOST_LOGO

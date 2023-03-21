@@ -159,19 +159,6 @@ class XMLTVS:
         return tmpProgrammes
 
 
-    def cleanLogo(self, logo):
-        if not logo.startswith(('image://','resource://','special://')):
-            realPath = xbmcvfs.translatePath('special://home/addons/')
-            if logo.startswith(realPath):# convert real path. to vfs
-                logo = logo.replace(realPath,'special://home/addons/').replace('\\','/')
-            elif logo.startswith(realPath.replace('\\','/')):
-                logo = logo.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
-            # else:# convert local art to webserver for clients.
-                # logo = self.buildWebImage(logo) #todo m3u/xmltv logos use 'server' instance hosted images
-            self.log('cleanLogo, logo Out = %s'%(logo))
-        return logo
-               
-               
     def sortChannels(self, channels):
         try: channels.sort(key=lambda x:x.get('display-name'))
         except: pass
@@ -196,7 +183,7 @@ class XMLTVS:
     def addChannel(self, citem):
         mitem = ({'id'           : citem['id'],
                   'display-name' : [(self.cleanString(citem['name']), LANG)],
-                  'icon'         : [{'src':self.cleanLogo(citem['logo'])}]})
+                  'icon'         : [{'src':citem['logo']}]})
                   
         self.log('addChannel, mitem = %s'%(mitem))
         idx, channel = self.findChannel(mitem, channels=self.getChannels())
@@ -215,7 +202,7 @@ class XMLTVS:
                       'desc'        : [(self.cleanString(item['desc']), LANG)],
                       'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
                       'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
-                      'icon'        : [{'src': self.cleanLogo(item['thumb'])}],
+                      'icon'        : [{'src': item['thumb']}],
                       'length'      : {'units': 'seconds', 'length': str(item['length'])}}
                       
         if item.get('sub-title'):

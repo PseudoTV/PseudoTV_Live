@@ -140,6 +140,7 @@ class Resources:
             
 
     def buildWebImage(self, image):  #todo host/use kodi webserver to share image files for remote m3u/xmltv
+        if image.startswith(('resource://','special://','image://'))): return image
         return joinURL('%s/image'%(self.jsonRPC.buildWebBase()), quoteString('image://%s'%(quoteString(image))))
             
             

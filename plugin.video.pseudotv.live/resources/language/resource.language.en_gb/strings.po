@@ -1013,6 +1013,10 @@ msgctxt "#32130"
 msgid "Warning!! File caching disabled\nIt's recommended you re-enable when finished debugging"
 msgstr ""
 
+msgctxt "#32131"
+msgid "Notice!! Kodi's Webserver is disabled.\nIt's recommend you enable."
+msgstr ""
+
 
 
 
