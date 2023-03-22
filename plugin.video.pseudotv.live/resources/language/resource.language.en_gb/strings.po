@@ -1017,6 +1017,10 @@ msgctxt "#32131"
 msgid "Notice!! Kodi's Webserver is disabled.\nIt's recommend you enable."
 msgstr ""
 
+msgctxt "#32132"
+msgid "Update unnecessary."
+msgstr ""
+
 
 
 

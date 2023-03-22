@@ -102,12 +102,16 @@ class Builder:
                     
                 with busyLocker():
                     channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
-                    
+
                     #set global dialog.
                     self.pName  = channel['name']
                     self.pCount = int(idx*100//len(channels))
-                    if stopTimes.get(channel['id']): self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:                            self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
+                    if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
+                        self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                    elif stopTimes.get(channel['id']):
+                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                    else:
+                        self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
                     
                     #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)', False:'In-Valid Channel (No guidedata)', list:'fileList (guidedata)'}
                     cacheResponse = self.getFileList(channel, now, stopTimes.get(channel['id'],start))
@@ -154,6 +158,7 @@ class Builder:
             start = self.runActions(RULES_ACTION_CHANNEL_START, citem, start, inherited=self)
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
+                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,LANGUAGE(32132)),header='%s, %s'%(ADDON_NAME,self.pMSG))
                 return True# prevent over-building
             
             citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, self.getProvisional(citem), citem, inherited=self)
@@ -560,6 +565,8 @@ class Builder:
           
           
     def cleanMPAA(self, mpaa):
+        orgMPA = mpaa
+        self.log('cleanMPAA, in = %s'%(mpaa))
         mpaa = mpaa.lower()
         if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
         if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
@@ -572,10 +579,12 @@ class Builder:
             mpaa = text.strip()
         except: 
             mpaa = mpaa.strip()
+        if mpaa != orgMPA: self.log('cleanMPAA, out = %s'%(mpaa))
         return mpaa
                   
                   
     def cleanGroups(self, citem):
+        orgITM = citem
         self.log('cleanGroups, in = %s'%(citem['group']))
         if not self.enableGrouping:
             citem['group'] = [ADDON_NAME]
@@ -587,10 +596,26 @@ class Builder:
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:
                  citem['group'].remove(LANGUAGE(32019))
         citem['group'] = list(set(citem['group']))
-        self.log('cleanGroups, out = %s'%(citem['group']))
+        if citem != orgITM: self.log('cleanGroups, out = %s'%(citem['group']))
         return citem
         
-                  
+        
+    def cleanImage(self, image):
+        orgIMG = image
+        self.log('cleanImage, image In = %s'%(image))
+        if image is None: image = LOGO
+        if not image.startswith(('image://','resource://','special://')):
+            realPath = xbmcvfs.translatePath('special://home/addons/')
+            if image.startswith(realPath):# convert real path. to vfs
+                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
+            elif image.startswith(realPath.replace('\\','/')):
+                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+            else:# convert local art to webserver for clients.
+                image = self.resources.buildWebImage(image)
+        if image != orgIMG: self.log('cleanImage, image Out = %s'%(image))
+        return image
+            
+            
     def getThumb(self, item={},opt=0): #unify thumbnail artwork
         keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
                 1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
@@ -605,34 +630,12 @@ class Builder:
             if art: return art
         return {0:FANART,1:COLOR_LOGO}[opt]
              
-              
-    def cleanImage(self, image):
-        orgIMG = image
-        self.log('cleanImage, image In = %s'%(image))
-        if image is None: image = LOGO
-        if not image.startswith(('image://','resource://','special://')):
-            realPath = xbmcvfs.translatePath('special://home/addons/')
-            if image.startswith(realPath):# convert real path. to vfs
-                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
-            elif image.startswith(realPath.replace('\\','/')):
-                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
-            else:# convert local art to webserver for clients.
-                image = self.resources.buildWebImage(image)
-        #todo fix issue with resources with space.
-        # path, file = os.path.split(image)
-        # if " " in file: 
-            #image = '%s/%s'%(path,quoteString(file))
-            # image = xbmcvfs.translatePath(image)
-            # image = 'image://%s'%(quoteString(xbmcvfs.translatePath(image)))
-        if image != orgIMG: self.log('cleanImage, image Out = %s'%(image))
-        return image
-               
-                
+                  
     def addChannelStation(self, citem):
         self.log('addChannelStation, id = %s'%(citem['id']))
         citem['url'] = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
-        citem = self.cleanGroups(citem)
         citem['logo'] = self.cleanImage(citem['logo'])
+        citem = self.cleanGroups(citem)
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
         

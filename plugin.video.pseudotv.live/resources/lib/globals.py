@@ -702,6 +702,12 @@ def hasAutotuned():
     
 def setAutotuned(state=True):
     return PROPERTIES.setPropertyBool('hasAutotuned',state)
+         
+def hasFirstrun():
+    return PROPERTIES.getPropertyBool('hasFirstrun')
+    
+def setFirstrun(state=True):
+    return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient():
     client = PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.isClient') == "true"

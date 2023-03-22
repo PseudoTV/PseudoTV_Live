@@ -64,7 +64,7 @@ class Plugin:
                     self.log('getCallback, found = %s'%(result.get('file')))
                     return result.get('file')
 
-        cacheName = 'getCallback.%s.%s'%(chname,id)
+        cacheName = 'getCallback.%s.%s'%(getMD5(chname),id)
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID())
         if not cacheResponse:
             callback = _match()
@@ -130,11 +130,10 @@ class Plugin:
         try:    pvritem['epgurl']  = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1)) #"pvr://guide/1197/2022-02-14 18:22:24.epg"
         except: pvritem['epgurl']  = ''
             
-        pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
+        pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
         pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
         if isPlaylist: pvritem = self.extendProgrammes(pvritem)
 
-        citem     = pvritem['citem']
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
@@ -142,7 +141,7 @@ class Plugin:
         if nowitem:
             found = True
             if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
-                nowitem = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
+                nowitem = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                 self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
                 self.log('playChannel, progress = %s, Seek_Tolerance = %s'%(nowitem['progress'],SEEK_TOLER))
@@ -169,7 +168,7 @@ class Plugin:
                 writer = decodeWriter(nowitem.get('writer',{}))
                 liz    = LISTITEMS.buildItemListItem(writer)
                 path   = liz.getPath()
-                self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,citem,writer))
+                self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,pvritem['citem'],writer))
                 
                 if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
                     self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
@@ -206,19 +205,15 @@ class Plugin:
         
         pvritem['isPlaylist']  = True
         pvritem['callback']    = '%s%s'%(self.sysARG[0],self.sysARG[2])
-        pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
+        pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
         pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
 
-        citem   = pvritem['citem']
         nowitem = pvritem.get('broadcastnow',{})  # current item
-        
         if nowitem:
             found = True
             if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
-                nowitem  = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
-                citem.update(decodeWriter(nowitem.get('writer',{})).get('citem',{}))
-                
-                fileList = [self.jsonRPC.requestList(citem, path, 'music', page=RADIO_ITEM_LIMIT) for path in citem.get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
+                nowitem  = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
+                fileList = [self.jsonRPC.requestList(pvritem['citem'], path, 'music', page=RADIO_ITEM_LIMIT) for path in pvritem['citem'].get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
                 fileList = list(interleave(fileList))
                 if len(fileList) > 0:
                     random.shuffle(fileList)
@@ -249,7 +244,7 @@ class Plugin:
         
             pvritem['isPlaylist']  = isPlaylist
             pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
-            pvritem['citem']       = self.sysInfo.get('citem',decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')))
+            pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
             pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
             if isPlaylist: pvritem = self.extendProgrammes(pvritem)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
@@ -305,7 +300,7 @@ class Plugin:
         
 
     def playError(self, pvritem={}):
-        self.resolveURL(False, xbmcgui.ListItem())
+        self.resolveURL(False, xbmcgui.ListItem()) #release pending play.
         if not pvritem: pvritem = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={})
         channelPlaycount = pvritem.get('playcount',0)
         channelPlaycount += 1

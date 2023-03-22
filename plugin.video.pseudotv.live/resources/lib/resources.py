@@ -50,14 +50,15 @@ class Resources:
         
     def getLocalLogo(self, chname):
         for path in LOCAL_RESOURCES:
-            if FileAccess.exists(os.path.join(path,'%s.png'%chname)): return os.path.join(path,'%s.png'%chname)
-            if FileAccess.exists(os.path.join(path,'%s.jpg'%chname)): return os.path.join(path,'%s.jpg'%chname)
+            for ext in IMG_EXTS:
+                if FileAccess.exists(os.path.join(path,'%s%s'%(chname,ext))):
+                    return os.path.join(path,'%s%s'%(chname,ext))
         
     
     def getLogoResources(self, chname, type):
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
         resources = self.LOGO_RESOURCES
-        if   type in ["TV Genres","Movie Genres"]:
+        if type in ["TV Genres","Movie Genres"]:
             resources.extend(GENRE_RESOURCE)         
         elif type in ["TV Networks","Movie Studios"]:
             resources.extend(STUDIO_RESOURCE)
@@ -76,7 +77,10 @@ class Resources:
                     self.log('getLogoResources, interrupted')
                     break
                     
-                if not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'): continue
+                if not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
+                    self.log('getLogoResources, missing %s'%(id))
+                    continue
+                    
                 self.log('getLogoResources, checking %s'%(id))
                 paths = self.walkResource(id)
                 for path in paths:
@@ -105,7 +109,8 @@ class Resources:
         
         
     def matchName(self, chname, name):
-        patterns = list(set([chname,cleanChannelSuffix(chname, type),stripRegion(chname),splitYear(chname)[0],slugify(chname),slugify(stripRegion(chname))]))
+        patterns = list(set([cleanChannelSuffix(chname, type),stripRegion(chname),splitYear(chname)[0],slugify(chname),slugify(stripRegion(chname))]))
+        patterns.insert(0,chname)#make sure unaltered channel name first to parse.
         for pattern in patterns:
             if name.lower() == pattern.lower():
                 return True
@@ -139,7 +144,7 @@ class Resources:
         return walk
             
 
-    def buildWebImage(self, image):  #todo host/use kodi webserver to share image files for remote m3u/xmltv
+    def buildWebImage(self, image):
         if image.startswith(('resource://','special://','image://')): return image
         return joinURL('%s/image'%(self.jsonRPC.buildWebBase()), quoteString('image://%s'%(quoteString(image))))
             

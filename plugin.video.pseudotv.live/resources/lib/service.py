@@ -335,7 +335,7 @@ class Service():
                 continue
                 
             isIdle = self.monitor.chkIdle()
-            if isLowPower(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+            if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
             if not isClient(): self.producer._chkProcesses()
         self._stop()
             
@@ -358,6 +358,7 @@ class Service():
         self._stop()
         setInstanceID()
         setAutotuned(False)
+        setFirstrun(False)
         Service()._start()
         
 if __name__ == '__main__': Service()._start()

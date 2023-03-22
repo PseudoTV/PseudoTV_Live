@@ -1,9 +1,12 @@
 v.0.4.1
-- Improved Playback error detection.
-- Autotuned channels added to "Favorite" group.
-- Miscellaneous Tweaks.
-- Fixed "library" content not respecting "specials" & "extras" exclusion. 
-- Improved "Random" limits.
+-Improved Playback error detection.
+-Autotuned channels added to "Favorite" group.
+-Miscellaneous Tweaks.
+-Fixed "library" content not respecting "specials" & "extras" exclusion. 
+-Improved "Random" limits.
+-Fixed channel logos for clients.
+-Changed default "Debugging" from enabled to disabled. Recommended users enable temporarily only for debugging.
+-Improved loading dialog.
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.

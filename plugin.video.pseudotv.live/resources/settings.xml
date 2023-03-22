@@ -1043,7 +1043,7 @@
 			<group id="2" label="30072">
 				<setting id="Enable_Debugging" type="boolean" label="30001" help="33001">
 					<level>1</level>
-					<default>true</default>
+					<default>false</default>
 					<control type="toggle"/>
 				</setting>
 				<setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Enable_Debugging">

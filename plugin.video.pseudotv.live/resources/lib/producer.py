@@ -157,6 +157,7 @@ class Producer():
             autotune = Autotune()
             autotune._runTune(samples=True,rebuild=False)
             del autotune
+            setFirstrun()
         except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
         
