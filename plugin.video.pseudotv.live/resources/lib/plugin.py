@@ -68,8 +68,9 @@ class Plugin:
         cacheName = 'getCallback.%s.%s'%(getMD5(chname),id)
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID())
         if not cacheResponse:
-            if isLowPower(): callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-            else:            callback = _match()
+            callback = _match()
+            # if isLowPower(): callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
+            # else:            callback = _match()
             if callback is None: return forceBrute()
             cacheResponse = self.cache.set(cacheName, callback, checksum=getInstanceID(), expiration=datetime.timedelta(minutes=OVERLAY_DELAY))
         return cacheResponse
@@ -128,8 +129,8 @@ class Plugin:
         
         pvritem['isPlaylist'] = isPlaylist
         #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr.
-        pvritem['callback']   = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-        # pvritem['callback'] = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
+        # pvritem['callback']   = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
+        pvritem['callback'] = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
         
         
         try:    pvritem['epgurl']  = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1)) #"pvr://guide/1197/2022-02-14 18:22:24.epg"
@@ -251,8 +252,8 @@ class Plugin:
             pvritem['isPlaylist']  = isPlaylist
             
             #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr.
-            pvritem['callback']    = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-            # pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
+            # pvritem['callback']    = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
+            pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
             
             pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
             pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
