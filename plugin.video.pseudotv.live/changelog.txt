@@ -9,6 +9,7 @@ v.0.4.1
 -Improved loading dialog.
 -Removed duplicate code.
 -Improved Kodi Omega support.
+-Fixed playback method "playlist" time-shift transitioning. 
 
 
 v.0.4.0

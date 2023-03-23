@@ -158,7 +158,7 @@ class Player(xbmc.Player):
                     self.playingItem['broadcastnext'] = broadcastnext
                     self.log('_onChange, isPlaylist = %s, broadcastnext = %s'%(self.playingItem.get('isPlaylist'), len(self.playingItem['broadcastnext'])))
                     if len(broadcastnext) == 0: raise Exception('empty broadcastnext')
-                raise Exception('using callback')
+                else: raise Exception('using callback')
                 # JSONRPC().playerOpen('{"item":{"channelid":%s}}'%(self.playingItem["channelid"])) #slower than playmedia
                 # JSONRPC().playerOpen('{"item":{"broadcastid":%s}}'%(self.playingItem['broadcastnow']["broadcastid"])) #calls catchup vod
             except Exception as e:

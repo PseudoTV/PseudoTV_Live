@@ -54,29 +54,30 @@ class Plugin:
         return LISTITEMS.buildItemListItem(decodeWriter(item.get('writer','')), media)
 
 
-    def getCallback(self, chname, id, radio=False):
-        self.log('getCallback, id = %s, radio = %s'%(id,radio))
+    def getCallback(self, chname, id, radio=False, isPlaylist=False):
+        self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
         def _match():
             dir = 'radio' if radio else 'tv'
-            for result in self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[]):
+            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
+            for result in results:
                 if result.get('label','').lower() == ADDON_NAME.lower():
-                    for result in self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[]):
-                        if result.get('label','').lower() == chname.lower() and result.get('uniqueid','') == id:
-                            self.log('getCallback, found = %s'%(result.get('file')))
-                            return result.get('file')
+                    response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
+                    for item in response:
+                        if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
+                            self.log('getCallback, found = %s'%(item.get('file')))
+                            return item.get('file')
 
-        cacheName = 'getCallback.%s.%s'%(getMD5(chname),id)
-        cacheResponse = self.cache.get(cacheName, checksum=getInstanceID())
-        if not cacheResponse:
+        if (isLowPower() and isPlaylist) or radio:
+            #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 
+            #this breaks "pvr" should only apply to playlists, avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
+            callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
+        else:
             callback = _match()
-            # if isLowPower(): callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-            # else:            callback = _match()
-            if callback is None: return forceBrute()
-            cacheResponse = self.cache.set(cacheName, callback, checksum=getInstanceID(), expiration=datetime.timedelta(minutes=OVERLAY_DELAY))
-        return cacheResponse
+        if callback is None: return forceBrute()
+        return callback
         
         
-    def matchChannel(self, chname, id, radio=False):
+    def matchChannel(self, chname, id, radio=False, isPlaylist=False):
         self.log('matchChannel, id = %s, radio = %s'%(id,radio))
         def _match():
             channels = self.jsonRPC.getPVRChannels(radio)
@@ -89,16 +90,25 @@ class Plugin:
                             self.log('matchChannel, found = %s'%(channel))
                             return channel
         
-        cacheName = 'matchChannel.%s.%s'%(chname,id)
+        cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True)
         if not cacheResponse:
             pvritem = _match()
-            if pvritem is None: return forceBrute()
+            if pvritem is None:
+                return self.playError()
+                
+            pvritem['isPlaylist'] = isPlaylist
+            pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
+            pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
+            pvritem['playcount']  = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
+          
+            try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
+            except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
+            if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
 
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),checksum=getInstanceID(),json_data=True) #channel surfing short term cache.
     def extendProgrammes(self, pvritem, limit=PAGE_LIMIT):
         channelItem = {}
         def _parseBroadcast(broadcast):
@@ -123,23 +133,7 @@ class Plugin:
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
-        
-        pvritem = self.matchChannel(name,id)
-        if pvritem is None: return self.playError()
-        
-        pvritem['isPlaylist'] = isPlaylist
-        #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr.
-        # pvritem['callback']   = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-        pvritem['callback'] = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
-        
-        
-        try:    pvritem['epgurl']  = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1)) #"pvr://guide/1197/2022-02-14 18:22:24.epg"
-        except: pvritem['epgurl']  = ''
-            
-        pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
-        if isPlaylist: pvritem = self.extendProgrammes(pvritem)
-
+        pvritem   = self.matchChannel(name,id,False,isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
         del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
@@ -201,20 +195,12 @@ class Plugin:
         self.resolveURL(found, listitems[0])
 
 
-    def playRadio(self, name, id):
+    def playRadio(self, name, id, isPlaylist=True):
         self.log('playRadio, id = %s'%(id))
         found     = False
         listitems = [LISTITEMS.getListItem()] #empty listitem required to pass failed playback.
-        
-        pvritem = self.matchChannel(name,id,radio=True)
-        if pvritem is None: return self.playError()
-        
-        pvritem['isPlaylist']  = True
-        pvritem['callback']    = '%s%s'%(self.sysARG[0],self.sysARG[2])
-        pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-        pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
-
-        nowitem = pvritem.get('broadcastnow',{})  # current item
+        pvritem   = self.matchChannel(name,id,True,isPlaylist)
+        nowitem   = pvritem.get('broadcastnow',{})  # current item
         if nowitem:
             found = True
             if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
@@ -246,18 +232,7 @@ class Plugin:
         if writer.get('citem',{}): 
             found = True
             citem = writer.get('citem')
-            pvritem = self.matchChannel(citem.get('name'),citem.get('id'))
-            if pvritem is None: return self.playError()
-        
-            pvritem['isPlaylist']  = isPlaylist
-            
-            #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr.
-            # pvritem['callback']    = callback = '%s%s'%(self.sysARG[0],self.sysARG[2]) #avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
-            pvritem['callback']    = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'))
-            
-            pvritem['citem']       = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-            pvritem['playcount']   = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
-            if isPlaylist: pvritem = self.extendProgrammes(pvritem)
+            pvritem = self.matchChannel(citem.get('name'),citem.get('id'),False,isPlaylist)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
 
             if isPlaylist:
