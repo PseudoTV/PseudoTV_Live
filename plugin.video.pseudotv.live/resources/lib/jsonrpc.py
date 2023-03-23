@@ -309,48 +309,15 @@ class JSONRPC:
                  'song'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid":dbid, "runtime":dur}}}
         self.queueJSON(param[media])
         
-        
-    def requestLibrary(self, citem, item, page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
-        if not limits: 
-            limits = self.autoPagination(citem['id'], filter.get('value')) #get
-            total  = limits.get('total',0)
-            if total > page and sort.get("method") == "random":
-                limits = self.randomPagination(page,total)
-                self.log('requestLibrary, id = %s generating random limits = %s'%(citem['id'],limits))
 
-        param = {}
-        param["properties"]      = self.getEnums(item['enum'], type='items')
-        param["limits"]          = {}
-        param["limits"]["start"] = limits.get('end', 0)
-        param["limits"]["end"]   = limits.get('end', 0) + page
+    def requestList(self, citem, item, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
+        if isinstance(item, dict):
+            getFile = False
+            path    = item.get('value')
+        else:
+            getFile = True
+            path    = item
         
-        if sort:   param["sort"]   = sort
-        if filter: param["filter"] = filter
-            
-        self.log('requestLibrary, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
-        results = self.getLibrary(item['method'],param)
-        limits  = results.pop('limits') 
-        key     = list(results.keys())[0]
-        items   = results.get(key, [])
-        total   = limits.get('total',0)
-        self.log('requestLibrary, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
-        
-        # restart page to 0, exceeding boundaries.
-        if (limits.get('end',0) >= total or limits.get('start',0) >= total):
-            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
-            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-            
-        # retry last request with fresh limits.
-        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
-            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
-            return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-            
-        self.autoPagination(citem['id'], filter.get('value'), limits) #set 
-        self.log("requestLibrary, id = %s, return items = %s" % (citem['id'], len(items)))
-        return results
-        
-
-    def requestList(self, citem, path, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
         self.log("requestList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],page,sort,filter,limits,path))
         # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         if not limits: 
@@ -361,24 +328,33 @@ class JSONRPC:
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
         param = {}
-        param["media"]           = media
-        param["directory"]       = escapeDirJSON(path)
-        param["properties"]      = self.getEnums("List.Fields.Files", type='items')
         param["limits"]          = {}
         param["limits"]["start"] = limits.get('end', 0)
         param["limits"]["end"]   = limits.get('end', 0) + page
         
         if sort:   param["sort"]   = sort
-        if filter: param['filter'] = filter #convert db:// path to dynamic xsp, inject "rule"
+        if filter: param['filter'] = filter
 
+        if getFile:
+            param["properties"] = self.getEnums("List.Fields.Files", type='items')
+            param["media"]      = media
+            param["directory"]  = escapeDirJSON(path)
+        else:
+            param["properties"] = self.getEnums(item['enum'], type='items')
+            
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
-        results = self.getDirectory(param)
-
-        if 'filedetails' in results: key = 'filedetails'
-        else:                        key = 'files'
+        
+        if getFile:
+            results = self.getDirectory(param)
+            limits  = results.get('limits', param["limits"])
+            if 'filedetails' in results: key = 'filedetails'
+            else:                        key = 'files'
+        else:
+            results = self.getLibrary(item['method'],param)
+            limits  = results.pop('limits') 
+            key     = list(results.keys())[0]
             
         items  = results.get(key, [])
-        limits = results.get('limits', param["limits"])
         total  = limits.get('total',0)
         self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
         
@@ -392,8 +368,17 @@ class JSONRPC:
             self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
             
+        if (len(items) > 0 and len(items) < page) and (total > 0 and total < page):
+            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
+            items = self.padItems(items)
+            
+        elif (len(items) > 0 and len(items) < page) and (total > page):
+            self.log("requestList, id = %s, extending items with new limits %s"%(citem['id'],limits))
+            items.extend(self.requestList(citem, path, media, page, sort, filter, limits))
+            
         self.autoPagination(citem['id'], path, limits) #set 
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
+        if not getFile: items = {key:items}
         return items
 
 
@@ -456,3 +441,17 @@ class JSONRPC:
                     break
         self.log('buildProvisional, return paths = %s'%(paths))
         return paths
+
+
+    def padItems(self, items, page=int(REAL_SETTINGS.getSetting('Page_Limit'))):
+        # Balance media limits, by filling randomly with duplicates to meet min. pagination.
+        self.log("padItems; items In = %s"%(len(items)))
+        if len(items) < page:
+            iters = cycle(items)
+            while not MONITOR.abortRequested() and len(items) < page:
+                item = next(iters).copy()
+                items.append(item)
+        self.log("padItems; items Out = %s"%(len(items)))
+        return items
+        
+        

@@ -294,10 +294,7 @@ def stripRegion(s):
         if match.group(1): return match.group(1)
     except: pass
     return s
-    
-def joinURL(base, url, frag=True):
-    return urllib.parse.urljoin(base, url, allow_fragments=frag)
-    
+
 def unquoteString(text):
     return urllib.parse.unquote(text)
     

@@ -158,7 +158,7 @@ class Builder:
             start = self.runActions(RULES_ACTION_CHANNEL_START, citem, start, inherited=self)
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
-                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,LANGUAGE(32132)),header='%s, %s'%(ADDON_NAME,self.pMSG))
+                # self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,LANGUAGE(32132)),header='%s, %s'%(ADDON_NAME,self.pMSG))
                 return True# prevent over-building
             
             citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, self.getProvisional(citem), citem, inherited=self)
@@ -208,27 +208,9 @@ class Builder:
         cacheResponse = setDictLST(cacheResponse)      # remove any duplicates that may have been parsed via similar paths.
         cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
         self.log('buildChannel, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
-        if len(cacheResponse) < self.limit: cacheResponse = self.fillCells(cacheResponse) 
         return cacheResponse
 
 
-    def fillCells(self, fileList, minGuide=(((SETTINGS.getSettingInt('Max_Days') * 24)*60)*60)):
-        ''' 
-        Balance media limits, by filling EPG randomly with duplicates to meet min. guide hours (minGuide).
-        '''
-        totRuntime = sum([item.get('duration') for item in fileList])
-        self.log("fillCells; fileList In = %s, Total runtime = %s"%(len(fileList),totRuntime))
-        if len(fileList) < self.limit:
-            iters = cycle(fileList)
-            # while not self.service.monitor.abortRequested() and totRuntime < minGuide:
-            while not self.service.monitor.abortRequested() and len(fileList) < self.limit:
-                item = next(iters).copy()
-                totRuntime += item.get('duration')
-                fileList.append(item)
-        self.log("fillCells; fileList Out = %s, Total runtime = %s"%(len(fileList),totRuntime))
-        return fileList
-        
-        
     def buildCells(self, citem, duration=10800, type='video', entries=3):
         self.log("buildCells; id = %s"%(citem.get('id')))
         tmpItem  = {'label'       : citem['name'],
@@ -266,11 +248,13 @@ class Builder:
         
     def buildLibraryList(self, citem, value, query, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
         self.log("buildLibraryList; id = %s, provisional value = %s\nquery = %s"%(citem['id'],value,query))
-        fileList      = []
-        seasoneplist  = []
+        fileList       = []
+        seasoneplist   = []
+        query['value'] = value
+        
         if not sort:   sort   = {"ignorearticle":True,"method":query.get('sort'),"order":"ascending","useartistsortname":True}
         if not filter: filter = {"and":[{"field":query.get('field'),"operator":query.get('operator'),"value":[value]}]}
-        json_response = self.jsonRPC.requestLibrary(citem, query, page, sort, filter, limits)
+        json_response = self.jsonRPC.requestList(citem, query, media, page, sort, filter, limits)
         key     = list(json_response.keys())[0]
         results = json_response.get(key, [])
         
@@ -600,10 +584,10 @@ class Builder:
         return citem
         
         
-    def cleanImage(self, image):
+    def cleanImage(self, image=LOGO):
         orgIMG = image
+        if not image: image = LOGO
         self.log('cleanImage, image In = %s'%(image))
-        if image is None: image = LOGO
         if not image.startswith(('image://','resource://','special://')):
             realPath = xbmcvfs.translatePath('special://home/addons/')
             if image.startswith(realPath):# convert real path. to vfs

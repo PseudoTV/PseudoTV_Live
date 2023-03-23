@@ -7,6 +7,9 @@ v.0.4.1
 -Fixed channel logos for clients.
 -Changed default "Debugging" from enabled to disabled. Recommended users enable temporarily only for debugging.
 -Improved loading dialog.
+-Removed duplicate code.
+-Improved Kodi Omega support.
+
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.
