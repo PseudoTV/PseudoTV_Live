@@ -61,7 +61,8 @@ class Plugin:
             results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
-                    if result.get('label','').lower() == dir.lower():
+                    if result.get('label','').lower().startswith(dir.lower()):
+                        SETTINGS.setCacheSetting('pseudopvr', result.get('file'))
                         self.log('getCallback, found dir = %s'%(result.get('file')))
                         response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
                         for item in response:
