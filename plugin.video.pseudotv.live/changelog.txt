@@ -9,7 +9,9 @@ v.0.4.1
 -Improved loading dialog.
 -Removed duplicate code.
 -Improved Kodi Omega support.
--Fixed playback method "playlist" time-shift transitioning. 
+-Fixed playback method "playlist" time-shift transitioning.
+-Fixed playback fault. #Fix may not support local translations. 
+-Added "autoclose" to okdialog and textviewer.
 
 
 v.0.4.0

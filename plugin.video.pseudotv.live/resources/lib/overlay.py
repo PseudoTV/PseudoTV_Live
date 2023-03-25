@@ -253,7 +253,7 @@ class Overlay():
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
                 if self.player.isPseudoTV: logo = self.player.playingItem.get('citem',{}).get('logo',LOGO)
-                else:                      logo = (BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
+                else:                      logo = ''#(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 self.setImage(self._channelBug,logo)
                 

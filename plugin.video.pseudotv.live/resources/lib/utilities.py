@@ -65,7 +65,7 @@ class Utilities:
             text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
             text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
             return text        
-        try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+        try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90, usethread=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -152,7 +152,7 @@ class Utilities:
             color   = 'dimgray' if offline else 'white'
             labels.append('[COLOR=%s]%s %s[/COLOR]'%(color,servers[server].get('name'),offline))
             
-        select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, autoclose=90000, multi=False)
+        select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, autoclose=90, multi=False)
         if select is not None:
             server = list(servers.keys())[select]
             chkDiscovery({server:servers[server]}, forced=True)

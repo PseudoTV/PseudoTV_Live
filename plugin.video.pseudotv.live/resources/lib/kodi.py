@@ -634,31 +634,34 @@ class Dialog:
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
              
         
-    def _okDialog(self, msg, heading, wait):
-        timerit(self.okDialog)(wait,[msg, heading])
+    def _okDialog(self, msg, heading, autoclose, wait=0.5):
+        timerit(self.okDialog)(wait,[msg, heading, autoclose])
         
         
-    def okDialog(self, msg, heading=ADDON_NAME, usethread=False):
-        if usethread: return self._okDialog(msg, heading, wait=0.5)
-        else:         return xbmcgui.Dialog().ok(heading, msg)
+    def okDialog(self, msg, heading=ADDON_NAME, autoclose=0, usethread=False):
+        if usethread: return self._okDialog(msg, heading, autoclose)
+        else:
+            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
+            return xbmcgui.Dialog().ok(heading, msg)
         
         
-    def _textviewer(self, msg, heading, usemono, wait):
-        timerit(self.textviewer)(wait,[msg, heading, usemono])
+    def _textviewer(self, msg, heading, usemono, autoclose, wait=0.5):
+        timerit(self.textviewer)(wait,[msg, heading, usemono, autoclose])
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, usethread=False):
-        if usethread: return self._textviewer(msg, heading, usemono, wait=0.5)
-        else:         return xbmcgui.Dialog().textviewer(heading, msg, usemono)
+    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=0, usethread=False):
+        if usethread: return self._textviewer(msg, heading, usemono, autoclose)
+        else:
+            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
+            return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
-    
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0): 
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
-            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, autoclose)
+            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))
         else: 
             # Returns True if 'Yes' was pressed, else False.
-            return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
+            return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
 
 
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
@@ -677,12 +680,12 @@ class Dialog:
             if preselect is None: preselect = [-1]
             if custom: ... #todo domodel custom selectDialog for library select.
             else:
-                select = xbmcgui.Dialog().multiselect(header, list, autoclose, preselect, useDetails)
+                select = xbmcgui.Dialog().multiselect(header, list, (autoclose*1000), preselect, useDetails)
         else:
             if preselect is None: preselect = -1
             if custom: ... #todo domodel custom selectDialog for library select.
             else:
-                select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
+                select = xbmcgui.Dialog().select(header, list, (autoclose*1000), preselect, useDetails)
                 if select == -1:  select = None
         return select
       

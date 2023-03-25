@@ -59,13 +59,16 @@ class Plugin:
         def _match():
             dir = 'radio' if radio else 'tv'
             results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
-            for result in results:
-                if result.get('label','').lower() == ADDON_NAME.lower():
-                    response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
-                    for item in response:
-                        if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
-                            self.log('getCallback, found = %s'%(item.get('file')))
-                            return item.get('file')
+            for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
+                for result in results:
+                    if result.get('label','').lower() == dir.lower():
+                        self.log('getCallback, found dir = %s'%(result.get('file')))
+                        response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
+                        for item in response:
+                            if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
+                                self.log('getCallback, found file = %s'%(item.get('file')))
+                                return item.get('file')
+            self.log('getCallback, no callback found!\nresults = %s'%(results))
 
         if (isLowPower() and isPlaylist) or radio:
             #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 

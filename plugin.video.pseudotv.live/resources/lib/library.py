@@ -414,7 +414,7 @@ class Library:
         
         try:
             if len(addonNames) > 1:
-                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90000)
+                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
                 self.log('importPrompt, prompt retval = %s'%(retval))
                 if   retval == 1: raise Exception('Single Entry')
                 elif retval == 2: 
@@ -426,7 +426,7 @@ class Library:
             self.log('importPrompt, %s'%(e))
             for addonid, item in addonList.items():
                 if item.get('meta',{}).get('name') in addonNames:
-                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90000):
+                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
                         self.addBlackList(addonid)
                     else:
                         self.addWhiteList(addonid)
