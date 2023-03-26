@@ -311,14 +311,13 @@ class JSONRPC:
         
 
     def requestList(self, citem, item, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
+        getFile = True
+        path    = item
         if isinstance(item, dict):
             getFile = False
             path    = item.get('value')
-        else:
-            getFile = True
-            path    = item
         
-        self.log("requestList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],page,sort,filter,limits,path))
+        self.log("requestList, id: %s, getFile = %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],getFile,page,sort,filter,limits,path))
         # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         if not limits: 
             limits = self.autoPagination(citem['id'], path) #get
@@ -341,7 +340,6 @@ class JSONRPC:
             param["directory"]  = escapeDirJSON(path)
         else:
             param["properties"] = self.getEnums(item['enum'], type='items')
-            
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         
         if getFile:
@@ -357,7 +355,7 @@ class JSONRPC:
         items  = results.get(key, [])
         total  = limits.get('total',0)
         self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
-        
+
         # restart page to 0, exceeding boundaries.
         if (limits.get('end',0) >= total or limits.get('start',0) >= total):
             self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
@@ -366,15 +364,14 @@ class JSONRPC:
         # retry last request with fresh limits.
         if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
             self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
-            return self.requestList(citem, path, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-            
-        if (len(items) > 0 and len(items) < page) and (total > 0 and total < page):
-            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-            items = self.padItems(items)
-            
-        elif (len(items) > 0 and len(items) < page) and (total > page):
-            self.log("requestList, id = %s, extending items with new limits %s"%(citem['id'],limits))
-            items.extend(self.requestList(citem, path, media, page, sort, filter, limits))
+            return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
+        elif (len(items) > 0 and len(items) < page):
+            if total > page:
+                self.log("requestList, id = %s, extending items with new limits %s"%(citem['id'],limits))
+                items.extend(self.requestList(citem, item, media, page, sort, filter, limits))
+            elif total > 0 and total < page:
+                self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
+                items = self.padItems(items)
             
         self.autoPagination(citem['id'], path, limits) #set 
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
@@ -396,7 +393,7 @@ class JSONRPC:
             
              
     def randomPagination(self, page=int(REAL_SETTINGS.getSetting('Page_Limit')), total=0):
-        if total > page: start = random.choice(range(0, (total-page)))
+        if total > page: start = random.randrange(0, (total-page), page)
         else:            start = 0
         return {"end": start, "start": start, "total":total}
         
@@ -444,7 +441,7 @@ class JSONRPC:
 
 
     def padItems(self, items, page=int(REAL_SETTINGS.getSetting('Page_Limit'))):
-        # Balance media limits, by filling randomly with duplicates to meet min. pagination.
+        # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; items In = %s"%(len(items)))
         if len(items) < page:
             iters = cycle(items)
