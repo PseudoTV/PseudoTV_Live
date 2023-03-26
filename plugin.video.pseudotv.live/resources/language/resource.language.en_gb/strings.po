@@ -978,7 +978,7 @@ msgid "Force %s to reload"
 msgstr ""
 
 msgctxt "#32122"
-msgid "Warning System can become unresponsive."
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]System can become unresponsive."
 msgstr ""
 
 msgctxt "#32123"
@@ -1010,22 +1010,20 @@ msgid "Error detected! %s is out of sync with Kodi."
 msgstr ""
 
 msgctxt "#32130"
-msgid "Warning!! File caching disabled\nIt's recommended you re-enable when finished debugging"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]File caching disabled\nIt's recommended you re-enable when finished debugging"
 msgstr ""
 
 msgctxt "#32131"
-msgid "Notice!! Kodi's Webserver is disabled.\nIt's recommend you enable."
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled.\nIt's recommend you enable."
 msgstr ""
 
 msgctxt "#32132"
 msgid "update unnecessary."
 msgstr ""
 
-
-
-
-
-
+msgctxt "#32133"
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]In-order for %s to work properly [B]PVR://[/B] must be added as a Kodi video source.\nTo remove this prompt navigate to [B]Videos, Files, + Add Videos[/B] and enter [B]PVR://[/B] as a path."
+msgstr ""
 
 
 

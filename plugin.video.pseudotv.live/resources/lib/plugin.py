@@ -77,7 +77,7 @@ class Plugin:
             callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
         else:
             callback = _match()
-        if callback is None: return forceBrute()
+        if callback is None: return DIALOG.okDialog(LANGUAGE(32133)%(ADDON_NAME), autoclose=90, usethread=True)
         return callback
         
         

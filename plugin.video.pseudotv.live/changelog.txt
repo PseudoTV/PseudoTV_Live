@@ -12,6 +12,7 @@ v.0.4.1
 -Fixed playback method "playlist" time-shift transitioning.
 -Fixed playback fault. #Fix may not support local translations. 
 -Added "autoclose" to okdialog and textviewer.
+-Added prompt for adding "PVR://" as a Kodi video sources.
 
 
 v.0.4.0
