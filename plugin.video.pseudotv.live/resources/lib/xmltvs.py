@@ -271,8 +271,8 @@ class XMLTVS:
     def importXMLTV(self, file, m3uChannels={}):
         self.log('importXMLTV, file = %s, m3uChannels = %s'%(file,len(m3uChannels)))
         def matchChannel(channel, channels, programmes):
-            importChannels.extend(list(filter(lambda chan:chan.get('id') == channel.get('id'), channels)))
-            importProgrammes.extend(list(filter(lambda prog:prog.get('channel') == channel.get('id'), programmes)))
+            importChannels.extend(list([chan for chan in channels if chan.get('id') == channel.get('id')]))
+            importProgrammes.extend(list([prog for prog in programmes if prog.get('channel') == channel.get('id')]))
 
         try:
             if file.startswith('http'):

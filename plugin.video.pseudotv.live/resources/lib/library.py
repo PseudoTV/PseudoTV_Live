@@ -354,7 +354,7 @@ class Library:
                 
         if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
         addonList = list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f]))
-        return dict(filter(None,[_search(addonid) for addonid in addonList]))
+        return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
 
     def getServices(self):

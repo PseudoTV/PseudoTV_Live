@@ -51,7 +51,7 @@ class Channels:
         
 
     def getPredefinedChannels(self):
-        return list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels()))
+        return list([citem for citem in self.getChannels() if citem.get('number') > CHANNEL_LIMIT])
 
                 
     def popChannels(self, type, channels=[]):
