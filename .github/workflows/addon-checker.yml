@@ -8,11 +8,16 @@ jobs:
     name: Kodi addon checker
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
-    - name: Kodi addon checker validation
-      id: kodi-addon-checker
-      uses: xbmc/action-kodi-addon-checker@v1.2
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
       with:
-        kodi-version: nexus
-        is-pr: false
-        addon-id: ${{ github.event.repository.name }}
+        python-version: 3.8
+    - name: Install addon checker
+      run: |
+        pip install -q kodi-addon-checker
+      uses: xbmc/action-kodi-addon-checker@v1.2
+    - name: Check with addon-checker
+      run: |
+        kodi-addon-checker --branch nexus plugin.video.pseudotv.live
+        
