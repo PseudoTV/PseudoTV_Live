@@ -7,7 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     name: Kodi addon checker
     steps:
-    - name: Checkout
     - uses: actions/checkout@v2
     - name: Set up Python 3.8
       uses: actions/setup-python@v1
@@ -16,7 +15,6 @@ jobs:
     - name: Install addon checker
       run: |
         pip install -q kodi-addon-checker
-      uses: xbmc/action-kodi-addon-checker@v1.2
     - name: Check with addon-checker
       run: |
         kodi-addon-checker --branch nexus plugin.video.pseudotv.live
