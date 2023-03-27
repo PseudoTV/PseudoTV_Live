@@ -1,0 +1,7 @@
+*.png filter=lfs diff=lfs merge=lfs -text
+*.avi filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mpg filter=lfs diff=lfs merge=lfs -text
+*.mkv filter=lfs diff=lfs merge=lfs -text
+resource.videos.bumpers.pseudotv-0.0.2.zip filter=lfs diff=lfs merge=lfs -text
+resource.images.tvlogos.com-2021.07.15.zip filter=lfs diff=lfs merge=lfs -text
