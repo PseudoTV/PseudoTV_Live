@@ -55,20 +55,20 @@ class Channels:
 
                 
     def popChannels(self, type, channels=[]):
-        return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list(filter(lambda c:c.get('type') == type, channels))]
+        return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list([c for c in channels if c.get('type') == type])]
         
         
     def getAutotuned(self):
-        return list(filter(lambda citem:citem.get('number') > CHANNEL_LIMIT, self.getChannels()))
+        return list([citem for citem in self.getChannels() if citem.get('number') > CHANNEL_LIMIT])
         
 
     def getChannelbyID(self, id):
         channels = self.getChannels()
-        return list(filter(lambda c:c.get('id') == id, channels))
+        return list([c for c in channels if c.get('id') == id])
         
         
     def getType(self, type):
-        return list(filter(lambda citem:citem.get('type') == type, self.getChannels()))
+        return list([citem for citem in self.getChannels() if citem.get('type') == type])
 
 
     def setChannels(self, channels=[]):

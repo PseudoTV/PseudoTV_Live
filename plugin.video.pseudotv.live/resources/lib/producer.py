@@ -88,7 +88,7 @@ class Producer():
                  GENREFLEPATH  :self.updateChannels}#"Genre"
                  
         actions = []
-        for file in files.keys():
+        for file in list(files.keys()):
             if not FileAccess.exists(file):
                 actions.append(files.get(file))
         for action in list(set(actions)):
@@ -210,7 +210,7 @@ class Producer():
                          'Remote_URL'   :self.serviceRestart,
                          'Disable_Cache':self.serviceRestart}
             
-            for setting, value in settings.items():
+            for setting, value in list(settings.items()):
                 if nSettings.get(setting) != value and actions.get(setting):
                     if setting == 'User_Folder': args = (value,nSettings.get(setting))
                     else:                        args = None

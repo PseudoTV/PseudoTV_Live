@@ -120,12 +120,12 @@ class Player(xbmc.Player):
 
 
     def getTimeRemaining(self):
-        try:    return int(sum(x*y for x, y in zip(map(float, BUILTIN.getInfoLabel('TimeRemaining(hh:mm:ss)','Player').split(':')[::-1]), (1, 60, 3600, 86400))))
+        try:    return int(sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('TimeRemaining(hh:mm:ss)','Player').split(':')[::-1])), (1, 60, 3600, 86400))))
         except: return 0
    
    
     def getPVRTime(self):
-        try:    return (sum(x*y for x, y in zip(map(float, BUILTIN.getInfoLabel('EpgEventElapsedTime(hh:mm:ss)','PVR').split(':')[::-1]), (1, 60, 3600, 86400))))
+        try:    return (sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('EpgEventElapsedTime(hh:mm:ss)','PVR').split(':')[::-1])), (1, 60, 3600, 86400))))
         except: return 0
         
         

@@ -415,7 +415,7 @@ msgstr ""
 
 msgctxt "#30099"
 msgid "Client Configuration"
-msgstr 
+msgstr ""
 
 msgctxt "#30100"
 msgid "Client Mode"

@@ -473,7 +473,7 @@ class ListItems:
             
         def cleanInfo(ninfo):
             tmpInfo = ninfo.copy()
-            for key, value in tmpInfo.items():
+            for key, value in list(tmpInfo.items()):
                 types = LISTITEM_TYPES.get(key,None)
                 if not types:# key not in json enum schema, add to customproperties
                     ninfo.pop(key)
@@ -519,7 +519,7 @@ class ListItems:
         
         # listitem.setProperties({})
         # listitem.setIsFolder(True)
-        for key, pvalue in properties.items(): listitem.setProperty(key, cleanProp(pvalue))
+        for key, pvalue in list(properties.items()): listitem.setProperty(key, cleanProp(pvalue))
         if playable: listitem.setProperty("IsPlayable","true")
         return listitem
              
@@ -634,17 +634,28 @@ class Dialog:
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
              
         
-    def _okDialog(self, msg, heading, autoclose, wait=0.5):
-        timerit(self.okDialog)(wait,[msg, heading, autoclose])
+    def _okDialog(self, msg, heading, autoclose, url, wait=0.5):
+        timerit(self.okDialog)(wait,[msg, heading, autoclose, url])
         
         
-    def okDialog(self, msg, heading=ADDON_NAME, autoclose=0, usethread=False):
-        if usethread: return self._okDialog(msg, heading, autoclose)
+    def okDialog(self, msg, heading=ADDON_NAME, autoclose=0, url=None, usethread=False):
+        if usethread: return self._okDialog(msg, heading, autoclose, url)
         else:
             if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
+            # todo add qr code support
+            # if not url is None and BUILTIN.getInfoBool('HasAddon(script.module.pyqrcode)','System'):
+                # import pyqrcode
+                # imagefile = os.path.join(xbmcvfs.translatePath(PROFILE),'%s.png' % str(url.split('/')[-1]))
+                # qrIMG = pyqrcode.create(url)
+                # qrIMG.png(imagefile, scale=10)
+                # qr = QRCode( "main.xml" , ADDON_PATH, "default", image=imagefile, text=message)
+                # qr.doModal()
+                # del qr
+                # xbmcvfs.delete(imagefile)
+                # return
             return xbmcgui.Dialog().ok(heading, msg)
-        
-        
+
+
     def _textviewer(self, msg, heading, usemono, autoclose, wait=0.5):
         timerit(self.textviewer)(wait,[msg, heading, usemono, autoclose])
         

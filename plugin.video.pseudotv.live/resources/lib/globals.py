@@ -313,7 +313,7 @@ def escapeString(text, table=HTML_ESCAPE):
     return escape(text,table)
     
 def unescapeString(text, table=HTML_ESCAPE):
-    return unescape(text,{v:k for k, v in table.items()})
+    return unescape(text,{v:k for k, v in list(table.items())})
 
 def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
     if not isinstance(item,str):
@@ -501,14 +501,14 @@ def randomShuffle(items=[]):
 def interleave(seqs): 
     #interleave multi-lists, while preserving seqs order
     #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
-    return filter(None,chain.from_iterable(zip_longest(*seqs)))
+    return [_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f]
         
 def intersperse(*seqs):
     #interleave multi-lists, while preserving order distribution
     def distribute(seq):
         for i, x in enumerate(seq, 1):
             yield i/(len(seq) + 1), x
-    distributions = map(distribute, seqs)
+    distributions = list(map(distribute, seqs))
     #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
     for _, x in sorted(chain(*distributions), key=operator.itemgetter(0)):
         yield x
@@ -535,7 +535,7 @@ def hasStack(path,file=None): #does path has stack paths, return paths
 
 def splitStacks(path): #split stack path for indv. files.
     if not isStack(path): return [path]
-    return list(filter(None,((path.split('stack://')[1]).split(' , '))))
+    return list([_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f])
             
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
@@ -632,13 +632,13 @@ def setPluginSettings(id, values, override=SETTINGS.getSettingBool('Override_Use
     try:
         addon_name = addon.getAddonInfo('name')
         if not override:
-            DIALOG.textviewer('%s\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['%s: %s changing to [B]%s[/B]'%(s,v[0],v[1]) for s,v in values.items()]))))
+            DIALOG.textviewer('%s\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['%s: %s changing to [B]%s[/B]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
             if not DIALOG.yesnoDialog((LANGUAGE(32036)%addon_name)): return
             
         if addon is None:
             DIALOG.notificationDialog(LANGUAGE(32034)%(id))
             return False
-        for s, v in values.items(): 
+        for s, v in list(values.items()):
             if MONITOR.waitForAbort(1): return False
             addon.setSetting(s, v[1])
         DIALOG.notificationDialog((LANGUAGE(32037)%(id)))
@@ -648,7 +648,7 @@ def chkPluginSettings(id, values, silent=True):
     try: 
         changes = {}
         addon   = xbmcaddon.Addon(id)
-        for s, v in values.items():
+        for s, v in list(values.items()):
             if MONITOR.waitForAbort(1): return False
             value = addon.getSetting(s)
             if str(value).lower() != str(v).lower(): 
@@ -723,12 +723,12 @@ def setDiscovery(servers):
 def chkDiscovery(servers, forced=False):
     def setResourceSettings(settings):
         #Set resource settings on client.
-        for key, value in settings.items():
+        for key, value in list(settings.items()):
             try:    SETTINGS.setSettings(key, value)
             except: pass
 
     current_server = SETTINGS.getSetting('Remote_URL')
-    if (not current_server or forced) and len(servers.keys()) == 1: #If one server found autoselect.
+    if (not current_server or forced) and len(list(servers.keys())) == 1: #If one server found autoselect.
         server = list(servers.keys())[0]
         setServerSettings(server) #set server host paths.
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.

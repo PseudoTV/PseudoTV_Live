@@ -313,7 +313,7 @@ class JSONRPC:
     def requestList(self, citem, item, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
         getFile = True
         path    = item
-        if isinstance(item, dict):
+        if isinstance(item, dict): #library json query
             getFile = False
             path    = item.get('value')
         
@@ -360,7 +360,8 @@ class JSONRPC:
         if (limits.get('end',0) >= total or limits.get('start',0) >= total):
             self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-            
+        self.autoPagination(citem['id'], path, limits) #set 
+        
         # retry last request with fresh limits.
         if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
             self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
@@ -373,7 +374,6 @@ class JSONRPC:
                 self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
                 items = self.padItems(items)
             
-        self.autoPagination(citem['id'], path, limits) #set 
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
         if not getFile: items = {key:items}
         return items
@@ -388,7 +388,7 @@ class JSONRPC:
         else:
             msg = 'set'
             self.cache.set(cacheName, limits, checksum=checksum, expiration=life, json_data=True)
-        self.log("%s autoPagination; id = %s, limits = %s\npath = %s"%(msg,id,limits,path))
+        self.log("%s autoPagination; id = %s, limits = %s, path = %s"%(msg,id,limits,path))
         return limits
             
              

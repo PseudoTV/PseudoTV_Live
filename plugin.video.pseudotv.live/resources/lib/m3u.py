@@ -121,7 +121,7 @@ class M3U:
                                   'logo'   :LOGO,
                                   'catchup':''}) #set default parameters
                     
-                    for key, value in match.items():
+                    for key, value in list(match.items()):
                         if value is None:
                             if data.get(key,None) is not None:
                                 self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF'%(key))
@@ -136,7 +136,7 @@ class M3U:
                             try:    mitem[key] = int(value.group(1))
                             except: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
-                            mitem[key] = list(filter(None,list(set((value.group(1)).split(';')))))
+                            mitem[key] = list([_f for _f in list(set((value.group(1)).split(';'))) if _f])
                         elif key == 'radio':
                             mitem[key] = (value.group(1)).lower() == 'true'
                         else:
@@ -193,7 +193,7 @@ class M3U:
                 if not channel: continue
                     
                 # write optional m3u parameters.
-                for key, value in channel.items():
+                for key, value in list(channel.items()):
                     if key in keys: continue
                     elif value: optional += '%s="%s" '%(key,value)
                         
@@ -217,7 +217,7 @@ class M3U:
     def cleanSelf(self, channels, key='id', slug='@%s'%(slugify(ADDON_NAME))):
         self.log('cleanSelf, slug = %s'%(slug)) # remove imports (Non PseudoTV Live)
         if not slug: return channels
-        return list(filter(lambda line:line.get(key,'').endswith(slug), self._verify(channels)))
+        return list([line for line in self._verify(channels) if line.get(key,'').endswith(slug)])
         
 
     def sortStations(self, channels):
@@ -280,7 +280,7 @@ class M3U:
                 setURL(url,file)
                 
             channels = self.loadM3U(file)
-            for key, value in filters.items():
+            for key, value in list(filters.items()):
                 if key == 'slug' and value:
                     importChannels.extend(self.cleanSelf(channels,'id',value))
                 elif key == 'providers' and value:

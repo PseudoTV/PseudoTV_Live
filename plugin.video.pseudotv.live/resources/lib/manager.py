@@ -318,7 +318,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                   
         listItems   = []
         channelProp = dumpJSON(channelData, sortkey=False)
-        for key in self.channels.getTemplate().keys():
+        for key in list(self.channels.getTemplate().keys()):
             value = channelData.get(key)
             print(key, value)
             if   key in ["number","type","logo","id","catchup"]: continue # keys to ignore, internal use only.
@@ -356,7 +356,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         print('itemInput',key, retval, channelData)
         if not retval is None:
             self.madeChanges = True
-            if key in self.newChannel.keys():
+            if key in list(self.newChannel.keys()):
                 channelData[key] = retval
                 self.log('itemInput, setting key = %s, value = %s'%(key,retval))
             elif key == 'clear':

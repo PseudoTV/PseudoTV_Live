@@ -138,9 +138,9 @@ class Builder:
         try: #match proper paths for provisional autotune.
             provisional = re.findall(r"\{(.*?)}", str(citem['path']))
             if len(provisional) > 0 and not bool(list(set([True for path in citem.get('path',[]) if '?xsp=' in path]))):
-                if   provisional[0] == "Seasonal":
+                if provisional[0] == "Seasonal":
                     citem, citem['path'] = Seasonal().buildPath(citem) #Seasonal
-                elif provisional and citem['type'] in PROVISIONAL_TYPES.keys():
+                elif provisional and citem['type'] in list(PROVISIONAL_TYPES.keys()):
                     citem['provisional'] = {'value':provisional[0],'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisional(provisional[0],citem['type'])} #Autotune
         except Exception as e: self.log("getProvisional, failed! %s"%(e), xbmc.LOGERROR)
         return citem
@@ -196,8 +196,12 @@ class Builder:
         if citem.get('provisional',None):
             cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[])]
         else:
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path']]
-        valid = list(filter(lambda k:k, cacheResponse)) #check that at least one filelist array contains meta.
+            multi = len(citem['path']) > 1
+            limit =  self.limit #todo adv. rule to override splitting limits by path count.
+            if multi: limit = roundupDIV(self.limit,len(citem['path']))
+            self.log("buildChannel, id: %s, content limit: %s\npaths: %s"%(citem['id'],limit,citem['path']),xbmc.LOGINFO)
+            cacheResponse = [self.buildFileList(citem, file, 'video', limit, self.sort, self.filter, self.limits) for file in citem['path']]
+        valid = list([k for k in cacheResponse if k]) #check that at least one filelist array contains meta.
         if not valid:
             self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
             return False
@@ -206,7 +210,7 @@ class Builder:
         cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid interleave() below.
         cacheResponse = list(interleave(cacheResponse))# interleave multi-paths, while keeping filelist order.
         cacheResponse = setDictLST(cacheResponse)      # remove any duplicates that may have been parsed via similar paths.
-        cacheResponse = list(filter(lambda filelist:filelist != {}, filter(None,cacheResponse))) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
+        cacheResponse = list([filelist for filelist in [_f for _f in cacheResponse if _f] if filelist != {}]) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
         self.log('buildChannel, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
         return cacheResponse
 
@@ -268,6 +272,10 @@ class Builder:
                 break
 
             with busyLocker():
+                if not isinstance(item, dict):
+                    self.log('buildLibraryList, item malformed %s'%(item)) #todo debug issue where key is injected into results as a string? ex. results = [{},{},'episode'], bug with keys()?
+                    continue
+                    
                 file = item.get('file','')
                 item['type'] = key
                 if not file:

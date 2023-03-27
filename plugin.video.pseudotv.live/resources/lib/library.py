@@ -238,7 +238,7 @@ class Library:
                 NetworkList = [x[0] for x in sorted(NetworkList.most_common(50))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
             else:
-                TVShows = (sorted(map(json.loads, TVShows.keys()), key=lambda k: k['name']))
+                TVShows = (sorted(map(json.loads, list(TVShows.keys())), key=lambda k: k['name']))
                 del TVShows[250:]
                 NetworkList = (sorted(set(list(NetworkList.keys()))))
                 del NetworkList[250:]
@@ -318,7 +318,7 @@ class Library:
         PluginList = []
         WhiteList  = self.getWhiteList()
         AddonsList = self.searchRecommended()
-        for addonid, item in AddonsList.items():
+        for addonid, item in list(AddonsList.items()):
             if addonid not in WhiteList: continue
             items = item.get('data',{}).get('vod',[])
             items.extend(item.get('data',{}).get('live',[]))
@@ -353,7 +353,7 @@ class Library:
                 return addonid,{"data":payload,"meta":addonMeta}
                 
         if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
-        addonList = list(set(filter(None,[addon.get('addonid') for addon in list(filter(lambda k:k.get('addonid','') not in self.getBlackList(), self.jsonRPC.getAddons()))])))
+        addonList = list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f]))
         return dict(filter(None,[_search(addonid) for addonid in addonList]))
 
 
@@ -409,7 +409,7 @@ class Library:
         addonList = self.searchRecommended()
         ignoreList = self.getWhiteList()
         ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
-        addonNames = list(set(filter(None,[item.get('meta',{}).get('name') for addonid, item in addonList.items() if not addonid in ignoreList])))
+        addonNames = list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f]))
         self.log('importPrompt, addonNames = %s'%(len(addonNames)))
         
         try:
@@ -418,13 +418,13 @@ class Library:
                 self.log('importPrompt, prompt retval = %s'%(retval))
                 if   retval == 1: raise Exception('Single Entry')
                 elif retval == 2: 
-                    for addonid, item in addonList.items():
+                    for addonid, item in list(addonList.items()):
                         if item.get('meta',{}).get('name') in addonNames:
                             self.addWhiteList(addonid)
             else: raise Exception('Single Entry')
         except Exception as e:
             self.log('importPrompt, %s'%(e))
-            for addonid, item in addonList.items():
+            for addonid, item in list(addonList.items()):
                 if item.get('meta',{}).get('name') in addonNames:
                     if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
                         self.addBlackList(addonid)

@@ -127,7 +127,7 @@ def poolit(method):
             log('poolit, failed! %s'%(e), xbmc.LOGERROR)
             results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
-        return list(filter(None,results))
+        return list([_f for _f in results if _f])
     return wrapper
 
 def threadit(method):

@@ -138,7 +138,7 @@ class XMLTVS:
     def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         self.log('cleanSelf, key = %s'%(key))
         if not slug: return items
-        return (list(filter(lambda item:item.get(key,'').endswith(slug), items)))
+        return (list([item for item in items if item.get(key,'').endswith(slug)]))
         
         
     def cleanChannels(self, channels, programmes): # remove stations with no guidedata
@@ -262,8 +262,8 @@ class XMLTVS:
     def delBroadcast(self, citem):# remove single channel and all programmes from XMLTVDATA
         channels   = self.XMLTVDATA['channels'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
-        self.XMLTVDATA['channels']   = list(filter(lambda channel:channel.get('id') != citem.get('id'), channels))
-        self.XMLTVDATA['programmes'] = list(filter(lambda program:program.get('channel') != citem.get('id'), programmes))
+        self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
+        self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != citem.get('id')])
         self.log('delBroadcast, removing channel %s; channels: before = %s, after = %s; programmes: before = %s, after = %s'%(citem.get('id'),len(channels),len(self.XMLTVDATA['channels']),len(programmes),len(self.XMLTVDATA['programmes'])))
         return True
         
@@ -366,7 +366,7 @@ class XMLTVS:
                 dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
                 epggenres = parseGenres(dom.getElementsByTagName('genre'))
                 matchGenres(self.XMLTVDATA.get('programmes',[]))
-                epggenres = dict(sorted(sorted(epggenres.items(), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
+                epggenres = dict(sorted(sorted(list(epggenres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
                 
                 doc  = Document()
                 root = doc.createElement('genres')                

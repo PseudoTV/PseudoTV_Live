@@ -133,7 +133,7 @@ class Resources:
         self.log('walkDirectory, path = %s, exts = %s'%(path,exts))
         dirs, files = self.jsonRPC.getListDirectory(path,checksum,datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
         if TEXTURES in files: return _parseXBT()
-        else: walk.setdefault(path,[]).extend(list(filter(lambda f:f.endswith(tuple(exts)),files)))
+        else: walk.setdefault(path,[]).extend(list([f for f in files if f.endswith(tuple(exts))]))
         for idx, dir in enumerate(dirs): 
             if MONITOR.waitForAbort(0.001): 
                 self.log('walkDirectory, interrupted')
