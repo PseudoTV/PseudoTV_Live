@@ -490,7 +490,7 @@ msgstr ""
 
 # Labels - strings 32000 thru 32999 reserved for scripts
 msgctxt "#32000"
-msgid "Something went wrong, Try again..."
+msgid "Something went wrong, Try again later..."
 msgstr ""
 
 msgctxt "#32001"
@@ -642,7 +642,7 @@ msgid "%s settings updated."
 msgstr ""
 
 msgctxt "#32038"
-msgid "Something went wrong! wait while we try again..."
+msgid "Something went wrong! wait while we try again... (%s)"
 msgstr ""
 
 msgctxt "#32039"
@@ -1023,6 +1023,10 @@ msgstr ""
 
 msgctxt "#32133"
 msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]In-order for %s to work properly [B]PVR://[/B] must be added as a Kodi video source.\nTo remove this prompt navigate to [B]Videos, Files, + Add Videos[/B] and enter [B]PVR://[/B] as a path."
+msgstr ""
+
+msgctxt "#32134"
+msgid "Playback failed! This maybe because %s is currently building this channel.\nor possibly an error with your channel configurations."
 msgstr ""
 
 

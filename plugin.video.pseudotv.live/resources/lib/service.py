@@ -37,7 +37,7 @@ class Player(xbmc.Player):
     
     def __init__(self):
         xbmc.Player.__init__(self)
-        self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
+        self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, pvritem=self.playingItem)
         
         """ 
         Player() Trigger Order
@@ -137,7 +137,7 @@ class Player(xbmc.Player):
    
     def _onPlay(self):
         self.log('_onPlay')
-        self.closeBackground()
+        self.toggleBackground(False)
         self.pendingPlay = False
         pvritem = self.getPlayerPVRitem()
         pvritem.update({'citem':self.getPlayerCitem()})
@@ -148,7 +148,7 @@ class Player(xbmc.Player):
         
     def _onChange(self):
         self.log('_onChange, channelid = %s,'%(self.playingItem.get("channelid",'')))
-        self.showBackground()
+        self.toggleBackground()
         if not self.playingItem: self._onStop()
         else:
             try:
@@ -169,7 +169,7 @@ class Player(xbmc.Player):
         
     def _onStop(self):
         self.log('_onStop')
-        self.closeBackground()
+        self.toggleBackground(False)
         if self.pendingPlay: #todo failed playback detection (trigger forced pvr rebuild after user prompt?, remove channel?)
             self.pendingPlay = False
         self.runActions(RULES_ACTION_PLAYER_STOP, self.playingItem.get('citem',{}), inherited=self)
@@ -178,19 +178,17 @@ class Player(xbmc.Player):
         self.isPseudoTV  = False
 
 
-    def showBackground(self):
-        conditions = not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND') & SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV
-        if not conditions: return
-        try: self.background.show()
-        except: pass
-                
-    
-    def closeBackground(self):
-        try: self.background.close() 
-        except: pass
-        if self.isPlaying():
-            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-        
+    def toggleBackground(self,state=True):
+        if state:
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, pvritem=self.playingItem)
+            conditions = not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND') & SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV
+            if not conditions: return
+            self.background.show()
+        else:
+            self.background.close()
+            if self.isPlaying():
+                BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+                    
 
 class Monitor(xbmc.Monitor):
     def __init__(self):
@@ -224,7 +222,7 @@ class Monitor(xbmc.Monitor):
         if state and not isOverlay():
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
-            self.myService.overlay.open()
+            self.myService.overlay.open(self.myService.player.playingItem)
         elif not state and isOverlay():
             self.log("toggleOverlay, state = %s"%(state))
             self.myService.overlay.close()

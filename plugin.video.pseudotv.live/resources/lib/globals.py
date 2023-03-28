@@ -33,7 +33,7 @@ from ast         import literal_eval
 
 from cache       import Cache, cacheit
 from pool        import killJSON, killit, timeit, poolit, threadit, timerit
-from kodi        import Settings, Properties, Dialog, ListItems, Builtin
+from kodi        import Dialog
 from fileaccess  import FileAccess, FileLock
 from collections import Counter, OrderedDict
 from six.moves   import urllib 

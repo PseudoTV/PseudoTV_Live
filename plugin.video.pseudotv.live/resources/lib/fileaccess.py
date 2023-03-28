@@ -273,7 +273,7 @@ class FileLock:
 
 
     def chkLOCK(self):
-        LOCK_LOC = os.path.join(Settings().getSetting('User_Folder'))
+        LOCK_LOC = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
         if not FileAccess.exists(LOCK_LOC):    
             if FileAccess.makedirs(LOCK_LOC):
                 return LOCK_LOC

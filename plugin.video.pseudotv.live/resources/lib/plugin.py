@@ -99,16 +99,19 @@ class Plugin:
         if not cacheResponse:
             pvritem = _match()
             if pvritem is None:
-                return self.playError()
+                pvritem = PROPERTIES.getPropertyDict('playingPVRITEM.%s'%('-1'))
+                pvritem['playcount'] = pvritem.get('playcount',0) + 1
+                return self.playError(pvritem)
                 
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-            pvritem['playcount']  = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={}).get('playcount',0)
+            pvritem['playcount']  = PROPERTIES.getPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1'))).get('playcount',0) + 1
           
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
             except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
+            PROPERTIES.setPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
@@ -163,11 +166,7 @@ class Plugin:
             elif round(nowitem['progresspercentage']) > SEEK_THRED:
                 self.log('playChannel, progress near the end playing nextitem')
                 nowitem = nextitems.pop(0)
-                
-            elif pvritem['playcount'] > 2:
-                found = False
-                self.playError(pvritem)
-                
+
             if found:
                 writer = decodeWriter(nowitem.get('writer',{}))
                 liz    = LISTITEMS.buildItemListItem(writer)
@@ -185,7 +184,6 @@ class Plugin:
                 liz.setProperty('pvritem',dumpJSON(pvritem))
                 listitems = [liz]
                 listitems.extend(poolit(self.buildWriterItem)(nextitems))
-                SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
                 
                 if isPlaylist:
                     for idx,lz in enumerate(listitems):
@@ -195,7 +193,8 @@ class Plugin:
                     PLAYER.play(self.channelPlaylist)
                     return
 
-        else: self.playError(pvritem)
+        else: return self.playError(pvritem)
+        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(found, listitems[0])
 
 
@@ -225,7 +224,8 @@ class Plugin:
                     if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                     if PLAYER.isPlayingVideo(): PLAYER.stop()
                     return PLAYER.play(self.channelPlaylist)
-        else: self.playError(id, playCount)
+        else: return self.playError(id)
+        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(False, xbmcgui.ListItem())
 
 
@@ -282,28 +282,27 @@ class Plugin:
                 
             self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
             return PLAYER.play(self.channelPlaylist, startpos=0)
             
         else: return self.playError(pvritem)
+        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(found, listitems[0])
         
 
     def playError(self, pvritem={}):
-        self.resolveURL(False, xbmcgui.ListItem()) #release pending play.
-        if not pvritem: pvritem = SETTINGS.getCacheSetting('playingPVRITEM', checksum=pvritem.get('id','-1'), json_data=True, default={})
-        channelPlaycount = pvritem.get('playcount',0)
-        channelPlaycount += 1
-        pvritem['playcount'] = channelPlaycount
-        SETTINGS.setCacheSetting('playingPVRITEM', pvritem, checksum=pvritem.get('id','-1'), life=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
-        self.log('playError, id = %s, attempt = %s'%(pvritem.get('id','-1'),channelPlaycount))
-        if channelPlaycount == 1: setInstanceID() #reset instance and force cache flush.
-        if channelPlaycount <= 2:
+        PROPERTIES.setPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
+        self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('id','-1'),pvritem['playcount'],pvritem))
+        if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
+        if pvritem['playcount'] <= 2:
             with busy_dialog():
-                DIALOG.notificationWait(LANGUAGE(32038),wait=OVERLAY_DELAY)
-            BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
-        elif channelPlaycount == 3: forceBrute()
+                DIALOG.notificati  
+                onWait(LANGUAGE(32038)%(pvritem['playcount']),wait=OVERLAY_DELAY)
+                self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
+                return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
+        elif pvritem['playcount'] == 3: forceBrute()
+        elif pvritem['playcount'] == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME),autoclose=90)
         else: DIALOG.notificationWait(LANGUAGE(32000))
+        self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
 
 
     def resolveURL(self, found, listitem):
