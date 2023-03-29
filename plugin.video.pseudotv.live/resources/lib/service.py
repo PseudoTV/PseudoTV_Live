@@ -333,7 +333,7 @@ class Service():
                 continue
                 
             isIdle = self.monitor.chkIdle()
-            if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+            if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
             if not isClient(): self.producer._chkProcesses()
         self._stop()
             

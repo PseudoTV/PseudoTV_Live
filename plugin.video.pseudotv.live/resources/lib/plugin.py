@@ -50,37 +50,59 @@ class Plugin:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def buildWriterItem(self, item, media='video'):
+    def buildWriterItem(self, item={}, media='video'):
         return LISTITEMS.buildItemListItem(decodeWriter(item.get('writer','')), media)
 
 
     def getCallback(self, chname, id, radio=False, isPlaylist=False):
         self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
-        def _match():
-            dir = 'radio' if radio else 'tv'
-            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=dir)}, cache=False).get('files',[])
+        @timeit
+        def _matchVFS():
+            pvrType = 'radio' if radio else 'tv'
+            pvrRoot = "pvr://channels/{dir}/".format(dir=pvrType)
+            results = self.jsonRPC.walkListDirectory(pvrRoot,expiration=datetime.timedelta(seconds=OVERLAY_DELAY))[0]
+            for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
+                for result in results:
+                    if result.lower().startswith(quoteString(dir.lower())):
+                        pvrPath = os.path.join(pvrRoot,result)
+                        SETTINGS.setCacheSetting('pseudopvr', pvrPath)
+                        self.log('getCallback: _matchVFS, found dir = %s'%(pvrPath))
+                        response = self.jsonRPC.walkListDirectory(pvrPath,append_path=True,expiration=datetime.timedelta(seconds=OVERLAY_DELAY))[1]
+                        for pvr in response:
+                            if pvr.lower().endswith('%s.pvr'%(id)):
+                                self.log('getCallback: _matchVFS, found file = %s'%(pvr))
+                                return pvr
+            self.log('getCallback: _matchVFS, no callback found!\nresults = %s'%(results))
+            
+        @timeit
+        def _matchJSON():
+            pvrType = 'radio' if radio else 'tv'
+            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=pvrType)}, cache=False).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         SETTINGS.setCacheSetting('pseudopvr', result.get('file'))
-                        self.log('getCallback, found dir = %s'%(result.get('file')))
+                        self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
                         response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
                         for item in response:
                             if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
-                                self.log('getCallback, found file = %s'%(item.get('file')))
+                                self.log('getCallback: _matchJSON, found file = %s'%(item.get('file')))
                                 return item.get('file')
-            self.log('getCallback, no callback found!\nresults = %s'%(results))
+            self.log('getCallback: _matchJSON, no callback found!\nresults = %s'%(results))
 
-        if (isLowPower() and isPlaylist) or radio:
+        if isPlaylist or radio:
             #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 
             #this breaks "pvr" should only apply to playlists, avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
             callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
+        elif PROPERTIES.getPropertyBool('isLowPower') or not PROPERTIES.getPropertyBool('hasPVRSource'):
+            callback = _matchVFS()
         else:
-            callback = _match()
+            callback = _matchJSON() #use faster jsonrpc on high power devices. requires 'pvr://' json whitelisting.
         if callback is None: return DIALOG.okDialog(LANGUAGE(32133)%(ADDON_NAME), autoclose=90, usethread=True)
         return callback
         
         
+    @timeit
     def matchChannel(self, chname, id, radio=False, isPlaylist=False):
         self.log('matchChannel, id = %s, radio = %s'%(id,radio))
         def _match():
@@ -99,19 +121,19 @@ class Plugin:
         if not cacheResponse:
             pvritem = _match()
             if pvritem is None:
-                pvritem = PROPERTIES.getPropertyDict('playingPVRITEM.%s'%('-1'))
+                pvritem = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%('-1'))
                 pvritem['playcount'] = pvritem.get('playcount',0) + 1
                 return self.playError(pvritem)
                 
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-            pvritem['playcount']  = PROPERTIES.getPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1'))).get('playcount',0) + 1
+            pvritem['playcount']  = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('id','-1'))).get('playcount',0) + 1
           
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
             except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
-            PROPERTIES.setPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
+            PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
@@ -119,12 +141,17 @@ class Plugin:
     def extendProgrammes(self, pvritem, limit=PAGE_LIMIT):
         channelItem = {}
         def _parseBroadcast(broadcast):
-            if broadcast['progresspercentage'] > 0 and broadcast['progresspercentage'] != 100:
+            if broadcast.get('progresspercentage',0) > 0 and broadcast.get('progresspercentage',0) != 100:
                 channelItem['broadcastnow'] = broadcast
-            elif broadcast['progresspercentage'] == 0 and len(channelItem.get('broadcastnext',[])) < limit:
+            elif broadcast.get('progresspercentage',0) and len(channelItem.get('broadcastnext',[])) < limit:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
-        poolit(_parseBroadcast)(self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid')))
-        pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
+        
+        nextitems = self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))
+        poolit(_parseBroadcast)(nextitems)
+        nextitems = channelItem.get('broadcastnext',pvritem['broadcastnext'])
+        del nextitems[limit:]# list of upcoming items, truncate for speed.
+        pvritem['broadcastnext'] = nextitems
+        self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
         return pvritem
 
 
@@ -143,7 +170,6 @@ class Plugin:
         pvritem   = self.matchChannel(name,id,False,isPlaylist)
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
 
         if nowitem:
             found = True
@@ -194,7 +220,7 @@ class Plugin:
                     return
 
         else: return self.playError(pvritem)
-        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
+        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(found, listitems[0])
 
 
@@ -206,17 +232,13 @@ class Plugin:
         nowitem   = pvritem.get('broadcastnow',{})  # current item
         if nowitem:
             found = True
-            if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
+            if nowitem.get('broadcastid',random.random()):
                 nowitem  = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                 fileList = [self.jsonRPC.requestList(pvritem['citem'], path, 'music', page=RADIO_ITEM_LIMIT) for path in pvritem['citem'].get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
                 fileList = list(interleave(fileList))
                 if len(fileList) > 0:
-                    random.shuffle(fileList)
-                    listitems = []
-                    # listitems.extend(poolit(LISTITEMS.buildItemListItem)(fileList)(**{media:'music'}))
-                    for item in fileList:
-                        listitems.append(LISTITEMS.buildItemListItem(item,media='music'))
-                    
+                    randomShuffle(fileList)
+                    listitems = [LISTITEMS.buildItemListItem(item,media='music') for item in fileList]
                     for idx,lz in enumerate(listitems):
                         self.channelPlaylist.add(lz.getPath(),lz,idx)
                         
@@ -224,8 +246,8 @@ class Plugin:
                     if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                     if PLAYER.isPlayingVideo(): PLAYER.stop()
                     return PLAYER.play(self.channelPlaylist)
-        else: return self.playError(id)
-        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
+        else: return self.playError(pvritem)
+        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(False, xbmcgui.ListItem())
 
 
@@ -248,7 +270,6 @@ class Plugin:
                 for pos, nextitem in enumerate(nextitems):
                     if decodeWriter(nextitem.get('writer',{})).get('file') == writer.get('file'):
                         del nextitems[0:pos]      # start array at correct position
-                        del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
                         break
                        
                 nowitem = nextitems.pop(0)
@@ -285,12 +306,12 @@ class Plugin:
             return PLAYER.play(self.channelPlaylist, startpos=0)
             
         else: return self.playError(pvritem)
-        PROPERTIES.clearProperty('playingPVRITEM.%s'%(pvritem.get('id','-1')))
+        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(found, listitems[0])
         
 
     def playError(self, pvritem={}):
-        PROPERTIES.setPropertyDict('playingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
+        PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('id','-1')),pvritem)
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('id','-1'),pvritem['playcount'],pvritem))
         if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
         if pvritem['playcount'] <= 2:

@@ -118,14 +118,15 @@ def poolit(method):
         results  = []
         cpucount = Cores().CPUcount()
         pool = Concurrent(cpucount)
-        try:
-            if cpucount > 1 and len(items) > 1:
-                results = pool.executors(method, items, *args, **kwargs)
-            else:
-                results = pool.generator(method, items, *args, **kwargs)
-        except Exception as e:
-            log('poolit, failed! %s'%(e), xbmc.LOGERROR)
-            results = pool.generator(method, items, *args, **kwargs)
+        #todo debug issues
+        # try:
+            # if cpucount > 1 and len(items) > 1:
+                # results = pool.executors(method, items, *args, **kwargs)
+            # else:
+                # results = pool.generator(method, items, *args, **kwargs)
+        # except Exception as e:
+            # log('poolit, failed! %s'%(e), xbmc.LOGERROR)
+        results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return list([_f for _f in results if _f])
     return wrapper

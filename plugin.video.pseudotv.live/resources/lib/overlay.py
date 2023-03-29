@@ -59,7 +59,7 @@ class Background(xbmcgui.WindowXML):
             self.runActions(RULES_ACTION_OVERLAY, self.pvritem.get('citem',{}), inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
             self.getControl(40002).setImage(self.pvritem.get('icon',COLOR_LOGO))
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.pvritem.get('label','')))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.pvritem.get('label',ADDON_NAME)))
         except: pass
         
 
@@ -184,7 +184,7 @@ class Overlay():
 
     def open(self, pvritem={}):
         self.log('open')
-        if isOverlay(): 
+        if isOverlay() or not pvritem: 
             return self.close()
             
         setOverlay(True)

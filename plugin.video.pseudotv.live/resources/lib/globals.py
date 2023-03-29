@@ -406,12 +406,15 @@ def getChannelID(name, path, number):
     tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
 
-def splitYear(s):
+def splitYear(label):
     try:
-        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(s)
-        if match and match.group(2): return match.groups()
+        match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(label)
+        if match and match.group(2):
+            label, year = match.groups()
+            if year.isdigit():
+                return label, int(year)
     except: pass
-    return s, None
+    return label, None
 
 def getChannelSuffix(name, type):
     if   type == "TV Genres"    and not LANGUAGE(32014) in name: suffix = LANGUAGE(32014) #TV

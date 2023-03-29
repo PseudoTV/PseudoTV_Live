@@ -91,18 +91,22 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkListDirectory(self, path, depth=3, verify=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+    def walkListDirectory(self, path, depth=3, verify_runtime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
         dirs  = [path]
         files = []
         for idx, dir in enumerate(dirs):
             if MONITOR.waitForAbort(0.5) or idx > depth: break
             ndirs, nfiles = self.getListDirectory(dir, checksum, expiration)
-            dirs.extend(ndirs)
-            files.extend(nfiles)
-            if verify:
+            if append_path:
+                dirs.extend([os.path.join(path,dir) for dir in ndirs])
+                files.extend([os.path.join(path,fle) for fle in nfiles])
+            else:
+                dirs.extend(ndirs)
+                files.extend(nfiles)
+            if verify_runtime:
                 for file in files:
-                    if self.getDuration(file): break
-        self.log('walkListDirectory, verify %s: return dirs = %s, files = %s\n%s'%(verify, len(dirs), len(files),path))
+                    if self.getDuration(file): return True
+        self.log('walkListDirectory, return dirs = %s, files = %s\npath = %s'%(len(dirs), len(files),path))
         return dirs, files
 
         
@@ -159,6 +163,12 @@ class JSONRPC:
     def setSettingValue(self, key, value):
         param = {"method":"Settings.SetSettingValue","params":{"setting":key,"value":value}}
         self.queueJSON(param)
+
+
+    def getSources(self, media='video', cache=True):
+        param = {"method":"Files.GetSources","params":{"media":media}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('sources', [])
+        else:     return self.sendJSON(param).get('result', {}).get('sources', [])
 
 
     def getAddonDetails(self, addonid=ADDON_ID, cache=True):
@@ -452,3 +462,9 @@ class JSONRPC:
         return items
         
         
+    def hasPVRSource(self):
+        for item in self.getSources():
+            if item.get('file','').lower().startswith('pvr://'):
+                return True
+        return False
+               

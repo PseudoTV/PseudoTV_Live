@@ -763,7 +763,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getLogo(self, channelData, channelPOS):
         def cleanLogo(chlogo):
-            return unquoteImage(chlogo)
+            return chlogo
             #todo convert resource from vfs to fs
             # return chlogo.replace('resource://','special://home/addons/')
             # resource = path.replace('/resources','').replace(,)

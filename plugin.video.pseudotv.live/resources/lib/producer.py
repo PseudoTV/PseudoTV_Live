@@ -72,6 +72,7 @@ class Producer():
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
+        PROPERTIES.setPropertyBool('isLowPower',isLowPower())
         
         
     def _chkDebugging(self):
@@ -142,6 +143,7 @@ class Producer():
                     SETTINGS.setSettingInt('Max_Days',max)
                 setClient(isClient())
                 SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+                PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())  
                 del jsonRPC
         except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
     

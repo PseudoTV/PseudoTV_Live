@@ -13,6 +13,8 @@ v.0.4.1
 -Fixed playback fault. #Fix may not support local translations. 
 -Added "autoclose" to okdialog and textviewer.
 -Added prompt for adding "PVR://" as a Kodi video sources.
+-Fixed "Browse" channel logo replacement.
+-Added New PVR callback request technique to avoid high jsonprc latency on low power devices. 
 
 
 v.0.4.0
