@@ -60,14 +60,14 @@ class Plugin:
         def _matchVFS():
             pvrType = 'radio' if radio else 'tv'
             pvrRoot = "pvr://channels/{dir}/".format(dir=pvrType)
-            results = self.jsonRPC.walkListDirectory(pvrRoot,expiration=datetime.timedelta(seconds=OVERLAY_DELAY))[0]
+            results = self.jsonRPC.walkListDirectory(pvrRoot,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[0]
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.lower().startswith(quoteString(dir.lower())):
                         pvrPath = os.path.join(pvrRoot,result)
                         SETTINGS.setCacheSetting('pseudopvr', pvrPath)
                         self.log('getCallback: _matchVFS, found dir = %s'%(pvrPath))
-                        response = self.jsonRPC.walkListDirectory(pvrPath,append_path=True,expiration=datetime.timedelta(seconds=OVERLAY_DELAY))[1]
+                        response = self.jsonRPC.walkListDirectory(pvrPath,append_path=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
                         for pvr in response:
                             if pvr.lower().endswith('%s.pvr'%(id)):
                                 self.log('getCallback: _matchVFS, found file = %s'%(pvr))
@@ -77,13 +77,13 @@ class Plugin:
         @timeit
         def _matchJSON():
             pvrType = 'radio' if radio else 'tv'
-            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=pvrType)}, cache=False).get('files',[])
+            results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=pvrType)}, cache=True).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         SETTINGS.setCacheSetting('pseudopvr', result.get('file'))
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                        response = self.jsonRPC.getDirectory(param={"directory":result.get('file')}, cache=False).get('files',[])
+                        response = self.jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
                         for item in response:
                             if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
                                 self.log('getCallback: _matchJSON, found file = %s'%(item.get('file')))
@@ -98,7 +98,7 @@ class Plugin:
             callback = _matchVFS()
         else:
             callback = _matchJSON() #use faster jsonrpc on high power devices. requires 'pvr://' json whitelisting.
-        if callback is None: return DIALOG.okDialog(LANGUAGE(32133)%(ADDON_NAME), autoclose=90, usethread=True)
+        if callback is None: return DIALOG.okDialog(LANGUAGE(32133), autoclose=90, usethread=True)
         return callback
         
         
@@ -120,7 +120,7 @@ class Plugin:
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True)
         if not cacheResponse:
             pvritem = _match()
-            if pvritem is None:
+            if not pvritem:
                 pvritem = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%('-1'))
                 pvritem['playcount'] = pvritem.get('playcount',0) + 1
                 return self.playError(pvritem)
@@ -130,6 +130,9 @@ class Plugin:
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
             pvritem['playcount']  = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('id','-1'))).get('playcount',0) + 1
           
+            if pvritem['playcount'] >= 3:
+                return self.playError(pvritem)
+                
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
             except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
@@ -140,7 +143,7 @@ class Plugin:
 
     def extendProgrammes(self, pvritem, limit=PAGE_LIMIT):
         channelItem = {}
-        def _parseBroadcast(broadcast):
+        def _parseBroadcast(broadcast={}):
             if broadcast.get('progresspercentage',0) > 0 and broadcast.get('progresspercentage',0) != 100:
                 channelItem['broadcastnow'] = broadcast
             elif broadcast.get('progresspercentage',0) and len(channelItem.get('broadcastnext',[])) < limit:
@@ -193,34 +196,32 @@ class Plugin:
                 self.log('playChannel, progress near the end playing nextitem')
                 nowitem = nextitems.pop(0)
 
-            if found:
-                writer = decodeWriter(nowitem.get('writer',{}))
-                liz    = LISTITEMS.buildItemListItem(writer)
-                path   = liz.getPath()
-                self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,pvritem['citem'],writer))
-                
-                if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                    self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
-                    liz.setProperty('startoffset', str(nowitem['progress'])) #secs
-                    infoTag = ListItemInfoTag(liz, 'video')
-                    infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
+            writer = decodeWriter(nowitem.get('writer',{}))
+            liz    = LISTITEMS.buildItemListItem(writer)
+            path   = liz.getPath()
+            self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,pvritem['citem'],writer))
+            
+            if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                self.log('playChannel, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                liz.setProperty('startoffset', str(nowitem['progress'])) #secs
+                infoTag = ListItemInfoTag(liz, 'video')
+                infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
 
-                pvritem['broadcastnow']  = nowitem   # current item
-                pvritem['broadcastnext'] = nextitems # upcoming items
-                liz.setProperty('pvritem',dumpJSON(pvritem))
-                listitems = [liz]
-                listitems.extend(poolit(self.buildWriterItem)(nextitems))
-                
-                if isPlaylist:
-                    for idx,lz in enumerate(listitems):
-                        self.channelPlaylist.add(lz.getPath(),lz,idx)
-                    self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
-                    if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-                    PLAYER.play(self.channelPlaylist)
-                    return
+            pvritem['broadcastnow']  = nowitem   # current item
+            pvritem['broadcastnext'] = nextitems # upcoming items
+            liz.setProperty('pvritem',dumpJSON(pvritem))
+            listitems = [liz]
+            listitems.extend(poolit(self.buildWriterItem)(nextitems))
+            PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
+            
+            if isPlaylist:
+                for idx,lz in enumerate(listitems):
+                    self.channelPlaylist.add(lz.getPath(),lz,idx)
+                self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
+                if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+                return PLAYER.play(self.channelPlaylist)
 
         else: return self.playError(pvritem)
-        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(found, listitems[0])
 
 
@@ -247,7 +248,6 @@ class Plugin:
                     if PLAYER.isPlayingVideo(): PLAYER.stop()
                     return PLAYER.play(self.channelPlaylist)
         else: return self.playError(pvritem)
-        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
         self.resolveURL(False, xbmcgui.ListItem())
 
 
@@ -301,12 +301,11 @@ class Plugin:
                 path = lz.getPath()
                 self.channelPlaylist.add(lz.getPath(),lz,idx)
                 
+            PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
             self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
             return PLAYER.play(self.channelPlaylist, startpos=0)
-            
-        else: return self.playError(pvritem)
-        PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
+        else: return DIALOG.notificationDialog(LANGUAGE(32000))
         self.resolveURL(found, listitems[0])
         
 
@@ -316,8 +315,7 @@ class Plugin:
         if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
         if pvritem['playcount'] <= 2:
             with busy_dialog():
-                DIALOG.notificati  
-                onWait(LANGUAGE(32038)%(pvritem['playcount']),wait=OVERLAY_DELAY)
+                DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=OVERLAY_DELAY)
                 self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
                 return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
         elif pvritem['playcount'] == 3: forceBrute()

@@ -514,7 +514,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     result = self.validateVFS(path, channelData)
                     if result: return result
     
-        json_response = self.jsonRPC.requestList(channelData, path, media, limits={"end": 5, "start": 0})
+        json_response = self.jsonRPC.requestList(channelData, path, media, limits={"end": 5, "start": 0}) #todo use another means to verify or bypass autopage set limits.
         for idx, item in enumerate(json_response):
             file     = item.get('file', '')
             fileType = item.get('filetype', 'file')

@@ -12,10 +12,11 @@ v.0.4.1
 -Fixed playback method "playlist" time-shift transitioning.
 -Fixed playback fault. #Fix may not support local translations. 
 -Added "autoclose" to okdialog and textviewer.
--Added prompt for adding "PVR://" as a Kodi video sources.
 -Fixed "Browse" channel logo replacement.
 -Added New PVR callback request technique to avoid high jsonprc latency on low power devices. 
-
+-Notice some users can improve channel changing performance by adding "PVR://" as a Kodi video sources; See readme for details.
+-Improved channel building filters not respecting "specials" & "extras" exclusion. 
+-Improved channel changing "surfing" times after refactoring for Kodi Omega API changes.
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.

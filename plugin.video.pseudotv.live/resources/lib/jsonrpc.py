@@ -220,10 +220,10 @@ class JSONRPC:
         else:     return self.sendJSON(param).get('result', {}).get('genres', [])
 
 
-    def getDirectory(self, param={}, cache=True):
+    def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         param["properties"] = self.getEnums("List.Fields.Files", type='items')
         param = {"method":"Files.GetDirectory","params":param}
-        if cache: return self.cacheJSON(param).get('result', {})
+        if cache: return self.cacheJSON(param, expiration, checksum).get('result', {})
         else:     return self.sendJSON(param).get('result', {})
         
         
@@ -376,13 +376,10 @@ class JSONRPC:
         if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
             self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
             return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-        elif (len(items) > 0 and len(items) < page):
-            if total > page:
-                self.log("requestList, id = %s, extending items with new limits %s"%(citem['id'],limits))
-                items.extend(self.requestList(citem, item, media, page, sort, filter, limits))
-            elif total > 0 and total < page:
-                self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-                items = self.padItems(items)
+        # path total doesn't fill page limit; pad with duplicates.
+        elif (len(items) > 0 and len(items) < page) and (total > 0 and total < page):
+            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
+            items = self.padItems(items)
             
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
         if not getFile: items = {key:items}

@@ -196,10 +196,8 @@ class Builder:
         if citem.get('provisional',None):
             cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[])]
         else:
-            multi = len(citem['path']) > 1
-            limit =  self.limit #todo adv. rule to override splitting limits by path count.
-            if multi: limit = roundupDIV(self.limit,len(citem['path']))
-            self.log("buildChannel, id: %s, content limit: %s\npaths: %s"%(citem['id'],limit,citem['path']),xbmc.LOGINFO)
+            limit = roundupDIV(self.limit,len(citem['path']))
+            self.log("buildChannel, id: %s, content limit: %s, multi-path: %s\npaths: %s"%(citem['id'], limit, len(citem['path']) > 1, citem['path']),xbmc.LOGINFO)
             cacheResponse = [self.buildFileList(citem, file, 'video', limit, self.sort, self.filter, self.limits) for file in citem['path']]
         valid = list([k for k in cacheResponse if k]) #check that at least one filelist array contains meta.
         if not valid:
@@ -256,8 +254,15 @@ class Builder:
         seasoneplist   = []
         query['value'] = value
         
-        if not sort:   sort   = {"ignorearticle":True,"method":query.get('sort'),"order":"ascending","useartistsortname":True}
-        if not filter: filter = {"and":[{"field":query.get('field'),"operator":query.get('operator'),"value":[value]}]}
+        if not sort:
+            sort = {"ignorearticle":True,"method":query.get('sort'),"order":"ascending","useartistsortname":True}
+            
+        if not filter:
+            filter = {"and":[{"field":query.get('field'),"operator":query.get('operator'),"value":[value]}]}
+            if not self.incExtras and query.get('sort','').startswith(tuple(TV_TYPES)):
+                filter.get("and",[]).extend([{"field":"season","operator":"greaterthan","value":"0"},
+                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+                
         json_response = self.jsonRPC.requestList(citem, query, media, page, sort, filter, limits)
         key     = list(json_response.keys())[0]
         results = json_response.get(key, [])
@@ -282,6 +287,7 @@ class Builder:
                     self.pErrors.append(LANGUAGE(32031))
                     self.log("buildLibraryList, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
                     continue
+                    
                 elif (file.lower().endswith('strm') and not self.incStrms): 
                     self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
                     self.log("buildLibraryList, id: %s, IDX = %s skipping strm!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -290,7 +296,7 @@ class Builder:
                 if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
                     item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
-                if (self.is3D(item) and not self.inc3D): 
+                if (self.is3D(item) and not self.inc3D): #requires streamdetails, parse last.
                     self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
                     self.log("buildLibraryList, id: %s, IDX = %s skipping 3D!"%(citem['id'],idx),xbmc.LOGINFO)
                     continue
@@ -357,6 +363,7 @@ class Builder:
             seasoneplist.sort(key=lambda seep: seep[0])
             for seepitem in seasoneplist: 
                 fileList.append(seepitem[2])
+                
         elif sort.get("method","") == 'random':
             self.log("buildLibraryList, id: %s, method = random: shuffling."%(citem['id']))
             if len(fileList) > 0: fileList = randomShuffle(fileList)
@@ -365,16 +372,17 @@ class Builder:
         
           
     def buildFileList(self, citem, path, media='video', limit=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
-        if path.endswith('.xsp'): #smartplaylist
+        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
             paths, ofilter, media, osort = self.xsp.parseSmartPlaylist(path)
-            if not sort: sort = osort #restore default sort if new not found.
+            if not sort: sort = osort #restore default sort if new sort not found.
             if len(paths) > 0: #treat 'mixed' smartplaylists as multi-path mixed content.
                 if limit == self.limit and len(paths) > 1: limit = roundupDIV(limit,len(paths))
-                fileList = [self.buildFileList(citem, file, media, limit, sort, filter, limits) for file in paths]
-                return list(interleave(fileList))
+                self.log("buildFileList, id: %s, content limit: %s, mixed xsp: %s\npaths: %s"%(citem['id'], limit, len(paths) > 1, paths),xbmc.LOGINFO)
+                return list(interleave([self.buildFileList(citem, file, media, limit, sort, filter, limits) for file in paths]))
+                
         elif 'db://' in path:
             param = {}
-            if '?xsp=' in path:  #dynamicplaylist
+            if '?xsp=' in path:  #dynamicplaylist - parse xsp for path, filter and sort info.
                 path, ofilter, media, osort = self.xsp.parseDynamicPlaylist(path)
                 if not sort:   sort   = osort   #restore default sort if new not found.
                 if not filter: filter = ofilter #restore default filter if new not found.
@@ -383,16 +391,19 @@ class Builder:
             elif path.startswith('videodb://movies/'):  type, media, osort = ('movies'  ,'video',{"method": "random"})  #movies
             elif path.startswith('musicdb://songs/'):   type, media, osort = ('music'   ,'music',{"method": "random"})  #music
             else:                                       type, media, osort = ('files'   ,'video',{"method": "random"})  #other
-                
-            if not sort: #add default sorts by db
-                sort = osort
+            if not sort: sort = osort #add default sorts by db
+
+            if not self.incExtras and type.startswith(tuple(TV_TYPES)):
+                filter.get("and",[]).extend([{"field":"season","operator":"greaterthan","value":"0"},
+                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+
             if sort:   param["order"] = sort
             if filter: param["rules"] = filter
             if param:
                 param["type"] = type
-                filter = {} #clear filter since it was injected into the dynamic path.
-                if type == 'episodes': flatten = '-1/-1/-1/-1/'
-                else:                  flatten = ''
+                filter  = {} #clear filter since it was injected into the dynamic path.
+                flatten = ''
+                if type == 'episodes' and '-1/-1/-1/-1/' not in path: flatten = '-1/-1/-1/-1/'
                 path ='%s%s?xsp=%s'%(path,flatten,dumpJSON(param))
 
         fileList = []
@@ -401,7 +412,7 @@ class Builder:
         
         self.log("buildFileList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,filter,limits,path))
         while not self.service.monitor.abortRequested() and (len(fileList) < limit):
-            #Not all results are flat hierarchies walk all paths until filelist limit is reached. ie. Plugins with [NEXT PAGE]
+            #Not all results are flat hierarchies; walk all paths until filelist limit is reached. ie. Plugins with [NEXT PAGE]
             if self.service.monitor.waitForAbort(0.001): 
                 self.log('buildFileList, interrupted')
                 break
@@ -547,6 +558,17 @@ class Builder:
         return False
 
 
+    def isUHD(self, item):
+        if 'isUHD' in item: return item['isUHD']
+        elif 'streamdetails' in item: 
+            item = item.get('streamdetails',{})
+            if 'video' in item and len(item.get('video')) > 0:
+                videowidth  = int(item['video'][0]['width']  or '0')
+                videoheight = int(item['video'][0]['height'] or '0')
+                if videowidth > 1920 and videoheight > 1080: return True  
+        return False
+        
+        
     def is3D(self, item):
         if 'is3D' in item: return item['is3D']
         if 'streamdetails' in item: item = item.get('streamdetails',{})

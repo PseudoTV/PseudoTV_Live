@@ -68,7 +68,6 @@ class Producer():
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
         self._chkVersion()
         self._chkDebugging()
-        self._chkFiles()
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
@@ -107,6 +106,8 @@ class Producer():
             self._que(self.updateChannels,3)
         if self.chkUpdateTime('updateJSON',600):
             self._que(self.updateJSON,4)
+        if self.chkUpdateTime('chkFiles',600):
+            self._que(self._chkFiles,2)
 
 
     def updateRecommended(self):

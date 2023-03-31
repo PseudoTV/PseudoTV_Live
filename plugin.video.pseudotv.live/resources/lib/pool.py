@@ -117,15 +117,15 @@ def poolit(method):
     def wrapper(items=[], *args, **kwargs):
         results  = []
         cpucount = Cores().CPUcount()
-        pool = Concurrent(cpucount)
-        #todo debug issues
-        # try:
-            # if cpucount > 1 and len(items) > 1:
-                # results = pool.executors(method, items, *args, **kwargs)
-            # else:
-                # results = pool.generator(method, items, *args, **kwargs)
-        # except Exception as e:
-            # log('poolit, failed! %s'%(e), xbmc.LOGERROR)
+        threads  = cpucount * 2
+        pool = Concurrent(threads)
+        try:
+            if cpucount > 1 and len(items) > 1:
+                results = pool.executors(method, items, *args, **kwargs)
+            else:
+                results = pool.generator(method, items, *args, **kwargs)
+        except Exception as e:
+            log('poolit, failed! %s'%(e), xbmc.LOGERROR)
         results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return list([_f for _f in results if _f])
@@ -172,14 +172,14 @@ class Concurrent:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def executor(self, func, timeout=None, default=None, *args, **kwargs):
+    def executor(self, func, timeout=None, *args, **kwargs):
         with ThreadPoolExecutor(roundupDIV(self.cpuCount,2)) as executor:
             future = executor.submit(func, *args, **kwargs)
             return future.result(timeout)
 
 
     @timeit
-    def executors(self, func, items=[], timeout=300, *args, **kwargs):
+    def executors(self, func, items=[], timeout=None, *args, **kwargs):
         return [self.executor((partial(func, *args, **kwargs)), timeout, item) for item in items]
 
 

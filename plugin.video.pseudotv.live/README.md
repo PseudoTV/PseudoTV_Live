@@ -285,6 +285,9 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 
 	1. Navigate again to playlist type select "Movie" and repeat the steps above. Before leaving the editor switch playlist type back to "Mixed" and save.
 
+- Adding "pvr://" as a Kodi video source can improve channel changing times on certain platforms by whitelisting the path for jsonrpc access. Follow the directions below and select "None" as your media type.
+  https://kodi.wiki/view/Adding_video_sources
+  
 ------------
 
 # Plugin Integration.

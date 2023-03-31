@@ -1022,7 +1022,7 @@ msgid "update unnecessary."
 msgstr ""
 
 msgctxt "#32133"
-msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]In-order for %s to work properly [B]PVR://[/B] must be added as a Kodi video source.\nTo remove this prompt navigate to [B]Videos, Files, + Add Videos[/B] and enter [B]PVR://[/B] as a path."
+msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please double check your PVR configurations and reboot Kodi."
 msgstr ""
 
 msgctxt "#32134"

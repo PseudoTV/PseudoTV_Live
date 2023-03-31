@@ -30,8 +30,6 @@ GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
 STUDIO_RESOURCE = ["resource.images.studios.white"]
 
 class Resources:
-    LOGO_RESOURCES = SETTINGS.getSetting('Resource_Logos').split('|')
-    
     def __init__(self, jsonRPC, cache):
         self.cache   = cache
         self.jsonRPC = jsonRPC
@@ -42,9 +40,9 @@ class Resources:
 
 
     def getLogo(self, chname, type="Custom"):
-        logo = self.getLocalLogo(chname)  
-        if not logo: logo = self.getLogoResources(chname, type)
-        if not logo: logo = self.getTVShowLogo(chname)
+        logo = self.getLocalLogo(chname)                        #local
+        if not logo: logo = self.getLogoResources(chname, type) #resource
+        if not logo: logo = self.getTVShowLogo(chname)          #tvshow 
         return (logo or LOGO)
         
         
@@ -57,9 +55,9 @@ class Resources:
     
     def getLogoResources(self, chname, type):
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
-        resources = self.LOGO_RESOURCES
+        resources = SETTINGS.getSetting('Resource_Logos').split('|')
         if type in ["TV Genres","Movie Genres"]:
-            resources.extend(GENRE_RESOURCE)         
+            resources.extend(GENRE_RESOURCE)
         elif type in ["TV Networks","Movie Studios"]:
             resources.extend(STUDIO_RESOURCE)
         elif type == "Music Genres":
@@ -87,7 +85,8 @@ class Resources:
                     for image in paths[path]:
                         name, ext = os.path.splitext(image)
                         if self.matchName(chname, name):
-                            cacheResponse = self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                            self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
+                            return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
         return cacheResponse
         
         
@@ -103,8 +102,8 @@ class Resources:
                     for key in keys:
                         art = item.get('art',{}).get(key)
                         if art:
-                            cacheResponse = self.cache.set(cacheName, art, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
-                            break
+                            self.log('getTVShowLogo, found %s'%(art))
+                            return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
         return cacheResponse
         
         
