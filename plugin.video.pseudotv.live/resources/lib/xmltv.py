@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV.

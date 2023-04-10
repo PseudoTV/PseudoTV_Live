@@ -115,7 +115,7 @@ class Announcement:
         
         while not self.monitor.abortRequested():
             if not isClient():
-                try:    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
+                try:   sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
                 except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
             
             if self.monitor.waitForAbort(5) or self.monitor.chkRestart():

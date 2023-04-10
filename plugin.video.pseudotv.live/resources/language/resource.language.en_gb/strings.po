@@ -1029,6 +1029,10 @@ msgctxt "#32134"
 msgid "Playback failed! This maybe because %s is currently building this channel.\nor possibly an error with your channel configurations."
 msgstr ""
 
+msgctxt "#32135"
+msgid "Canceling"
+msgstr ""
+
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons

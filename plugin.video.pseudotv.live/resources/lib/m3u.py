@@ -26,9 +26,7 @@ M3U_TEMP = {"id"                : "",
             "number"            : 0,
             "name"              : "",
             "logo"              : "",
-            "path"              : [],
             "group"             : [],
-            "rules"             : [],
             "catchup"           : "vod",
             "radio"             : False,
             "favorite"          : False,
@@ -48,6 +46,16 @@ M3U_TEMP = {"id"                : "",
             "provider-countries": "",
             "provider-languages": "",
             "kodiprops"         : []}
+            
+M3U_MIN  = {"number"            : 0,
+            "id"                : "",
+            "name"              : "",
+            "logo"              : "",
+            "group"             : [],
+            "radio"             : False,
+            "catchup"           : "vod",
+            "label"             : "",
+            "url"               : ""}
 
 class M3U:
     def __init__(self):
@@ -184,18 +192,20 @@ class M3U:
             self.log('_save, saving to %s'%(file))
             fle.write('%s\n'%(self.M3UDATA['data']))
             
-            keys = list(self.getMitem().keys())
+            opts = list(self.getMitem().keys())
+            mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
             line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             self.M3UDATA['channels'] = self.sortStations(self.M3UDATA.get('channels',[]))
             
             for channel in self.M3UDATA['channels']:
-                optional = ''
+                optional  = ''
+                kodiprops = {}
                 if not channel: continue
                     
                 # write optional m3u parameters.
+                if 'kodiprops' in channel: kodiprops = channel.pop('kodiprops')
                 for key, value in list(channel.items()):
-                    if key in keys: continue
-                    elif value: optional += '%s="%s" '%(key,value)
+                    if key in opts and value: optional += '%s="%s" '%(key,value)
                         
                 fle.write(line%(channel['number'],
                                 channel['id'],
@@ -207,8 +217,8 @@ class M3U:
                                 optional,
                                 channel['label']))
                                  
-                if channel.get('kodiprops',[]):
-                    fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in channel['kodiprops']])))
+                if kodiprops:
+                    fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in kodiprops])))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
         return True
@@ -252,7 +262,7 @@ class M3U:
         self.log('addStation, channel item = %s'%(citem))
         idx, line = self.findStation(citem)
         mitem = self.getMitem()
-        mitem.update(citem)
+        mitem.update(citem)            
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
         mitem['logo']          = citem['logo']
         mitem['provider']      = ADDON_NAME

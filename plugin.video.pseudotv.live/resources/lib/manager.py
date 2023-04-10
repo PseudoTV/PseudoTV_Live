@@ -476,6 +476,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def validateLabel(self, label, channelData):
         self.log('validateLabel, label = %s'%(label))
+        #todo if path already used as channel verify name is different.
         if not label or len(label) < 1 or len(label) < 3 or len(label) > 128: return None, channelData
         return label, self.getChannelIcon(label, channelData, force=True)
 
@@ -556,15 +557,15 @@ class Manager(xbmcgui.WindowXMLDialog):
         waitTime = 30
         while not MONITOR.abortRequested():
             waitTime -= 1
-            if not PLAYER.isPlaying(): continue
-            seekEnabled = xbmc.getCondVisibility('Player.SeekEnabled')
-            if int(PLAYER.getTime()) > getTime or seekEnabled:
-                PLAYER.stop()
-                return True
-                
             if MONITOR.waitForAbort(1) or waitTime < 1:
                 self.log('validateSeek, interrupted')
                 break
+            elif not PLAYER.isPlaying():
+                continue
+                
+            if ((int(PLAYER.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+                PLAYER.stop()
+                return True
                 
         PLAYER.stop()
         return False

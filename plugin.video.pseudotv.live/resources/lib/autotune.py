@@ -24,10 +24,10 @@ from channels   import Channels
 from backup     import Backup
 
 class Autotune:
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, sysARG=sys.argv, service=None):
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG   = sysARG
-        self.library  = Library()
+        self.library  = Library(service)
         self.channels = Channels()
         
                 

@@ -32,18 +32,20 @@ def run(sysARG):
     log("Default: run, params = %s"%(params))
 
     if BUILTIN.getInfoBool('HasAddon(%s)'%(PVR_CLIENT),'System'):
-        if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'): BUILTIN.executebuiltin('"EnableAddon(%s)'%(PVR_CLIENT))
-    else: BUILTIN.executebuiltin('"InstallAddon(%s)'%(PVR_CLIENT))
+        if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'):
+            BUILTIN.executebuiltin('"EnableAddon(%s)'%(PVR_CLIENT))
+    else:
+        BUILTIN.executebuiltin('"InstallAddon(%s)'%(PVR_CLIENT))
     
     if mode == 'guide':
         BUILTIN.executebuiltin("Dialog.Close(all)") 
-        BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s,return)"%(quoteString(SETTINGS.getCacheSetting('pseudopvr', default='pvr://channels/tv/'))))
+        BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s)"%(quoteString(SETTINGS.getCacheSetting('pseudopvr', default='pvr://channels/tv/'))))
     elif mode == 'settings': 
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
     elif mode == 'vod': 
         timerit(Plugin(sysARG).playVOD)(.001,(name,id))
     elif mode == 'play':
-        if radio: timerit(Plugin(sysARG).playRadio)(.001,(name,id))
-        else:     timerit(Plugin(sysARG).playChannel)(.001,(name,id,bool(SETTINGS.getSettingInt('Playback_Method'))))
+        if radio: threadit(Plugin(sysARG).playRadio)(name,id)
+        else:     threadit(Plugin(sysARG).playChannel)(name,id,bool(SETTINGS.getSettingInt('Playback_Method')))
 
 if __name__ == '__main__': run(sys.argv)

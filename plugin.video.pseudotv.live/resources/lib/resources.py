@@ -144,8 +144,9 @@ class Resources:
             
 
     def buildWebImage(self, image):
-        if image.startswith(('resource://','special://','image://')): return image
-        return '%s/image/%s'%(self.jsonRPC.buildWebBase(),'image://%s'%(quoteString(image)))
+        if image.startswith(('resource://','special://','image://','http://')): return image
+        # return '%s/image/%s'%(self.jsonRPC.buildWebBase(),'image://%s'%(quoteString(image))) #todo debug
+        return image
             
             
     def isMono(self, file):

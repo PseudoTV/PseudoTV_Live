@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -25,14 +25,14 @@ from itertools          import repeat, count
 from functools          import partial, wraps, reduce    
 
 #info
-ADDON_ID            = 'plugin.video.pseudotv.live'
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
+ADDON_ID      = 'plugin.video.pseudotv.live'
+REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
+ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
+ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
 
 #variables
-PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
+PAGE_LIMIT    = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
+DEBUG_ENABLED = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
 
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
@@ -87,7 +87,6 @@ def killit(timeout=15.0, default={}):
         return wrapper
     return internal
 
-
 def killJSON(method):
     @wraps(method)
     def wrapper(timeout, *args, **kwargs):
@@ -110,7 +109,6 @@ def killJSON(method):
             return {'error':{'message':'JSONRPC timed out!'}}
         return timer.result
     return wrapper
-
 
 def poolit(method):
     @wraps(method)
@@ -136,7 +134,7 @@ def threadit(method):
     def wrapper(*args, **kwargs):
         cpucount = Cores().CPUcount()
         pool = Concurrent(roundupDIV(cpucount,2))
-        results = pool.executor(method, *args, **kwargs)
+        results = pool.executor(method, None, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return results
     return wrapper
@@ -146,7 +144,7 @@ def timerit(method):
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
         for thread in enumerate():
-            if thread.name == thread_name:
+            if thread.name == thread_name and thread.is_alive():
                 try: 
                     thread.cancel()
                     thread.join()

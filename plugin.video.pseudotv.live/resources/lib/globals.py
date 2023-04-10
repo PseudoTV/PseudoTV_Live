@@ -217,18 +217,18 @@ RULES_ACTION_OVERLAY       = 21
 
 #functions      
 def setBusy(state=True):
-    PROPERTIES.setPropertyBool('busyLocker',state)
+    PROPERTIES.setPropertyBool('idleLocker',state)
 
 def isBusy():
-    return PROPERTIES.getPropertyBool('busyLocker')
+    return PROPERTIES.getPropertyBool('idleLocker')
   
 @contextmanager
-def busyLocker(set=False):
-    while not MONITOR.abortRequested() and PROPERTIES.getPropertyBool('busyLocker'):
+def idleLocker(set=False):
+    while not MONITOR.abortRequested() and PROPERTIES.getPropertyBool('idleLocker'):
         if MONITOR.waitForAbort(0.001): break
     try: yield
     finally:
-        PROPERTIES.setPropertyBool('busyLocker',False)
+        PROPERTIES.setPropertyBool('idleLocker',False)
 
 @contextmanager
 def busy_dialog():
@@ -775,3 +775,7 @@ def isLowPower():
     if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
         return False
     return True
+
+def forceUpdateTime(key):
+    PROPERTIES.setPropertyInt(key,0)
+

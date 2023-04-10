@@ -46,13 +46,13 @@ IMPORT_TEMP = {"enabled": False,
 				           "xmltv": {"path": ""}}}
     
 class Library:
-    def __init__(self):
-        self.cache      = Cache()
-        self.jsonRPC    = JSONRPC()
-        self.predefined = Predefined()
-        self.channels   = Channels()
-        self.resources  = Resources(self.jsonRPC,self.cache)
-        
+    def __init__(self, service=None):
+        self.service     = service
+        self.cache       = Cache()
+        self.jsonRPC     = JSONRPC()
+        self.predefined  = Predefined()
+        self.channels    = Channels()
+        self.resources   = Resources(self.jsonRPC,self.cache)
         self.libraryDATA = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryDATA.update(self._load())
         
@@ -84,32 +84,35 @@ class Library:
         return [item for item in self.getLibrary(type) if item.get('enabled',False)]
 
     
-    @timeit
     def fillItems(self):
+        def fillItem(type):
+            funcs = {"Playlists"    :self.getPlaylists,
+                     "TV Networks"  :self.getNetworks,
+                     "TV Shows"     :self.getTVShows,
+                     "TV Genres"    :self.getTVGenres,
+                     "Movie Genres" :self.getMovieGenres,
+                     "Movie Studios":self.getMovieStudios,
+                     "Mixed Genres" :self.getMixedGenres,
+                     "Mixed"        :self.getMixed,
+                     "Recommended"  :self.getRecommend,
+                     "Services"     :self.getServices,
+                     "Music Genres" :self.getMusicGenres}
+            try: return funcs[type]()
+            except Exception as e: 
+                self.log('fillItem failed! %s'%(e), xbmc.LOGERROR)
+                return []
+                
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            with busyLocker():
+            if self.service.monitor.chkInterrupt(0.001):
+                self.log('fillItems, interrupted')
+                forceUpdateTime('updateLibrary')
+                DIALOG.progressBGDialog(100,dia,LANGUAGE(32135))
+                break
+            with idleLocker():
                 dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                yield (type,self.fillItem(type))
+                yield (type,fillItem(type))
                 
-                
-    def fillItem(self, type):
-        funcs = {"Playlists"    :self.getPlaylists,
-                 "TV Networks"  :self.getNetworks,
-                 "TV Shows"     :self.getTVShows,
-                 "TV Genres"    :self.getTVGenres,
-                 "Movie Genres" :self.getMovieGenres,
-                 "Movie Studios":self.getMovieStudios,
-                 "Mixed Genres" :self.getMixedGenres,
-                 "Mixed"        :self.getMixed,
-                 "Recommended"  :self.getRecommend,
-                 "Services"     :self.getServices,
-                 "Music Genres" :self.getMusicGenres}
-        try: return funcs[type]()
-        except Exception as e: 
-            self.log('fillItem failed! %s'%(e), xbmc.LOGERROR)
-            return []
-        
         
     @timeit
     def updateLibrary(self):
@@ -131,9 +134,10 @@ class Library:
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
-            if MONITOR.waitForAbort(0.001): 
+            if self.service.monitor.chkInterrupt(0.001): 
                 self.log('updateLibrary, interrupted')
-                DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
+                forceUpdateTime('updateLibrary')
+                DIALOG.progressBGDialog(100,dia,LANGUAGE(32135))
                 break
 
             items = libraryItems.get(type,[])
@@ -199,16 +203,15 @@ class Library:
         return sorted(MixedList,key=lambda x:x['name'])
     
     
+    @cacheit(expiration=datetime.timedelta(minutes=int(REAL_SETTINGS.getSetting('Max_Days'))),json_data=True)
     def getPlaylists(self):
         PlayList = []
         for type in ['video','mixed','music']:
             results = self.jsonRPC.getDirectory(param={"directory":"special://profile/playlists/%s"%(type)})
             for result in results.get('files',[]):
-                name = result.get('label')
-                if not name: continue
-                logo = result.get('thumbnail')
-                if not logo: logo = self.resources.getLogo(name,"Playlists")
-                PlayList.append({'name':name,'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
+                if not result.get('label'): continue
+                logo = (result.get('thumbnail') or self.resources.getLogo(result.get('label'),"Playlists"))
+                PlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
         self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
         PlayList = sorted(PlayList,key=lambda x:x['name'])
         PlayList = sorted(PlayList,key=lambda x:x['type'])
@@ -224,10 +227,6 @@ class Library:
             json_response = self.jsonRPC.getTVshows()
             
             for info in json_response:
-                if MONITOR.waitForAbort(0.001):
-                    self.log('getTVInfo, interrupted')
-                    return {}
-                    
                 if not info.get('label'): continue
                 TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createProvisional(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
                 NetworkList.update([studio for studio in info.get('studio', [])])
@@ -261,10 +260,6 @@ class Library:
             json_response  = self.jsonRPC.getMovies()
 
             for info in json_response:
-                if MONITOR.waitForAbort(0.001):
-                    self.log('getMovieInfo, interrupted')
-                    return {}
-                    
                 StudioList.update([studio for studio in info.get('studio', [])])
                 MovieGenreList.update([genre for genre in info.get('genre', [])])
 
@@ -292,10 +287,6 @@ class Library:
             json_response  = self.jsonRPC.getMusicGenres()
             
             for info in json_response:
-                if MONITOR.waitForAbort(0.001):
-                    self.log('getMusicInfo, interrupted')
-                    return {}
-                    
                 MusicGenreList.update([genre for genre in info.get('label','').split(';')])
             
             if sortbycount:

@@ -567,6 +567,7 @@ class Builtin: #todo move all infolabels, infobools, executers, etc here.
         
     
     def executebuiltin(self, key):
+        self.log('executebuiltin, key=%s'%(key))
         return xbmc.executebuiltin('%s'%(key))
         
         
@@ -668,12 +669,13 @@ class Dialog:
             return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0): 
+        if autoclose > 0: autoclose = (autoclose*1000) #secs to msecs
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
-            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, (autoclose*1000))
+            return xbmcgui.Dialog().yesnocustom(heading, message, customlabel, nolabel, yeslabel, autoclose)
         else: 
             # Returns True if 'Yes' was pressed, else False.
-            return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
+            return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, autoclose)
 
 
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
@@ -688,16 +690,17 @@ class Dialog:
              
              
     def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True, custom=False):
+        if autoclose > 0: autoclose = (autoclose*1000) #secs to msecs
         if multi == True:
             if preselect is None: preselect = [-1]
             if custom: ... #todo domodel custom selectDialog for library select.
             else:
-                select = xbmcgui.Dialog().multiselect(header, list, (autoclose*1000), preselect, useDetails)
+                select = xbmcgui.Dialog().multiselect(header, list, autoclose, preselect, useDetails)
         else:
             if preselect is None: preselect = -1
             if custom: ... #todo domodel custom selectDialog for library select.
             else:
-                select = xbmcgui.Dialog().select(header, list, (autoclose*1000), preselect, useDetails)
+                select = xbmcgui.Dialog().select(header, list, autoclose, preselect, useDetails)
                 if select == -1:  select = None
         return select
       

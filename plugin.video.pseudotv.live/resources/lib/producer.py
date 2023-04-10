@@ -51,6 +51,7 @@ class Producer():
 
 
     def chkUpdateTime(self, key, wait, nextUpdate=None):
+        #schedule updates, first boot always forces run!
         if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
         epoch = int(time.time())
         if (epoch >= nextUpdate):
@@ -59,12 +60,8 @@ class Producer():
         return False
 
 
-    def forceUpdateTime(self, key):
-        self.log('forceUpdateTime, %s'%(key))
-        PROPERTIES.setPropertyInt(key,0)
-
-
-    def _startProcess(self): #first processes before service loop starts. Only runs once per instance.
+    def _startProcess(self):
+        #first processes before service loop starts. Only runs once per instance.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
         self._chkVersion()
         self._chkDebugging()
@@ -75,27 +72,32 @@ class Producer():
         
         
     def _chkDebugging(self):
+        #prompt user warning concerning disabled cache.
         DEBUG_CACHE = (SETTINGS.getSettingBool('Enable_Debugging') & SETTINGS.getSettingBool('Disable_Cache'))
-        if DEBUG_CACHE: 
-            DIALOG.okDialog(LANGUAGE(32130))
+        if DEBUG_CACHE: DIALOG.okDialog(LANGUAGE(32130))
     
 
     def _chkFiles(self):
-        files = {LIBRARYFLEPATH:self.updateLibrary, #"Library"
-                 CHANNELFLEPATH:self.updateChannels,#"Channels"
-                 M3UFLEPATH    :self.updateChannels,#"M3U"
-                 XMLTVFLEPATH  :self.updateChannels,#"XMLTV"
-                 GENREFLEPATH  :self.updateChannels}#"Genre"
-                 
-        actions = []
-        for file in list(files.keys()):
-            if not FileAccess.exists(file):
-                actions.append(files.get(file))
-        for action in list(set(actions)):
-            self._que(action,2)
+        #check for missing files and run appropriate action to rebuild them only after init. startup.
+        if hasFirstrun():
+            files = {LIBRARYFLEPATH:self.updateLibrary, #"Library"
+                     CHANNELFLEPATH:self.updateChannels,#"Channels"
+                     M3UFLEPATH    :self.updateChannels,#"M3U"
+                     XMLTVFLEPATH  :self.updateChannels,#"XMLTV"
+                     GENREFLEPATH  :self.updateChannels}#"Genre"
+                     
+            actions = []
+            for file in list(files.keys()):
+                if not FileAccess.exists(file):
+                    actions.append(files.get(file))
+            for action in list(set(actions)):
+                self._que(action,2)
         
 
     def _chkProcesses(self):
+        #main function to handle all scheduled ques. 
+        if self.chkUpdateTime('chkFiles',300):
+            self._que(self._chkFiles,2)
         if self.chkUpdateTime('updateRecommended',300):
             self._que(self.updateRecommended,2)
         if self.chkUpdateTime('updateLibrary',(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
@@ -106,14 +108,12 @@ class Producer():
             self._que(self.updateChannels,3)
         if self.chkUpdateTime('updateJSON',600):
             self._que(self.updateJSON,4)
-        if self.chkUpdateTime('chkFiles',600):
-            self._que(self._chkFiles,2)
 
 
     def updateRecommended(self):
         self.log('updateRecommended')
         try:
-            library = Library()
+            library = Library(service=self.service)
             library.searchRecommended()
             del library
         except Exception as e: self.log('updateRecommended failed! %s'%(e), xbmc.LOGERROR)
@@ -122,34 +122,31 @@ class Producer():
     def updateLibrary(self):
         self.log('updateLibrary')
         try:
-            library = Library()
+            library = Library(service=self.service)
             library.importPrompt()
             library.updateLibrary()
             del library
-
-            if not hasAutotuned(): self.updateAutoTune()
+            if not hasAutotuned(): self.updateAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
     
     def updateSettings(self):
+        #parse/sync varies third-party and Kodi settings.
         self.log('updateSettings')
         try:
             with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
                 jsonRPC = JSONRPC()
-                min = (jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1)
-                if min != SETTINGS.getSettingInt('Min_Days'):
-                    SETTINGS.setSettingInt('Min_Days',min)
-                max = (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3)
-                if max != SETTINGS.getSettingInt('Max_Days'):
-                    SETTINGS.setSettingInt('Max_Days',max)
                 setClient(isClient())
-                SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
-                PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())  
+                if (jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != SETTINGS.getSettingInt('Min_Days'): SETTINGS.setSettingInt('Min_Days',min)
+                if (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != SETTINGS.getSettingInt('Max_Days'): SETTINGS.setSettingInt('Max_Days',max)
+                if (SETTINGS.getSetting('Network_Path')) != (SETTINGS.getSetting('User_Folder')):                   SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+                PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
                 del jsonRPC
         except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
     
         
-    def _chkAutotune(self): #force rebuild to predefined autotuned channels
+    def _chkAutotune(self):
+        #force rebuild to predefined autotuned channels/ update paths & logos
         self._que(self.updateAutoTune,2)
     
     
@@ -157,10 +154,9 @@ class Producer():
         self.log('updateAutoTune')
         # self.producer._chkAutotune() #rebuild autotune selection todo only on change?
         try:
-            autotune = Autotune()
+            autotune = Autotune(service=self.service)
             autotune._runTune(samples=True,rebuild=False)
             del autotune
-            setFirstrun()
         except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
         
@@ -170,6 +166,7 @@ class Producer():
             builder = Builder(self.service)
             builder.build()
             del builder
+            setFirstrun() #set init. boot status to true.
         except Exception as e: self.log('updateChannels failed! %s'%(e), xbmc.LOGERROR)
         
     
@@ -190,7 +187,7 @@ class Producer():
             nChannels = self.getChannels()
             if channels != nChannels:
                 self.log('chkChannelChange, resetting updateChannels')
-                self.forceUpdateTime('updateChannels')
+                forceUpdateTime('updateChannels')
                 return nChannels
             return channels
 
@@ -212,7 +209,7 @@ class Producer():
                          'Client_Mode'  :self.serviceRestart,
                          'Remote_URL'   :self.serviceRestart,
                          'Disable_Cache':self.serviceRestart}
-            
+            #serviceRestart runs on a threaded delay, multi-calls allowed/cancelled
             for setting, value in list(settings.items()):
                 if nSettings.get(setting) != value and actions.get(setting):
                     if setting == 'User_Folder': args = (value,nSettings.get(setting))
@@ -241,10 +238,10 @@ class Producer():
             dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
         SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
         self.serviceRestart()
-        
-            
+
+
     def serviceRestart(self):
-        timerit(self._serviceRestart)(15)
+        timerit(self._serviceRestart)(15.0)
         
         
     def _serviceRestart(self):
@@ -257,15 +254,17 @@ class Producer():
 
 
     def runJSON(self):
-        '''
-        Only run after idle for 2mins to reduce system impact. Check interval every 15mins.
-        '''
+        #Only run after idle for 2mins to reduce system impact. Check interval every 15mins, run in chunks set by PAGE_LIMIT.
         if not self.queueRunning:
             self.queueRunning = True
             queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
             params = queuePool.get('params',[])
             for param in (list(chunkLst(params,PAGE_LIMIT)) or [[]])[0]:
-                if MONITOR.waitForAbort(1) or not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY:
+                if self.service.monitor.waitForAbort(1):
+                    self.log('runJSON, interrupted')
+                    forceUpdateTime('updateJSON')
+                    break
+                elif not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY:
                     self.log('runJSON, waiting for idle...')
                     break
                 runParam = params.pop(0)
@@ -283,5 +282,3 @@ class Producer():
         if ADDON_VERSION != SETTINGS.getCacheSetting('lastVersion', default='v.0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
-        
-#todo check between kodi json pvr channels return and channels.json, if difference trigger user prompt to reboot kodi or brutepvr update.

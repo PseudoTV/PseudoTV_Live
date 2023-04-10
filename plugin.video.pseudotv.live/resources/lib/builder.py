@@ -71,16 +71,10 @@ class Builder:
 
 
     def verify(self):
-        channels = self.channels.getChannels()
-        for idx, citem in enumerate(channels):
-            if self.service.monitor.waitForAbort(0.001): 
-                self.log('verify, interrupted')
-                break
-                
+        for idx, citem in enumerate(self.channels.getChannels()):
             if not citem.get('id'):
                 self.log('verify, skipping - missing channel id\n%s'%(citem))
                 continue
-                
             self.log('verify, %s: %s'%(idx,citem['id']))
             yield self.runActions(RULES_ACTION_CHANNEL, citem, citem, inherited=self)
             
@@ -96,11 +90,12 @@ class Builder:
 
             self.pDialog = DIALOG.progressBGDialog()
             for idx, channel in enumerate(channels):
-                if self.service.monitor.waitForAbort(0.001):
+                if self.service.monitor.chkInterrupt():
                     self.log('build, interrupted')
-                    return
+                    forceUpdateTime('updateChannels')
+                    break
                     
-                with busyLocker():
+                with idleLocker():
                     channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
 
                     #set global dialog.
@@ -138,10 +133,10 @@ class Builder:
         try: #match proper paths for provisional autotune.
             provisional = re.findall(r"\{(.*?)}", str(citem['path']))
             if len(provisional) > 0 and not bool(list(set([True for path in citem.get('path',[]) if '?xsp=' in path]))):
-                if provisional[0] == "Seasonal":
-                    citem, citem['path'] = Seasonal().buildPath(citem) #Seasonal
-                elif provisional and citem['type'] in list(PROVISIONAL_TYPES.keys()):
-                    citem['provisional'] = {'value':provisional[0],'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisional(provisional[0],citem['type'])} #Autotune
+                if provisional[0] == "Seasonal": #Seasonal
+                    citem, citem['path'] = Seasonal().buildPath(citem)
+                elif provisional and citem['type'] in list(PROVISIONAL_TYPES.keys()): #Autotune
+                    citem['provisional'] = {'value':provisional[0],'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisional(provisional[0],citem['type'])}
         except Exception as e: self.log("getProvisional, failed! %s"%(e), xbmc.LOGERROR)
         return citem
 
@@ -173,7 +168,8 @@ class Builder:
                 return False
                 
             cacheResponse = self.addScheduling(citem, cacheResponse, start)
-            if self.fillBCTs and not citem.get('radio',False): cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
+            if self.fillBCTs and not citem.get('radio',False):
+                cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
             cacheResponse = self.runActions(RULES_ACTION_CHANNEL_STOP, citem, cacheResponse, inherited=self)
             return sorted(cacheResponse, key=lambda k: k['start'])
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
@@ -185,46 +181,44 @@ class Builder:
         #todo insert custom radio labels,plots based on genre type?
         # https://www.musicgenreslist.com/
         # https://www.musicgateway.com/blog/how-to/what-are-the-different-genres-of-music
-        citem['genre'] = ["Music"]
-        citem['art']   = {'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']}
-        citem['plot']  = LANGUAGE(32029)%(citem['name'])
-        return self.buildCells(citem, self.minEPG, 'music', ((self.maxDays * 8)))
+        return self.buildCells(citem, self.minEPG, 'music', ((self.maxDays * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
         
 
     def buildChannel(self, citem):
+        def verify(cacheResponse):
+            for fileList in cacheResponse:
+                if len(fileList) > 0: return True
+        
         # build multi-paths as individual arrays for easier interleaving.
         if citem.get('provisional',None):
-            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[])]
+            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service.monitor.chkInterrupt()]
         else:
-            limit = roundupDIV(self.limit,len(citem['path']))
-            self.log("buildChannel, id: %s, content limit: %s, multi-path: %s\npaths: %s"%(citem['id'], limit, len(citem['path']) > 1, citem['path']),xbmc.LOGINFO)
-            cacheResponse = [self.buildFileList(citem, file, 'video', limit, self.sort, self.filter, self.limits) for file in citem['path']]
-        valid = list([k for k in cacheResponse if k]) #check that at least one filelist array contains meta.
-        if not valid:
+            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service.monitor.chkInterrupt()]
+
+        if not verify(cacheResponse):#check that at least one filelist array contains meta.
             self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
         self.log("buildChannel, id: %s cacheResponse array = %s"%(citem['id'],len(cacheResponse)))
         cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid interleave() below.
-        cacheResponse = list(interleave(cacheResponse))# interleave multi-paths, while keeping filelist order.
-        cacheResponse = setDictLST(cacheResponse)      # remove any duplicates that may have been parsed via similar paths.
+        cacheResponse = setDictLST(list(interleave(cacheResponse))) # interleave multi-paths, while keeping filelist order, remove any duplicates that may have been parsed via similar paths.
         cacheResponse = list([filelist for filelist in [_f for _f in cacheResponse if _f] if filelist != {}]) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
         self.log('buildChannel, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
         return cacheResponse
 
 
-    def buildCells(self, citem, duration=10800, type='video', entries=3):
+    def buildCells(self, citem, duration=10800, type='video', entries=3, info={}):
         self.log("buildCells; id = %s"%(citem.get('id')))
-        tmpItem  = {'label'       : citem['name'],
-                    'episodetitle': (citem.get('episodetitle','') or '|'.join(citem['group'])),
-                    'plot'        : (citem.get('plot' ,'') or LANGUAGE(30161)),
-                    'genre'       : citem.get('genre',['Undefined']),
+        tmpItem  = {'label'       : (info.get('title','')        or citem['name']),
+                    'episodetitle': (info.get('episodetitle','') or '|'.join(citem['group'])),
+                    'plot'        : (info.get('plot' ,'')        or LANGUAGE(30161)),
+                    'genre'       : (info.get('genre','')        or ['Undefined']),
+                    'file'        : (info.get('path','')         or citem['path']),
                     'type'        : type,
                     'duration'    : duration,
-                    'file'        : citem['path'],
                     'start'       : 0,
                     'stop'        : 0,
-                    'art'         : citem.get('art',{"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO})}
+                    'art'         : (info.get('art','') or {"thumb":COLOR_LOGO,"fanart":FANART,"logo":LOGO,"icon":LOGO})}
         return [tmpItem.copy() for idx in range(entries)]
 
 
@@ -233,10 +227,7 @@ class Builder:
         tmpList  = []
         fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList, inherited=self) #adv. scheduling rules start here.
         for idx, item in enumerate(fileList):
-            if self.service.monitor.waitForAbort(0.001):
-                self.log('addScheduling, interrupted')
-                break
-            elif not item.get('file',''):
+            if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
                 continue
                 
@@ -250,9 +241,9 @@ class Builder:
         
     def buildLibraryList(self, citem, value, query, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
         self.log("buildLibraryList; id = %s, provisional value = %s\nquery = %s"%(citem['id'],value,query))
+        query['value'] = value
         fileList       = []
         seasoneplist   = []
-        query['value'] = value
         
         if not sort:
             sort = {"ignorearticle":True,"method":query.get('sort'),"order":"ascending","useartistsortname":True}
@@ -272,11 +263,7 @@ class Builder:
             pass
 
         for idx, item in enumerate(results):
-            if self.service.monitor.waitForAbort(0.001):  
-                self.log('buildLibraryList, interrupted')
-                break
-
-            with busyLocker():
+            with idleLocker():
                 if not isinstance(item, dict):
                     self.log('buildLibraryList, item malformed %s'%(item)) #todo debug issue where key is injected into results as a string? ex. results = [{},{},'episode'], bug with keys()?
                     continue
@@ -376,10 +363,8 @@ class Builder:
             paths, ofilter, media, osort = self.xsp.parseSmartPlaylist(path)
             if not sort: sort = osort #restore default sort if new sort not found.
             if len(paths) > 0: #treat 'mixed' smartplaylists as multi-path mixed content.
-                if limit == self.limit and len(paths) > 1: limit = roundupDIV(limit,len(paths))
-                self.log("buildFileList, id: %s, content limit: %s, mixed xsp: %s\npaths: %s"%(citem['id'], limit, len(paths) > 1, paths),xbmc.LOGINFO)
-                return list(interleave([self.buildFileList(citem, file, media, limit, sort, filter, limits) for file in paths]))
-                
+                self.log("buildFileList, id: %s, content limit: %s, mixed xsp: %s\npaths: %s"%(citem['id'], roundupDIV(limit,len(paths)), len(paths) > 1, paths),xbmc.LOGINFO)
+                return list(interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, filter, limits) for file in paths])) #todo when adv. rules interleaving added remove interleaving and only extend each path?
         elif 'db://' in path:
             param = {}
             if '?xsp=' in path:  #dynamicplaylist - parse xsp for path, filter and sort info.
@@ -413,14 +398,14 @@ class Builder:
         self.log("buildFileList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,filter,limits,path))
         while not self.service.monitor.abortRequested() and (len(fileList) < limit):
             #Not all results are flat hierarchies; walk all paths until filelist limit is reached. ie. Plugins with [NEXT PAGE]
-            if self.service.monitor.waitForAbort(0.001): 
+            if self.service.monitor.chkInterrupt(): 
                 self.log('buildFileList, interrupted')
                 break
             elif len(dirList) == 0:
                 self.log('buildFileList, no more folders to parse')
                 break
             else:
-                with busyLocker():
+                with idleLocker():
                     dir = dirList.pop(0)
                     try: 
                         if fileList[0] == {}: fileList.pop(0)
@@ -453,11 +438,7 @@ class Builder:
             self.pErrors.append(LANGUAGE(32026))
             
         for idx, item in enumerate(json_response):
-            if self.service.monitor.waitForAbort(0.001):  
-                self.log('buildList, interrupted')
-                break
-            
-            with busyLocker():
+            with idleLocker():
                 file     = item.get('file','')
                 fileType = item.get('filetype','file')
 
@@ -484,7 +465,7 @@ class Builder:
                     if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
                         item['duration']     = dur
                         item['media']        = media
-                        item['originalpath'] = path
+                        item['originalpath'] = path #use for path sorting
                         if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
                             item['year'] = 0
                             
@@ -647,7 +628,7 @@ class Builder:
                   
     def addChannelStation(self, citem):
         self.log('addChannelStation, id = %s'%(citem['id']))
-        citem['url'] = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
+        citem['url']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
         citem['logo'] = self.cleanImage(citem['logo'])
         citem = self.cleanGroups(citem)
         self.m3u.addStation(citem)
@@ -657,10 +638,6 @@ class Builder:
     def addChannelProgrammes(self, citem, fileList):
         self.log('addProgrammes, id = %s, fileList = %s'%(citem['id'],len(fileList)))
         for idx, file in enumerate(fileList):
-            if self.service.monitor.waitForAbort(0.001):
-                self.log('addProgrammes, interrupted')
-                break
-        
             item = {}
             item['channel']     = citem['id']
             item['radio']       = citem['radio']

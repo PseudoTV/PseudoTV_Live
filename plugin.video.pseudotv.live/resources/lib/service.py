@@ -201,6 +201,11 @@ class Monitor(xbmc.Monitor):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def chkInterrupt(self, wait=0.001):
+        if (self.waitForAbort(wait) | self.pendingRestart | self.pendingChange): return True
+        return False
+        
+        
     def chkRestart(self):
         restart = PROPERTIES.getPropertyBool('pendingRestart')
         if restart: PROPERTIES.clearProperty('pendingRestart')
@@ -287,7 +292,7 @@ class Monitor(xbmc.Monitor):
         if not isClient():
             self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
         self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
-        self.pendingChange = False
+        self.pendingChange  = False
         
                     
 class Service():
@@ -301,9 +306,9 @@ class Service():
     
     def __init__(self):
         self.log('__init__')
-        DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=30)#startup delay; give Kodi PVR time to initialize. 
+        DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
-        if self.player.isPlaying(): 
+        if self.player.isPlaying(): #if playback already in-progress run onAVStarted tasks.
             self.player.onAVStarted()
             
         self.monitor.pendingRestart = False
@@ -315,7 +320,7 @@ class Service():
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)        
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
     def _start(self):

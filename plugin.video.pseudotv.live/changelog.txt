@@ -17,6 +17,8 @@ v.0.4.1
 -Notice some users can improve channel changing performance by adding "PVR://" as a Kodi video sources; See readme for details.
 -Improved channel building filters not respecting "specials" & "extras" exclusion. 
 -Improved channel changing "surfing" times after refactoring for Kodi Omega API changes.
+-Fixed channel manager becoming unresponsive during path validation.
+-Fixed channels updating twice after startup.
 
 v.0.4.0
 -Major code refactoring to improve memory usage/stability.

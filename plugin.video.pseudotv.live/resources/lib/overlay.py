@@ -279,11 +279,12 @@ class Overlay():
           
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
-            totalTime   = int(self.playerTotTime)
-            remaining   = floor(self.player.getTimeRemaining())
-            intTime     = roundupDIV(abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval),interval)
+            #split totalTime time into quarters, last quarter trigger nextup split by equal intervals of 3. 
+            totalTime = int(self.playerTotTime)
+            remaining = floor(self.player.getTimeRemaining())
+            intTime   = roundupDIV(abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval),interval)
             if remaining < intTime: return getOnNextInterval((interval + 1))
-            showTime = floor(self.player.getTimeRemaining()) <= (intTime *interval)
+            showTime  = remaining <= (intTime * interval)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showTime = %s'%(totalTime,interval,remaining,intTime,showTime))
             return showTime, intTime
 
@@ -304,7 +305,6 @@ class Overlay():
                     if not self._hasControl(self._onNext):
                         self._addControl(self._onNext)
                         self._onNext.setEnableCondition('[Player.Playing]')
-                        
                     try:
                         nowItem = self.pvritem['broadcastnow'] # current item
                         broadcastnext = self.pvritem['broadcastnext']
@@ -313,17 +313,18 @@ class Overlay():
                         nextitem = self.pvritem['broadcastnow']# upcoming items
                     except:
                         self.log('toggleOnNext, pvritem = %s failed! using playingItem\n%s'%(self.pvritem,self.player.playingItem))
-                        nowItem  = self.player.playingItem['broadcastnow']  # current item
-                        nextitem = self.player.playingItem['broadcastnext'] # upcoming items
+                        nowItem  = self.player.playingItem.get('broadcastnow',{})       # current item
+                        nextitem = self.player.playingItem.get('broadcastnext',[{}])[0] # upcoming items
                         
-                    onNow    = '%s on %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem['episodename']) if nextitem['episodename'] else ''), self.pvritem.get('label',ADDON_NAME))
-                    onNext   = '%s %s'%(nextitem['title'],'- %s'%(nextitem['episodename']) if nextitem['episodename'] else '')
-                    
-                    self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
-                    self._onNext.autoScroll(6000, 3000, 5000)
-                    playSFX(BING_WAV)
-                    self.setVisible(self._onNext,True)
+                    if nowItem and nextitem:
+                        onNow  = '%s on %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.pvritem.get('label',ADDON_NAME))
+                        onNext = '%s %s'%(nextitem['title'],'- %s'%(nextitem.get('episodename')) if nextitem.get('episodename') else '')
+                        
+                        self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                        self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                        self._onNext.autoScroll(6000, 3000, 5000)
+                        playSFX(BING_WAV)
+                        self.setVisible(self._onNext,True)
                 else: 
                     self.setVisible(self._onNext,False)
                 

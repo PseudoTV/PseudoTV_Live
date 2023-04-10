@@ -362,22 +362,33 @@ class JSONRPC:
             limits  = results.pop('limits') 
             key     = list(results.keys())[0]
             
-        items  = results.get(key, [])
-        total  = limits.get('total',0)
-        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+        items = results.get(key, [])
+        total = limits.get('total',0)
+        try:
+            if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == total):
+                #limits may fail to apply properly and return full list. Instead use limits param to slice list.
+                items = items[param["limits"]["start"]:param["limits"]["end"]]
+                self.log('requestList, id = %s, items = %s sliced from VFS exceeding page %s'%(citem['id'], len(items), page))
+        except Exception as e: self.log('requestList, id = %s, failed! to slice items %s'%(citem['id'],e), xbmc.LOGERROR)
 
-        # restart page to 0, exceeding boundaries.
+        if len(items) > page:
+            #in the rare (if at all possible) instance items exceed expected limits, truncate size.
+            items = items[:page]
+            self.log('requestList, id = %s, items = %s truncated to %s'%(citem['id'], len(items), page))
+        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+        
         if (limits.get('end',0) >= total or limits.get('start',0) >= total):
+            # restart page to 0, exceeding boundaries.
             self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
         self.autoPagination(citem['id'], path, limits) #set 
         
-        # retry last request with fresh limits.
         if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
+            # retry last request with fresh limits.
             self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
             return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-        # path total doesn't fill page limit; pad with duplicates.
         elif (len(items) > 0 and len(items) < page) and (total > 0 and total < page):
+            # path total doesn't fill page limit; pad with duplicates.
             self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
             items = self.padItems(items)
             
