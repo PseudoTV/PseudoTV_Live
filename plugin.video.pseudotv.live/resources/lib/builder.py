@@ -364,7 +364,7 @@ class Builder:
             if not sort: sort = osort #restore default sort if new sort not found.
             if len(paths) > 0: #treat 'mixed' smartplaylists as multi-path mixed content.
                 self.log("buildFileList, id: %s, content limit: %s, mixed xsp: %s\npaths: %s"%(citem['id'], roundupDIV(limit,len(paths)), len(paths) > 1, paths),xbmc.LOGINFO)
-                return list(interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, filter, limits) for file in paths])) #todo when adv. rules interleaving added remove interleaving and only extend each path?
+                return list(interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, filter, limits) for file in paths]))
         elif 'db://' in path:
             param = {}
             if '?xsp=' in path:  #dynamicplaylist - parse xsp for path, filter and sort info.
@@ -404,16 +404,16 @@ class Builder:
             elif len(dirList) == 0:
                 self.log('buildFileList, no more folders to parse')
                 break
-            else:
-                with idleLocker():
-                    dir = dirList.pop(0)
-                    try: 
-                        if fileList[0] == {}: fileList.pop(0)
-                    except: fileList = []
-                    subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, filter, limits, dir)
-                    fileList += subfileList
-                    dirList = setDictLST(subdirList + dirList)
-                    self.log('buildFileList, parsing %s, fileList = %s'%(dir.get('file'),len(fileList)))
+                
+            with idleLocker():
+                dir = dirList.pop(0)
+                try: 
+                    if fileList[0] == {}: fileList.pop(0)
+                except: fileList = []
+                subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, filter, limits, dir)
+                fileList += subfileList
+                dirList = setDictLST(subdirList + dirList)
+                self.log('buildFileList, parsing %s, fileList = %s'%(dir.get('file'),len(fileList)))
         try: 
             if fileList[0] == {}: fileList.pop(0)
         except: fileList = []

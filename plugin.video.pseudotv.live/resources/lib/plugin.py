@@ -54,9 +54,9 @@ class Plugin:
         return LISTITEMS.buildItemListItem(decodeWriter(item.get('writer','')), media)
 
 
+    @timeit
     def getCallback(self, chname, id, radio=False, isPlaylist=False):
         self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
-        @timeit
         def _matchVFS():
             pvrType = 'radio' if radio else 'tv'
             pvrRoot = "pvr://channels/{dir}/".format(dir=pvrType)
@@ -74,7 +74,6 @@ class Plugin:
                                 return pvr
             self.log('getCallback: _matchVFS, no callback found!\nresults = %s'%(results))
             
-        @timeit
         def _matchJSON():
             pvrType = 'radio' if radio else 'tv'
             results = self.jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=pvrType)}, cache=True).get('files',[])
@@ -104,7 +103,7 @@ class Plugin:
         
     @timeit
     def matchChannel(self, chname, id, radio=False, isPlaylist=False):
-        self.log('matchChannel, id = %s, radio = %s'%(id,radio))
+        self.log('matchChannel, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
         def _match():
             channels = self.jsonRPC.getPVRChannels(radio)
             for channel in channels:
@@ -116,8 +115,8 @@ class Plugin:
                             self.log('matchChannel, found = %s'%(channel))
                             return channel
         
-        cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
-        cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True)
+        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
+        cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
         if not cacheResponse:
             pvritem = _match()
             if not pvritem:
@@ -171,11 +170,11 @@ class Plugin:
         found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.matchChannel(name,id,False,isPlaylist)
-        nowitem   = pvritem.get('broadcastnow',{})  # current item
-        nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-
-        if nowitem:
-            found = True
+        if pvritem:
+            found     = True
+            nowitem   = pvritem.get('broadcastnow',{})  # current item
+            nextitems = pvritem.get('broadcastnext',[]) # upcoming items
+            
             if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
                 nowitem = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                 timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
@@ -230,9 +229,9 @@ class Plugin:
         found     = False
         listitems = [LISTITEMS.getListItem()] #empty listitem required to pass failed playback.
         pvritem   = self.matchChannel(name,id,True,isPlaylist)
-        nowitem   = pvritem.get('broadcastnow',{})  # current item
-        if nowitem:
-            found = True
+        if pvritem:
+            found   = True
+            nowitem = pvritem.get('broadcastnow',{})  # current item
             if nowitem.get('broadcastid',random.random()):
                 nowitem  = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                 fileList = [self.jsonRPC.requestList(pvritem['citem'], path, 'music', page=RADIO_ITEM_LIMIT) for path in pvritem['citem'].get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
@@ -256,11 +255,11 @@ class Plugin:
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
 
         if writer.get('citem',{}): 
-            found = True
-            citem = writer.get('citem')
+            found   = True
+            citem   = writer.get('citem')
             pvritem = self.matchChannel(citem.get('name'),citem.get('id'),False,isPlaylist)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
-
+            
             if isPlaylist:
                 nowitem   = pvritem.get('broadcastnow',{})  # current item
                 nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
@@ -304,7 +303,7 @@ class Plugin:
             PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('id','-1')))
             self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            return PLAYER.play(self.channelPlaylist, startpos=0)
+            return PLAYER.play(self.channelPlaylist)
         else: return DIALOG.notificationDialog(LANGUAGE(32000))
         self.resolveURL(found, listitems[0])
         
@@ -326,4 +325,3 @@ class Plugin:
 
     def resolveURL(self, found, listitem):
         xbmcplugin.setResolvedUrl(int(self.sysARG[1]), found, listitem)
-

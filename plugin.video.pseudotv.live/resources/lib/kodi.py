@@ -69,6 +69,12 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
 def isBusyDialog():
     return (Builtin().getInfoBool('IsActive(busydialognocancel)','Window') | Builtin().getInfoBool('IsActive(busydialog)','Window'))
          
+def closeBusyDialog():
+    if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
+        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    elif Builtin().getInfoBool('IsActive(busydialog)','Window'):
+        Builtin().executebuiltin('Dialog.Close(busydialog)')
+         
 @contextmanager
 def busy_dialog():
     if not isBusyDialog():

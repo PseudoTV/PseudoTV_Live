@@ -265,6 +265,8 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
     ![Play From Here](https://i.imgur.com/ZSZzpmy.png "Play From Here")
 
 - Channel surfing only works while in PVR CallbacK mode and during linear playback; VOD & Playlist playback exits the PVR.
+  Repeated Back-to-Back channel surfing when "confirm channel switches by pressing "ok"" is disabled may crash Kodi. 
+  This is due to a long existing bug with related to Kodi busy dialog. https://github.com/xbmc/xbmc/pull/21563
 
 - Content ordering defaults to 'random' for all content except TV which defaults to 'episode' ordering. 'Mixed" content ordering defaults to 'year' for Movies. This only applies to channels configured without sort/order method. Multi-Path channels will default to using a standard interleaving distribution. *see below for details.
  

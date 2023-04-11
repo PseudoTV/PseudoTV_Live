@@ -114,7 +114,7 @@ class Predefined:
         param = self.getParams()
         param["type"] = "music"
         param["order"]["method"] = method
-        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[(genre)]})
+        param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
         return ['musicdb://songs/?xsp=%s'%(dumpJSON(param))]
 
 

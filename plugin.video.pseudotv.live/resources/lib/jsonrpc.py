@@ -366,13 +366,13 @@ class JSONRPC:
         total = limits.get('total',0)
         try:
             if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == total):
-                #limits may fail to apply properly and return full list. Instead use limits param to slice list.
+                #VFS paths ie.Plugin:// may fail to apply limits and return a full directory list. Instead use limits param to slice list.
                 items = items[param["limits"]["start"]:param["limits"]["end"]]
                 self.log('requestList, id = %s, items = %s sliced from VFS exceeding page %s'%(citem['id'], len(items), page))
         except Exception as e: self.log('requestList, id = %s, failed! to slice items %s'%(citem['id'],e), xbmc.LOGERROR)
 
         if len(items) > page:
-            #in the rare (if at all possible) instance items exceed expected limits, truncate size.
+            #in the rare (if at all possible) instance items may exceed expected limits, truncate size.
             items = items[:page]
             self.log('requestList, id = %s, items = %s truncated to %s'%(citem['id'], len(items), page))
         self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))

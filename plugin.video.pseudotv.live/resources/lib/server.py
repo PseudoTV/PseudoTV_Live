@@ -48,25 +48,23 @@ class Discovery:
         
         while not self.monitor.abortRequested():
             if isClient():
-                try:
-                    data, addr = sock.recvfrom(1024) #wait for a packet
-                    if data.startswith(ADDON_ID.encode()):
-                        response = data[len(ADDON_ID):]
-                        if response:
-                            payload = loadJSON(decodeString(response.decode()))
-                            host = payload.get('host','')
-                            if host != local:
-                                self.log('_start: discovered server @ host = %s'%(host),xbmc.LOGINFO)
-                                md5 = payload.pop('md5')
-                                if md5 == getMD5(dumpJSON(payload)):
-                                    payload['received'] = time.time()
-                                    servers = getDiscovery()
-                                    if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
-                                        DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
-                                    servers[host] = payload
-                                    setDiscovery(servers)
-                                    chkDiscovery(servers)
-                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
+                try: data, addr = sock.recvfrom(1024) #wait for a packet
+                except: pass
+                if data.startswith(ADDON_ID.encode()):
+                    response = data[len(ADDON_ID):]
+                    if response:
+                        payload = loadJSON(decodeString(response.decode()))
+                        host = payload.get('host','')
+                        if host != local and 'md5' in payload:
+                            self.log('_start: discovered server @ host = %s'%(host),xbmc.LOGINFO)
+                            if payload.pop('md5') == getMD5(dumpJSON(payload)):
+                                payload['received'] = time.time()
+                                servers = getDiscovery()
+                                if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
+                                    DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
+                                servers[host] = payload
+                                setDiscovery(servers)
+                                chkDiscovery(servers)
                 
             if self.monitor.waitForAbort(1) or self.monitor.chkRestart():
                 self.log('_start, interrupted',xbmc.LOGINFO)

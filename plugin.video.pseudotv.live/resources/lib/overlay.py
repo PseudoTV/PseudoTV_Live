@@ -123,7 +123,9 @@ class Overlay():
 
 
     def _hasControl(self, control):
-        return control in self.controlManager
+        ctrl = self._getControl(control) is not None
+        self.log('_hasControl, %s = %s'%(control,ctrl))
+        return ctrl
         
 
     def _getControl(self, control):
@@ -139,17 +141,17 @@ class Overlay():
         
         
     def _delControl(self, control):
-        if self._hasControl(control):
-            self.controlManager.pop(control)
+        self.controlManager.pop(control)
         
         
     def _addControl(self, control):
         """ Create Control & Add to manager.
         """
         try:
-            self.log('_addControl, %s'%(control))
-            self.window.addControl(control)
-            self._setControl(control,self.setVisible(control, False))
+            if not self._hasControl(control):
+                self.log('_addControl, %s'%(control))
+                self.window.addControl(control)
+                self._setControl(control,self.setVisible(control, False))
         except Exception as e: self.log('_addControl failed! %s'%(e), xbmc.LOGERROR)
         
         
@@ -157,22 +159,26 @@ class Overlay():
         """ Remove Control & Delete from manager.
         """
         try:
-            self.log('_removeControl, %s'%(control))
-            self.window.removeControl(control)
-            self._delControl(control)
+            if self._hasControl(control):
+                self.log('_removeControl, %s'%(control))
+                self.window.removeControl(control)
+                self._delControl(control)
         except Exception as e: self.log('_removeControl failed! %s'%(e), xbmc.LOGERROR)
         
         
     def setImage(self, control, image, cache=True):
-        try: control.setImage(image, useCache=cache)
+        try: 
+            if self._hasControl(control):
+                control.setImage(image, useCache=cache)
         except Exception as e: self.log('setImage failed! %s'%(e), xbmc.LOGERROR)
         
         
     def setVisible(self, control, state):
         try:
-            self._setControl(control,state)
-            control.setVisible(state)
-            self.log('setVisible, %s = %s'%(control,state))
+            if self._hasControl(control):
+                self._setControl(control,state)
+                control.setVisible(state)
+                self.log('setVisible, %s = %s'%(control,state))
         except Exception('setVisible, failed! control does not exist'): pass
         return state
         
@@ -197,8 +203,9 @@ class Overlay():
             
 
     def close(self):
-        self.log('close')
-        self.cancelChannelBug()          
+        self.log('close')     
+        self.cancelOnNext()
+        self.cancelChannelBug()     
         self.setImage(self._channelBug,'None')
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
@@ -283,8 +290,9 @@ class Overlay():
             totalTime = int(self.playerTotTime)
             remaining = floor(self.player.getTimeRemaining())
             intTime   = roundupDIV(abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval),interval)
-            if remaining < intTime: return getOnNextInterval((interval + 1))
-            showTime  = remaining <= (intTime * interval)
+            if remaining < intTime:
+                return getOnNextInterval((interval + 1))
+            showTime  = remaining <= intTime
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showTime = %s'%(totalTime,interval,remaining,intTime,showTime))
             return showTime, intTime
 
@@ -302,29 +310,26 @@ class Overlay():
                 except: pass
                     
                 if state and showTime: 
-                    if not self._hasControl(self._onNext):
-                        self._addControl(self._onNext)
-                        self._onNext.setEnableCondition('[Player.Playing]')
                     try:
-                        nowItem = self.pvritem['broadcastnow'] # current item
-                        broadcastnext = self.pvritem['broadcastnext']
-                        self.pvritem['broadcastnow']  = broadcastnext.pop(0)
-                        self.pvritem['broadcastnext'] = broadcastnext
-                        nextitem = self.pvritem['broadcastnow']# upcoming items
+                        nowItem  = self.pvritem['broadcastnow']    # current item
+                        nextitem = self.pvritem['broadcastnext'][0]# upcoming items
                     except:
                         self.log('toggleOnNext, pvritem = %s failed! using playingItem\n%s'%(self.pvritem,self.player.playingItem))
                         nowItem  = self.player.playingItem.get('broadcastnow',{})       # current item
                         nextitem = self.player.playingItem.get('broadcastnext',[{}])[0] # upcoming items
-                        
+
+                    if not self._hasControl(self._onNext):
+                        self._addControl(self._onNext)
+                        self._onNext.setEnableCondition('[Player.Playing]')
+                                                
                     if nowItem and nextitem:
                         onNow  = '%s on %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.pvritem.get('label',ADDON_NAME))
                         onNext = '%s %s'%(nextitem['title'],'- %s'%(nextitem.get('episodename')) if nextitem.get('episodename') else '')
-                        
                         self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                         self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                         self._onNext.autoScroll(6000, 3000, 5000)
-                        playSFX(BING_WAV)
                         self.setVisible(self._onNext,True)
+                        playSFX(BING_WAV)
                 else: 
                     self.setVisible(self._onNext,False)
                 
