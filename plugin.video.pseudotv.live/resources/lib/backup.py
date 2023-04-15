@@ -106,7 +106,7 @@ class Backup:
                     self.channels.addChannel(citem)
                 else: 
                     self.channels.delChannel(citem)
-            return self.channels._save()
+            return self.channels.setChannels()
         return False
 
        

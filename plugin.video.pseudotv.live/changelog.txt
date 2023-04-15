@@ -7,6 +7,7 @@ v.0.4.2
 
 -Fixed Radio playback failing due to URL encoding.
 -Tweaked UpNext not creating new instance.
+-Fixed playback error introduced in the previous release.
 
 v.0.4.1
 -Improved Playback error detection.

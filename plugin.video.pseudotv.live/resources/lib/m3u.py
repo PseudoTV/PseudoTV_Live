@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+# https://github.com/kodi-pvr/pvr.iptvsimple#supported-m3u-and-xmltv-elements
 
 # -*- coding: utf-8 -*-
 
@@ -266,7 +267,7 @@ class M3U:
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
         mitem['logo']          = citem['logo']
         mitem['provider']      = ADDON_NAME
-        mitem['provider-type'] = 'local'
+        mitem['provider-type'] = 'addon'
         mitem['provider-logo'] = HOST_LOGO
         if idx is None:  self.M3UDATA.get('channels',[]).append(mitem)
         else:            self.M3UDATA.get('channels',[])[idx] = mitem # replace existing channel

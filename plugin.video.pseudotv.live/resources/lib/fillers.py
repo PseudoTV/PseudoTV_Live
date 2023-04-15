@@ -76,10 +76,10 @@ class Fillers:
             stop   = fileItem['stop']
             end    = abs(roundTimeUp(stop) - stop) #auto mode
             
-            print('duration',fileItem['duration'])
-            print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-            print('stop',datetime.datetime.fromtimestamp(stop))
-            print('end',end)
+            # print('duration',fileItem['duration'])
+            # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
+            # print('stop',datetime.datetime.fromtimestamp(stop))
+            # print('end',end)
             
             if ratings and self.bctTypes['ratings'].get('enabled',True):
                 mpaa = self.builder.cleanMPAA(fileItem.get('mpaa',''))
@@ -88,17 +88,17 @@ class Fillers:
                 if rating:
                     paths.insert(0,rating.get('file'))
                     end -= rating.get('duration')
-                    print('end ratings', end)
-                    print('mpaa',mpaa)  
-                    print('rating',rating) 
+                    # print('end ratings', end)
+                    # print('mpaa',mpaa)  
+                    # print('rating',rating) 
         
             if bumpers and self.bctTypes['bumpers'].get('enabled',True):
                 bumper = random.choice(bumpers)
                 paths.insert(0,bumper.get('file'))
                 end -= bumper.get('duration')
-                print('end bumper', end)
-                print('chname',chname)
-                print('bumper',bumper)
+                # print('end bumper', end)
+                # print('chname',chname)
+                # print('bumper',bumper)
         
         
         
@@ -208,7 +208,7 @@ class Fillers:
             # # commercials = bctItems.get('commercials',{}).get(chname.lower(),[])
             # # commercials.extend(bctItems.get('commercials',{}).get('root',[]))
             # # if isinstance(commercials,list) and len(commercials) > 0: random.shuffle(commercials)
-            # # print('commercials',commercials)
+            # # # print('commercials',commercials)
         # # else: 
             # # commercials = []
             # # auto_commercials = False
@@ -222,7 +222,7 @@ class Fillers:
             # # trailers.extend(bctItems.get('trailers',{}).get('root',[]))
             # # trailers.extend(self.buildLocalTrailers(citem, fileList))
             # # if isinstance(trailers,list) and len(trailers) > 0: random.shuffle(trailers)
-            # # print('trailers',trailers)
+            # # # print('trailers',trailers)
         # # else: 
             # # trailers = []
             # # auto_trailers = False
@@ -243,10 +243,10 @@ class Fillers:
                 # stop   = fileItem['stop']
                 # end    = abs(roundTimeUp(stop) - stop) #auto mode
                 
-                # print('duration',fileItem['duration'])
-                # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-                # print('stop',datetime.datetime.fromtimestamp(stop))
-                # print('end',end)
+                # # print('duration',fileItem['duration'])
+                # # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
+                # # print('stop',datetime.datetime.fromtimestamp(stop))
+                # # print('end',end)
                 
                 # #ratings (auto == 1)
                 # mpaa = cleanMPAA(fileItem.get('mpaa',''))
@@ -255,18 +255,18 @@ class Fillers:
                 # if rating:
                     # paths.insert(0,rating.get('file'))
                     # end -= rating.get('duration')
-                    # print('end ratings', end)
-                    # print('mpaa',mpaa)  
-                    # print('rating',rating) 
+                    # # print('end ratings', end)
+                    # # print('mpaa',mpaa)  
+                    # # print('rating',rating) 
                     
                 # #bumpers (auto == 1)
                 # if bumpers:
                     # bumper = random.choice(bumpers)
                     # paths.insert(0,bumper.get('file'))
                     # end -= bumper.get('duration')
-                    # print('end bumper', end)
-                    # print('chname',chname)
-                    # print('bumper',bumper)
+                    # # print('end bumper', end)
+                    # # print('chname',chname)
+                    # # print('bumper',bumper)
                     
                 # # CTItems = set()
                 # # cnt_commercials = 0
@@ -277,20 +277,20 @@ class Fillers:
                         # # commercial = random.choice(commercials)
                         # # CTItems.add(commercial.get('file'))
                         # # end -= commercial.get('duration')
-                        # # print('end commercial', end)
-                        # # print('commercial',commercial)
+                        # # # print('end commercial', end)
+                        # # # print('commercial',commercial)
                             
                 # #trailers
                 # # if trailers and not auto_trailers:
                     # # trailers_sel = random.sample(trailers, random.randint(min_trailers,max_trailers))
-                    # # print('trailers_sel',trailers_sel)
+                    # # # print('trailers_sel',trailers_sel)
                     # # for trailer in trailers_sel:
                         # # tfile = trailer.get('file')
                         # # # if tfile.startwith(tuple(VFS_TYPES)):
                         # # CTItems.add(tfile)
                         # # end -= trailer.get('duration')
-                        # # print('end trailer', end)
-                        # # print('trailer',trailer)
+                        # # # print('end trailer', end)
+                        # # # print('trailer',trailer)
                         
                 # # #auto fill POST_ROLL
                 # # if auto_commercials | auto_trailers:
@@ -298,26 +298,26 @@ class Fillers:
                         # # if self.writer.monitor.waitForAbort(0.5): 
                             # # self.log('injectBCTs, interrupted')
                             # # break
-                        # # print('autofill while loop',end)
+                        # # # print('autofill while loop',end)
                         # # stpos = end
                         # # if commercials and auto_commercials and cnt_commercials <= max_commercials:
                             # # commercial = random.choice(commercials)
                             # # CTItems.add(commercial.get('file'))
                             # # end -= commercial.get('duration')
-                            # # print('end commercial', end)
-                            # # print('commercial',commercial)
+                            # # # print('end commercial', end)
+                            # # # print('commercial',commercial)
                         
                         # # if trailers and auto_trailers and cnt_trailers <= max_trailers:
                             # # trailer = random.choice(trailers)
                             # # CTItems.add(trailer.get('file'))
                             # # end -= trailer.get('duration')
-                            # # print('end trailer', end)
-                            # # print('trailer',trailer)
+                            # # # print('end trailer', end)
+                            # # # print('trailer',trailer)
                             
                         # # if stpos == end: break #empty list
                         
                 # # CTItems = list(CTItems)
-                # # print('CTItems',CTItems)
+                # # # print('CTItems',CTItems)
                 # # if len(CTItems) > 0:
                     # # random.shuffle(CTItems)#shuffle, then random sample for increased diversity. 
                     # # paths.extend(random.sample(CTItems, len(CTItems)))
@@ -326,15 +326,15 @@ class Fillers:
                 # # #trailers, commercials do not match by chname, random.choice from list, for variation users change resource folder in adv. rules.
                 # # #trailers always incorporate local_trailers from the media in current fileList playlist.
                 
-                # # print('oPaths',oPaths)
-                # # print('paths',paths)
+                # # # print('oPaths',oPaths)
+                # # # print('paths',paths)
                     
                 # if oPaths != paths:
                     # fileItem['file'] = buildStack(paths)
                     # fileItem['stop'] = abs(roundTimeUp(stop) - abs(end))
                     # fileItem['duration'] = (datetime.datetime.fromtimestamp(fileItem['stop']) - datetime.datetime.fromtimestamp(fileItem['start'])).seconds
-                    # print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
-                    # print('fileItem',fileItem)
+                    # # print('end',end,'lstop',datetime.datetime.fromtimestamp(fileItem['stop']),'dur',fileItem['duration'])
+                    # # print('fileItem',fileItem)
 
             # lstop = fileItem['stop']  #new stop time, offset next start time.
             # nfileList.append(fileItem)
@@ -365,8 +365,8 @@ class Fillers:
                                 # bcts.setdefault(splitFilename(file)[0],[]).append(os.path.join(id,file))
                 # yield key,bcts
                 
-        # print('injectBCTs',self.builder.bctTypes)
-        # print('injectBCTs',dict(buildResourceType()))
+        # # print('injectBCTs',self.builder.bctTypes)
+        # # print('injectBCTs',dict(buildResourceType()))
        
         # {
             # 'ratings': [{

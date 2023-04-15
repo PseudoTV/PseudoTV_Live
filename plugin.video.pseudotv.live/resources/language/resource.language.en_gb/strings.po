@@ -62,7 +62,7 @@ msgid "Options"
 msgstr ""
 
 msgctxt "#30011"
-msgid "[COLOR=red][B]Warning!! [/B]Recommend Flash/SSD users change path to HDD or RAMDISK.[/COLOR]"
+msgid "[COLOR=red][B]Warning!! [/B]Recommend Flash/SSD users change path to HDD/RAMDISK.[/COLOR]"
 msgstr ""
 
 msgctxt "#30012"
@@ -422,7 +422,7 @@ msgid "Client Mode"
 msgstr ""
 
 msgctxt "#30101"
-msgid "Remote Server"
+msgid "Remote Path"
 msgstr ""
 
 msgctxt "#30102"
@@ -1030,7 +1030,7 @@ msgid "Playback failed! This maybe because %s is currently building this channel
 msgstr ""
 
 msgctxt "#32135"
-msgid "Canceling"
+msgid "Interrupted"
 msgstr ""
 
 
@@ -1041,40 +1041,44 @@ msgctxt "#33001"
 msgid "Only enable for short DEBUGGING sessions. The Kodi log will be spammed; You may experience poor system performance while enabled."
 msgstr ""
 
+msgctxt "#33002"
+msgid "AutoTune Video/Mixed/Music SmartPlaylists."
+msgstr ""
+
 msgctxt "#33003"
 msgid "AutoTune from Recommended (Supported) plugins installed on Kodi.\nSupport does not imply a relation between projects, PseudoTV is not responsible for the content provided by third-party plugins."
 msgstr ""
 
 msgctxt "#33004"
-msgid "AutoTune from Pre-defined TV Networks collected from your Kodi Library."
+msgid "AutoTune TV Networks collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33005"
-msgid "AutoTune from Pre-defined TV Shows collected from your Kodi Library."
+msgid "AutoTune TV Shows collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33006"
-msgid "AutoTune from Pre-defined TV Genres collected from your Kodi Library."
+msgid "AutoTune TV Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33007"
-msgid "AutoTune from Pre-defined Movie Genres collected from your Kodi Library."
+msgid "AutoTune Movie Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33008"
-msgid "AutoTune from Pre-defined Movie Studios collected from your Kodi Library."
+msgid "AutoTune Movie Studios collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33009"
-msgid "AutoTune from Pre-defined Mixed TV/Movie Genres collected from your Kodi Library."
+msgid "AutoTune Mixed TV/Movie Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33010"
-msgid "AutoTune from Pre-defined Mixed Miscellaneous Content collected from your Kodi Library."
+msgid "AutoTune Mixed content collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33011"
-msgid "AutoTune from Pre-defined Music Genres collected from your Kodi Library."
+msgid "AutoTune Music Genres collected from your Kodi Library."
 msgstr ""
 
 msgctxt "#33012"
@@ -1114,7 +1118,7 @@ msgid "Clear all Pre-defined selections and remove their channels."
 msgstr ""
 
 msgctxt "#33041"
-msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for all channels."
+msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel regardless of its Advanced Rules."
 msgstr ""
 
 msgctxt "#33042"
@@ -1130,7 +1134,7 @@ msgid "Select Color to apply to channel logo [#FFFFFFFF Default]"
 msgstr ""
 
 msgctxt "#33045"
-msgid "Display coming up next meta"
+msgid "Display On-Next information towards the end of a video.\nIf Playlist Playback & Up-Next service installed; support meta is provided."
 msgstr ""
 
 msgctxt "#33046"
@@ -1178,7 +1182,7 @@ msgid "Enter custom guide data categories, used by the channel manager."
 msgstr ""
 
 msgctxt "#33068"
-msgid "Allow the Holiday Seasonal Channel to advance nearest holiday within the month."
+msgid "Allow the Seasonal Holiday Channel to advance to the nearest holiday within its given month."
 msgstr ""
 
 msgctxt "#33070"
@@ -1214,7 +1218,7 @@ msgid "Only recommend you change port if a conflict exists."
 msgstr ""
 
 msgctxt "#33100"
-msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Path configure under options 'Centralized file location'."
+msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Folder configure under options 'Centralized file location'."
 msgstr ""
 
 msgctxt "#33104"
@@ -1229,12 +1233,16 @@ msgctxt "#33107"
 msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
 msgstr ""
 
-msgctxt "#33110"
+msgctxt "#33109"
 msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes on non-windows platforms.\nReducing number improves performance; while adding instability. [2000 Default]"
 msgstr ""
 
+msgctxt "#33110"
+msgid "Backup channel configurations & rules."
+msgstr ""
+
 msgctxt "#33111"
-msgid "Apply Diffuse Color channel bug."
+msgid "Apply diffuse color to channel bug regardless of non-monochromatic"
 msgstr ""
 
 msgctxt "#33112"

@@ -140,7 +140,7 @@ class Autotune:
                 citem['id']       = eitem.get('id')
                 citem['favorite'] = eitem.get('favorite')
             self.channels.addChannel(citem)
-        return self.channels._save()
+        return self.channels.setChannels()
        
 
     def run(self):  

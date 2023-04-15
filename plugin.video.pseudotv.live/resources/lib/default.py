@@ -31,12 +31,13 @@ def run(sysARG):
     radio   = (params.get("radio",'')               or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
 
-    if BUILTIN.getInfoBool('HasAddon(%s)'%(PVR_CLIENT),'System'):
-        if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'):
-            BUILTIN.executebuiltin('"EnableAddon(%s)'%(PVR_CLIENT))
-    else:
-        BUILTIN.executebuiltin('"InstallAddon(%s)'%(PVR_CLIENT))
-    
+    if DEBUG_ENABLED:
+        if BUILTIN.getInfoBool('HasAddon(%s)'%(PVR_CLIENT),'System'):
+            if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'):
+                BUILTIN.executebuiltin('"EnableAddon(%s)'%(PVR_CLIENT))
+        else:
+            BUILTIN.executebuiltin('"InstallAddon(%s)'%(PVR_CLIENT))
+        
     if mode == 'guide':
         BUILTIN.executebuiltin("Dialog.Close(all)") 
         BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s)"%(quoteString(SETTINGS.getCacheSetting('pseudopvr', default='pvr://channels/tv/'))))

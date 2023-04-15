@@ -106,9 +106,8 @@ class Library:
         for idx, type in enumerate(AUTOTUNE_TYPES):
             if self.service.monitor.chkInterrupt(0.001):
                 self.log('fillItems, interrupted')
-                forceUpdateTime('updateLibrary')
-                DIALOG.progressBGDialog(100,dia,LANGUAGE(32135))
                 break
+                
             with idleLocker():
                 dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 yield (type,fillItem(type))
@@ -136,9 +135,8 @@ class Library:
             dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
             if self.service.monitor.chkInterrupt(0.001): 
                 self.log('updateLibrary, interrupted')
-                forceUpdateTime('updateLibrary')
                 DIALOG.progressBGDialog(100,dia,LANGUAGE(32135))
-                break
+                return False
 
             items = libraryItems.get(type,[])
             enabledItems = self.getEnabled(type)
@@ -146,7 +144,8 @@ class Library:
             PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
             self.setLibrary(type, [_updateItem(item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
-
+        return True
+        
 
     @cacheit(json_data=True)
     def getNetworks(self):

@@ -23,7 +23,7 @@
             </group>
             <group id="2" label="">
 				<setting id="Backup_Channels" type="string" label="32110" help="33110">
-					<level>2</level>
+					<level>1</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -41,7 +41,7 @@
 					</control>
 				</setting>
 				<setting id="Recover_Channels" type="string" label="32107" help="33107" parent="Backup_Channels">
-					<level>2</level>
+					<level>1</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -64,7 +64,7 @@
         
 		<category id="autotune" label="30038" help="33038">
 			<group id="1" label="30038">
-				<setting id="Select_Playlists" type="string" label="30104" help="33009">
+				<setting id="Select_Playlists" type="string" label="30104" help="33002">
 					<level>0</level>
 					<default/>
 					<constraints>
@@ -700,7 +700,7 @@
 					<control type="toggle"/>
 				</setting>
                 <setting id="DIFFUSE_LOGO" type="string" label="30044" help="33044" parent="Enable_ChannelBug">
-                    <level>0</level>
+                    <level>1</level>
                     <default>FFFFFFFF</default>
                     <control type="colorbutton" />
                     <dependencies>
@@ -875,7 +875,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Enable_3D" type="boolean" label="30055" help="33055">
+				<setting id="Enable_3D" type="boolean" label="30055" help="30055">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -1002,7 +1002,7 @@
                         <close>true</close>
 					</control>
 				</setting>
-                <setting id="Network_Path" type="path" label="30102" help="" parent="Client_Mode">
+                <setting id="Network_Path" type="path" label="30102" help="30012" parent="Client_Mode">
 					<level>1</level>
                     <enable>false</enable>
 					<default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
@@ -1209,7 +1209,7 @@
 				</setting>	
 			</group>
 			<group id="5" label="30111">
-                <setting id="JSONRPC_Delay" type="integer" label="30110" help="33110">
+                <setting id="JSONRPC_Delay" type="integer" label="30110" help="33109">
 					<level>3</level>
 					<default>2000</default>
 					<constraints>

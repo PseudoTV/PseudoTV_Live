@@ -71,8 +71,8 @@ class Channels:
         return list([citem for citem in self.getChannels() if citem.get('type') == type])
 
 
-    def setChannels(self, channels=[]):
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
+    def setChannels(self):
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
         return self._save()
 
     
@@ -82,7 +82,7 @@ class Channels:
         
     def setImports(self, data=[]):
         self.channelDATA['imports'] = data
-        return self._save()
+        return self.setChannels()
         
         
     def getUUID(self):

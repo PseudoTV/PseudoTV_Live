@@ -124,9 +124,12 @@ class Producer():
         try:
             library = Library(service=self.service)
             library.importPrompt()
-            library.updateLibrary()
+            complete = library.updateLibrary()
             del library
-            if not hasAutotuned(): self.updateAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            if not complete: forceUpdateTime('updateLibrary')
+            else:
+                setFirstrun() #set init. boot status to true.
+                if not hasAutotuned(): self.updateAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
     
@@ -163,10 +166,10 @@ class Producer():
     def updateChannels(self):
         self.log('updateChannels')
         try:
-            builder = Builder(self.service)
-            builder.build()
+            builder  = Builder(self.service)
+            complete = builder.build()
             del builder
-            setFirstrun() #set init. boot status to true.
+            if not complete: forceUpdateTime('updateChannels') #clear run schedule
         except Exception as e: self.log('updateChannels failed! %s'%(e), xbmc.LOGERROR)
         
     

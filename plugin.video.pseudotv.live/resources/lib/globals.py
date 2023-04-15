@@ -223,12 +223,13 @@ def isBusy():
     return PROPERTIES.getPropertyBool('idleLocker')
   
 @contextmanager
-def idleLocker(set=False):
-    while not MONITOR.abortRequested() and PROPERTIES.getPropertyBool('idleLocker'):
+def idleLocker(state=False):
+    #only pause actions after init. firstrun
+    while not MONITOR.abortRequested() and isBusy() and hasFirstrun():
         if MONITOR.waitForAbort(0.001): break
     try: yield
     finally:
-        PROPERTIES.setPropertyBool('idleLocker',False)
+        setBusy(state)
 
 @contextmanager
 def busy_dialog():
@@ -263,6 +264,14 @@ def open_window():
     try: yield
     finally:
         PROPERTIES.setPropertyBool('openwindow',False)
+
+@contextmanager
+def pending_Playback():
+    if not PROPERTIES.getPropertyBool('pendingplayback'):
+        PROPERTIES.setPropertyBool('pendingplayback',True)
+    try: yield
+    finally:
+        PROPERTIES.setPropertyBool('pendingplayback',False)
 
 @contextmanager
 def fileLocker(globalFileLock):
@@ -681,13 +690,7 @@ def decodeWriter(text):
     
 def encodeWriter(writer, text):
     return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(text)))
-    
-def isOverlay():
-    return PROPERTIES.getPropertyBool('OVERLAY')
-    
-def setOverlay(state=True):
-    PROPERTIES.setPropertyBool('OVERLAY',state)
-        
+  
 def isBusyDialog():
     return (BUILTIN.getInfoBool('IsActive(busydialognocancel)','Window') | BUILTIN.getInfoBool('IsActive(busydialog)','Window'))
          

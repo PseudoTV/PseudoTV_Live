@@ -320,7 +320,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         channelProp = dumpJSON(channelData, sortkey=False)
         for key in list(self.channels.getTemplate().keys()):
             value = channelData.get(key)
-            print(key, value)
+            # print(key, value)
             if   key in ["number","type","logo","id","catchup"]: continue # keys to ignore, internal use only.
             elif isinstance(value,list): 
                 if   key == "group" :    value = ' / '.join(list(set(value)))
@@ -353,7 +353,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         args   = KEY_INPUT[key.lower()].get('args',())
         kwargs = KEY_INPUT[key.lower()].get('kwargs',{})
         retval, channelData = self.validateInput(key,func(*args,**kwargs),channelData)
-        print('itemInput',key, retval, channelData)
+        # print('itemInput',key, retval, channelData)
         if not retval is None:
             self.madeChanges = True
             if key in list(self.newChannel.keys()):
@@ -361,7 +361,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.log('itemInput, setting key = %s, value = %s'%(key,retval))
             elif key == 'clear':
                 channelData = retval
-        print(channelData)
+        # print(channelData)
         return channelData
    
    
@@ -627,7 +627,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
         for idx, citem in enumerate(difference):
-            print('citem',citem)
+            # print('citem',citem)
             pCount = int(((idx + 1)*100)//len(difference))
             if citem in self.channelList: 
                 self.channels.delChannel(citem)
@@ -651,7 +651,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def selectRuleItems(self, item):
         self.log('selectRuleItems')
-        print('selectRuleItems',item)
+        # print('selectRuleItems',item)
         channelData = loadJSON(item['item'].getProperty('channelData'))
         
         if item['position'] == 0:
@@ -663,7 +663,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         optionIDX = DIALOG.selectDialog(listitems,LANGUAGE(32072),multi=False)
 
         # ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) #all rule instances with channel settings applied
-        # print(ruleInstances)
+        # # print(ruleInstances)
 
         # if not append:
             # ruleInstances = channelRules.copy()
@@ -681,16 +681,16 @@ class Manager(xbmcgui.WindowXMLDialog):
             ruleSelect    = loadJSON(listitems[optionIDX].getProperty('rule'))
             ruleInstances = self.rules.buildRuleList([channelData]).get(channelData['id'],[]) # all rules
             ruleInstance  = [ruleInstance for ruleInstance in ruleInstances if ruleInstance.myId == ruleSelect.get('id')][0]
-            print(ruleSelect,ruleInstance)
+            # print(ruleSelect,ruleInstance)
         
             #todo create listitem using ruleInstance and rule.py action map.
             listitems     = [LISTITEMS.buildMenuListItem(ruleInstance.optionLabels[idx],str(ruleInstance.optionValues[idx]),iconImage=channelData.get("logo",''),url=str(ruleInstance.myId),propItem={'channelData':dumpJSON(channelData)}) for idx, label in enumerate(ruleInstance.optionLabels)]
             self.ruleList.addItems(listitems)
             
             # optionIDX    = DIALOG.selectDialog(listitems,LANGUAGE(30135),multi=False)
-            # print(ruleSelect)
+            # # print(ruleSelect)
             # ruleSelect['options'][str(optionIDX)].update({'value':ruleInstance.onAction(optionIDX)})
-            # print(ruleSelect)
+            # # print(ruleSelect)
             # self.selectRuleItems(channelData, rules, ruleSelect)
             
             
@@ -700,13 +700,13 @@ class Manager(xbmcgui.WindowXMLDialog):
         return item
         # if not self.validateChannel(channelData): return DIALOG.notificationDialog(LANGUAGE(32071))
         # listitems = self.buildRuleItems(channelData)
-        # print('selectRules listitems',[listitem.getLabel() for listitem in listitems],channelData)
+        # # print('selectRules listitems',[listitem.getLabel() for listitem in listitems],channelData)
         # self.toggleruleList(True)
         # self.ruleList.addItems(listitems)
         
         # select = DIALOG.selectDialog(listitems,LANGUAGE(30135),useDetails=True,multi=False)
         # if select is None: return DIALOG.notificationDialog(LANGUAGE(30001))
-        # print(listitems[select].getLabel())
+        # # print(listitems[select].getLabel())
         
         # self.ruleList.addItems(listitems)
         
@@ -742,7 +742,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def buildRuleListItem(self, data):
         ruleInstance, channelData = data
         rule = {'id':ruleInstance.myId,'name':ruleInstance.name,'description':ruleInstance.description,'labels':ruleInstance.optionLabels,'values':ruleInstance.optionValues,'title':ruleInstance.getTitle()}
-        print(rule)
+        # print(rule)
         prop = {'description':rule['description'],'rule':dumpJSON(rule),'channelData':dumpJSON(channelData),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
         return LISTITEMS.buildMenuListItem(rule['title'],rule['description'],iconImage=channelData.get("logo",''),url=str(rule['id']),propItem=prop)
 
@@ -898,7 +898,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.focusItems['number'] = self.focusItems['chanList']['citem']['number']
             else:
                 self.focusItems['number'] = channelPOS + 1
-            print('focusItems',self.focusItems)
+            # print('focusItems',self.focusItems)
             return self.focusItems
         except Exception as e:
             self.log('getFocusVARS failed! %s'%(e))

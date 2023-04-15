@@ -179,12 +179,12 @@ class Player(xbmc.Player):
 
 
     def toggleBackground(self,state=True):
-        if state:
+        if state and not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND'):
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, pvritem=self.playingItem)
-            conditions = not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND') & SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV
+            conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV
             if not conditions: return
             self.background.show()
-        else:
+        elif not state and PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND'):
             self.background.close()
             if self.isPlaying():
                 BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
@@ -202,7 +202,7 @@ class Monitor(xbmc.Monitor):
 
 
     def chkInterrupt(self, wait=0.001):
-        if (self.waitForAbort(wait) | self.pendingRestart | self.pendingChange): return True
+        if (self.pendingRestart | self.pendingChange): return True
         return False
         
         
@@ -224,11 +224,11 @@ class Monitor(xbmc.Monitor):
 
         
     def toggleOverlay(self, state):
-        if state and not isOverlay():
+        if state and not PROPERTIES.getPropertyBool('OVERLAY'):
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open(self.myService.player.playingItem)
-        elif not state and isOverlay():
+        elif not state and PROPERTIES.getPropertyBool('OVERLAY'):
             self.log("toggleOverlay, state = %s"%(state))
             self.myService.overlay.close()
 
@@ -338,7 +338,7 @@ class Service():
                 continue
                 
             isIdle = self.monitor.chkIdle()
-            if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+            if PROPERTIES.getPropertyBool('isLowPower'): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
             if not isClient(): self.producer._chkProcesses()
         self._stop()
             

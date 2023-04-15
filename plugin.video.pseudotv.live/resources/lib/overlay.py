@@ -190,10 +190,10 @@ class Overlay():
 
     def open(self, pvritem={}):
         self.log('open')
-        if isOverlay() or not pvritem: 
+        if PROPERTIES.getPropertyBool('OVERLAY') or not pvritem: 
             return self.close()
             
-        setOverlay(True)
+        PROPERTIES.setPropertyBool('OVERLAY',True)
         self.myPlayer        = Player(overlay=self)
         self.pvritem         = pvritem
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
@@ -211,7 +211,7 @@ class Overlay():
             self._removeControl(control)
 
         del self.myPlayer
-        setOverlay(False)
+        PROPERTIES.setPropertyBool('OVERLAY',False)
 
     
     def cancelChannelBug(self):
@@ -287,20 +287,23 @@ class Overlay():
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
             #split totalTime time into quarters, last quarter trigger nextup split by equal intervals of 3. 
-            totalTime = int(self.playerTotTime)
-            remaining = floor(self.player.getTimeRemaining())
-            intTime   = roundupDIV(abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval),interval)
+            totalTime  = int(self.playerTotTime)
+            remaining  = floor(self.player.getTimeRemaining())
+            showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
+            intTime    = roundupDIV(showTime,interval)
+            showOnNext = remaining <= showTime
+            
             if remaining < intTime:
-                return getOnNextInterval((interval + 1))
-            showTime  = remaining <= intTime
-            self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showTime = %s'%(totalTime,interval,remaining,intTime,showTime))
-            return showTime, intTime
+                return getOnNextInterval(interval + 1)
+
+            self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
+            return showOnNext, intTime
 
         if BUILTIN.getInfoBool('HasAddon(service.upnext)','System') and self.pvritem.get('isPlaylist',False):
             self.updateUpNext(self.pvritem)
         else:
             try:
-                showTime, intTime = getOnNextInterval()
+                showOnNext, intTime = getOnNextInterval()
                 wait   = {True:OVERLAY_DELAY,False:float(intTime)}[state]
                 nstate = not bool(state)
                 try: 
@@ -309,7 +312,7 @@ class Overlay():
                         self._onNextThread.join()
                 except: pass
                     
-                if state and showTime: 
+                if state and showOnNext: 
                     try:
                         nowItem  = self.pvritem['broadcastnow']    # current item
                         nextitem = self.pvritem['broadcastnext'][0]# upcoming items

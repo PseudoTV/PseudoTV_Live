@@ -82,6 +82,7 @@ class Builder:
     @timeit
     def build(self):
         self.log('build')
+        complete = True
         channels = sorted(self.verify(), key=lambda k: k['number'])
         if channels:
             now       = getLocalTime()
@@ -92,41 +93,41 @@ class Builder:
             for idx, channel in enumerate(channels):
                 if self.service.monitor.chkInterrupt():
                     self.log('build, interrupted')
-                    forceUpdateTime('updateChannels')
+                    complete = False
                     break
-                    
-                with idleLocker():
-                    channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
+                else:
+                    with idleLocker():
+                        channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
 
-                    #set global dialog.
-                    self.pName  = channel['name']
-                    self.pCount = int(idx*100//len(channels))
-                    if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
-                        self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                    elif stopTimes.get(channel['id']):
-                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:
-                        self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
-                    
-                    #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)', False:'In-Valid Channel (No guidedata)', list:'fileList (guidedata)'}
-                    cacheResponse = self.getFileList(channel, now, stopTimes.get(channel['id'],start))
-                    cacheResponse = self.runActions(RULES_ACTION_BUILD_STOP, channel, cacheResponse, inherited=self)
-                    if cacheResponse:
-                        if self.addChannelStation(channel): #create/update m3u/xmltv station entry.
-                            if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
-                                self.addChannelProgrammes(channel, cacheResponse) #create xmltv lineup entries.
-                    else: 
-                        self.pErrors.append(LANGUAGE(32026))
-                        chanErrors = ' | '.join(list(set(self.pErrors)))
-                        self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, channel['id'],self.pName))
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                        self.delChannelStation(channel)
-                        self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
+                        #set global dialog.
+                        self.pName  = channel['name']
+                        self.pCount = int(idx*100//len(channels))
+                        if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
+                            self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                        elif stopTimes.get(channel['id']):
+                            self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                        else:
+                            self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
+                        
+                        #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)', False:'In-Valid Channel (No guidedata)', list:'fileList (guidedata)'}
+                        cacheResponse = self.getFileList(channel, now, stopTimes.get(channel['id'],start))
+                        cacheResponse = self.runActions(RULES_ACTION_BUILD_STOP, channel, cacheResponse, inherited=self)
+                        if cacheResponse:
+                            if self.addChannelStation(channel): #create/update m3u/xmltv station entry.
+                                if isinstance(cacheResponse,list) and len(cacheResponse) > 0:
+                                    self.addChannelProgrammes(channel, cacheResponse) #create xmltv lineup entries.
+                        else: 
+                            self.pErrors.append(LANGUAGE(32026))
+                            chanErrors = ' | '.join(list(set(self.pErrors)))
+                            self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, channel['id'],self.pName))
+                            self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
+                            self.delChannelStation(channel)
+                            self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
 
             if not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
-            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025)))
+            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if complete else LANGUAGE(32135)))
             self.log('build, finished!')
-            return True
+            return complete
 
 
     def getProvisional(self, citem):
