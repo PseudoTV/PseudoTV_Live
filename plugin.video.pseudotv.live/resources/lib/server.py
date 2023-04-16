@@ -48,8 +48,11 @@ class Discovery:
         
         while not self.monitor.abortRequested():
             if isClient():
-                try: data, addr = sock.recvfrom(1024) #wait for a packet
-                except: pass
+                try:
+                    data, addr = sock.recvfrom(1024) #wait for a packet
+                except:
+                    data = ''
+                    
                 if data.startswith(ADDON_ID.encode()):
                     response = data[len(ADDON_ID):]
                     if response:

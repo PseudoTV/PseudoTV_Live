@@ -119,10 +119,7 @@ class Plugin:
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
         if not cacheResponse:
             pvritem = _match()
-            if not pvritem:
-                pvritem = {'channelid':'-1'}
-                pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
-                return self.playError(pvritem)
+            if not pvritem: return self.playError(pvritem)
                 
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
@@ -311,6 +308,9 @@ class Plugin:
         
 
     def playError(self, pvritem={}):
+        if not pvritem:
+            pvritem = {'channelid':'-1'}
+            pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
         PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),pvritem)
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('channelid','-1'),pvritem['playcount'],pvritem))
         if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
