@@ -202,7 +202,7 @@ class Monitor(xbmc.Monitor):
 
 
     def chkInterrupt(self, wait=0.001):
-        if (self.pendingRestart | self.pendingChange): return True
+        if (self.waitForAbort(wait) | self.pendingRestart | self.pendingChange): return True
         return False
         
         
@@ -338,7 +338,8 @@ class Service():
                 continue
                 
             isIdle = self.monitor.chkIdle()
-            if PROPERTIES.getPropertyBool('isLowPower'): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+            if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun():
+                setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
             if not isClient(): self.producer._chkProcesses()
         self._stop()
             

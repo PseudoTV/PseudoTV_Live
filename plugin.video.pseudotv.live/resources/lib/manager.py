@@ -562,11 +562,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 break
             elif not PLAYER.isPlaying():
                 continue
-                
-            if ((int(PLAYER.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
+            elif ((int(PLAYER.getTime()) > getTime) or BUILTIN.getInfoBool('SeekEnabled','Player')):
                 PLAYER.stop()
                 return True
-                
         PLAYER.stop()
         return False
 

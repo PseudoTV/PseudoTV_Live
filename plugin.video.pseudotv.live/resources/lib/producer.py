@@ -270,11 +270,12 @@ class Producer():
                 elif not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY:
                     self.log('runJSON, waiting for idle...')
                     break
-                runParam = params.pop(0)
-                if 'Files.GetDirectory' in runParam:
-                    self._que(JSONRPC().cacheJSON,4,runParam, **{'life':datetime.timedelta(days=28),'timeout':120})
                 else:
-                    self._que(JSONRPC().sendJSON,5,runParam)
+                    runParam = params.pop(0)
+                    if 'Files.GetDirectory' in runParam:
+                        self._que(JSONRPC().cacheJSON,4,runParam, **{'life':datetime.timedelta(days=28),'timeout':120})
+                    else:
+                        self._que(JSONRPC().sendJSON,5,runParam)
             queuePool['params'] = setDictLST(params)
             self.log('runJSON, remaining = %s'%(len(queuePool['params'])))
             SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)

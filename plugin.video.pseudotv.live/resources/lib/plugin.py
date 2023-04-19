@@ -89,7 +89,7 @@ class Plugin:
                                 return item.get('file')
             self.log('getCallback: _matchJSON, no callback found!\nresults = %s'%(results))
 
-        if isPlaylist or radio:
+        if (isPlaylist or radio) and len(self.sysARG) > 2:
             #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 
             #this breaks "pvr" should only apply to playlists, avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
             callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
@@ -137,18 +137,17 @@ class Plugin:
         return cacheResponse
 
 
-    def extendProgrammes(self, pvritem, limit=PAGE_LIMIT):
+    def extendProgrammes(self, pvritem):
         channelItem = {}
         def _parseBroadcast(broadcast={}):
             if broadcast.get('progresspercentage',0) > 0 and broadcast.get('progresspercentage',0) != 100:
                 channelItem['broadcastnow'] = broadcast
-            elif broadcast.get('progresspercentage',0) and len(channelItem.get('broadcastnext',[])) < limit:
+            elif broadcast.get('progresspercentage',0) == 0 and broadcast.get('progresspercentage',0) != 100:
                 channelItem.setdefault('broadcastnext',[]).append(broadcast)
         
         nextitems = self.jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{}))
         poolit(_parseBroadcast)(nextitems)
         nextitems = channelItem.get('broadcastnext',pvritem['broadcastnext'])
-        del nextitems[limit:]# list of upcoming items, truncate for speed.
         pvritem['broadcastnext'] = nextitems
         self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
         return pvritem
@@ -169,7 +168,6 @@ class Plugin:
             listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,False,isPlaylist)
             if pvritem:
-                found     = True
                 nowitem   = pvritem.get('broadcastnow',{})  # current item
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                 
@@ -204,6 +202,7 @@ class Plugin:
                     infoTag = ListItemInfoTag(liz, 'video')
                     infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
 
+                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
                 pvritem['broadcastnow']  = nowitem   # current item
                 pvritem['broadcastnext'] = nextitems # upcoming items
                 liz.setProperty('pvritem',dumpJSON(pvritem))
@@ -216,8 +215,8 @@ class Plugin:
                         self.channelPlaylist.add(lz.getPath(),lz,idx)
                     self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
                     if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-                    return PLAYER.play(self.channelPlaylist)
-
+                    PLAYER.play(self.channelPlaylist)
+                else: found = True
             else: return self.playError(pvritem)
             self.resolveURL(found, listitems[0])
 
@@ -240,21 +239,17 @@ class Plugin:
                         listitems = [LISTITEMS.buildItemListItem(item,media='music') for item in fileList]
                         for idx,lz in enumerate(listitems):
                             self.channelPlaylist.add(lz.getPath(),lz,idx)
-                            
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                         if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                         if PLAYER.isPlayingVideo(): PLAYER.stop()
-                        return PLAYER.play(self.channelPlaylist)
+                        PLAYER.play(self.channelPlaylist)
             else: return self.playError(pvritem)
             self.resolveURL(False, xbmcgui.ListItem())
 
 
     def contextPlay(self, writer={}, isPlaylist=False):
-        found     = False
         listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
-
         if writer.get('citem',{}): 
-            found   = True
             citem   = writer.get('citem')
             pvritem = self.matchChannel(citem.get('name'),citem.get('id'),False,isPlaylist)
             self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
@@ -285,6 +280,7 @@ class Plugin:
                     infoTag = ListItemInfoTag(liz, 'video')
                     infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
                     
+                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
                 pvritem['broadcastnow']  = nowitem   # current item
                 pvritem['broadcastnext'] = nextitems # upcoming items
                 liz.setProperty('pvritem',dumpJSON(pvritem))
@@ -297,14 +293,12 @@ class Plugin:
                 
             for idx,lz in enumerate(listitems):
                 path = lz.getPath()
-                self.channelPlaylist.add(lz.getPath(),lz,idx)
-                
+                self.channelPlaylist.add(lz.getPath(),lz,idx)                
             PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
             self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
             if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            return PLAYER.play(self.channelPlaylist)
+            PLAYER.play(self.channelPlaylist)
         else: return DIALOG.notificationDialog(LANGUAGE(32000))
-        self.resolveURL(found, listitems[0])
         
 
     def playError(self, pvritem={}):

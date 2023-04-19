@@ -88,7 +88,8 @@ class Builder:
             now       = getLocalTime()
             start     = roundTimeDown(getLocalTime(),offset=60)#offset time to start bottom of the hour
             stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
-
+            
+            self.pMSG    = ''
             self.pDialog = DIALOG.progressBGDialog()
             for idx, channel in enumerate(channels):
                 if self.service.monitor.chkInterrupt():
@@ -124,7 +125,7 @@ class Builder:
                             self.delChannelStation(channel)
                             self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
 
-            if not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
+            if complete and not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if complete else LANGUAGE(32135)))
             self.log('build, finished!')
             return complete
@@ -405,16 +406,16 @@ class Builder:
             elif len(dirList) == 0:
                 self.log('buildFileList, no more folders to parse')
                 break
-                
-            with idleLocker():
-                dir = dirList.pop(0)
-                try: 
-                    if fileList[0] == {}: fileList.pop(0)
-                except: fileList = []
-                subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, filter, limits, dir)
-                fileList += subfileList
-                dirList = setDictLST(subdirList + dirList)
-                self.log('buildFileList, parsing %s, fileList = %s'%(dir.get('file'),len(fileList)))
+            else:
+                with idleLocker():
+                    dir = dirList.pop(0)
+                    try: 
+                        if fileList[0] == {}: fileList.pop(0)
+                    except: fileList = []
+                    subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, filter, limits, dir)
+                    fileList += subfileList
+                    dirList = setDictLST(subdirList + dirList)
+                    self.log('buildFileList, parsing %s, fileList = %s'%(dir.get('file'),len(fileList)))
         try: 
             if fileList[0] == {}: fileList.pop(0)
         except: fileList = []

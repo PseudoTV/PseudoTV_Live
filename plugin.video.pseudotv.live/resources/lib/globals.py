@@ -225,7 +225,7 @@ def isBusy():
 @contextmanager
 def idleLocker(state=False):
     #only pause actions after init. firstrun
-    while not MONITOR.abortRequested() and isBusy() and hasFirstrun():
+    while not MONITOR.abortRequested() and isBusy():
         if MONITOR.waitForAbort(0.001): break
     try: yield
     finally:
@@ -282,10 +282,10 @@ def fileLocker(globalFileLock):
         globalFileLock.close()
 
 def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
+    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-    
+
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()

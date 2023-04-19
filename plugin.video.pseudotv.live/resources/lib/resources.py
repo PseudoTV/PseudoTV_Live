@@ -74,19 +74,18 @@ class Resources:
                 if MONITOR.waitForAbort(0.001): 
                     self.log('getLogoResources, interrupted')
                     break
-                    
-                if not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
+                elif not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
                     self.log('getLogoResources, missing %s'%(id))
                     continue
-                    
-                self.log('getLogoResources, checking %s'%(id))
-                paths = self.walkResource(id)
-                for path in paths:
-                    for image in paths[path]:
-                        name, ext = os.path.splitext(image)
-                        if self.matchName(chname, name):
-                            self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
-                            return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                else:
+                    self.log('getLogoResources, checking %s'%(id))
+                    paths = self.walkResource(id)
+                    for path in paths:
+                        for image in paths[path]:
+                            name, ext = os.path.splitext(image)
+                            if self.matchName(chname, name):
+                                self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
+                                return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
         return cacheResponse
         
         
@@ -136,10 +135,10 @@ class Resources:
         for idx, dir in enumerate(dirs): 
             if MONITOR.waitForAbort(0.001): 
                 self.log('walkDirectory, interrupted')
-                return
-                
-            self.log('walkDirectory, walking %s/%s directory'%(idx,len(dirs)))
-            walk.update(self.walkDirectory(os.path.join(path, dir),exts,checksum))
+                break
+            else:
+                self.log('walkDirectory, walking %s/%s directory'%(idx,len(dirs)))
+                walk.update(self.walkDirectory(os.path.join(path, dir),exts,checksum))
         return walk
             
 

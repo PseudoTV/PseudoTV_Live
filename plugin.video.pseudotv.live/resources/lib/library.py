@@ -75,6 +75,7 @@ class Library:
         
         
     def setLibrary(self, type, data=[]):
+        self.log('setLibrary')
         self.libraryDATA['library'][type] = data
         SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(data)))
         return self._save()
@@ -104,10 +105,10 @@ class Library:
                 
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service.monitor.chkInterrupt(0.001):
+            if self.service.monitor.chkInterrupt():
                 self.log('fillItems, interrupted')
                 break
-                
+            
             with idleLocker():
                 dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 yield (type,fillItem(type))
@@ -116,15 +117,15 @@ class Library:
     @timeit
     def updateLibrary(self):
         self.log('updateLibrary')
-        def _updateItem(item):
+        def _updateItem(type,item):
             entry = TYPE_TEMP.copy()
             entry.update(item)
             #check existing library for enabled items
-            for item in enabledItems:
+            for item in self.getEnabled(type):
                 if entry.get('name').lower() == item.get('name').lower():
                     entry['enabled'] = True
             #check existing channels for enabled items
-            for channel in channels:
+            for channel in self.channels.getType(type):
                 if entry.get('name').lower() == channel.get('name').lower():
                     entry['enabled'] = True
             return entry
@@ -133,16 +134,13 @@ class Library:
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
-            if self.service.monitor.chkInterrupt(0.001): 
+            if self.service.monitor.chkInterrupt(): 
                 self.log('updateLibrary, interrupted')
-                DIALOG.progressBGDialog(100,dia,LANGUAGE(32135))
-                return False
-
-            items = libraryItems.get(type,[])
-            enabledItems = self.getEnabled(type)
-            channels = self.channels.getType(type)
-            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
-            self.setLibrary(type, [_updateItem(item) for item in items])
+                break
+            else:
+                items = libraryItems.get(type,[])
+                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
+                self.setLibrary(type, [_updateItem(type,item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
         return True
         

@@ -23,7 +23,19 @@ from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
-
+            
+def delServerSettings():
+    SETTINGS.setSetting('Remote_URL'  ,'')
+    SETTINGS.setSetting('Remote_M3U'  ,'')
+    SETTINGS.setSetting('Remote_XMLTV','')
+    SETTINGS.setSetting('Remote_GENRE','')
+                     
+def setServerSettings(host):
+    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(host))
+    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(host,M3UFLE))
+    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(host,XMLTVFLE))
+    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(host,GENREFLE))
+       
 class Discovery:
     isRunning = False
     

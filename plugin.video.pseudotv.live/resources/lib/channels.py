@@ -86,7 +86,7 @@ class Channels:
         
         
     def getUUID(self):
-        return (self.channelDATA.get('uuid','') or self.getMYUUID())
+        return (self.channelDATA.get('uuid','') or getMYUUID())
         
         
     def setUUID(self, data=[]):
