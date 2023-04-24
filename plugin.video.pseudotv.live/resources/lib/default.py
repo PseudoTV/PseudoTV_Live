@@ -40,7 +40,7 @@ def run(sysARG):
         
     if mode == 'guide':
         BUILTIN.executebuiltin("Dialog.Close(all)") 
-        BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s)"%(quoteString(SETTINGS.getCacheSetting('pseudopvr', default='pvr://channels/tv/'))))
+        BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s,return)"%(quoteString(PROPERTIES.getProperty('ptvlkodipath') or 'pvr://channels/tv/')))
     elif mode == 'settings': 
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
     elif mode == 'vod': 

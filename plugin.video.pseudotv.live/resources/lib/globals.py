@@ -739,19 +739,7 @@ def chkDiscovery(servers, forced=False):
         setServerSettings(server) #set server host paths.
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
-            
-def delServerSettings():
-    SETTINGS.setSetting('Remote_URL'  ,'')
-    SETTINGS.setSetting('Remote_M3U'  ,'')
-    SETTINGS.setSetting('Remote_XMLTV','')
-    SETTINGS.setSetting('Remote_GENRE','')
-                     
-def setServerSettings(host):
-    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(host))
-    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(host,M3UFLE))
-    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(host,XMLTVFLE))
-    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(host,GENREFLE))
-       
+
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]

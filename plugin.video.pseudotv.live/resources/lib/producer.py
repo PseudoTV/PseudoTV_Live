@@ -80,30 +80,25 @@ class Producer():
     def _chkFiles(self):
         #check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun():
-            files = {LIBRARYFLEPATH:self.updateLibrary, #"Library"
-                     CHANNELFLEPATH:self.updateChannels,#"Channels"
-                     M3UFLEPATH    :self.updateChannels,#"M3U"
-                     XMLTVFLEPATH  :self.updateChannels,#"XMLTV"
-                     GENREFLEPATH  :self.updateChannels}#"Genre"
-                     
-            actions = []
-            for file in list(files.keys()):
-                if not FileAccess.exists(file):
-                    actions.append(files.get(file))
-            for action in list(set(actions)):
-                self._que(action,2)
-        
+            fileTasks = [{'files':[CHANNELFLEPATH,M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH],'action':self.updateChannels,'priority':3},
+                         {'files':[LIBRARYFLEPATH],'action':self.updateLibrary,'priority':2}]
+            for task in fileTasks:
+                for file in task.get('files',[]):
+                    if not FileAccess.exists(file):
+                        self._que(task['action'],task['priority'])
+                        break
+                        
 
-    def _chkProcesses(self):
-        #main function to handle all scheduled ques. 
+    def _taskManager(self):
+        #main function to handle all scheduled queues. 
+        if self.chkUpdateTime('updateSettings',3600):
+            self._que(self.updateSettings,1)
         if self.chkUpdateTime('chkFiles',300):
             self._que(self._chkFiles,2)
         if self.chkUpdateTime('updateRecommended',300):
             self._que(self.updateRecommended,2)
         if self.chkUpdateTime('updateLibrary',(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
             self._que(self.updateLibrary,2)
-        if self.chkUpdateTime('updateSettings',3600):
-            self._que(self.updateSettings,2)
         if self.chkUpdateTime('updateChannels',3600):
             self._que(self.updateChannels,3)
         if self.chkUpdateTime('updateJSON',600):
@@ -273,7 +268,7 @@ class Producer():
                 else:
                     runParam = params.pop(0)
                     if 'Files.GetDirectory' in runParam:
-                        self._que(JSONRPC().cacheJSON,4,runParam, **{'life':datetime.timedelta(days=28),'timeout':120})
+                        self._que(JSONRPC().cacheJSON,2,runParam, **{'life':datetime.timedelta(days=28),'timeout':90})
                     else:
                         self._que(JSONRPC().sendJSON,5,runParam)
             queuePool['params'] = setDictLST(params)

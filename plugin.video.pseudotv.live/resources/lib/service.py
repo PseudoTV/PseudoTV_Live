@@ -179,6 +179,7 @@ class Player(xbmc.Player):
 
 
     def toggleBackground(self,state=True):
+        self.log('toggleBackground, state = %s'%(state))
         if state and not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND'):
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, pvritem=self.playingItem)
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV
@@ -224,12 +225,12 @@ class Monitor(xbmc.Monitor):
 
         
     def toggleOverlay(self, state):
+        self.log("toggleOverlay, state = %s"%(state))
         if state and not PROPERTIES.getPropertyBool('OVERLAY'):
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open(self.myService.player.playingItem)
         elif not state and PROPERTIES.getPropertyBool('OVERLAY'):
-            self.log("toggleOverlay, state = %s"%(state))
             self.myService.overlay.close()
 
 
@@ -307,9 +308,7 @@ class Service():
     def __init__(self):
         self.log('__init__')
         DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
-        
-        if self.player.isPlaying(): #if playback already in-progress run onAVStarted tasks.
-            self.player.onAVStarted()
+        if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
             
         self.monitor.pendingRestart = False
         self.producer = Producer(service=self)
@@ -336,12 +335,10 @@ class Service():
             elif self.monitor.isSettingsOpened():
                 self.monitor.pendingChange = True
                 continue
-                
-            isIdle = self.monitor.chkIdle()
-            if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun():
-                setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
-            if not isClient(): self.producer._chkProcesses()
-        self._stop()
+            else:
+                isIdle = self.monitor.chkIdle()
+                if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building while low power devices are in use/not idle.
+                if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
             
         
     def _stop(self):

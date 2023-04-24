@@ -64,10 +64,9 @@ class Plugin:
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.lower().startswith(quoteString(dir.lower())):
-                        pvrPath = os.path.join(pvrRoot,result)
-                        SETTINGS.setCacheSetting('pseudopvr', pvrPath)
-                        self.log('getCallback: _matchVFS, found dir = %s'%(pvrPath))
-                        response = self.jsonRPC.walkListDirectory(pvrPath,append_path=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
+                        PROPERTIES.setProperty('ptvlkodipath', os.path.join(pvrRoot,result))
+                        self.log('getCallback: _matchVFS, found dir = %s'%(os.path.join(pvrRoot,result)))
+                        response = self.jsonRPC.walkListDirectory(os.path.join(pvrRoot,result),append_path=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
                         for pvr in response:
                             if pvr.lower().endswith('%s.pvr'%(id)):
                                 self.log('getCallback: _matchVFS, found file = %s'%(pvr))
@@ -80,7 +79,7 @@ class Plugin:
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
-                        SETTINGS.setCacheSetting('pseudopvr', result.get('file'))
+                        PROPERTIES.setProperty('ptvlkodipath', result.get('file'))
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
                         response = self.jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
                         for item in response:

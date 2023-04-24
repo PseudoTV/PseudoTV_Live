@@ -43,7 +43,7 @@ class Background(xbmcgui.WindowXML):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.player     = kwargs.get('player')
         self.pvritem    = kwargs.get('pvritem',{})
-        self.myPlayer   = Player(background=self)
+        self.myPlayer   = MYPlayer(background=self)
         self.runActions = RulesList().runActions
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
@@ -63,7 +63,7 @@ class Background(xbmcgui.WindowXML):
         except: pass
         
 
-class Player(xbmc.Player):
+class MYPlayer(xbmc.Player):
     def __init__(self, overlay=None, background=None):
         xbmc.Player.__init__(self)
         self.overlay    = overlay
@@ -192,7 +192,7 @@ class Overlay():
             return self.close()
             
         PROPERTIES.setPropertyBool('OVERLAY',True)
-        self.myPlayer        = Player(overlay=self)
+        self.myPlayer        = MYPlayer(overlay=self)
         self.pvritem         = pvritem
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
@@ -285,7 +285,7 @@ class Overlay():
     def toggleOnNext(self, state=True):
         def getOnNextInterval(interval=3):
             #split totalTime time into quarters, last quarter trigger nextup split by equal intervals of 3. 
-            totalTime  = int(int(self.overlay.player.getPlayerTime()))
+            totalTime  = int(int(self.player.getPlayerTime()))
             remaining  = floor(self.player.getTimeRemaining())
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
@@ -324,8 +324,8 @@ class Overlay():
                         self._onNext.setEnableCondition('[Player.Playing]')
                                                 
                     if nowItem and nextItem:
-                        onNow  = '%s on %s'%('%s %s'%(nowItem['title'],'- %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.pvritem.get('label',ADDON_NAME))
-                        onNext = '%s %s'%(nextItem['title'],'- %s'%(nextItem.get('episodename')) if nextItem.get('episodename') else '')
+                        onNow  = '%s on %s'%('%s%s'%(nowItem['title'],' - %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.pvritem.get('label',ADDON_NAME))
+                        onNext = '%s%s'%(nextItem['title'],' - %s'%(nextItem.get('episodename')) if nextItem.get('episodename') else '')
                         self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                         self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                         self._onNext.autoScroll(6000, 3000, 5000)
@@ -353,7 +353,7 @@ class Overlay():
         self.log('updateUpNext')
         try:
             # https://github.com/im85288/service.upnext/wiki/Example-source-code
-            data            = {"notification_time": 600}
+            data            = dict()
             nowItem         = decodeWriter(playingItem['broadcastnow'].get('writer',{}))       
             current_episode = {"current_episode":{"episodeid" :(nowItem.get("id"           ,"") or ""),
                                                   "tvshowid"  :(nowItem.get("tvshowid"     ,"") or ""),
