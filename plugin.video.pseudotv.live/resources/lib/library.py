@@ -129,20 +129,22 @@ class Library:
                 if entry.get('name').lower() == channel.get('name').lower():
                     entry['enabled'] = True
             return entry
-            
+           
+        complete = True 
         libraryItems = dict(self.fillItems())
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
             if self.service.monitor.chkInterrupt(): 
                 self.log('updateLibrary, interrupted')
+                complete = False
                 break
             else:
                 items = libraryItems.get(type,[])
                 PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
                 self.setLibrary(type, [_updateItem(type,item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
-        return True
+        return complete
         
 
     @cacheit(json_data=True)

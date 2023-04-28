@@ -42,7 +42,7 @@ from globals     import *
         
 class RulesList:
     def __init__(self):  
-        self.log('__init__')
+        ...
         # self.channels = ChannelList()
         # self.ruleList = [BaseRule(),
                          # ShowChannelBug(),

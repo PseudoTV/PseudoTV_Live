@@ -721,10 +721,10 @@ def setClient(state=False,silent=True):
     PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
            
 def getDiscovery():
-    return loadJSON(PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.SERVER_DISCOVERY'))
+    return PROPERTIES.getPropertyDict('SERVER_DISCOVERY')
 
-def setDiscovery(servers):
-    return PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.SERVER_DISCOVERY',dumpJSON(servers))
+def setDiscovery(servers={}):
+    return PROPERTIES.setPropertyDict('SERVER_DISCOVERY',servers)
 
 def chkDiscovery(servers, forced=False):
     def setResourceSettings(settings):
@@ -739,7 +739,19 @@ def chkDiscovery(servers, forced=False):
         setServerSettings(server) #set server host paths.
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
-
+            
+def delServerSettings():
+    SETTINGS.setSetting('Remote_URL'  ,'')
+    SETTINGS.setSetting('Remote_M3U'  ,'')
+    SETTINGS.setSetting('Remote_XMLTV','')
+    SETTINGS.setSetting('Remote_GENRE','')
+                     
+def setServerSettings(host):
+    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(host))
+    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(host,M3UFLE))
+    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(host,XMLTVFLE))
+    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(host,GENREFLE))
+       
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
@@ -770,3 +782,9 @@ def isLowPower():
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
 
+def debugNotification():
+    if SETTINGS.getSettingBool('Enable_Debugging'):
+        if DIALOG.yesnoDialog('Debugging is enabled\nIt''s recommend you disable debugging when applicable.\nWould you like disable debugging now?',autoclose=90):
+            SETTINGS.setSettingBool('Enable_Debugging',False)
+            DIALOG.notificationDialog('%s %s'%('Setting Disabled',LANGUAGE(32025)))
+            

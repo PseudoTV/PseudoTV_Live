@@ -42,8 +42,6 @@ class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.player     = kwargs.get('player')
-        self.pvritem    = kwargs.get('pvritem',{})
-        self.myPlayer   = MYPlayer(background=self)
         self.runActions = RulesList().runActions
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
@@ -55,19 +53,18 @@ class Background(xbmcgui.WindowXML):
     def onInit(self):
         self.log('onInit')
         try:
-            self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
-            self.runActions(RULES_ACTION_OVERLAY, self.pvritem.get('citem',{}), inherited=self)
+            self.showStatic = SETTINGS.getSettingBool("Static_Overlay")#temp remove when rules finished.
+            self.runActions(RULES_ACTION_OVERLAY, self.player.pvritem.get('citem',{}), inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
-            self.getControl(40002).setImage(self.pvritem.get('icon',COLOR_LOGO))
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.pvritem.get('label',ADDON_NAME)))
-        except: pass
+            self.getControl(40002).setImage(self.player.pvritem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or COLOR_LOGO)))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.player.pvritem.get('label',ADDON_NAME)))
+        except: self.close()
         
 
 class MYPlayer(xbmc.Player):
-    def __init__(self, overlay=None, background=None):
+    def __init__(self, overlay):
         xbmc.Player.__init__(self)
-        self.overlay    = overlay
-        self.background = background
+        self.overlay = overlay
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -76,9 +73,8 @@ class MYPlayer(xbmc.Player):
 
     def onAVStarted(self):
         self.log('onAVStarted')
-        if self.overlay:
-            self.overlay.toggleBug()
-            self.overlay.toggleOnNext()
+        self.overlay.toggleBug()
+        self.overlay.toggleOnNext()
             
 
     def onPlayBackStopped(self):
@@ -88,12 +84,10 @@ class MYPlayer(xbmc.Player):
 
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded')
-        if self.overlay:
-            self.overlay.close()
+        self.overlay.close()
 
 
 class Overlay():
-    pvritem        = {}
     controlManager = dict()
     runActions = RulesList().runActions
     
@@ -186,18 +180,18 @@ class Overlay():
         except: return (self._getControl(control) or False)
         
 
-    def open(self, pvritem={}):
+    def open(self):
         self.log('open')
-        if PROPERTIES.getPropertyBool('OVERLAY') or not pvritem: 
+        if PROPERTIES.getPropertyBool('OVERLAY') or not self.player.isPseudoTV: 
             return self.close()
             
         PROPERTIES.setPropertyBool('OVERLAY',True)
-        self.myPlayer        = MYPlayer(overlay=self)
-        self.pvritem         = pvritem
+        self.myPlayer = MYPlayer(overlay=self)
+        self.myPlayer.onAVStarted()
+        
         self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
-        self.runActions(RULES_ACTION_OVERLAY, self.pvritem.get('citem',{}), inherited=self)
-        self.myPlayer.onAVStarted()
+        self.runActions(RULES_ACTION_OVERLAY, self.player.pvritem.get('citem',{}), inherited=self)
             
 
     def close(self):
@@ -256,8 +250,7 @@ class Overlay():
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
-                if self.player.isPseudoTV: logo = self.pvritem.get('icon',LOGO)
-                else:                      logo = ''#(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO)
+                logo = self.player.pvritem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 self.setImage(self._channelBug,logo)
                 
@@ -297,8 +290,8 @@ class Overlay():
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
             return showOnNext, intTime
 
-        if BUILTIN.getInfoBool('HasAddon(service.upnext)','System') and self.pvritem.get('isPlaylist',False):
-            self.updateUpNext(self.pvritem)
+        if BUILTIN.getInfoBool('HasAddon(service.upnext)','System') and self.player.pvritem.get('isPlaylist',False):
+            self.updateUpNext(self.player.pvritem)
         else:
             try:
                 showOnNext, intTime = getOnNextInterval()
@@ -312,19 +305,18 @@ class Overlay():
                     
                 if state and showOnNext: 
                     try:
-                        nowItem  = (self.pvritem.get('broadcastnow')  or {})      # current item
-                        nextItem = (self.pvritem.get('broadcastnext') or [{}])[0] # upcoming items
+                        nowItem  = (self.player.pvritem.get('broadcastnow')  or {})      # current item
+                        nextItem = (self.player.pvritem.get('broadcastnext') or [{}])[0] # upcoming items
                     except:
-                        self.log('toggleOnNext, pvritem = %s failed! using playingItem\n%s'%(self.pvritem,self.player.playingItem))
-                        nowItem  = (self.player.playingItem.get('broadcastnow')  or {})      # current item
-                        nextItem = (self.player.playingItem.get('broadcastnext') or [{}])[0] # upcoming items
+                        self.log('toggleOnNext, pvritem = %s failed!'%(self.player.pvritem))
+                        return
 
                     if not self._hasControl(self._onNext):
                         self._addControl(self._onNext)
                         self._onNext.setEnableCondition('[Player.Playing]')
                                                 
                     if nowItem and nextItem:
-                        onNow  = '%s on %s'%('%s%s'%(nowItem['title'],' - %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.pvritem.get('label',ADDON_NAME))
+                        onNow  = '%s on %s'%('%s%s'%(nowItem['title'],' - %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.player.pvritem.get('label',ADDON_NAME))
                         onNext = '%s%s'%(nextItem['title'],' - %s'%(nextItem.get('episodename')) if nextItem.get('episodename') else '')
                         self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                         self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])

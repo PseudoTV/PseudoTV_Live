@@ -234,8 +234,7 @@ class Plugin:
                     fileList = [self.jsonRPC.requestList(pvritem['citem'], path, 'music', page=RADIO_ITEM_LIMIT) for path in pvritem['citem'].get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
                     fileList = list(interleave(fileList))
                     if len(fileList) > 0:
-                        randomShuffle(fileList)
-                        listitems = [LISTITEMS.buildItemListItem(item,media='music') for item in fileList]
+                        listitems = [LISTITEMS.buildItemListItem(item,media='music') for item in randomShuffle(fileList)]
                         for idx,lz in enumerate(listitems):
                             self.channelPlaylist.add(lz.getPath(),lz,idx)
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))

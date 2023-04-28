@@ -213,8 +213,8 @@ class Settings:
         self._setSetting(self.getRealSettings().setSetting,key,value)
             
             
-    def setSettingBool(self, key, value):  
-        self.setSetting(key,value.lower())
+    def setSettingBool(self, key, value):
+        self.setSetting(key,value)
         
                       
     def setSettingBoolList(self, key, value):
@@ -317,7 +317,7 @@ class Properties:
 
     def getProperty(self, key):
         value = self.window.getProperty(self.getKey(key))
-        # self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
+        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         return value
         
         
@@ -359,7 +359,7 @@ class Properties:
         
     def setProperty(self, key, value):
         if not isinstance(value,str): value = str(value)
-        # self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
+        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         self.window.setProperty(self.getKey(key), value)
         return True
 

@@ -19,9 +19,7 @@
 #adapted from https://github.com/sualfred/script.embuary.helper/blob/matrix
 
 from globals     import *
-
-# https://www.holidaysmart.com/holidays/daily/fandom
-# https://www.holidaysmart.com/holidays/daily/tv-movies
+# from seasons     import *
 
 SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                    ,'tagline':''                                             ,'keyword':'newyear' ,'types':['movie','tvshow'],'method':{"tvshow":"random" ,"movie":"random"},"operator":"contains",'fields':['title']                            , 'logo':'https://png.pngtree.com/png-vector/20191027/ourmid/pngtree-happy-new-year-text-png-image_1859009.jpg'},
                          2: {'name':'Science Fiction Week'                     ,'tagline':''                                             ,'keyword':'scifiday','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['genre']                            , 'logo':'http://static1.squarespace.com/static/552d143de4b09906febc898c/t/553231dee4b047c173d7b2f1/1429352959406/SFword_RGB_Y.png?format=1500w'},
@@ -44,7 +42,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                    ,
                          2: {'name':'Anime Week'                               ,'tagline':''                                             ,'keyword':'anime'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre']             , 'logo':'https://www.pikpng.com/pngl/m/225-2258809_anime-logo-png-dj-anime-logo-clipart.png'},
                          3: {'name':'Shakespeare Week'                         ,'tagline':'“Non Sans Droict“'                            ,'keyword':'othello' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre']             , 'logo':'https://w7.pngwing.com/pngs/756/980/png-transparent-hamlet-shakespeare-s-handwriting-romeo-and-juliet-shakespeare-s-r-j-macbeth-others.png'},
                          4: {'name':'Alien Week'                               ,'tagline':'“In space, no one can hear you scream.“'      ,'keyword':'aliens'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title']                            , 'logo':'https://www.clipartmax.com/png/middle/133-1336219_alien-movie-logo-png.png'},
-                         5: {'name':'Superhero Week'                           ,'tagline':''                                             ,'keyword':'super'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre','studio']    , 'logo':'https://www.pngfind.com/pngs/m/661-6616519_calling-all-superheroes-png-polos-epidemik-transparent-png.png'}},
+                         5: {'name':'Superhero Week'                           ,'tagline':'"I Can Do This All Day!"'                     ,'keyword':'super'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre','studio']    , 'logo':'https://raisely-images.imgix.net/national-superhero-week/uploads/artboard-4-png-eb2608.png?fit=max&w=1000&auto=format&q=62'}},
                         
             'May'      :{1: {'name':'Star Wars Week'                           ,'tagline':'“May the force be with you.“'                 ,'keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://toppng.com/uploads/preview/hantoms-announce-star-wars-night-on-sunday-january-star-wars-title-white-11563117239kqn75zxdsg.png'},
                          2: {'name':'Twilight Zone Week'                       ,'tagline':'“You are about to enter another dimension...“','keyword':'zone'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://fanart.tv/api/download.php?type=download&image=92524&section=1'},
@@ -73,7 +71,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                    ,
             'September':{1: {'name':''                                         ,'tagline':''                                             ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre']             , 'logo':''},
                          2: {'name':''                                         ,'tagline':''                                             ,'keyword':''        ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre']             , 'logo':''},
                          3: {'name':'Batman Week'                              ,'tagline':'The Dark Knight'                              ,'keyword':'batman'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.freepnglogos.com/uploads/3d-batman-vector-logo-png-28.png'},
-                         4: {'name':'Hobbit Week'                              ,'tagline':'out of the frying-pan into the fire.'         ,'keyword':'hobbit'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.liblogo.com/img-logo/th8627tcb2-the-hobbit-logo-the-hobbit-lego-dimensions-2-the-rise-of-enoch-wiki-.png'},                  
+                         4: {'name':'Hobbit Week'                              ,'tagline':'..out of the frying-pan into the fire.'       ,'keyword':'hobbit'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.liblogo.com/img-logo/th8627tcb2-the-hobbit-logo-the-hobbit-lego-dimensions-2-the-rise-of-enoch-wiki-.png'},                  
                          5: {'name':'Comic Book Week'                          ,'tagline':''                                             ,'keyword':'comic'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot','studio']            , 'logo':'https://img1.pnghut.com/23/18/1/4pGq0T4FiA/brand-batman-sticker-point-cartoon.jpg'}},
                         
             'October'  :{1: {'name':'Back to the Future Week'                  ,'tagline':'Great Scott!'                                 ,'keyword':'future'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.pngarts.com/files/1/Back-To-The-Future-PNG-Image.png'},
@@ -106,8 +104,8 @@ KEYWORDS = {'newyear'  :['The Twilight Zone','Black-Mirror','Black Mirror','Oute
             'lotr'     :['Hobbit','Lord of the rings','LOTR','Tolkien'],
             'pulp'     :["Quentin Tarantino","Tarantino"],
             'startrek' :['Star Trek',"Gene Roddenberry"],
-            'aliens'   :['Alien','Aliens'],
-            'super'    :['Superhero','DC','Marvel','Batman','Superman','Spiderman','Spider-Man','Wonder woman'],
+            'aliens'   :['Alien vs. Predator','Aliens vs. Predator: Requiem','Prometheus','Alien: Covenant','Alien','Aliens','Alien 3','Alien: Resurrection','Predator','Predator 2','Predators'],
+            'super'    :['Superhero','DC','Marvel','Batman','Superman','Spiderman','Spider-Man','Thor'],
             'starwars' :['Star Wars','Krieg der Sterne','Skywalker','Darth Vader','Jedi ','Ewoks','Boba Fett','Mandalorian' 
                          'Starwars','Yoda ','Obi-Wan','Kenobi','Millennium Falcon','Millenium Falke','Stormtrooper','Sturmtruppler', 'Sith'],
             'zone'     :['The Twilight Zone','Twilight Zone'],
@@ -135,8 +133,12 @@ KEYWORDS = {'newyear'  :['The Twilight Zone','Black-Mirror','Black Mirror','Oute
                          'Meilleurs vœux','feliz navidad','joyeux noel','Natale','szczęśliwe święta','Veselé Vánoce',
                          'Vrolijk kerstfeest','Kerstmis','Boże Narodzenie','Kalėdos','Crăciun']}
                                                 
-EXC_EXTRAS = [{"field":"season" ,"operator":"greaterthan","value":"0"},
-              {"field":"episode","operator":"greaterthan","value":"0"}]
+
+TVSHOW_XSP  = 'videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'
+MOVIE_XSP   = 'videodb://movies/titles/?xsp=%s'
+
+EXCL_EXTRAS = [{"field":"season" ,"operator":"greaterthan","value":"0"},
+               {"field":"episode","operator":"greaterthan","value":"0"}]
     
 class Seasonal:
     def __init__(self):
@@ -197,7 +199,7 @@ class Seasonal:
 
                         if type == 'tvshow' and field == 'title': field = 'tvshow'
                         if type == 'tvshow' and not SETTINGS.getSettingBool('Enable_Extras'): 
-                            param.setdefault("rules",{}).setdefault("and",[]).extend(EXC_EXTRAS)
+                            param.setdefault("rules",{}).setdefault("and",[]).extend(EXCL_EXTRAS)
                         param["order"]["method"] = season.get('method',{"tvshow":"episode","movie":"random"})[type]
                     
                         entry = {"operator":season.get('operator','contains')}
@@ -210,3 +212,42 @@ class Seasonal:
        
         self.log('buildPath, returning urls = %s'%(urls))
         return citem, urls
+        
+        
+        # #TODO improve keywords by adding fields and operators to each keyword. ie. {'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']},{'fields':['studio'],'operator':'is','keywords':['Marvel Studios','DC Studios'],'types':['episodes','movies']}
+        # #KEYPARAMS = {'super': [{'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']}]}
+        # urls   = []
+        # params = KEYPARAMS.get(season.get('keyword',''),[])
+        # if params:
+            # citem['holiday'] = '%s%s'%(season.get('name',''),(' - %s'%(season.get('tagline')) if season.get('tagline','') else ''))
+            # citem['logo']    = (season.get('logo','') or citem['logo'])
+            
+            # for param in params:
+                # url      = {}
+                # operator = param.get('operator')
+                # fields   = param.get('fields',[])
+                # values   = param.get('keywords',[])
+                # if not operator: continue
+                # for type in param.get('types',[]):
+                    # if type in TV_TYPES:
+                        # path = TVSHOW_XSP
+                        # if 'title' in fields:
+                            # fields.pop(fields.index('title'))
+                            # fields.append('tvshow')
+                        # if not SETTINGS.getSettingBool('Enable_Extras'): 
+                            # url.setdefault("rules",{}).setdefault("and",[]).extend(EXCL_EXTRAS)
+                    # else:
+                        # path = MOVIE_XSP
+                        
+                    # media  = {'episodes','tvshows'}
+                    # url["type"]  = type
+                    # url["order"] = {"direction"        :"ascending",
+                                    # "method"           :"random",
+                                    # "ignorearticle"    :True,
+                                    # "useartistsortname":True}
+                    # url["order"]["method"] = season.get('method',{"tvshow":"episode","movie":"random"})[type]
+                    
+                    # entry = {"operator":operator}
+                    # entry["field"] = fields
+                    # entry["value"] = quoteString(value)
+                    # url.setdefault("rules",{}).setdefault("or",[]).append(entry)

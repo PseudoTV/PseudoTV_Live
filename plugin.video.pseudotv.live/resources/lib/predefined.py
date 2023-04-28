@@ -21,8 +21,8 @@
 from globals    import *
 
 class Predefined:
-    EXC_EXTRAS = [{"field":"season" ,"operator":"greaterthan","value":"0"},
-                  {"field":"episode","operator":"greaterthan","value":"0"}]
+    EXCL_EXTRAS = [{"field":"season" ,"operator":"greaterthan","value":"0"},
+                   {"field":"episode","operator":"greaterthan","value":"0"}]
     
     def __init__(self):
         ...
@@ -52,7 +52,7 @@ class Predefined:
     def createMixedRecent(self):
         param = self.getParams()
         param["order"]["method"] = "episode"
-        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
         return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(param)),
                 'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(self.getParams()))]
         
@@ -66,7 +66,7 @@ class Predefined:
         param["type"] = "episodes"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(network)]})
-        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
         return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
@@ -74,14 +74,14 @@ class Predefined:
         param = self.getParams()
         param["type"] = "episodes"
         param["order"]["method"] = method
-        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
         try:
             match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(show)
             year, title = int(match.group(2)), match.group(1)
             param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"year","operator":"is","value":[year]},{"field":"tvshow","operator":"is","value":[quoteString(title)]}])
         except:
             param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[quoteString(show)]})
-        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
         return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
@@ -90,7 +90,7 @@ class Predefined:
         param["type"] = "episodes"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
-        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXC_EXTRAS)
+        if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
         return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 

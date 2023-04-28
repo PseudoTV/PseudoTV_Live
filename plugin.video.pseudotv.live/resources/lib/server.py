@@ -23,19 +23,7 @@ from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
-            
-def delServerSettings():
-    SETTINGS.setSetting('Remote_URL'  ,'')
-    SETTINGS.setSetting('Remote_M3U'  ,'')
-    SETTINGS.setSetting('Remote_XMLTV','')
-    SETTINGS.setSetting('Remote_GENRE','')
-                     
-def setServerSettings(host):
-    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(host))
-    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(host,M3UFLE))
-    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(host,XMLTVFLE))
-    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(host,GENREFLE))
-       
+
 class Discovery:
     isRunning = False
     
@@ -59,33 +47,34 @@ class Discovery:
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            if isClient():
-                try:
-                    data, addr = sock.recvfrom(1024) #wait for a packet
-                except:
-                    data = ''
-                    
-                if data.startswith(ADDON_ID.encode()):
-                    response = data[len(ADDON_ID):]
-                    if response:
-                        payload = loadJSON(decodeString(response.decode()))
-                        host = payload.get('host','')
-                        if host != local and 'md5' in payload:
-                            self.log('_start: discovered server @ host = %s'%(host),xbmc.LOGINFO)
-                            if payload.pop('md5') == getMD5(dumpJSON(payload)):
-                                payload['received'] = time.time()
-                                servers = getDiscovery()
-                                if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
-                                    DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
-                                servers[host] = payload
-                                setDiscovery(servers)
-                                chkDiscovery(servers)
-                
             if self.monitor.waitForAbort(1) or self.monitor.chkRestart():
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
+            elif isClient():
+                try: 
+                    data, addr = sock.recvfrom(1024) #wait for a packet
+                    self._run(local,data)
+                except: pass #ignore except TimeoutError: timed out
         self.isRunning = False
 
+
+    def _run(self, local, data=''):
+        if data.startswith(ADDON_ID.encode()):
+            response = data[len(ADDON_ID):]
+            if response:
+                self.log('_run: response = %s'%(response))
+                payload = loadJSON(decodeString(response.decode()))
+                host = payload.get('host','')
+                if host != local and 'md5' in payload:
+                    self.log('_run: discovered server @ host = %s'%(host),xbmc.LOGINFO)
+                    if payload.pop('md5') == getMD5(dumpJSON(payload)):
+                        payload['received'] = time.time()
+                        servers = getDiscovery()
+                        if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
+                            DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
+                        servers[host] = payload
+                        setDiscovery(servers)
+                        chkDiscovery(servers)
 
 class Announcement:
     isRunning = False
@@ -191,7 +180,9 @@ class HTTP:
     def __init__(self, monitor=None):
         delServerSettings()
         self.monitor = monitor
-        timerit(self._start)(5)
+        self.startThread = Thread(target=self._start)
+        self.startThread.daemon = True
+        self.startThread.start()
 
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -261,8 +252,9 @@ class HTTP:
                 self._server.server_close()
                 self._server.socket.close()
                 self._httpd_thread.join()
-                self.isRunning = False
+                self.startThread.join()
         except: pass
+        self.isRunning = False
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
