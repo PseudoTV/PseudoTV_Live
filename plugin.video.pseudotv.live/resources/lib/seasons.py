@@ -91,15 +91,23 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                    ,
                          5: {'name':'Christmas Season'                         ,'tagline':"“'Tis the season“"                            ,'keyword':'xmas'    , 'logo':'https://www.pngfind.com/pngs/m/185-1856026_merry-christmas-wishes-png-transparent-png.png'}}}
                           
                
-KEYPARAMS = {'newyear': [{'fields':['title','plot'],'operator':'contains','keywords':['The Twilight Zone','Outer Limits','Amazing Stories','Tales from the Darkside','Tales from the crypt','Creepshow','The Hitchhiker','Into the Dark','The Ray Bradbury Theater','American Horror Stories'],'types':['episodes','movies']},
-                         {'fields':['genre','plot'],'operator':'contains','keywords':['Anthology'],'types':['episodes','movies']}],
+KEYPARAMS = {'newyear': [{'fields':['title','plot'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'year'}},'types':['episodes','movies'],
+                          'keywords':['The Twilight Zone','Outer Limits','Amazing Stories','Tales from the Darkside','Tales from the crypt',
+                                      'Creepshow','The Hitchhiker','Into the Dark','The Ray Bradbury Theater','American Horror Stories']},
+                         {'fields':['genre','plot'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'random'}},'types':['episodes','movies'],
+                          'keywords':['Anthology']}],
                          
-            'scifiday' :[{'fields':['genre','studio'],'operator':'contains','keywords':['Science-Fiction','Science Fiction','Sci-Fi','Syfi'],'types':['episodes','movies']}],
+
+            'scifiday' :[{'fields':['genre','studio'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'random'}},'types':['episodes','movies'],
+                          'keywords':['Science-Fiction','Science Fiction','Sci-Fi','Syfi']}],
             
-            'gijoe'    :[{'fields':['title','plot'],'operator':'contains','keywords':['G.I. Joe','GI Joe'],'types':['episodes','movies']}],
+            'gijoe'    :[{'fields':['title','plot'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'year'}},'types':['episodes','movies'],
+                          'keywords':['G.I. Joe','GI Joe']}],
             
-            'romance'  :[{'fields':['title','plot'],'operator':'contains','keywords':['Valentine','Valentines','Valentine''s Day','Love','Cupid','Romance','Romcom'],'types':['episodes','movies']},
-                         {'fields':['genre'],'operator':'contains','keywords':['Romance','Romcom'],'types':['episodes','movies']}],
+            'romance'  :[{'fields':['title','plot'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'random'}},'types':['episodes','movies'],
+                          'keywords':['Valentine','Valentines','Valentine''s Day','Love','Cupid','Romance','Romcom']},
+                         {'fields':['genre'],'operator':'contains','order':{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'random'}},'types':['episodes','movies'],
+                          'keywords':['Romance','Romcom']}],
 
 
 

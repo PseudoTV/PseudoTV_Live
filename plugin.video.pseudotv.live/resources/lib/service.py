@@ -67,7 +67,9 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.pvritem    = self.getPlayerPVRitem()
-        self.isPseudoTV = self.pvritem.get('citem',{}).get('id',None) != None
+        self.isPseudoTV = not None in [self.pvritem.get('channelid'),self.pvritem.get('citem',{}).get('id')]
+        
+         
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         

@@ -73,8 +73,11 @@ class MYPlayer(xbmc.Player):
 
     def onAVStarted(self):
         self.log('onAVStarted')
-        self.overlay.toggleBug()
-        self.overlay.toggleOnNext()
+        if not self.overlay.player.isPseudoTV:
+            self.onPlayBackEnded()
+        else:
+            self.overlay.toggleBug()
+            self.overlay.toggleOnNext()
             
 
     def onPlayBackStopped(self):
@@ -245,7 +248,7 @@ class Overlay():
                 self._channelBug.setPosition(self._channelBugX, self._channelBugY)
             except: pass
             
-            if state: 
+            if state and self.player.isPseudoTV: 
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
@@ -303,7 +306,7 @@ class Overlay():
                         self._onNextThread.join()
                 except: pass
                     
-                if state and showOnNext: 
+                if state and showOnNext and self.player.isPseudoTV:
                     try:
                         nowItem  = (self.player.pvritem.get('broadcastnow')  or {})      # current item
                         nextItem = (self.player.pvritem.get('broadcastnext') or [{}])[0] # upcoming items

@@ -23,7 +23,13 @@ from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
-
+            
+def delServerSettings():
+    SETTINGS.setSetting('Remote_URL'  ,'')
+    SETTINGS.setSetting('Remote_M3U'  ,'')
+    SETTINGS.setSetting('Remote_XMLTV','')
+    SETTINGS.setSetting('Remote_GENRE','')
+    
 class Discovery:
     isRunning = False
     
@@ -227,7 +233,10 @@ class HTTP:
                     LOCAL_HOST ='%s:%s'%(IP,port)
                     self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
                     PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
-                    setServerSettings(LOCAL_HOST)
+                    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(LOCAL_HOST))
+                    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
+                    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
+                    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
                     
                     self._server = ThreadedHTTPServer((IP, port), partial(RequestHandler,monitor=self.monitor))
                     self._server.allow_reuse_address = True

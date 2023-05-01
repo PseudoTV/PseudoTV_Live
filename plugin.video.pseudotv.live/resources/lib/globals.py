@@ -285,7 +285,7 @@ def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-
+  
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()
@@ -736,22 +736,14 @@ def chkDiscovery(servers, forced=False):
     current_server = SETTINGS.getSetting('Remote_URL')
     if (not current_server or forced) and len(list(servers.keys())) == 1: #If one server found autoselect.
         server = list(servers.keys())[0]
-        setServerSettings(server) #set server host paths.
+         #set server host paths.
+        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(server))
+        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
+        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
+        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
-            
-def delServerSettings():
-    SETTINGS.setSetting('Remote_URL'  ,'')
-    SETTINGS.setSetting('Remote_M3U'  ,'')
-    SETTINGS.setSetting('Remote_XMLTV','')
-    SETTINGS.setSetting('Remote_GENRE','')
-                     
-def setServerSettings(host):
-    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(host))
-    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(host,M3UFLE))
-    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(host,XMLTVFLE))
-    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(host,GENREFLE))
-       
+
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]

@@ -44,7 +44,7 @@ SEASONS  = {'January'  :{1: {'name':'New Years Anthologies'                    ,
                          4: {'name':'Alien Week'                               ,'tagline':'“In space, no one can hear you scream.“'      ,'keyword':'aliens'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title']                            , 'logo':'https://www.clipartmax.com/png/middle/133-1336219_alien-movie-logo-png.png'},
                          5: {'name':'Superhero Week'                           ,'tagline':'"I Can Do This All Day!"'                     ,'keyword':'super'   ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot','genre','studio']    , 'logo':'https://raisely-images.imgix.net/national-superhero-week/uploads/artboard-4-png-eb2608.png?fit=max&w=1000&auto=format&q=62'}},
                         
-            'May'      :{1: {'name':'Star Wars Week'                           ,'tagline':'“May the force be with you.“'                 ,'keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://toppng.com/uploads/preview/hantoms-announce-star-wars-night-on-sunday-january-star-wars-title-white-11563117239kqn75zxdsg.png'},
+            'May'      :{1: {'name':'Star Wars Week'                           ,'tagline':'“May the force be with you.“'                 ,'keyword':'starwars','types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://pngimg.com/d/star_wars_logo_PNG28.png'},
                          2: {'name':'Twilight Zone Week'                       ,'tagline':'“You are about to enter another dimension...“','keyword':'zone'    ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://fanart.tv/api/download.php?type=download&image=92524&section=1'},
                          3: {'name':'Sherlock Holmes Week'                     ,'tagline':'“The Game is Afoot!“'                         ,'keyword':'watson'  ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"year"}  ,"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.clipartmax.com/png/middle/456-4564142_welcome-to-our-hand-picked-9th-grade-clipart-page-please-imagen-de.png'},
                          4: {'name':'Dracula Week'                             ,'tagline':'“Fidelis et mortem“'                          ,'keyword':'vampire' ,'types':['movie','tvshow'],'method':{"tvshow":"episode","movie":"random"},"operator":"contains",'fields':['title','plot']                     , 'logo':'https://www.pioneerdrama.com/Images/Title_Art/DRACULA.png'},
@@ -214,8 +214,8 @@ class Seasonal:
         return citem, urls
         
         
-        # #TODO improve keywords by adding fields and operators to each keyword. ie. {'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']},{'fields':['studio'],'operator':'is','keywords':['Marvel Studios','DC Studios'],'types':['episodes','movies']}
-        # #KEYPARAMS = {'super': [{'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']}]}
+        # # TODO improve keywords by adding fields and operators to each keyword. ie. {'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']},{'fields':['studio'],'operator':'is','keywords':['Marvel Studios','DC Studios'],'types':['episodes','movies']}
+        # # KEYPARAMS = {'super': [{'fields':['title','plot'],'operator':'contains','keywords':['Superman','Batman'],'types':['episodes','movies']}]}
         # urls   = []
         # params = KEYPARAMS.get(season.get('keyword',''),[])
         # if params:
@@ -225,28 +225,36 @@ class Seasonal:
             # for param in params:
                 # url      = {}
                 # operator = param.get('operator')
+                # order    = param.get('order',{'direction':{'episodes':'ascending','movies':'ascending'},'method':{'episodes':'episode','movies':'random'}})
                 # fields   = param.get('fields',[])
                 # values   = param.get('keywords',[])
                 # if not operator: continue
                 # for type in param.get('types',[]):
                     # if type in TV_TYPES:
                         # path = TVSHOW_XSP
-                        # if 'title' in fields:
+                        # if 'title' in fields: #unify "title" as movie/tv key; actual jsonrpc key for tv is "tvshow"
                             # fields.pop(fields.index('title'))
                             # fields.append('tvshow')
                         # if not SETTINGS.getSettingBool('Enable_Extras'): 
                             # url.setdefault("rules",{}).setdefault("and",[]).extend(EXCL_EXTRAS)
                     # else:
                         # path = MOVIE_XSP
-                        
-                    # media  = {'episodes','tvshows'}
+
                     # url["type"]  = type
-                    # url["order"] = {"direction"        :"ascending",
-                                    # "method"           :"random",
+                    # url["order"] = {"direction"        :order.get('direction')[type],
+                                    # "method"           :order.get('method')[type],
                                     # "ignorearticle"    :True,
                                     # "useartistsortname":True}
-                    # url["order"]["method"] = season.get('method',{"tvshow":"episode","movie":"random"})[type]
+                                    
                     
+
+                    # for field in param.get('fields',[]):
+                    # for value in param.get('keywords',[]):
+
+
+
+
+
                     # entry = {"operator":operator}
                     # entry["field"] = fields
                     # entry["value"] = quoteString(value)
