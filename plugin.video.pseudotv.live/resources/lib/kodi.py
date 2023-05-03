@@ -68,7 +68,7 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
                
 def isBusyDialog():
     return (Builtin().getInfoBool('IsActive(busydialognocancel)','Window') | Builtin().getInfoBool('IsActive(busydialog)','Window'))
-         
+
 def closeBusyDialog():
     if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
         Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
@@ -732,10 +732,10 @@ class Dialog:
                            {"label":"Mixed Playlists" , "label2":"Mixed Playlists"               , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1, "multi":False},
                            {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0, "multi":False},
                            {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0, "multi":False},
-                           {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
                            {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
                            {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
                            {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
+                           {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
                            {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
                 if default:
                     default, file = os.path.split(default)
@@ -745,11 +745,11 @@ class Dialog:
                    
             with busy_dialog():
                 lizLST = poolit(buildMenuItem)(options)
-            select = self.selectDialog(lizLST, LANGUAGE(30116), multi=False)
+            select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
             if select is not None:
                 # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS
                     # listitems = self.pool.poolList(buildMenuItem,options)
-                    # select    = self.selectDialog(listitems, LANGUAGE(30116), multi=False)
+                    # select    = self.selectDialog(listitems, LANGUAGE(32089), multi=False)
                     # if select is not None:
                 # else:    
                 shares    = options[select]['label'].lower().replace("network","")

@@ -69,7 +69,7 @@ class Utilities:
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
-    def openChannelManager(self, chnum=1):
+    def openChannelManager(self, chnum=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.getPropertyBool('OVERLAY_MANAGER'):
             chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)

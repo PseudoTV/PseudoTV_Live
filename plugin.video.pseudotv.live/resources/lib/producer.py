@@ -68,7 +68,7 @@ class Producer():
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
-        PROPERTIES.setPropertyBool('isLowPower',isLowPower())
+        setLowPower()
         
         
     def _chkDebugging(self):

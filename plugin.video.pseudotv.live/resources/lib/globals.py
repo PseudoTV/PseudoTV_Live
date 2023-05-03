@@ -690,7 +690,10 @@ def decodeWriter(text):
     
 def encodeWriter(writer, text):
     return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(text)))
-  
+    
+def isPaused():
+    return BUILTIN.getInfoBool('Player.Paused')
+    
 def isBusyDialog():
     return (BUILTIN.getInfoBool('IsActive(busydialognocancel)','Window') | BUILTIN.getInfoBool('IsActive(busydialog)','Window'))
          
@@ -765,10 +768,14 @@ def roundupDIV(p, q):
 def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
     
-    
 def isLowPower():
+    return PROPERTIES.getPropertyBool('isLowPower')
+
+def setLowPower():
     if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
+        PROPERTIES.setPropertyBool('isLowPower',False)
         return False
+    PROPERTIES.setPropertyBool('isLowPower',True)
     return True
 
 def forceUpdateTime(key):

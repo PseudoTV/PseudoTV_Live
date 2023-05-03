@@ -483,7 +483,7 @@
                 <top>92</top>
                 <orientation>vertical</orientation>
                 <width>300</width>
-                <height>300</height>
+                <height>440</height>
                 <itemgap>-10</itemgap>
                 <onright>10</onright>
                 <onleft condition="Control.IsVisible(5)">Control.SetFocus(5)</onleft>
@@ -525,7 +525,7 @@
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
-                    <visible>!String.IsEmpty(Control.GetLabel(9003)) + !String.IsEmpty(Container(5).ListItem.Label2)</visible>
+                    <visible>!String.IsEmpty(Control.GetLabel(9003))</visible>
                 </control>
                 <control type="button" id="9004">
                     <!-- todo open node/xsp editor using listitem path to detect .xsp or .xml ListItem.FileExtension	 -->
@@ -539,7 +539,7 @@
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
-                    <visible>!String.IsEmpty(Control.GetLabel(9004)) + !String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)</visible>
+                    <visible>!String.IsEmpty(Control.GetLabel(9004))</visible>
                 </control>
             </control>
 

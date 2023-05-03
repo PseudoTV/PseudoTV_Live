@@ -473,6 +473,10 @@ msgctxt "#30113"
 msgid "Force Diffuse Color"
 msgstr ""
 
+msgctxt "#30114"
+msgid "Add to PseudoTV Live"
+msgstr ""
+
 
 
 
@@ -834,7 +838,7 @@ msgid "Enter Channel Name"
 msgstr ""
 
 msgctxt "#32086"
-msgid "Select Content Path"
+msgid "Build Channel Sources"
 msgstr ""
 
 msgctxt "#32087"
@@ -846,7 +850,7 @@ msgid "Create Advanced Channel Rules"
 msgstr ""
 
 msgctxt "#32089"
-msgid "Clear Configurations?"
+msgid "Select Media Source"
 msgstr ""
 
 msgctxt "#32090"
@@ -890,11 +894,11 @@ msgid "This may take a moment."
 msgstr ""
 
 msgctxt "#32100"
-msgid "-Add Path"
+msgid "[COLOR=yellow][B]- Add Paths[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32101"
-msgid "-Save Paths"
+msgid "[COLOR=yellow][B]- Save Paths[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32102"
@@ -1031,6 +1035,14 @@ msgstr ""
 
 msgctxt "#32135"
 msgid "Interrupted"
+msgstr ""
+
+msgctxt "#32136"
+msgid "Move"
+msgstr ""
+
+msgctxt "#32137"
+msgid "Enter new channel number"
 msgstr ""
 
 
@@ -1250,9 +1262,9 @@ msgid "Change the onscreen Channel Bug position. [(1556,920) Default]"
 msgstr ""
 
 msgctxt "#33113"
-msgid "Add more channel paths to channel"
+msgid "Add paths to channel"
 msgstr ""
 
 msgctxt "#33114"
-msgid "Save channel path settings"
+msgid "Save channel paths"
 msgstr ""

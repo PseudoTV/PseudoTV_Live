@@ -1,10 +1,7 @@
 v.0.4.2
--Notice Kodi forums are temporarily down due to a data breach:
- https://kodi.tv/article/important-kodi-forum-data-breach/
- 
- In the interim if you require help; please visit r/PseudoTV on reddit:
- https://www.reddit.com/r/PseudoTV/new/
-
+-Improved In-App Channel Manager.
+-Added "Add to PseudoTV Live" context menu option for effortless channel configuration (Experimental).
+-Add "Move" channel manager option for easy channel renumbering.
 -Fixed Radio playback failing due to URL encoding.
 -Tweaked UpNext not creating new instance.
 -Fixed playback error introduced in the previous release.

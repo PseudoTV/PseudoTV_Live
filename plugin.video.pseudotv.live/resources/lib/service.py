@@ -335,9 +335,13 @@ class Service():
                 self.monitor.pendingChange = True
                 continue
             else:
-                isIdle = self.monitor.chkIdle()
-                if PROPERTIES.getPropertyBool('isLowPower') and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
-                if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
+                self._tasks()
+                
+    
+    def _tasks(self):
+        isIdle = self.monitor.chkIdle()
+        if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
+        if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
             
         
     def _stop(self):
