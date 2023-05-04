@@ -665,15 +665,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('moveChannel, channelPOS = %s'%(channelPOS))
         retval = int(DIALOG.inputDialog(LANGUAGE(32137), key=xbmcgui.INPUT_NUMERIC, opt=channelData['number']))
         if retval and (retval > 0 and retval < CHANNEL_LIMIT) and retval != channelPOS + 1:
-            if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),channelData['name'],LANGUAGE(32023),channelData['number'],retval)): 
-                self.madeChanges = True
-                nitem = self.newChannel.copy()
-                nitem['number'] = channelPOS + 1
-                self.newChannels[channelPOS] = nitem
-                channelData['number'] = retval
-                self.saveChannelItems(channelData,channelData['number'] - 1)
+            if DIALOG.yesnoDialog('%s %s %s from [B]%s[/B] to [B]%s[/B]?'%(LANGUAGE(32136),channelData['name'],LANGUAGE(32023),channelData['number'],retval)):
+                if retval in [channel.get('number') for channel in self.newChannels if channel.get('path')]:
+                    DIALOG.notificationDialog(LANGUAGE(32138))
+                else:
+                    self.madeChanges = True
+                    nitem = self.newChannel.copy()
+                    nitem['number'] = channelPOS + 1
+                    self.newChannels[channelPOS] = nitem
+                    channelData['number'] = retval
+                    self.saveChannelItems(channelData,channelData['number'] - 1)
         return channelData, channelPOS
-        
+
 
     def selectRuleItems(self, item):
         self.log('selectRuleItems')

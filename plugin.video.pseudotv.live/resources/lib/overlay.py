@@ -205,7 +205,8 @@ class Overlay():
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
 
-        del self.myPlayer
+        try: del self.myPlayer
+        except: pass
         PROPERTIES.setPropertyBool('OVERLAY',False)
 
     

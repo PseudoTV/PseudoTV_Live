@@ -1045,6 +1045,10 @@ msgctxt "#32137"
 msgid "Enter new channel number"
 msgstr ""
 
+msgctxt "#32138"
+msgid "Inputted channel number already in use."
+msgstr ""
+
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
