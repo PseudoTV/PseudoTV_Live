@@ -43,17 +43,30 @@ class Resources:
         logo = self.getLocalLogo(chname)                        #local
         if not logo: logo = self.getLogoResources(chname, type) #resource
         if not logo: logo = self.getTVShowLogo(chname)          #tvshow 
+        self.log('getLogo, chname = %s, logo = %s'%(chname, logo))
         return (logo or LOGO)
         
         
-    def getLocalLogo(self, chname):
+    def selectLogo(self, chname, type="Custom"):
+        logos = []
+        logos.extend(self.getLocalLogo(chname,select=True))
+        logos.extend(self.getLogoResources(chname,type,select=True))
+        logos.append(self.getTVShowLogo(chname))
+        self.log('selectLogo, chname = %s, logos = %s'%(chname, len(logos)))
+        return list(filter(None,logos))
+        
+
+    def getLocalLogo(self, chname, select=False):
+        logos = []
         for path in LOCAL_RESOURCES:
             for ext in IMG_EXTS:
                 if FileAccess.exists(os.path.join(path,'%s%s'%(chname,ext))):
-                    return os.path.join(path,'%s%s'%(chname,ext))
+                    if select: logos.append(os.path.join(path,'%s%s'%(chname,ext)))
+                    else: return os.path.join(path,'%s%s'%(chname,ext))
+        if select: return logos
         
     
-    def getLogoResources(self, chname, type):
+    def getLogoResources(self, chname, type, select=False):
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
         resources = SETTINGS.getSetting('Resource_Logos').split('|')
         if type in ["TV Genres","Movie Genres"]:
@@ -63,11 +76,12 @@ class Resources:
         elif type == "Music Genres":
             resources.extend(MUSIC_RESOURCE)
         else:
-            resources.extend(GENRE_RESOURCE)   
-            resources.extend(STUDIO_RESOURCE)    
+            resources.extend(GENRE_RESOURCE)
+            resources.extend(STUDIO_RESOURCE)
             resources.extend(MUSIC_RESOURCE)
             
-        cacheName = 'getLogoResources.%s'%(getMD5(chname))
+        logos = []
+        cacheName = 'getLogoResources.%s.%s'%(getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(set(resources)):
@@ -85,7 +99,11 @@ class Resources:
                             name, ext = os.path.splitext(image)
                             if self.matchName(chname, name):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
-                                return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                                if select: logos.append('%s/%s'%(path,image))
+                                else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+            if select:
+                if len(logos) > 0: cacheResponse = self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                else: return logos
         return cacheResponse
         
         

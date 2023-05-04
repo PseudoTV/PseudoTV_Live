@@ -793,20 +793,20 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getLogo(self, channelData, channelPOS):
         def cleanLogo(chlogo):
-            return chlogo
             #todo convert resource from vfs to fs
             # return chlogo.replace('resource://','special://home/addons/')
             # resource = path.replace('/resources','').replace(,)
             # resource://resource.images.studios.white/Amazon.png
+            return chlogo
         
         def select(chname):
-            DIALOG.notificationDialog("Coming Soon")
-            # self.toggleSpinner(self.itemList,True)
-            #todo parse all resources for pattern matches and select dialog results.
-            # self.toggleSpinner(self.itemList,False)
-            # select = DIALOG.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
-            # if select is not None:
-                # return listitems[select].getPath()
+            self.toggleSpinner(self.itemList,True)
+            DIALOG.notificationDialog(LANGUAGE(32140))
+            listitems = [LISTITEMS.buildMenuListItem('%s. %s'%(idx+1, chname),logo,iconImage=logo,url=logo) for idx, logo in enumerate(self.resources.selectLogo(chname))]
+            self.toggleSpinner(self.itemList,False)
+            select = DIALOG.selectDialog(listitems,'Select Channel Logo',useDetails=True,multi=False)
+            if select is not None:
+                return listitems[select].getPath()
 
         def browse(chname):
             retval = DIALOG.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(32066),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
@@ -816,7 +816,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     return image
 
         def match(chname):
-            return self.jsonRPC.resources.getLogo(chname)
+            return self.resources.getLogo(chname)
 
         if self.isVisible(self.ruleList): return
         chname = channelData.get('name')
@@ -837,11 +837,12 @@ class Manager(xbmcgui.WindowXMLDialog):
         if chlogo:
             self.madeChanges = True
             channelData['logo'] = chlogo
+            DIALOG.notificationDialog(LANGUAGE(32139))
             if self.isVisible(self.itemList): self.buildChannelItem(channelData)
             else:
                 self.newChannels[channelPOS] = channelData
                 self.fillChanList(self.newChannels,reset=True,focus=channelPOS)
-            
+
 
     def isVisible(self, cntrl):
         try: 
@@ -934,7 +935,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.focusItems['number'] = self.focusItems['chanList']['citem']['number']
             else:
                 self.focusItems['number'] = channelPOS + 1
-            # print('focusItems',self.focusItems)
             return self.focusItems
         except Exception as e:
             self.log('getFocusVARS failed! %s'%(e))

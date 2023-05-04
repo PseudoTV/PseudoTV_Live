@@ -750,7 +750,7 @@ msgid "OK"
 msgstr ""
 
 msgctxt "#32064"
-msgid "Pre-defined Channels are currently not configurable."
+msgid "Pre-defined Channels are currently non-configurable."
 msgstr ""
 
 msgctxt "#32065"
@@ -1042,11 +1042,19 @@ msgid "Move"
 msgstr ""
 
 msgctxt "#32137"
-msgid "Enter new channel number"
+msgid "Input new channel number"
 msgstr ""
 
 msgctxt "#32138"
-msgid "Inputted channel number already in use."
+msgid "Inputted channel number already in-use."
+msgstr ""
+
+msgctxt "#32139"
+msgid "Channel logo updated"
+msgstr ""
+
+msgctxt "#32140"
+msgid "This may take a moment..."
 msgstr ""
 
 
