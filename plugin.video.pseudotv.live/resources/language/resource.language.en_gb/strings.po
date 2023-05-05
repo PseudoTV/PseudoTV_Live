@@ -802,7 +802,7 @@ msgid "Save All Channel Changes?"
 msgstr ""
 
 msgctxt "#32077"
-msgid "%s Configuration Invalid, Try again..."
+msgid "%s Configuration In-valid, Try again..."
 msgstr ""
 
 msgctxt "#32078"

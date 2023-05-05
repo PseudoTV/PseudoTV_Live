@@ -23,7 +23,8 @@ from manager     import Manager
 class Create:
     def __init__(self, sysARG, listitem):
         log('Create: __init__, sysARG = %s'%(sysARG))
-        if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\n[B]%s[/B]\n to the first available %s channel?'%(listitem.getLabel(),listitem.getPath(),ADDON_NAME)):
+        if not listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
+        elif DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\n[B]%s[/B]\n to the first available %s channel?'%(listitem.getLabel(),listitem.getPath(),ADDON_NAME)):
             manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", start=False)
             channelData = manager.newChannel
             channelData['type']     = 'Custom'
@@ -31,7 +32,7 @@ class Create:
             channelData['number']   = manager.getFirstAvailChannel()
             #Name
             with busy_dialog():
-                channelData['name'], channelData   = manager.validateLabel(manger.cleanLabel(listitem.getLabel()),channelData)
+                channelData['name'], channelData   = manager.validateLabel(cleanLabel(listitem.getLabel()),channelData)
             #Path
             with busy_dialog():
                 path, channelData   = manager.validatePath(listitem.getPath(),channelData,spinner=False)

@@ -145,7 +145,7 @@ class M3U:
                             try:    mitem[key] = int(value.group(1))
                             except: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
-                            mitem[key] = list([_f for _f in list(set((value.group(1)).split(';'))) if _f])
+                            mitem[key] = list([_f for _f in sorted(list(set((value.group(1)).split(';')))) if _f])
                         elif key == 'radio':
                             mitem[key] = (value.group(1)).lower() == 'true'
                         else:
@@ -159,7 +159,7 @@ class M3U:
                                 prop = re.compile('^#EXTGRP:(.*)$', re.IGNORECASE).search(nline)
                                 if prop is not None: 
                                     mitem['group'].append(prop.group(1).split(';'))
-                                    mitem['group'] = list(set(mitem['group']))
+                                    mitem['group'] = sorted(list(set(mitem['group'])))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
                                 if prop is not None:

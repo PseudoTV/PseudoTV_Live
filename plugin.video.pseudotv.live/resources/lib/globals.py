@@ -786,4 +786,11 @@ def debugNotification():
         if DIALOG.yesnoDialog('Debugging is enabled\nIt''s recommend you disable debugging when applicable.\nWould you like disable debugging now?',autoclose=90):
             SETTINGS.setSettingBool('Enable_Debugging',False)
             DIALOG.notificationDialog('%s %s'%('Setting Disabled',LANGUAGE(32025)))
-            
+         
+def cleanLabel(text):
+    text = re.sub('\[COLOR=(.+?)\]', '', text)
+    text = re.sub('\[/COLOR\]', '', text)
+    text = text.replace("[B]",'').replace("[/B]",'')
+    text = text.replace("[I]",'').replace("[/I]",'')
+    return text.replace(":",'')
+    

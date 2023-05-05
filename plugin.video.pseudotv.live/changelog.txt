@@ -1,8 +1,9 @@
 v.0.4.2
--Improved In-App Channel logo replacement.
+-Improved In-App Channel Manager logo tool.
  -Browse: Directory Navigation
  -Select: Choose from matching results.
  -Match: Automatically choose first match.
+ 
 -Improved In-App Channel Manager.
 -Added "Add to PseudoTV Live" context menu option for effortless channel configuration (Experimental).
 -Add "Move" channel manager option for easy channel renumbering.

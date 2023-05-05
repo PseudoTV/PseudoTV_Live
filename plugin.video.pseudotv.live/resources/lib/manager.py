@@ -61,14 +61,7 @@ def convertString2Num(value):
     
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
-    
-def cleanLabel(text):
-    text = re.sub('\[COLOR=(.+?)\]', '', text)
-    text = re.sub('\[/COLOR\]', '', text)
-    text = text.replace("[B]",'').replace("[/B]",'')
-    text = text.replace("[I]",'').replace("[/I]",'')
-    return text.replace(":",'')
-    
+
 def getGroups(add=False):
     if SETTINGS.getSetting('User_Groups'): GROUP_TYPES.extend(SETTINGS.getSetting('User_Groups').split('|'))
     if add: GROUP_TYPES.insert(0,'+Add')

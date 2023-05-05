@@ -259,10 +259,7 @@ class Builder:
         json_response = self.jsonRPC.requestList(citem, query, media, page, sort, filter, limits)
         key     = list(json_response.keys())[0]
         results = json_response.get(key, [])
-        
-        if not results:
-            self.pErrors.append(LANGUAGE(32026))
-            pass
+        if not results: self.pErrors.append(LANGUAGE(32026))
 
         for idx, item in enumerate(results):
             with idleLocker():
@@ -592,7 +589,7 @@ class Builder:
                 citem['group'].append(LANGUAGE(32019))
             elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:
                  citem['group'].remove(LANGUAGE(32019))
-        citem['group'] = list(set(citem['group']))
+        citem['group'] = sorted(list(set(citem['group'])))
         if citem != orgITM: self.log('cleanGroups, out = %s'%(citem['group']))
         return citem
         

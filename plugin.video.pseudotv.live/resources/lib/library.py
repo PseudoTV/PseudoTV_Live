@@ -343,7 +343,7 @@ class Library:
                 return addonid,{"data":payload,"meta":addonMeta}
                 
         if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
-        addonList = list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f]))
+        addonList = sorted(list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f])))
         return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
 
@@ -358,7 +358,7 @@ class Library:
         
         
     def setWhiteList(self, data=[]):
-        self.libraryDATA['whitelist'] = list(set(data))
+        self.libraryDATA['whitelist'] = sorted(list(set(data)))
         return self._save()
         
         
@@ -368,7 +368,7 @@ class Library:
     
         
     def setBlackList(self, data=[]):
-        self.libraryDATA['blacklist'] = list(set(data))
+        self.libraryDATA['blacklist'] = sorted(list(set(data)))
         return self._save()
         
         
@@ -399,7 +399,7 @@ class Library:
         addonList = self.searchRecommended()
         ignoreList = self.getWhiteList()
         ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
-        addonNames = list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f]))
+        addonNames = sorted(list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f])))
         self.log('importPrompt, addonNames = %s'%(len(addonNames)))
         
         try:

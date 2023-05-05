@@ -92,7 +92,7 @@ class Autotune:
             selects = list(_match(self.library.getEnabled(type)))
         elif autoSelect:#build sample channels
             if len(items) >= AUTOTUNE_LIMIT:
-                selects = list(set(random.sample(list(set(range(0,len(items)))),AUTOTUNE_LIMIT)))
+                selects = sorted(list(set(random.sample(list(set(range(0,len(items)))),AUTOTUNE_LIMIT))))
             else: 
                 selects = list(range(0,len(items)))
         else:
