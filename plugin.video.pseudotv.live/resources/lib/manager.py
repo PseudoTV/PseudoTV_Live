@@ -472,6 +472,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             if retval is None:
                 DIALOG.notificationDialog(LANGUAGE(32077)%key.title())
                 return None, channelData 
+            self.log('validateInput, value = %s'%(retval))
             return retval, self.getID(channelData)
         except Exception as e: 
             log("validateInput, no action! %s"%(e))

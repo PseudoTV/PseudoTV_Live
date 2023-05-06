@@ -56,15 +56,14 @@ class Autotune:
                 elif retval == 2: return Backup().recoverChannels()
                 else: return
                 
-        for idx, type in enumerate(AUTOTUNE_TYPES): 
-            if samples: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,type,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-            self.selectAUTOTUNE(type, samples, rebuild)
-        if samples:
-            setAutotuned()
+        for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
+            if samples: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+            self.selectAUTOTUNE(ATtype, samples, rebuild)
+        if samples: setAutotuned()
         
 
-    def selectAUTOTUNE(self, type, autoSelect=False, rebuildChannels=False):
-        self.log('selectAUTOTUNE, type = %s'%(type))
+    def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
+        self.log('selectAUTOTUNE, ATtype = %s'%(ATtype))
         if isClient(): return
         def _build(item):
             return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
@@ -75,54 +74,54 @@ class Autotune:
                     if item.get('name').lower() == liz.getLabel().lower():
                         yield idx
 
-        def _set(selects=[]):
+        def _set(ATtype, selects=[]):
             for item in items:
                 item['enabled'] = False #disable everything before selecting new items.
                 for select in selects:
                     if item.get('name').lower() == lizlst[select].getLabel().lower():
                         item['enabled'] = True
-            self.library.setLibrary(type, items)
+            self.library.setLibrary(ATtype, items)
            
-        items = self.library.getLibrary(type)
+        items = self.library.getLibrary(ATtype)
         if len(items) == 0 and (not rebuildChannels and not autoSelect): 
-            return DIALOG.notificationDialog(LANGUAGE(32018)%(type))
+            return DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
         
         lizlst = [_build(item) for item in items]
         if rebuildChannels:#rebuild channels.json entries
-            selects = list(_match(self.library.getEnabled(type)))
+            selects = list(_match(self.library.getEnabled(ATtype)))
         elif autoSelect:#build sample channels
             if len(items) >= AUTOTUNE_LIMIT:
                 selects = sorted(list(set(random.sample(list(set(range(0,len(items)))),AUTOTUNE_LIMIT))))
             else: 
                 selects = list(range(0,len(items)))
         else:
-            selects = DIALOG.selectDialog(lizlst,LANGUAGE(32017)%(type),preselect=list(_match(self.library.getEnabled(type))))
+            selects = DIALOG.selectDialog(lizlst,LANGUAGE(32017)%(ATtype),preselect=list(_match(self.library.getEnabled(ATtype))))
         
-        if not selects is None: _set(selects)
-        return self.buildAUTOTUNE(type, self.library.getEnabled(type))
+        if not selects is None: _set(ATtype, selects)
+        return self.buildAUTOTUNE(ATtype, self.library.getEnabled(ATtype))
         
         
-    def buildAUTOTUNE(self, type, items):
+    def buildAUTOTUNE(self, ATtype, items):
         def buildAvailableRange(existing):
             # create number array for given type, excluding existing channel numbers.
             if existing:
                 existingNUMBERS = [eitem.get('number') for eitem in existing if eitem.get('number',0) > 0] # existing channel numbers
             else:
                 existingNUMBERS = []
-            start = ((CHANNEL_LIMIT+1)*(AUTOTUNE_TYPES.index(type)+1))
+            start = ((CHANNEL_LIMIT+1)*(AUTOTUNE_TYPES.index(ATtype)+1))
             stop  = (start + CHANNEL_LIMIT)
-            self.log('buildAUTOTUNE, type = %s, range = %s-%s, existingNUMBERS = %s'%(type,start,stop,existingNUMBERS))
+            self.log('buildAUTOTUNE, ATtype = %s, range = %s-%s, existingNUMBERS = %s'%(ATtype,start,stop,existingNUMBERS))
             return [num for num in range(start,stop) if num not in existingNUMBERS]
                   
-        existingAUTOTUNE = self.channels.popChannels(type,self.getAutotuned())
+        existingAUTOTUNE = self.channels.popChannels(ATtype,self.getAutotuned())
         usesableNUMBERS  = iter(buildAvailableRange(existingAUTOTUNE)) # available channel numbers
         for item in items:
             music = isRadio(item)
             citem = self.channels.getTemplate()
             citem.update({"id"      : "",
-                          "type"    : type,
+                          "type"    : ATtype,
                           "number"  : 0,
-                          "name"    : getChannelSuffix(item['name'], type),
+                          "name"    : getChannelSuffix(item['name'], ATtype),
                           "logo"    : item['logo'],
                           "path"    : item['path'],
                           "group"   : [item['type']],

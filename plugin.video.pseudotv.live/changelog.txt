@@ -1,4 +1,5 @@
 v.0.4.2
+-Fixed Seasonal Channel.
 -Improved In-App Channel Manager logo tool.
  -Browse: Directory Navigation
  -Select: Choose from matching results.
