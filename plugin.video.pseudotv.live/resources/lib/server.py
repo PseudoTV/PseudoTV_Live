@@ -53,7 +53,7 @@ class Discovery:
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            if self.monitor.waitForAbort(1) or self.monitor.chkRestart():
+            if self.monitor.chkInterrupt(1):
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
             elif isClient():
@@ -126,7 +126,7 @@ class Announcement:
                 try:   sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
                 except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
             
-            if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
+            if self.monitor.chkInterrupt(5):
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self.isRunning = False
@@ -247,7 +247,7 @@ class HTTP:
             except Exception as e: 
                 self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
                 
-            if self.monitor.waitForAbort(5) or self.monitor.chkRestart():
+            if self.monitor.chkInterrupt(5):
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self._stop()

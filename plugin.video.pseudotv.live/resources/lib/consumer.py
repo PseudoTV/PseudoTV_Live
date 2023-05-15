@@ -38,20 +38,19 @@ class Consumer():
 
     def _run(self):
         self.log('_run, starting...')
-        while not self.service.monitor.abortRequested():
-            try:
-                priority, randomheap, package  = self.queue.get(block=False)
-                func, args, kwargs = package
-                try: 
-                    self.log("_run, priority = %s, func = %s"%(priority,func.__name__))
-                    func(*args,**kwargs)
-                except Exception as e:
-                    self.log("_run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
-            except Empty:
-                if self.service.monitor.waitForAbort(5): break
-                else: continue
-                
-            if self.service.monitor.waitForAbort(1) or self.service.monitor.chkRestart() or isClient(): 
+        while not self.service.monitor.abortRequested() or not isClient():
+            if self.service.monitor.chkInterrupt(1): 
                 self.log('_run, interrupted')
                 break
+            else:
+                try:
+                    priority, randomheap, package  = self.queue.get(block=False)
+                    func, args, kwargs = package
+                    try: 
+                        self.log("_run, priority = %s, func = %s"%(priority,func.__name__))
+                        func(*args,**kwargs)
+                    except Exception as e:
+                        self.log("_run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
+                except Empty:
+                    if self.service.monitor.waitForAbort(5): break
         self.log('_run, stopping...')

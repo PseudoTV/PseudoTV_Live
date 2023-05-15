@@ -296,7 +296,7 @@ class Fillers:
                 # # if auto_commercials | auto_trailers:
                     # # while end > 0 and not self.writer.monitor.abortRequested():
                         # # if self.writer.monitor.waitForAbort(0.5): 
-                            # # self.log('injectBCTs, interrupted')
+                            # # self.log('injectBCTs, suspended')
                             # # break
                         # # # print('autofill while loop',end)
                         # # stpos = end

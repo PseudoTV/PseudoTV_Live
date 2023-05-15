@@ -92,8 +92,8 @@ class Builder:
             self.pMSG    = ''
             self.pDialog = DIALOG.progressBGDialog()
             for idx, channel in enumerate(channels):
-                if self.service.monitor.chkInterrupt():
-                    self.log('build, interrupted')
+                if self.service.monitor.chkSuspend():
+                    self.log('build, suspended')
                     complete = False
                     break
                 else:
@@ -193,9 +193,9 @@ class Builder:
         
         # build multi-paths as individual arrays for easier interleaving.
         if citem.get('provisional',None):
-            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service.monitor.chkInterrupt()]
+            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service.monitor.chkSuspend()]
         else:
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service.monitor.chkInterrupt()]
+            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service.monitor.chkSuspend()]
 
         if not verify(cacheResponse):#check that at least one filelist array contains meta.
             self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
@@ -397,8 +397,8 @@ class Builder:
         self.log("buildFileList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,filter,limits,path))
         while not self.service.monitor.abortRequested() and (len(fileList) < limit):
             #Not all results are flat hierarchies; walk all paths until filelist limit is reached. ie. Plugins with [NEXT PAGE]
-            if self.service.monitor.chkInterrupt(): 
-                self.log('buildFileList, interrupted')
+            if self.service.monitor.chkSuspend(): 
+                self.log('buildFileList, suspended')
                 break
             elif len(dirList) == 0:
                 self.log('buildFileList, no more folders to parse')

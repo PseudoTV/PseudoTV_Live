@@ -185,10 +185,10 @@ class Overlay():
 
     def open(self):
         self.log('open')
-        if PROPERTIES.getPropertyBool('OVERLAY') or not self.player.isPseudoTV: 
+        if isOverlay() or not self.player.isPseudoTV: 
             return self.close()
             
-        PROPERTIES.setPropertyBool('OVERLAY',True)
+        setOverlay(True)
         self.myPlayer = MYPlayer(overlay=self)
         self.myPlayer.onAVStarted()
         
@@ -207,7 +207,7 @@ class Overlay():
 
         try: del self.myPlayer
         except: pass
-        PROPERTIES.setPropertyBool('OVERLAY',False)
+        setOverlay(False)
 
     
     def cancelChannelBug(self):

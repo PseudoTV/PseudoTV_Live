@@ -71,8 +71,9 @@ class Channels:
         return list([citem for citem in self.getChannels() if citem.get('type') == type])
 
 
-    def setChannels(self):
-        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(self.channelDATA['channels'])))
+    def setChannels(self, channels=None):
+        if channels is None: channels = self.channelDATA['channels']
+        SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
         return self._save()
 
     

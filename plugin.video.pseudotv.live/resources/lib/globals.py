@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re, json, struct
-import shutil, subprocess, traceback
+import shutil, subprocess
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
@@ -31,6 +31,7 @@ from itertools   import cycle, chain, zip_longest
 from xml.sax.saxutils import escape, unescape
 from ast         import literal_eval
 
+from logger      import *
 from cache       import Cache, cacheit
 from pool        import killJSON, killit, timeit, poolit, threadit, timerit
 from kodi        import Dialog
@@ -134,9 +135,6 @@ PTVL_REPO           = 'repository.pseudotv'
 PVR_CLIENT          = 'pvr.iptvsimple'
       
 #variables
-DEBUG_ENABLED       = SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-DEBUG_LEVELS        = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR}
-DEBUG_LEVEL         = DEBUG_LEVELS[int((SETTINGS.getSetting('Debugging_Level') or "1"))]
 USER_LOC            = SETTINGS.getSetting('User_Folder')
 
 #docs
@@ -281,11 +279,6 @@ def fileLocker(globalFileLock):
         globalFileLock.unlockFile('MasterLock')
         globalFileLock.close()
 
-def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-  
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()
@@ -745,7 +738,7 @@ def chkDiscovery(servers, forced=False):
         SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
         SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
-        # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
+        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
@@ -771,19 +764,22 @@ def playSFX(filename, cached=False):
 def isLowPower():
     return PROPERTIES.getPropertyBool('isLowPower')
 
-def setLowPower():
+def getLowPower():
     if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
         PROPERTIES.setPropertyBool('isLowPower',False)
         return False
-    PROPERTIES.setPropertyBool('isLowPower',True)
     return True
+
+def setLowPower(state=False):
+    PROPERTIES.setPropertyBool('isLowPower',state)
+    return state
 
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
 
 def debugNotification():
     if SETTINGS.getSettingBool('Enable_Debugging'):
-        if DIALOG.yesnoDialog('Debugging is enabled\nIt''s recommend you disable debugging when applicable.\nWould you like disable debugging now?',autoclose=90):
+        if DIALOG.yesnoDialog('Debugging is [B]enabled[/B]\nIt''s recommend you disable debugging when applicable.\nWould you like disable debugging now?',autoclose=90):
             SETTINGS.setSettingBool('Enable_Debugging',False)
             DIALOG.notificationDialog('%s %s'%('Setting Disabled',LANGUAGE(32025)))
          
@@ -794,3 +790,12 @@ def cleanLabel(text):
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
     
+def convertString2Num(value):
+    try:    return literal_eval(value)
+    except: return None
+         
+def isOverlay():
+    return PROPERTIES.getPropertyBool('OVERLAY')
+    
+def setOverlay(state=True):
+     PROPERTIES.setPropertyBool('OVERLAY',state)

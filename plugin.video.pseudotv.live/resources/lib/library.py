@@ -105,8 +105,8 @@ class Library:
                 
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service.monitor.chkInterrupt():
-                self.log('fillItems, interrupted')
+            if self.service.monitor.chkSuspend():
+                self.log('fillItems, suspended')
                 break
             
             with idleLocker():
@@ -135,8 +135,8 @@ class Library:
         dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
-            if self.service.monitor.chkInterrupt(): 
-                self.log('updateLibrary, interrupted')
+            if self.service.monitor.chkSuspend(): 
+                self.log('updateLibrary, suspended')
                 complete = False
                 break
             else:

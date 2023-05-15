@@ -200,16 +200,32 @@ class Monitor(xbmc.Monitor):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def chkInterrupt(self, wait=0.001):
+    def chkSuspend(self, wait=0.001):
         if (self.waitForAbort(wait) | self.pendingRestart | self.pendingChange): return True
         return False
         
         
+    def chkInterrupt(self, wait=0.001):
+        if (self.waitForAbort(wait) | self.pendingRestart): return True
+        return False
+        
+        
+    def chkChange(self):
+        change = (PROPERTIES.getPropertyBool('pendingChange') | self.pendingChange)
+        if change:
+            self.pendingChange = False
+            PROPERTIES.clearProperty('pendingChange')
+        self.log('chkChange, pendingChange = %s'%(change))
+        return change
+        
+        
     def chkRestart(self):
-        restart = PROPERTIES.getPropertyBool('pendingRestart')
-        if restart: PROPERTIES.clearProperty('pendingRestart')
-        self.pendingRestart = (self.pendingRestart | restart)
-        return self.pendingRestart
+        restart = (PROPERTIES.getPropertyBool('pendingRestart') | self.pendingRestart)
+        if restart:
+            self.pendingRestart = False
+            PROPERTIES.clearProperty('pendingRestart')
+        self.log('chkRestart, pendingRestart = %s'%(restart))
+        return restart
 
 
     def getIdle(self):
@@ -224,11 +240,11 @@ class Monitor(xbmc.Monitor):
         
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
-        if state and not PROPERTIES.getPropertyBool('OVERLAY'):
+        if state and not isOverlay():
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open()
-        elif not state and PROPERTIES.getPropertyBool('OVERLAY'):
+        elif not state and isOverlay():
             self.myService.overlay.close()
 
 
@@ -244,7 +260,7 @@ class Monitor(xbmc.Monitor):
 
 
     def triggerSleep(self):
-        conditions = not isPaused() & self.isPlaying() & self.isPseudoTV
+        conditions = not isPaused() & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
         self.log("triggerSleep, conditions = %s"%(conditions))
         if not conditions: return
         if self.sleepTimer():
@@ -259,11 +275,11 @@ class Monitor(xbmc.Monitor):
         inc = int(100/OVERLAY_DELAY)
         playSFX(NOTE_WAV)
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-        while not self.monitor.abortRequested() and (sec < OVERLAY_DELAY):
+        while not self.abortRequested() and (sec < OVERLAY_DELAY):
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%((OVERLAY_DELAY-sec)))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
-            if self.monitor.waitForAbort(1) or dia is None:
+            if self.waitForAbort(1) or dia is None:
                 cnx = True
                 break
         DIALOG.progressDialog(100,dia)
@@ -282,17 +298,14 @@ class Monitor(xbmc.Monitor):
   
     def onSettingsChanged(self):
         self.log('onSettingsChanged, pendingChange = %s'%(self.pendingChange))
-        if self.pendingChange:
-            timerit(self._onSettingsChanged)(15.0)
+        if self.chkChange(): timerit(self._onSettingsChanged)(15.0)
                 
                 
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
-        if not isClient():
-            self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
+        if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
         self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
-        self.pendingChange  = False
-        
+
 
 class Service():
     setClient(isClient())
@@ -309,7 +322,6 @@ class Service():
         debugNotification()
         DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
-        self.monitor.pendingRestart = False
         self.producer = Producer(service=self)
         self.channels = self.producer.getChannels()       #startup channels
         self.settings = dict(self.producer.getSettings()) #startup settings
@@ -326,18 +338,20 @@ class Service():
         self.producer._startProcess()
         while not self.monitor.abortRequested():
             if self.monitor.waitForAbort(1): 
-                self.log('_start, interrupted')
-                break
+                self.log('_start, waitForAbort')
+                DIALOG.notificationDialog(LANGUAGE(32141)%(ADDON_NAME))
+                return self._stop()
             elif self.monitor.chkRestart():
                 self.log('_start, pending restart')
+                DIALOG.notificationDialog(LANGUAGE(32049)%(ADDON_NAME))
                 return self._restart()
             elif self.monitor.isSettingsOpened():
                 self.monitor.pendingChange = True
-                continue
-            else:
+                timerit(self.monitor.onSettingsChanged)(15.0) #onSettingsChanged() not called when kodi settings cancelled. call timer instead.
+            elif not self.monitor.pendingChange:
                 self._tasks()
+        
                 
-    
     def _tasks(self):
         isIdle = self.monitor.chkIdle()
         if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
@@ -354,15 +368,15 @@ class Service():
                     thread.join(1.0)
                 except: pass
             except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
+        setInstanceID()    #create new instanceID
+        setAutotuned(False)#reset autotuned state
+        setFirstrun(False) #reset firstrun state
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
         
         
     def _restart(self):
-        DIALOG.notificationDialog(LANGUAGE(32049)%(ADDON_NAME))
         self._stop()
-        setInstanceID()
-        setAutotuned(False)
-        setFirstrun(False)
         Service()._start()
+        
         
 if __name__ == '__main__': Service()._start()

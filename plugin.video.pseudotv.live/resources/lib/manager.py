@@ -54,11 +54,7 @@ def isManagerRunning():
     
 def setManagerRunning(state=True):
     return PROPERTIES.setPropertyBool('managerRunning',state)
-        
-def convertString2Num(value):
-    try:    return literal_eval(value)
-    except: return None
-    
+
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
 
@@ -566,7 +562,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         while not MONITOR.abortRequested():
             waitTime -= 1
             if MONITOR.waitForAbort(1) or waitTime < 1:
-                self.log('validateSeek, interrupted')
+                self.log('validateSeek, waitForAbort')
                 break
             elif not PLAYER.isPlaying():
                 continue

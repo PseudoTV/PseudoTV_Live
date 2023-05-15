@@ -62,15 +62,16 @@ class Producer():
 
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
-        # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
+        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
         self._chkVersion()
         self._chkDebugging()
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
-        setLowPower()
+        setLowPower(state=getLowPower())
+        self._chkAutotune()
         
-        
+
     def _chkDebugging(self):
         #prompt user warning concerning disabled cache.
         DEBUG_CACHE = (SETTINGS.getSettingBool('Enable_Debugging') & SETTINGS.getSettingBool('Disable_Cache'))
@@ -122,7 +123,7 @@ class Producer():
             complete = library.updateLibrary()
             del library
             if not complete: forceUpdateTime('updateLibrary')
-            elif not hasAutotuned(): self.updateAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
     
@@ -139,21 +140,28 @@ class Producer():
                 PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
                 del jsonRPC
         except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
-    
-        
+            
+
     def _chkAutotune(self):
-        #force rebuild to predefined autotuned channels/ update paths & logos
         self._que(self.updateAutoTune,2)
-    
-    
+        
+        
     def updateAutoTune(self):
         self.log('updateAutoTune')
-        # self.producer._chkAutotune() #rebuild autotune selection todo only on change?
+        try:
+            autotune = Autotune(service=self.service)
+            autotune._runTune()
+            del autotune
+        except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
+        
+        
+    def runAutoTune(self):
+        self.log('runAutoTune')
         try:
             autotune = Autotune(service=self.service)
             autotune._runTune(samples=True,rebuild=False)
             del autotune
-        except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
+        except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
         
     def updateChannels(self):
@@ -259,7 +267,7 @@ class Producer():
             params = queuePool.get('params',[])
             for param in (list(chunkLst(params,PAGE_LIMIT)) or [[]])[0]:
                 if self.service.monitor.waitForAbort(1):
-                    self.log('runJSON, interrupted')
+                    self.log('runJSON, waitForAbort')
                     forceUpdateTime('updateJSON')
                     break
                 elif not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY:

@@ -86,7 +86,7 @@ class Resources:
         if not cacheResponse:
             for id in list(set(resources)):
                 if MONITOR.waitForAbort(0.001): 
-                    self.log('getLogoResources, interrupted')
+                    self.log('getLogoResources, waitForAbort')
                     break
                 elif not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
                     self.log('getLogoResources, missing %s'%(id))
@@ -152,7 +152,7 @@ class Resources:
         else: walk.setdefault(path,[]).extend(list([f for f in files if f.endswith(tuple(exts))]))
         for idx, dir in enumerate(dirs): 
             if MONITOR.waitForAbort(0.001): 
-                self.log('walkDirectory, interrupted')
+                self.log('walkDirectory, waitForAbort')
                 break
             else:
                 self.log('walkDirectory, walking %s/%s directory'%(idx,len(dirs)))

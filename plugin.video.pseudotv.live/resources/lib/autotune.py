@@ -36,28 +36,29 @@ class Autotune:
 
 
     def getAutotuned(self):
+        #return autotuned channels ie. channels > CHANNEL_LIMIT
         return self.channels.getAutotuned()
 
 
     def _runTune(self, samples=False, rebuild=True):
+        #samples = build random selection | rebuild = refresh autotuned channels.
         self.log('_runTune, samples = %s, rebuild = %s'%(samples,rebuild))
-        if   isClient(): return
-        elif samples:
-            if hasAutotuned() or len(self.getAutotuned()) != 0: return #don't create samples when channels exist or prompt already displayed.
-            else:
-                opt = ''
-                msg = (LANGUAGE(32042)%ADDON_NAME)
-                if PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.has.Backup') == "true":
-                    opt = LANGUAGE(32112)
-                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
-                retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
-                if retval == 1:
-                    dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                elif retval == 2: return Backup().recoverChannels()
-                else: return
-                
+        dia = None
+        if isClient(): return
+        elif samples and not hasAutotuned() and len(self.getAutotuned()) == 0:
+            opt = ''
+            msg = (LANGUAGE(32042)%ADDON_NAME)
+            backup = Backup()
+            if backup.hasBackup():
+                opt = LANGUAGE(32112)
+                msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
+            retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
+            if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+            elif retval == 2: return backup.recoverChannels()
+            else:             return
+        elif rebuild and hasAutotuned() and len(self.getAutotuned()) == 0: return
         for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-            if samples: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+            if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
             self.selectAUTOTUNE(ATtype, samples, rebuild)
         if samples: setAutotuned()
         
