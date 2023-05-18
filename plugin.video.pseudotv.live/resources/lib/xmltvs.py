@@ -71,7 +71,8 @@ class XMLTVS:
         try: 
             return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
         except Exception as e: 
-            self.log('loadData, failed! %s'%(e), xbmc.LOGERROR)
+            if not 'no element found: line 1, column 0' in str(e):
+                self.log('loadData, failed! %s'%(e), xbmc.LOGERROR)
             return self.resetData()
 
 
@@ -80,8 +81,8 @@ class XMLTVS:
         try:
             return (xmltv.read_channels(FileAccess.open(file, 'r')) or [])
         except Exception as e:
-            if 'no element found: line 1, column 0' in str(e): return [] #new file error
-            self.log('loadChannels, failed! %s'%(e), xbmc.LOGWARNING)
+            if not 'no element found: line 1, column 0' in str(e):
+                self.log('loadChannels, failed! %s'%(e), xbmc.LOGERROR)
             return []
         
         
@@ -90,8 +91,8 @@ class XMLTVS:
         try: 
             return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
         except Exception as e: 
-            if 'no element found: line 1, column 0' in str(e): return [] #new file error
-            self.log('loadProgrammes, failed! %s'%(e), xbmc.LOGWARNING)
+            if not 'no element found: line 1, column 0' in str(e):
+                self.log('loadProgrammes, failed! %s'%(e), xbmc.LOGERROR)
             return []
 
             

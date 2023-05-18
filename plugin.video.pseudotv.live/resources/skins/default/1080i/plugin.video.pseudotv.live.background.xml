@@ -20,6 +20,12 @@
                     <colordiffuse>black</colordiffuse>
                     <texture>colors/white.png</texture>
                 </control>
+                <control type="image"> 
+                    <width>auto</width>
+                    <height>auto</height>
+                    <texture>backgrounds/background.gif</texture>
+                    <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
+                </control>
                 <control type="grouplist">
                     <posx>1440</posx>
                     <posy>850</posy>

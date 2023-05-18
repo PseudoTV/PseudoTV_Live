@@ -62,7 +62,7 @@ class Producer():
 
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
-        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
+        # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
         self._chkVersion()
         self._chkDebugging()
         setClient(isClient(),silent=False)

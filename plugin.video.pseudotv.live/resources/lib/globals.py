@@ -738,7 +738,7 @@ def chkDiscovery(servers, forced=False):
         SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
         SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
-        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
+        # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
@@ -779,9 +779,9 @@ def forceUpdateTime(key):
 
 def debugNotification():
     if SETTINGS.getSettingBool('Enable_Debugging'):
-        if DIALOG.yesnoDialog('Debugging is [B]enabled[/B]\nIt''s recommend you disable debugging when applicable.\nWould you like disable debugging now?',autoclose=90):
+        if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=90):
             SETTINGS.setSettingBool('Enable_Debugging',False)
-            DIALOG.notificationDialog('%s %s'%('Setting Disabled',LANGUAGE(32025)))
+            DIALOG.notificationDialog(LANGUAGE(321423))
          
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)

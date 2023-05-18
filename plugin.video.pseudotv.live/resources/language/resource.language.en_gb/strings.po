@@ -1061,6 +1061,13 @@ msgctxt "#32141"
 msgid "Shutting Down %s..."
 msgstr ""
 
+msgctxt "#32142"
+msgid "Debugging is [B]enabled[/B]\nIt's recommend you disable debugging when applicable.\nWould you like to disable debugging now?"
+msgstr ""
+
+msgctxt "#32143"
+msgid "Debugging Disabled!"
+msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
