@@ -1,4 +1,6 @@
 v.0.4.2
+-Fixed Forced Autotuning overriding custom channels.
+-Improved seasonal channels and channel recovery.
 -Fixed Seasonal Channel.
 -Improved In-App Channel Manager logo tool.
  -Browse: Directory Navigation

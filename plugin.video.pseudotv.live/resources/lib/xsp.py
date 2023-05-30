@@ -83,7 +83,10 @@ class XSP:
             except: pass
             try:
                 sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()
-                sort["order"]  = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
+                #todo pop rules to filter var.
+            except: pass
+            try:
+                sort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
                 #todo pop rules to filter var.
             except: pass
             self.log("parseSmartPlaylist, media = %s, paths = %s, sort = %s"%(media, paths, sort))

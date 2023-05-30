@@ -164,15 +164,20 @@ class Seasonal:
         return SEASONS.get(self.getMonth(),{}).get(self.getWeek(),{})
 
 
-    def getNearestHoliday(self):
+    def getNearestHoliday(self, fallback=True):
         holiday = {}
         month   = self.getMonth()
         week    = self.getWeek()
         weeks   = [1,2,3,4,5][week-1:] #running a 5 week month for extended weeks > 28 days.
+        if fallback:
+            past = [1,2,3,4,5][:week-1]
+            past.reverse()
+            weeks = weeks + past
+            
         for next in weeks:
             holiday = SEASONS.get(month,{}).get(next,{})
             if holiday.get('keyword'): break
-        self.log('getNearestHoliday, month = %s, week = %s, found = %s'%(month, week, holiday))
+        self.log('getNearestHoliday, using fallback = %s, month = %s, current week = %s, using week = %s, found = %s'%(fallback, month, week, next, holiday))
         return holiday
 
 

@@ -25,20 +25,7 @@ from ast         import literal_eval
 from contextlib  import contextmanager, closing
 from infotagger.listitem import ListItemInfoTag
 
-#info
-ADDON_ID            = 'plugin.video.pseudotv.live'
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
-ICON                = REAL_SETTINGS.getAddonInfo('icon')
-FANART              = REAL_SETTINGS.getAddonInfo('fanart')
-SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
-ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
-LANGUAGE            = REAL_SETTINGS.getLocalizedString
-COLOR_LOGO          = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
-
 #variables
-PROMPT_DELAY        = 4000 #msecs
 DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
 
 MONITOR             = xbmc.Monitor()

@@ -69,7 +69,6 @@ class Producer():
         Backup().hasBackup()
         chkPVREnabled()
         setLowPower(state=getLowPower())
-        self._chkAutotune()
         
 
     def _chkDebugging(self):
@@ -122,7 +121,7 @@ class Producer():
             library.importPrompt()
             complete = library.updateLibrary()
             del library
-            if not complete: forceUpdateTime('updateLibrary')
+            if   not complete: forceUpdateTime('updateLibrary')
             elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
@@ -140,26 +139,13 @@ class Producer():
                 PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
                 del jsonRPC
         except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
-            
-
-    def _chkAutotune(self):
-        self._que(self.updateAutoTune,2)
-        
-        
-    def updateAutoTune(self):
-        self.log('updateAutoTune')
-        try:
-            autotune = Autotune(service=self.service)
-            autotune._runTune()
-            del autotune
-        except Exception as e: self.log('updateAutoTune failed! %s'%(e), xbmc.LOGERROR)
-        
-        
+         
+         
     def runAutoTune(self):
         self.log('runAutoTune')
         try:
             autotune = Autotune(service=self.service)
-            autotune._runTune(samples=True,rebuild=False)
+            autotune._runTune(samples=True)
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

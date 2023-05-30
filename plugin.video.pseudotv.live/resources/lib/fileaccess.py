@@ -21,18 +21,6 @@
 from globals    import *
 from threading  import BoundedSemaphore, Timer
 
-#info
-ADDON_ID            = 'plugin.video.pseudotv.live'
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
-ICON                = REAL_SETTINGS.getAddonInfo('icon')
-FANART              = REAL_SETTINGS.getAddonInfo('fanart')
-SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
-ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
-LANGUAGE            = REAL_SETTINGS.getLocalizedString
-COLOR_LOGO          = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
-
 #constants 
 DEFAULT_ENCODING           = "utf-8"
 FILE_LOCK_MAX_FILE_TIMEOUT = 13

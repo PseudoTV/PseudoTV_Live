@@ -24,12 +24,6 @@ from threading          import Event, Thread, Timer, enumerate
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce    
 
-#info
-ADDON_ID      = 'plugin.video.pseudotv.live'
-REAL_SETTINGS = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME    = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION = REAL_SETTINGS.getAddonInfo('version')
-
 #variables
 PAGE_LIMIT    = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 DEBUG_ENABLED = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'

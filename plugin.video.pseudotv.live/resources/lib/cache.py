@@ -23,17 +23,6 @@ from globals     import *
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
-#info
-ADDON_ID            = 'plugin.video.pseudotv.live'
-REAL_SETTINGS       = xbmcaddon.Addon(id=ADDON_ID)
-ADDON_NAME          = REAL_SETTINGS.getAddonInfo('name')
-ADDON_VERSION       = REAL_SETTINGS.getAddonInfo('version')
-
-#variables
-DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-DEBUG_CACHE         = REAL_SETTINGS.getSetting('Disable_Cache').lower() == 'true'
-DEBUG_CACHE         = (DEBUG_ENABLED & DEBUG_CACHE) #Only enable DEBUG_CACHE when DEBUG_ENABLED
-
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())

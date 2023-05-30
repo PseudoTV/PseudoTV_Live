@@ -147,6 +147,14 @@ class Library:
         return complete
         
 
+    def resetLibrary(self, ATtypes=AUTOTUNE_TYPES):
+        self.log('resetLibrary')
+        for ATtype in ATtypes: 
+            items = self.getLibrary(ATtype)
+            for item in items: item['enabled'] = False #disable everything before selecting new items.
+            self.setLibrary(ATtype, items)
+
+
     @cacheit(json_data=True)
     def getNetworks(self):
         return self.getTVInfo().get('studios',[])

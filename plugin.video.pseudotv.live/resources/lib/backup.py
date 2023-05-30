@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
  
 from globals    import *
+from library    import Library
 from channels   import Channels
 
 BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
@@ -27,6 +28,7 @@ class Backup:
     def __init__(self, sysARG=sys.argv):
         self.sysARG   = sysARG
         self.channels = Channels()
+        
     
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -106,10 +108,11 @@ class Backup:
                     self.channels.addChannel(citem)
                 else: 
                     self.channels.delChannel(citem)
+            Library().resetLibrary()
             return self.channels.setChannels()
         return False
-
-       
+        
+  
     def run(self):  
         ctl = (0,2) #settings return focus
         try:    param = self.sysARG[1]

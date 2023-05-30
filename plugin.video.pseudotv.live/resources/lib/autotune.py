@@ -37,31 +37,36 @@ class Autotune:
 
     def getAutotuned(self):
         #return autotuned channels ie. channels > CHANNEL_LIMIT
-        return self.channels.getAutotuned()
+        channels = self.channels.getAutotuned()
+        self.log('getAutotuned, channels = %s'%(len(channels)))
+        return channels
 
 
-    def _runTune(self, samples=False, rebuild=True):
-        #samples = build random selection | rebuild = refresh autotuned channels.
-        self.log('_runTune, samples = %s, rebuild = %s'%(samples,rebuild))
-        dia = None
+    def _runTune(self, samples=False, rebuild=False):
+        self.log('_runTune, samples = %s'%(samples))
         if isClient(): return
-        elif samples and not hasAutotuned() and len(self.getAutotuned()) == 0:
-            opt = ''
-            msg = (LANGUAGE(32042)%ADDON_NAME)
-            backup = Backup()
-            if backup.hasBackup():
-                opt = LANGUAGE(32112)
-                msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
-            retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
-            if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-            elif retval == 2: return backup.recoverChannels()
-            else:             return
-        elif rebuild and hasAutotuned() and len(self.getAutotuned()) == 0: return
-        for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-            if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-            self.selectAUTOTUNE(ATtype, samples, rebuild)
-        if samples: setAutotuned()
-        
+        elif not hasAutotuned():
+            dia = None
+            setAutotuned()
+            autoChannels = self.getAutotuned()
+            if len(autoChannels) == 0 and samples:
+                opt = ''
+                msg = (LANGUAGE(32042)%ADDON_NAME)
+                if Backup().hasBackup():
+                    opt = LANGUAGE(32112)
+                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
+                retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
+                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                elif retval == 2: return Backup().recoverChannels()
+                else: return
+            elif len(autoChannels) > 0:
+                samples = False
+                rebuild = True
+                
+            for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
+                if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
+
 
     def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
         self.log('selectAUTOTUNE, ATtype = %s'%(ATtype))
