@@ -50,12 +50,12 @@ class Producer():
             self.log("_que, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def chkUpdateTime(self, key, wait, nextUpdate=None):
+    def chkUpdateTime(self, key, runEvery, nextUpdate=None):
         #schedule updates, first boot always forces run!
         if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
         epoch = int(time.time())
         if (epoch >= nextUpdate):
-            PROPERTIES.setPropertyInt(key,(epoch+wait))
+            PROPERTIES.setPropertyInt(key,(epoch+runEvery))
             return True
         return False
 
@@ -63,6 +63,9 @@ class Producer():
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
         # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple if needed.
+        setInstanceID() #create new instanceID
+        setAutotuned(False)#reset autotuned state
+        setFirstrun(False) #reset firstrun state
         self._chkVersion()
         self._chkDebugging()
         setClient(isClient(),silent=False)
@@ -91,17 +94,17 @@ class Producer():
 
     def _taskManager(self):
         #main function to handle all scheduled queues. 
-        if self.chkUpdateTime('updateSettings',3600):
+        if self.chkUpdateTime('updateSettings',runEvery=3600):
             self._que(self.updateSettings,1)
-        if self.chkUpdateTime('chkFiles',300):
+        if self.chkUpdateTime('chkFiles',runEvery=300):
             self._que(self._chkFiles,2)
-        if self.chkUpdateTime('updateRecommended',300):
+        if self.chkUpdateTime('updateRecommended',runEvery=300):
             self._que(self.updateRecommended,2)
-        if self.chkUpdateTime('updateLibrary',(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
+        if self.chkUpdateTime('updateLibrary',runEvery=(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
             self._que(self.updateLibrary,2)
-        if self.chkUpdateTime('updateChannels',3600):
+        if self.chkUpdateTime('updateChannels',runEvery=3600):
             self._que(self.updateChannels,3)
-        if self.chkUpdateTime('updateJSON',600):
+        if self.chkUpdateTime('updateJSON',runEvery=600):
             self._que(self.updateJSON,4)
 
 
@@ -273,5 +276,6 @@ class Producer():
 
     def _chkVersion(self):
         if ADDON_VERSION != SETTINGS.getCacheSetting('lastVersion', default='v.0.0.0'):
+            #todo check kodi repo addon.xml version number, prompt user if outdated.
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')

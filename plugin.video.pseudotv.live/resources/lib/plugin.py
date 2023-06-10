@@ -308,7 +308,7 @@ class Plugin:
         if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
         if pvritem['playcount'] <= 2:
             with busy_dialog():
-                DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=OVERLAY_DELAY)
+                DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=5)
                 self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
                 return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
         elif pvritem['playcount'] == 3: forceBrute()

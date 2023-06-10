@@ -192,8 +192,8 @@ class Player(xbmc.Player):
 class Monitor(xbmc.Monitor):
     def __init__(self):
         xbmc.Monitor.__init__(self)
-        self.pendingChange  = False
-        self.pendingRestart = False
+        self.pendingChange    = False
+        self.pendingRestart   = False
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -201,31 +201,32 @@ class Monitor(xbmc.Monitor):
 
 
     def chkSuspend(self, wait=0.001):
-        if (self.waitForAbort(wait) | self.pendingRestart | self.pendingChange): return True
-        return False
+        pendingChange  = (isPendingChange()  | self.pendingChange)
+        pendingRestart = (isPendingRestart() | self.pendingRestart)
+        pendingSuspend = (self.waitForAbort(wait) | pendingChange | pendingRestart)
+        self.log('chkSuspend, pendingSuspend = %s'%(pendingSuspend))
+        return pendingSuspend
         
         
     def chkInterrupt(self, wait=0.001):
-        if (self.waitForAbort(wait) | self.pendingRestart): return True
-        return False
+        pendingRestart   = (isPendingRestart() | self.pendingRestart)
+        pendingInterrupt = (self.waitForAbort(wait) | pendingRestart)
+        self.log('chkInterrupt, pendingInterrupt = %s'%(pendingInterrupt))
+        return pendingInterrupt
         
         
     def chkChange(self):
-        change = (PROPERTIES.getPropertyBool('pendingChange') | self.pendingChange)
-        if change:
-            self.pendingChange = False
-            PROPERTIES.clearProperty('pendingChange')
-        self.log('chkChange, pendingChange = %s'%(change))
-        return change
+        self.pendingChange = (isPendingChange() | self.pendingChange)
+        self.log('chkChange, pendingChange = %s'%(self.pendingChange))
+        setPendingChange(False)
+        return self.pendingChange
         
         
     def chkRestart(self):
-        restart = (PROPERTIES.getPropertyBool('pendingRestart') | self.pendingRestart)
-        if restart:
-            self.pendingRestart = False
-            PROPERTIES.clearProperty('pendingRestart')
-        self.log('chkRestart, pendingRestart = %s'%(restart))
-        return restart
+        self.pendingRestart = (isPendingRestart() | self.pendingRestart)
+        self.log('chkRestart, pendingRestart = %s'%(self.pendingRestart))
+        setPendingRestart(False)
+        return self.pendingRestart
 
 
     def getIdle(self):
@@ -264,7 +265,7 @@ class Monitor(xbmc.Monitor):
         self.log("triggerSleep, conditions = %s"%(conditions))
         if not conditions: return
         if self.sleepTimer():
-            self.stop()
+            self.myService.player.stop()
             return True
         
         
@@ -298,11 +299,12 @@ class Monitor(xbmc.Monitor):
   
     def onSettingsChanged(self):
         self.log('onSettingsChanged, pendingChange = %s'%(self.pendingChange))
-        if self.chkChange(): timerit(self._onSettingsChanged)(15.0)
+        if self.pendingChange: timerit(self._onSettingsChanged)(15.0)
                 
                 
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
+        self.pendingChange = False
         if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
         self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
 
@@ -346,9 +348,10 @@ class Service():
                 DIALOG.notificationDialog(LANGUAGE(32049)%(ADDON_NAME))
                 return self._restart()
             elif self.monitor.isSettingsOpened():
+                self.log('_start, pending change')
                 self.monitor.pendingChange = True
                 timerit(self.monitor.onSettingsChanged)(15.0) #onSettingsChanged() not called when kodi settings cancelled. call timer instead.
-            elif not self.monitor.pendingChange:
+            elif not self.monitor.chkChange():
                 self._tasks()
         
                 
@@ -356,7 +359,12 @@ class Service():
         isIdle = self.monitor.chkIdle()
         if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
         if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
-            
+                    
+        
+    def _restart(self):
+        if self._stop():
+            Service()._start()
+        
         
     def _stop(self):
         for thread in enumerate():
@@ -368,15 +376,8 @@ class Service():
                     thread.join(1.0)
                 except: pass
             except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
-        setInstanceID()    #create new instanceID
-        setAutotuned(False)#reset autotuned state
-        setFirstrun(False) #reset firstrun state
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        
-        
-    def _restart(self):
-        self._stop()
-        Service()._start()
-        
+        return True
+
         
 if __name__ == '__main__': Service()._start()

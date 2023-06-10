@@ -178,7 +178,7 @@ msgid "Clear Recommended Blacklist"
 msgstr ""
 
 msgctxt "#30040"
-msgid "Clear Pre-defined Channels"
+msgid "Clear Autotuned Channels"
 msgstr ""
 
 msgctxt "#30041"

@@ -62,10 +62,12 @@ class Autotune:
             elif len(autoChannels) > 0:
                 samples = False
                 rebuild = True
-                
-            for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-                if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
+            
+            if samples or rebuild:
+                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Predefined',True)
+                for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
+                    if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                    self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
 
 
     def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
@@ -147,7 +149,17 @@ class Autotune:
             self.channels.addChannel(citem)
         return self.channels.setChannels()
        
-
+       
+    def clearLibrary(self):
+        self.library.resetLibrary()
+        DIALOG.notificationDialog(LANGUAGE(32025))
+       
+       
+    def clearBlacklist(self):
+        SETTINGS.setSetting('Clear_BlackList','')
+        DIALOG.notificationDialog(LANGUAGE(32025))
+        
+        
     def run(self):  
         ctl = (1,1) #settings return focus
         try:    param = self.sysARG[1]
@@ -156,6 +168,8 @@ class Autotune:
         if param.replace('_',' ') in AUTOTUNE_TYPES:
             ctl = (1,AUTOTUNE_TYPES.index(param.replace('_',' '))+1)
             self.selectAUTOTUNE(param.replace('_',' '))
+        elif param == 'Clear_Autotune' : self.clearLibrary()
+        elif param == 'Clear_BlackList': self.clearBlacklist()
         return openAddonSettings(ctl)
         
 if __name__ == '__main__': Autotune(sys.argv).run()

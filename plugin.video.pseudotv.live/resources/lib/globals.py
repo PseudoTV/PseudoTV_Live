@@ -210,7 +210,7 @@ def setInstanceID():
     PROPERTIES.setEXTProperty('InstanceID',uuid.uuid4())
 
 def getInstanceID():
-    instanceID = PROPERTIES.getEXTProperty('InstanceID') 
+    instanceID = PROPERTIES.getEXTProperty('InstanceID')
     if not instanceID: setInstanceID()
     return PROPERTIES.getEXTProperty('InstanceID')
   
@@ -536,6 +536,18 @@ def closeBusyDialog():
     elif BUILTIN.getInfoBool('IsActive(busydialog)','Window'):
         BUILTIN.executebuiltin('Dialog.Close(busydialog)')
          
+def isPendingRestart():
+    return PROPERTIES.getPropertyBool('pendingRestart')
+    
+def setPendingRestart(state=True):
+    return PROPERTIES.setPropertyBool('pendingRestart',state)
+                    
+def isPendingChange():
+    return PROPERTIES.getPropertyBool('pendingChange')
+    
+def setPendingChange(state=True):
+    return PROPERTIES.setPropertyBool('pendingChange',state)
+                
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
     

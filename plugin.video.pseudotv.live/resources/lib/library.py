@@ -385,8 +385,7 @@ class Library:
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = list(set(whiteList))
-        if len(whiteList) > 0: 
-            PROPERTIES.setPropertyBool('has.WhiteList',len(whiteList) > 0)
+        if len(whiteList) > 0: PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 

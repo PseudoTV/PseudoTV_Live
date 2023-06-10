@@ -88,7 +88,7 @@ class Utilities:
             items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)}, #"Rebuild M3U/XMLTV"
                         {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},  #"Clean Start"
                         {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                  #"Force PVR reload"
-                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':PROPERTIES.setPropertyBool,'args':('pendingRestart',True)}] #"Force PTVL reload"
+                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart}] #"Force PTVL reload"
 
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
             if select is None: 
@@ -122,7 +122,7 @@ class Utilities:
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
             with busy_dialog():
                 [DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':',''))) for key in keys if FileAccess.delete(files[key])]
-        if full: PROPERTIES.setPropertyBool('pendingRestart',True)
+        if full: setPendingRestart()
 
 
     # def clearImport(self):
