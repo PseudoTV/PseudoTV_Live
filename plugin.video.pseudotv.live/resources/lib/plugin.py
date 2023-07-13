@@ -26,6 +26,16 @@ PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 SEEK_TOLER = SETTINGS.getSettingInt('Seek_Tolerance')
 SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
+@contextmanager
+def pending_Playback():
+    if not PROPERTIES.getPropertyBool('pendingplayback'):
+        setBusy(True)
+        PROPERTIES.setPropertyBool('pendingplayback',True)
+    try: yield
+    finally:
+        setBusy(False)
+        PROPERTIES.setPropertyBool('pendingplayback',False)
+
 class Plugin:
     def __init__(self, sysARG=sys.argv):
         self.cache   = Cache(mem_cache=True)
@@ -64,7 +74,6 @@ class Plugin:
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.lower().startswith(quoteString(dir.lower())):
-                        PROPERTIES.setProperty('ptvlkodipath', os.path.join(pvrRoot,result))
                         self.log('getCallback: _matchVFS, found dir = %s'%(os.path.join(pvrRoot,result)))
                         response = self.jsonRPC.walkListDirectory(os.path.join(pvrRoot,result),append_path=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
                         for pvr in response:
@@ -79,7 +88,6 @@ class Plugin:
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
-                        PROPERTIES.setProperty('ptvlkodipath', result.get('file'))
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
                         response = self.jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
                         for item in response:
@@ -300,6 +308,7 @@ class Plugin:
         
 
     def playError(self, pvritem={}):
+        #todo verify xmltv file has programmes, if not force rebuild.
         if not pvritem:
             pvritem = {'channelid':'-1'}
             pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1

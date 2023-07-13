@@ -236,7 +236,8 @@ class Producer():
 
 
     def serviceRestart(self):
-        timerit(self._serviceRestart)(15.0)
+        if not self.service.monitor.pendingRestart:
+            timerit(self._serviceRestart)(15.0)
         
         
     def _serviceRestart(self):

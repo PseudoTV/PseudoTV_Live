@@ -198,9 +198,9 @@ class Overlay():
             
 
     def close(self):
-        self.log('close')     
+        self.log('close')
         self.cancelOnNext()
-        self.cancelChannelBug()     
+        self.cancelChannelBug()
         self.setImage(self._channelBug,'None')
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
@@ -256,7 +256,6 @@ class Overlay():
 
                 logo = self.player.pvritem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
-                self.setImage(self._channelBug,logo)
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
                 elif BUILTIN.getInfoBool('HasAddon(script.module.pil)','System'):
@@ -267,9 +266,11 @@ class Overlay():
                     del jsonRPC
                 
                 self.setVisible(self._channelBug,True)
+                self.setImage(self._channelBug,logo)
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
+                self.setImage(self._channelBug,'None')
                 self.setVisible(self._channelBug,False)
                 
             self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))

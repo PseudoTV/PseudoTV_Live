@@ -82,7 +82,7 @@ class Builder:
     @timeit
     def build(self):
         self.log('build')
-        complete = True
+        finished = True
         channels = sorted(self.verify(), key=lambda k: k['number'])
         if channels:
             now       = getLocalTime()
@@ -94,10 +94,10 @@ class Builder:
             for idx, channel in enumerate(channels):
                 if self.service.monitor.chkSuspend():
                     self.log('build, suspended')
-                    complete = False
+                    finished = False
                     break
                 else:
-                    with idleLocker():
+                    with self.service.monitor.idleLocker():
                         channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
 
                         #set global dialog.
@@ -124,11 +124,11 @@ class Builder:
                             self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                             self.delChannelStation(channel)
                             self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
-
-            if complete and not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
-            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if complete else LANGUAGE(32135)))
+                self.saveChannelLineups()
+            # if finished and not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
+            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if finished else LANGUAGE(32135)))
             self.log('build, finished!')
-            return complete
+            return finished
 
 
     def getProvisional(self, citem):
@@ -262,7 +262,7 @@ class Builder:
         if not results: self.pErrors.append(LANGUAGE(32026))
 
         for idx, item in enumerate(results):
-            with idleLocker():
+            with self.service.monitor.idleLocker():
                 if not isinstance(item, dict):
                     self.log('buildLibraryList, item malformed %s'%(item)) #todo debug issue where key is injected into results as a string? ex. results = [{},{},'episode'], bug with keys()?
                     continue
@@ -274,6 +274,12 @@ class Builder:
                     self.log("buildLibraryList, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
                     continue
                     
+                elif not file.startswith(tuple(VFS_TYPES)) and self.accurateDuration:
+                    if not FileAccess.exists(file): 
+                        self.pErrors.append('%s'%(LANGUAGE(32147)))
+                        self.log("buildLibraryList, id: %s, IDX = %s skipping missing file!"%(citem['id'],idx),xbmc.LOGINFO)
+                        continue
+                
                 elif (file.lower().endswith('strm') and not self.incStrms): 
                     self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
                     self.log("buildLibraryList, id: %s, IDX = %s skipping strm!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -404,7 +410,7 @@ class Builder:
                 self.log('buildFileList, no more folders to parse')
                 break
             else:
-                with idleLocker():
+                with self.service.monitor.idleLocker():
                     dir = dirList.pop(0)
                     try: 
                         if fileList[0] == {}: fileList.pop(0)
@@ -437,7 +443,7 @@ class Builder:
             self.pErrors.append(LANGUAGE(32026))
             
         for idx, item in enumerate(json_response):
-            with idleLocker():
+            with self.service.monitor.idleLocker():
                 file     = item.get('file','')
                 fileType = item.get('filetype','file')
 

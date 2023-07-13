@@ -62,14 +62,13 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
+        self.pendingPlay  = False
         self.lastSubState = isSubtitle()
             
         
     def onAVStarted(self):
         self.pvritem    = self.getPlayerPVRitem()
         self.isPseudoTV = not None in [self.pvritem.get('channelid'),self.pvritem.get('citem',{}).get('id')]
-        
-         
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         
@@ -80,7 +79,7 @@ class Player(xbmc.Player):
     
     def onPlayBackError(self):
         self.log('onPlayBackError')
-        if self.isPseudoTV: self._onStop()
+        self.onPlayBackStopped()
         
         
     def onPlayBackEnded(self):
@@ -90,9 +89,10 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
-        self.pvritem    = {}
-        self.isPseudoTV = False
-        if self.isPseudoTV: self._onStop()
+        self._onStop()
+        self.pvritem     = {}
+        self.isPseudoTV  = False
+        self.pendingPlay = False
         
         
     def getPlayerPVRitem(self):
@@ -109,6 +109,11 @@ class Player(xbmc.Player):
         self.log('getPlayerCitem, citem = %s'%(citem))
         return citem
         
+
+    def getPlayerFile(self):
+        try:    return self.getPlayingFile()
+        except: return ''
+
 
     def getPlayerTime(self):
         try:    return self.getTotalTime()
@@ -144,7 +149,6 @@ class Player(xbmc.Player):
     def _onPlay(self):
         self.log('_onPlay')
         self.toggleBackground(False)
-        self.pendingPlay = False
         if self.pvritem.get('citem',{}).get('id') != self.pvritem.get('citem',{}).get('id',random.random()): #playing new channel
             self.pvritem = self.runActions(RULES_ACTION_PLAYER_START, self.pvritem.get('citem'), self.pvritem, inherited=self)
             # self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
@@ -174,11 +178,17 @@ class Player(xbmc.Player):
     def _onStop(self):
         self.log('_onStop')
         self.toggleBackground(False)
-        if self.pendingPlay: self.pendingPlay = False #todo failed playback detection (trigger forced pvr rebuild after user prompt?, remove channel?)
         self.runActions(RULES_ACTION_PLAYER_STOP, self.pvritem.get('citem',{}), inherited=self)
         if self.pvritem.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        if self.pendingPlay: self._onError(self.pvritem)
 
 
+    def _onError(self, pvritem):
+        file = self.getPlayerFile()
+        self.log('_onError, playing file = %s'%(file))
+        DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32147),file))
+        
+        
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
         if state:
@@ -186,7 +196,7 @@ class Player(xbmc.Player):
             self.background.show()
         elif not state:
             self.background.close()
-            if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+            if self.isPlaying(): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):
@@ -199,6 +209,22 @@ class Monitor(xbmc.Monitor):
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+  
+    @contextmanager
+    def idleLocker(self, wait=0.001):
+        #only pause actions after init. firstrun
+        dia     = None
+        elapsed = 0
+        while not self.abortRequested():
+            if self.chkInterrupt(wait): break
+            elif not isBusy(): break
+            elapsed += wait
+            if dia is None: dia = DIALOG.progressBGDialog(message='%s %s'%(LANGUAGE(32144),LANGUAGE(32145)))
+            else:           dia = DIALOG.progressBGDialog(elapsed,dia)
+        try: yield
+        finally:
+            if not dia is None: DIALOG.progressBGDialog(100,dia,'%s %s'%(LANGUAGE(32144),LANGUAGE(32146)))
+        
 
     def chkSuspend(self, wait=0.001):
         pendingChange  = (isPendingChange()  | self.pendingChange)
@@ -234,7 +260,7 @@ class Monitor(xbmc.Monitor):
         except: #Kodi raises error after sleep.
             log('globals: getIdleTime, Kodi waking up from sleep...')
             idleTime = 0
-        idleState = (idleTime > 0)
+        idleState = (idleTime > OVERLAY_DELAY)
         if (idleTime == 0 or idleTime <= 5): log("globals: getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
         return idleState,idleTime
 
@@ -255,8 +281,8 @@ class Monitor(xbmc.Monitor):
         if self.myService.player.isPseudoTV:
             if sleepTime > 0 and (idleTime > (sleepTime * 10800)): #3hr increments
                 if self.triggerSleep(): return False
-        if idleTime > OVERLAY_DELAY: self.toggleOverlay(True)
-        else:                        self.toggleOverlay(False)
+        if isIdle: self.toggleOverlay(True)
+        else:      self.toggleOverlay(False)
         return isIdle
 
 
@@ -357,7 +383,7 @@ class Service():
                 
     def _tasks(self):
         isIdle = self.monitor.chkIdle()
-        if isLowPower() and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
+        if (isLowPower()) and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
         if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
                     
         

@@ -1069,6 +1069,28 @@ msgctxt "#32143"
 msgid "Debugging Disabled!"
 msgstr ""
 
+msgctxt "#32144"
+msgid "Background Service"
+msgstr ""
+
+msgctxt "#32145"
+msgid "Paused"
+msgstr ""
+
+msgctxt "#32146"
+msgid "Resumed"
+msgstr ""
+
+msgctxt "#32147"
+msgid "Media File Missing!"
+msgstr ""
+
+
+
+
+
+
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"

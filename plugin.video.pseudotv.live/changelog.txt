@@ -1,4 +1,6 @@
 v.0.4.2
+-Improved "Find More" context option. Now supports Embuary Helpers find similar.
+-Miscellaneous tweaks and bug fixes.
 -Fixed Forced Autotuning overriding custom channels.
 -Improved seasonal channels and channel recovery.
 -Fixed Seasonal Channel.

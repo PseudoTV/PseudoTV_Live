@@ -38,7 +38,7 @@ class ChannelBug(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         self.posx, self.posy = (1556, 920)
         if BUILTIN.getInfoBool('Playing','Player'):
-            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+            BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
         self.doModal()
         
         

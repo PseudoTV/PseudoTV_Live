@@ -705,6 +705,9 @@
                     <control type="colorbutton" />
                     <dependencies>
 						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
                             <and>
                                 <condition operator="is" setting="Enable_ChannelBug">true</condition>
                             </and>
@@ -720,6 +723,9 @@
                     <dependencies>
 						<dependency type="visible">
 							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
+							<and>
                                 <condition operator="is" setting="Enable_ChannelBug">true</condition>
                             </and>
 						</dependency>
@@ -731,6 +737,9 @@
 					<default>0</default>
                     <dependencies>
 						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
                             <and>
                                 <condition operator="is" setting="Enable_ChannelBug">true</condition>
                             </and>
@@ -753,6 +762,9 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
                             <and>
                                 <condition operator="is" setting="Enable_ChannelBug">true</condition>
                             </and>

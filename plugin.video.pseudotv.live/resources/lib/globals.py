@@ -59,15 +59,14 @@ def setBusy(state=True):
 
 def isBusy():
     return PROPERTIES.getPropertyBool('idleLocker')
-  
+
 @contextmanager
-def idleLocker(state=False):
-    #only pause actions after init. firstrun
-    while not MONITOR.abortRequested() and isBusy():
-        if MONITOR.waitForAbort(0.001): break
+def fileLocker(globalFileLock):
+    globalFileLock.lockFile("MasterLock")
     try: yield
-    finally:
-        setBusy(state)
+    finally: 
+        globalFileLock.unlockFile('MasterLock')
+        globalFileLock.close()
 
 @contextmanager
 def busy_dialog():
@@ -102,14 +101,6 @@ def open_window():
     try: yield
     finally:
         PROPERTIES.setPropertyBool('openwindow',False)
-
-@contextmanager
-def pending_Playback():
-    if not PROPERTIES.getPropertyBool('pendingplayback'):
-        PROPERTIES.setPropertyBool('pendingplayback',True)
-    try: yield
-    finally:
-        PROPERTIES.setPropertyBool('pendingplayback',False)
 
 @contextmanager
 def fileLocker(globalFileLock):
@@ -565,7 +556,7 @@ def isClient():
     return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
    
 def setClient(state=False,silent=True):
-    if not silent and state: DIALOG.notificationDialog(LANGUAGE(32115)%(ADDON_NAME))
+    if not silent and state: DIALOG.notificationWait(LANGUAGE(32115)%(ADDON_NAME))
     PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
            
 def getDiscovery():
@@ -614,7 +605,7 @@ def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
     
 def isLowPower():
-    return PROPERTIES.getPropertyBool('isLowPower')
+    return (PROPERTIES.getPropertyBool('isLowPower') | DEBUG_ENABLED)
 
 def getLowPower():
     if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):

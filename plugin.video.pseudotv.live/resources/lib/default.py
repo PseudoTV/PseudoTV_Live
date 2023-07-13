@@ -34,13 +34,18 @@ def run(sysARG):
     if DEBUG_ENABLED:
         if BUILTIN.getInfoBool('HasAddon(%s)'%(PVR_CLIENT),'System'):
             if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'):
-                BUILTIN.executebuiltin('"EnableAddon(%s)'%(PVR_CLIENT))
+                BUILTIN.executebuiltin('EnableAddon(%s)'%(PVR_CLIENT))
+                xbmc.sleep(2)
+                run(sys.argv)
         else:
-            BUILTIN.executebuiltin('"InstallAddon(%s)'%(PVR_CLIENT))
+            BUILTIN.executebuiltin('InstallAddon(%s)'%(PVR_CLIENT))
+            xbmc.sleep(2)
+            run(sys.argv)
         
     if mode == 'guide':
         BUILTIN.executebuiltin("Dialog.Close(all)") 
-        BUILTIN.executebuiltin("ActivateWindow(TVGuide,%s,return)"%(quoteString(PROPERTIES.getProperty('ptvlkodipath') or 'pvr://channels/tv/')))
+        BUILTIN.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
+        
     elif mode == 'settings': 
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
     elif mode == 'vod': 
