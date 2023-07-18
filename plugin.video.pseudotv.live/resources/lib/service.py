@@ -36,6 +36,7 @@ class Player(xbmc.Player):
     runActions   = rules.runActions
     
     def __init__(self):
+        self.log('__init__')
         xbmc.Player.__init__(self)
         self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
         
@@ -196,11 +197,12 @@ class Player(xbmc.Player):
             self.background.show()
         elif not state:
             self.background.close()
-            if self.isPlaying(): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+            if self.isPlaying() & self.isPseudoTV: BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):
     def __init__(self):
+        self.log('__init__')
         xbmc.Monitor.__init__(self)
         self.pendingChange    = False
         self.pendingRestart   = False
@@ -343,7 +345,6 @@ class Service():
     http     = HTTP(monitor)
     announce = Announcement(monitor)
     disco    = Discovery(monitor)
-    
     
     def __init__(self):
         self.log('__init__')

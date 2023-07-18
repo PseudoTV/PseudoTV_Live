@@ -34,7 +34,6 @@ class Discovery:
     isRunning = False
     
     def __init__(self, monitor):
-        delServerSettings()
         self.monitor = monitor
         self.startThread = Thread(target=self._start)
         self.startThread.daemon = True

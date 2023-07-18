@@ -249,9 +249,11 @@ class Settings:
         
         
 class Properties:
+    
     def __init__(self, winID=10000):
         self.winID  = winID
         self.window = xbmcgui.Window(winID)
+        self.master = self.window.getProperty(self.getKey('propMaster')).split('|')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -348,9 +350,25 @@ class Properties:
         if not isinstance(value,str): value = str(value)
         self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         self.window.setProperty(self.getKey(key), value)
+        self.setMasterProperty(self.winID,self.getKey(key))
         return True
 
+
+    def masterProperty(self, value=None):
+        if value is None:
+            try:    return loadJSON(xbmcgui.Window(10000).getProperty(self.getKey('propMaster')))
+            except: return {}
+        else:
+            return xbmcgui.Window(10000).setProperty(self.getKey('propMaster'),dumpJSON(value))
         
+        
+    def setMasterProperty(self, id, key):
+        master = self.masterProperty()
+        master.setdefault(id,[]).append(key)
+        master[id] = list(set(master[id]))
+        return self.masterProperty(master)
+        
+
 class ListItems:
     def __init__(self):
         ...

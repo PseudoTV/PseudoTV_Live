@@ -397,7 +397,9 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
 def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
     # SETTINGS.getSettingInt('Client_Mode') #todo restore user setting.
     CLIENT_MODE = 0
-    return {'m3uRefreshMode'              :'1',
+    return {'kodi_addon_instance_name'    :ADDON_NAME,
+            'kodi_addon_instance_enabled' :'true',
+            'm3uRefreshMode'              :'1',
             'm3uRefreshIntervalMins'      :'5',
             'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
@@ -418,7 +420,7 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             # 'radioGroupMode'              :'0',
             # 'customRadioGroupsFile'       :(RADIOGROUPFLE),#todo
             # 'enableProviderMappings'      :'true',
-            # 'defaultProviderName'         :ADDON_NAME,
+            'defaultProviderName'         :ADDON_NAME,
             # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
             # 'useEpgGenreText'             :'true',
             'logoFromEpg'                 :'1',
@@ -478,6 +480,7 @@ def setPluginSettings(id, values, override=SETTINGS.getSettingBool('Override_Use
             if MONITOR.waitForAbort(1): return False
             addon.setSetting(s, v[1])
         DIALOG.notificationDialog((LANGUAGE(32037)%(id)))
+        forceMigration(id)
     except: DIALOG.notificationDialog(LANGUAGE(32000))
     
 def chkPluginSettings(id, values, silent=True):
@@ -492,7 +495,28 @@ def chkPluginSettings(id, values, silent=True):
         if changes: setPluginSettings(id,changes)
         elif not silent: DIALOG.notificationDialog(LANGUAGE(32046))
     except:DIALOG.notificationDialog(LANGUAGE(32034)%(id))
-         
+    
+def forceMigration(id):
+    pvrPath = 'special://profile/addon_data/%s'%(id)
+    settingInstance = 1
+    settingFiles    = [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]
+    for file in settingFiles:
+        if file.startswith('instance-settings-'):
+            try:
+                xml = FileAccess.open(os.path.join(pvrPath,file), "r")
+                string = xml.read()
+                xml.close()
+                
+                instanceNumb = int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
+                instanceName = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(string).group(1)
+                if instanceName == ADDON_NAME: FileAccess.delete(os.path.join(pvrPath,file))  #delete old instance settings
+                settingInstance += instanceNumb
+            except: pass
+        
+    #copy new instance settings
+    if FileAccess.exists(os.path.join(pvrPath,'settings.xml')):
+        return FileAccess.copy(os.path.join(pvrPath,'settings.xml'),os.path.join(pvrPath,'instance-settings-%d.xml'%(settingInstance)))
+        
 def hasSubtitle():
     return BUILTIN.getInfoBool('HasSubtitles','VideoPlayer')
 
@@ -581,7 +605,7 @@ def chkDiscovery(servers, forced=False):
         SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
         SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
-        # chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
+        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):

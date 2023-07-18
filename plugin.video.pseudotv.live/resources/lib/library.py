@@ -235,6 +235,7 @@ class Library:
         return PlayList
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getTVInfo(self, sortbycount=True):
         self.log('getTVInfo')
         if hasTV():
@@ -272,6 +273,7 @@ class Library:
         return {'studios':NetworkList,'genres':ShowGenreList,'shows':TVShows}
 
 
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
         if hasMovie():        
@@ -303,6 +305,7 @@ class Library:
         return {'studios':StudioList,'genres':MovieGenreList}
         
         
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMusicInfo(self, sortbycount=True):
         self.log('getMusicInfo')
         if hasMusic():
