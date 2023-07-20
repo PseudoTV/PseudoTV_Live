@@ -112,12 +112,12 @@ class Library:
             if self.service.monitor.chkSuspend():
                 self.log('fillItems, suspended')
                 break
-            
-            with self.service.monitor.idleLocker():
-                self.parserMSG    = AUTOTUNE_TYPES[idx]
-                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-                yield (type,fillItem(type))
+                
+            self.log('fillItems, filling %s'%(type))
+            self.parserMSG    = AUTOTUNE_TYPES[idx]
+            self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
+            self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+            yield (type,fillItem(type))
                 
         
     @timeit

@@ -38,7 +38,7 @@ class Player(xbmc.Player):
     def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
+        self.background = None
         
         """ 
         Player() Trigger Order
@@ -80,7 +80,7 @@ class Player(xbmc.Player):
     
     def onPlayBackError(self):
         self.log('onPlayBackError')
-        self.onPlayBackStopped()
+        if isPseudoTV: self._onError()
         
         
     def onPlayBackEnded(self):
@@ -90,7 +90,7 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
-        self._onStop()
+        if self.isPseudoTV: self._onStop()
         self.pvritem     = {}
         self.isPseudoTV  = False
         self.pendingPlay = False
@@ -181,23 +181,23 @@ class Player(xbmc.Player):
         self.toggleBackground(False)
         self.runActions(RULES_ACTION_PLAYER_STOP, self.pvritem.get('citem',{}), inherited=self)
         if self.pvritem.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        if self.pendingPlay: self._onError(self.pvritem)
 
 
     def _onError(self, pvritem):
-        file = self.getPlayerFile()
-        self.log('_onError, playing file = %s'%(file))
-        DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32147),file))
+        self.log('_onError, playing file = %s'%(self.getPlayerFile()))
+        self.onPlayBackStopped()
         
         
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state:
-            if not SETTINGS.getSettingBool('Enable_Overlay') & self.isPseudoTV: return
+        if state and not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND'):
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
             self.background.show()
-        elif not state:
+        elif not state and not self.background is None:
             self.background.close()
-            if self.isPlaying() & self.isPseudoTV: BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+            del self.background
+            # if self.isPlaying():
+                # BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):

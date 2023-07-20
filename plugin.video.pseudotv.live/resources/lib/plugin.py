@@ -314,8 +314,8 @@ class Plugin:
             pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
         PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),pvritem)
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('channelid','-1'),pvritem['playcount'],pvritem))
-        if pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
-        if pvritem['playcount'] <= 2:
+        if   pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
+        elif pvritem['playcount'] == 2:
             with busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=5)
                 self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.

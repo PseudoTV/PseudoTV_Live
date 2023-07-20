@@ -1,5 +1,6 @@
 v.0.4.3
 -Added "Hack" method for automatically configuring IPTV-Simple (Manual configuration no longer necessary).
+-Improved Usability/Notifications
 
 v.0.4.2
 -Improved "Find More" context option. Now supports Embuary Helpers find similar.

@@ -1040,7 +1040,7 @@
 
 		<category id="Miscellaneous" label="30000" help="33000">
 			<group id="1" label="30106">
-                <setting id="Apply_Settings" type="action" label="32126" help="">
+                <setting id="Utility_MENU" type="action" label="32126" help="">
 					<level>3</level>
 					<default/>
 					<constraints>
@@ -1120,6 +1120,7 @@
 							<and>
                                 <condition operator="is" setting="Enable_Debugging">true</condition>
                                 <condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabledscript.kodi.loguploader)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -1179,9 +1180,7 @@
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Override_User">false</condition>
-                            </and>
+                            <condition operator="is" setting="Override_User">false</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
@@ -1196,12 +1195,15 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="enable">
-							<condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
+                        <dependency type="enable">
+                            <and>
+                                <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<close>true</close>
+						<close>false</close>
 					</control>
 				</setting>
 				<setting id="iptvmanager" type="action" label="30073" help="">
@@ -1212,11 +1214,14 @@
 					</constraints>
 					<dependencies>
 						<dependency type="enable">
-							<condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
+                            <and>
+                                <condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(service.iptv.manager)</condition>
+                            </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<close>true</close>
+						<close>false</close>
 					</control>
 				</setting>	
 			</group>

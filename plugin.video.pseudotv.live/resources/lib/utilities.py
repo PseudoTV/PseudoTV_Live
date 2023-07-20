@@ -166,7 +166,9 @@ class Utilities:
         
         if param == 'Apply_Settings':
             ctl = (7,9)
-            chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS(),silent=False)
+            with busy_dialog():
+                if not setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())])):
+                    DIALOG.notificationDialog(LANGUAGE(32046))
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()
@@ -186,7 +188,7 @@ class Utilities:
             # ctl = (2,7)
             # self.clearImport()
         elif param == 'Select_Server': 
-            ctl = (7,7)
+            ctl = (6,7)
             self.selectServer()
         # elif param == 'Install_Resources': chkResources()
         # else: 

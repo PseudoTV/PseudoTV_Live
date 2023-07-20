@@ -124,10 +124,9 @@ class Builder:
                             self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                             self.delChannelStation(channel)
                             self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
-                self.saveChannelLineups()
-            # if finished and not self.saveChannelLineups(): DIALOG.notificationDialog(LANGUAGE(32000))
+                        self.saveChannelLineups()
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if finished else LANGUAGE(32135)))
-            self.log('build, finished!')
+            self.log('build, finished = %s'%(finished))
             return finished
 
 
@@ -238,6 +237,11 @@ class Builder:
             item['stop']  = start + item['duration']
             start = item['stop']
             tmpList.append(item)
+            
+        #force removal of channel with no current programmes
+        if fileList[-1].get('stop') < getLocalTime():
+            self.log("addScheduling; id = %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
+            tmpList = []
         return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         
@@ -344,7 +348,7 @@ class Builder:
                         fileList.append(item)
                         
                     if self.pDialog: 
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//page))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(results)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                 else: 
                     self.pErrors.append(LANGUAGE(32032))
                     self.log("buildLibraryList, id: %s skipping %s no duration meta found!"%(citem['id'],file),xbmc.LOGINFO)
@@ -512,7 +516,7 @@ class Builder:
                             fileList.append(item)
                             
                         if self.pDialog: 
-                            self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//page))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                            self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(json_response)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                     else: 
                         self.pErrors.append(LANGUAGE(32032))
                         self.log("buildList, id: %s skipping %s no duration meta found!"%(citem['id'],file),xbmc.LOGINFO)

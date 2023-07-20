@@ -400,7 +400,7 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
     return {'kodi_addon_instance_name'    :ADDON_NAME,
             'kodi_addon_instance_enabled' :'true',
             'm3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'5',
+            'm3uRefreshIntervalMins'      :'2',
             'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
@@ -440,10 +440,12 @@ def chkPVREnabled():
          
 def togglePVR(state=True, reverse=False, waitTime=15):
     log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))
+    BUILTIN.executebuiltin('ActivateWindow(home)')
     try:    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
     except: name = PVR_CLIENT
     PROPERTIES.setPropertyBool('%s.Disabled'%(PVR_CLIENT),not bool(state))
     xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,str(state).lower()))
+    xbmc.sleep(250)
     waitMSG = '%s: %s'%(LANGUAGE(32125),name)
     if reverse: timerit(togglePVR)(waitTime,[not bool(state)])
     else: waitTime = int(PROMPT_DELAY/1000)
@@ -470,7 +472,7 @@ def setPluginSettings(id, values, override=SETTINGS.getSettingBool('Override_Use
     try:
         addon_name = addon.getAddonInfo('name')
         if not override:
-            DIALOG.textviewer('%s\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['%s: %s changing to [B]%s[/B]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
+            DIALOG.textviewer('%s\n\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
             if not DIALOG.yesnoDialog((LANGUAGE(32036)%addon_name)): return
             
         if addon is None:
@@ -479,21 +481,22 @@ def setPluginSettings(id, values, override=SETTINGS.getSettingBool('Override_Use
         for s, v in list(values.items()):
             if MONITOR.waitForAbort(1): return False
             addon.setSetting(s, v[1])
-        DIALOG.notificationDialog((LANGUAGE(32037)%(id)))
         forceMigration(id)
-    except: DIALOG.notificationDialog(LANGUAGE(32000))
+        DIALOG.notificationDialog((LANGUAGE(32037)%(id)))
+        return True
+    except: 
+        DIALOG.notificationDialog(LANGUAGE(32000))
+        return False
     
-def chkPluginSettings(id, values, silent=True):
+def chkPluginSettings(id, values):
     try: 
         changes = {}
         addon   = xbmcaddon.Addon(id)
         for s, v in list(values.items()):
             if MONITOR.waitForAbort(1): return False
             value = addon.getSetting(s)
-            if str(value).lower() != str(v).lower(): 
-                changes[s] = (value, v)
+            if str(value).lower() != str(v).lower(): changes[s] = (value, v)
         if changes: setPluginSettings(id,changes)
-        elif not silent: DIALOG.notificationDialog(LANGUAGE(32046))
     except:DIALOG.notificationDialog(LANGUAGE(32034)%(id))
     
 def forceMigration(id):
@@ -501,16 +504,18 @@ def forceMigration(id):
     settingInstance = 1
     settingFiles    = [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]
     for file in settingFiles:
-        if file.startswith('instance-settings-'):
+        if   MONITOR.waitForAbort(5): break
+        elif file.startswith('instance-settings-'):
             try:
+                instanceNumb = int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
+                settingInstance += instanceNumb
                 xml = FileAccess.open(os.path.join(pvrPath,file), "r")
                 string = xml.read()
                 xml.close()
                 
-                instanceNumb = int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
                 instanceName = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(string).group(1)
-                if instanceName == ADDON_NAME: FileAccess.delete(os.path.join(pvrPath,file))  #delete old instance settings
-                settingInstance += instanceNumb
+                if instanceName == ADDON_NAME:  #delete old instance settings
+                    FileAccess.delete(os.path.join(pvrPath,file))
             except: pass
         
     #copy new instance settings

@@ -634,7 +634,7 @@ msgid "%s not found, Please Install!"
 msgstr ""
 
 msgctxt "#32035"
-msgid "[COLOR=yellow][B]Notice!! [/B]The following changes will be applied to [B]%s[/B] if you select [B]'YES'![/B][/COLOR]"
+msgid "[COLOR=yellow][B]Notice!! [/B]The following changes will be applied to [B]%s[/B], if you select [B]YES![/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32036"
@@ -678,7 +678,7 @@ msgid "%s - Changelog v.%s"
 msgstr ""
 
 msgctxt "#32046"
-msgid "No Changes to Apply..."
+msgid "No Changes Applied!
 msgstr ""
 
 msgctxt "#32047"
@@ -1030,7 +1030,7 @@ msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please doubl
 msgstr ""
 
 msgctxt "#32134"
-msgid "Playback failed! This maybe because %s is currently building this channel.\nor possibly an error with your channel configurations."
+msgid "Playback failed! This maybe because %s is building this channel.\nPlease check your channel configuration."
 msgstr ""
 
 msgctxt "#32135"
