@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
     <backgroundcolor>0x00000000</backgroundcolor>
-    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_MANAGER,True,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_MANAGER,False,10000)</onunload> 
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_MANAGER,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_MANAGER,false,10000)</onunload> 
     <animation type="WindowOpen" reversible="false">
         <effect type="zoom" start="80" end="100" center="50%,50%" delay="160" tween="back" time="240" />
         <effect type="fade" delay="160" end="100" time="240" />

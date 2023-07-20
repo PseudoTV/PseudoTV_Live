@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <window>
     <backgroundcolor>0x00000000</backgroundcolor>
-    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,True,10000)</onload>
-    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,False,10000)</onunload> 
+    <onload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,true,10000)</onload>
+    <onunload>SetProperty(plugin.video.pseudotv.live.OVERLAY_CHANNELBUG,false,10000)</onunload> 
     <controls>
         <control type="group" id="40000">
             <posx>0</posx>

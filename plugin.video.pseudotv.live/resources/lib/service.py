@@ -190,14 +190,16 @@ class Player(xbmc.Player):
         
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state and not PROPERTIES.getPropertyBool('OVERLAY_BACKGROUND'):
+        if state and not PROPERTIES.getEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID)) == "true":
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
+            PROPERTIES.setEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID),'true')
             self.background.show()
         elif not state and not self.background is None:
             self.background.close()
+            PROPERTIES.setEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID),'false')
             del self.background
-            # if self.isPlaying():
-                # BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+            if self.isPlaying():
+                BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):
@@ -269,11 +271,11 @@ class Monitor(xbmc.Monitor):
         
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
-        if state and not isOverlay():
+        if state:
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open()
-        elif not state and isOverlay():
+        elif not state:
             self.myService.overlay.close()
 
 

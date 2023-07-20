@@ -28,13 +28,13 @@ SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
 @contextmanager
 def pending_Playback():
-    if not PROPERTIES.getPropertyBool('pendingplayback'):
+    if not PROPERTIES.getEXTProperty('%s.pendingplayback'%(ADDON_ID)) == 'true':
         setBusy(True)
-        PROPERTIES.setPropertyBool('pendingplayback',True)
+        PROPERTIES.setEXTProperty('%s.pendingplayback'%(ADDON_ID),'true')
     try: yield
     finally:
         setBusy(False)
-        PROPERTIES.setPropertyBool('pendingplayback',False)
+        PROPERTIES.setEXTProperty('%s.pendingplayback'%(ADDON_ID),'false')
 
 class Plugin:
     def __init__(self, sysARG=sys.argv):
@@ -100,7 +100,7 @@ class Plugin:
             #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 
             #this breaks "pvr" should only apply to playlists, avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
             callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
-        elif PROPERTIES.getPropertyBool('isLowPower') or not PROPERTIES.getPropertyBool('hasPVRSource'):
+        elif isLowPower() or not PROPERTIES.getPropertyBool('hasPVRSource'):
             callback = _matchVFS()
         else:
             callback = _matchJSON() #use faster jsonrpc on high power devices. requires 'pvr://' json whitelisting.
@@ -314,7 +314,7 @@ class Plugin:
             pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
         PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),pvritem)
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('channelid','-1'),pvritem['playcount'],pvritem))
-        if   pvritem['playcount'] == 1: setInstanceID() #reset instance and force cache flush.
+        if   pvritem['playcount'] == 1 and not PLAYER.isPlaying(): setInstanceID() #reset instance and force cache flush.
         elif pvritem['playcount'] == 2:
             with busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=5)

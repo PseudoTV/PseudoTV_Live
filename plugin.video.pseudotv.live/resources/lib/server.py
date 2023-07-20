@@ -231,7 +231,7 @@ class HTTP:
                     IP = getIP()
                     LOCAL_HOST ='%s:%s'%(IP,port)
                     self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
-                    PROPERTIES.setProperty('LOCAL_HOST',LOCAL_HOST)
+                    PROPERTIES.setEXTProperty('%s.LOCAL_HOST'%(ADDON_ID),LOCAL_HOST)
                     SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(LOCAL_HOST))
                     SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                     SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))

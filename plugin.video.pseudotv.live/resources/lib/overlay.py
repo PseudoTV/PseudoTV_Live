@@ -185,10 +185,10 @@ class Overlay():
 
     def open(self):
         self.log('open')
-        if isOverlay() or not self.player.isPseudoTV: 
+        if not self.player.isPseudoTV or PROPERTIES.getEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID)) == 'true': 
             return self.close()
             
-        setOverlay(True)
+        PROPERTIES.setEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID),'true')
         self.myPlayer = MYPlayer(overlay=self)
         self.myPlayer.onAVStarted()
         
@@ -204,10 +204,9 @@ class Overlay():
         self.setImage(self._channelBug,'None')
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
-
+        PROPERTIES.setEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID),'false')
         try: del self.myPlayer
         except: pass
-        setOverlay(False)
 
     
     def cancelChannelBug(self):

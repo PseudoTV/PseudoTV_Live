@@ -71,14 +71,14 @@ class Utilities:
    
     def openChannelManager(self, chnum=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not PROPERTIES.getPropertyBool('OVERLAY_MANAGER'):
+        if not PROPERTIES.getEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID)) == 'true':
             chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
             del chmanager
         
         
     def openChannelBug(self):
         self.log('openChannelBug')
-        if not PROPERTIES.getPropertyBool('OVERLAY_CHANNELBUG'):
+        if not PROPERTIES.getEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID)) == 'true':
             channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
             del channelbug
 

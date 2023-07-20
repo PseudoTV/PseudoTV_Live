@@ -146,6 +146,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             self.focusItems    = {}
             self.fillChanList(self.newChannels,focus=self.focusIndex) #all changes made to self.newChannels before final save to self.channellist
+            PROPERTIES.setEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID),'true')
         except Exception as e: 
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.closeManager()
@@ -886,6 +887,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         if self.madeChanges:
             forceUpdateTime('updateChannels')
         setManagerRunning(False)
+        PROPERTIES.setEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID),'false')
         self.close()
 
 

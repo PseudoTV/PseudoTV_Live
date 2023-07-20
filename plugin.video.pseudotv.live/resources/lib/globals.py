@@ -54,11 +54,11 @@ LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
 #functions      
-def setBusy(state=True):
-    PROPERTIES.setPropertyBool('idleLocker',state)
-
 def isBusy():
-    return PROPERTIES.getPropertyBool('idleLocker')
+    return PROPERTIES.getEXTProperty('%s.idleLocker'%(ADDON_ID)) == 'true'
+
+def setBusy(state=True):
+    PROPERTIES.setEXTProperty('%s.idleLocker'%(ADDON_ID),str(state).lower())
 
 @contextmanager
 def fileLocker(globalFileLock):
@@ -88,20 +88,20 @@ def sudo_dialog(msg):
 
 @contextmanager
 def open_dialog():
-    if not PROPERTIES.getPropertyBool('opendialog'):
-        PROPERTIES.setPropertyBool('opendialog',True)
+    if not PROPERTIES.getEXTProperty('%s.opendialog'%(ADDON_ID)) == 'true':
+        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
     try: yield
     finally:
-        PROPERTIES.setPropertyBool('opendialog',False)
+        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'false')
 
 @contextmanager
 def open_window():
-    if not PROPERTIES.getPropertyBool('openwindow'):
-        PROPERTIES.setPropertyBool('openwindow',True)
+    if not PROPERTIES.getEXTProperty('%s.openwindow'%(ADDON_ID)) == 'true':
+        PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'true')
     try: yield
     finally:
-        PROPERTIES.setPropertyBool('openwindow',False)
-
+        PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'false')
+        
 @contextmanager
 def fileLocker(globalFileLock):
     globalFileLock.lockFile("MasterLock")
@@ -198,12 +198,12 @@ def diffLSTDICT(old, new):
     return setDictLST([loadJSON(e) for e in sDIFF])
 
 def setInstanceID():
-    PROPERTIES.setEXTProperty('InstanceID',uuid.uuid4())
+    PROPERTIES.setEXTProperty('%s.InstanceID'%(ADDON_ID),uuid.uuid4())
 
 def getInstanceID():
-    instanceID = PROPERTIES.getEXTProperty('InstanceID')
+    instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
     if not instanceID: setInstanceID()
-    return PROPERTIES.getEXTProperty('InstanceID')
+    return PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
   
 def getMD5(text,hash=0,hexit=True):
     if isinstance(text,dict):     text = dumpJSON(text)
@@ -435,7 +435,7 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             }
 
 def chkPVREnabled():
-    if PROPERTIES.getPropertyBool('%s.Disabled'%(PVR_CLIENT)):
+    if PROPERTIES.getEXTProperty('%s.Disabled'%(PVR_CLIENT)):
         togglePVR(True,False)
          
 def togglePVR(state=True, reverse=False, waitTime=15):
@@ -443,7 +443,7 @@ def togglePVR(state=True, reverse=False, waitTime=15):
     BUILTIN.executebuiltin('ActivateWindow(home)')
     try:    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
     except: name = PVR_CLIENT
-    PROPERTIES.setPropertyBool('%s.Disabled'%(PVR_CLIENT),not bool(state))
+    PROPERTIES.setEXTProperty('%s.Disabled'%(PVR_CLIENT),not bool(state))
     xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,str(state).lower()))
     xbmc.sleep(250)
     waitMSG = '%s: %s'%(LANGUAGE(32125),name)
@@ -557,16 +557,16 @@ def closeBusyDialog():
         BUILTIN.executebuiltin('Dialog.Close(busydialog)')
          
 def isPendingRestart():
-    return PROPERTIES.getPropertyBool('pendingRestart')
+    return PROPERTIES.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
     
 def setPendingRestart(state=True):
-    return PROPERTIES.setPropertyBool('pendingRestart',state)
+    return PROPERTIES.setEXTProperty('%s.pendingRestart'%(ADDON_ID),str(state).lower())
                     
 def isPendingChange():
-    return PROPERTIES.getPropertyBool('pendingChange')
+    return PROPERTIES.getEXTProperty('%s.pendingChange'%(ADDON_ID)) == "true"
     
 def setPendingChange(state=True):
-    return PROPERTIES.setPropertyBool('pendingChange',state)
+    return PROPERTIES.setEXTProperty('%s.pendingChange'%(ADDON_ID),str(state).lower())
                 
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
@@ -634,16 +634,17 @@ def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
     
 def isLowPower():
-    return (PROPERTIES.getPropertyBool('isLowPower') | DEBUG_ENABLED)
+    isLowPower = PROPERTIES.getEXTProperty('%s.isLowPower'%(ADDON_ID)) == 'true'
+    return (isLowPower | DEBUG_ENABLED)
 
 def getLowPower():
     if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
-        PROPERTIES.setPropertyBool('isLowPower',False)
+        PROPERTIES.setEXTProperty('%s.isLowPower'%(ADDON_ID),'false')
         return False
     return True
 
 def setLowPower(state=False):
-    PROPERTIES.setPropertyBool('isLowPower',state)
+    PROPERTIES.setEXTProperty('%s.isLowPower'%(ADDON_ID),str(state).lower())
     return state
 
 def forceUpdateTime(key):
@@ -665,9 +666,3 @@ def cleanLabel(text):
 def convertString2Num(value):
     try:    return literal_eval(value)
     except: return None
-         
-def isOverlay():
-    return PROPERTIES.getPropertyBool('OVERLAY')
-    
-def setOverlay(state=True):
-     PROPERTIES.setPropertyBool('OVERLAY',state)

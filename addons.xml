@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.4.2b" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.4.2c" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="script.module.six" version="1.0.0"/>
@@ -43,7 +43,7 @@
             </item>
             <item library="resources/lib/context_create.py">
                 <label>30114</label>
-                <visible>[!ListItem.IsPlayable + ListItem.IsFolder] + [!String.IsEmpty(ListItem.Label)] + String.isEqual(Window(10000).Property(plugin.video.pseudotv.live.isClient),False)</visible>
+                <visible>[!ListItem.IsPlayable + ListItem.IsFolder] + [!String.IsEmpty(ListItem.Label)] + String.isEqual(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</visible>
             </item>
         </menu>
     </extension>

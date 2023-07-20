@@ -45,14 +45,14 @@ class Cache:
     
     @contextmanager
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
-        if xbmcgui.Window(10000).getProperty('cacheLocker') == 'True':
+        if xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
             while not xbmc.Monitor().abortRequested():
                 if xbmc.Monitor().waitForAbort(0.5): break
-                elif not xbmcgui.Window(10000).getProperty('cacheLocker') == 'True': break
-        xbmcgui.Window(10000).setProperty('cacheLocker','True')
+                elif not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
+        xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
         finally:
-            xbmcgui.Window(10000).setProperty('cacheLocker','False')
+            xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
 
     def __init__(self, mem_cache=False, is_json=False):
         self.cache.enable_mem_cache = mem_cache

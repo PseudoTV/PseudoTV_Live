@@ -253,7 +253,6 @@ class Properties:
     def __init__(self, winID=10000):
         self.winID  = winID
         self.window = xbmcgui.Window(winID)
-        self.master = self.window.getProperty(self.getKey('propMaster')).split('|')
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -261,12 +260,12 @@ class Properties:
 
 
     def getInstanceID(self):
-        instanceID = self.getEXTProperty('InstanceID') 
-        if not instanceID: self.setEXTProperty('InstanceID',uuid.uuid4())
-        return self.getEXTProperty('InstanceID')
+        instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
+        if not instanceID: self.setEXTProperty('%s.InstanceID'%(ADDON_ID),uuid.uuid4())
+        return self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
       
 
-    def getKey(self, key, instance=False):
+    def getKey(self, key, instance=True):
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
             if instance:
                 return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.getInstanceID()))
@@ -311,15 +310,18 @@ class Properties:
         
         
     def clearEXTProperty(self, key):
-        return self.window.clearProperty(key)
+        return xbmcgui.Window(10000).clearProperty(key)
         
         
     def getEXTProperty(self, key):
-        return xbmcgui.Window(10000).getProperty(key)
+        value = xbmcgui.Window(10000).getProperty(key)
+        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
+        return value
         
     #SET
     def setEXTProperty(self, key, value):
         if not isinstance(value,str): value = str(value)
+        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
         return xbmcgui.Window(10000).setProperty(key,value)
         
         
@@ -356,10 +358,10 @@ class Properties:
 
     def masterProperty(self, value=None):
         if value is None:
-            try:    return loadJSON(xbmcgui.Window(10000).getProperty(self.getKey('propMaster')))
+            try:    return loadJSON(self.getEXTProperty('%s.propMaster'%(ADDON_ID)))
             except: return {}
         else:
-            return xbmcgui.Window(10000).setProperty(self.getKey('propMaster'),dumpJSON(value))
+            return self.setEXTProperty('%s.propMaster'%(ADDON_ID),dumpJSON(value))
         
         
     def setMasterProperty(self, id, key):

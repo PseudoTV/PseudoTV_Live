@@ -37,20 +37,20 @@ class JSONRPC:
     
     @contextmanager
     def sendLocker(self):
-        if PROPERTIES.getPropertyBool('sendLocker'):
+        if PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true':
             while not MONITOR.abortRequested():
                 if MONITOR.waitForAbort(0.5): break
-                elif not PROPERTIES.getPropertyBool('sendLocker'): break
-        PROPERTIES.setPropertyBool('sendLocker',True)
+                elif not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
+        PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'true')
         try: yield
         finally:
-            PROPERTIES.setPropertyBool('sendLocker',False)
+            PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'false')
 
 
     def _sendJSON(self, command):
         self.log('_sendJSON, command = %s'%(command))
         results = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
-        if PROPERTIES.getPropertyBool('isLowPower'):
+        if isLowPower():
             xbmc.sleep(SETTINGS.getSettingInt('JSONRPC_Delay')) #overcome overflow issue within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
         return results
 
