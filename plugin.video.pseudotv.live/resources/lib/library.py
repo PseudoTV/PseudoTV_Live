@@ -108,16 +108,19 @@ class Library:
                 return []
                 
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-        for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service.monitor.chkSuspend():
-                self.log('fillItems, suspended')
-                break
+        with self.service.monitor.idleLocker():
+            for idx, type in enumerate(AUTOTUNE_TYPES):
+                self.parserMSG    = AUTOTUNE_TYPES[idx]
+                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
-            self.log('fillItems, filling %s'%(type))
-            self.parserMSG    = AUTOTUNE_TYPES[idx]
-            self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-            self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-            yield (type,fillItem(type))
+                if self.service.monitor.chkSuspend():
+                    self.log('fillItems, suspended')
+                    DIALOG.progressBGDialog(100,self.parserDialog) 
+                    break
+                    
+                self.log('fillItems, returning %s'%(type))
+                yield (type,fillItem(type))
                 
         
     @timeit

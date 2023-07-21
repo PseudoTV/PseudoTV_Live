@@ -37,8 +37,8 @@ class ChannelBug(xbmcgui.WindowXML):
     
     def __init__(self, *args, **kwargs):
         self.posx, self.posy = (1556, 920)
-        # if BUILTIN.getInfoBool('Playing','Player'):
-            # BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+        if BUILTIN.getInfoBool('Playing','Player'):
+            BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
         self.doModal()
         
         
@@ -51,7 +51,7 @@ class ChannelBug(xbmcgui.WindowXML):
             DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')), usethread=True)
             
         self.log('onInit, channelbug posx,posy = (%s,%s)'%(self.userPOSX,self.userPOSY))
-        self._channelBug = xbmcgui.ControlImage(self.userPOSX, self.userPOSY, 128, 128, COLOR_LOGO, aspectRatio=2)
+        self._channelBug  = xbmcgui.ControlImage(self.userPOSX, self.userPOSY, 128, 128, COLOR_LOGO, aspectRatio=2)
         self.addControl(self._channelBug)
         self.posx, self.posy = (self._channelBug.getX(),self._channelBug.getY())
 
@@ -77,12 +77,11 @@ class ChannelBug(xbmcgui.WindowXML):
         else:
             if   actionId == ACTION_MOVE_UP:    self.posy-=1
             elif actionId == ACTION_MOVE_DOWN:  self.posy+=1
-            elif actionId == ACTION_MOVE_RIGHT: self.posx+=1
             elif actionId == ACTION_MOVE_LEFT:  self.posx-=1
+            elif actionId == ACTION_MOVE_RIGHT: self.posx+=1
             else: return
             if (self.posx != self.userPOSX or self.posy != self.userPOSY):
                 self._channelBug.setPosition(self.posx, self.posy)
-            
         
         
         

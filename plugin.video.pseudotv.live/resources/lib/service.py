@@ -271,7 +271,7 @@ class Monitor(xbmc.Monitor):
         
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
-        if state:
+        if state and not self.myService.overlay.showingChannelBug:
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open()
