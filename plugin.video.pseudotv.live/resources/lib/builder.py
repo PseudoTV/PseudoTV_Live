@@ -125,6 +125,7 @@ class Builder:
                             self.delChannelStation(channel)
                             self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
                         self.saveChannelLineups()
+            finished = self.saveChannelLineups()
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if finished else LANGUAGE(32135)))
             self.log('build, finished = %s'%(finished))
             return finished
@@ -696,4 +697,4 @@ class Builder:
         
     def saveChannelLineups(self):
         self.log('saveChannelLineups')
-        return [self.m3u._save() & self.xmltv._save()]
+        return self.m3u._save() & self.xmltv._save()

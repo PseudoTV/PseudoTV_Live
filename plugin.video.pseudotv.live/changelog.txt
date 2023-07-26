@@ -1,6 +1,8 @@
 v.0.4.3
 -Added "Hack" method for automatically configuring IPTV-Simple (Manual configuration no longer necessary).
 -Improved Usability/Notifications
+-Fixed Channel Manager channels removed/missing after editing.
+-Added support for upcoming IPTV-Simple update that allows audio passthrough for PVR content.
 
 v.0.4.2
 -Improved "Find More" context option. Now supports Embuary Helpers find similar.

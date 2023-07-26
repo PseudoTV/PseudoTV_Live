@@ -31,6 +31,7 @@ M3U_TEMP = {"id"                : "",
             "catchup"           : "vod",
             "radio"             : False,
             "favorite"          : False,
+            "realtime"          : False,
             "label"             : "",
             "url"               : "",
             "tvg-shift"         : "",
@@ -46,15 +47,17 @@ M3U_TEMP = {"id"                : "",
             "provider-logo"     : "",
             "provider-countries": "",
             "provider-languages": "",
+            "x-playlist-type"   : "",
             "kodiprops"         : []}
             
-M3U_MIN  = {"number"            : 0,
-            "id"                : "",
+M3U_MIN  = {"id"                : "",
+            "number"            : 0,
             "name"              : "",
             "logo"              : "",
             "group"             : [],
-            "radio"             : False,
             "catchup"           : "vod",
+            "radio"             : False,
+            "realtime"          : False,
             "label"             : "",
             "url"               : ""}
 
@@ -123,7 +126,8 @@ class M3U:
                              'provider-languages':re.compile('provider-languages=\"(.*?)\"' , re.IGNORECASE).search(line),
                              'media'             :re.compile('media=\"(.*?)\"'              , re.IGNORECASE).search(line),
                              'media-dir'         :re.compile('media-dir=\"(.*?)\"'          , re.IGNORECASE).search(line),
-                             'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line)}
+                             'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line),
+                             'realtime'          :re.compile('realtime=\"(.*?)\"'           , re.IGNORECASE).search(line)}
                     
                     mitem = self.getMitem()
                     mitem.update({'number' :chCount,
@@ -146,7 +150,7 @@ class M3U:
                             except: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
                             mitem[key] = list([_f for _f in sorted(list(set((value.group(1)).split(';')))) if _f])
-                        elif key == 'radio':
+                        elif key in ['radio','favorite','realtime']:
                             mitem[key] = (value.group(1)).lower() == 'true'
                         else:
                             mitem[key] = value.group(1)
@@ -165,19 +169,24 @@ class M3U:
                                 if prop is not None:
                                     mitem.setdefault('kodiprops',[]).append(prop.group(1))
                             # elif nline.startswith('#EXTVLCOPT'):
-                            # elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
+                            elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
+                                xplay = re.compile('^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE).search(nline)
+                                if xplay is not None:
+                                    mitem['x-playlist-type'] = xplay.group(1)
                             elif nline.startswith('##'): continue
                             elif not nline: continue
                             else: mitem['url'] = nline
                         except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
                             
-                    mitem['name']     = (mitem.get('name','')     or mitem.get('label',''))
-                    mitem['label']    = (mitem.get('label','')    or mitem.get('name',''))
-                    mitem['favorite'] = (mitem.get('favorite','') or False)
+                    #Fill missing with similar parameters.
+                    mitem['name']  = (mitem.get('name','')   or mitem.get('label',''))
+                    mitem['label'] = (mitem.get('label','')  or mitem.get('name',''))
                     
+                    #Set Fav. based on group value.
                     if LANGUAGE(32019) in mitem['group'] and not mitem['favorite']:
                         mitem['favorite'] = True
-                        
+                    
+                    #Core m3u parameters missing, ignore entry.
                     if not mitem.get('id','') or not mitem.get('name','') or not mitem.get('number',''): 
                         self.log('loadM3U, SKIPPED MISSING META m3u item = %s'%mitem)
                         continue
@@ -195,16 +204,18 @@ class M3U:
             
             opts = list(self.getMitem().keys())
             mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
-            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" realtime="%s" %s,%s\n'
             self.M3UDATA['channels'] = self.sortStations(self.M3UDATA.get('channels',[]))
             
             for channel in self.M3UDATA['channels']:
                 optional  = ''
+                xplaylist = ''
                 kodiprops = {}
                 if not channel: continue
                     
                 # write optional m3u parameters.
-                if 'kodiprops' in channel: kodiprops = channel.pop('kodiprops')
+                if 'kodiprops'       in channel: kodiprops = channel.pop('kodiprops')
+                if 'x-playlist-type' in channel: xplaylist = channel.pop('x-playlist-type')
                 for key, value in list(channel.items()):
                     if key in opts and value: optional += '%s="%s" '%(key,value)
                         
@@ -215,11 +226,14 @@ class M3U:
                                 ';'.join(channel['group']),
                                 channel['radio'],
                                 channel['catchup'],
+                                channel['realtime'],
                                 optional,
                                 channel['label']))
-                                 
+                       
                 if kodiprops:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in kodiprops])))
+                if xplaylist:
+                    fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
                 fle.write('%s\n'%(channel['url']))
             fle.close()
         return True

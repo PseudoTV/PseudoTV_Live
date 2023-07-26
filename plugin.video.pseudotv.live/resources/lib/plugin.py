@@ -27,7 +27,7 @@ SEEK_TOLER = SETTINGS.getSettingInt('Seek_Tolerance')
 SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
 @contextmanager
-def pending_Playback():
+def pendingPlayback():
     if not PROPERTIES.getEXTProperty('%s.pendingplayback'%(ADDON_ID)) == 'true':
         setBusy(True)
         PROPERTIES.setEXTProperty('%s.pendingplayback'%(ADDON_ID),'true')
@@ -170,7 +170,7 @@ class Plugin:
 
     def playChannel(self, name, id, isPlaylist=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
-        with pending_Playback():
+        with pendingPlayback():
             found     = False
             listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,False,isPlaylist)
@@ -230,7 +230,7 @@ class Plugin:
 
     def playRadio(self, name, id, isPlaylist=True):
         self.log('playRadio, id = %s'%(id))
-        with pending_Playback():
+        with pendingPlayback():
             found     = False
             listitems = [LISTITEMS.getListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,True,isPlaylist)

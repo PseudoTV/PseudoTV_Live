@@ -610,7 +610,7 @@ def chkDiscovery(servers, forced=False):
         SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
         SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
         setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
-        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #update pvr settings
+        setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=True)
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):

@@ -123,6 +123,7 @@ class Manager(xbmcgui.WindowXMLDialog):
            
         try:
             if not kwargs.get('start',True): raise Exception('Bypassed doModal')
+            setBusy(True)
             self.doModal()
         except Exception as e: 
             self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
@@ -630,13 +631,17 @@ class Manager(xbmcgui.WindowXMLDialog):
         
         pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
         for idx, citem in enumerate(difference):
-            if citem in self.channelList: 
-                self.channels.delChannel(citem)
+            pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
+            #remove abandoned or stale settings.
+            if citem in self.channelList:
+                self.channels.delChannel(difference.pop(idx))
+            #add new or updated settings
+            elif citem in self.newChannels:
+                self.channels.addChannel(difference.pop(idx))
                 
-            if citem in self.newChannels:
-                pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
-                self.channels.addChannel(citem)
-
+        if len(difference) > 0: 
+            log('saveChannels, malformed difference = %s\n%s'%(len(difference)),difference)
+        
         self.channels.setChannels()
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
@@ -801,11 +806,11 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         def browse(chname):
             retval = DIALOG.browseDialog(type=1,heading='%s for %s'%(LANGUAGE(32066),chname),default=channelData.get('icon',''), shares='files',mask=xbmc.getSupportedMedia('picture'),prompt=False)
-            image  = os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
-            if FileAccess.copy(cleanLogo(retval), image): 
-                if FileAccess.exists(image): 
-                    return image
-
+            if FileAccess.copy(cleanLogo(retval), os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
+                if FileAccess.exists(os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')): 
+                    return os.path.join(LOGO_LOC,'%s%s'%(chname,retval[-4:])).replace('\\','/')
+            return retval
+            
         def match(chname):
             return self.resources.getLogo(chname)
 
@@ -888,6 +893,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             forceUpdateTime('updateChannels')
         setManagerRunning(False)
         PROPERTIES.setEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID),'false')
+        setBusy(False)
         self.close()
 
 

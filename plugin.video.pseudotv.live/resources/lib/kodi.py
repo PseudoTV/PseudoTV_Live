@@ -653,7 +653,7 @@ class Dialog:
         timerit(self.okDialog)(wait,[msg, heading, autoclose, url])
         
         
-    def okDialog(self, msg, heading=ADDON_NAME, autoclose=0, url=None, usethread=False):
+    def okDialog(self, msg, heading=ADDON_NAME, autoclose=900, url=None, usethread=False):
         if usethread: return self._okDialog(msg, heading, autoclose, url)
         else:
             if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
@@ -675,13 +675,13 @@ class Dialog:
         timerit(self.textviewer)(wait,[msg, heading, usemono, autoclose])
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=0, usethread=False):
+    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=900, usethread=False):
         if usethread: return self._textviewer(msg, heading, usemono, autoclose)
         else:
             if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
             return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
-    def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=0): 
+    def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=900): 
         if autoclose > 0: autoclose = (autoclose*1000) #secs to msecs
         if customlabel:
             # Returns the integer value for the selected button (-1:cancelled, 0:no, 1:yes, 2:custom)
@@ -702,7 +702,7 @@ class Dialog:
         return True
              
              
-    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=0, multi=True, custom=False):
+    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=900, multi=True, custom=False):
         if autoclose > 0: autoclose = (autoclose*1000) #secs to msecs
         if multi == True:
             if preselect is None: preselect = [-1]

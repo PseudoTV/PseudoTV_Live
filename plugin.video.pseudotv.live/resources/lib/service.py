@@ -225,6 +225,9 @@ class Monitor(xbmc.Monitor):
             elapsed += wait
             if dia is None: dia = DIALOG.progressBGDialog(message='%s %s'%(LANGUAGE(32144),LANGUAGE(32145)))
             else:           dia = DIALOG.progressBGDialog(elapsed,dia)
+            if elapsed >= 600: 
+                setPendingChange(True)
+                break
         try: yield
         finally:
             if not dia is None: DIALOG.progressBGDialog(100,dia,'%s %s'%(LANGUAGE(32144),LANGUAGE(32146)))

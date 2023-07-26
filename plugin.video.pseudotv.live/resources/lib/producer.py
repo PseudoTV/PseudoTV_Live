@@ -81,16 +81,16 @@ class Producer():
     
 
     def _chkFiles(self):
+        self.log('_chkFiles')
         #check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun():
-            fileTasks = [{'files':[CHANNELFLEPATH,M3UFLEPATH,XMLTVFLEPATH,GENREFLEPATH],'action':self.updateChannels,'priority':3},
-                         {'files':[LIBRARYFLEPATH],'action':self.updateLibrary,'priority':2}]
-            for task in fileTasks:
-                for file in task.get('files',[]):
-                    if not FileAccess.exists(file):
-                        self._que(task['action'],task['priority'])
-                        break
-                        
+            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
+                self.log('_chkFiles, rebuilding missing playlists')
+                self._que(self.updateChannels,3)
+            if not (FileAccess.exists(LIBRARYFLEPATH)):
+                self.log('_chkFiles, rebuilding missing library')
+                self._que(self.updateLibrary,1)
+
 
     def _taskManager(self):
         #main function to handle all scheduled queues. 
