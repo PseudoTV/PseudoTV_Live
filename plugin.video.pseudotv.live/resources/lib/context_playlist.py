@@ -19,13 +19,13 @@
 from globals import *
 from plugin  import Plugin
 
-class Context:
+class Playlist:
     def __init__(self, sysARG, writer):
         with busy_dialog():
-            log('Context: __init__, sysARG = %s'%(sysARG))
+            log('Playlist: __init__, sysARG = %s'%(sysARG))
             Plugin(sysARG).contextPlay(writer,isPlaylist=True)
             
 if __name__ == '__main__': 
-    Context(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+    Playlist(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
     
     

@@ -82,7 +82,7 @@ class Fillers:
             # print('end',end)
             
             if ratings and self.bctTypes['ratings'].get('enabled',True):
-                mpaa = self.builder.cleanMPAA(fileItem.get('mpaa',''))
+                mpaa = cleanMPAA(fileItem.get('mpaa',''))
                 if self.builder.is3D(fileItem): mpaa += ' (3DSBS)'
                 rating = ratings.get(mpaa.lower(), {})
                 if rating:

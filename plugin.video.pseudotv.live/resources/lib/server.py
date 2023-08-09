@@ -24,12 +24,7 @@ from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
 from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR, SOCK_STREAM
             
-def delServerSettings():
-    SETTINGS.setSetting('Remote_URL'  ,'')
-    SETTINGS.setSetting('Remote_M3U'  ,'')
-    SETTINGS.setSetting('Remote_XMLTV','')
-    SETTINGS.setSetting('Remote_GENRE','')
-    
+
 class Discovery:
     isRunning = False
     
@@ -79,7 +74,7 @@ class Discovery:
                             DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
                         servers[host] = payload
                         setDiscovery(servers)
-                        chkDiscovery(servers)
+                        SETTINGS.chkDiscovery(servers)
 
 class Announcement:
     isRunning = False
@@ -162,7 +157,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         
         self.log('do_GET, sending = %s'%(path))
-        with fileLocker(GLOBAL_FILELOCK):
+        with FileLock():
             fle = FileAccess.open(path, "r")
             while not self.monitor.abortRequested():
                 chunk = fle.read(self.CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
@@ -170,7 +165,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(chunk)
             fle.close()
             
-    
     def do_HEAD(self):
         return
         
@@ -181,9 +175,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         
 class HTTP:
     isRunning = False
+    SETTINGS.setSetting('Remote_URL'  ,'')
+    SETTINGS.setSetting('Remote_M3U'  ,'')
+    SETTINGS.setSetting('Remote_XMLTV','')
+    SETTINGS.setSetting('Remote_GENRE','')
     
+
     def __init__(self, monitor=None):
-        delServerSettings()
         self.monitor = monitor
         self.startThread = Thread(target=self._start)
         self.startThread.daemon = True
@@ -213,20 +211,15 @@ class HTTP:
 
 
     def _start(self):
-        port = SETTINGS.getSettingInt('TCP_PORT')
         while not self.monitor.abortRequested():
             try:
-                CLIENT   = isClient()
-                TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
-                if self.isRunning:
-                    if port != TCP_PORT or CLIENT: 
-                        self._stop()#port changed restart server.
-                        return self.__init__(self.monitor)
-                elif not CLIENT:
+                if not self.isRunning and not isClient():
+                    self.isRunning = True
+                    
+                    TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
                     port = self.chkPort(TCP_PORT,redirect=True)
-                    if port is None: raise Exception('Port In-Use!')
-                    elif port != TCP_PORT:
-                        SETTINGS.setSettingInt('TCP_PORT',port)
+                    if   port is None: raise Exception('Port In-Use!')
+                    elif port != TCP_PORT: SETTINGS.setSettingInt('TCP_PORT',port)
                         
                     IP = getIP()
                     LOCAL_HOST ='%s:%s'%(IP,port)
@@ -242,11 +235,10 @@ class HTTP:
                     self._httpd_thread = Thread(target=self._server.serve_forever)
                     self._httpd_thread.daemon = True
                     self._httpd_thread.start()
-                    self.isRunning = True
             except Exception as e: 
                 self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
                 
-            if self.monitor.chkInterrupt(5):
+            if self.monitor.chkInterrupt(15):
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
         self._stop()
@@ -261,7 +253,7 @@ class HTTP:
                 self._server.socket.close()
                 self._httpd_thread.join()
                 self.startThread.join()
-        except: pass
+        except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
 
 

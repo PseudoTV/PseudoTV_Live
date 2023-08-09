@@ -27,14 +27,12 @@ SEEK_TOLER = SETTINGS.getSettingInt('Seek_Tolerance')
 SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
 @contextmanager
-def pendingPlayback():
-    if not PROPERTIES.getEXTProperty('%s.pendingplayback'%(ADDON_ID)) == 'true':
-        setBusy(True)
-        PROPERTIES.setEXTProperty('%s.pendingplayback'%(ADDON_ID),'true')
+def preparingPlayback():
+    if not PROPERTIES.getEXTProperty('%s.preparingPlayback'%(ADDON_ID)) == 'true':
+        PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'true')
     try: yield
     finally:
-        setBusy(False)
-        PROPERTIES.setEXTProperty('%s.pendingplayback'%(ADDON_ID),'false')
+        PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'false')
 
 class Plugin:
     def __init__(self, sysARG=sys.argv):
@@ -160,17 +158,18 @@ class Plugin:
         return pvritem
 
 
-    def playVOD(self, name, id):
-        path = decodeString(id)
-        self.log('playVOD, id = %s\npath = %s'%(id,path))
-        liz = xbmcgui.ListItem(name,path=path)
-        liz.setProperty("IsPlayable","true")
-        self.resolveURL(True, liz)
+    def playVOD(self, name, url):
+        with preparingPlayback(), pauseActivity():
+            path = decodeString(url)
+            self.log('playVOD, url = %s\npath = %s'%(url,path))
+            liz = xbmcgui.ListItem(name,path=path)
+            liz.setProperty("IsPlayable","true")
+            self.resolveURL(True, liz)
 
 
     def playChannel(self, name, id, isPlaylist=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
-        with pendingPlayback():
+        with preparingPlayback(), pauseActivity():
             found     = False
             listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,False,isPlaylist)
@@ -222,7 +221,7 @@ class Plugin:
                         self.channelPlaylist.add(lz.getPath(),lz,idx)
                     self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
                     if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-                    PLAYER.play(self.channelPlaylist)
+                    PLAYER.play(self.channelPlaylist,windowed=True)
                 else: found = True
             else: return self.playError(pvritem)
             self.resolveURL(found, listitems[0])
@@ -230,7 +229,7 @@ class Plugin:
 
     def playRadio(self, name, id, isPlaylist=True):
         self.log('playRadio, id = %s'%(id))
-        with pendingPlayback():
+        with preparingPlayback(), pauseActivity():
             found     = False
             listitems = [LISTITEMS.getListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,True,isPlaylist)
@@ -248,63 +247,64 @@ class Plugin:
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                         if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                         if PLAYER.isPlayingVideo(): PLAYER.stop()
-                        PLAYER.play(self.channelPlaylist)
+                        PLAYER.play(self.channelPlaylist,windowed=True)
             else: return self.playError(pvritem)
             self.resolveURL(False, xbmcgui.ListItem())
 
 
     def contextPlay(self, writer={}, isPlaylist=False):
-        listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
-        if writer.get('citem',{}): 
-            citem   = writer.get('citem')
-            pvritem = self.matchChannel(citem.get('name'),citem.get('id'),False,isPlaylist)
-            self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
-            
-            if isPlaylist:
-                nowitem   = pvritem.get('broadcastnow',{})  # current item
-                nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
-                nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-                nextitems.insert(0,nowitem)
+        with preparingPlayback(), pauseActivity():
+            listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
+            if writer.get('citem',{}): 
+                citem   = writer.get('citem')
+                pvritem = self.matchChannel(citem.get('name'),citem.get('id'),False,isPlaylist)
+                self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
+                
+                if isPlaylist:
+                    nowitem   = pvritem.get('broadcastnow',{})  # current item
+                    nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
+                    nextitems = pvritem.get('broadcastnext',[]) # upcoming items
+                    nextitems.insert(0,nowitem)
 
-                for pos, nextitem in enumerate(nextitems):
-                    if decodeWriter(nextitem.get('writer',{})).get('file') == writer.get('file'):
-                        del nextitems[0:pos]      # start array at correct position
-                        break
-                       
-                nowitem = nextitems.pop(0)
-                writer  = decodeWriter(nowitem.get('writer',{}))
-                liz = LISTITEMS.buildItemListItem(writer)
-                
-                if round(nowitem['progress']) <= SEEK_TOLER or round(nowitem['progresspercentage']) > SEEK_THRED:
-                    self.log('contextPlay, progress start at the beginning')
-                    nowitem['progress']           = 0
-                    nowitem['progresspercentage'] = 0
+                    for pos, nextitem in enumerate(nextitems):
+                        if decodeWriter(nextitem.get('writer',{})).get('file') == writer.get('file'):
+                            del nextitems[0:pos]      # start array at correct position
+                            break
+                           
+                    nowitem = nextitems.pop(0)
+                    writer  = decodeWriter(nowitem.get('writer',{}))
+                    liz = LISTITEMS.buildItemListItem(writer)
                     
-                if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                    self.log('contextPlay, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
-                    liz.setProperty('startoffset', str(nowitem['progress'])) #secs
-                    infoTag = ListItemInfoTag(liz, 'video')
-                    infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
+                    if round(nowitem['progress']) <= SEEK_TOLER or round(nowitem['progresspercentage']) > SEEK_THRED:
+                        self.log('contextPlay, progress start at the beginning')
+                        nowitem['progress']           = 0
+                        nowitem['progresspercentage'] = 0
+                        
+                    if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                        self.log('contextPlay, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                        liz.setProperty('startoffset', str(nowitem['progress'])) #secs
+                        infoTag = ListItemInfoTag(liz, 'video')
+                        infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
+                        
+                    del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                    pvritem['broadcastnow']  = nowitem   # current item
+                    pvritem['broadcastnext'] = nextitems # upcoming items
+                    liz.setProperty('pvritem',dumpJSON(pvritem))
+                    listitems = [liz]
+                    listitems.extend(poolit(self.buildWriterItem)(nextitems))
+                else:
+                    liz = LISTITEMS.buildItemListItem(writer)
+                    liz.setProperty('pvritem', dumpJSON(pvritem))
+                    listitems = [liz]
                     
-                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-                pvritem['broadcastnow']  = nowitem   # current item
-                pvritem['broadcastnext'] = nextitems # upcoming items
-                liz.setProperty('pvritem',dumpJSON(pvritem))
-                listitems = [liz]
-                listitems.extend(poolit(self.buildWriterItem)(nextitems))
-            else:
-                liz = LISTITEMS.buildItemListItem(writer)
-                liz.setProperty('pvritem', dumpJSON(pvritem))
-                listitems = [liz]
-                
-            for idx,lz in enumerate(listitems):
-                path = lz.getPath()
-                self.channelPlaylist.add(lz.getPath(),lz,idx)                
-            PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
-            self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
-            if isPlaylistRandom(): self.channelPlaylist.unshuffle()
-            PLAYER.play(self.channelPlaylist)
-        else: return DIALOG.notificationDialog(LANGUAGE(32000))
+                for idx,lz in enumerate(listitems):
+                    path = lz.getPath()
+                    self.channelPlaylist.add(lz.getPath(),lz,idx)                
+                PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
+                self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
+                if isPlaylistRandom(): self.channelPlaylist.unshuffle()
+                PLAYER.play(self.channelPlaylist,windowed=True)
+            else: return DIALOG.notificationDialog(LANGUAGE(32000))
         
 
     def playError(self, pvritem={}):

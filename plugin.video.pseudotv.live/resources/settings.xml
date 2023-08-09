@@ -391,6 +391,31 @@
 						</dependency>
 					</dependencies>
 				</setting>
+				<setting id="Force_HighPower" type="boolean" label="32149" help="33149">
+					<level>3</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isLowPower),true)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+				</setting>
+				<setting id="Playback_Background" type="boolean" label="32150" help="33150">
+					<level>3</level>
+					<default>true</default>
+					<control type="toggle"/>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+				</setting>
 			</group>               
             <group id="2" label="30011">
 				<setting id="User_Folder" type="path" label="30012" help="33012">
@@ -1058,18 +1083,6 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Enable_Debugging">
-					<level>3</level>
-					<default>false</default>
-					<control type="toggle"/>
-					<dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition operator="is" setting="Enable_Debugging">true</condition>
-							</and>
-						</dependency>
-					</dependencies>
-				</setting>
                 <setting id="Debugging_Level" type="integer" label="30002" help="" parent="Enable_Debugging">
 					<level>2</level>
 					<default>0</default>
@@ -1120,7 +1133,7 @@
 							<and>
                                 <condition operator="is" setting="Enable_Debugging">true</condition>
                                 <condition on="property" name="InfoBool">System.HasAddon(script.kodi.loguploader)</condition>
-                                <condition on="property" name="InfoBool">System.AddonIsEnabledscript.kodi.loguploader)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(script.kodi.loguploader)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -1129,6 +1142,18 @@
 						<close>true</close>
 					</control>
                 </setting>
+				<setting id="Disable_Cache" type="boolean" label="30084" help="33084" parent="Enable_Debugging">
+					<level>3</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Debugging">true</condition>
+							</and>
+						</dependency>
+					</dependencies>
+				</setting>
 			</group>
 			<group id="3" label="30088">
                 <setting id="Show_Readme" type="action" label="30089" help="">
@@ -1203,7 +1228,7 @@
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<close>false</close>
+						<close>true</close>
 					</control>
 				</setting>
 				<setting id="iptvmanager" type="action" label="30073" help="">
@@ -1221,7 +1246,7 @@
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<close>false</close>
+						<close>true</close>
 					</control>
 				</setting>	
 			</group>

@@ -38,8 +38,9 @@ class Browse:
             else: 
                 path = citem.get('path','')
             if isinstance(path,list): path = path[0]
+            
         log('Browse: target = %s, path = %s'%(target,path))
-        BUILTIN.executebuiltin('ActivateWindow(%s,%s,return)'%(target,path))
+        BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%(target,path))
 
 if __name__ == '__main__': 
     Browse(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))

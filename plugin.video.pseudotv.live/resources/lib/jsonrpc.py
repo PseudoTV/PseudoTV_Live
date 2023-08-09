@@ -270,7 +270,9 @@ class JSONRPC:
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
         duration = 0
-        runtime  = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        for runtime in [int(item.get('runtime', '0') or '0'),int(item.get('duration', '0') or '0'),int((item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')]:
+            if runtime != 0: break
+
         if (runtime == 0 or accurate):
             if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
                 if isStack(path):# handle "stacked" videos
@@ -332,9 +334,8 @@ class JSONRPC:
         # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         if not limits: 
             limits = self.autoPagination(citem['id'], path) #get
-            total  = limits.get('total',0)
-            if total > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
-                limits = self.randomPagination(page,total)
+            if limits.get('total',0) > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
+                limits = self.randomPagination(page,limits.get('total',0))
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
         param = {}
@@ -362,37 +363,40 @@ class JSONRPC:
             results = self.getLibrary(item['method'],param)
             limits  = results.pop('limits') 
             key     = list(results.keys())[0]
-            
+                                    
+        if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
+            # restart page to 0, exceeding boundaries.
+            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
+            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
+        self.autoPagination(citem['id'], path, limits) #set 
+        
         items = results.get(key, [])
-        total = limits.get('total',0)
         try:
-            if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == total):
+            if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == limits.get('total',0)):
                 #VFS paths ie.Plugin:// may fail to apply limits and return a full directory list. Instead use limits param to slice list.
                 items = items[param["limits"]["start"]:param["limits"]["end"]]
                 self.log('requestList, id = %s, items = %s sliced from VFS exceeding page %s'%(citem['id'], len(items), page))
         except Exception as e: self.log('requestList, id = %s, failed! to slice items %s'%(citem['id'],e), xbmc.LOGERROR)
 
         if len(items) > page:
-            #in the rare (if at all possible) instance items may exceed expected limits, truncate size.
+            #in the rare (if at all possible) instance items exceed expected limits, truncate size.
             items = items[:page]
             self.log('requestList, id = %s, items = %s truncated to %s'%(citem['id'], len(items), page))
-        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
-        
-        if (limits.get('end',0) >= total or limits.get('start',0) >= total):
-            # restart page to 0, exceeding boundaries.
-            self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
-            limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.autoPagination(citem['id'], path, limits) #set 
-        
-        if (len(items) == 0 and total > 0) and not path.startswith(tuple(VFS_TYPES)):
-            # retry last request with fresh limits.
-            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
-            return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-        elif (len(items) > 0 and len(items) < page) and (total > 0 and total < page):
-            # path total doesn't fill page limit; pad with duplicates.
-            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-            items = self.padItems(items)
-            
+        else:
+            self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+            if (len(items) == 0 and limits.get('total',0) > 0) and not path.startswith(tuple(VFS_TYPES)):
+                # retry last request with fresh limits.
+                self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
+                return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
+            elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) < page):
+                # path total doesn't fill page limit; pad with duplicates.
+                self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
+                items = self.padItems(items)
+            elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) > page):
+                # path total doesn't fill page limit; re-run with new limits
+                self.log("requestList, id = %s, extending items with new limits"%(citem['id']))
+                items.extend(self.requestList(citem, item, media, page-len(items), sort, filter, limits))
+
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
         if not getFile: items = {key:items}
         return items
@@ -464,9 +468,12 @@ class JSONRPC:
         self.log("padItems; items In = %s"%(len(items)))
         if len(items) < page:
             iters = cycle(items)
-            while not MONITOR.abortRequested() and len(items) < page:
+            while not MONITOR.abortRequested() and (len(items) < page and len(items) > 0):
                 item = next(iters).copy()
-                items.append(item)
+                if self.getDuration(item.get('file'),item) == 0:
+                    items.pop(items.index(item))
+                else:
+                    items.append(item)
         self.log("padItems; items Out = %s"%(len(items)))
         return items
         

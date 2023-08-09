@@ -23,8 +23,8 @@ from threading  import BoundedSemaphore, Timer
 
 #constants 
 DEFAULT_ENCODING           = "utf-8"
-FILE_LOCK_MAX_FILE_TIMEOUT = 13
-FILE_LOCK_NAME             = "FileLock.dat"
+FILE_LOCK_MAX_FILE_TIMEOUT = 10
+FILE_LOCK_NAME             = "pseudotv"
 
 #variables
 DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
@@ -248,301 +248,95 @@ class VFSFile:
         except: return self.currentFile.seek(0, 1)
         
 
-class FileLock:
-    def __init__(self):
-        random.seed()        
-        self.LOCK_LOC      = self.chkLOCK()
-        self.lockedList    = []
-        self.isExiting     = False
-        self.lockFileName  = os.path.join(self.LOCK_LOC,FILE_LOCK_NAME)
-        self.grabSemaphore = BoundedSemaphore()
-        self.listSemaphore = BoundedSemaphore()
-        log("FileLock: instance")
-
-
-    def chkLOCK(self):
-        LOCK_LOC = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
-        if not FileAccess.exists(LOCK_LOC):    
-            if FileAccess.makedirs(LOCK_LOC):
-                return LOCK_LOC
-            LOCK_LOC = os.path.join(SETTINGS_LOC,'cache')
-            if not FileAccess.exists(LOCK_LOC):    
-                FileAccess.makedirs(LOCK_LOC)
-                
-        if not FileAccess.exists(FILE_LOCK_NAME):    
-            FileAccess.open(FILE_LOCK_NAME,'a').close()
-        return LOCK_LOC
-
-
-    def close(self):
-        log("FileLock: close")
-        self.isExiting = True
-        try: 
-            if self.refreshLocksTimer.is_alive():   
-                self.refreshLocksTimer.cancel()
-                self.refreshLocksTimer.join()
-        except: pass
-        self.refreshLocksTimer = Timer(4.0, self.refreshLocks)
-        self.refreshLocksTimer.name = "RefreshLocks"
-        for item in self.lockedList:
-            self.unlockFile(item)
-
-
-    def refreshLocks(self):
-        for item in self.lockedList:
-            if self.isExiting:
-                log("FileLock: IsExiting")
-                return False
-            self.lockFile(item, True)
-            
-        try: 
-            if self.refreshLocksTimer.is_alive():
-                self.refreshLocksTimer.cancel()
-                self.refreshLocksTimer.join()
-        except: pass
-        self.refreshLocksTimer = Timer(4.0, self.refreshLocks)
-        self.refreshLocksTimer.name = "RefreshLocks"
-        if self.isExiting == False:
-            self.refreshLocksTimer.start()
-            return True
-        return False
-
-
-    def lockFile(self, filename, block = False):
-        log("FileLock: lockFile %s"%filename)
-        curval   = -1
-        attempts = 0
-        fle      = 0
-        filename = filename.lower()
-        locked   = True
-        lines    = []
-
-        while not xbmc.Monitor().abortRequested() and (locked == True and attempts < FILE_LOCK_MAX_FILE_TIMEOUT):
-            locked = False
-            if curval > -1:
-                self.releaseLockFile()
-                self.grabSemaphore.release()
-
-            self.grabSemaphore.acquire()
-            if self.grabLockFile() == False:
-                self.grabSemaphore.release()
-                return False
-
-            try:
-                fle = FileAccess.open(self.lockName, "r")
-            except:
-                log("FileLock: Unable to open the lock file")
-                self.releaseLockFile()
-                self.grabSemaphore.release()
-                return False
-
-            lines = fle.readlines()
-            fle.close()
-            val = self.findLockEntry(lines, filename)
-
-            # If the file is locked:
-            if val > -1:
-                locked = True
-
-                # If we're the ones that have the file locked, allow overriding it
-                for item in self.lockedList:
-                    if item == filename:
-                        locked = False
-                        block = False
-                        break
-
-                if curval == -1:
-                    curval = val
-                else:
-                    if curval == val:
-                        attempts += 1
-                    else:
-                        if block == False:
-                            self.releaseLockFile()
-                            self.grabSemaphore.release()
-                            log("FileLock: File is locked")
-                            return False
-
-                        curval = val
-                        attempts = 0
-
-        log("FileLock: File is unlocked")
-        self.writeLockEntry(lines, filename)
-        self.releaseLockFile()
-        existing = False
-
-        for item in self.lockedList:
-            if item == filename:
-                existing = True
-                break
-
-        if existing == False:
-            self.lockedList.append(filename)
-            
-        try: self.grabSemaphore.release()
-        except: pass
-        return True
-
-
-    def grabLockFile(self):
-        # Wait a maximum of 20 seconds to grab file-lock file.  This long
-        # timeout should help prevent issues with an old cache.
-        for i in range(40):
-            # Cycle file names in case one of them is sitting around in the directory
-            self.lockName = os.path.join(self.LOCK_LOC,'%s.lock'%(random.randint(1, 60000)))
-            try:
-                FileAccess.rename(self.lockFileName, self.lockName)
-                fle = FileAccess.open(self.lockName, 'r')
-                fle.close()
-                return True
-            except: 
-                xbmc.Monitor().waitForAbort(0.5)
-
-        log("FileLock: Creating lock file")
-        try:
-            fle = FileAccess.open(self.lockName, 'w')
-            fle.close()
-        except:
-            log("FileLock: Unable to create a lock file")
-            return False
-        return True
-
-
-    def releaseLockFile(self):
-        log("FileLock: releaseLockFile")
-        # Move the file back to the original lock file name
-        try:
-            FileAccess.rename(self.lockName, self.lockFileName)
-        except:
-            log("FileLock: Unable to rename the file back to the original name")
-            return False
-        return True
-
-
-    def writeLockEntry(self, lines, filename, addentry = True):
-        log("FileLock: writeLockEntry")
-        # Make sure the entry doesn't exist.  This should only be the case
-        # when the attempts count times out
-        self.removeLockEntry(lines, filename)
-        if addentry:
-            try:
-                lines.append("%s,%s\n"%((random.randint(1, 60000)),filename))
-            except: return False
-
-        try:    
-            fle = FileAccess.open(self.lockName, 'w')
-        except: 
-            log("FileLock: Unable to open the lock file for writing")
-            return False
-
-        flewrite = ''
-        for line in lines:
-            flewrite += line
-
-        try:    
-            fle.write(flewrite)
-        except: log("FileLock: Exception writing to the log file")
-        fle.close()
-
-
-    def findLockEntry(self, lines, filename):
-        log("FileLock: findLockEntry")
-        # Read the file
-        for line in lines:
-            # Format is 'random value,filename'
-            index = line.find(",")
-            flenme = ''
-            setval = -1
-
-            # Valid line, get the value and filename
-            if index > -1:
-                try:
-                    setval = int(line[:index])
-                    flenme = line[index + 1:].strip()
-                except:
-                    setval = -1
-                    flenme = ''
-
-            # The lock already exists
-            if flenme == filename:
-                log("FileLock: entry exists, val is %s"%(setval))
-                return setval
-        return -1
-
-
-    def removeLockEntry(self, lines, filename):
-        log("FileLock: removeLockEntry")
-        realindex = 0
-        for i in range(len(lines)):
-            index = lines[realindex].find(filename)
-            if index > -1:
-                del lines[realindex]
-                realindex -= 1
-            realindex += 1
-
-
-    def unlockFile(self, filename):
-        log("FileLock: unlockFile %s"%filename)
-        realindex = 0
-        found     = False
+class FileLock(object):
+    # https://github.com/dmfrey/FileLock
+    """ A file locking mechanism that has context-manager support so 
+        you can use it in a with statement. This should be relatively cross
+        compatible as it doesn't rely on msvcrt or fcntl for the locking.
+    """
+ 
+    def __init__(self, file_name=FILE_LOCK_NAME, timeout=FILE_LOCK_MAX_FILE_TIMEOUT, delay=.05):
+        """ Prepare the file locker. Specify the file to lock and optionally
+            the maximum timeout and the delay between each attempt to lock.
+        """
+        if timeout is not None and delay is None:
+            raise ValueError("If timeout is not None, then delay must not be None.")
+        self.is_locked = False
+        self.file_name = file_name
+        self.lockpath  = self.checkpath()
+        self.lockfile  = os.path.join(self.lockpath, "%s.lock" % self.file_name)
+        self.timeout   = timeout
+        self.delay     = delay
+ 
+ 
+    def checkpath(self):
+        lockpath = os.path.join(REAL_SETTINGS.getSetting('User_Folder'))
+        if not FileAccess.exists(lockpath):
+            if FileAccess.makedirs(lockpath):
+                return lockpath
+            else:
+                #todo log error with lock path
+                lockpath = os.path.join(SETTINGS_LOC,'cache')
+                if not FileAccess.exists(lockpath):
+                    FileAccess.makedirs(lockpath)
+        return lockpath
         
-        # First make sure we actually own the lock
-        # Remove it from the list if we do
-        self.listSemaphore.acquire()
-        for i in range(len(self.lockedList)):
-            if self.lockedList[realindex] == filename:
-                del self.lockedList[realindex]
-                found = True
-                realindex -= 1
-            realindex += 1
+        
+    def acquire(self):
+        """ Acquire the lock, if possible. If the lock is in use, it check again
+            every `wait` seconds. It does this until it either gets the lock or
+            exceeds `timeout` number of seconds, in which case it throws 
+            an exception.
+        """
+        start_time = time.time()
+        while not xbmc.Monitor().abortRequested():
+            try:
+                self.fd = FileAccess.open(self.lockfile, 'w')
+                self.is_locked = True #moved to ensure tag only when locked
+                break;
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+                if self.timeout is None:
+                    raise FileLockException("Could not acquire lock on {}".format(self.file_name))
+                if (time.time() - start_time) >= self.timeout:
+                    raise FileLockException("Timeout occured.")
+                if xbmc.Monitor().waitForAbort(self.delay): break
+ 
+ 
+    def release(self):
+        """ Get rid of the lock by deleting the lockfile. 
+            When working in a `with` statement, this gets automatically 
+            called at the end.
+        """
+        if self.is_locked:
+            self.fd.close()
+            self.is_locked = False
+ 
+ 
+    def __enter__(self):
+        """ Activated when used in the with statement. 
+            Should automatically acquire a lock to be used in the with block.
+        """
+        if not self.is_locked:
+            self.acquire()
+        return self
+ 
+ 
+    def __exit__(self, type, value, traceback):
+        """ Activated at the end of the with statement.
+            It automatically releases the lock if it isn't locked.
+        """
+        if self.is_locked:
+            self.release()
+ 
+ 
+    def __del__(self):
+        """ Make sure that the FileLock instance doesn't leave a lockfile
+            lying around.
+        """
+        self.release()
 
-        self.listSemaphore.release()
-        if found == False:
-            log("FileLock: Lock not found")
-            return False
 
-        self.grabSemaphore.acquire()
-        if self.grabLockFile() == False:
-            self.grabSemaphore.release()
-            return False
-
-        try:
-            fle   = FileAccess.open(self.lockName, "r")
-            lines = fle.readlines()
-            fle.close()
-        except:
-            log("FileLock: Unable to open the lock file")
-            self.releaseLockFile()
-            self.grabSemaphore.release()
-            return False
-
-        self.writeLockEntry(lines, filename.lower(), False)
-        self.releaseLockFile()
-        self.grabSemaphore.release()
-        return True
-
-
-    def isFileLocked(self, filename, block = False):
-        log("FileLock: isFileLocked %s"%filename)
-        self.grabSemaphore.acquire()
-        if self.grabLockFile() == False:
-            self.grabSemaphore.release()
-            return True
-
-        try:
-            fle   = FileAccess.open(self.lockName, "r")
-            lines = fle.readlines()
-            fle.close()
-        except:
-            log("FileLock: Unable to open the lock file")
-            self.releaseLockFile()
-            self.grabSemaphore.release()
-            return True
-
-        retval = False
-        if self.findLockEntry(lines, filename.lower()) > -1:
-            retval = True
-
-        self.releaseLockFile()
-        self.grabSemaphore.release()
-        return retval
+class FileLockException(Exception):
+    pass

@@ -208,6 +208,7 @@ class Monitor(xbmc.Monitor):
         xbmc.Monitor.__init__(self)
         self.pendingChange    = False
         self.pendingRestart   = False
+        self.pendingInterrupt = False
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -215,48 +216,39 @@ class Monitor(xbmc.Monitor):
 
   
     @contextmanager
-    def idleLocker(self, wait=0.001):
+    def idleLocker(self, wait=0.001, timeout=600):
         #only pause actions after init. firstrun
         dia     = None
         elapsed = 0
         while not self.abortRequested():
-            if self.chkInterrupt(wait): break
+            if self.chkSuspend(wait): break
             elif not isBusy(): break
-            elapsed += wait
-            if dia is None: dia = DIALOG.progressBGDialog(message='%s %s'%(LANGUAGE(32144),LANGUAGE(32145)))
-            else:           dia = DIALOG.progressBGDialog(elapsed,dia)
-            if elapsed >= 600: 
-                setPendingChange(True)
+            elif elapsed >= timeout: 
+                self.pendingChange = True
                 break
+            elapsed += wait
+            if dia is None: dia = DIALOG.progressBGDialog(message='%s %s\n%s'%(LANGUAGE(32144),LANGUAGE(32145),LANGUAGE(32148)))
+            else:           dia = DIALOG.progressBGDialog(elapsed,dia)
         try: yield
         finally:
-            if not dia is None: DIALOG.progressBGDialog(100,dia,'%s %s'%(LANGUAGE(32144),LANGUAGE(32146)))
+            if not dia is None:
+                DIALOG.progressBGDialog(100,DIALOG.progressBGDialog(elapsed,dia,'%s %s'%(LANGUAGE(32144),LANGUAGE(32146))),'%s %s'%(LANGUAGE(32144),LANGUAGE(32146)))
         
 
-    def chkSuspend(self, wait=0.001):
-        pendingChange  = (isPendingChange()  | self.pendingChange)
-        pendingRestart = (isPendingRestart() | self.pendingRestart)
-        pendingSuspend = (self.waitForAbort(wait) | pendingChange | pendingRestart)
+    def chkSuspend(self, wait=0.001): #stop current tasks pending setting/channel change or interrupt.
+        pendingSuspend = (self.waitForAbort(wait) | isPendingSuspend() | self.pendingChange | self.chkInterrupt())
         self.log('chkSuspend, pendingSuspend = %s'%(pendingSuspend))
         return pendingSuspend
         
         
-    def chkInterrupt(self, wait=0.001):
-        pendingRestart   = (isPendingRestart() | self.pendingRestart)
-        pendingInterrupt = (self.waitForAbort(wait) | pendingRestart)
-        self.log('chkInterrupt, pendingInterrupt = %s'%(pendingInterrupt))
-        return pendingInterrupt
-        
-        
-    def chkChange(self):
-        self.pendingChange = (isPendingChange() | self.pendingChange)
-        self.log('chkChange, pendingChange = %s'%(self.pendingChange))
-        setPendingChange(False)
-        return self.pendingChange
+    def chkInterrupt(self, wait=0.001): #interrupt tasks for pending service restart/shutdown
+        self.pendingInterrupt = (self.waitForAbort(wait) | self.pendingInterrupt | self.chkRestart())
+        self.log('chkInterrupt, pendingInterrupt = %s'%(self.pendingInterrupt))
+        return self.pendingInterrupt
         
         
     def chkRestart(self):
-        self.pendingRestart = (isPendingRestart() | self.pendingRestart)
+        self.pendingRestart = (self.pendingRestart | isPendingRestart())
         self.log('chkRestart, pendingRestart = %s'%(self.pendingRestart))
         setPendingRestart(False)
         return self.pendingRestart
@@ -338,8 +330,9 @@ class Monitor(xbmc.Monitor):
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
         self.pendingChange = False
-        if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
-        self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
+        with suspendActivity():
+            if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
+            self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
 
 
 class Service():
@@ -348,12 +341,12 @@ class Service():
     monitor  = Monitor()
     overlay  = Overlay(player)
     http     = HTTP(monitor)
-    announce = Announcement(monitor)
-    disco    = Discovery(monitor)
+    # announce = Announcement(monitor)
+    # disco    = Discovery(monitor)
     
     def __init__(self):
         self.log('__init__')
-        debugNotification()
+        SETTINGS.chkDEBUG()
         DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
         self.producer = Producer(service=self)
@@ -371,26 +364,37 @@ class Service():
         self.log('_start')
         self.producer._startProcess()
         while not self.monitor.abortRequested():
-            if self.monitor.waitForAbort(1): 
-                self.log('_start, waitForAbort')
+            if self.monitor.waitForAbort(2): 
+                self.log('_start, pending stop')
                 DIALOG.notificationDialog(LANGUAGE(32141)%(ADDON_NAME))
-                return self._stop()
+                self._stop()
+                
             elif self.monitor.chkRestart():
                 self.log('_start, pending restart')
                 DIALOG.notificationDialog(LANGUAGE(32049)%(ADDON_NAME))
-                return self._restart()
+                self._restart()
+                
             elif self.monitor.isSettingsOpened():
                 self.log('_start, pending change')
                 self.monitor.pendingChange = True
                 timerit(self.monitor.onSettingsChanged)(15.0) #onSettingsChanged() not called when kodi settings cancelled. call timer instead.
-            elif not self.monitor.chkChange():
+            
+            elif not self.monitor.pendingChange:
+                self._busy(self.monitor.chkIdle())
                 self._tasks()
         
                 
+    def _busy(self, isIdle):
+         #pause background building after first-run while low power devices are in use/not idle.
+        if (isLowPower()) and hasFirstrun():
+            setBusy(not bool(isIdle))
+           
+                
     def _tasks(self):
-        isIdle = self.monitor.chkIdle()
-        if (isLowPower()) and hasFirstrun(): setBusy(not bool(isIdle)) #pause background building after first-run while low power devices are in use/not idle.
-        if not isClient(): self.producer._taskManager() #chk/run scheduled tasks.
+        if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Playback_Background'):
+            return
+        elif not isClient():
+            self.producer._taskManager() #chk/run scheduled tasks.
                     
         
     def _restart(self):

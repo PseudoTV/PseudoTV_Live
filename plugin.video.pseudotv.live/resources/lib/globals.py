@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 
-import os, sys, re, json, struct
+import os, sys, re, json, struct, errno 
 import shutil, subprocess
 import codecs, random
 import uuid, base64, binascii, hashlib
@@ -44,7 +44,6 @@ from socket      import timeout
 from math        import ceil,  floor
 from infotagger.listitem import ListItemInfoTag
 
-GLOBAL_FILELOCK     = FileLock()
 MONITOR             = xbmc.Monitor()
 PLAYER              = xbmc.Player()
 DIALOG              = Dialog()
@@ -53,20 +52,33 @@ SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
-#functions      
 def isBusy():
-    return PROPERTIES.getEXTProperty('%s.idleLocker'%(ADDON_ID)) == 'true'
+    return PROPERTIES.getEXTProperty('%s.busy'%(ADDON_ID)) == 'true'
 
 def setBusy(state=True):
-    PROPERTIES.setEXTProperty('%s.idleLocker'%(ADDON_ID),str(state).lower())
+    if state == isBusy(): return
+    PROPERTIES.setEXTProperty('%s.busy'%(ADDON_ID),str(state).lower())
 
 @contextmanager
-def fileLocker(globalFileLock):
-    globalFileLock.lockFile("MasterLock")
+def pauseActivity(): #pause background building same as setBusy/isBusy.
+    setBusy(True)
     try: yield
-    finally: 
-        globalFileLock.unlockFile('MasterLock')
-        globalFileLock.close()
+    finally:
+        setBusy(False)
+
+def isPendingSuspend():
+    return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
+
+def setPendingSuspend(state=True):
+    if state == isPendingSuspend(): return
+    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),str(state).lower())
+
+@contextmanager
+def suspendActivity(): #suspend/quit running background task.
+    setPendingSuspend(True)
+    try: yield
+    finally:
+        setPendingSuspend(False)
 
 @contextmanager
 def busy_dialog():
@@ -102,14 +114,6 @@ def open_window():
     finally:
         PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'false')
         
-@contextmanager
-def fileLocker(globalFileLock):
-    globalFileLock.lockFile("MasterLock")
-    try: yield
-    finally: 
-        globalFileLock.unlockFile('MasterLock')
-        globalFileLock.close()
-
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()
@@ -170,7 +174,7 @@ def getJSON(file):
     return data
     
 def setJSON(file, data):
-    with fileLocker(GLOBAL_FILELOCK):
+    with FileLock():
         fle = FileAccess.open(file, 'w')
         fle.write(dumpJSON(data, idnt=4, sortkey=False))
         fle.close()
@@ -238,6 +242,11 @@ def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
+    
+def getRecordID(name, path, number):
+    if isinstance(path, list): path = '|'.join(path)
+    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
+    return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:16]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
 
 def splitYear(label):
     try:
@@ -353,7 +362,7 @@ def distribute(*seq):
     #randomly distribute multi-lists of different sizes.
     #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
     iters = list(map(iter, seqs))
-    while not xbmc.Monitor().abortRequested() and iters:
+    while not MONITOR.abortRequested() and iters:
         it = random.choice(iters)
         try:   yield next(it)
         except StopIteration:
@@ -463,65 +472,7 @@ def brutePVR(override=False, waitTime=15):
     togglePVR(False,True,waitTime)
     if MONITOR.waitForAbort(waitTime): return False
     return True
-    
-def setPluginSettings(id, values, override=SETTINGS.getSettingBool('Override_User')):
-    try: addon = xbmcaddon.Addon(id)
-    except:
-        DIALOG.notificationDialog(LANGUAGE(32034)%(id))
-        return False
-    try:
-        addon_name = addon.getAddonInfo('name')
-        if not override:
-            DIALOG.textviewer('%s\n\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
-            if not DIALOG.yesnoDialog((LANGUAGE(32036)%addon_name)): return
-            
-        if addon is None:
-            DIALOG.notificationDialog(LANGUAGE(32034)%(id))
-            return False
-        for s, v in list(values.items()):
-            if MONITOR.waitForAbort(1): return False
-            addon.setSetting(s, v[1])
-        forceMigration(id)
-        DIALOG.notificationDialog((LANGUAGE(32037)%(id)))
-        return True
-    except: 
-        DIALOG.notificationDialog(LANGUAGE(32000))
-        return False
-    
-def chkPluginSettings(id, values):
-    try: 
-        changes = {}
-        addon   = xbmcaddon.Addon(id)
-        for s, v in list(values.items()):
-            if MONITOR.waitForAbort(1): return False
-            value = addon.getSetting(s)
-            if str(value).lower() != str(v).lower(): changes[s] = (value, v)
-        if changes: setPluginSettings(id,changes)
-    except:DIALOG.notificationDialog(LANGUAGE(32034)%(id))
-    
-def forceMigration(id):
-    pvrPath = 'special://profile/addon_data/%s'%(id)
-    settingInstance = 1
-    settingFiles    = [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]
-    for file in settingFiles:
-        if   MONITOR.waitForAbort(5): break
-        elif file.startswith('instance-settings-'):
-            try:
-                instanceNumb = int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
-                settingInstance += instanceNumb
-                xml = FileAccess.open(os.path.join(pvrPath,file), "r")
-                string = xml.read()
-                xml.close()
-                
-                instanceName = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(string).group(1)
-                if instanceName == ADDON_NAME:  #delete old instance settings
-                    FileAccess.delete(os.path.join(pvrPath,file))
-            except: pass
-        
-    #copy new instance settings
-    if FileAccess.exists(os.path.join(pvrPath,'settings.xml')):
-        return FileAccess.copy(os.path.join(pvrPath,'settings.xml'),os.path.join(pvrPath,'instance-settings-%d.xml'%(settingInstance)))
-        
+     
 def hasSubtitle():
     return BUILTIN.getInfoBool('HasSubtitles','VideoPlayer')
 
@@ -560,24 +511,21 @@ def isPendingRestart():
     return PROPERTIES.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
     
 def setPendingRestart(state=True):
+    if state == isPendingRestart(): return
     return PROPERTIES.setEXTProperty('%s.pendingRestart'%(ADDON_ID),str(state).lower())
-                    
-def isPendingChange():
-    return PROPERTIES.getEXTProperty('%s.pendingChange'%(ADDON_ID)) == "true"
-    
-def setPendingChange(state=True):
-    return PROPERTIES.setEXTProperty('%s.pendingChange'%(ADDON_ID),str(state).lower())
-                
+                           
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
     
 def setAutotuned(state=True):
+    if state == hasAutotuned(): return
     return PROPERTIES.setPropertyBool('hasAutotuned',state)
          
 def hasFirstrun():
     return PROPERTIES.getPropertyBool('hasFirstrun')
     
 def setFirstrun(state=True):
+    if state == hasFirstrun(): return
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient():
@@ -587,30 +535,13 @@ def isClient():
 def setClient(state=False,silent=True):
     if not silent and state: DIALOG.notificationWait(LANGUAGE(32115)%(ADDON_NAME))
     PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
+    PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isSlave',SETTINGS.getSettingInt('Client_Mode') == 1)
            
 def getDiscovery():
     return PROPERTIES.getPropertyDict('SERVER_DISCOVERY')
 
 def setDiscovery(servers={}):
     return PROPERTIES.setPropertyDict('SERVER_DISCOVERY',servers)
-
-def chkDiscovery(servers, forced=False):
-    def setResourceSettings(settings):
-        #Set resource settings on client.
-        for key, value in list(settings.items()):
-            try:    SETTINGS.setSettings(key, value)
-            except: pass
-
-    current_server = SETTINGS.getSetting('Remote_URL')
-    if (not current_server or forced) and len(list(servers.keys())) == 1: #If one server found autoselect.
-        server = list(servers.keys())[0]
-         #set server host paths.
-        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(server))
-        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(server,M3UFLE))
-        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(server,XMLTVFLE))
-        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(server,GENREFLE))
-        setResourceSettings(servers[server].get('settings',{})) #update client resources to server settings.
-        setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=True)
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
@@ -634,28 +565,20 @@ def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
     
 def isLowPower():
-    isLowPower = PROPERTIES.getEXTProperty('%s.isLowPower'%(ADDON_ID)) == 'true'
-    return (isLowPower | DEBUG_ENABLED)
+    return PROPERTIES.getEXTProperty('%s.isLowPower'%(ADDON_ID)) == 'true'
 
 def getLowPower():
-    if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System')):
-        PROPERTIES.setEXTProperty('%s.isLowPower'%(ADDON_ID),'false')
+    if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System') | SETTINGS.getSettingBool('Force_HighPower')):
         return False
     return True
 
-def setLowPower(state=False):
+def setLowPower(state=getLowPower()):
     PROPERTIES.setEXTProperty('%s.isLowPower'%(ADDON_ID),str(state).lower())
     return state
 
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
 
-def debugNotification():
-    if SETTINGS.getSettingBool('Enable_Debugging'):
-        if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=90):
-            SETTINGS.setSettingBool('Enable_Debugging',False)
-            DIALOG.notificationDialog(LANGUAGE(321423))
-         
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)
     text = re.sub('\[/COLOR\]', '', text)
@@ -666,3 +589,52 @@ def cleanLabel(text):
 def convertString2Num(value):
     try:    return literal_eval(value)
     except: return None
+         
+def getThumb(item={},opt=0): #unify thumbnail artwork
+    keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
+            1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
+    for key in keys:
+        art = (item.get('art',{}).get('album.%s'%(key),'')       or 
+               item.get('art',{}).get('albumartist.%s'%(key),'') or 
+               item.get('art',{}).get('artist.%s'%(key),'')      or 
+               item.get('art',{}).get('season.%s'%(key),'')      or 
+               item.get('art',{}).get('tvshow.%s'%(key),'')      or 
+               item.get('art',{}).get(key,'')                    or
+               item.get(key,''))
+        if art: return art
+    return {0:FANART,1:COLOR_LOGO}[opt]
+                   
+def cleanImage(image=LOGO):
+    orgIMG = image
+    if not image: image = LOGO
+    if not image.startswith(('image://','resource://','special://')):
+        realPath = xbmcvfs.translatePath('special://home/addons/')
+        if image.startswith(realPath):# convert real path. to vfs
+            image = image.replace(realPath,'special://home/addons/').replace('\\','/')
+        elif image.startswith(realPath.replace('\\','/')):
+            image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
+    return image
+                       
+def cleanMPAA(mpaa):
+    orgMPA = mpaa
+    mpaa = mpaa.lower()
+    if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
+    if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
+    #todo regex, detect other region rating formats
+    # re.compile(':(.*)', re.IGNORECASE).search(text))
+    text = mpaa.upper()
+    try:
+        text = re.sub('/ US', ''  , text)
+        text = re.sub('Rated ', '', text)
+        mpaa = text.strip()
+    except: 
+        mpaa = mpaa.strip()
+    return mpaa
+              
+def hasFile(file):
+    if file.startswith(tuple(VFS_TYPES)):
+        if file.startswith('plugin://'): return BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(file),'System')
+        else: return True
+    else: return FileAccess.exists(file)
+
+              

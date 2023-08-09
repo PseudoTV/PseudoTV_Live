@@ -65,15 +65,16 @@ class Utilities:
             text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
             text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
             return text        
-        try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90, usethread=True)
+        try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
     def openChannelManager(self, chnum=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.getEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID)) == 'true':
-            chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
-            del chmanager
+            with suspendActivity():
+                chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
+                del chmanager
         
         
     def openChannelBug(self):
@@ -155,7 +156,7 @@ class Utilities:
         select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, autoclose=90, multi=False)
         if select is not None:
             server = list(servers.keys())[select]
-            chkDiscovery({server:servers[server]}, forced=True)
+            SETTINGS.chkDiscovery({server:servers[server]}, forced=True)
 
 
     def run(self):  
@@ -167,7 +168,7 @@ class Utilities:
         if param == 'Apply_Settings':
             ctl = (7,9)
             with busy_dialog():
-                if not setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())])):
+                if not SETTINGS.setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=False):
                     DIALOG.notificationDialog(LANGUAGE(32046))
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
@@ -198,7 +199,7 @@ class Utilities:
                 # return
         return openAddonSettings(ctl)
 
-        # # ('ActivateWindow(pvrsettings)') #todo open pvr settings.
+        # # ('ReplaceWindow(pvrsettings)') #todo open pvr settings.
 if __name__ == '__main__': Utilities(sys.argv).run()
     
     

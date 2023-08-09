@@ -23,7 +23,8 @@ class Context:
     def __init__(self, sysARG, writer):
         with busy_dialog():
             log('Context: __init__, sysARG = %s'%(sysARG))
-            DIALOG.infoDialog(LISTITEMS.buildItemListItem(writer))
+            listitem = LISTITEMS.buildItemListItem(writer)
+        DIALOG.infoDialog(listitem)
             
 if __name__ == '__main__': 
     Context(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))

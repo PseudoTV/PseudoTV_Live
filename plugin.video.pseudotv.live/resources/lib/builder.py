@@ -30,7 +30,8 @@ from fillers    import Fillers
 from resources  import Resources
 
 class Builder:
-    loopback = {}
+    loopback   = {}
+    
     
     def __init__(self, service=None):
         #global dialog
@@ -124,8 +125,8 @@ class Builder:
                             self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                             self.delChannelStation(channel)
                             self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
-                        self.saveChannelLineups()
-            finished = self.saveChannelLineups()
+                        if not isLowPower(): self.saveChannelLineups() #
+            if isLowPower(): finished = self.saveChannelLineups()
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if finished else LANGUAGE(32135)))
             self.log('build, finished = %s'%(finished))
             return finished
@@ -267,93 +268,99 @@ class Builder:
         if not results: self.pErrors.append(LANGUAGE(32026))
 
         for idx, item in enumerate(results):
-            with self.service.monitor.idleLocker():
-                if not isinstance(item, dict):
-                    self.log('buildLibraryList, item malformed %s'%(item)) #todo debug issue where key is injected into results as a string? ex. results = [{},{},'episode'], bug with keys()?
-                    continue
-                    
-                file = item.get('file','')
-                item['type'] = key
-                if not file:
-                    self.pErrors.append(LANGUAGE(32031))
-                    self.log("buildLibraryList, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
-                    continue
-                    
-                elif not file.startswith(tuple(VFS_TYPES)) and self.accurateDuration:
-                    if not FileAccess.exists(file): 
-                        self.pErrors.append('%s'%(LANGUAGE(32147)))
-                        self.log("buildLibraryList, id: %s, IDX = %s skipping missing file!"%(citem['id'],idx),xbmc.LOGINFO)
+            if self.service.monitor.chkSuspend(): 
+                self.log('buildLibraryList, suspended')
+                break
+            else:
+                with self.service.monitor.idleLocker():
+                    if not isinstance(item, dict):
+                        self.log('buildLibraryList, item malformed %s'%(item)) #todo debug issue where key is injected into results as a string? ex. results = [{},{},'episode'], bug with keys()?
                         continue
-                
-                elif (file.lower().endswith('strm') and not self.incStrms): 
-                    self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
-                    self.log("buildLibraryList, id: %s, IDX = %s skipping strm!"%(citem['id'],idx),xbmc.LOGINFO)
-                    continue
-                    
-                if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
-                    item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
-
-                if (self.is3D(item) and not self.inc3D): #requires streamdetails, parse last.
-                    self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
-                    self.log("buildLibraryList, id: %s, IDX = %s skipping 3D!"%(citem['id'],idx),xbmc.LOGINFO)
-                    continue
-
-                dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
-                if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
-                    item['duration']     = dur
-                    item['media']        = media
-                    item['originalpath'] = file
-                    if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
-                        item['year'] = 0
                         
-                    title   = (item.get("title",'') or item.get("label",''))
-                    tvtitle = item.get("showtitle",'')
-                    
-                    if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
-                        season  = int(item.get("season","0"))
-                        episode = int(item.get("episode","0"))
-                        if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
-                            self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                            self.log("buildLibraryList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
+                    file = item.get('file','')
+                    item['type'] = key
+                    if not file:
+                        self.pErrors.append(LANGUAGE(32031))
+                        self.log("buildLibraryList, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
+                        continue
+                        
+                    elif not file.startswith(tuple(VFS_TYPES)) and self.accurateDuration:
+                        if not FileAccess.exists(file): 
+                            self.pErrors.append('%s'%(LANGUAGE(32147)))
+                            self.log("buildLibraryList, id: %s, IDX = %s skipping missing file!"%(citem['id'],idx),xbmc.LOGINFO)
                             continue
+                    
+                    elif (file.lower().endswith('strm') and not self.incStrms): 
+                        self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
+                        self.log("buildLibraryList, id: %s, IDX = %s skipping strm!"%(citem['id'],idx),xbmc.LOGINFO)
+                        continue
+                        
+                    if not item.get('streamdetails',{}).get('video',[]): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
+                        item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
-                        label = tvtitle
-                        item["tvshowtitle"]  = tvtitle
-                        item["episodetitle"] = title
-                        item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                    else: # This is a Movie
-                        label = title
-                        item["episodetitle"] = item.get("tagline","")
-                        item["episodelabel"] = item.get("tagline","")
-            
-                    if not label: continue
-                    spTitle, spYear = splitYear(label)
-                    item['label'] = spTitle
-                    if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
-                        item['year'] = spYear
+                    if (self.is3D(item) and not self.inc3D): #requires streamdetails, parse last.
+                        self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
+                        self.log("buildLibraryList, id: %s, IDX = %s skipping 3D!"%(citem['id'],idx),xbmc.LOGINFO)
+                        continue
+
+                    dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
+                    if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
+                        item['duration']     = dur
+                        item['media']        = media
+                        item['originalpath'] = file
+                        if item.get("year",0) == 1601: #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
+                            item['year'] = 0
+                            
+                        title   = (item.get("title",'') or item.get("label",''))
+                        tvtitle = item.get("showtitle",'')
                         
-                    item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
-                    if citem.get('holiday'): item['plot'] = '[B]%s[/B]\n%s'%(citem['holiday'],item['plot'])
-                    
-                    item['art']  = item.get('art',{})
-                    item.get('art',{})['icon'] = citem['logo']
-                    
-                    #correct for missing genre meta, some library returns don't include genre. https://github.com/xbmc/xbmc/issues/22955
-                    if not item.get('genre'):
-                        if citem.get('type') in ["TV Shows","TV Networks"]: item['genre'] = ["Show"]
-                        else:                                               item['genre'] = [cleanChannelSuffix(citem.get('name'),citem.get('type'))]
-                        
-                    if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
-                        seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
-                    else: 
-                        fileList.append(item)
-                        
-                    if self.pDialog: 
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(results)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
-                else: 
-                    self.pErrors.append(LANGUAGE(32032))
-                    self.log("buildLibraryList, id: %s skipping %s no duration meta found!"%(citem['id'],file),xbmc.LOGINFO)
+                        if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
+                            season  = int(item.get("season","0"))
+                            episode = int(item.get("episode","0"))
+                            if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
+                                self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
+                                self.log("buildLibraryList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
+                                continue
+
+                            label = tvtitle
+                            item["tvshowtitle"]  = tvtitle
+                            item["episodetitle"] = title
+                            item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                            item["showlabel"]    = '%s %s'%(item["tvshowtitle"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                        else: # This is a Movie
+                            label = title
+                            item["episodetitle"] = item.get("tagline","")
+                            item["episodelabel"] = item.get("tagline","")
+                            item["showlabel"]    = '%s %s'%(item["title"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
                 
+                        if not label: continue
+                        spTitle, spYear = splitYear(label)
+                        item['label'] = spTitle
+                        if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
+                            item['year'] = spYear
+                            
+                        item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
+                        if citem.get('holiday'): item['plot'] = '[B]%s[/B]\n%s'%(citem['holiday'],item['plot'])
+                        
+                        item['art']  = item.get('art',{})
+                        item.get('art',{})['icon'] = citem['logo']
+                        
+                        #correct for missing genre meta, some library returns don't include genre. https://github.com/xbmc/xbmc/issues/22955
+                        if not item.get('genre'):
+                            if citem.get('type') in ["TV Shows","TV Networks"]: item['genre'] = ["Show"]
+                            else:                                               item['genre'] = [cleanChannelSuffix(citem.get('name'),citem.get('type'))]
+                            
+                        if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
+                            seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
+                        else: 
+                            fileList.append(item)
+                            
+                        if self.pDialog: 
+                            self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(results)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+                    else: 
+                        self.pErrors.append(LANGUAGE(32032))
+                        self.log("buildLibraryList, id: %s skipping %s no duration meta found!"%(citem['id'],file),xbmc.LOGINFO)
+                    
         if sort.get("method","") == 'episode':
             self.log("buildLibraryList, id: %s, method = episode: sorting."%(citem['id']))
             seasoneplist.sort(key=lambda seep: seep[1])
@@ -494,11 +501,13 @@ class Builder:
                             item["tvshowtitle"]  = tvtitle
                             item["episodetitle"] = title
                             item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                            item["showlabel"]    = '%s %s'%(item["tvshowtitle"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
                         else: # This is a Movie
                             label = title
                             item["episodetitle"] = item.get("tagline","")
                             item["episodelabel"] = item.get("tagline","")
-                
+                            item["showlabel"]    = '%s %s'%(item["title"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                    
                         if not label: continue
                         spTitle, spYear = splitYear(label)
                         item['label'] = spTitle
@@ -567,27 +576,8 @@ class Builder:
             stereomode = (item['video'][0]['stereomode'] or '')
             if len(stereomode) > 0: return True
         return False
-          
-          
-    def cleanMPAA(self, mpaa):
-        orgMPA = mpaa
-        self.log('cleanMPAA, in = %s'%(mpaa))
-        mpaa = mpaa.lower()
-        if ':'      in mpaa: mpaa = re.split(':',mpaa)[1]       #todo prop. regex
-        if 'rated ' in mpaa: mpaa = re.split('rated ',mpaa)[1]  #todo prop. regex
-        #todo regex, detect other region rating formats
-        # re.compile(':(.*)', re.IGNORECASE).search(text))
-        text = mpaa.upper()
-        try:
-            text = re.sub('/ US', ''  , text)
-            text = re.sub('Rated ', '', text)
-            mpaa = text.strip()
-        except: 
-            mpaa = mpaa.strip()
-        if mpaa != orgMPA: self.log('cleanMPAA, out = %s'%(mpaa))
-        return mpaa
-                  
-                  
+
+
     def cleanGroups(self, citem):
         orgITM = citem
         self.log('cleanGroups, in = %s'%(citem['group']))
@@ -604,42 +594,11 @@ class Builder:
         if citem != orgITM: self.log('cleanGroups, out = %s'%(citem['group']))
         return citem
         
-        
-    def cleanImage(self, image=LOGO):
-        orgIMG = image
-        if not image: image = LOGO
-        self.log('cleanImage, image In = %s'%(image))
-        if not image.startswith(('image://','resource://','special://')):
-            realPath = xbmcvfs.translatePath('special://home/addons/')
-            if image.startswith(realPath):# convert real path. to vfs
-                image = image.replace(realPath,'special://home/addons/').replace('\\','/')
-            elif image.startswith(realPath.replace('\\','/')):
-                image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
-            else:# convert local art to webserver for clients.
-                image = self.resources.buildWebImage(image)
-        if image != orgIMG: self.log('cleanImage, image Out = %s'%(image))
-        return image
-            
-            
-    def getThumb(self, item={},opt=0): #unify thumbnail artwork
-        keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
-                1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
-        for key in keys:
-            art = (item.get('art',{}).get('album.%s'%(key),'')       or 
-                   item.get('art',{}).get('albumartist.%s'%(key),'') or 
-                   item.get('art',{}).get('artist.%s'%(key),'')      or 
-                   item.get('art',{}).get('season.%s'%(key),'')      or 
-                   item.get('art',{}).get('tvshow.%s'%(key),'')      or 
-                   item.get('art',{}).get(key,'')                    or
-                   item.get(key,''))
-            if art: return art
-        return {0:FANART,1:COLOR_LOGO}[opt]
-             
-                  
+
     def addChannelStation(self, citem):
         self.log('addChannelStation, id = %s'%(citem['id']))
         citem['url']  = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
-        citem['logo'] = self.cleanImage(citem['logo'])
+        citem['logo'] = cleanImage(citem['logo'])
         citem = self.cleanGroups(citem)
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
@@ -647,47 +606,7 @@ class Builder:
         
     def addChannelProgrammes(self, citem, fileList):
         self.log('addProgrammes, id = %s, fileList = %s'%(citem['id'],len(fileList)))
-        for idx, file in enumerate(fileList):
-            item = {}
-            item['channel']     = citem['id']
-            item['radio']       = citem['radio']
-            item['start']       = file['start']
-            item['stop']        = file['stop']
-            item['title']       = file['label']
-            item['desc']        = file['plot']
-            item['length']      = file['duration']
-            item['sub-title']   = (file.get('episodetitle','') or '')
-            item['categories']  = (file.get('genre','')        or ['Undefined'])[:5]
-            item['type']        = file.get('type','video')
-            item['new']         = int(file.get('playcount','1')) == 0
-            item['thumb']       = self.cleanImage(self.getThumb(file,self.epgArt)) #unify thumbnail by user preference 
-            file['art']['thumb']= self.getThumb(file,{0:1,1:0}[self.epgArt]) #unify thumbnail artwork, opposite of EPG_Artwork
-            item['date']        = file.get('premiered','')
-            
-            if citem['catchup']:
-                item['catchup-id'] = VOD_URL.format(addon=ADDON_ID,name=quoteString(item['title']),id=quoteString(encodeString((file.get('originalfile','') or file.get('file','')))),channel=quoteString(citem['id']),radio=str(item['radio']))
-                file['catchup-id'] = item['catchup-id']
-                
-            if (item['type'] != 'movie' and ((file.get("season",0) > 0) and (file.get("episode",0) > 0))):
-                item['episode-num'] = {'xmltv_ns':'%s.%s'%(file.get("season",1)-1,file.get("episode",1)-1),
-                                       'onscreen':'S%sE%s'%(str(file.get("season",0)).zfill(2),str(file.get("episode",0)).zfill(2))}
-
-            item['rating']      = self.cleanMPAA(file.get('mpaa','') or 'NA')
-            item['stars']       = (file.get('rating','')        or '0')
-            item['writer']      = ', '.join(file.get('writer',[])[:5])
-            item['director']    = file.get('director',[])[:5]
-            item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in file.get('cast',[])[:5] if actor.get('name')]
-
-            file['citem']       = citem #channel item (stale data due to xmltv storage) use for reference.
-            item['fitem']       = file  #raw kodi fileitem/listitem, contains citem both passed through 'writer' xmltv param.
-            
-            streamdetails = file.get('streamdetails',{})
-            if streamdetails:
-                item['subtitle'] = list(set([sub.get('language','')                    for sub in streamdetails.get('subtitle',[]) if sub.get('language')]))
-                item['language'] = ', '.join(list(set([aud.get('language','')          for aud in streamdetails.get('audio',[])    if aud.get('language')])))
-                item['audio']    = True if True in list(set([aud.get('codec','')       for aud in streamdetails.get('audio',[])    if aud.get('channels',0) >= 2])) else False
-                item.setdefault('video',{})['aspect'] = list(set([vid.get('aspect','') for vid in streamdetails.get('video',[])    if vid.get('aspect','')]))
-            self.xmltv.addProgram(citem['id'], item)
+        [self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, file)) for idx, file in enumerate(fileList)]
             
         
     def delChannelStation(self, citem):

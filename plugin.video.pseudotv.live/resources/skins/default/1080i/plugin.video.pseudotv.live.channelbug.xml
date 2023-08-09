@@ -33,14 +33,14 @@
             <left>200</left>
             <bottom>35</bottom>
             <width>1000</width>
-            <height>50</height>
+            <height>80</height>
             <itemgap>10</itemgap>
             <orientation>horizontal</orientation>
             <visible>true</visible>
             <animation effect="fade" start="100" end="0" time="12000">WindowOpen</animation>
             <control type="image">
                 <width>50</width> 
-                <height>50</height> 
+                <height>80</height> 
                 <align>left</align>
                 <aligny>center</aligny>
                 <texture>buttons/dpad.png</texture>
@@ -50,11 +50,11 @@
                 <align>left</align>
                 <aligny>center</aligny>
                 <width>auto</width>
-                <height>50</height>
+                <height>80</height>
                 <font>font32_title</font>
                 <textcolor>ffffffff</textcolor>
                 <shadowcolor>ff000000</shadowcolor>
-                <label>Move logo into position.</label>
+                <label>Move logo into position.[CR]Back/Enter/Select to save.</label>
             </control>
         </control>
     </controls>

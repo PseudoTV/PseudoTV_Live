@@ -25,12 +25,13 @@ SIMILAR_SCRIPT = 'script.embuary.helper'
 
 class Match:
     def __init__(self, sysARG):
-        title  = BUILTIN.getInfoLabel('Title')
-        name   = BUILTIN.getInfoLabel('EpisodeName')
-        writer = decodeWriter(BUILTIN.getInfoLabel('Writer'))
-        dbtype = writer.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')
-        dbid   = (writer.get('tvshowid') or writer.get('movieid'))
-        log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
+        with busy_dialog():
+            title  = BUILTIN.getInfoLabel('Title')
+            name   = BUILTIN.getInfoLabel('EpisodeName')
+            writer = decodeWriter(BUILTIN.getInfoLabel('Writer'))
+            dbtype = writer.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')
+            dbid   = (writer.get('tvshowid') or writer.get('movieid'))
+            log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
 
         if BUILTIN.getInfoBool('HasAddon(%s)'%(SIMILAR_SCRIPT),'System') and dbid:
             SEARCH_SCRIPT = SIMILAR_SCRIPT
@@ -48,7 +49,7 @@ class Match:
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=tvshow&tag=HDR
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=movie&tag=HDR
             # tag = optional, additional filter option to filter by library tag
-            BUILTIN.executebuiltin('ActivateWindow(%s,%s,return)'%('%ss'%(writer.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(SEARCH_SCRIPT,dbid,dbtype)))
+            BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%('%ss'%(writer.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(SEARCH_SCRIPT,dbid,dbtype)))
         else:
             # - the addon is executed by another addon/skin: RunScript(script.globalsearch,searchstring=foo)
             # You can specify which categories should be searched (this overrides the user preferences set in the addon settings):

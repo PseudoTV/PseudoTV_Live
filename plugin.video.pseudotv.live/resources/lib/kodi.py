@@ -20,6 +20,7 @@
 import json, uuid
 
 from globals     import *
+from fileaccess  import FileAccess
 from collections import Counter, OrderedDict
 from ast         import literal_eval
 from contextlib  import contextmanager, closing
@@ -27,7 +28,6 @@ from infotagger.listitem import ListItemInfoTag
 
 #variables
 DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-
 MONITOR             = xbmc.Monitor()
 
 def log(event, level=xbmc.LOGDEBUG):
@@ -68,7 +68,7 @@ def busy_dialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+        closeBusyDialog()
 
 def setDictLST(lst=[]):
     sLST = [dumpJSON(d) for d in lst]
@@ -248,6 +248,90 @@ class Settings:
         return self.property.setProperty(key, value)
         
         
+    def chkDEBUG(self):
+        if self.getSettingBool('Enable_Debugging'):
+            if self.dialog.yesnoDialog(LANGUAGE(32142),autoclose=15):
+                self.log('chkDEBUG, disabling debugging.')
+                self.setSettingBool('Enable_Debugging',False)
+                self.dialog.notificationDialog(LANGUAGE(321423))
+
+        
+    def chkDiscovery(self, servers, forced=False):
+        #set client resources in-sync with server.
+        def setResourceSettings(settings):
+            for key, value in list(settings.items()):
+                try:    self.setSetting(key, value)
+                except: pass
+
+        current_server = self.getSetting('Remote_URL')
+        if (not current_server or forced) and len(list(servers.keys())) == 1:
+            #If one server found autoselec, set server host paths.
+            self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
+            self.setSetting('Remote_URL'  ,'http://%s'%(list(servers.keys())[0]))
+            self.setSetting('Remote_M3U'  ,'http://%s/%s'%(list(servers.keys())[0],M3UFLE))
+            self.setSetting('Remote_XMLTV','http://%s/%s'%(list(servers.keys())[0],XMLTVFLE))
+            self.setSetting('Remote_GENRE','http://%s/%s'%(list(servers.keys())[0],GENREFLE))
+            setResourceSettings(servers[list(servers.keys())[0]].get('settings',{}))
+            self.setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=True)
+
+            
+    def chkPluginSettings(self, id, values):
+        self.log('chkPluginSettings, id = %s'%(id))
+        try: 
+            changes = {}
+            addon   = xbmcaddon.Addon(id)
+            if addon is None: raise Exception()
+            for s, v in list(values.items()):
+                if MONITOR.waitForAbort(1): return False
+                value = addon.getSetting(s)
+                if str(value).lower() != str(v).lower(): changes[s] = (value, v)
+            if changes and v: self.setPluginSettings(id,changes)
+        except: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
+        
+            
+    def setPluginSettings(self, id, values, override=None):
+        if override is None: override = self.getSettingBool('Override_User')
+        self.log('setPluginSettings, id = %s, override = %s'%(id,override))
+        try:
+            addon = xbmcaddon.Addon(id)
+            addon_name = addon.getAddonInfo('name')
+            if addon is None: raise Exception()
+            
+            if not override:
+                self.dialog.textviewer('%s\n\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
+                if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon_name)): return False
+                
+            for s, v in list(values.items()):
+                if MONITOR.waitForAbort(1): return False
+                addon.setSetting(s, v[1])
+            self.forceMigration(id)
+            self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
+        except: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
+
+
+    def forceMigration(self, id):
+        pvrPath = 'special://profile/addon_data/%s'%(id)
+        settingInstance = 1
+        for file in [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]:
+            if   MONITOR.waitForAbort(5): break
+            elif file.startswith('instance-settings-'):
+                try:
+                    xml = FileAccess.open(os.path.join(pvrPath,file), "r")
+                    instanceName = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(xml.read()).group(1)
+                    xml.close()
+                    if instanceName == ADDON_NAME:  #delete old instance settings
+                        self.log('forceMigration, id = %s deleting %s...'%(id,file))
+                        FileAccess.delete(os.path.join(pvrPath,file))
+                except Exception as e: self.log('forceMigration, id = %s, failed to open/parse %s\n%s'%(id,file,e))
+                settingInstance += int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
+        
+        #todo open pvr simple settings prompt user to disable Migrated Add-on Config.
+        #copy new instance settings
+        if FileAccess.exists(os.path.join(pvrPath,'settings.xml')):
+            self.log('forceMigration, id = %s creating %s...'%(id,'instance-settings-%d.xml'%(settingInstance)))
+            return FileAccess.copy(os.path.join(pvrPath,'settings.xml'),os.path.join(pvrPath,'instance-settings-%d.xml'%(settingInstance)))
+           
+
 class Properties:
     
     def __init__(self, winID=10000):
@@ -348,29 +432,28 @@ class Properties:
         return self.setProperty(key, value)
         
         
-    def setProperty(self, key, value):
+    def setProperty(self, key, value, index=False):
         if not isinstance(value,str): value = str(value)
         self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
         self.window.setProperty(self.getKey(key), value)
-        self.setMasterProperty(self.winID,self.getKey(key))
+        if index: self.setMasterProperty(self.winID,self.getKey(key))
         return True
 
 
-    def masterProperty(self, value=None):
-        if value is None:
-            try:    return loadJSON(self.getEXTProperty('%s.propMaster'%(ADDON_ID)))
-            except: return {}
-        else:
-            return self.setEXTProperty('%s.propMaster'%(ADDON_ID),dumpJSON(value))
-        
-        
     def setMasterProperty(self, id, key):
-        master = self.masterProperty()
+        def masterProperty(value=None):
+            if value is None:
+                try:    return loadJSON(self.getEXTProperty('%s.propMaster'%(ADDON_ID)))
+                except: return {}
+            else:
+                return self.setEXTProperty('%s.propMaster'%(ADDON_ID),dumpJSON(value))
+                
+        master = masterProperty()
         master.setdefault(id,[]).append(key)
         master[id] = list(set(master[id]))
-        return self.masterProperty(master)
+        return masterProperty(master)
         
-
+        
 class ListItems:
     def __init__(self):
         ...
@@ -591,7 +674,8 @@ class Dialog:
     builtin    = Builtin()
     
     def __init__(self):
-        ...
+        self.settings.dialog = self
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)

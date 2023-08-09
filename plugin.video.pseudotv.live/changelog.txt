@@ -1,8 +1,14 @@
 v.0.4.3
 -Added "Hack" method for automatically configuring IPTV-Simple (Manual configuration no longer necessary).
 -Improved Usability/Notifications
--Fixed Channel Manager channels removed/missing after editing.
--Added support for upcoming IPTV-Simple update that allows audio passthrough for PVR content.
+-Fixed Channel Manager - channels removed/missing after editing.
+-Added Support for upcoming IPTV-Simple update that allows audio passthrough for PVR content.
+-Added "Add to Recordings" context option; stores given media as a PVR recording; "Watch Later" feature (Experimental - Feedback appreciated).
+ Known issue with recordings - meta information inconsistently displays, I'm working with @phunkyfish to resolve this bug.
+-Added "Force High-Power" option under miscellaneous settings. Disables performance throttling on low power devices.
+-Improved file locking for upcoming webUI. 
+-Temporarily disabled multi-room discovery/announcements. 
+-Improved flow controls for background management (Experimental - Feedback appreciated).
 
 v.0.4.2
 -Improved "Find More" context option. Now supports Embuary Helpers find similar.

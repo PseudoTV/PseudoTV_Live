@@ -23,7 +23,6 @@ from globals    import *
 from channels   import Channels
 
 M3U_TEMP = {"id"                : "",
-            "type"              : "",
             "number"            : 0,
             "name"              : "",
             "logo"              : "",
@@ -32,11 +31,11 @@ M3U_TEMP = {"id"                : "",
             "radio"             : False,
             "favorite"          : False,
             "realtime"          : False,
+            "media"             : "",
             "label"             : "",
             "url"               : "",
             "tvg-shift"         : "",
             "x-tvg-url"         : "",
-            "media"             : "",
             "media-dir"         : "",
             "media-size"        : "",
             "catchup-source"    : "",
@@ -57,29 +56,31 @@ M3U_MIN  = {"id"                : "",
             "group"             : [],
             "catchup"           : "vod",
             "radio"             : False,
-            "realtime"          : False,
             "label"             : "",
             "url"               : ""}
 
 class M3U:
     def __init__(self):
-        self.M3UDATA = {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 'channels':self.cleanSelf(self._load())}
+        stations, recordings = self.cleanSelf(list(self._load()))
+        self.M3UDATA = {'data':'#EXTM3U tvg-shift="" x-tvg-url="" x-tvg-id="" catchup-correction=""', 'stations':stations, 'recordings':recordings}
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _verify(self, stations):
-        def _log(station):
-            self.log('_verify, found = %s'%(station))
-            return station
-        #remove abandoned m3u entries; Stations that are not found in the channel list.
-        return [_log(station) for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))]
-
+    def _verify(self, stations=[], recordings=[]):
+        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list.
+            self.log('_verify, stations = %s'%(len(stations)))
+            return [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
+        elif recordings:#remove recordings that no longer exists on disk
+            self.log('_verify, recordings = %s'%(len(recordings)))
+            return [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url','').replace('.pvr',''))).get("id",'')))]
+        return []
+        
 
     def _load(self, file=M3UFLEPATH):
-        self.log('loadM3U, file = %s'%file)
+        self.log('_load, file = %s'%file)
         if file.startswith('http'):
             url  = file
             file = os.path.join(TEMP_LOC,slugify(url))
@@ -102,7 +103,7 @@ class M3U:
                             
                     # if SETTINGS.getSettingInt('Import_XMLTV_TYPE') == 2 and file == os.path.join(TEMP_LOC,slugify(SETTINGS.getSetting('Import_M3U_URL'))):
                         # if data.get('x-tvg-url').group(1):
-                            # self.log('loadM3U, using #EXTM3U "x-tvg-url"')
+                            # self.log('_load, using #EXTM3U "x-tvg-url"')
                             # SETTINGS.setSetting('Import_XMLTV_M3U',data.get('x-tvg-url').group(1))
                            
                 elif line.startswith('#EXTINF:'):
@@ -137,20 +138,20 @@ class M3U:
                     for key, value in list(match.items()):
                         if value is None:
                             if data.get(key,None) is not None:
-                                self.log('loadM3U, using #EXTM3U "%s" value for #EXTINF'%(key))
+                                self.log('_load, using #EXTM3U "%s" value for #EXTINF'%(key))
                                 value = data[key] #no local EXTINF value found; use global EXTM3U if applicable.
                             else: continue
                         
                         if value.group(1) is None:
                             continue
                         elif key == 'logo':
-                            mitem[key] = value.group(1)
+                            mitem[key] = value.group(1) #todo cleanimage? checkimage?
                         elif key == 'number':
                             try:    mitem[key] = int(value.group(1))
                             except: mitem[key] = float(value.group(1))#todo why was this needed?
                         elif key == 'group':
                             mitem[key] = list([_f for _f in sorted(list(set((value.group(1)).split(';')))) if _f])
-                        elif key in ['radio','favorite','realtime']:
+                        elif key in ['radio','favorite','realtime','media']:
                             mitem[key] = (value.group(1)).lower() == 'true'
                         else:
                             mitem[key] = value.group(1)
@@ -176,11 +177,12 @@ class M3U:
                             elif nline.startswith('##'): continue
                             elif not nline: continue
                             else: mitem['url'] = nline
-                        except Exception as e: self.log('loadM3U, error parsing m3u! %s'%(e))
+                        except Exception as e: self.log('_load, error parsing m3u! %s'%(e))
                             
                     #Fill missing with similar parameters.
-                    mitem['name']  = (mitem.get('name','')   or mitem.get('label',''))
-                    mitem['label'] = (mitem.get('label','')  or mitem.get('name',''))
+                    mitem['name']     = (mitem.get('name','')     or mitem.get('label',''))
+                    mitem['label']    = (mitem.get('label','')    or mitem.get('name',''))
+                    mitem['favorite'] = (mitem.get('favorite','') or False)
                     
                     #Set Fav. based on group value.
                     if LANGUAGE(32019) in mitem['group'] and not mitem['favorite']:
@@ -188,65 +190,73 @@ class M3U:
                     
                     #Core m3u parameters missing, ignore entry.
                     if not mitem.get('id','') or not mitem.get('name','') or not mitem.get('number',''): 
-                        self.log('loadM3U, SKIPPED MISSING META m3u item = %s'%mitem)
+                        self.log('_load, SKIPPED MISSING META m3u item = %s'%mitem)
                         continue
                         
-                    self.log('loadM3U, m3u item = %s'%mitem)
+                    self.log('_load, m3u item = %s'%mitem)
                     yield mitem
         
         
     def _save(self, file=M3UFLEPATH):
-        self.log('_save')
-        with fileLocker(GLOBAL_FILELOCK):
+        with FileLock():
             fle = FileAccess.open(file, 'w')
-            self.log('_save, saving to %s'%(file))
             fle.write('%s\n'%(self.M3UDATA['data']))
             
             opts = list(self.getMitem().keys())
             mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
-            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" realtime="%s" %s,%s\n'
-            self.M3UDATA['channels'] = self.sortStations(self.M3UDATA.get('channels',[]))
+            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
+            self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]))
+            self.log('_save, saving %s stations and %s recordings to %s'%(len(self.M3UDATA['stations']),len(self.M3UDATA['recordings']),file))
             
-            for channel in self.M3UDATA['channels']:
+            for station in self.M3UDATA['recordings'] + self.M3UDATA['stations']:
                 optional  = ''
                 xplaylist = ''
                 kodiprops = {}
-                if not channel: continue
+                if not station: continue
                     
                 # write optional m3u parameters.
-                if 'kodiprops'       in channel: kodiprops = channel.pop('kodiprops')
-                if 'x-playlist-type' in channel: xplaylist = channel.pop('x-playlist-type')
-                for key, value in list(channel.items()):
-                    if key in opts and value: optional += '%s="%s" '%(key,value)
+                if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
+                if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
+                for key, value in list(station.items()):
+                    if key in opts and str(value):
+                        optional += '%s="%s" '%(key,value)
                         
-                fle.write(line%(channel['number'],
-                                channel['id'],
-                                channel['name'],
-                                channel['logo'],
-                                ';'.join(channel['group']),
-                                channel['radio'],
-                                channel['catchup'],
-                                channel['realtime'],
+                fle.write(line%(station['number'],
+                                station['id'],
+                                station['name'],
+                                station['logo'],
+                                ';'.join(station['group']),
+                                station['radio'],
+                                station['catchup'],
                                 optional,
-                                channel['label']))
+                                station['label']))
                        
                 if kodiprops:
                     fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in kodiprops])))
                 if xplaylist:
                     fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
-                fle.write('%s\n'%(channel['url']))
+                fle.write('%s\n'%(station['url']))
             fle.close()
+        return self._reload()
+        
+        
+    def _reload(self):
+        self.log('_reload') 
+        self.__init__()
         return True
         
         
-    def cleanSelf(self, channels, key='id', slug='@%s'%(slugify(ADDON_NAME))):
-        self.log('cleanSelf, slug = %s'%(slug)) # remove imports (Non PseudoTV Live)
-        if not slug: return channels
-        return list([line for line in self._verify(channels) if line.get(key,'').endswith(slug)])
-        
+    def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live)
+        if not slug: return items
+        stations   = self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)])
+        recordings = self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)])
+        self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s'%(slug,key,len(stations),len(recordings)))
+        return self.sortStations(stations), self.sortStations(recordings)
 
-    def sortStations(self, channels):
-        return sorted(channels, key=lambda k: k['number'])
+
+    def sortStations(self, stations):
+        return sorted(stations, key=lambda k: k['number'])
         
         
     def getMitem(self):
@@ -259,42 +269,89 @@ class M3U:
 
     
     def getStations(self):
-        stations = self.sortStations(self.M3UDATA.get('channels',[]))
-        self.log('getStations, channels = %s'%(len(stations)))
+        stations = self.sortStations(self.M3UDATA.get('stations',[]))
+        self.log('getStations, stations = %s'%(len(stations)))
         return stations
-        
-                
-    def findStation(self, item, channels=None):
-        if channels is None: channels = self.M3UDATA.get('channels',[])
-        for idx, eitem in enumerate(channels):
-            if (item.get('id') == eitem.get('id',str(random.random()))) or (item.get('type','').lower() == eitem.get('type',str(random.random())).lower() and item.get('name','').lower() == eitem.get('name',str(random.random())).lower()):
-                self.log('findChannel, found item = %s'%(eitem))
+              
+              
+    def getRecordings(self):
+        recordings = self.sortStations(self.M3UDATA.get('recordings',[]))
+        self.log('getRecordings, recordings = %s'%(len(recordings)))
+        return recordings
+               
+               
+    def findStation(self, citem, stations=None):
+        if stations is None: stations = self.M3UDATA.get('stations',[])
+        for idx, eitem in enumerate(stations):
+            if (citem.get('id') == eitem.get('id',str(random.random())) or citem.get('url','').lower() == eitem.get('url',str(random.random())).lower()):
+                self.log('findStation, found citem = %s'%(eitem))
                 return idx, eitem
         return None, {}
         
+                        
+    def findRecording(self, ritem, recordings=None):
+        if recordings is None: recordings = self.M3UDATA.get('recordings',[])
+        for idx, eitem in enumerate(recordings):
+            if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label','').lower() == eitem.get('label',str(random.random())).lower()):
+                self.log('findRecording, found ritem = %s'%(eitem))
+                return idx, eitem
+        return None, {} 
+        
         
     def addStation(self, citem):
-        self.log('addStation, channel item = %s'%(citem))
         idx, line = self.findStation(citem)
+        self.log('addStation, channel item = %s, found existing = %s'%(citem,idx))
         mitem = self.getMitem()
         mitem.update(citem)            
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
         mitem['logo']          = citem['logo']
+        mitem['realtime']      = False
         mitem['provider']      = ADDON_NAME
         mitem['provider-type'] = 'addon'
         mitem['provider-logo'] = HOST_LOGO
-        if idx is None:  self.M3UDATA.get('channels',[]).append(mitem)
-        else:            self.M3UDATA.get('channels',[])[idx] = mitem # replace existing channel
+        if idx is None:  self.M3UDATA.get('stations',[]).append(mitem)
+        else:            self.M3UDATA.get('stations',[])[idx] = mitem # replace existing channel
         return True
         
+        
+    def addRecording(self, ritem):
+        # https://github.com/kodi-pvr/pvr.iptvsimple/blob/Omega/README.md#media
+        idx, line = self.findRecording(ritem)
+        self.log('addRecording, recording ritem = %s, found existing = %s'%(ritem,idx))
+        if idx is None:  self.M3UDATA.get('recordings',[]).append(ritem)
+        else:            self.M3UDATA.get('recordings',[])[idx] = ritem # replace existing channel
+        return self._save()
+
 
     def delStation(self, citem):
         self.log('delStation id = %s'%(citem['id']))
         idx, line = self.findStation(citem)
-        if idx is not None: self.M3UDATA['channels'].pop(idx)
+        if idx is not None: self.M3UDATA['stations'].pop(idx)
         return True
         
-        
+
+    def delRecording(self, ritem):
+        self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
+        idx, line = self.findRecording(ritem)
+        if idx is not None:self.M3UDATA['recordings'].pop(idx)
+        return self._save()
+    
+    
+    def getRecordItem(self, fitem):
+        ritem = self.getMitem()
+        ritem['label']      = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
+        ritem['url']        = fitem.get('catchup-id','')
+        ritem['name']       = ritem['label']
+        ritem['number']     = random.Random(ritem['name']).random()
+        ritem['logo']       = cleanImage(getThumb(fitem,opt=SETTINGS.getSettingInt('EPG_Artwork')))
+        ritem['media']      = True
+        ritem['media-size'] = str(fitem.get('size',0))
+        ritem['media-dir']  = ''#todo optional add parent directory via user prompt?
+        ritem['group']      = ['%s (%s)'%(LANGUAGE(30119),ADDON_NAME)]
+        ritem['id']         = getRecordID(ritem['name'], ritem['url'], ritem['number']) if ritem['url'] else ''
+        return ritem
+    
+    
     def importM3U(self, file, filters={}, multiplier=1):
         self.log('importM3U, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))
         try:
@@ -304,24 +361,24 @@ class M3U:
                 file = os.path.join(TEMP_LOC,'%s'%(slugify(url)))
                 setURL(url,file)
                 
-            channels = self.loadM3U(file)
+            stations = self._load(file)
             for key, value in list(filters.items()):
                 if key == 'slug' and value:
-                    importChannels.extend(self.cleanSelf(channels,'id',value))
+                    importChannels.extend(self.cleanSelf(stations,'id',value)[0])
                 elif key == 'providers' and value:
                     for provider in value: 
-                        importChannels.extend(self.cleanSelf(channels,'provider',provider))
+                        importChannels.extend(self.cleanSelf(stations,'provider',provider)[0])
             
-            #no filter found, import all channels.
-            if not importChannels: importChannels.extend(channels)
+            #no filter found, import all stations.
+            if not importChannels: importChannels.extend(stations)
             importChannels = self.sortStations(list(self.chkImport(importChannels,multiplier)))
             self.log('importM3U, found import stations = %s'%(len(importChannels)))
-            self.M3UDATA.get('channels',[]).extend(importChannels)
+            self.M3UDATA.get('stations',[]).extend(importChannels)
         except Exception as e: self.log("importM3U, failed! %s"%(e), xbmc.LOGERROR)
         return importChannels
         
         
-    def chkImport(self, channels, multiplier=1):
+    def chkImport(self, stations, multiplier=1):
         def roundup(x):
             return x if x % 1000 == 0 else x + 1000 - x % 1000
             
@@ -330,15 +387,15 @@ class M3U:
             yield float(start)
             start += decimal.Decimal(step)
 
-        channels  = self.sortStations(channels)
+        stations  = self.sortStations(stations)
         chstart   = roundup((CHANNEL_LIMIT * len(CHAN_TYPES)+1))
         chmin     = int(chstart + (multiplier*1000))
         chmax     = int(chmin + (CHANNEL_LIMIT))
         chrange   = list(frange(chmin,chmax,0.1))
         leftovers = []
-        self.log('chkImport, channels = %s, multiplier = %s, chstart = %s, chmin = %s, chmax = %s'%(len(channels),multiplier,chstart,chmin,chmax))
+        self.log('chkImport, stations = %s, multiplier = %s, chstart = %s, chmin = %s, chmax = %s'%(len(stations),multiplier,chstart,chmin,chmax))
         ## check tvg-chno for conflict, use multiplier to modify org chnum.
-        for mitem in channels:
+        for mitem in stations:
             if len(chrange) == 0:
                 self.log('chkImport, reached max import')
                 break

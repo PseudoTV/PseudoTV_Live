@@ -1,3 +1,4 @@
+rd /s /q C:\GitHub\PseudoTV_Live\plugin.video.pseudotv.live\
 cd\
 C:
 cd\Program Files\TeraCopy

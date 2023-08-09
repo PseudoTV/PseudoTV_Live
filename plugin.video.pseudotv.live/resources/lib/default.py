@@ -44,7 +44,7 @@ def run(sysARG):
         
     if mode == 'guide':
         BUILTIN.executebuiltin("Dialog.Close(all)") 
-        BUILTIN.executebuiltin("ActivateWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
+        BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(ADDON_NAME))
         
     elif mode == 'settings': 
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)

@@ -422,7 +422,7 @@ msgid "Client Mode"
 msgstr ""
 
 msgctxt "#30101"
-msgid "Remote Path"
+msgid "Remote url"
 msgstr ""
 
 msgctxt "#30102"
@@ -475,6 +475,26 @@ msgstr ""
 
 msgctxt "#30114"
 msgid "Add to PseudoTV Live"
+msgstr ""
+
+msgctxt "#30115"
+msgid "Add to Recordings"
+msgstr ""
+
+msgctxt "#30116"
+msgid "Added to Recordings."
+msgstr ""
+
+msgctxt "#30117"
+msgid "Remove Recording"
+msgstr ""
+
+msgctxt "#30118"
+msgid "Removed Recording!"
+msgstr ""
+
+msgctxt "#30119"
+msgid "Watch Later"
 msgstr ""
 
 
@@ -1085,6 +1105,17 @@ msgctxt "#32147"
 msgid "Media File Missing!"
 msgstr ""
 
+msgctxt "#32148"
+msgid "Waiting for system idle..."
+msgstr ""
+
+msgctxt "#32149"
+msgid "Force High-Power"
+msgstr ""
+
+msgctxt "#32150"
+msgid "Run during playback"
+msgstr ""
 
 
 
@@ -1311,4 +1342,12 @@ msgstr ""
 
 msgctxt "#33114"
 msgid "Save channel paths"
+msgstr ""
+
+msgctxt "#33149"
+msgid "Override Low-Power background pausing and performance throttling."
+msgstr ""
+
+msgctxt "#33150"
+msgid "Parse Library & Build Channels while playing."
 msgstr ""

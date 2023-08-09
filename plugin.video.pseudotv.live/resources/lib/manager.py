@@ -123,7 +123,6 @@ class Manager(xbmcgui.WindowXMLDialog):
            
         try:
             if not kwargs.get('start',True): raise Exception('Bypassed doModal')
-            setBusy(True)
             self.doModal()
         except Exception as e: 
             self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
@@ -893,7 +892,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             forceUpdateTime('updateChannels')
         setManagerRunning(False)
         PROPERTIES.setEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID),'false')
-        setBusy(False)
         self.close()
 
 
@@ -955,7 +953,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             items = self.getFocusVARS()
             if actionId in ACTION_PREVIOUS_MENU:
                 if xbmcgui.getCurrentWindowDialogId() == "13001":
-                     BUILTIN.executebuiltin("ActivateWindow(Action(Back)")
+                     BUILTIN.executebuiltin("Action(Back)")
                 elif self.isVisible(self.ruleList): self.toggleruleList(False)
                 elif self.isVisible(self.itemList): self.togglechanList(True,focus=items['chanList']['position'])
                 elif self.isVisible(self.chanList):

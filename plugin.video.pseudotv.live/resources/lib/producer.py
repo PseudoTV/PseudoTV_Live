@@ -29,12 +29,23 @@ from backup     import Backup
 PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 
 class Producer():
-    queueRunning = False
+    queueRunning      = False
+    backgroundRunning = False
     
+
     def __init__(self, service):
         self.log('__init__')
         self.service  = service
         self.consumer = Consumer(service)
+
+
+    @contextmanager
+    def backgroundActivity(self): #background running, reset suspend when finished.
+        self.backgroundRunning = True
+        try: yield
+        finally:
+            self.backgroundRunning = False
+            setPendingSuspend(False)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -62,7 +73,6 @@ class Producer():
 
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
-        chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
         setInstanceID() #create new instanceID
         setAutotuned(False)#reset autotuned state
         setFirstrun(False) #reset firstrun state
@@ -71,7 +81,8 @@ class Producer():
         setClient(isClient(),silent=False)
         Backup().hasBackup()
         chkPVREnabled()
-        setLowPower(state=getLowPower())
+        setLowPower()
+        SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
         
 
     def _chkDebugging(self):
@@ -100,12 +111,16 @@ class Producer():
             self._que(self._chkFiles,2)
         if self.chkUpdateTime('updateRecommended',runEvery=300):
             self._que(self.updateRecommended,2)
-        if self.chkUpdateTime('updateLibrary',runEvery=(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
-            self._que(self.updateLibrary,2)
-        if self.chkUpdateTime('updateChannels',runEvery=3600):
-            self._que(self.updateChannels,3)
-        if self.chkUpdateTime('updateJSON',runEvery=600):
-            self._que(self.updateJSON,4)
+            
+        if not self.backgroundRunning:
+            if self.chkUpdateTime('updateLibrary',runEvery=(REAL_SETTINGS.getSettingInt('Max_Days')*3600)):
+                self._que(self.updateLibrary,2)
+            if self.chkUpdateTime('updateChannels',runEvery=3600):
+                self._que(self.updateChannels,3)
+    
+        if not self.queueRunning:
+            if self.chkUpdateTime('updateJSON',runEvery=600):
+                self._que(self.updateJSON,4)
 
 
     def updateRecommended(self):
@@ -120,12 +135,13 @@ class Producer():
     def updateLibrary(self):
         self.log('updateLibrary')
         try:
-            library = Library(service=self.service)
-            library.importPrompt()
-            complete = library.updateLibrary()
-            del library
-            if   not complete: forceUpdateTime('updateLibrary')
-            elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            with self.backgroundActivity():
+                library = Library(service=self.service)
+                library.importPrompt()
+                complete = library.updateLibrary()
+                del library
+                if   not complete: forceUpdateTime('updateLibrary')
+                elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('updateLibrary failed! %s'%(e), xbmc.LOGERROR)
     
     
@@ -136,9 +152,15 @@ class Producer():
             with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
                 jsonRPC = JSONRPC()
                 setClient(isClient())
-                if (jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != SETTINGS.getSettingInt('Min_Days'): SETTINGS.setSettingInt('Min_Days',min)
-                if (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != SETTINGS.getSettingInt('Max_Days'): SETTINGS.setSettingInt('Max_Days',max)
-                if (SETTINGS.getSetting('Network_Path')) != (SETTINGS.getSetting('User_Folder')):                   SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+                if (jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != SETTINGS.getSettingInt('Min_Days'):
+                    SETTINGS.setSettingInt('Min_Days',min)
+                    
+                if (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != SETTINGS.getSettingInt('Max_Days'):
+                    SETTINGS.setSettingInt('Max_Days',max)
+                    
+                if SETTINGS.getSetting('Network_Path') != SETTINGS.getSetting('User_Folder'):
+                    SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+                    
                 PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
                 del jsonRPC
         except Exception as e: self.log('updateSettings failed! %s'%(e), xbmc.LOGERROR)
@@ -147,20 +169,22 @@ class Producer():
     def runAutoTune(self):
         self.log('runAutoTune')
         try:
-            autotune = Autotune(service=self.service)
-            autotune._runTune(samples=True)
-            del autotune
+            with self.backgroundActivity():
+                autotune = Autotune(service=self.service)
+                autotune._runTune(samples=True)
+                del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
         
     def updateChannels(self):
         self.log('updateChannels')
         try:
-            builder  = Builder(self.service)
-            complete = builder.build()
-            del builder
-            if not complete: forceUpdateTime('updateChannels') #clear run schedule
-            else: setFirstrun() #set init. boot status to true.
+            with self.backgroundActivity():
+                builder  = Builder(self.service)
+                complete = builder.build()
+                del builder
+                if not complete: forceUpdateTime('updateChannels') #clear run schedule
+                else: setFirstrun() #set init. boot status to true.
         except Exception as e: self.log('updateChannels failed! %s'%(e), xbmc.LOGERROR)
         
     
@@ -199,11 +223,11 @@ class Producer():
         with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(self.getSettings())
             actions   = {'User_Folder'  :self.moveUser,
-                         'UDP_PORT'     :self.serviceRestart,
-                         'TCP_PORT'     :self.serviceRestart,
-                         'Client_Mode'  :self.serviceRestart,
-                         'Remote_URL'   :self.serviceRestart,
-                         'Disable_Cache':self.serviceRestart}
+                         'UDP_PORT'     :setPendingRestart,
+                         'TCP_PORT'     :setPendingRestart,
+                         'Client_Mode'  :setPendingRestart,
+                         'Remote_URL'   :setPendingRestart,
+                         'Disable_Cache':setPendingRestart}
             #serviceRestart runs on a threaded delay, multi-calls allowed/cancelled
             for setting, value in list(settings.items()):
                 if nSettings.get(setting) != value and actions.get(setting):
@@ -232,21 +256,11 @@ class Producer():
                     continue
             dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
         SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
-        self.serviceRestart()
+        setPendingRestart()
 
-
-    def serviceRestart(self):
-        if not self.service.monitor.pendingRestart:
-            timerit(self._serviceRestart)(15.0)
-        
-        
-    def _serviceRestart(self):
-        self.service.monitor.pendingRestart = True
-        
         
     def updateJSON(self):
-        if not self.queueRunning:
-            timerit(self.runJSON)(5)
+        timerit(self.runJSON)(5)
 
 
     def runJSON(self):
@@ -260,7 +274,10 @@ class Producer():
                     self.log('runJSON, waitForAbort')
                     forceUpdateTime('updateJSON')
                     break
-                elif not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY:
+                elif self.service.player.isPlaying():
+                    self.log('runJSON, waiting for playback to finish...')
+                    break
+                elif not (int(xbmc.getGlobalIdleTime()) or 0) > OVERLAY_DELAY or self.service.player.isPlaying():
                     self.log('runJSON, waiting for idle...')
                     break
                 else:
@@ -269,9 +286,9 @@ class Producer():
                         self._que(JSONRPC().cacheJSON,2,runParam, **{'life':datetime.timedelta(days=28),'timeout':90})
                     else:
                         self._que(JSONRPC().sendJSON,5,runParam)
-            queuePool['params'] = setDictLST(params)
-            self.log('runJSON, remaining = %s'%(len(queuePool['params'])))
-            SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+                queuePool['params'] = setDictLST(params)
+                self.log('runJSON, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
             self.queueRunning = False
 
 
