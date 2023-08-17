@@ -205,7 +205,7 @@ class Library:
     @cacheit(json_data=True)
     def getMixed(self):
         def hasRecordings():
-            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',verify_runtime=True) #todo add infobool to Kodi core.
+            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/') #todo add infobool to Kodi core.
                
         MixedList = []
         if hasTV() or hasMovie():
@@ -427,33 +427,33 @@ class Library:
 
                
     def importPrompt(self):
-        if isClient(): return
-        addonList = self.searchRecommended()
-        ignoreList = self.getWhiteList()
-        ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
-        addonNames = sorted(list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f])))
-        self.log('importPrompt, addonNames = %s'%(len(addonNames)))
-        
-        try:
-            if len(addonNames) > 1:
-                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
-                self.log('importPrompt, prompt retval = %s'%(retval))
-                if   retval == 1: raise Exception('Single Entry')
-                elif retval == 2: 
-                    for addonid, item in list(addonList.items()):
-                        if item.get('meta',{}).get('name') in addonNames:
+        if not isClient():
+            addonList = self.searchRecommended()
+            ignoreList = self.getWhiteList()
+            ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
+            addonNames = sorted(list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f])))
+            self.log('importPrompt, addonNames = %s'%(len(addonNames)))
+            
+            try:
+                if len(addonNames) > 1:
+                    retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
+                    self.log('importPrompt, prompt retval = %s'%(retval))
+                    if   retval == 1: raise Exception('Single Entry')
+                    elif retval == 2: 
+                        for addonid, item in list(addonList.items()):
+                            if item.get('meta',{}).get('name') in addonNames:
+                                self.addWhiteList(addonid)
+                else: raise Exception('Single Entry')
+            except Exception as e:
+                self.log('importPrompt, %s'%(e))
+                for addonid, item in list(addonList.items()):
+                    if item.get('meta',{}).get('name') in addonNames:
+                        if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
+                            self.addBlackList(addonid)
+                        else:
                             self.addWhiteList(addonid)
-            else: raise Exception('Single Entry')
-        except Exception as e:
-            self.log('importPrompt, %s'%(e))
-            for addonid, item in list(addonList.items()):
-                if item.get('meta',{}).get('name') in addonNames:
-                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
-                        self.addBlackList(addonid)
-                    else:
-                        self.addWhiteList(addonid)
-                
-        PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',str(len(self.getWhiteList()) > 0).lower())
-        PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.BlackList',str(len(self.getBlackList()) > 0).lower())
-        SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
+                    
+            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',str(len(self.getWhiteList()) > 0).lower())
+            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.BlackList',str(len(self.getBlackList()) > 0).lower())
+            SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         

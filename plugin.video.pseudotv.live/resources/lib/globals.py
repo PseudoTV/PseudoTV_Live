@@ -585,11 +585,7 @@ def cleanLabel(text):
     text = text.replace("[B]",'').replace("[/B]",'')
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
-    
-def convertString2Num(value):
-    try:    return literal_eval(value)
-    except: return None
-         
+  
 def getThumb(item={},opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
             1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]

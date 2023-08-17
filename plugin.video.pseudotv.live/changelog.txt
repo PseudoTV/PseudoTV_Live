@@ -9,6 +9,7 @@ v.0.4.3
 -Improved file locking for upcoming webUI. 
 -Temporarily disabled multi-room discovery/announcements. 
 -Improved flow controls for background management (Experimental - Feedback appreciated).
+-Fixed "Move"/"Delete" channel manager buttons.
 
 v.0.4.2
 -Improved "Find More" context option. Now supports Embuary Helpers find similar.

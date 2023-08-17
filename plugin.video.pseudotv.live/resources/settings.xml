@@ -404,7 +404,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Playback_Background" type="boolean" label="32150" help="33150">
+				<setting id="Run_While_Playing" type="boolean" label="32150" help="33150">
 					<level>3</level>
 					<default>true</default>
 					<control type="toggle"/>

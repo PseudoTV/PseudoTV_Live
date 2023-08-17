@@ -34,11 +34,11 @@ def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-
+    
 def convertString2Num(value):
     try:    return literal_eval(value)
     except: return None
-         
+       
 def getThumb(item={},opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
             1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
@@ -96,7 +96,8 @@ def getMD5(text,hash=0,hexit=True):
     if hexit: return hex(hash)[2:].upper().zfill(8)
     else:     return hash
 
-class Settings:       
+class Settings:
+    #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
         self.cache    = Cache(mem_cache=True)
         self.property = Properties()
@@ -197,7 +198,8 @@ class Settings:
         
     def setSetting(self, key, value=""):  
         if not isinstance(value,str): value = str(value)
-        self._setSetting(self.getRealSettings().setSetting,key,value)
+        if self.getSetting(key) != value: #Kodi setsetting() can tax system performance. i/o issue? block redundant saves.
+            self._setSetting(self.getRealSettings().setSetting,key,value)
             
             
     def setSettingBool(self, key, value):
@@ -887,6 +889,7 @@ class Dialog:
         
         if silent:
             if hasattr(control, 'close'): control.close()
+            self.log('progressBGDialog, silent = %s; closing dialog'%(silent))
             return 
             
         if control is None and percent == 0:

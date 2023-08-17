@@ -45,7 +45,6 @@ class Producer():
         try: yield
         finally:
             self.backgroundRunning = False
-            setPendingSuspend(False)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -190,8 +189,8 @@ class Producer():
     
     def getChannels(self):
         self.log('getChannels')
-        if isClient(): return []
         try:
+            if isClient(): raise Exception('Client Instance')
             builder  = Builder(self.service)
             channels = builder.verify()
             del builder

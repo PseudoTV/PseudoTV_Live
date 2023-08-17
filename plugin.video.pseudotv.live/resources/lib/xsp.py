@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2023 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -63,31 +63,28 @@ class XSP:
         paths  = []
         sort   = {}
         filter = {}
-        media  = 'video'
+
         try: 
             xml = FileAccess.open(file, "r")
             dom = parse(xml)
             xml.close()
-            try:
-                media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            except:pass
-            try:
+            
+            #media
+            try:    media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
+            except: media  = 'video'
+            #paths
+            try:#todo use operators to build filter list for mixed content.
                 if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() == "mixed":
-                    rules = dom.getElementsByTagName('rule')
-                    for rule in rules:
+                    for rule in dom.getElementsByTagName('rule'):
                         if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is','contains']:
                             paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
                         elif rule.getAttribute('field').lower() in ['playlist','virtualfolder'] and rule.getAttribute('operator').lower() in ['is','contains']:
                             paths.extend(self.findSmartPlaylist(rule.getElementsByTagName("value")[0].childNodes[0].data))
-            #todo use operators to build filter list for mixed content.
             except: pass
-            try:
-                sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()
-                #todo pop rules to filter var.
+            #sort
+            try: sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()#todo pop rules to filter var.
             except: pass
-            try:
-                sort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()
-                #todo pop rules to filter var.
+            try: sort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()#todo pop rules to filter var.
             except: pass
             self.log("parseSmartPlaylist, media = %s, paths = %s, sort = %s"%(media, paths, sort))
         except Exception as e: self.log("parseSmartPlaylist, failed! %s"%(e), xbmc.LOGERROR)
@@ -109,7 +106,6 @@ class XSP:
             self.log("parseDynamicPlaylist, path = %s, media = %s, sort = %s, filter = %s"%(path, media, sort, filter))
         except Exception as e: self.log("parseDynamicPlaylist, failed! %s"%(e), xbmc.LOGERROR)
         return path, filter, media, sort
-        
         
         
     def buildDynamicPlaylist(self):

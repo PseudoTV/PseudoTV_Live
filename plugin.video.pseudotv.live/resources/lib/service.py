@@ -197,7 +197,7 @@ class Player(xbmc.Player):
         elif not state and not self.background is None:
             self.background.close()
             PROPERTIES.setEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID),'false')
-            del self.background
+            self.background = None
             if self.isPlaying():
                 BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
@@ -216,15 +216,14 @@ class Monitor(xbmc.Monitor):
 
   
     @contextmanager
-    def idleLocker(self, wait=0.001, timeout=600):
+    def idleLocker(self, wait=0.001, timeout=900):
         #only pause actions after init. firstrun
         dia     = None
         elapsed = 0
         while not self.abortRequested():
-            if self.chkSuspend(wait): break
-            elif not isBusy(): break
-            elif elapsed >= timeout: 
-                self.pendingChange = True
+            if   self.chkSuspend(wait) or not isBusy(): break
+            elif elapsed >= timeout*1000: #secs-to-msecs
+                self.pendingChange = True #set pendingChange to rerun idled builder.
                 break
             elapsed += wait
             if dia is None: dia = DIALOG.progressBGDialog(message='%s %s\n%s'%(LANGUAGE(32144),LANGUAGE(32145),LANGUAGE(32148)))
@@ -319,7 +318,7 @@ class Monitor(xbmc.Monitor):
     def isSettingsOpened(self):
         isSettingDialog = (PROPERTIES.getPropertyBool('addonsettings') or BUILTIN.getInfoBool('IsVisible(addonsettings)','Window'))
         isSelectDialog  = (PROPERTIES.getPropertyBool('selectdialog')  or BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
-        return (isSettingDialog | isSelectDialog)
+        return (isSettingDialog | isSelectDialog | isPendingSuspend())
 
   
     def onSettingsChanged(self):
@@ -330,9 +329,8 @@ class Monitor(xbmc.Monitor):
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
         self.pendingChange = False
-        with suspendActivity():
-            if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
-            self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
+        if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
+        self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
 
 
 class Service():
@@ -391,7 +389,7 @@ class Service():
            
                 
     def _tasks(self):
-        if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Playback_Background'):
+        if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Run_While_Playing'):
             return
         elif not isClient():
             self.producer._taskManager() #chk/run scheduled tasks.

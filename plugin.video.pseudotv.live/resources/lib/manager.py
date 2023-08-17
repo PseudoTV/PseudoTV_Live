@@ -592,7 +592,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def getID(self, channelData):
-        if channelData.get('name') and channelData.get('path') and channelData.get('number'): 
+        if not channelData.get('id') and channelData.get('name') and channelData.get('path') and channelData.get('number'): 
             channelData['id'] = getChannelID(channelData['name'], channelData['path'], channelData['number'])
             self.log('getID, id = %s'%(channelData['id']))
         return channelData
@@ -626,21 +626,19 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.newChannels = self.validateChannels(self.newChannels)
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
-        log('saveChannels, difference = %s'%(len(difference)))
+        self.log('saveChannels, difference = %s\n%s'%(len(difference),difference))
         
         pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
         for idx, citem in enumerate(difference):
+            print(idx,citem,citem in self.channelList,citem in self.newChannels)
             pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
             #remove abandoned or stale settings.
             if citem in self.channelList:
-                self.channels.delChannel(difference.pop(idx))
+                self.channels.delChannel(citem)
             #add new or updated settings
             elif citem in self.newChannels:
-                self.channels.addChannel(difference.pop(idx))
+                self.channels.addChannel(citem)
                 
-        if len(difference) > 0: 
-            log('saveChannels, malformed difference = %s\n%s'%(len(difference)),difference)
-        
         self.channels.setChannels()
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
@@ -896,7 +894,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def getFocusVARS(self, controlId=None):
-        if controlId not in [5,6,7,10,9001,9002,9003]: return self.focusItems
+        if controlId not in [5,6,7,10,9001,9002,9003,9004]: return self.focusItems
         self.log('getFocusVARS, controlId = %s'%(controlId))
         try:
             channelitem     = (self.chanList.getSelectedItem()     or xbmcgui.ListItem())
@@ -926,7 +924,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             
             chnumber = cleanLabel(channelitem.getLabel())
             if chnumber.isdigit(): 
-                self.focusItems['number'] = convertString2Num(chnumber)
+                self.focusItems['number'] = literal_eval(chnumber)
             elif self.focusItems['chanList']['citem'].get('number',''):
                 self.focusItems['number'] = self.focusItems['chanList']['citem']['number']
             else:
@@ -969,9 +967,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             
         self.log('onClick: controlId = %s\nitems = %s'%(controlId,items))
         if self.isVisible(self.chanList):
-            channelData = items['chanList']['citem'] 
+            channelData = (items.get('chanList',{}).get('citem') or items.get('itemList',{}).get('citem') or {})
         else:
-            channelData = items['itemList']['citem']
+            channelData = items.get('itemList',{}).get('citem',{})
             
         if   controlId == 0: self.closeManager()
         elif controlId == 5: 
@@ -1007,6 +1005,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             if items['label'] == LANGUAGE(32136):#Move
                 self.moveChannel(channelData, items['chanList']['position'])
         elif controlId == 9004:
-            if (self.isVisible(self.itemList) or items['label'] == LANGUAGE(32061)):#Delete
+            if items['label'] == LANGUAGE(32061):#Delete
                 if not channelData.get('id'): channelData = items['chanList']['citem']
                 self.clearChannel(channelData)

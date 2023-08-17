@@ -42,11 +42,9 @@ class Autotune:
         return channels
 
 
-    def _runTune(self, samples=False, rebuild=False):
+    def _runTune(self, samples=False, rebuild=False, dia=None):
         self.log('_runTune, samples = %s'%(samples))
-        if isClient(): return
-        elif not hasAutotuned():
-            dia = None
+        if not hasAutotuned() and not isClient():
             setAutotuned()
             autoChannels = self.getAutotuned()
             if len(autoChannels) == 0 and samples:
@@ -72,7 +70,6 @@ class Autotune:
 
     def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
         self.log('selectAUTOTUNE, ATtype = %s'%(ATtype))
-        if isClient(): return
         def _build(item):
             return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
         
@@ -90,23 +87,24 @@ class Autotune:
                         item['enabled'] = True
             self.library.setLibrary(ATtype, items)
            
-        items = self.library.getLibrary(ATtype)
-        if len(items) == 0 and (not rebuildChannels and not autoSelect): 
-            return DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
-        
-        lizlst = [_build(item) for item in items]
-        if rebuildChannels:#rebuild channels.json entries
-            selects = list(_match(self.library.getEnabled(ATtype)))
-        elif autoSelect:#build sample channels
-            if len(items) >= AUTOTUNE_LIMIT:
-                selects = sorted(list(set(random.sample(list(set(range(0,len(items)))),AUTOTUNE_LIMIT))))
-            else: 
-                selects = list(range(0,len(items)))
-        else:
-            selects = DIALOG.selectDialog(lizlst,LANGUAGE(32017)%(ATtype),preselect=list(_match(self.library.getEnabled(ATtype))))
-        
-        if not selects is None: _set(ATtype, selects)
-        return self.buildAUTOTUNE(ATtype, self.library.getEnabled(ATtype))
+        if not isClient():
+            items = self.library.getLibrary(ATtype)
+            if len(items) == 0 and (not rebuildChannels and not autoSelect): 
+                return DIALOG.notificationDialog(LANGUAGE(32018)%(ATtype))
+            
+            lizlst = [_build(item) for item in items]
+            if rebuildChannels:#rebuild channels.json entries
+                selects = list(_match(self.library.getEnabled(ATtype)))
+            elif autoSelect:#build sample channels
+                if len(items) >= AUTOTUNE_LIMIT:
+                    selects = sorted(list(set(random.sample(list(set(range(0,len(items)))),AUTOTUNE_LIMIT))))
+                else: 
+                    selects = list(range(0,len(items)))
+            else:
+                selects = DIALOG.selectDialog(lizlst,LANGUAGE(32017)%(ATtype),preselect=list(_match(self.library.getEnabled(ATtype))))
+            
+            if not selects is None: _set(ATtype, selects)
+            return self.buildAUTOTUNE(ATtype, self.library.getEnabled(ATtype))
         
         
     def buildAUTOTUNE(self, ATtype, items):
@@ -138,7 +136,7 @@ class Autotune:
                           "radio"   : music,
                           "favorite": True})
                           
-            match, eitem = self.channels.findChannel(citem, channels=existingAUTOTUNE)
+            match, eitem = self.channels.findAutotune(citem, channels=existingAUTOTUNE)
             if match is None:
                 citem['number'] = next(usesableNUMBERS,0)
                 citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])

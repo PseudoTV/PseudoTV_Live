@@ -91,22 +91,24 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkListDirectory(self, path, depth=3, verify_runtime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+    def walkListDirectory(self, path, depth=3, hasruntime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+        def chkruntime(file):
+            return self.getDuration(file) > 0
+    
         dirs  = [path]
         files = []
         for idx, dir in enumerate(dirs):
             if MONITOR.waitForAbort(0.5) or idx > depth: break
             else:
                 ndirs, nfiles = self.getListDirectory(dir, checksum, expiration)
+                if hasruntime: nfiles = [file for file in nfiles if chkruntime(file)]
                 if append_path:
                     dirs.extend([os.path.join(path,dir) for dir in ndirs])
                     files.extend([os.path.join(path,fle) for fle in nfiles])
                 else:
                     dirs.extend(ndirs)
                     files.extend(nfiles)
-                if verify_runtime:
-                    for file in files:
-                        if self.getDuration(file): return True
+
         self.log('walkListDirectory, return dirs = %s, files = %s\npath = %s'%(len(dirs), len(files),path))
         return dirs, files
 
@@ -471,7 +473,8 @@ class JSONRPC:
             while not MONITOR.abortRequested() and (len(items) < page and len(items) > 0):
                 item = next(iters).copy()
                 if self.getDuration(item.get('file'),item) == 0:
-                    items.pop(items.index(item))
+                    try: items.pop(items.index(item))
+                    except: break
                 else:
                     items.append(item)
         self.log("padItems; items Out = %s"%(len(items)))

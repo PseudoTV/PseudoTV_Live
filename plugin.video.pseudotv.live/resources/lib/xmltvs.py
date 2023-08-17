@@ -209,7 +209,7 @@ class XMLTVS:
 
 
     def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.XMLTVDATA.get('channels',[])
+        if channels is None: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
             if citem.get('id') == eitem.get('id',str(random.random())):
                 self.log('findChannel, found citem = %s'%(eitem))
@@ -218,7 +218,7 @@ class XMLTVS:
         
         
     def findRecording(self, ritem, recordings=None):
-        if recordings is None: recordings = self.XMLTVDATA.get('recordings',[])
+        if recordings is None: recordings = self.getRecordings()
         for idx, eitem in enumerate(recordings):
             if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label').lower() == eitem.get('display-name')[0][0].lower()):
                 self.log('findRecording, found ritem = %s'%(eitem))
@@ -409,7 +409,7 @@ class XMLTVS:
 
 
     def buildGenres(self):
-        self.log('buildGenres') #todo user color selector.
+        self.log('buildGenres') #todo custom user color selector.
         def parseGenres(plines):
             epggenres = {}
             for line in plines:
@@ -445,7 +445,7 @@ class XMLTVS:
                 epggenres = dict(sorted(sorted(list(epggenres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
                 
                 doc  = Document()
-                root = doc.createElement('genres')                
+                root = doc.createElement('genres')
                 doc.appendChild(root)
                 name = doc.createElement('name')
                 name.appendChild(doc.createTextNode('%s'%(ADDON_NAME)))
@@ -468,6 +468,7 @@ class XMLTVS:
 
 
     def getProgramItem(self, citem, fItem):
+        ''' Convert fileItem to Programme (XMLTV) item '''
         item = {}
         item['channel']       = citem['id']
         item['radio']         = citem['radio']
@@ -481,7 +482,7 @@ class XMLTVS:
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         item['thumb']         = cleanImage(getThumb(fItem,SETTINGS.getSettingInt('EPG_Artwork'))) #unify thumbnail by user preference 
-        fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[SETTINGS.getSettingInt('EPG_Artwork')]) #unify thumbnail artwork, opposite of EPG_Artwork
+        fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[SETTINGS.getSettingInt('EPG_Artwork')])  #unify thumbnail artwork, opposite of EPG_Artwork
         item['date']          = fItem.get('premiered','')
         
         if citem['catchup']:

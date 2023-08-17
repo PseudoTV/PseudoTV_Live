@@ -281,7 +281,7 @@ class M3U:
                
                
     def findStation(self, citem, stations=None):
-        if stations is None: stations = self.M3UDATA.get('stations',[])
+        if stations is None: stations = self.getStations()
         for idx, eitem in enumerate(stations):
             if (citem.get('id') == eitem.get('id',str(random.random())) or citem.get('url','').lower() == eitem.get('url',str(random.random())).lower()):
                 self.log('findStation, found citem = %s'%(eitem))
@@ -290,7 +290,7 @@ class M3U:
         
                         
     def findRecording(self, ritem, recordings=None):
-        if recordings is None: recordings = self.M3UDATA.get('recordings',[])
+        if recordings is None: recordings = self.getRecordings()
         for idx, eitem in enumerate(recordings):
             if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label','').lower() == eitem.get('label',str(random.random())).lower()):
                 self.log('findRecording, found ritem = %s'%(eitem))
