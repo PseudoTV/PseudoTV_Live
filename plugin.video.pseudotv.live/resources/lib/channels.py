@@ -132,7 +132,7 @@ class Channels:
         return None, {}
             
             
-    def findAutotune(self, citem, channels=[]):
+    def findAutotuned(self, citem, channels=[]):
         if len(channels) == 0: channels = self.getAutotuned()
         for idx, eitem in enumerate(channels):
             if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name').lower() == eitem.get('name',str(random.random())).lower()):

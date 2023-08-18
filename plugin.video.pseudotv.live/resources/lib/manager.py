@@ -324,7 +324,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             value = channelData.get(key)
             if   key in ["number","type","logo","id","catchup"]: continue # keys to ignore, internal use only.
             elif isinstance(value,list): 
-                if   key == "group" :    value = ' / '.join(list(set(value)))
+                if   key == "group" :    value = ' / '.join(sorted(set(value)))
                 elif key == "path"  :    value = '|'.join(value)
             elif isinstance(value,bool): value = str(value)
             if not value: value = ''

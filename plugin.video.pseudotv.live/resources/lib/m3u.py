@@ -333,8 +333,9 @@ class M3U:
     def delRecording(self, ritem):
         self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
         idx, line = self.findRecording(ritem)
-        if idx is not None:self.M3UDATA['recordings'].pop(idx)
-        return self._save()
+        if idx is not None:
+            self.M3UDATA['recordings'].pop(idx)
+            return self._save()
     
     
     def getRecordItem(self, fitem):

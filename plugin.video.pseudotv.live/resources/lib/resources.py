@@ -68,7 +68,7 @@ class Resources:
     
     def getLogoResources(self, chname, type, select=False):
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
-        resources = SETTINGS.getSetting('Resource_Logos').split('|')
+        resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
         if type in ["TV Genres","Movie Genres"]:
             resources.extend(GENRE_RESOURCE)
         elif type in ["TV Networks","Movie Studios"]:
@@ -79,12 +79,12 @@ class Resources:
             resources.extend(GENRE_RESOURCE)
             resources.extend(STUDIO_RESOURCE)
             resources.extend(MUSIC_RESOURCE)
-            
+        
         logos = []
         cacheName = 'getLogoResources.%s.%s'%(getMD5(chname),select)
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
-            for id in list(set(resources)):
+            for id in list(dict.fromkeys(resources)):
                 if MONITOR.waitForAbort(0.001): 
                     self.log('getLogoResources, waitForAbort')
                     break

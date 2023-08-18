@@ -396,8 +396,8 @@ class Builder:
             if not sort: sort = osort #add default sorts by db
 
             if not self.incExtras and type.startswith(tuple(TV_TYPES)):
-                filter.get("and",[]).extend([{"field":"season","operator":"greaterthan","value":"0"},
-                                             {"field":"episode","operator":"greaterthan","value":"0"}])
+                filter.setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
+                                                    {"field":"episode","operator":"greaterthan","value":"0"}])
 
             if sort:   param["order"] = sort
             if filter: param["rules"] = filter
@@ -494,7 +494,7 @@ class Builder:
                             episode = int(item.get("episode","0"))
                             if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
                                 self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                                self.log("buildLibraryList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
+                                self.log("buildList, id: %s skipping extras!"%(citem['id']),xbmc.LOGINFO)
                                 continue
 
                             label = tvtitle

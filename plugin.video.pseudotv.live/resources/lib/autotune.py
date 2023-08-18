@@ -136,7 +136,7 @@ class Autotune:
                           "radio"   : music,
                           "favorite": True})
                           
-            match, eitem = self.channels.findAutotune(citem, channels=existingAUTOTUNE)
+            match, eitem = self.channels.findAutotuned(citem, channels=existingAUTOTUNE)
             if match is None:
                 citem['number'] = next(usesableNUMBERS,0)
                 citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])

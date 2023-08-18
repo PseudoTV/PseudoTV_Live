@@ -409,7 +409,7 @@ class Library:
         self.log('addWhiteList, addonid = %s'%(addonid))
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
-        whiteList = list(set(whiteList))
+        whiteList = sorted(set(whiteList))
         if len(whiteList) > 0: PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
@@ -418,7 +418,7 @@ class Library:
         self.log('addBlackList, addonid = %s'%(addonid))
         blackList = self.getBlackList()
         blackList.append(addonid)
-        blackList = list(set(blackList))
+        blackList = sorted(set(blackList))
         return self.setBlackList(blackList)
 
 

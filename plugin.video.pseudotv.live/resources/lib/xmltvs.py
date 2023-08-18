@@ -121,14 +121,13 @@ class XMLTVS:
         if channels   is None: channels   = self.getChannels()
         if programmes is None: programmes = self.getProgrammes()
         if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60)).strftime(DTFORMAT)
-            
+        
         for channel in channels:
             try: 
-                stopTimes = [program['start'] for program in programmes if program['channel'] == channel['id']]
-                firstStop = min(stopTimes, default=fallback)
-                lastStop  = max(stopTimes, default=fallback)
-                self.log('loadStopTimes, channel = %s, first-stop = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStop,lastStop,fallback))
-                if firstStop > fallback: raise Exception('First stop-time in future, rebuild channel with fallback')
+                firstStart = min([program['start'] for program in programmes if program['channel'] == channel['id']], default=fallback)
+                lastStop   = max([program['stop']  for program in programmes if program['channel'] == channel['id']], default=fallback)
+                self.log('loadStopTimes, channel = %s, first-start = %s, last-stop = %s, fallback = %s'%(channel['id'],firstStart,lastStop,fallback))
+                if firstStart > fallback: raise Exception('First start-time in the future, rebuild channel with fallback')
                 yield channel['id'],datetime.datetime.timestamp(strpTime(lastStop, DTFORMAT))
             except Exception as e:
                 self.log("loadStopTimes, channel = %s failed!\nMalformed XMLTV channel/programmes %s! rebuilding channel with default stop-time %s"%(channel.get('id'),e,fallback), xbmc.LOGWARNING)
@@ -186,7 +185,7 @@ class XMLTVS:
         
     def cleanProgrammes(self, programmes): # remove expired content, ignore "recordings" ie. media=True
         try:
-            now = (datetime.datetime.fromtimestamp(float(getLocalTime()))) - datetime.timedelta(days=SETTINGS.getSettingInt('Min_Days')) #allow some old programmes to avoid empty cells.
+            now = (datetime.datetime.fromtimestamp(float(getLocalTime())) - datetime.timedelta(days=SETTINGS.getSettingInt('Min_Days'))) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if (strpTime(program['stop'].rstrip(),DTFORMAT) > now)]
         except Exception as e: 
             self.log("cleanProgrammes, Failed! %s"%(e), xbmc.LOGERROR)
@@ -338,10 +337,11 @@ class XMLTVS:
         recordings = self.XMLTVDATA['recordings'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
         idx, recording = self.findRecording(ritem)
-        if idx is not None: self.XMLTVDATA['recordings'].pop(idx)
-        if not ritem.get('id'): ritem['id'] = recording['id']
-        self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != ritem.get('id')])
-        return self._save()
+        if idx is not None:
+            self.XMLTVDATA['recordings'].pop(idx)
+            if not ritem.get('id'): ritem['id'] = recording['id']
+            self.XMLTVDATA['programmes'] = list([program for program in programmes if program.get('channel') != ritem.get('id')])
+            return self._save()
         
 
     def importXMLTV(self, file, m3uChannels={}):

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.4.2i" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.4.2j" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="script.module.six" version="1.0.0"/>
@@ -27,7 +27,7 @@
             </item>
             <item library="resources/lib/context_record.py" args="del">
                 <label>30117</label>
-                <visible>Window.IsVisible(tvrecordings)</visible>
+                <visible>[Window.IsVisible(tvrecordings)]</visible>
             </item>
             <item library="resources/lib/context_play.py">
                 <label>30077</label>
