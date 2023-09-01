@@ -710,7 +710,7 @@ msgid "Select Server"
 msgstr ""
 
 msgctxt "#32049"
-msgid "Restarting %s..."
+msgid "Restarting..."
 msgstr ""
 
 msgctxt "#32050"
@@ -730,7 +730,7 @@ msgid "Settings"
 msgstr ""
 
 msgctxt "#32054"
-msgid "Initializing"
+msgid "Initializing..."
 msgstr ""
 
 msgctxt "#32055"
@@ -974,7 +974,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#32115"
-msgid "%s, Running as client..."
+msgid "Running in client mode..."
 msgstr ""
 
 msgctxt "#32116"
@@ -1014,7 +1014,7 @@ msgid "Shutdown background service and restart."
 msgstr ""
 
 msgctxt "#32125"
-msgid "Reloading"
+msgid "Reloading..."
 msgstr ""
 
 msgctxt "#32126"
@@ -1078,7 +1078,7 @@ msgid "This may take a moment..."
 msgstr ""
 
 msgctxt "#32141"
-msgid "Shutting Down %s..."
+msgid "Shutting Down..."
 msgstr ""
 
 msgctxt "#32142"

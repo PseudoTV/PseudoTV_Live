@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.pseudotv.live" version="0.4.2j" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.4.2k" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="script.module.six" version="1.0.0"/>
@@ -22,29 +22,29 @@
         <menu id="kodi.core.main">            
             <item library="resources/lib/context_record.py" args="add">
                 <label>30115</label>
-                <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg + ListItem.IsPlayable + String.isEqual(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)] +	[Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+                <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg + String.isEqual(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)] +	[Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>              
             <item library="resources/lib/context_record.py" args="del">
                 <label>30117</label>
                 <visible>[Window.IsVisible(tvrecordings)]</visible>
             </item>         
-            <item library="resources/lib/context_play.py">
+            <item library="resources/lib/context_play.py" args="play">
                 <label>30077</label>
                 <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg + !ListItem.IsPlayable+ String.isEqual(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)] +	[Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item> 
-            <item library="resources/lib/context_playlist.py">
+            <item library="resources/lib/context_play.py" args="playlist">
                 <label>30076</label>
                 <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>  
-            <item library="resources/lib/context_info.py">
+            <item library="resources/lib/context_info.py" args="info">
                 <label>30075</label>
                 <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item> 
-            <item library="resources/lib/context_match.py">
+            <item library="resources/lib/context_info.py" args="match">
                 <label>30091</label>
                 <visible>[ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>      
-            <item library="resources/lib/context_browse.py">
+            <item library="resources/lib/context_info.py" args="browse">
                 <label>30087</label>
                 <visible>[String.Contains(ListItem.Writer,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>      

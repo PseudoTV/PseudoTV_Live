@@ -30,13 +30,16 @@ class Discovery:
     
     def __init__(self, monitor):
         self.monitor = monitor
-        self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
-        self.startThread.start()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def _run(self):
+        self.startThread = Thread(target=self._start)
+        self.startThread.daemon = True
+        self.startThread.start()
 
 
     def _start(self):
@@ -47,31 +50,31 @@ class Discovery:
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            if self.monitor.chkInterrupt(1):
+            if self.monitor.chkInterrupt(1) or not isClient():
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
-            elif isClient():
+            else:
                 try: 
                     data, addr = sock.recvfrom(1024) #wait for a packet
-                    self._run(local,data)
+                    self._work(local,data)
                 except: pass #ignore except TimeoutError: timed out
         self.isRunning = False
 
 
-    def _run(self, local, data=''):
+    def _work(self, local, data=''):
         if data.startswith(ADDON_ID.encode()):
             response = data[len(ADDON_ID):]
             if response:
-                self.log('_run: response = %s'%(response))
+                self.log('_work: response = %s'%(response))
                 payload = loadJSON(decodeString(response.decode()))
                 host = payload.get('host','')
                 if host != local and 'md5' in payload:
-                    self.log('_run: discovered server @ host = %s'%(host),xbmc.LOGINFO)
+                    self.log('_work: discovered server @ host = %s'%(host),xbmc.LOGINFO)
                     if payload.pop('md5') == getMD5(dumpJSON(payload)):
                         payload['received'] = time.time()
                         servers = getDiscovery()
                         if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
-                            DIALOG.notificationDialog('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
+                            DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
                         servers[host] = payload
                         setDiscovery(servers)
                         SETTINGS.chkDiscovery(servers)
@@ -81,9 +84,6 @@ class Announcement:
     
     def __init__(self, monitor):
         self.monitor = monitor
-        self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
-        self.startThread.start()
         
             
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -98,6 +98,12 @@ class Announcement:
                 'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
 
 
+    def _run(self):
+        self.startThread = Thread(target=self._start)
+        self.startThread.daemon = True
+        self.startThread.start()
+        
+        
     def _start(self):
         self.isRunning = True
         payload = {'id':ADDON_ID,
@@ -116,13 +122,12 @@ class Announcement:
         self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
         
         while not self.monitor.abortRequested():
-            if not isClient():
-                try:   sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
-                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
-            
-            if self.monitor.chkInterrupt(5):
+            if self.monitor.chkInterrupt(15) or isClient():
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
+            else:
+                try:   sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
+                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
         self.isRunning = False
 
 
@@ -161,7 +166,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             fle = FileAccess.open(path, "r")
             while not self.monitor.abortRequested():
                 chunk = fle.read(self.CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
-                if not chunk: break
+                if not chunk or self.monitor.chkInterrupt(.001): break
                 self.wfile.write(chunk)
             fle.close()
             
@@ -175,18 +180,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         
 class HTTP:
     isRunning = False
-    SETTINGS.setSetting('Remote_URL'  ,'')
-    SETTINGS.setSetting('Remote_M3U'  ,'')
-    SETTINGS.setSetting('Remote_XMLTV','')
-    SETTINGS.setSetting('Remote_GENRE','')
-    
+
 
     def __init__(self, monitor=None):
         self.monitor = monitor
-        self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
-        self.startThread.start()
-
+        
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -210,37 +208,42 @@ class HTTP:
         return port
 
 
+    def _run(self):
+        self.startThread = Thread(target=self._start)
+        self.startThread.daemon = True
+        self.startThread.start()
+
+
     def _start(self):
         while not self.monitor.abortRequested():
-            try:
-                if not self.isRunning and not isClient():
-                    self.isRunning = True
-                    
-                    TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
-                    port = self.chkPort(TCP_PORT,redirect=True)
-                    if   port is None: raise Exception('Port In-Use!')
-                    elif port != TCP_PORT: SETTINGS.setSettingInt('TCP_PORT',port)
-                        
-                    IP = getIP()
-                    LOCAL_HOST ='%s:%s'%(IP,port)
-                    self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
-                    PROPERTIES.setEXTProperty('%s.LOCAL_HOST'%(ADDON_ID),LOCAL_HOST)
-                    SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(LOCAL_HOST))
-                    SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
-                    SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
-                    SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
-                    
-                    self._server = ThreadedHTTPServer((IP, port), partial(RequestHandler,monitor=self.monitor))
-                    self._server.allow_reuse_address = True
-                    self._httpd_thread = Thread(target=self._server.serve_forever)
-                    self._httpd_thread.daemon = True
-                    self._httpd_thread.start()
-            except Exception as e: 
-                self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
-                
-            if self.monitor.chkInterrupt(15):
+            if self.monitor.chkInterrupt(15) or isClient():
                 self.log('_start, interrupted',xbmc.LOGINFO)
                 break
+            else:
+                if not self.isRunning:
+                    self.isRunning = True
+                    try:
+                        TCP_PORT = SETTINGS.getSettingInt('TCP_PORT')
+                        port = self.chkPort(TCP_PORT,redirect=True)
+                        if   port is None: raise Exception('Port In-Use!')
+                        elif port != TCP_PORT: SETTINGS.setSettingInt('TCP_PORT',port)
+                            
+                        IP = getIP()
+                        LOCAL_HOST ='%s:%s'%(IP,port)
+                        self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
+                        PROPERTIES.setEXTProperty('%s.LOCAL_HOST'%(ADDON_ID),LOCAL_HOST)
+                        SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(LOCAL_HOST))
+                        SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
+                        SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
+                        SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
+                        
+                        self._server = ThreadedHTTPServer((IP, port), partial(RequestHandler,monitor=self.monitor))
+                        self._server.allow_reuse_address = True
+                        self._httpd_thread = Thread(target=self._server.serve_forever)
+                        self._httpd_thread.daemon = True
+                        self._httpd_thread.start()
+                    except Exception as e: 
+                        self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
         self._stop()
         
         

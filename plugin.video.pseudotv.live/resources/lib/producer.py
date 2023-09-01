@@ -25,6 +25,7 @@ from jsonrpc    import JSONRPC
 from autotune   import Autotune
 from builder    import Builder
 from backup     import Backup
+from server     import HTTP, Discovery, Announcement
 
 PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 
@@ -37,6 +38,9 @@ class Producer():
         self.log('__init__')
         self.service  = service
         self.consumer = Consumer(service)
+        self.http     = HTTP(service.monitor)
+        self.announce = Announcement(service.monitor)
+        self.discover = Discovery(service.monitor)
 
 
     @contextmanager
@@ -73,22 +77,32 @@ class Producer():
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
         setInstanceID() #create new instanceID
-        setAutotuned(False)#reset autotuned state
-        setFirstrun(False) #reset firstrun state
-        self._chkVersion()
-        self._chkDebugging()
         setClient(isClient(),silent=False)
-        Backup().hasBackup()
-        chkPVREnabled()
+        setAutotuned(False)#reset autotuned state #todo find better solution for resetting
+        setFirstrun(False) #reset firstrun state  #todo find better solution for resetting
         setLowPower()
+        Backup().hasBackup()
+        
+        self.http._run()
+        self.announce._run()
+        self.discover._run()
+        self._chkPVRBackend()
+        self._chkDebugging()
+        self._chkVersion()
+        
+        
+    def _chkPVRBackend(self):
+        if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'): togglePVR(True,False)
         SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
         
 
     def _chkDebugging(self):
-        #prompt user warning concerning disabled cache.
-        DEBUG_CACHE = (SETTINGS.getSettingBool('Enable_Debugging') & SETTINGS.getSettingBool('Disable_Cache'))
-        if DEBUG_CACHE: DIALOG.okDialog(LANGUAGE(32130))
-    
+        if SETTINGS.getSettingBool('Enable_Debugging'):
+            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=5):
+                self.log('_chkDebugging, disabling debugging.')
+                SETTINGS.setSettingBool('Enable_Debugging',False)
+                DIALOG.notificationDialog(LANGUAGE(321423))
+
 
     def _chkFiles(self):
         self.log('_chkFiles')
@@ -190,7 +204,7 @@ class Producer():
     def getChannels(self):
         self.log('getChannels')
         try:
-            if isClient(): raise Exception('Client Instance')
+            if isClient(): return []
             builder  = Builder(self.service)
             channels = builder.verify()
             del builder
@@ -209,14 +223,7 @@ class Producer():
                 return nChannels
             return channels
 
-        
-    def getSettings(self):
-        self.log('getSettings')
-        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
-        for setting in settings:
-            yield (setting,SETTINGS.getSetting(setting))
-               
-        
+
     def chkSettingsChange(self, settings=[]):
         self.log('chkSettingsChange')
         with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):

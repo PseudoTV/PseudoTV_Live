@@ -126,7 +126,6 @@ class Channels:
     def findChannel(self, citem, channels=[]):
         if len(channels) == 0: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
-            print(idx,eitem,type(eitem), citem, type(citem))
             if citem.get('id') == eitem.get('id',str(random.random())):
                 return idx, eitem
         return None, {}

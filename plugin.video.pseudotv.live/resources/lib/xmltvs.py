@@ -48,10 +48,10 @@ class XMLTVS:
         with FileLock():
             writer = xmltv.Writer(encoding            = DEFAULT_ENCODING, 
                                   date                = data['date'],
-                                  source_info_url     = data['source-info-url'], 
-                                  source_info_name    = data['source-info-name'],
-                                  generator_info_url  = data['generator-info-url'], 
-                                  generator_info_name = data['generator-info-name'])
+                                  source_info_url     = self.cleanString(data['source-info-url']), 
+                                  source_info_name    = self.cleanString(data['source-info-name']),
+                                  generator_info_url  = self.cleanString(data['generator-info-url']), 
+                                  generator_info_name = self.cleanString(data['generator-info-name']))
 
             programmes = self.sortProgrammes(self.XMLTVDATA['programmes'])
             for channel in self.sortChannels(self.cleanChannels(self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels'], programmes)):
@@ -83,9 +83,7 @@ class XMLTVS:
                     fle  = FileAccess.open(file,'r')
                     file = fle.readlines()
                     fle.close()
-                    print(file)
-                    print(file[int(match.group(1))][int(match.group(2))-5:][:5])
-                    self.log('%s, failed! parser error %s\n%s'%(name,e,file[int(match.group(1))][int(match.group(2))-5:][:5]), xbmc.LOGERROR)
+                    self.log('%s, failed! parser error %s\nLine: %s\n Error: %s'%(name,e,file[int(match.group(1))],file[int(match.group(1))][int(match.group(2))-5:]), xbmc.LOGERROR)
                 else: raise Exception('no parser match %s'%(str(e)))
             except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
     

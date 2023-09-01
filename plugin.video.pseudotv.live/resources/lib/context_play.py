@@ -26,5 +26,17 @@ class Play:
             log('Play: __init__, sysARG = %s'%(sysARG))
             Plugin(sysARG).contextPlay(writer,isPlaylist=False)
             
+class Playlist:
+    def __init__(self, sysARG, writer):
+        with busy_dialog():
+            log('Playlist: __init__, sysARG = %s'%(sysARG))
+            Plugin(sysARG).contextPlay(writer,isPlaylist=True)
+            
 if __name__ == '__main__': 
-    Play(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+    try:    param = sys.argv[1]
+    except: param = None
+    log('Play: __main__, param = %s'%(param))
+    if param == 'play':
+        Play(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+    elif param == 'playlist':
+        Playlist(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))

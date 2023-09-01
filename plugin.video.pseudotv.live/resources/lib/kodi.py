@@ -61,14 +61,14 @@ def closeBusyDialog():
         Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
     elif Builtin().getInfoBool('IsActive(busydialog)','Window'):
         Builtin().executebuiltin('Dialog.Close(busydialog)')
-         
+
 @contextmanager
 def busy_dialog():
     if not isBusyDialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        closeBusyDialog()
+        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
 
 def setDictLST(lst=[]):
     sLST = [dumpJSON(d) for d in lst]
@@ -76,19 +76,23 @@ def setDictLST(lst=[]):
     return [loadJSON(s) for s in sLST]
 
 def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
-    if not isinstance(item,str):
-        return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
-    elif isinstance(item,str):
-        return item
+    try:
+        if not isinstance(item,str):
+            return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
+        elif isinstance(item,str):
+            return item
+    except Exception as e: log("globals: dumpJSON, failed! %s"%(e), xbmc.LOGERROR)
     return ''
     
 def loadJSON(item):
-    if isinstance(item,str):
-        return json.loads(item)
-    elif isinstance(item,dict):
-        return item
+    try:
+        if isinstance(item,str):
+            return json.loads(item)
+        elif isinstance(item,dict):
+            return item
+    except Exception as e: log("globals: loadJSON, failed! %s"%(e), xbmc.LOGERROR)
     return {}
-      
+  
 def getMD5(text,hash=0,hexit=True):
     if isinstance(text,dict):     text = dumpJSON(text)
     elif not isinstance(text,str):text = str(text)
@@ -249,32 +253,21 @@ class Settings:
     def setPropertySetting(self, key, value):
         return self.property.setProperty(key, value)
         
-        
-    def chkDEBUG(self):
-        if self.getSettingBool('Enable_Debugging'):
-            if self.dialog.yesnoDialog(LANGUAGE(32142),autoclose=15):
-                self.log('chkDEBUG, disabling debugging.')
-                self.setSettingBool('Enable_Debugging',False)
-                self.dialog.notificationDialog(LANGUAGE(321423))
 
-        
     def chkDiscovery(self, servers, forced=False):
-        #set client resources in-sync with server.
-        def setResourceSettings(settings):
-            for key, value in list(settings.items()):
-                try:    self.setSetting(key, value)
-                except: pass
-
         current_server = self.getSetting('Remote_URL')
         if (not current_server or forced) and len(list(servers.keys())) == 1:
-            #If one server found autoselec, set server host paths.
+            #If one server found autoselect, set server host paths.
             self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
             self.setSetting('Remote_URL'  ,'http://%s'%(list(servers.keys())[0]))
             self.setSetting('Remote_M3U'  ,'http://%s/%s'%(list(servers.keys())[0],M3UFLE))
             self.setSetting('Remote_XMLTV','http://%s/%s'%(list(servers.keys())[0],XMLTVFLE))
             self.setSetting('Remote_GENRE','http://%s/%s'%(list(servers.keys())[0],GENREFLE))
-            setResourceSettings(servers[list(servers.keys())[0]].get('settings',{}))
             self.setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=True)
+            #sync client resources with server.
+            for key, value in list((servers[list(servers.keys())[0]].get('settings',{})).items()):
+                try:    self.setSetting(key, value)
+                except: pass
 
             
     def chkPluginSettings(self, id, values):
@@ -312,6 +305,21 @@ class Settings:
 
 
     def forceMigration(self, id):
+        # # https://github.com/xbmc/xbmc/pull/23648
+        # newid = REAL_SETTINGS.getFreeNewInstanceId()
+        # addonsettingnew = REAL_SETTINGS.getSettings(newid)
+        # addonsettingnew.setString('kodi_addon_instance_name', 'By Python added')
+        # addonsettingnew.setBool('kodi_addon_instance_enabled', True)
+        # addonsettingnew.setString('host', '10.144.12.13')
+        # REAL_SETTINGS.publishInstanceChange(newid
+        # # REAL_SETTINGS.deleteInstanceId(1001);
+        # printstring = "Support Instances: " + str(REAL_SETTINGS.supportsInstanceSettings()) + "\n" \
+                      # "Used Instances:\n"
+        # for x in REAL_SETTINGS.getKnownInstanceIds():
+            # printstring += "ID: " + str(x) + "\n"
+            # printstring += "Test setting: " + REAL_SETTINGS.getSettings(x).getString('host') + "\n"
+        # xbmcgui.Dialog().textviewer(ADDON_NAME, printstring)
+
         pvrPath = 'special://profile/addon_data/%s'%(id)
         settingInstance = 1
         for file in [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]:
@@ -333,7 +341,14 @@ class Settings:
             self.log('forceMigration, id = %s creating %s...'%(id,'instance-settings-%d.xml'%(settingInstance)))
             return FileAccess.copy(os.path.join(pvrPath,'settings.xml'),os.path.join(pvrPath,'instance-settings-%d.xml'%(settingInstance)))
            
-
+        
+    def getCurrentSettings(self):
+        self.log('getCurrentSettings')
+        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
+        for setting in settings:
+            yield (setting,self.getSetting(setting))
+               
+        
 class Properties:
     
     def __init__(self, winID=10000):
@@ -425,8 +440,7 @@ class Properties:
         
                 
     def setPropertyInt(self, key, value):
-        if not isinstance(value,int): value = int(value)
-        return self.setProperty(key, value)
+        return self.setProperty(key, int(value))
                 
                 
     def setPropertyFloat(self, key, value):
@@ -734,7 +748,7 @@ class Dialog:
         # dialog.colorpicker('Select color', 'ff00ff00', 'os.path.join(xbmcaddon.Addon().getAddonInfo("path"),"colors.xml")')
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
              
-        
+
     def _okDialog(self, msg, heading, autoclose, url, wait=0.5):
         timerit(self.okDialog)(wait,[msg, heading, autoclose, url])
         
@@ -874,16 +888,14 @@ class Dialog:
         
 
     def notificationWait(self, message, header=ADDON_NAME, wait=4):
-        if not isinstance(wait,int): wait = int(wait)
         pDialog = self.progressBGDialog(message=message,header=header)
-        for idx in range(wait):
-            pDialog = self.progressBGDialog((((idx+1) * 100)//wait),control=pDialog,header=header)
+        for idx in range(int(wait)):
+            pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
             if pDialog is None or MONITOR.waitForAbort(1): break
         return True
 
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
-        if not isinstance(percent,int): percent = int(percent)
         if silent is None: 
             silent = (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player')))
         
@@ -892,27 +904,26 @@ class Dialog:
             self.log('progressBGDialog, silent = %s; closing dialog'%(silent))
             return 
             
-        if control is None and percent == 0:
+        if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgressBG()
             control.create(header, message)
         elif control:
-            if percent == 100 or control.isFinished(): 
+            if int(percent) == 100 or control.isFinished(): 
                 if hasattr(control, 'close'): control.close()
                 return
-            elif hasattr(control, 'update'): control.update(percent, header, message)
+            elif hasattr(control, 'update'): control.update(int(percent), header, message)
         return control
         
 
     def progressDialog(self, percent=0, control=None, message='', header=ADDON_NAME):
-        if not isinstance(percent,int): percent = int(percent)
-        if control is None and percent == 0:
+        if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgress()
             control.create(header, message)
         elif control:
-            if percent == 100 or control.iscanceled(): 
+            if int(percent) == 100 or control.iscanceled(): 
                 if hasattr(control, 'close'): control.close()
                 return
-            elif hasattr(control, 'update'): control.update(percent, message)
+            elif hasattr(control, 'update'): control.update(int(percent), message)
         return control
         
    

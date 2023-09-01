@@ -129,7 +129,7 @@ class Plugin:
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-            pvritem['playcount']  = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
+            pvritem['playcount']  = loadJSON(PROPERTIES.getEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))).get('playcount',0) + 1
           
             if pvritem['playcount'] > 3:
                 return self.playError(pvritem)
@@ -137,7 +137,7 @@ class Plugin:
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
             except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
-            PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),pvritem)
+            PROPERTIES.setEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),dumpJSON(pvritem))
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
@@ -214,7 +214,7 @@ class Plugin:
                 liz.setProperty('pvritem',dumpJSON(pvritem))
                 listitems = [liz]
                 listitems.extend(poolit(self.buildWriterItem)(nextitems))
-                PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
+                PROPERTIES.clearEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
                 
                 if isPlaylist:
                     for idx,lz in enumerate(listitems):
@@ -300,7 +300,7 @@ class Plugin:
                 for idx,lz in enumerate(listitems):
                     path = lz.getPath()
                     self.channelPlaylist.add(lz.getPath(),lz,idx)                
-                PROPERTIES.clearProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
+                PROPERTIES.clearEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
                 self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
                 if isPlaylistRandom(): self.channelPlaylist.unshuffle()
                 PLAYER.play(self.channelPlaylist,windowed=True)
@@ -311,8 +311,8 @@ class Plugin:
         #todo verify xmltv file has programmes, if not force rebuild.
         if not pvritem:
             pvritem = {'channelid':'-1'}
-            pvritem['playcount'] = PROPERTIES.getPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1'))).get('playcount',0) + 1
-        PROPERTIES.setPropertyDict('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),pvritem)
+            pvritem['playcount'] = loadJSON(PROPERTIES.getEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))).get('playcount',0) + 1
+        PROPERTIES.setEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),dumpJSON(pvritem))
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('channelid','-1'),pvritem['playcount'],pvritem))
         if   pvritem['playcount'] == 1 and not PLAYER.isPlaying(): setInstanceID() #reset instance and force cache flush.
         elif pvritem['playcount'] == 2:

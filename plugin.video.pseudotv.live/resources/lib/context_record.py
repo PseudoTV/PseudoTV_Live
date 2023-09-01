@@ -38,7 +38,7 @@ class Record:
                 with busy_dialog():
                     xmltv = XMLTVS()
                     if m3u.addRecording(ritem) and xmltv.addRecording(ritem,self.writer):
-                        DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
+                        DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
                     del xmltv
             del m3u
     
@@ -52,7 +52,7 @@ class Record:
                 with busy_dialog():
                     xmltv = XMLTVS()
                     if m3u.delRecording(ritem) and xmltv.delRecording(ritem):
-                        DIALOG.notificationDialog('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
+                        DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
                     del xmltv
             del m3u
             

@@ -36,7 +36,7 @@ from ast         import literal_eval
 from logger      import *
 from cache       import Cache, cacheit
 from pool        import killJSON, killit, timeit, poolit, threadit, timerit
-from kodi        import Dialog
+from kodi        import *
 from fileaccess  import FileAccess, FileLock
 from collections import Counter, OrderedDict
 from six.moves   import urllib 
@@ -81,14 +81,13 @@ def suspendActivity(): #suspend/quit running background task.
         setPendingSuspend(False)
 
 @contextmanager
-def busy_dialog():
-    if not isBusyDialog():
-        BUILTIN.executebuiltin('ActivateWindow(busydialognocancel)')
+def open_dialog():
+    if not PROPERTIES.getEXTProperty('%s.opendialog'%(ADDON_ID)) == 'true':
+        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
     try: yield
     finally:
-        if BUILTIN.getInfoBool('IsActive(busydialognocancel)','Window'):
-            BUILTIN.executebuiltin('Dialog.Close(busydialognocancel)')
-
+        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'false')
+         
 @contextmanager
 def sudo_dialog(msg):
     dia = DIALOG.progressBGDialog(message=msg)
@@ -97,14 +96,6 @@ def sudo_dialog(msg):
         yield
     finally:
         DIALOG.progressBGDialog(100,dia) 
-
-@contextmanager
-def open_dialog():
-    if not PROPERTIES.getEXTProperty('%s.opendialog'%(ADDON_ID)) == 'true':
-        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
-    try: yield
-    finally:
-        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'false')
 
 @contextmanager
 def open_window():
@@ -121,6 +112,7 @@ def slugify(s, lowercase=False):
   s = re.sub(r'[\s_-]+', '_', s)
   s = re.sub(r'^-+|-+$', '', s)
   return s
+        
         
 def stripNumber(s):
     return re.sub(r'\d+','',s)
@@ -152,20 +144,7 @@ def escapeString(text, table=HTML_ESCAPE):
 def unescapeString(text, table=HTML_ESCAPE):
     return unescape(text,{v:k for k, v in list(table.items())})
 
-def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
-    if not isinstance(item,str):
-        return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
-    elif isinstance(item,str):
-        return item
-    return ''
-    
-def loadJSON(item):
-    if isinstance(item,str):
-        return json.loads(item)
-    elif isinstance(item,dict):
-        return item
-    return {}
-  
+
 def getJSON(file):
     fle  = (FileAccess.open(file, 'r') or '')
     try:    data = loadJSON(fle.read())
@@ -190,11 +169,6 @@ def setURL(url, file):
     except Exception as e: 
         log("saveURL, failed! %s"%e, xbmc.LOGERROR)
 
-def setDictLST(lst=[]):
-    sLST = [dumpJSON(d) for d in lst]
-    sLST = list(OrderedDict.fromkeys(sLST))
-    return [loadJSON(s) for s in sLST]
-
 def diffLSTDICT(old, new):
     sOLD = set([dumpJSON(e) for e in old])
     sNEW = set([dumpJSON(e) for e in new])
@@ -208,13 +182,6 @@ def getInstanceID():
     instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
     if not instanceID: setInstanceID()
     return PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-  
-def getMD5(text,hash=0,hexit=True):
-    if isinstance(text,dict):     text = dumpJSON(text)
-    elif not isinstance(text,str):text = str(text)
-    for ch in text: hash = (hash*281 ^ ord(ch)*997) & 0xFFFFFFFF
-    if hexit: return hex(hash)[2:].upper().zfill(8)
-    else:     return hash
 
 def genUUID(seed=None):
     if seed:
@@ -409,8 +376,8 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
     return {'kodi_addon_instance_name'    :ADDON_NAME,
             'kodi_addon_instance_enabled' :'true',
             'm3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'2',
-            'm3uRefreshHour'              :'0',
+            # 'm3uRefreshIntervalMins'      :'15',
+            # 'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
             'logoPath'                    :LOGO_LOC,
@@ -443,22 +410,18 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             # 'useInputstreamAdaptiveforHls':'true'
             }
 
-def chkPVREnabled():
-    if PROPERTIES.getEXTProperty('%s.Disabled'%(PVR_CLIENT)):
-        togglePVR(True,False)
-         
 def togglePVR(state=True, reverse=False, waitTime=15):
     log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))
     BUILTIN.executebuiltin('ActivateWindow(home)')
     try:    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
     except: name = PVR_CLIENT
-    PROPERTIES.setEXTProperty('%s.Disabled'%(PVR_CLIENT),not bool(state))
+    isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System')
+    if (state and isEnabled) or (not state and not isEnabled): return
     xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,str(state).lower()))
     xbmc.sleep(250)
-    waitMSG = '%s: %s'%(LANGUAGE(32125),name)
     if reverse: timerit(togglePVR)(waitTime,[not bool(state)])
     else: waitTime = int(PROMPT_DELAY/1000)
-    DIALOG.notificationWait(waitMSG,wait=waitTime)
+    DIALOG.notificationWait('%s: %s'%(name,LANGUAGE(32125)),wait=waitTime)
               
 def forceBrute(msg=''):
     name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
@@ -498,15 +461,6 @@ def encodeWriter(writer, text):
 def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
     
-def isBusyDialog():
-    return (BUILTIN.getInfoBool('IsActive(busydialognocancel)','Window') | BUILTIN.getInfoBool('IsActive(busydialog)','Window'))
-         
-def closeBusyDialog():
-    if BUILTIN.getInfoBool('IsActive(busydialognocancel)','Window'):
-        BUILTIN.executebuiltin('Dialog.Close(busydialognocancel)')
-    elif BUILTIN.getInfoBool('IsActive(busydialog)','Window'):
-        BUILTIN.executebuiltin('Dialog.Close(busydialog)')
-         
 def isPendingRestart():
     return PROPERTIES.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
     
@@ -533,15 +487,15 @@ def isClient():
     return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
    
 def setClient(state=False,silent=True):
-    if not silent and state: DIALOG.notificationWait(LANGUAGE(32115)%(ADDON_NAME))
     PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
     PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isSlave',SETTINGS.getSettingInt('Client_Mode') == 1)
+    if not silent and state: DIALOG.notificationWait(LANGUAGE(32115))
            
 def getDiscovery():
-    return PROPERTIES.getPropertyDict('SERVER_DISCOVERY')
+    return loadJSON(PROPERTIES.getEXTProperty('SERVER_DISCOVERY'))
 
 def setDiscovery(servers={}):
-    return PROPERTIES.setPropertyDict('SERVER_DISCOVERY',servers)
+    return PROPERTIES.setEXTProperty('SERVER_DISCOVERY',dumpJSON(servers))
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
@@ -586,20 +540,6 @@ def cleanLabel(text):
     text = text.replace("[I]",'').replace("[/I]",'')
     return text.replace(":",'')
   
-def getThumb(item={},opt=0): #unify thumbnail artwork
-    keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
-            1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
-    for key in keys:
-        art = (item.get('art',{}).get('album.%s'%(key),'')       or 
-               item.get('art',{}).get('albumartist.%s'%(key),'') or 
-               item.get('art',{}).get('artist.%s'%(key),'')      or 
-               item.get('art',{}).get('season.%s'%(key),'')      or 
-               item.get('art',{}).get('tvshow.%s'%(key),'')      or 
-               item.get('art',{}).get(key,'')                    or
-               item.get(key,''))
-        if art: return art
-    return {0:FANART,1:COLOR_LOGO}[opt]
-                   
 def cleanImage(image=LOGO):
     orgIMG = image
     if not image: image = LOGO

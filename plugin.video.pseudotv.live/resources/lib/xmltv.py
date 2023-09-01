@@ -35,7 +35,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with this software; if not, see <http://www.gnu.org/licenses/>.
 """
 from globals               import *
-from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser
+from xml.etree.ElementTree import ElementTree, Element, SubElement, XMLParser, fromstringlist, parse
 
 # The Python-XMLTV version
 VERSION = "1.4.4_PSEUDOTV"
@@ -136,9 +136,11 @@ def read_channels(fp=None, tree=None):
     """
     channels = []
     if fp:
-        et = ElementTree()
-        parser = XMLParser(encoding=locale)
-        tree = et.parse(fp, parser=parser)
+        if hasattr(fp, 'readlines'):
+            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            fp.close()
+        else: 
+            tree = parse(fp, parser=XMLParser(encoding=locale))
     for elem in tree.findall('channel'):
         channel = elem_to_channel(elem) 
         try:
@@ -274,9 +276,11 @@ def read_programmes(fp=None, tree=None):
     ElementTree 'tree'
     """
     if fp:
-        et = ElementTree()
-        parser = XMLParser(encoding=locale)
-        tree = et.parse(fp, parser=parser)
+        if hasattr(fp, 'readlines'):
+            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            fp.close()
+        else: 
+            tree = parse(fp, parser=XMLParser(encoding=locale))
     return [elem_to_programme(elem) for elem in tree.findall('programme')]
 
 
@@ -288,9 +292,11 @@ def read_data(fp=None, tree=None):
     'tree'
     """
     if fp:
-        et = ElementTree()
-        parser = XMLParser(encoding=locale)
-        tree = et.parse(fp, parser=parser)
+        if hasattr(fp, 'readlines'):
+            tree = fromstringlist(fp.readlines(), parser=XMLParser(encoding=locale))
+            fp.close()
+        else: 
+            tree = parse(fp, parser=XMLParser(encoding=locale))
     d = {}
     set_attrs(d, tree, ('date', 'source-info-url', 'source-info-name',
                         'source-data-url', 'generator-info-name',

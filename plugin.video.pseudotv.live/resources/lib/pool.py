@@ -265,7 +265,8 @@ class Cores:
                 dmesg = dmesgProcess.communicate()[0]
 
             res = 0
-            while not MONITOR.abortRequested() and '\ncpu%s:'%(res) in dmesg: res += 1
+            while not MONITOR.abortRequested() and '\ncpu%s:'%(res) in dmesg:
+                res += 1
             if res > 0: return res
         except OSError: pass
         return 1

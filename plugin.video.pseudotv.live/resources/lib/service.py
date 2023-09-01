@@ -22,12 +22,12 @@ from globals    import *
 from producer   import Producer
 from overlay    import Overlay, Background
 from rules      import RulesList
-from jsonrpc    import JSONRPC
-from server     import HTTP, Discovery, Announcement
-from threading  import enumerate
+from threading  import enumerate as thread_enumerate
 
 class Player(xbmc.Player):
     pvritem      = {}
+    background   = None
+    showingBackground = False
     myService    = False
     pendingPlay  = False
     isPseudoTV   = False
@@ -38,7 +38,6 @@ class Player(xbmc.Player):
     def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.background = None
         
         """ 
         Player() Trigger Order
@@ -63,19 +62,19 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
-        self.pendingPlay  = False
-        self.lastSubState = isSubtitle()
+        if self.isPseudoTV: self.lastSubState = isSubtitle()
             
         
     def onAVStarted(self):
-        self.pvritem    = self.getPlayerPVRitem()
-        self.isPseudoTV = not None in [self.pvritem.get('channelid'),self.pvritem.get('citem',{}).get('id')]
+        self.pendingPlay = False
+        self.pvritem     = self.getPlayerPVRitem()
+        self.isPseudoTV  = not None in [self.pvritem.get('channelid'),self.pvritem.get('citem',{}).get('id')]
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         
         
-    def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, limited to pvr?
-        self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
+    def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, issue limited to pvr?
+        if self.isPseudoTV: self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
     
     
     def onPlayBackError(self):
@@ -143,16 +142,17 @@ class Player(xbmc.Player):
         
     def setSubtitles(self, state):
         self.log('setSubtitles, state = %s'%(state))
-        if state and (not hasSubtitle() or not self.isPseudoTV): return
-        self.showSubtitles(state)
+        if state and (hasSubtitle() and self.isPseudoTV):
+            self.showSubtitles(state)
 
    
     def _onPlay(self):
         self.log('_onPlay')
         self.toggleBackground(False)
+        BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
         if self.pvritem.get('citem',{}).get('id') != self.pvritem.get('citem',{}).get('id',random.random()): #playing new channel
             self.pvritem = self.runActions(RULES_ACTION_PLAYER_START, self.pvritem.get('citem'), self.pvritem, inherited=self)
-            # self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
+            self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
 
         
     def _onChange(self):
@@ -161,6 +161,7 @@ class Player(xbmc.Player):
         if not self.pvritem: self._onStop()
         else:
             try:
+                self.lastSubState = isSubtitle()
                 if self.pvritem.get('isPlaylist',False):
                     broadcastnext = self.pvritem['broadcastnext']
                     self.pvritem['broadcastnow']  = broadcastnext.pop(0)
@@ -190,14 +191,14 @@ class Player(xbmc.Player):
         
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state and not PROPERTIES.getEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID)) == "true":
+        if state and not self.showingBackground:
+            self.showingBackground = True
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
-            PROPERTIES.setEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID),'true')
             self.background.show()
-        elif not state and not self.background is None:
-            self.background.close()
-            PROPERTIES.setEXTProperty('%s.OVERLAY_BACKGROUND'%(ADDON_ID),'false')
+        elif not state and self.showingBackground:
+            if hasattr(self.background, 'close'): self.background.close()
             self.background = None
+            self.showingBackground = False
             if self.isPlaying():
                 BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
@@ -235,7 +236,7 @@ class Monitor(xbmc.Monitor):
         
 
     def chkSuspend(self, wait=0.001): #stop current tasks pending setting/channel change or interrupt.
-        pendingSuspend = (self.waitForAbort(wait) | isPendingSuspend() | self.pendingChange | self.chkInterrupt())
+        pendingSuspend = (self.waitForAbort(wait) | isPendingSuspend() | self.pendingChange | self.chkInterrupt() | isClient())
         self.log('chkSuspend, pendingSuspend = %s'%(pendingSuspend))
         return pendingSuspend
         
@@ -265,11 +266,11 @@ class Monitor(xbmc.Monitor):
         
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
-        if state and not self.myService.overlay.showingChannelBug:
+        if state and not self.myService.overlay.showingOverlay:
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
             self.myService.overlay.open()
-        elif not state:
+        elif not state and self.myService.overlay.showingOverlay:
             self.myService.overlay.close()
 
 
@@ -279,8 +280,8 @@ class Monitor(xbmc.Monitor):
         if self.myService.player.isPseudoTV:
             if sleepTime > 0 and (idleTime > (sleepTime * 10800)): #3hr increments
                 if self.triggerSleep(): return False
-        if isIdle: self.toggleOverlay(True)
-        else:      self.toggleOverlay(False)
+        if isIdle and self.myService.player.isPseudoTV: self.toggleOverlay(True)
+        else:                                           self.toggleOverlay(False)
         return isIdle
 
 
@@ -329,29 +330,24 @@ class Monitor(xbmc.Monitor):
     def _onSettingsChanged(self):
         self.log('_onSettingsChanged')
         self.pendingChange = False
-        if not isClient(): self.myService.channels = self.myService.producer.chkChannelChange(self.myService.channels)  #check for channel change, rebuild if needed.
-        self.myService.settings = self.myService.producer.chkSettingsChange(self.myService.settings) #check for settings change, take action if needed.
+        if not isClient(): self.myService.currentChannels = self.myService.producer.chkChannelChange(self.myService.currentChannels)  #check for channel change, rebuild if needed.
+        self.myService.currentSettings = self.myService.producer.chkSettingsChange(self.myService.currentSettings) #check for settings change, take action if needed.
 
 
 class Service():
     setClient(isClient())
+    currentChannels = []
+    currentSettings = []
+    
+    producer = None
     player   = Player()
     monitor  = Monitor()
     overlay  = Overlay(player)
-    http     = HTTP(monitor)
-    # announce = Announcement(monitor)
-    # disco    = Discovery(monitor)
+    
     
     def __init__(self):
         self.log('__init__')
-        SETTINGS.chkDEBUG()
-        DIALOG.notificationWait('%s...'%(LANGUAGE(32054)),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
-        if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
-        self.producer = Producer(service=self)
-        self.channels = self.producer.getChannels()       #startup channels
-        self.settings = dict(self.producer.getSettings()) #startup settings
-        self.player.myService  = self
-        self.monitor.myService = self
+        DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -360,17 +356,28 @@ class Service():
 
     def _start(self):
         self.log('_start')
-        self.producer._startProcess()
+        if self.player.isPlaying():
+            self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
+        self.currentSettings = dict(SETTINGS.getCurrentSettings()) #startup settings
+        
+        if not isClient():
+            self.producer = Producer(service=self)
+            self.currentChannels = self.producer.getChannels() #startup channels
+            self.producer._startProcess()
+            
+        self.player.myService  = self
+        self.monitor.myService = self
+        
         while not self.monitor.abortRequested():
             if self.monitor.waitForAbort(2): 
                 self.log('_start, pending stop')
-                DIALOG.notificationDialog(LANGUAGE(32141)%(ADDON_NAME))
-                self._stop()
+                if DIALOG.notificationWait(LANGUAGE(32141), wait=15):
+                    return self._stop()
                 
             elif self.monitor.chkRestart():
                 self.log('_start, pending restart')
-                DIALOG.notificationDialog(LANGUAGE(32049)%(ADDON_NAME))
-                self._restart()
+                if DIALOG.notificationWait(LANGUAGE(32049), wait=15):
+                    return self._restart()
                 
             elif self.monitor.isSettingsOpened():
                 self.log('_start, pending change')
@@ -378,7 +385,6 @@ class Service():
                 timerit(self.monitor.onSettingsChanged)(15.0) #onSettingsChanged() not called when kodi settings cancelled. call timer instead.
             
             elif not self.monitor.pendingChange:
-                self._busy(self.monitor.chkIdle())
                 self._tasks()
         
                 
@@ -389,19 +395,22 @@ class Service():
            
                 
     def _tasks(self):
+        self._busy(self.monitor.chkIdle())
         if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Run_While_Playing'):
             return
-        elif not isClient():
+        elif not isClient() and self.producer:
             self.producer._taskManager() #chk/run scheduled tasks.
                     
         
     def _restart(self):
+        self.log('_restart')
         if self._stop():
             Service()._start()
         
         
     def _stop(self):
-        for thread in enumerate():
+        self.log('_stop')
+        for thread in thread_enumerate():
             try: 
                 if thread.name == "MainThread": continue
                 self.log("_stop, joining thread %s"%(thread.name))

@@ -91,12 +91,12 @@ class MYPlayer(xbmc.Player):
 
 
 class Overlay():
+    showingOverlay = False
     controlManager = dict()
     runActions = RulesList().runActions
     
     def __init__(self, player):
         self.player = player
-        self.showingChannelBug = False
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
@@ -189,7 +189,7 @@ class Overlay():
         if not self.player.isPseudoTV: 
             return self.close()
             
-        self.showingChannelBug = True
+        self.showingOverlay = True
         self.myPlayer = MYPlayer(overlay=self)
         self.myPlayer.onAVStarted()
         
@@ -203,9 +203,9 @@ class Overlay():
         self.cancelOnNext()
         self.cancelChannelBug()
         self.setImage(self._channelBug,'None')
+        self.showingOverlay = False
         for control, visible in list(self.controlManager.items()):
             self._removeControl(control)
-        self.showingChannelBug = False
         try: del self.myPlayer
         except: pass
 
