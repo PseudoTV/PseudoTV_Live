@@ -74,7 +74,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Playlists),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -93,7 +93,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -112,7 +112,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -131,7 +131,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Genres),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -150,7 +150,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Genres),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -169,7 +169,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Studios),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -188,7 +188,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed_Genres),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -207,7 +207,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -226,7 +226,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -245,7 +245,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Services),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -264,7 +264,7 @@
 						<dependency type="enable">
 							<and>
 								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isSlave),false)</condition>
 							</and>
 						</dependency>
 					</dependencies>
@@ -606,7 +606,7 @@
 			<group id="2" label="30032">
 				<setting id="Resource_Logos" type="list[addon]" label="30027" help="">
 					<level>2</level>
-					<default>resource.images.pseudotv.logos</default>
+					<default></default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -625,7 +625,7 @@
 				</setting>
 				<setting id="Resource_Ratings" type="list[addon]" label="30028" help="">
 					<level>2</level>
-					<default>resource.videos.ratings.mpaa.classic</default>
+					<default></default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -644,7 +644,7 @@
 				</setting>
 				<setting id="Resource_Bumpers" type="list[addon]" label="30029" help="">
 					<level>2</level>
-					<default>resource.videos.bumpers.pseudotv|resource.videos.bumpers.sample</default>
+					<default></default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -663,7 +663,7 @@
 				</setting>
 				<setting id="Resource_Commericals" type="list[addon]" label="30030" help="">
 					<level>2</level>
-					<default>resource.videos.commercials.sample</default>
+					<default></default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -682,7 +682,7 @@
 				</setting>
 				<setting id="Resource_Trailers" type="list[addon]" label="30031" help="">
 					<level>2</level>
-					<default>resource.videos.trailers.sample</default>
+					<default></default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -1030,16 +1030,13 @@
                         <dependency type="enable">
                             <condition on="property" name="InfoBool">!String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.SERVER_DISCOVERY))</condition>
 						</dependency>
-						<dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">1</condition>
-						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Select_Server)</data>
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)</data>
                         <close>true</close>
 					</control>
 				</setting>
-                <setting id="Network_Path" type="path" label="30102" help="30012" parent="Client_Mode">
+                <setting id="Network_Folder" type="path" label="30102" help="30012" parent="Client_Mode">
 					<level>1</level>
                     <enable>false</enable>
 					<default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
@@ -1192,27 +1189,6 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Override_User" type="boolean" label="30070" help="33070">
-					<level>1</level>
-					<default>false</default>
-					<control type="toggle"/>
-				</setting>
-                <setting id="Apply_Settings" type="action" label="30074" help="33074" parent="Override_User">
-					<level>1</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="visible">
-                            <condition operator="is" setting="Override_User">false</condition>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Apply_Settings)</data>
-						<close>true</close>
-					</control>
-				</setting>
 				<setting id="iptvsimple" type="action" label="30071" help="">
 					<level>0</level>
 					<data>Addon.OpenSettings(pvr.iptvsimple)</data>
@@ -1231,24 +1207,25 @@
 						<close>true</close>
 					</control>
 				</setting>
-				<setting id="iptvmanager" type="action" label="30073" help="">
-					<level>0</level>
-					<data>Addon.OpenSettings(service.iptv.manager)</data>
+                <setting id="Apply_PVR_Settings" type="action" label="30074" help="33074" parent="iptvsimple">
+					<level>1</level>
+					<default/>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="enable">
+						<dependency type="visible">
                             <and>
-                                <condition on="property" name="InfoBool">System.HasAddon(service.iptv.manager)</condition>
-                                <condition on="property" name="InfoBool">System.AddonIsEnabled(service.iptv.manager)</condition>
+                                <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
                             </and>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Apply_PVR_Settings)</data>
 						<close>true</close>
 					</control>
-				</setting>	
+				</setting>
 			</group>
 			<group id="5" label="30111">
                 <setting id="JSONRPC_Delay" type="integer" label="30110" help="33109">

@@ -50,7 +50,6 @@ class Library:
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
-        
         self.service      = service
         self.cache        = Cache()
         self.jsonRPC      = JSONRPC()
@@ -65,12 +64,12 @@ class Library:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
     
-    def _load(self):
-        return getJSON(LIBRARYFLEPATH)
+    def _load(self, file=LIBRARYFLEPATH):
+        return getJSON(file)
     
     
-    def _save(self):
-        return setJSON(LIBRARYFLEPATH,self.libraryDATA)
+    def _save(self, file=LIBRARYFLEPATH):
+        return setJSON(file, self.libraryDATA)
         
         
     def getLibrary(self, type):
@@ -150,7 +149,7 @@ class Library:
                 break
             else:
                 items = libraryItems.get(type,[])
-                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.%s'%(slugify(type)),str(len(items)>0).lower())
+                PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(items)>0).lower())
                 self.setLibrary(type, [_updateItem(type,item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
         return complete
@@ -410,7 +409,7 @@ class Library:
         whiteList = self.getWhiteList()
         whiteList.append(addonid)
         whiteList = sorted(set(whiteList))
-        if len(whiteList) > 0: PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',len(whiteList) > 0)
+        if len(whiteList) > 0: PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),len(whiteList) > 0)
         return self.setWhiteList(whiteList)
         
 
@@ -453,7 +452,7 @@ class Library:
                         else:
                             self.addWhiteList(addonid)
                     
-            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.WhiteList',str(len(self.getWhiteList()) > 0).lower())
-            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.BlackList',str(len(self.getBlackList()) > 0).lower())
+            PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),str(len(self.getWhiteList()) > 0).lower())
+            PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),str(len(self.getBlackList()) > 0).lower())
             SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
         

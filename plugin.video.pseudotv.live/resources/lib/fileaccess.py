@@ -336,7 +336,8 @@ class FileLock(object):
             lying around.
         """
         self.release()
-
+        FileAccess.delete(self.lockfile)
+        
 
 class FileLockException(Exception):
     pass

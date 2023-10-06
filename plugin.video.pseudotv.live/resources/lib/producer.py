@@ -25,7 +25,7 @@ from jsonrpc    import JSONRPC
 from autotune   import Autotune
 from builder    import Builder
 from backup     import Backup
-from server     import HTTP, Discovery, Announcement
+from server     import HTTP
 
 PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 
@@ -36,11 +36,9 @@ class Producer():
 
     def __init__(self, service):
         self.log('__init__')
-        self.service  = service
-        self.consumer = Consumer(service)
-        self.http     = HTTP(service.monitor)
-        self.announce = Announcement(service.monitor)
-        self.discover = Discovery(service.monitor)
+        self.service   = service
+        self.consumer  = Consumer(service)
+        self.webServer = HTTP(service.monitor)
 
 
     @contextmanager
@@ -82,18 +80,16 @@ class Producer():
         setFirstrun(False) #reset firstrun state  #todo find better solution for resetting
         setLowPower()
         Backup().hasBackup()
-        
-        self.http._run()
-        self.announce._run()
-        self.discover._run()
         self._chkPVRBackend()
-        self._chkDebugging()
         self._chkVersion()
+        self._chkDebugging()
+        self.webServer._run()
         
-        
-    def _chkPVRBackend(self):
-        if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'): togglePVR(True,False)
-        SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
+     
+    def _chkPVRBackend(self): #todo limit to one initial. run, as base template. Allowing users to edit settings. All future changes only set local/remote paths.
+        if hasAddon(PVR_CLIENT,install=True,enable=True):
+            SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
+        else: ... #todo okdialog user to explain IPTV PVR requirements. 
         
 
     def _chkDebugging(self):
@@ -171,8 +167,8 @@ class Producer():
                 if (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != SETTINGS.getSettingInt('Max_Days'):
                     SETTINGS.setSettingInt('Max_Days',max)
                     
-                if SETTINGS.getSetting('Network_Path') != SETTINGS.getSetting('User_Folder'):
-                    SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+                if SETTINGS.getSetting('Network_Folder') != SETTINGS.getSetting('User_Folder'):
+                    SETTINGS.setSetting('Network_Folder',SETTINGS.getSetting('User_Folder'))
                     
                 PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
                 del jsonRPC
@@ -227,7 +223,7 @@ class Producer():
     def chkSettingsChange(self, settings=[]):
         self.log('chkSettingsChange')
         with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
-            nSettings = dict(self.getSettings())
+            nSettings = dict(SETTINGS.getCurrentSettings())
             actions   = {'User_Folder'  :self.moveUser,
                          'UDP_PORT'     :setPendingRestart,
                          'TCP_PORT'     :setPendingRestart,
@@ -244,24 +240,31 @@ class Producer():
             return nSettings
 
 
-    def moveUser(self, folders):
+    def moveUser(self, folders, forceOverride=False):
         oldFolder, newFolder = folders
         self.log('moveUser, oldFolder = %s, newFolder = %s'%(oldFolder,newFolder))
-        files = [M3UFLE,XMLTVFLE,GENREFLE]
+        files = [M3UFLE,XMLTVFLE,GENREFLE,LIBRARYFLE,CHANNELFLE]
         dia   = DIALOG.progressDialog(message=LANGUAGE(32050))
-        FileAccess.copy(os.path.join(oldFolder,'logos'),os.path.join(newFolder,'logos'))
+        FileAccess.move(os.path.join(oldFolder,'logos'),os.path.join(newFolder,'logos'))
         for idx, file in enumerate(files):
             pnt = int(((idx+1)*100)//len(files))
-            dia = DIALOG.progressDialog(pnt, dia, message='%s %s'%(LANGUAGE(32051),file))
+            dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
             oldFilePath = os.path.join(oldFolder,file)
             newFilePath = os.path.join(newFolder,file)
+            bakFilePath = os.path.join(newFolder,'%s.bak'%(file))
             if FileAccess.exists(oldFilePath):
-                dia = DIALOG.progressDialog(pnt, dia, message='%s %s'%(LANGUAGE(32051),file))
-                if FileAccess.copy(oldFilePath,newFilePath):
-                    dia = DIALOG.progressDialog(pnt, dia, message='%s %s %s'%(LANGUAGE(32051),file,LANGUAGE(30053)))
+                dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
+                if FileAccess.exists(newFilePath):
+                    if DIALOG.yesnoDialog((LANGUAGE(30120)%newFilePath),autoclose=90):
+                        dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32151),os.path.join(newFolder,'%s.bak'%(file))))
+                        if FileAccess.copy(newFilePath,bakFilePath): #backup existing file.
+                            dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32151),bakFilePath,LANGUAGE(32025)))
+                    else: continue
+                if FileAccess.move(oldFilePath,newFilePath):
+                    dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32051),file,LANGUAGE(32025)))
                     continue
             dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
-        SETTINGS.setSetting('Network_Path',SETTINGS.getSetting('User_Folder'))
+        SETTINGS.setPVRPath(SETTINGS.getSetting('User_Folder'))
         setPendingRestart()
 
         
@@ -271,7 +274,7 @@ class Producer():
 
     def runJSON(self):
         #Only run after idle for 2mins to reduce system impact. Check interval every 15mins, run in chunks set by PAGE_LIMIT.
-        if not self.queueRunning:
+        if not self.queueRunning and not isClient():
             self.queueRunning = True
             queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
             params = queuePool.get('params',[])

@@ -46,7 +46,7 @@ class Browse:
             if isinstance(path,list): path = path[0]
             
         log('Browse: target = %s, path = %s'%(target,path))
-        BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%(target,path))
+        BUILTIN.executebuiltin('ReplaceWindow(%s,%s)'%(target,path))
 
 class Match:
     SEARCH_SCRIPT  = None
@@ -62,24 +62,19 @@ class Match:
             dbid   = (writer.get('tvshowid') or writer.get('movieid'))
             log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
 
-        if BUILTIN.getInfoBool('HasAddon(%s)'%(self.SIMILAR_SCRIPT),'System') and dbid:
+        if hasAddon(self.SIMILAR_SCRIPT,install=True) and dbid:
             self.SEARCH_SCRIPT = self.SIMILAR_SCRIPT
-        elif BUILTIN.getInfoBool('HasAddon(%s)'%(self.GLOBAL_SCRIPT),'System'):
+        elif hasAddon(self.GLOBAL_SCRIPT,install=True):
             self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
         else: return DIALOG.notificationDialog(LANGUAGE(32000))
         log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
-        
-        if BUILTIN.getInfoBool('HasAddon(%s)'%(self.SEARCH_SCRIPT),'System'):
-            if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(self.SEARCH_SCRIPT),'System'):
-                BUILTIN.executebuiltin('EnableAddon(%s)'%(self.SEARCH_SCRIPT))
-        else:
-            BUILTIN.executebuiltin('InstallAddon(%s)'%(self.SEARCH_SCRIPT))
+        hasAddon(self.SEARCH_SCRIPT,enable=True)
 
         if self.SEARCH_SCRIPT == self.SIMILAR_SCRIPT:
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=tvshow&tag=HDR
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=movie&tag=HDR
             # tag = optional, additional filter option to filter by library tag
-            BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%('%ss'%(writer.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(self.SEARCH_SCRIPT,dbid,dbtype)))
+            BUILTIN.executebuiltin('ReplaceWindow(%s,%s)'%('%ss'%(writer.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(self.SEARCH_SCRIPT,dbid,dbtype)))
         else:
             # - the addon is executed by another addon/skin: RunScript(script.globalsearch,searchstring=foo)
             # You can specify which categories should be searched (this overrides the user preferences set in the addon settings):

@@ -235,7 +235,7 @@ def getChannelSuffix(name, type):
  
 def cleanChannelSuffix(name, type):
     if   type == "TV Genres"    : name = name.split(' %s'%LANGUAGE(32014))[0]#TV
-    elif type == "Movie Genres" : name = name.split(' %s'%LANGUAGE(32015))[0]#Movie
+    elif type == "Movie Genres" : name = name.split(' %s'%LANGUAGE(32015))[0]#Movies
     elif type == "Mixed Genres" : name = name.split(' %s'%LANGUAGE(32010))[0]#Mixed
     elif type == "Music Genres" : name = name.split(' %s'%LANGUAGE(32016))[0]#Music
     return name
@@ -263,6 +263,17 @@ def hasTV():
 def hasMovie():
     return BUILTIN.getInfoBool('HasContent(Movies)','Library')
  
+def hasAddon(id, install=False, enable=False, force=False, notify=False):
+    if BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
+        if BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(id),'System'): return True
+        elif enable: 
+            if not force:
+                if not DIALOG.yesnoDialog(message=LANGUAGE(32156)%(id),autoclose=90): return False
+            return BUILTIN.executebuiltin('EnableAddon(%s)'%(id),wait=True)
+    elif install: return BUILTIN.executebuiltin('InstallAddon(%s)'%(id),wait=True)
+    if notify: DIALOG.notificationDialog(LANGUAGE(32034)%(id))
+    return False
+    
 def openAddonSettings(ctl=(0,1),id=ADDON_ID):
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
     ## ctl[1] is the Setting (Control) offset (1=first, 2=second, 3...etc)# addonId is the Addon ID
@@ -376,8 +387,8 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
     return {'kodi_addon_instance_name'    :ADDON_NAME,
             'kodi_addon_instance_enabled' :'true',
             'm3uRefreshMode'              :'1',
-            # 'm3uRefreshIntervalMins'      :'15',
-            # 'm3uRefreshHour'              :'0',
+            'm3uRefreshIntervalMins'      :'15',
+            'm3uRefreshHour'              :'0',
             'm3uCache'                    :'true',
             'logoPathType'                :'0',
             'logoPath'                    :LOGO_LOC,
@@ -482,20 +493,23 @@ def setFirstrun(state=True):
     if state == hasFirstrun(): return
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
+def isSlave():
+    return PROPERTIES.getEXTProperty('%s.isSlave'%(ADDON_ID))
+
 def isClient():
-    client = PROPERTIES.getEXTProperty('plugin.video.pseudotv.live.isClient') == "true"
+    client = PROPERTIES.getEXTProperty('%s.isClient'%(ADDON_ID)) == "true"
     return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
    
 def setClient(state=False,silent=True):
-    PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isClient',str(state).lower())
-    PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.isSlave',SETTINGS.getSettingInt('Client_Mode') == 1)
+    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
+    PROPERTIES.setEXTProperty('%s.isSlave'%(ADDON_ID),SETTINGS.getSettingInt('Client_Mode') == 1) #slave == http file user.
     if not silent and state: DIALOG.notificationWait(LANGUAGE(32115))
            
 def getDiscovery():
-    return loadJSON(PROPERTIES.getEXTProperty('SERVER_DISCOVERY'))
+    return loadJSON(PROPERTIES.getEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID)))
 
 def setDiscovery(servers={}):
-    return PROPERTIES.setEXTProperty('SERVER_DISCOVERY',dumpJSON(servers))
+    return PROPERTIES.setEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID),dumpJSON(servers))
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):

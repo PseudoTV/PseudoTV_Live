@@ -27,7 +27,6 @@ BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
 class Backup:
     def __init__(self, sysARG=sys.argv):
         self.sysARG   = sysARG
-        self.channels = Channels()
         
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -45,18 +44,19 @@ class Backup:
             return LANGUAGE(32105) #Unknown
         
         
-    def hasBackup(self):
+    def hasBackup(self, file=CHANNELFLE_BACKUP):
         with busy_dialog():
             self.log('hasBackup')
-            if FileAccess.exists(CHANNELFLE_BACKUP) and not isClient():
-                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"true")
-                backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
-                if backup_channel == 'Last Backup: Unknown':
-                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(CHANNELFLE_BACKUP)))
-                if not SETTINGS.getSetting('Recover_Channels'):
-                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
+            if FileAccess.exists(file):
+                if file == CHANNELFLE_BACKUP:#main backup file, set meta.
+                    PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
+                    backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
+                    if backup_channel == 'Last Backup: Unknown':
+                        SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
+                    if not SETTINGS.getSetting('Recover_Channels'):
+                        SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return True
-            PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"false")
+            PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"false")
             SETTINGS.setSetting('Backup_Channels'  ,'')
             SETTINGS.setSetting('Recover_Channels' ,'')
             return False
@@ -64,21 +64,22 @@ class Backup:
             
     def getChannels(self, file=CHANNELFLE_BACKUP):
         self.log('getChannels')
-        return self.channels._load(file).get('channels',[])
-
-
-    def backupChannels(self):
+        return Channels()._load(file).get('channels',[])
+        
+        
+    def backupChannels(self, file=CHANNELFLE_BACKUP):
         self.log('backupChannels')
         if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
-        elif FileAccess.exists(CHANNELFLE_BACKUP):
+        elif FileAccess.exists(file):
             if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
                 
         with busy_dialog():
-            if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_BACKUP):
-                PROPERTIES.setEXTProperty('plugin.video.pseudotv.live.has.Backup',"true")
-                SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
-                SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
+            if FileAccess.copy(CHANNELFLEPATH,file):
+                if file == CHANNELFLE_BACKUP: #main backup file, set meta.
+                    PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
+                    SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),datetime.datetime.now().strftime(BACKUP_TIME_FORMAT)))
+                    SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
         return self.hasBackup()
         
@@ -94,6 +95,8 @@ class Backup:
         
         
     def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
+        FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_RESTORE) #flex/temp backup existing channels prior to recover channels.
+        channels    = Channels()
         newChannels = self.getChannels()
         difference  = sorted(diffLSTDICT(self.getChannels(CHANNELFLE_DEFAULT),newChannels), key=lambda k: k['number'])
         self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
@@ -105,11 +108,12 @@ class Backup:
                 pCount = int(((idx + 1)*100)//len(difference))
                 if citem in newChannels: 
                     pDialog = DIALOG.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(32113),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
-                    self.channels.addChannel(citem)
+                    channels.addChannel(citem)
                 else: 
-                    self.channels.delChannel(citem)
+                    channels.delChannel(citem)
             Library().resetLibrary()
-            return self.channels.setChannels()
+            return channels.setChannels()
+        del channels
         return False
         
   

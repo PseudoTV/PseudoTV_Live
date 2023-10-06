@@ -21,7 +21,6 @@
 # -*- coding: utf-8 -*-
 from globals   import *
 from jsonrpc   import JSONRPC
-from rules     import RulesList
 from resources import Resources
 from threading import Timer, enumerate
 
@@ -42,7 +41,7 @@ class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.player     = kwargs.get('player')
-        self.runActions = RulesList().runActions
+        self.runActions = kwargs.get('runActions')
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
         
         
@@ -93,10 +92,10 @@ class MYPlayer(xbmc.Player):
 class Overlay():
     showingOverlay = False
     controlManager = dict()
-    runActions = RulesList().runActions
     
-    def __init__(self, player):
-        self.player = player
+    def __init__(self, player, runActions):
+        self.player     = player
+        self.runActions = runActions
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
@@ -258,7 +257,7 @@ class Overlay():
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
-                elif BUILTIN.getInfoBool('HasAddon(script.module.pil)','System'):
+                elif hasAddon('script.module.pil'):
                     jsonRPC   = JSONRPC()
                     resources = Resources(jsonRPC,jsonRPC.cache)
                     if resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
@@ -295,7 +294,7 @@ class Overlay():
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
             return showOnNext, intTime
 
-        if BUILTIN.getInfoBool('HasAddon(service.upnext)','System') and self.player.pvritem.get('isPlaylist',False):
+        if hasAddon('service.upnext') and self.player.pvritem.get('isPlaylist',False):
             self.updateUpNext(self.player.pvritem)
         else:
             try:

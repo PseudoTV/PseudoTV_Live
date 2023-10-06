@@ -30,26 +30,16 @@ def run(sysARG):
     mode    = (params.get("mode",'')                or 'guide')
     radio   = (params.get("radio",'')               or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
-
-    if DEBUG_ENABLED:
-        if BUILTIN.getInfoBool('HasAddon(%s)'%(PVR_CLIENT),'System'):
-            if not BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System'):
-                BUILTIN.executebuiltin('EnableAddon(%s)'%(PVR_CLIENT))
-                xbmc.sleep(2)
-                run(sys.argv)
-        else:
-            BUILTIN.executebuiltin('InstallAddon(%s)'%(PVR_CLIENT))
-            xbmc.sleep(2)
-            run(sys.argv)
-        
+    
     if mode == 'guide':
+        hasAddon(PVR_CLIENT,install=True,enable=True)
         BUILTIN.executebuiltin("Dialog.Close(all)") 
         BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(ADDON_NAME))
-        
     elif mode == 'settings': 
+        hasAddon(PVR_CLIENT,install=True,enable=True)
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
     elif mode == 'vod': 
-        timerit(Plugin(sysARG).playVOD)(.001,(name,id))
+        threadit(Plugin(sysARG).playVOD)(name,id)
     elif mode == 'play':
         if radio: threadit(Plugin(sysARG).playRadio)(name,id)
         else:     threadit(Plugin(sysARG).playChannel)(name,id,bool(SETTINGS.getSettingInt('Playback_Method')))

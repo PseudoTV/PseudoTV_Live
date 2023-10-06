@@ -278,7 +278,7 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 - "Mixed" Content ie. TV & Movie Smartplaylists are unsupported in Kodi and its given type was designed for "Music" media. PseudoTV Live can use the "Mixed" type to allow mixed content. Create a "Mixed" type smartplaylist and select the `path, playlist or virtual folder` you'd like to use.
 
     #### How-To Create Mixed Smartplaylist:
-    ![How-To Create Mixed Smartplaylist](https://i.imgur.com/28mlM1P.gif)
+    ![How-To Create Mixed Smartplaylist](https://i.imgur.com/MY7CO2p.mp4)
     
     1. Open Smartplaylist editor, Select "Mixed" Type. Enter playlist name and when prompted save the file.
 

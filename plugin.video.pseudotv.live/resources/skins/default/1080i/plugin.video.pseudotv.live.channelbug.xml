@@ -12,8 +12,9 @@
                 <width>auto</width>
                 <height>auto</height>
                 <colordiffuse>black</colordiffuse>
-                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <texture>colors/white.png</texture>
+                <visible>!Player.Playing</visible>
+                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
             </control>
             <control type="videowindow">
                 <width>auto</width>

@@ -126,11 +126,10 @@ def poolit(method):
 def threadit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
-        cpucount = Cores().CPUcount()
-        pool = Concurrent(roundupDIV(cpucount,2))
-        results = pool.executor(method, None, *args, **kwargs)
+        pool   = Concurrent(roundupDIV(Cores().CPUcount(),2))
+        result = pool.executor(method, None, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
-        return results
+        return result
     return wrapper
 
 def timerit(method):

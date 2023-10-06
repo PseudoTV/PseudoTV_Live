@@ -1,3 +1,9 @@
+v.0.4.4
+-Added "Network Folder" clients ability to edit Autotuned channels on server (W.I.P).
+-Moved "channels.json,library.json" files to "Centralized Folder" for network/client accessibility.
+-Improved overlay functions to reduce memory overhead.
+-Added "Show M3U/XMLTV" option to the utility Menu (Debugging tool).
+
 v.0.4.3
 -Added "Hack" method for automatically configuring IPTV-Simple (Manual configuration no longer necessary).
 -Improved Usability/Notifications

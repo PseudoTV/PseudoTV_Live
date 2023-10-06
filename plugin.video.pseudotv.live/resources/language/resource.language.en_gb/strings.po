@@ -294,11 +294,11 @@ msgid "Enable Nearest Holiday"
 msgstr ""
 
 msgctxt "#30069"
-msgid "Third-Party (Settings)"
+msgid "Third-Party"
 msgstr ""
 
 msgctxt "#30070"
-msgid "Automatically Apply Recommended Third-Party plugin settings?"
+msgid ""
 msgstr ""
 
 msgctxt "#30071"
@@ -310,11 +310,11 @@ msgid "Debugging"
 msgstr ""
 
 msgctxt "#30073"
-msgid "Open Settings [IPTV Manager]"
+msgid ""
 msgstr ""
 
 msgctxt "#30074"
-msgid "Manually Apply Recommended Third-Party plugin settings."
+msgid "Manually Apply Recommended PVR settings."
 msgstr ""
 
 msgctxt "#30075"
@@ -497,8 +497,9 @@ msgctxt "#30119"
 msgid "Watch Later"
 msgstr ""
 
-
-
+msgctxt "#30120"
+msgid "[COLOR=red][B]Warning!! [/B][/COLOR]%s\nAlready Exists, override it?."
+msgstr ""
 
 
 
@@ -1018,7 +1019,7 @@ msgid "Reloading..."
 msgstr ""
 
 msgctxt "#32126"
-msgid "Select Utility to perform"
+msgid "Utility Menu"
 msgstr ""
 
 msgctxt "#32127"
@@ -1117,9 +1118,29 @@ msgctxt "#32150"
 msgid "Run during playback"
 msgstr ""
 
+msgctxt "#32151"
+msgid "Creating Backup"
+msgstr ""
 
+msgctxt "#32152"
+msgid "Changes Applied!"
+msgstr ""
 
+msgctxt "#32153"
+msgid "[COLOR=red][B]File migration required!![/B][/COLOR]\n[B]Moving File:[/B] %s\n[B]From:[/B] %s\n[B]To:[/B] %s"
+msgstr ""
 
+msgctxt "#32154"
+msgid "Show M3U"
+msgstr ""
+
+msgctxt "#32155"
+msgid "Show XMLTV"
+msgstr ""
+
+msgctxt "#32156"
+msgid "Would you like to Install %s?"
+msgstr ""
 
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -1277,7 +1298,7 @@ msgid "Allow PseudoTV Live to configure Third-Party plugins (IPTV Simple/IPTV Ma
 msgstr ""
 
 msgctxt "#33074"
-msgid "Manually apply recommend settings to Third-Party plugins (IPTV Simple/IPTV Manager)"
+msgid "Applying will override select user settings."
 msgstr ""
 
 msgctxt "#33078"

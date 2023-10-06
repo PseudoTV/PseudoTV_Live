@@ -50,8 +50,10 @@ class Discovery:
         sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
         
         while not self.monitor.abortRequested():
-            if self.monitor.chkInterrupt(1) or not isClient():
-                self.log('_start, interrupted',xbmc.LOGINFO)
+            if not isClient():
+                self.log('_start, not client break')
+            elif self.monitor.chkInterrupt(1):
+                self.log('_start, interrupted')
                 break
             else:
                 try: 
@@ -122,8 +124,11 @@ class Announcement:
         self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
         
         while not self.monitor.abortRequested():
-            if self.monitor.chkInterrupt(15) or isClient():
-                self.log('_start, interrupted',xbmc.LOGINFO)
+            if isClient(): 
+                self.log('_start, client break')
+                break
+            elif self.monitor.chkInterrupt(5):
+                self.log('_start, interrupted')
                 break
             else:
                 try:   sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
@@ -181,7 +186,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 class HTTP:
     isRunning = False
 
-
     def __init__(self, monitor=None):
         self.monitor = monitor
         
@@ -216,8 +220,11 @@ class HTTP:
 
     def _start(self):
         while not self.monitor.abortRequested():
-            if self.monitor.chkInterrupt(15) or isClient():
-                self.log('_start, interrupted',xbmc.LOGINFO)
+            if isClient(): 
+                self.log('_start, isClient break')
+                break
+            elif self.monitor.chkInterrupt(5):
+                self.log('_start, interrupted')
                 break
             else:
                 if not self.isRunning:
@@ -254,8 +261,10 @@ class HTTP:
                 self._server.shutdown()
                 self._server.server_close()
                 self._server.socket.close()
-                self._httpd_thread.join()
-                self.startThread.join()
+                if self._httpd_thread.is_alive():
+                    self._httpd_thread.join(5.5)
+                if self.startThread.is_alive():
+                    self.startThread.join(5.5)
         except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
 

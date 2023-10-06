@@ -27,6 +27,7 @@ class Channels:
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = self.channelDATA.get('channels',[]).pop(0)
         self.channelDATA.update(self._load())
+        self.setChannels()
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

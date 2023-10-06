@@ -81,16 +81,18 @@ def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
             return json.dumps(item, indent=idnt, sort_keys=sortkey, separators=separators)
         elif isinstance(item,str):
             return item
-    except Exception as e: log("globals: dumpJSON, failed! %s"%(e), xbmc.LOGERROR)
+    except Exception as e: log("dumpJSON, failed! %s"%(e), xbmc.LOGERROR)
     return ''
     
 def loadJSON(item):
     try:
-        if isinstance(item,str):
+        if hasattr(item, 'read'):
+            return json.load(item)
+        elif item and isinstance(item,str):
             return json.loads(item)
-        elif isinstance(item,dict):
+        elif item and isinstance(item,dict):
             return item
-    except Exception as e: log("globals: loadJSON, failed! %s"%(e), xbmc.LOGERROR)
+    except Exception as e: log("loadJSON, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return {}
   
 def getMD5(text,hash=0,hexit=True):
@@ -252,47 +254,66 @@ class Settings:
             
     def setPropertySetting(self, key, value):
         return self.property.setProperty(key, value)
+
+
+    def setPVRPath(self, userFolder):
+        self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
+        self.setSetting('Network_Folder',userFolder)
         
-
-    def chkDiscovery(self, servers, forced=False):
-        current_server = self.getSetting('Remote_URL')
-        if (not current_server or forced) and len(list(servers.keys())) == 1:
-            #If one server found autoselect, set server host paths.
-            self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
-            self.setSetting('Remote_URL'  ,'http://%s'%(list(servers.keys())[0]))
-            self.setSetting('Remote_M3U'  ,'http://%s/%s'%(list(servers.keys())[0],M3UFLE))
-            self.setSetting('Remote_XMLTV','http://%s/%s'%(list(servers.keys())[0],XMLTVFLE))
-            self.setSetting('Remote_GENRE','http://%s/%s'%(list(servers.keys())[0],GENREFLE))
-            self.setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=True)
-            #sync client resources with server.
-            for key, value in list((servers[list(servers.keys())[0]].get('settings',{})).items()):
-                try:    self.setSetting(key, value)
-                except: pass
-
-            
-    def chkPluginSettings(self, id, values):
+        clientMode  = self.getSettingInt('Client_Mode') 
+        newSettings = {'m3uPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'm3uPath'       :os.path.join(userFolder,M3UFLE),
+                       'epgPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'epgPath'       :os.path.join(userFolder,XMLTVFLE),
+                       'genresPathType':'%s'%('1' if clientMode == 1 else '0'),
+                       'genresPath'    :os.path.join(userFolder,GENREFLE)}
+        self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+        
+        
+    def setPVRRemote(self, userURL):
+        self.log('setPVRRemote, userURL = %s'%(userURL)) #set remote pvr url
+        self.setSetting('Remote_URL'  ,userURL)
+        self.setSetting('Remote_M3U'  ,'%s/%s'%(userURL,M3UFLE))
+        self.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
+        self.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
+        
+        clientMode  = self.getSettingInt('Client_Mode') 
+        newSettings = {'m3uPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
+                       'epgPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
+                       'genresPathType':'%s'%('1' if clientMode == 1 else '0'),
+                       'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
+        self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+    
+    
+    def chkPluginSettings(self, id, values, override=False, prompt=True):
         self.log('chkPluginSettings, id = %s'%(id))
         try: 
-            changes = {}
-            addon   = xbmcaddon.Addon(id)
-            if addon is None: raise Exception()
-            for s, v in list(values.items()):
-                if MONITOR.waitForAbort(1): return False
-                value = addon.getSetting(s)
-                if str(value).lower() != str(v).lower(): changes[s] = (value, v)
-            if changes and v: self.setPluginSettings(id,changes)
+            if override:
+                changes = dict([(s, (v,v)) for s, v in list(values.items())])
+            else:
+                changes = {}
+                addon   = xbmcaddon.Addon(id)
+                if addon is None: raise Exception('%s Not Found'%id)
+                
+                for s, v in list(values.items()):
+                    if MONITOR.waitForAbort(1): return False
+                    value = addon.getSetting(s)
+                    if str(value).lower() != str(v).lower(): changes[s] = (value, v)
+            if changes: return self.setPluginSettings(id,changes,prompt)
         except: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
-        
+        return False
             
-    def setPluginSettings(self, id, values, override=None):
-        if override is None: override = self.getSettingBool('Override_User')
-        self.log('setPluginSettings, id = %s, override = %s'%(id,override))
+            
+    def setPluginSettings(self, id, values, prompt=True):
+        self.log('setPluginSettings, id = %s, prompt = %s'%(id,prompt))
         try:
             addon = xbmcaddon.Addon(id)
             addon_name = addon.getAddonInfo('name')
-            if addon is None: raise Exception()
+            if addon is None: raise Exception('%s Not Found'%id)
             
-            if not override:
+            if prompt:
                 self.dialog.textviewer('%s\n\n%s'%((LANGUAGE(32035)%(addon_name)),('\n'.join(['Modifying %s: [COLOR=dimgray][B]%s[/B][/COLOR] => [COLOR=green][B]%s[/B][/COLOR]'%(s,v[0],v[1]) for s,v in list(values.items())]))))
                 if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon_name)): return False
                 
@@ -575,7 +596,7 @@ class ListItems:
         uniqueid   = (info.pop('uniqueid'         ,{}) or {})
         streamInfo = (info.pop('streamdetails'    ,{}) or {})
         properties = (info.pop('customproperties' ,{}) or {})
-        properties.update(info.get('citem'        ,{}))# write individual props for keys 
+        properties.update(info.get('citem'        ,{}))# write individual props for keys / needed? legacy!
         properties['citem']   = info.pop('citem'  ,{}) # write dump to single key
         properties['pvritem'] = info.pop('pvritem',{}) # write dump to single key
         
@@ -630,10 +651,9 @@ class ListItems:
         for vinfo in streamInfo.get('video',[]):    infoTag.add_stream_info('video'   , vinfo)
         for sinfo in streamInfo.get('subtitle',[]): infoTag.add_stream_info('subtitle', sinfo)
         
-        # listitem.setProperties({})
-        # listitem.setIsFolder(True)
         for key, pvalue in list(properties.items()): listitem.setProperty(key, cleanProp(pvalue))
         if playable: listitem.setProperty("IsPlayable","true")
+        else:        listitem.setIsFolder(True)
         return listitem
              
                      
@@ -662,7 +682,7 @@ class ListItems:
         return listitem
         
         
-class Builtin: #todo move all infolabels, infobools, executers, etc here.
+class Builtin:
     def __init__(self):
         ...
 
@@ -671,16 +691,21 @@ class Builtin: #todo move all infolabels, infobools, executers, etc here.
     
     
     def getInfoLabel(self, key, param='ListItem', default=''):
-        return (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
+        value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
+        self.log('getInfoLabel, key = %s, param = %s, value = %s'%(key,param,value))
+        return value
         
         
     def getInfoBool(self, key, param='Library', default=False):
-        return (xbmc.getCondVisibility('%s.%s'%(param,key)) or default)
+        value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or default)
+        self.log('getInfoBool, key = %s, param = %s, value = %s'%(key,param,value))
+        return value
         
     
-    def executebuiltin(self, key):
-        self.log('executebuiltin, key=%s'%(key))
-        return xbmc.executebuiltin('%s'%(key))
+    def executebuiltin(self, key, wait=False):
+        self.log('executebuiltin, key = %s, wait = %s'%(key,wait))
+        xbmc.executebuiltin('%s'%(key),wait)
+        return True
         
         
 class Dialog:
@@ -758,7 +783,7 @@ class Dialog:
         else:
             if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
             # todo add qr code support
-            # if not url is None and BUILTIN.getInfoBool('HasAddon(script.module.pyqrcode)','System'):
+            # if not url is None and hasAddon('script.module.pyqrcode'):
                 # import pyqrcode
                 # imagefile = os.path.join(xbmcvfs.translatePath(PROFILE),'%s.png' % str(url.split('/')[-1]))
                 # qrIMG = pyqrcode.create(url)
@@ -892,6 +917,7 @@ class Dialog:
         for idx in range(int(wait)):
             pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
             if pDialog is None or MONITOR.waitForAbort(1): break
+        if hasattr(pDialog, 'close'): pDialog.close()
         return True
 
 

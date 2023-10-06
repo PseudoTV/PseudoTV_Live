@@ -27,11 +27,10 @@ from threading  import enumerate as thread_enumerate
 class Player(xbmc.Player):
     pvritem      = {}
     background   = None
-    showingBackground = False
     myService    = False
     pendingPlay  = False
     isPseudoTV   = False
-    lastSubState = isSubtitle()
+    lastSubState = False
     rules        = RulesList()
     runActions   = rules.runActions
     
@@ -74,7 +73,7 @@ class Player(xbmc.Player):
         
         
     def onPlayBackSeek(self, seek_time=None, seek_offset=None): #Kodi bug? `OnPlayBackSeek` no longer called by player during seek, issue limited to pvr?
-        if self.isPseudoTV: self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
+        self.log('onPlayBackSeek, seek_time = %s, seek_offset = %s'%(seek_time,seek_offset))
     
     
     def onPlayBackError(self):
@@ -96,8 +95,7 @@ class Player(xbmc.Player):
         
         
     def getPlayerPVRitem(self):
-        try:    pvritem = loadJSON(self.getPlayingItem().getProperty('pvritem')) #Kodi v20.
-        except: pvritem = {'citem':{}}
+        pvritem = loadJSON((self.getPlayingItem().getProperty('pvritem') or '{"citem":{}}')) #Kodi v20.
         pvritem.update({'citem':self.getPlayerCitem()})
         self.log('getPlayerPVRitem, pvritem = %s'%(pvritem))
         return pvritem
@@ -130,16 +128,11 @@ class Player(xbmc.Player):
         except: return 0
 
 
-    def getTimeRemaining(self):
-        try:    return int(sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('TimeRemaining(hh:mm:ss)','Player').split(':')[::-1])), (1, 60, 3600, 86400))))
+    def getTimeRemaining(self, prop='TimeRemaining'): #prop='EpgEventElapsedTime'
+        try:    return int(sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player').split(':')[::-1])), (1, 60, 3600, 86400))))
         except: return 0
-   
-   
-    def getPVRTime(self):
-        try:    return (sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('EpgEventElapsedTime(hh:mm:ss)','PVR').split(':')[::-1])), (1, 60, 3600, 86400))))
-        except: return 0
-        
-        
+
+
     def setSubtitles(self, state):
         self.log('setSubtitles, state = %s'%(state))
         if state and (hasSubtitle() and self.isPseudoTV):
@@ -191,19 +184,19 @@ class Player(xbmc.Player):
         
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state and not self.showingBackground:
-            self.showingBackground = True
-            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self)
+        if state and self.background is None:
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, runActions=self.runActions)
             self.background.show()
-        elif not state and self.showingBackground:
-            if hasattr(self.background, 'close'): self.background.close()
+        elif not state and hasattr(self.background, 'close'):
+            self.background.close()
             self.background = None
-            self.showingBackground = False
             if self.isPlaying():
                 BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):
+    overlay = None
+    
     def __init__(self):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
@@ -222,7 +215,8 @@ class Monitor(xbmc.Monitor):
         dia     = None
         elapsed = 0
         while not self.abortRequested():
-            if   self.chkSuspend(wait) or not isBusy(): break
+            if not isBusy(): break
+            elif self.chkSuspend(wait): break
             elif elapsed >= timeout*1000: #secs-to-msecs
                 self.pendingChange = True #set pendingChange to rerun idled builder.
                 break
@@ -247,7 +241,7 @@ class Monitor(xbmc.Monitor):
         return self.pendingInterrupt
         
         
-    def chkRestart(self):
+    def chkRestart(self): #pending restart/shutdown
         self.pendingRestart = (self.pendingRestart | isPendingRestart())
         self.log('chkRestart, pendingRestart = %s'%(self.pendingRestart))
         setPendingRestart(False)
@@ -257,21 +251,23 @@ class Monitor(xbmc.Monitor):
     def getIdle(self):
         try: idleTime = (int(xbmc.getGlobalIdleTime()) or 0)
         except: #Kodi raises error after sleep.
-            log('globals: getIdleTime, Kodi waking up from sleep...')
+            self.log('getIdleTime, Kodi waking up from sleep...')
             idleTime = 0
         idleState = (idleTime > OVERLAY_DELAY)
-        if (idleTime == 0 or idleTime <= 5): log("globals: getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
+        if (idleTime == 0 or idleTime <= 5): self.log("getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
         return idleState,idleTime
 
         
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
-        if state and not self.myService.overlay.showingOverlay:
+        if state and self.overlay is None:
             conditions = SETTINGS.getSettingBool('Enable_Overlay') & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not conditions: return
-            self.myService.overlay.open()
-        elif not state and self.myService.overlay.showingOverlay:
-            self.myService.overlay.close()
+            self.overlay = Overlay(player=self.myService.player, runActions=self.myService.player.runActions)
+            self.overlay.open()
+        elif not state and hasattr(self.overlay, 'close'):
+            self.overlay.close()
+            self.overlay = None
 
 
     def chkIdle(self):
@@ -342,11 +338,10 @@ class Service():
     producer = None
     player   = Player()
     monitor  = Monitor()
-    overlay  = Overlay(player)
-    
     
     def __init__(self):
         self.log('__init__')
+        self._migrate() #temp func to move to new file location.
         DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
@@ -354,16 +349,26 @@ class Service():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
+    def _migrate(self):
+        if isClient(): return
+        files = [CHANNELFLE,LIBRARYFLE]
+        for file in files:
+            if not FileAccess.exists(os.path.join(SETTINGS_LOC,file)): continue
+            DIALOG.okDialog(LANGUAGE(32153)%(file,SETTINGS_LOC,USER_LOC))
+            if FileAccess.exists(os.path.join(SETTINGS_LOC,file)):
+                self.log('_migrate, moving %s'%(file))
+                FileAccess.move(os.path.join(SETTINGS_LOC,file),os.path.join(USER_LOC,file))
+        
+        
     def _start(self):
         self.log('_start')
         if self.player.isPlaying():
             self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
         self.currentSettings = dict(SETTINGS.getCurrentSettings()) #startup settings
         
-        if not isClient():
-            self.producer = Producer(service=self)
-            self.currentChannels = self.producer.getChannels() #startup channels
-            self.producer._startProcess()
+        self.producer = Producer(service=self)
+        self.currentChannels = self.producer.getChannels() #startup channels
+        self.producer._startProcess()
             
         self.player.myService  = self
         self.monitor.myService = self
@@ -371,12 +376,12 @@ class Service():
         while not self.monitor.abortRequested():
             if self.monitor.waitForAbort(2): 
                 self.log('_start, pending stop')
-                if DIALOG.notificationWait(LANGUAGE(32141), wait=15):
+                with sudo_dialog(LANGUAGE(32141)):
                     return self._stop()
                 
             elif self.monitor.chkRestart():
                 self.log('_start, pending restart')
-                if DIALOG.notificationWait(LANGUAGE(32049), wait=15):
+                with sudo_dialog(LANGUAGE(32049)):
                     return self._restart()
                 
             elif self.monitor.isSettingsOpened():
@@ -396,10 +401,10 @@ class Service():
                 
     def _tasks(self):
         self._busy(self.monitor.chkIdle())
-        if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Run_While_Playing'):
-            return
-        elif not isClient() and self.producer:
-            self.producer._taskManager() #chk/run scheduled tasks.
+        if not isClient() and self.producer:
+            if hasFirstrun() and self.player.isPlaying() and not SETTINGS.getSettingBool('Run_While_Playing'):
+                self.log('_tasks, waiting for playback to stop...')
+            else: self.producer._taskManager() #chk/run scheduled tasks.
                     
         
     def _restart(self):
@@ -412,12 +417,12 @@ class Service():
         self.log('_stop')
         for thread in thread_enumerate():
             try: 
-                if thread.name == "MainThread": continue
-                self.log("_stop, joining thread %s"%(thread.name))
-                try: 
-                    thread.cancel()
-                    thread.join(1.0)
-                except: pass
+                if thread.name != "MainThread":
+                    try: 
+                        thread.cancel()
+                        thread.join(1.0)
+                        self.log("_stop, joining thread %s"%(thread.name))
+                    except: pass
             except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
         return True

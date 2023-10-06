@@ -45,7 +45,7 @@ class Fillers:
    
     def buildResource(self, type, path):
         cacheName = 'buildResource.%s'%(getMD5(path))
-        # if not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'): continue
+        # if not hasAddon(id): continue
         # addonMeta = self.jsonRPC.getAddonDetails(addonid)
         # self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
         # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))), json_data=True)

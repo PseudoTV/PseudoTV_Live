@@ -88,7 +88,7 @@ class Resources:
                 if MONITOR.waitForAbort(0.001): 
                     self.log('getLogoResources, waitForAbort')
                     break
-                elif not BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
+                elif not hasAddon(id):
                     self.log('getLogoResources, missing %s'%(id))
                     continue
                 else:
@@ -169,7 +169,7 @@ class Resources:
     def isMono(self, file):
         if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True
-        elif BUILTIN.getInfoBool('HasAddon(script.module.pil)','System'):
+        elif hasAddon('script.module.pil'):
             try:
                 from PIL import Image, ImageStat
                 file = unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/')

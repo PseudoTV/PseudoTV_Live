@@ -14,11 +14,10 @@
                     <description>Hide Background</description>
                     <width>auto</width>
                     <height>auto</height>
-                    <aspectratio>scale</aspectratio>
-                    <align>center</align>
-                    <aligny>center</aligny>
                     <colordiffuse>black</colordiffuse>
                     <texture>colors/white.png</texture>
+                    <visible>!Player.Playing</visible>
+                    <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 </control>
                 <control type="image"> 
                     <width>auto</width>
@@ -80,6 +79,7 @@
                 <height>auto</height>
                 <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
                 <texture>backgrounds/static.gif</texture>
+                <visible>!Player.Playing</visible>
             </control>
             <control type="image">
                 <centertop>50%</centertop>

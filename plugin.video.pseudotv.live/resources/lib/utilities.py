@@ -17,9 +17,10 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals     import *
-from manager     import Manager
-from channelbug  import ChannelBug
+from globals          import *
+from manager          import Manager
+from channelbug       import ChannelBug
+from xml.dom.minidom  import parse, parseString
 
 class Utilities:
     def __init__(self, sysARG=sys.argv):
@@ -36,36 +37,56 @@ class Utilities:
         retval = DIALOG.inputDialog(LANGUAGE(32044), default=SETTINGS.getSetting('User_Groups'))
         if retval: SETTINGS.setSetting('User_Groups',retval)
                 
+                
+    def showFile(self, file):
+        with busy_dialog():
+            def openFile(fle):
+                if fle.lower().endswith('xml'):
+                    dom = parse(FileAccess.open(fle, "r")) # or xml.dom.minidom.parseString(xml_string)
+                    return dom.toprettyxml()
+                else:
+                    ppstring = FileAccess.open(fle, "r").read()
+                    return ppstring.replace('#EXTINF:','\n[COLOR=cyan][B]#EXTINF:[/B][/COLOR]')
+        openAddonSettings((7,1))
+        #todo generate qrcode to server file location.
+        #todo change xmltv to display statistics not raw file.
+        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True,usethread=True)
+        except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
+                
                  
     def showReadme(self):
-        def convertMD2TXT(md):
-            markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
-            markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-            markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
-            markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
-            markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
-            markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
-            return markdown
-        try: DIALOG.textviewer(convertMD2TXT(xbmcvfs.File(README_FLE).read()), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+        with busy_dialog():
+            def convertMD2TXT(md):
+                markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
+                markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
+                markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
+                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
+                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
+                markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
+                return markdown
+        openAddonSettings((7,1))
+        try: DIALOG.textviewer(convertMD2TXT(FileAccess.open(README_FLE, "r").read()), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    
     def showChangelog(self):
-        def addColor(text):
-            text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
-            text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
-            text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
-            text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
-            text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
-            text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
-            text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
-            text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
-            text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
-            text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
-            text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
-            text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-            return text        
-        try: DIALOG.textviewer(addColor(xbmcvfs.File(CHANGELOG_FLE).read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
+        with busy_dialog():
+            def addColor(text):
+                text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
+                text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
+                text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
+                text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
+                text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
+                text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
+                text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
+                text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
+                text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
+                text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
+                text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
+                text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
+                return text  
+        openAddonSettings((7,1))      
+        try: DIALOG.textviewer(addColor(FileAccess.open(CHANGELOG_FLE, "r").read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -86,10 +107,12 @@ class Utilities:
 
     def buildMenu(self, select=None):
         with busy_dialog():
-            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)}, #"Rebuild M3U/XMLTV"
-                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},  #"Clean Start"
-                        {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122),'icon':COLOR_LOGO,'func':brutePVR},                                                  #"Force PVR reload"
-                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart}] #"Force PTVL reload"
+            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},   #"Rebuild M3U/XMLTV"
+                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},    #"Clean Start"
+                        {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR}, #"Force PVR reload"
+                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                           #"Force PTVL reload"
+                        {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)},              #"Show M3U"
+                        {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)}]            #"Show M3U"
 
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
             if select is None: 
@@ -137,39 +160,18 @@ class Utilities:
             # SETTINGS.setSetting('User_Import','false')
             # DIALOG.notificationDialog('%s %s'%(LANGUAGE(30037),LANGUAGE(30053)))
 
-    
-    def selectServer(self):
-        self.log('selectServer')
-        labels  = []
-        servers = getDiscovery()
-        epoch   = time.time()
-        current = SETTINGS.getSetting('Remote_URL').strip('http://')
-        
-        try:    idx = list(servers.keys()).index(current)
-        except: idx = 0
-            
-        for server in servers:
-            offline = '(Offline)' if epoch >= (servers[server].get('received',epoch) + UPDATE_WAIT) else ''
-            color   = 'dimgray' if offline else 'white'
-            labels.append('[COLOR=%s]%s %s[/COLOR]'%(color,servers[server].get('name'),offline))
-            
-        select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, autoclose=90, multi=False)
-        if select is not None:
-            server = list(servers.keys())[select]
-            SETTINGS.chkDiscovery({server:servers[server]}, forced=True)
-
-
     def run(self):  
         ctl = (7,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
         self.log('run, param = %s'%(param))
         
-        if param == 'Apply_Settings':
+        if param == 'Apply_PVR_Settings':
             ctl = (7,9)
             with busy_dialog():
-                if not SETTINGS.setPluginSettings(PVR_CLIENT,dict([(s, (v,v)) for s, v in list(IPTV_SIMPLE_SETTINGS().items())]),override=False):
-                    DIALOG.notificationDialog(LANGUAGE(32046))
+                if SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS(),override=True):
+                    DIALOG.notificationDialog(LANGUAGE(32152))
+                else: DIALOG.notificationDialog(LANGUAGE(32046))
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()
@@ -188,9 +190,6 @@ class Utilities:
         # elif param == 'Clear_Import':
             # ctl = (2,7)
             # self.clearImport()
-        elif param == 'Select_Server': 
-            ctl = (6,7)
-            self.selectServer()
         # elif param == 'Install_Resources': chkResources()
         # else: 
             # with busy_dialog():

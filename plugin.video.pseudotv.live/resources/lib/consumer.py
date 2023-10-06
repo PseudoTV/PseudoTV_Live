@@ -39,7 +39,10 @@ class Consumer():
     def _run(self):
         self.log('_run, starting...')
         while not self.service.monitor.abortRequested():
-            if self.service.monitor.chkInterrupt(1) or isClient():
+            if isClient(): 
+                self.log('_run, client break')
+                break
+            elif self.service.monitor.chkInterrupt(1):
                 self.log('_run, interrupted')
                 break
             else:

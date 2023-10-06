@@ -114,7 +114,7 @@ IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
-CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
+CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache') #default User_Folder path
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -125,6 +125,8 @@ GENREFLE            = 'genres.xml'
 TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'
+CHANNELBACKUPFLE    = 'channels.backup'
+CHANNELRESTOREFLE   = 'channels.restore'
 
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
@@ -132,10 +134,8 @@ IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
 
 #file paths
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')
-CHANNELFLE_BACKUP   = os.path.join(SETTINGS_LOC,'channels.backup')
-CHANNELFLE_RESTORE  = os.path.join(SETTINGS_LOC,'channels.restore')
-CHANNELFLEPATH      = os.path.join(SETTINGS_LOC,CHANNELFLE)
-LIBRARYFLEPATH      = os.path.join(SETTINGS_LOC,LIBRARYFLE)
+CHANNELFLE_BACKUP   = os.path.join(BACKUP_LOC,CHANNELBACKUPFLE)
+CHANNELFLE_RESTORE  = os.path.join(BACKUP_LOC,CHANNELRESTOREFLE)
 
 #sfx
 BING_WAV            = os.path.join(SFX_LOC,'bing.wav')

@@ -36,7 +36,7 @@ def preparingPlayback():
 
 class Plugin:
     def __init__(self, sysARG=sys.argv):
-        self.cache   = Cache(mem_cache=True)
+        self.cache      = Cache(mem_cache=True)
         self.jsonRPC    = JSONRPC()
         self.rules      = RulesList()
         self.runActions = self.rules.runActions
@@ -56,6 +56,15 @@ class Plugin:
                 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+        
+        
+    def _checkLastPlayed(self, nowitem):
+        diff  = False
+        nowID = nowitem.get('broadcastid',random.random())
+        oldID = loadJSON(PROPERTIES.getEXTProperty('%s.lastNOWITEM'%(ADDON_ID))).get('broadcastid',random.random())
+        if nowID != oldID: diff = True
+        self.log('_checkLastPlayed, nowID = %s, oldID = %s, diff = %s'%(nowID,oldID,diff))
+        return diff
         
 
     def buildWriterItem(self, item={}, media='video'):
@@ -129,7 +138,7 @@ class Plugin:
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = self.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
-            pvritem['playcount']  = loadJSON(PROPERTIES.getEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))).get('playcount',0) + 1
+            pvritem['playcount']  = loadJSON((PROPERTIES.getEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1'))) or pvritem)).get('playcount',0) + 1
           
             if pvritem['playcount'] > 3:
                 return self.playError(pvritem)
@@ -137,7 +146,7 @@ class Plugin:
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
             except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
-            PROPERTIES.setEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),dumpJSON(pvritem))
+            PROPERTIES.setEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')),dumpJSON(pvritem))
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
@@ -177,7 +186,7 @@ class Plugin:
                 nowitem   = pvritem.get('broadcastnow',{})  # current item
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                 
-                if nowitem.get('broadcastid',random.random()):# != SETTINGS.getCacheSetting('PLAYCHANNEL_LAST_BROADCAST_ID',checksum=id):# and not nowitem.get('isStack',False): #new item to play
+                if self._checkLastPlayed(nowitem):# and not nowitem.get('isStack',False): #new item to play
                     nowitem = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                     timeremaining = ((nowitem['runtime'] * 60) - nowitem['progress'])
                     self.log('playChannel, runtime = %s, timeremaining = %s'%(nowitem['progress'],timeremaining))
@@ -214,7 +223,8 @@ class Plugin:
                 liz.setProperty('pvritem',dumpJSON(pvritem))
                 listitems = [liz]
                 listitems.extend(poolit(self.buildWriterItem)(nextitems))
-                PROPERTIES.clearEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
+                PROPERTIES.setEXTProperty('%s.lastNOWITEM'%(ADDON_ID),dumpJSON(nowitem))
+                PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                 
                 if isPlaylist:
                     for idx,lz in enumerate(listitems):
@@ -245,6 +255,8 @@ class Plugin:
                         for idx,lz in enumerate(listitems):
                             self.channelPlaylist.add(lz.getPath(),lz,idx)
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
+                        PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
+                        PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                         if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                         if PLAYER.isPlayingVideo(): PLAYER.stop()
                         PLAYER.play(self.channelPlaylist,windowed=True)
@@ -299,8 +311,9 @@ class Plugin:
                     
                 for idx,lz in enumerate(listitems):
                     path = lz.getPath()
-                    self.channelPlaylist.add(lz.getPath(),lz,idx)                
-                PROPERTIES.clearEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))
+                    self.channelPlaylist.add(lz.getPath(),lz,idx)
+                PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
+                PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                 self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
                 if isPlaylistRandom(): self.channelPlaylist.unshuffle()
                 PLAYER.play(self.channelPlaylist,windowed=True)
@@ -311,8 +324,8 @@ class Plugin:
         #todo verify xmltv file has programmes, if not force rebuild.
         if not pvritem:
             pvritem = {'channelid':'-1'}
-            pvritem['playcount'] = loadJSON(PROPERTIES.getEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')))).get('playcount',0) + 1
-        PROPERTIES.setEXTProperty('pendingPVRITEM.%s'%(pvritem.get('channelid','-1')),dumpJSON(pvritem))
+            pvritem['playcount'] = loadJSON((PROPERTIES.getEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1'))) or pvritem)).get('playcount',0) + 1
+        PROPERTIES.setEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')),dumpJSON(pvritem))
         self.log('playError, id = %s, attempt = %s\n%s'%(pvritem.get('channelid','-1'),pvritem['playcount'],pvritem))
         if   pvritem['playcount'] == 1 and not PLAYER.isPlaying(): setInstanceID() #reset instance and force cache flush.
         elif pvritem['playcount'] == 2:
