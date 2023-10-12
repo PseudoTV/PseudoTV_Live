@@ -74,6 +74,7 @@ class Channels:
 
     def setChannels(self, channels=None):
         if channels is None: channels = self.channelDATA['channels']
+        else: self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
         return self._save()
 
@@ -124,16 +125,16 @@ class Channels:
         return True
         
         
-    def findChannel(self, citem, channels=[]):
-        if len(channels) == 0: channels = self.getChannels()
+    def findChannel(self, citem, channels=None):
+        if channels is None: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
             if citem.get('id') == eitem.get('id',str(random.random())):
                 return idx, eitem
         return None, {}
             
             
-    def findAutotuned(self, citem, channels=[]):
-        if len(channels) == 0: channels = self.getAutotuned()
+    def findAutotuned(self, citem, channels=None):
+        if channels is None: channels = self.getAutotuned()
         for idx, eitem in enumerate(channels):
             if (citem.get('id') == eitem.get('id',str(random.random()))) or (citem.get('type') == eitem.get('type',str(random.random())) and citem.get('name').lower() == eitem.get('name',str(random.random())).lower()):
                 return idx, eitem

@@ -1,3 +1,8 @@
 *.db
 *.pyc
 plugin.video.pseudotv.live/remotes/genres.json
+plugin.video.pseudotv.live/.idea/vcs.xml
+plugin.video.pseudotv.live/.idea/inspectionProfiles/profiles_settings.xml
+plugin.video.pseudotv.live/.idea/misc.xml
+plugin.video.pseudotv.live/.idea/modules.xml
+plugin.video.pseudotv.live/.idea/plugin.video.pseudotv.live.iml

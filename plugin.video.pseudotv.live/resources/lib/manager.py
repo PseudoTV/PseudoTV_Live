@@ -93,40 +93,39 @@ class Manager(xbmcgui.WindowXMLDialog):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
         if isClient():
             DIALOG.notificationDialog(LANGUAGE(32058))
-            return openAddonSettings(0,1)
+            return openAddonSettings((0,1))
         elif isManagerRunning():
             DIALOG.notificationDialog(LANGUAGE(32057)%(LANGUAGE(30107)))
-            return openAddonSettings(0,1)
-        
-        with busy_dialog():
-            setManagerRunning(True)
-            self.cntrlStates  = {}
-            self.showingList  = True
-            self.startChannel = kwargs.get('channel',-1)
-            self.log('Manager, startChannel = %s'%(self.startChannel))
-            
-            self.cache        = Cache(mem_cache=True)
-            self.channels     = Channels()
-            self.jsonRPC      = JSONRPC()
-            self.rules        = RulesList()
-            self.xsp          = XSP()
-            self.m3u          = M3U()
-            self.resources    = Resources(self.jsonRPC, self.cache)
-            
-            self.newChannel   = self.channels.getTemplate()
-            self.channelList  = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
-            self.channelList.extend(self.channels.getPredefinedChannels())
-            self.newChannels  = self.channelList.copy()
-            
-            if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
-            self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
-           
-        try:
-            if not kwargs.get('start',True): raise Exception('Bypassed doModal')
-            self.doModal()
-        except Exception as e: 
-            self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
-            self.closeManager()
+            return openAddonSettings((0,1))
+        else:
+            with busy_dialog():
+                self.cntrlStates  = {}
+                self.showingList  = True
+                self.startChannel = kwargs.get('channel',-1)
+                self.log('Manager, startChannel = %s'%(self.startChannel))
+                
+                self.cache        = Cache(mem_cache=True)
+                self.channels     = Channels()
+                self.jsonRPC      = JSONRPC()
+                self.rules        = RulesList()
+                self.xsp          = XSP()
+                self.m3u          = M3U()
+                self.resources    = Resources(self.jsonRPC, self.cache)
+                
+                self.newChannel   = self.channels.getTemplate()
+                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+                self.channelList.extend(self.channels.getPredefinedChannels())
+                self.newChannels  = self.channelList.copy()
+                
+                if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
+                self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+               
+            try:
+                if kwargs.get('start',True):
+                    self.doModal()
+            except Exception as e: 
+                self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
+                self.closeManager()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -135,6 +134,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
+            setManagerRunning(True)
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
             self.itemList      = self.getControl(6)
@@ -628,18 +628,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
         self.log('saveChannels, difference = %s\n%s'%(len(difference),difference))
         
-        pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
-        for idx, citem in enumerate(difference):
-            print(idx,citem,citem in self.channelList,citem in self.newChannels)
-            pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
-            #remove abandoned or stale settings.
-            if citem in self.channelList:
-                self.channels.delChannel(citem)
-            #add new or updated settings
-            elif citem in self.newChannels:
-                self.channels.addChannel(citem)
+        # pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
+        # for idx, citem in enumerate(difference):
+            # print(idx,citem,citem in self.channelList,citem in self.newChannels)
+            # pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
+            # #remove abandoned or stale settings.
+            # if citem in self.channelList:
+                # self.channels.delChannel(citem)
+            # #add new or updated settings
+            # elif citem in self.newChannels:
+                # self.channels.addChannel(citem)
                 
-        self.channels.setChannels()
+        self.channels.setChannels(self.newChannels)
         self.toggleSpinner(self.chanList,False)
         self.closeManager()
             

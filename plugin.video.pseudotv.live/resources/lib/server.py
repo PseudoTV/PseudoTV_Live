@@ -263,8 +263,6 @@ class HTTP:
                 self._server.socket.close()
                 if self._httpd_thread.is_alive():
                     self._httpd_thread.join(5.5)
-                if self.startThread.is_alive():
-                    self.startThread.join(5.5)
         except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
 
