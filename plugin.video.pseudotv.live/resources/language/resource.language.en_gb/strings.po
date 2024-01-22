@@ -975,7 +975,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#32115"
-msgid "Running in client mode..."
+msgid "Running in client mode!"
 msgstr ""
 
 msgctxt "#32116"
@@ -1140,6 +1140,14 @@ msgstr ""
 
 msgctxt "#32156"
 msgid "Would you like to Install %s?"
+msgstr ""
+
+msgctxt "#32157"
+msgid "Pending Changes, Stand-by..."
+msgstr ""
+
+msgctxt "#32158"
+msgid "Syncing"
 msgstr ""
 
 

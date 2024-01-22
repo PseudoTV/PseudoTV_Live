@@ -69,11 +69,17 @@ def busy_dialog():
     try: yield
     finally:
         Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+         
+@contextmanager
+def sudo_dialog(msg):
+    dia = Dialog().progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
+    try: 
+        yield
+    finally:
+        dia = Dialog().progressBGDialog(100,dia)
 
 def setDictLST(lst=[]):
-    sLST = [dumpJSON(d) for d in lst]
-    sLST = list(OrderedDict.fromkeys(sLST))
-    return [loadJSON(s) for s in sLST]
+    return [loadJSON(s) for s in list(OrderedDict.fromkeys([dumpJSON(d) for d in lst]))]
 
 def dumpJSON(item, idnt=None, sortkey=False, separators=(',', ':')):
     try:
@@ -126,6 +132,7 @@ class Settings:
 
     def openSettings(self):     
         REAL_SETTINGS.openSettings()
+    
     
     #GET
     def _getSetting(self, func, key):
@@ -191,6 +198,7 @@ class Settings:
         
     def getPropertySetting(self, key):
         return self.property.getProperty(key)
+    
     
     #SET
     def _setSetting(self, func, key, value):
@@ -258,16 +266,18 @@ class Settings:
 
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
+        self.setSetting('User_Folder'   ,userFolder)
         self.setSetting('Network_Folder',userFolder)
         
-        clientMode  = self.getSettingInt('Client_Mode') 
-        newSettings = {'m3uPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+        CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),
-                       'epgPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'epgPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'epgPath'       :os.path.join(userFolder,XMLTVFLE),
-                       'genresPathType':'%s'%('1' if clientMode == 1 else '0'),
+                       'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'genresPath'    :os.path.join(userFolder,GENREFLE)}
         self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+        setPendingRestart()
         
         
     def setPVRRemote(self, userURL):
@@ -277,18 +287,19 @@ class Settings:
         self.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
         self.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
         
-        clientMode  = self.getSettingInt('Client_Mode') 
-        newSettings = {'m3uPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+        CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
-                       'epgPathType'   :'%s'%('1' if clientMode == 1 else '0'),
+                       'epgPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
-                       'genresPathType':'%s'%('1' if clientMode == 1 else '0'),
+                       'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
         self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+        setPendingRestart()
     
     
     def chkPluginSettings(self, id, values, override=False, prompt=True):
-        self.log('chkPluginSettings, id = %s'%(id))
+        self.log('chkPluginSettings, id = %s, override=%s'%(id,override))
         try: 
             if override:
                 changes = dict([(s, (v,v)) for s, v in list(values.items())])
@@ -321,8 +332,9 @@ class Settings:
                 if MONITOR.waitForAbort(1): return False
                 addon.setSetting(s, v[1])
             self.forceMigration(id)
-            self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
+            return self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
         except: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
+        return False
 
 
     def forceMigration(self, id):
@@ -365,7 +377,7 @@ class Settings:
         
     def getCurrentSettings(self):
         self.log('getCurrentSettings')
-        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
+        settings = ['User_Folder','Network_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
         for setting in settings:
             yield (setting,self.getSetting(setting))
                
@@ -373,8 +385,9 @@ class Settings:
 class Properties:
     
     def __init__(self, winID=10000):
-        self.winID  = winID
-        self.window = xbmcgui.Window(winID)
+        self.winID      = winID
+        self.window     = xbmcgui.Window(winID)
+        self.InstanceID = self.getInstanceID()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -387,15 +400,18 @@ class Properties:
         return self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
       
 
-    def getKey(self, key, instance=True):
+    def getKey(self, key, instanceID=True):
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
-            if instance:
-                return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.getInstanceID()))
-            else:
-                return '%s.%s'%(ADDON_ID,key)
+            if instanceID: return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.InstanceID))
+            else:          return '%s.%s'%(ADDON_ID,key)
         return key
 
-
+        
+    #CLEAR
+    def clearEXTProperty(self, key):
+        return xbmcgui.Window(10000).clearProperty(key)
+        
+        
     def clearProperties(self):
         return self.window.clearProperties()
         
@@ -403,7 +419,20 @@ class Properties:
     def clearProperty(self, key):
         return self.window.clearProperty(self.getKey(key))
 
+
     #GET
+    def getEXTProperty(self, key):
+        value = xbmcgui.Window(10000).getProperty(key)
+        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
+        return value
+        
+        
+    def getProperty(self, key):
+        value = self.window.getProperty(self.getKey(key))
+        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
+        return value
+        
+        
     def getPropertyList(self, key):
         return self.getProperty(key).split('|')
 
@@ -413,8 +442,7 @@ class Properties:
         
         
     def getPropertyDict(self, key=''):
-        try:    return loadJSON(self.getProperty(key))
-        except: return {}
+        return loadJSON(self.getProperty(key))
         
         
     def getPropertyInt(self, key):
@@ -425,26 +453,17 @@ class Properties:
         return float(convertString2Num(self.getProperty(key)))
         
 
-    def getProperty(self, key):
-        value = self.window.getProperty(self.getKey(key))
-        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
-        return value
-        
-        
-    def clearEXTProperty(self, key):
-        return xbmcgui.Window(10000).clearProperty(key)
-        
-        
-    def getEXTProperty(self, key):
-        value = xbmcgui.Window(10000).getProperty(key)
-        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
-        return value
-        
     #SET
     def setEXTProperty(self, key, value):
-        if not isinstance(value,str): value = str(value)
-        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
-        return xbmcgui.Window(10000).setProperty(key,value)
+        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,str(value)))
+        return xbmcgui.Window(10000).setProperty(key,str(value))
+        
+        
+    def setProperty(self, key, value: str) -> bool:
+        key = self.getKey(key)
+        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,value))
+        self.window.setProperty(key, str(value))
+        return True
         
         
     def setPropertyList(self, key, values):
@@ -452,7 +471,6 @@ class Properties:
         
         
     def setPropertyBool(self, key, value):
-        if not isinstance(value,bool): value = value.lower() == "true"
         return self.setProperty(key, value)
         
         
@@ -465,31 +483,8 @@ class Properties:
                 
                 
     def setPropertyFloat(self, key, value):
-        if not isinstance(value,float): value = float(value)
-        return self.setProperty(key, value)
-        
-        
-    def setProperty(self, key, value, index=False):
-        if not isinstance(value,str): value = str(value)
-        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
-        self.window.setProperty(self.getKey(key), value)
-        if index: self.setMasterProperty(self.winID,self.getKey(key))
-        return True
+        return self.setProperty(key, float(value))
 
-
-    def setMasterProperty(self, id, key):
-        def masterProperty(value=None):
-            if value is None:
-                try:    return loadJSON(self.getEXTProperty('%s.propMaster'%(ADDON_ID)))
-                except: return {}
-            else:
-                return self.setEXTProperty('%s.propMaster'%(ADDON_ID),dumpJSON(value))
-                
-        master = masterProperty()
-        master.setdefault(id,[]).append(key)
-        master[id] = list(set(master[id]))
-        return masterProperty(master)
-        
         
 class ListItems:
     def __init__(self):
@@ -692,13 +687,13 @@ class Builtin:
     
     def getInfoLabel(self, key, param='ListItem', default=''):
         value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
-        self.log('getInfoLabel, key = %s, param = %s, value = %s'%(key,param,value))
+        self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
         return value
         
         
     def getInfoBool(self, key, param='Library', default=False):
         value = (xbmc.getCondVisibility('%s.%s'%(param,key)) or default)
-        self.log('getInfoBool, key = %s, param = %s, value = %s'%(key,param,value))
+        self.log('getInfoBool, key = %s.%s, value = %s'%(param,key,value))
         return value
         
     
@@ -805,6 +800,7 @@ class Dialog:
         else:
             if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
             return xbmcgui.Dialog().textviewer(heading, msg, usemono)
+        
         
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=900): 
         if autoclose > 0: autoclose = (autoclose*1000) #secs to msecs
@@ -922,13 +918,13 @@ class Dialog:
 
 
     def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
-        if silent is None: 
-            silent = (self.settings.getSettingBool('Silent_OnPlayback') & (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player')))
+        # if silent is None and self.settings.getSettingBool('Silent_OnPlayback'): 
+            # silent = (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player'))
         
-        if silent:
-            if hasattr(control, 'close'): control.close()
-            self.log('progressBGDialog, silent = %s; closing dialog'%(silent))
-            return 
+        # if silent:
+            # if hasattr(control, 'close'): control.close()
+            # self.log('progressBGDialog, silent = %s; closing dialog'%(silent))
+            # return 
             
         if control is None and int(percent) == 0:
             control = xbmcgui.DialogProgressBG()
@@ -936,8 +932,7 @@ class Dialog:
         elif control:
             if int(percent) == 100 or control.isFinished(): 
                 if hasattr(control, 'close'): control.close()
-                return
-            elif hasattr(control, 'update'): control.update(int(percent), header, message)
+            elif hasattr(control, 'update'):  control.update(int(percent), header, message)
         return control
         
 
@@ -948,8 +943,7 @@ class Dialog:
         elif control:
             if int(percent) == 100 or control.iscanceled(): 
                 if hasattr(control, 'close'): control.close()
-                return
-            elif hasattr(control, 'update'): control.update(int(percent), message)
+            elif hasattr(control, 'update'):  control.update(int(percent), message)
         return control
         
    

@@ -24,10 +24,6 @@ from threading          import Event, Thread, Timer, enumerate
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce    
 
-#variables
-PAGE_LIMIT    = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
-DEBUG_ENABLED = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
@@ -51,7 +47,7 @@ def timeit(method):
         start_time = time.time()
         result     = method(*args, **kwargs)
         end_time   = time.time()
-        if REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true':
+        if DEBUG_ENABLED:
             log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper

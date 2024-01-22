@@ -31,6 +31,7 @@ class Autotune:
         self.channels = Channels()
         #todo allow autotune lists shared with client for configuration, list via filesharing... library.json
 
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -167,6 +168,7 @@ class Autotune:
             self.selectAUTOTUNE(param.replace('_',' '))
         elif param == 'Clear_Autotune' : self.clearLibrary()
         elif param == 'Clear_BlackList': self.clearBlacklist()
+        elif param == None: return
         return openAddonSettings(ctl)
         
 if __name__ == '__main__': Autotune(sys.argv).run()

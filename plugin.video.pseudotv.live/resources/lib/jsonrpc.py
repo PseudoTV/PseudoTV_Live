@@ -36,10 +36,10 @@ class JSONRPC:
     
     
     @contextmanager
-    def sendLocker(self):
+    def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
         if PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true':
             while not MONITOR.abortRequested():
-                if MONITOR.waitForAbort(0.5): break
+                if MONITOR.waitForAbort(0.001): break
                 elif not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
         PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'true')
         try: yield
@@ -50,8 +50,8 @@ class JSONRPC:
     def _sendJSON(self, command):
         self.log('_sendJSON, command = %s'%(command))
         results = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
-        if isLowPower():
-            xbmc.sleep(SETTINGS.getSettingInt('JSONRPC_Delay')) #overcome overflow issue within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
+        if isLowPower(): xbmc.sleep(SETTINGS.getSettingInt('JSONRPC_Delay'))
+        #overcome overflow issue within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
         return results
 
 
@@ -91,14 +91,14 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkListDirectory(self, path, depth=3, hasruntime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+    def walkListDirectory(self, path, depth=3, hasruntime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)):
         def chkruntime(file):
             return self.getDuration(file) > 0
     
         dirs  = [path]
         files = []
         for idx, dir in enumerate(dirs):
-            if MONITOR.waitForAbort(0.5) or idx > depth: break
+            if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
                 ndirs, nfiles = self.getListDirectory(dir, checksum, expiration)
                 if hasruntime: nfiles = [file for file in nfiles if chkruntime(file)]
@@ -113,7 +113,7 @@ class JSONRPC:
         return dirs, files
 
         
-    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days')))):
+    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)):
         cacheName = 'getListDirectory.%s'%(getMD5(path))
         results   = self.cache.get(cacheName, checksum)
         if not results:
@@ -238,7 +238,7 @@ class JSONRPC:
 
     def getStreamDetails(self, path, media='video'):
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
-        return self.cacheJSON(param, life=datetime.timedelta(days=SETTINGS.getSettingInt('Max_Days')), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
+        return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
 
     def getPlayerItem(self, playlist=False):
@@ -325,7 +325,7 @@ class JSONRPC:
         self.queueJSON(param[media])
         
 
-    def requestList(self, citem, item, media='video', page=int(REAL_SETTINGS.getSetting('Page_Limit')), sort={}, filter={}, limits={}):
+    def requestList(self, citem, item, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
         getFile = True
         path    = item
         if isinstance(item, dict): #library json query
@@ -417,7 +417,7 @@ class JSONRPC:
         return limits
             
              
-    def randomPagination(self, page=int(REAL_SETTINGS.getSetting('Page_Limit')), total=0):
+    def randomPagination(self, page=PAGE_LIMIT, total=0):
         if total > page: start = random.randrange(0, (total-page), page)
         else:            start = 0
         return {"end": start, "start": start, "total":total}
@@ -452,7 +452,7 @@ class JSONRPC:
             
             
     @cacheit(checksum=getInstanceID())
-    def buildProvisional(self, value, type):
+    def buildProvisionalPaths(self, value, type):
         self.log('buildProvisional, value = %s, type = %s'%(value,type))
         paths   = []
         for request in PROVISIONAL_TYPES.get(type,{}).get('path',[]):
@@ -465,7 +465,7 @@ class JSONRPC:
         return paths
 
 
-    def padItems(self, items, page=int(REAL_SETTINGS.getSetting('Page_Limit'))):
+    def padItems(self, items, page=PAGE_LIMIT):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; items In = %s"%(len(items)))
         if len(items) < page:

@@ -24,7 +24,9 @@ import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
 
-from constants   import *
+from threading  import Thread, Event
+from queue      import Empty, PriorityQueue
+
 from variables   import *
 from kodi_six    import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from contextlib  import contextmanager, closing
@@ -52,55 +54,32 @@ SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
-def isBusy():
-    return PROPERTIES.getEXTProperty('%s.busy'%(ADDON_ID)) == 'true'
-
-def setBusy(state=True):
-    if state == isBusy(): return
-    PROPERTIES.setEXTProperty('%s.busy'%(ADDON_ID),str(state).lower())
-
-@contextmanager
-def pauseActivity(): #pause background building same as setBusy/isBusy.
-    setBusy(True)
-    try: yield
-    finally:
-        setBusy(False)
-
-def isPendingSuspend():
-    return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
-
-def setPendingSuspend(state=True):
-    if state == isPendingSuspend(): return
-    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),str(state).lower())
-
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
+    while not MONITOR.abortRequested():
+        if MONITOR.waitForAbort(0.001): break
+        elif not isPendingSuspend(): break
     setPendingSuspend(True)
     try: yield
     finally:
         setPendingSuspend(False)
 
+def isPendingSuspend():
+    return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
+
+def setPendingSuspend(state=True):
+    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),str(state).lower())
+
 @contextmanager
 def open_dialog():
-    if not PROPERTIES.getEXTProperty('%s.opendialog'%(ADDON_ID)) == 'true':
-        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
+    PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
     try: yield
     finally:
         PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'false')
-         
-@contextmanager
-def sudo_dialog(msg):
-    dia = DIALOG.progressBGDialog(message=msg)
-    try: 
-        dia = DIALOG.progressBGDialog(int(time.time() % 60),dia)
-        yield
-    finally:
-        DIALOG.progressBGDialog(100,dia) 
 
 @contextmanager
 def open_window():
-    if not PROPERTIES.getEXTProperty('%s.openwindow'%(ADDON_ID)) == 'true':
-        PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'true')
+    PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'true')
     try: yield
     finally:
         PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'false')
@@ -322,7 +301,7 @@ def randomShuffle(items=[]):
     return items
     
 def interleave(seqs): 
-    #interleave multi-lists, while preserving seqs order
+    #evenly interleave multi-lists of different sizes, while preserving seqs order
     #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
     return [_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f]
         
@@ -382,8 +361,7 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
-    # SETTINGS.getSettingInt('Client_Mode') #todo restore user setting.
-    CLIENT_MODE = 0
+    CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
     return {'kodi_addon_instance_name'    :ADDON_NAME,
             'kodi_addon_instance_enabled' :'true',
             'm3uRefreshMode'              :'1',
@@ -434,7 +412,7 @@ def togglePVR(state=True, reverse=False, waitTime=15):
     else: waitTime = int(PROMPT_DELAY/1000)
     DIALOG.notificationWait('%s: %s'%(name,LANGUAGE(32125)),wait=waitTime)
               
-def forceBrute(msg=''):
+def bruteForcePVR(msg=''):
     name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
     if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = LANGUAGE(32128)
     if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(name),(LANGUAGE(32121)%(name)),msg)):
@@ -473,11 +451,13 @@ def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
     
 def isPendingRestart():
-    return PROPERTIES.getEXTProperty('%s.pendingRestart'%(ADDON_ID)) == "true"
+    state = PROPERTIES.getPropertyBool('pendingRestart')
+    setPendingRestart(False)
+    return state
     
 def setPendingRestart(state=True):
-    if state == isPendingRestart(): return
-    return PROPERTIES.setEXTProperty('%s.pendingRestart'%(ADDON_ID),str(state).lower())
+    if state: DIALOG.notificationWait(LANGUAGE(32124))
+    return PROPERTIES.setPropertyBool('pendingRestart',state)
                            
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
@@ -493,16 +473,12 @@ def setFirstrun(state=True):
     if state == hasFirstrun(): return
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
-def isSlave():
-    return PROPERTIES.getEXTProperty('%s.isSlave'%(ADDON_ID))
-
 def isClient():
     client = PROPERTIES.getEXTProperty('%s.isClient'%(ADDON_ID)) == "true"
     return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
    
 def setClient(state=False,silent=True):
     PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
-    PROPERTIES.setEXTProperty('%s.isSlave'%(ADDON_ID),SETTINGS.getSettingInt('Client_Mode') == 1) #slave == http file user.
     if not silent and state: DIALOG.notificationWait(LANGUAGE(32115))
            
 def getDiscovery():
@@ -564,7 +540,19 @@ def cleanImage(image=LOGO):
         elif image.startswith(realPath.replace('\\','/')):
             image = image.replace(realPath.replace('\\','/'),'special://home/addons/').replace('\\','/')
     return image
-                       
+            
+def cleanGroups(citem, enableGrouping=SETTINGS.getSettingBool('Enable_Grouping')):
+    if not enableGrouping:
+        citem['group'] = [ADDON_NAME]
+    else:
+        citem['group'].append(ADDON_NAME)
+            
+        if citem.get('favorite',False) and not LANGUAGE(32019) in citem['group']:
+            citem['group'].append(LANGUAGE(32019))
+        elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:
+             citem['group'].remove(LANGUAGE(32019))
+    return sorted(list(set(citem['group'])))
+        
 def cleanMPAA(mpaa):
     orgMPA = mpaa
     mpaa = mpaa.lower()

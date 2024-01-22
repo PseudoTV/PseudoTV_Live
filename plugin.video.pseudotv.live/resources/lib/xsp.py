@@ -31,6 +31,16 @@ class XSP:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def isXSP(self, path):
+        if path.lower().endswith('.xsp'): return True
+        return False
+        
+    
+    def isDXSP(self, path):
+        if '?xsp=' in path.lower(): return True
+        return False
+        
+        
     def getSmartPlaylistName(self, fle):
         try:
             name = ''
@@ -71,7 +81,7 @@ class XSP:
             
             #media
             try:    media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            except: media  = 'video'
+            except: media = 'video'
             #paths
             try:#todo use operators to build filter list for mixed content.
                 if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() == "mixed":

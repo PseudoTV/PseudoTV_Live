@@ -22,11 +22,14 @@ import xmltv
 from globals          import *
 from xml.dom.minidom  import parse, parseString, Document
 
+#todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
+
 class XMLTVS:
+        
     def __init__(self):   
         self.XMLTVDATA = self._load()
-        
-        
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -179,11 +182,11 @@ class XMLTVS:
         tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]
         self.log('cleanChannels, before = %s, after = %s'%(len(channels),len(tmpChannels)))
         return tmpChannels
-        
-        
+
+
     def cleanProgrammes(self, programmes): # remove expired content, ignore "recordings" ie. media=True
         try:
-            now = (datetime.datetime.fromtimestamp(float(getLocalTime())) - datetime.timedelta(days=SETTINGS.getSettingInt('Min_Days'))) #allow some old programmes to avoid empty cells.
+            now = (datetime.datetime.fromtimestamp(float(getLocalTime())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if (strpTime(program['stop'].rstrip(),DTFORMAT) > now)]
         except Exception as e: 
             self.log("cleanProgrammes, Failed! %s"%(e), xbmc.LOGERROR)
@@ -479,12 +482,12 @@ class XMLTVS:
         item['categories']    = (fItem.get('genre','')        or ['Undefined'])[:5]
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
-        item['thumb']         = cleanImage(getThumb(fItem,SETTINGS.getSettingInt('EPG_Artwork'))) #unify thumbnail by user preference 
-        fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[SETTINGS.getSettingInt('EPG_Artwork')])  #unify thumbnail artwork, opposite of EPG_Artwork
+        item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
+        fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
         item['date']          = fItem.get('premiered','')
         
         if citem['catchup']:
-            item['catchup-id']  = VOD_URL.format(addon=ADDON_ID,name=quoteString(item['title']),id=quoteString(encodeString((fItem.get('originalfile','') or fItem.get('file','')))),channel=quoteString(citem['id']),radio=str(item['radio']))
+            item['catchup-id']  = VOD_URL.format(addon=ADDON_ID,name=quoteString(item['title']),id=quoteString(encodeString((fItem.get('originalfile','') or fItem.get('file','')))),channel=quoteString(citem['id']))
             fItem['catchup-id'] = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):

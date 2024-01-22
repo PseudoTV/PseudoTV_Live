@@ -1,17 +1,24 @@
 {
-	"library": {
-		"TV Networks": [],
-		"TV Shows": [],
-		"TV Genres": [],
-		"Movie Genres": [],
-		"Movie Studios": [],
-		"Mixed Genres": [],
-		"Mixed": [],
-		"Playlists": [],
-		"Recommended": [],
-		"Services": [],
-		"Music Genres": []
-	},
-	"whitelist": [],
-	"blacklist": []
+    "library": {
+        "Item": {
+            "enabled": false,
+            "type": "",
+            "name": "",
+            "logo": "",
+            "path": []
+        },
+        "TV Networks": [],
+        "TV Shows": [],
+        "TV Genres": [],
+        "Movie Genres": [],
+        "Movie Studios": [],
+        "Mixed Genres": [],
+        "Mixed": [],
+        "Playlists": [],
+        "Recommended": [],
+        "Services": [],
+        "Music Genres": []
+    },
+    "whitelist": [],
+    "blacklist": []
 }

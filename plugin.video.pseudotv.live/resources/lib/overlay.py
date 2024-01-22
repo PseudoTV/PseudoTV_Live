@@ -109,8 +109,9 @@ class Overlay():
         self._onNext         = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
         self._onNextThread   = Timer(30, self.toggleOnNext)
         
-        self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
-        self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
+        self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
+        self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
+        self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -192,8 +193,9 @@ class Overlay():
         self.myPlayer = MYPlayer(overlay=self)
         self.myPlayer.onAVStarted()
         
-        self.channelBugColor = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
-        self.enableOnNext    = SETTINGS.getSettingBool('Enable_OnNext')
+        self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
+        self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
+        self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.runActions(RULES_ACTION_OVERLAY, self.player.pvritem.get('citem',{}), inherited=self)
             
 
@@ -248,7 +250,7 @@ class Overlay():
                 self._channelBug.setPosition(self._channelBugX, self._channelBugY)
             except: pass
             
-            if state and self.player.isPseudoTV: 
+            if state and self.player.isPseudoTV and self.enableChannelBug:
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')

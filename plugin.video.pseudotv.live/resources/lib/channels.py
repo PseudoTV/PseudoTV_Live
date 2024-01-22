@@ -74,7 +74,7 @@ class Channels:
 
     def setChannels(self, channels=None):
         if channels is None: channels = self.channelDATA['channels']
-        else: self.channelDATA['channels'] = channels
+        self.channelDATA['channels'] = channels
         SETTINGS.setSetting('Select_Channels','[B]%s[/B] Channels'%(len(channels)))
         return self._save()
 

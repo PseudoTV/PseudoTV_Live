@@ -20,7 +20,6 @@
 
 import traceback
 
-from constants import *
 from variables import *
 
 #todo add robust logging.

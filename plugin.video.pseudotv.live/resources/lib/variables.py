@@ -28,6 +28,11 @@ DEBUG_LEVEL         = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debugging_Leve
 DEBUG_CACHE_ENABLED = REAL_SETTINGS.getSetting('Disable_Cache').lower() == 'true'
 DEBUG_CACHE         = (DEBUG_ENABLED & DEBUG_CACHE_ENABLED) #Only enable DEBUG_CACHE when DEBUG_ENABLED
 
+PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "25"))
+MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))
+MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
+EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
+
 #file paths
 PLS_LOC             = os.path.join(USER_LOC,'playlists')
 LOGO_LOC            = os.path.join(USER_LOC,'logos')

@@ -28,8 +28,7 @@ SEEK_THRED = SETTINGS.getSettingInt('Seek_Threshold')
 
 @contextmanager
 def preparingPlayback():
-    if not PROPERTIES.getEXTProperty('%s.preparingPlayback'%(ADDON_ID)) == 'true':
-        PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'true')
+    PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'true')
     try: yield
     finally:
         PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'false')
@@ -59,11 +58,12 @@ class Plugin:
         
         
     def _checkLastPlayed(self, nowitem):
-        diff  = False
-        nowID = nowitem.get('broadcastid',random.random())
-        oldID = loadJSON(PROPERTIES.getEXTProperty('%s.lastNOWITEM'%(ADDON_ID))).get('broadcastid',random.random())
-        if nowID != oldID: diff = True
-        self.log('_checkLastPlayed, nowID = %s, oldID = %s, diff = %s'%(nowID,oldID,diff))
+        diff = True
+        olditem = loadJSON(PROPERTIES.getEXTProperty('%s.lastNOWITEM'%(ADDON_ID)))
+        if ((nowitem.get('channeluid',random.random()) == olditem.get('channeluid',random.random())) &
+           (nowitem.get('broadcastid',random.random()) == olditem.get('broadcastid',random.random())) &
+           (nowitem.get('progress',random.random())    == olditem.get('progress',random.random()))): diff =  False
+        self.log('_checkLastPlayed, diff = %s'%(diff))
         return diff
         
 
@@ -168,7 +168,7 @@ class Plugin:
 
 
     def playVOD(self, name, url):
-        with preparingPlayback(), pauseActivity():
+        with preparingPlayback():
             path = decodeString(url)
             self.log('playVOD, url = %s\npath = %s'%(url,path))
             liz = xbmcgui.ListItem(name,path=path)
@@ -176,9 +176,13 @@ class Plugin:
             self.resolveURL(True, liz)
 
 
+    def playBroadcast(self, name, id):
+        self.log('playBroadcast, id = %s'%(id))
+        
+        
     def playChannel(self, name, id, isPlaylist=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
-        with preparingPlayback(), pauseActivity():
+        with preparingPlayback():
             found     = False
             listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,False,isPlaylist)
@@ -201,14 +205,18 @@ class Plugin:
                     elif round(nowitem['progresspercentage']) > SEEK_THRED: # near end, avoid callback; override nowitem and queue next show.
                         self.log('playChannel, progress near the end, queue nextitem')
                         nowitem = nextitems.pop(0) #remove first element in nextitems keep playlist order
-
-                elif round(nowitem['progresspercentage']) > SEEK_THRED:
-                    self.log('playChannel, progress near the end playing nextitem')
-                    nowitem = nextitems.pop(0)
+                else:
+                    file = decodeWriter(nowitem.get('writer',{})).get('file')
+                    if not FileAccess.exists(file):
+                        self.log('playChannel, media missing %s'%(file))
+                        #todo prompt missing content
+                        return self.resolveURL(False, xbmcgui.ListItem())
+                    else:
+                        self.log('playChannel, duplicate nowitem detected, loopback? queue nextitem')
+                        nowitem = nextitems.pop(0)
 
                 writer = decodeWriter(nowitem.get('writer',{}))
                 liz    = LISTITEMS.buildItemListItem(writer)
-                path   = liz.getPath()
                 self.log('playChannel, nowitem = %s\ncitem = %s\nwriter = %s'%(nowitem,pvritem['citem'],writer))
                 
                 if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
@@ -217,7 +225,7 @@ class Plugin:
                     infoTag = ListItemInfoTag(liz, 'video')
                     infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
 
-                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for optimization.
                 pvritem['broadcastnow']  = nowitem   # current item
                 pvritem['broadcastnext'] = nextitems # upcoming items
                 liz.setProperty('pvritem',dumpJSON(pvritem))
@@ -227,11 +235,11 @@ class Plugin:
                 PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                 
                 if isPlaylist:
-                    for idx,lz in enumerate(listitems):
-                        self.channelPlaylist.add(lz.getPath(),lz,idx)
+                    for idx,lz in enumerate(listitems): self.channelPlaylist.add(lz.getPath(),lz,idx)
                     self.log('playChannel, Playlist size = %s'%(self.channelPlaylist.size()))
                     if isPlaylistRandom(): self.channelPlaylist.unshuffle()
                     PLAYER.play(self.channelPlaylist,windowed=True)
+                    
                 else: found = True
             else: return self.playError(pvritem)
             self.resolveURL(found, listitems[0])
@@ -239,7 +247,7 @@ class Plugin:
 
     def playRadio(self, name, id, isPlaylist=True):
         self.log('playRadio, id = %s'%(id))
-        with preparingPlayback(), pauseActivity():
+        with preparingPlayback():
             found     = False
             listitems = [LISTITEMS.getListItem()] #empty listitem required to pass failed playback.
             pvritem   = self.matchChannel(name,id,True,isPlaylist)
@@ -250,10 +258,12 @@ class Plugin:
                     nowitem  = self.runActions(RULES_ACTION_PLAYBACK, pvritem['citem'], nowitem, inherited=self)
                     fileList = [self.jsonRPC.requestList(pvritem['citem'], path, 'music', page=RADIO_ITEM_LIMIT) for path in pvritem['citem'].get('path',[])]#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
                     fileList = list(interleave(fileList))
+                    
                     if len(fileList) > 0:
                         listitems = [LISTITEMS.buildItemListItem(item,media='music') for item in randomShuffle(fileList)]
                         for idx,lz in enumerate(listitems):
                             self.channelPlaylist.add(lz.getPath(),lz,idx)
+                            
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
                         PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
                         PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
@@ -265,7 +275,7 @@ class Plugin:
 
 
     def contextPlay(self, writer={}, isPlaylist=False):
-        with preparingPlayback(), pauseActivity():
+        with preparingPlayback():
             listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
             if writer.get('citem',{}): 
                 citem   = writer.get('citem')
@@ -273,8 +283,7 @@ class Plugin:
                 self.log('contextPlay, citem = %s\npvritem = %s\nisPlaylist = %s'%(citem,pvritem,isPlaylist))
                 
                 if isPlaylist:
-                    nowitem   = pvritem.get('broadcastnow',{})  # current item
-                    nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, nowitem, inherited=self)
+                    nowitem   = self.runActions(RULES_ACTION_PLAYBACK, citem, pvritem.get('broadcastnow',{}), inherited=self)
                     nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                     nextitems.insert(0,nowitem)
 
@@ -310,8 +319,8 @@ class Plugin:
                     listitems = [liz]
                     
                 for idx,lz in enumerate(listitems):
-                    path = lz.getPath()
                     self.channelPlaylist.add(lz.getPath(),lz,idx)
+                    
                 PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
                 PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                 self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
@@ -333,7 +342,7 @@ class Plugin:
                 DIALOG.notificationWait(LANGUAGE(32038)%(pvritem['playcount']),wait=5)
                 self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
                 return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2]))
-        elif pvritem['playcount'] == 3: forceBrute()
+        elif pvritem['playcount'] == 3: bruteForcePVR()
         elif pvritem['playcount'] == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME),autoclose=90)
         else: DIALOG.notificationWait(LANGUAGE(32000))
         self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.

@@ -22,13 +22,14 @@ from globals   import *
 from plugin    import Plugin
 
 def run(sysARG):  
-    params  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-    name    = (unquoteString(params.get("name",'')) or None)
-    channel = (params.get("channel",'')             or None)
-    url     = (params.get("url",'')                 or None)
-    id      = (params.get("id",'')                  or None)
-    mode    = (params.get("mode",'')                or 'guide')
-    radio   = (params.get("radio",'')               or 'False').lower() == "true"
+    params    = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+    name      = (unquoteString(params.get("name",'')) or None)
+    channel   = (params.get("channel",'')             or None)
+    url       = (params.get("url",'')                 or None)
+    id        = (params.get("id",'')                  or None)
+    starttime = (params.get("starttime",'')           or None)
+    mode      = (params.get("mode",'')                or 'guide')
+    radio     = (params.get("radio",'')               or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
     
     if mode == 'guide':
@@ -40,6 +41,9 @@ def run(sysARG):
         BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
     elif mode == 'vod': 
         threadit(Plugin(sysARG).playVOD)(name,id)
+    elif mode == 'broadcast': 
+        print('broadcast',id,starttime)
+        # threadit(Plugin(sysARG).playVOD)(name,id)
     elif mode == 'play':
         if radio: threadit(Plugin(sysARG).playRadio)(name,id)
         else:     threadit(Plugin(sysARG).playChannel)(name,id,bool(SETTINGS.getSettingInt('Playback_Method')))

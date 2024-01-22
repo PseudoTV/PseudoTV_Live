@@ -217,9 +217,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.setLabels(self.right_button2,'')
                 self.setLabels(self.right_button3,LANGUAGE(32136))#Move
                 self.setLabels(self.right_button4,LANGUAGE(32061))#Delete
-            self.setFocus(self.right_button1)
-            self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)]')
-            self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path)]')
+            self.setFocus(self.right_button1)  
+            self.setEnableCondition(self.right_button3,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
+            self.setEnableCondition(self.right_button4,'[!String.IsEmpty(Container(5).ListItem(Container(5).Position).Path) + Integer.IsLessOrEqual(Container(5).ListItem(Container(5).Position).Property(chnum),CHANNEL_LIMIT)]')
         else: # channelitems
             self.setVisibility(self.ruleList,False)
             self.setVisibility(self.chanList,False)
@@ -282,7 +282,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         label  = '[COLOR=%s][B]%s.[/COLOR][/B]'%(channelColor,chnum)
         label2 = '[COLOR=%s]%s[/COLOR]'%(labelColor,chname)
         path   = '|'.join(channelData.get("path",[]))
-        prop   = {'description':chnum,'channelData':dumpJSON(channelData, sortkey=False),'chname':chname,'chnumber':chnum}
+        prop   = {'description':'%s). %s'%(chnum,path),'channelData':dumpJSON(channelData, sortkey=False),'chname':chname,'chnumber':chnum}
         return LISTITEMS.buildMenuListItem(label,label2,iconImage=channelData.get("logo",''),url=path,propItem=prop)
         
 
@@ -416,6 +416,11 @@ class Manager(xbmcgui.WindowXMLDialog):
         else:
             channelData['name'] = os.path.basename(os.path.dirname(path)).strip('/')
         return channelData
+
+
+    def viewChannel(self, citem): #todo preview uncached filelist for visual breakdown of channel content.
+        self.log('viewChannel, id = %s'%(citem['id']))
+        # [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.myService._interrupt()]
 
 
     def getMontiorList(self, key='label'):
@@ -887,7 +892,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def closeManager(self):
         self.log('closeManager')
         if self.madeChanges:
-            forceUpdateTime('updateChannels')
+            forceUpdateTime('chkChannels')
         setManagerRunning(False)
         PROPERTIES.setEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID),'false')
         self.close()

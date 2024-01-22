@@ -18,17 +18,11 @@
 #
 # -*- coding: utf-8 -*-
 
-from globals     import *
-
+from globals import *
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
-def log(event, level=xbmc.LOGDEBUG):
-    if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
-    if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
-    xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-    
-def cacheit(expiration=datetime.timedelta(days=int((REAL_SETTINGS.getSetting('Max_Days') or "1"))), checksum=ADDON_VERSION, json_data=False):
+def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
     def decorator(func):
         def decorated(*args, **kwargs):
             method_class = args[0]
@@ -47,12 +41,13 @@ class Cache:
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         if xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
             while not xbmc.Monitor().abortRequested():
-                if xbmc.Monitor().waitForAbort(0.5): break
+                if xbmc.Monitor().waitForAbort(0.001): break
                 elif not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
         finally:
             xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
+
 
     def __init__(self, mem_cache=False, is_json=False):
         self.cache.enable_mem_cache = mem_cache

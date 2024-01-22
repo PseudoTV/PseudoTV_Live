@@ -25,26 +25,8 @@ from resources  import Resources
 from channels   import Channels
 
 #constants
-REG_KEY    = 'PseudoTV_Recommended.%s'
+REG_KEY = 'PseudoTV_Recommended.%s'
 
-TYPE_TEMP  = {"enabled": False,
-			  "type"   : "",
-			  "name"   : "",
-			  "logo"   : "",
-			  "path"   : []}
-            
-IMPORT_TEMP = {"enabled": False,
-			   "type"   : "",
-			   "name"   : "",
-			   "logo"   : "",
-			   "item"   : {"id"   : "",
-				           "type" : "",
-                           "name" : "",
-				           "icon" : "",
-				           "m3u"  : {"path": "",
-					                 "slug": ""},
-				           "xmltv": {"path": ""}}}
-    
 class Library:
     def __init__(self, service=None):
         self.parserCount  = 0
@@ -72,6 +54,10 @@ class Library:
         return setJSON(file, self.libraryDATA)
         
         
+    def getTemplate(self):
+        return self.libraryDATA.get('library',{}).get('Item',{}).copy()
+        
+        
     def getLibrary(self, type):
         self.log('getLibrary, type = %s'%(type))
         return self.libraryDATA.get('library',{}).get(type,[])
@@ -80,6 +66,7 @@ class Library:
     def setLibrary(self, type, data=[]):
         self.log('setLibrary')
         self.libraryDATA['library'][type] = data
+        PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(data)>0).lower())
         SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(data)))
         return self._save()
 
@@ -107,26 +94,31 @@ class Library:
                 return []
                 
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-        with self.service.monitor.idleLocker():
-            for idx, type in enumerate(AUTOTUNE_TYPES):
-                self.parserMSG    = AUTOTUNE_TYPES[idx]
-                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+        for idx, type in enumerate(AUTOTUNE_TYPES):
+            if self.service._interrupt(): break
+            elif self.service._suspend(): break
+            self.parserMSG    = AUTOTUNE_TYPES[idx]
+            self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
+            self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+            
+            if self.service._interrupt():
+                DIALOG.progressBGDialog(100,self.parserDialog) 
+                break
                 
-                if self.service.monitor.chkSuspend():
-                    self.log('fillItems, suspended')
-                    DIALOG.progressBGDialog(100,self.parserDialog) 
-                    break
-                    
-                self.log('fillItems, returning %s'%(type))
-                yield (type,fillItem(type))
-                
-        
+            self.log('fillItems, returning %s'%(type))
+            yield (type,fillItem(type))
+                  
+                  
     @timeit
     def updateLibrary(self):
-        self.log('updateLibrary')
+        def _updateClient():
+            for idx, type in enumerate(AUTOTUNE_TYPES):
+                if self.service._interrupt(): break
+                elif self.service._suspend(): break
+                yield (type,self.getLibrary(type))
+                
         def _updateItem(type,item):
-            entry = TYPE_TEMP.copy()
+            entry = self.getTemplate()
             entry.update(item)
             #check existing library for enabled items
             for item in self.getEnabled(type):
@@ -138,20 +130,27 @@ class Library:
                     entry['enabled'] = True
             return entry
            
-        complete = True 
-        libraryItems = dict(self.fillItems())
-        dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
+        complete   = True 
+        if isClient():
+            if SETTINGS.getSettingInt('Client_Mode') != 2: return True
+            msg = LANGUAGE(32158)
+            libraryItems = dict(_updateClient())
+        else:
+            msg = LANGUAGE(32022)
+            libraryItems = dict(self.fillItems())
+        
+        dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
-            dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32022),LANGUAGE(32041))))
-            if self.service.monitor.chkSuspend(): 
-                self.log('updateLibrary, suspended')
+            dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+            if self.service._interrupt(): break
+            elif self.service._suspend():
                 complete = False
                 break
             else:
                 items = libraryItems.get(type,[])
-                PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(items)>0).lower())
                 self.setLibrary(type, [_updateItem(type,item) for item in items])
         DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
+        self.log('updateLibrary, complete = %s'%(complete))
         return complete
         
 
@@ -173,7 +172,7 @@ class Library:
         return self.getTVInfo().get('genres',[])
  
  
-    @cacheit(expiration=datetime.timedelta(hours=int(REAL_SETTINGS.getSetting('Max_Days'))),json_data=True)
+    @cacheit(expiration=datetime.timedelta(hours=MAX_GUIDEDAYS),json_data=True)
     def getTVShows(self):
         return self.getTVInfo().get('shows',[])
         
@@ -218,7 +217,7 @@ class Library:
         return sorted(MixedList,key=lambda x:x['name'])
     
     
-    @cacheit(expiration=datetime.timedelta(minutes=int(REAL_SETTINGS.getSetting('Max_Days'))),json_data=True)
+    @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS),json_data=True)
     def getPlaylists(self):
         PlayList = []
         types    = ['video','mixed','music']
@@ -368,13 +367,13 @@ class Library:
                 payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
             else:
                 payload = loadJSON(payload)
-                self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))), json_data=True)
+                self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
             
             if payload:
                 self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))
                 return addonid,{"data":payload,"meta":addonMeta}
                 
-        if not SETTINGS.getSettingBool('Enable_Recommended') or isClient(): return []
+        if isClient() or not SETTINGS.getSettingBool('Enable_Recommended'): return []
         addonList = sorted(list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f])))
         return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
@@ -426,33 +425,32 @@ class Library:
 
                
     def importPrompt(self):
-        if not isClient():
-            addonList = self.searchRecommended()
-            ignoreList = self.getWhiteList()
-            ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
-            addonNames = sorted(list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f])))
-            self.log('importPrompt, addonNames = %s'%(len(addonNames)))
-            
-            try:
-                if len(addonNames) > 1:
-                    retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
-                    self.log('importPrompt, prompt retval = %s'%(retval))
-                    if   retval == 1: raise Exception('Single Entry')
-                    elif retval == 2: 
-                        for addonid, item in list(addonList.items()):
-                            if item.get('meta',{}).get('name') in addonNames:
-                                self.addWhiteList(addonid)
-                else: raise Exception('Single Entry')
-            except Exception as e:
-                self.log('importPrompt, %s'%(e))
-                for addonid, item in list(addonList.items()):
-                    if item.get('meta',{}).get('name') in addonNames:
-                        if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
-                            self.addBlackList(addonid)
-                        else:
-                            self.addWhiteList(addonid)
-                    
-            PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),str(len(self.getWhiteList()) > 0).lower())
-            PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),str(len(self.getBlackList()) > 0).lower())
-            SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))
+        if isClient(): return
+        addonList = self.searchRecommended()
+        ignoreList = self.getWhiteList()
+        ignoreList.extend(self.getBlackList()) #filter addons previously parsed.
+        addonNames = sorted(list(set([_f for _f in [item.get('meta',{}).get('name') for addonid, item in list(addonList.items()) if not addonid in ignoreList] if _f])))
+        self.log('importPrompt, addonNames = %s'%(len(addonNames)))
         
+        try:
+            if len(addonNames) > 1:
+                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
+                self.log('importPrompt, prompt retval = %s'%(retval))
+                if   retval == 1: raise Exception('Single Entry')
+                elif retval == 2: 
+                    for addonid, item in list(addonList.items()):
+                        if item.get('meta',{}).get('name') in addonNames:
+                            self.addWhiteList(addonid)
+            else: raise Exception('Single Entry')
+        except Exception as e:
+            self.log('importPrompt, %s'%(e))
+            for addonid, item in list(addonList.items()):
+                if item.get('meta',{}).get('name') in addonNames:
+                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
+                        self.addBlackList(addonid)
+                    else:
+                        self.addWhiteList(addonid)
+                
+        PROPERTIES.setEXTProperty('%s.has.WhiteList'%(ADDON_ID),str(len(self.getWhiteList()) > 0).lower())
+        PROPERTIES.setEXTProperty('%s.has.BlackList'%(ADDON_ID),str(len(self.getBlackList()) > 0).lower())
+        SETTINGS.setSetting('Clear_BlackList','|'.join(self.getBlackList()))

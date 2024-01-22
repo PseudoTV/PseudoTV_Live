@@ -84,8 +84,7 @@ class Utilities:
                 text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
                 text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
                 text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-                return text  
-        openAddonSettings((7,1))      
+                return text     
         try: DIALOG.textviewer(addColor(FileAccess.open(CHANGELOG_FLE, "r").read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
@@ -107,10 +106,10 @@ class Utilities:
 
     def buildMenu(self, select=None):
         with busy_dialog():
-            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},   #"Rebuild M3U/XMLTV"
-                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},    #"Clean Start"
+            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},    #"Rebuild M3U/XMLTV"
+                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},     #"Clean Start"
                         {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR}, #"Force PVR reload"
-                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                           #"Force PTVL reload"
+                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                            #"Force PTVL reload"
                         {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)},              #"Show M3U"
                         {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)}]            #"Show M3U"
 

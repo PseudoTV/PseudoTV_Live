@@ -100,9 +100,9 @@ class Resources:
                             if self.matchName(chname, name):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
                                 if select: logos.append('%s/%s'%(path,image))
-                                else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                                else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if select:
-                if len(logos) > 0: cacheResponse = self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                if len(logos) > 0: cacheResponse = self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
                 else: return logos
         return cacheResponse
         
@@ -120,7 +120,7 @@ class Resources:
                         art = item.get('art',{}).get(key)
                         if art:
                             self.log('getTVShowLogo, found %s'%(art))
-                            return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+                            return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
         return cacheResponse
         
         
@@ -141,13 +141,13 @@ class Resources:
         def _parseXBT():
             self.log('walkDirectory, %s Found'%(TEXTURES))
             resource = path.replace('/resources','').replace('special://home/addons/','resource://')
-            walk.setdefault(resource,[]).extend(self.jsonRPC.getListDirectory(resource,checksum,datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))[1])
+            walk.setdefault(resource,[]).extend(self.jsonRPC.getListDirectory(resource,checksum,datetime.timedelta(days=MAX_GUIDEDAYS))[1])
             return walk
             
         walk = dict()
         path = path.replace('\\','/')
         self.log('walkDirectory, path = %s, exts = %s'%(path,exts))
-        dirs, files = self.jsonRPC.getListDirectory(path,checksum,datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))))
+        dirs, files = self.jsonRPC.getListDirectory(path,checksum,datetime.timedelta(days=MAX_GUIDEDAYS))
         if TEXTURES in files: return _parseXBT()
         else: walk.setdefault(path,[]).extend(list([f for f in files if f.endswith(tuple(exts))]))
         for idx, dir in enumerate(dirs): 

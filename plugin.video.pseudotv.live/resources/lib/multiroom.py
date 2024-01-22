@@ -19,17 +19,16 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from server     import Discovery, Announcement
+from server     import HTTP, Discovery, Announcement
 
 class Multiroom:
-    def __init__(self, sysARG=sys.argv):
+    def __init__(self, sysARG=sys.argv, monitor=None):
         self.log('__init__, sysARG = %s'%(sysARG))
-        self.sysARG  = sysARG
-        # announce = Announcement(service.monitor)
-        # announce._run() #todo pairing setup.
-        # discover = Discovery(service.monitor)
-        # discover._run() #todo move all discovery functions to a setting button, part of user select server. include progress bar during scan.
-      
+        self.sysARG = sysARG
+        HTTP(monitor)
+        Announcement(monitor)
+        Discovery(monitor)
+
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -40,7 +39,7 @@ class Multiroom:
         if (not current_server or forced) and len(list(servers.keys())) == 1:
             #If one server found autoselect, set server host paths.
             self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
-            SETTINGS.setPVRRemote('http://%s'%(list(servers.keys())[0]))
+            SETTINGS.setPVRRemote('http://%s'%(servers.keys()[0]))
             #sync client resources with server.
             for key, value in list((servers[list(servers.keys())[0]].get('settings',{})).items()):
                 try:    self.setSetting(key, value)

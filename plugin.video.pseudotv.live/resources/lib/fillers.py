@@ -48,7 +48,7 @@ class Fillers:
         # if not hasAddon(id): continue
         # addonMeta = self.jsonRPC.getAddonDetails(addonid)
         # self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
-        # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=int(SETTINGS.getSetting('Max_Days'))), json_data=True)
+        # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
             
             
     def buildResourceByType(self, type):
@@ -295,7 +295,7 @@ class Fillers:
                 # # #auto fill POST_ROLL
                 # # if auto_commercials | auto_trailers:
                     # # while end > 0 and not self.writer.monitor.abortRequested():
-                        # # if self.writer.monitor.waitForAbort(0.5): 
+                        # # if self.writer.monitor.waitForAbort(0.001): 
                             # # self.log('injectBCTs, suspended')
                             # # break
                         # # # print('autofill while loop',end)
