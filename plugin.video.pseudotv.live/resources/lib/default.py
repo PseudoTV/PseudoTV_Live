@@ -42,11 +42,10 @@ def run(sysARG):
     elif mode == 'vod': 
         threadit(Plugin(sysARG).playVOD)(name,id)
     elif mode == 'broadcast': 
-        print('broadcast',id,starttime)
-        # threadit(Plugin(sysARG).playVOD)(name,id)
+        threadit(Plugin(sysARG).playVOD)(name,id)
     elif mode == 'play':
-        if radio: threadit(Plugin(sysARG).playRadio)(name,id)
-        else:     threadit(Plugin(sysARG).playChannel)(name,id,bool(SETTINGS.getSettingInt('Playback_Method')))
+        if radio: threadit(Plugin(sysARG).playRadio)(name,channel)
+        else:     threadit(Plugin(sysARG).playChannel)(name,channel,bool(SETTINGS.getSettingInt('Playback_Method')))
 
 if __name__ == '__main__': run(sys.argv)
 

@@ -173,6 +173,7 @@ class Player(xbmc.Player):
         self.log('_onStop')
         self.toggleBackground(False)
         self.runActions(RULES_ACTION_PLAYER_STOP, self.pvritem.get('citem',{}), inherited=self)
+        PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
         if self.pvritem.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
 
 

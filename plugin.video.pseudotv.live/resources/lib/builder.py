@@ -598,10 +598,11 @@ class Builder:
 
     def addChannelStation(self, citem):
         self.log('addChannelStation, id: %s'%(citem['id']))
-        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),id=quoteString(citem['id']),radio=str(citem['radio']))
+        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),radio=str(citem['radio']))
         citem['logo']  = cleanImage(citem['logo'])
         citem['group'] = cleanGroups(citem, self.enableGrouping)
-        # if citem['catchup']: citem['catchup-source'] = SRC_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),source='&id={catchup-id}&starttime={Y}-{m}-{d}-{H}-{M}-{S}')
+        if citem['catchup']:
+            citem['catchup-source'] = SRC_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),source='&id={catchup-id}&starttime={Y}-{m}-{d}-{H}-{M}-{S}')
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
         

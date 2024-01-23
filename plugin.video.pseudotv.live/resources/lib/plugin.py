@@ -61,8 +61,7 @@ class Plugin:
         diff = True
         olditem = loadJSON(PROPERTIES.getEXTProperty('%s.lastNOWITEM'%(ADDON_ID)))
         if ((nowitem.get('channeluid',random.random()) == olditem.get('channeluid',random.random())) &
-           (nowitem.get('broadcastid',random.random()) == olditem.get('broadcastid',random.random())) &
-           (nowitem.get('progress',random.random())    == olditem.get('progress',random.random()))): diff =  False
+           (nowitem.get('broadcastid',random.random()) == olditem.get('broadcastid',random.random()))): diff =  False
         self.log('_checkLastPlayed, diff = %s'%(diff))
         return diff
         
@@ -265,7 +264,6 @@ class Plugin:
                             self.channelPlaylist.add(lz.getPath(),lz,idx)
                             
                         self.log('playRadio, Playlist size = %s'%(self.channelPlaylist.size()))
-                        PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
                         PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                         if not isPlaylistRandom(): self.channelPlaylist.shuffle()
                         if PLAYER.isPlayingVideo(): PLAYER.stop()
@@ -321,7 +319,6 @@ class Plugin:
                 for idx,lz in enumerate(listitems):
                     self.channelPlaylist.add(lz.getPath(),lz,idx)
                     
-                PROPERTIES.clearEXTProperty('%s.lastNOWITEM'%(ADDON_ID))
                 PROPERTIES.clearEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')))
                 self.log('contextPlay, Playlist size = %s'%(self.channelPlaylist.size()))
                 if isPlaylistRandom(): self.channelPlaylist.unshuffle()

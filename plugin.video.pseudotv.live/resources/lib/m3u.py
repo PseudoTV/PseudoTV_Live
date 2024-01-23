@@ -204,8 +204,7 @@ class M3U:
             
             opts = list(self.getMitem().keys())
             mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
-            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
-            # line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" catchup-source="%s" %s,%s\n'
+            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" catchup-source="%s" %s,%s\n'
             self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
             self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]))
             self.log('_save, saving %s stations and %s recordings to %s'%(len(self.M3UDATA['stations']),len(self.M3UDATA['recordings']),file))
@@ -230,7 +229,7 @@ class M3U:
                                 ';'.join(station['group']),
                                 station['radio'],
                                 station['catchup'],
-                                # station['catchup-source'],
+                                station['catchup-source'],
                                 optional,
                                 station['label']))
                        

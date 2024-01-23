@@ -98,7 +98,7 @@ HTML_ESCAPE         = {"&": "&amp;",
                        ">": "&gt;",
                        "<": "&lt;"}    
 
-PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&id={id}&radio={radio}.pvr'
+PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&channel={channel}&radio={radio}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}.pvr'
 SRC_URL             = 'plugin://{addon}/?mode=broadcast&name={name}&channel={channel}{source}.pvr'
               
