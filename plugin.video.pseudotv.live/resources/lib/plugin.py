@@ -116,7 +116,7 @@ class Plugin:
         
     @timeit
     def matchChannel(self, chname, id, radio=False, isPlaylist=False):
-        self.log('matchChannel, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
+        self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def _match():
             channels = self.jsonRPC.getPVRChannels(radio)
             for channel in channels:
@@ -143,7 +143,7 @@ class Plugin:
                 return self.playError(pvritem)
                 
             try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
-            except: pvritem['epgurl'] = ''#"pvr://guide/1197/2022-02-14 18:22:24.epg"
+            except: pvritem['epgurl'] = self.sysInfo.get('path','')#"pvr://guide/1197/2022-02-14 18:22:24.epg"
             if isPlaylist and not radio: pvritem = self.extendProgrammes(pvritem)
             PROPERTIES.setEXTProperty('%s.pendingPVRITEM.%s'%(ADDON_ID,pvritem.get('channelid','-1')),dumpJSON(pvritem))
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
@@ -175,10 +175,26 @@ class Plugin:
             self.resolveURL(True, liz)
 
 
-    def playBroadcast(self, name, id):
-        self.log('playBroadcast, id = %s'%(id))
-        
-        
+    def playBroadcast(self, name, id, endtime):
+        self.log('playBroadcast, id = %s, endtime = %s'%(id, endtime))
+        with preparingPlayback():
+            nowitem   = {}
+            found     = False
+            listitems = [xbmcgui.ListItem()] #empty listitem required to pass failed playback.
+            pvritem   = self.matchChannel(name,id,False,True)
+            if pvritem:
+                nextitems = [pvritem.get('broadcastnow',{})]
+                nextitems.extend(pvritem.get('broadcastnext',[]))
+                for nowitem in nextitems:
+                    if nowitem.get('endtime') == endtime:
+                        found = True
+                        liz = LISTITEMS.buildItemListItem(decodeWriter(nowitem.get('writer',{})))
+                        liz.setProperty('pvritem',dumpJSON(pvritem))
+                        listitems = [liz]
+                        break
+            self.resolveURL(found, listitems[0])
+                
+            
     def playChannel(self, name, id, isPlaylist=False):
         self.log('playChannel, id = %s, isPlaylist = %s'%(id,isPlaylist))
         with preparingPlayback():

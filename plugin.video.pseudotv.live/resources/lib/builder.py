@@ -49,7 +49,11 @@ class Builder:
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
         self.epgArt           = SETTINGS.getSettingInt('EPG_Artwork')
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
-         
+        self.limit            = SETTINGS.getSettingInt('Page_Limit')
+        self.filter           = {}                           #"filter":{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+        self.sort             = {}                           #"sort":{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
+        self.limits           = {}                           #"limits":{"end":0,"start":0,"total":0}
+
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = 10800 #Secs., Min. EPG guidedata
@@ -73,7 +77,6 @@ class Builder:
 
 
     def verify(self, channels=None):
-        #todo more robust verifying channel.json data before building.
         if channels is None: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
@@ -88,84 +91,57 @@ class Builder:
     def build(self):
         self.log('build')
         channels = sorted(self.verify(self.channels.getChannels()), key=lambda k: k['number'])
-        if channels:
-            now       = getLocalTime()
-            start     = roundTimeDown(getLocalTime(),offset=60)#offset time to start bottom of the hour
-            stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
-            
-            #set global dialog.
-            self.pMSG    = ''
-            self.pDialog = DIALOG.progressBGDialog()
-            
-            for idx, channel in enumerate(channels):
-                if self.service._interrupt(): break
-                elif self.service._suspend():
-                    self.completeBuild = False
-                    break
+        if not channels: return False
+        
+        now       = getUTCstamp()
+        start     = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
+        stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
+        self.pDialog = DIALOG.progressBGDialog()
+        
+        for idx, channel in enumerate(channels):
+            if self.service._interrupt(): break
+            elif self.service._suspend():
+                self.completeBuild = False
+                break
+            else:
+                channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
+                self.pName  = channel['name']
+                self.pCount = int(idx*100//len(channels))
+                
+                if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
+                    self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                elif stopTimes.get(channel['id']):
+                    self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                 else:
-                    channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
+                    self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
+                                    
+               #cacheResponse = {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
+                cacheResponse = self.runActions(RULES_ACTION_BUILD_STOP, channel, self.getFileList(channel, now, stopTimes.get(channel['id'],start)), inherited=self)
+                if cacheResponse:
+                    if self.addChannelStation(channel) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
+                        self.addChannelProgrammes(channel, cacheResponse) #added xmltv lineup entries.
+                else: 
+                    self.pErrors.append(LANGUAGE(32026))
+                    chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
+                    self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, channel['id'],self.pName))
+                    self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
+                    self.delChannelStation(channel)
+                    self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
                     
-                    #set global dialog.
-                    self.pName  = channel['name']
-                    self.pCount = int(idx*100//len(channels))
-                    if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
-                        self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                    elif stopTimes.get(channel['id']):
-                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:
-                        self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
-                    
-                    #cacheResponse = {True:'Valid Channel (exceed MAX_DAYS)', False:'In-Valid Channel (No guidedata)', list:'fileList (guidedata)'}
-                    cacheResponse = self.runActions(RULES_ACTION_BUILD_STOP, channel, self.getFileList(channel, now, stopTimes.get(channel['id'],start)), inherited=self)
-                    if cacheResponse:
-                        if self.addChannelStation(channel) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
-                            self.addChannelProgrammes(channel, cacheResponse) #added xmltv lineup entries.
-                    else: 
-                        self.pErrors.append(LANGUAGE(32026))
-                        chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                        self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, channel['id'],self.pName))
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                        self.delChannelStation(channel)
-                        self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
-                        
-            self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
-            self.log('build, completeBuild = %s, saved = %s'%(self.completeBuild,self.saveChannelLineups()))
-            return self.completeBuild
+        self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
+        self.log('build, completeBuild = %s, saved = %s'%(self.completeBuild,self.saveChannelLineups()))
+        return self.completeBuild
 
-        
-    def getProvisional(self, citem):
-        try:
-            provisional = re.findall(r"\{(.*?)}", str(citem['path']))[0]#match proper paths for provisional autotune.
-            if provisional and not bool(list(set([True for path in citem.get('path',[]) if self.xsp.isDXSP(path)]))): #exclude dynamic paths which trigger false positive during provisional regex.
-                if provisional == "Seasonal": #Seasonal
-                    citem['seasonal'] = Seasonal().buildSeasonal(citem)
-                elif citem['type'] in list(PROVISIONAL_TYPES.keys()): #Autotune
-                    citem['provisional'] = self.buildProvisional(provisional,citem)
-        except: pass
-        return citem
-
-        
-    def buildProvisional(self, provisional, citem):
-        self.log('buildProvisional, id: %s, provisional = %s'%(citem['id'],provisional))
-        return {'value':provisional,'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisionalPaths(provisional,citem['type'])}
-        
         
     def getFileList(self, citem, now, start):
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:
-            #globals
-            self.filter  = {}#"filter":{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
-            self.sort    = {}#"sort":{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
-            self.limits  = {}#"limits":{"end":0,"start":0,"total":0}
-            self.limit   = SETTINGS.getSettingInt('Page_Limit')
-
             start = self.runActions(RULES_ACTION_CHANNEL_START, citem, start, inherited=self)
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
-                # self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,LANGUAGE(32132)),header='%s, %s'%(ADDON_NAME,self.pMSG))
                 return True# prevent over-building
             
-            citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, self.getProvisional(citem), citem, inherited=self)
+            citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, self.buildProvisional(citem), citem, inherited=self)
             multi = len(citem['path']) > 1 #multi-path source
             radio = True if citem.get('radio',False) else False
             media = 'music' if radio else 'video'
@@ -184,40 +160,17 @@ class Builder:
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
 
-
-    def buildRadio(self, citem):
-        self.log("buildRadio; id: %s"%(citem.get('id')))
-        #todo insert custom radio labels,plots based on genre type?
-        # https://www.musicgenreslist.com/
-        # https://www.musicgateway.com/blog/how-to/what-are-the-different-genres-of-music
-        return self.buildCells(citem, self.minEPG, 'music', ((self.maxDays * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
         
-
-    def buildChannel(self, citem):
-        def verify(cacheResponse):
-            for fileList in cacheResponse:
-                if len(fileList) > 0: return True
-
-        # refactor library queries and path queries, unify to path only queries and create table to convert json requests to dynamic xsp.
-        
-        # # build multi-paths as individual arrays for easier interleaving.
-        if citem.get('provisional',None):
-            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service._interrupt()]
-        elif citem.get('seasonal',None):
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['seasonal']['path'] if not self.service._interrupt()]
-        else:
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service._interrupt()]
-
-        if not verify(cacheResponse):#check that at least one filelist array contains meta.
-            self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
-            return False
-            
-        cacheResponse = self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid interleave() below. Add avd. rule to setDictLST duplicates.
-        self.log("buildChannel, id: %s cacheResponse array = %s"%(citem['id'],len(cacheResponse)))
-        cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order.
-        cacheResponse = list([filelist for filelist in [_f for _f in cacheResponse if _f] if filelist != {}]) # filter None/empty filelist elements (probably unnecessary, catch if empty element is added during interleave or injection rules).
-        self.log('buildChannel, id: %s, cacheResponse = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
-        return cacheResponse
+    def buildProvisional(self, citem):
+        try:
+            provisional = re.findall(r"\{(.*?)}", str(citem['path']))[0]#match proper paths for provisional autotune.
+            if provisional and not bool(list(set([True for path in citem.get('path',[]) if self.xsp.isDXSP(path)]))): #exclude dynamic paths which trigger false positive during provisional regex.
+                if provisional == "Seasonal": #Seasonal
+                    citem['seasonal'] = Seasonal().buildSeasonal(citem)
+                elif citem['type'] in list(PROVISIONAL_TYPES.keys()): #Autotune
+                    citem['provisional'] = {'value':provisional,'json':PROVISIONAL_TYPES.get(citem['type'],{}).get('json',[]),'path':self.jsonRPC.buildProvisionalPaths(provisional,citem['type'])}
+        except: pass
+        return citem
 
 
     def buildCells(self, citem, duration=10800, type='video', entries=3, info={}):
@@ -251,12 +204,46 @@ class Builder:
             tmpList.append(item)
             
         #force removal of channel with no current programmes
-        if fileList[-1].get('stop') < getLocalTime():
+        if fileList[-1].get('stop') < getUTCstamp():
             self.log("addScheduling; id: %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
             tmpList = []
         return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         
+    def buildRadio(self, citem):
+        self.log("buildRadio; id: %s"%(citem.get('id')))
+        #todo insert custom radio labels,plots based on genre type?
+        # https://www.musicgenreslist.com/
+        # https://www.musicgateway.com/blog/how-to/what-are-the-different-genres-of-music
+        return self.buildCells(citem, self.minEPG, 'music', ((self.maxDays * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
+        
+
+    def buildChannel(self, citem):
+        def validFileList(cacheResponse):
+            for fileList in cacheResponse:
+                if len(fileList) > 0: return True
+
+        # refactor library queries and path queries, unify to path only queries and create table to convert json requests to dynamic xsp.
+        
+        # # build multi-paths as individual arrays for easier interleaving.
+        if citem.get('provisional',None):
+            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service._interrupt()]
+        elif citem.get('seasonal',None):
+            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['seasonal']['path'] if not self.service._interrupt()]
+        else:
+            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service._interrupt()]
+
+        if not validFileList(cacheResponse):#check that at least one filelist array contains meta.
+            self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
+            return False
+            
+        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        self.log("buildChannel, id: %s cacheResponse arrays = %s"%(citem['id'],len(cacheResponse)))
+        cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order.
+        self.log('buildChannel, id: %s, cacheResponse items = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
+        return cacheResponse
+
+
     def buildLibraryList(self, citem, value, query, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
         self.log("buildLibraryList; id: %s, media = %s, provisional value = %s\npage = %s, sort = %s, filter = %s, limits = %s\nquery = %s"%(citem['id'],media,value,page,sort,filter,limits,query))
         query['value'] = value
@@ -566,32 +553,32 @@ class Builder:
 
     def isHD(self, item):
         if 'isHD' in item: return item['isHD']
-        elif 'streamdetails' in item: 
-            item = item.get('streamdetails',{})
-            if 'video' in item and len(item.get('video')) > 0:
-                videowidth  = int(item['video'][0]['width']  or '0')
-                videoheight = int(item['video'][0]['height'] or '0')
-                if videowidth >= 1280 and videoheight >= 720: return True  
+        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        details = item.get('streamdetails',{})
+        if 'video' in details and len(details.get('video')) > 0:
+            videowidth  = int(details['video'][0]['width']  or '0')
+            videoheight = int(details['video'][0]['height'] or '0')
+            if videowidth >= 1280 and videoheight >= 720: return True
         return False
 
 
     def isUHD(self, item):
         if 'isUHD' in item: return item['isUHD']
-        elif 'streamdetails' in item: 
-            item = item.get('streamdetails',{})
-            if 'video' in item and len(item.get('video')) > 0:
-                videowidth  = int(item['video'][0]['width']  or '0')
-                videoheight = int(item['video'][0]['height'] or '0')
-                if videowidth > 1920 and videoheight > 1080: return True  
+        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        details = item.get('streamdetails',{})
+        if 'video' in details and len(details.get('video')) > 0:
+            videowidth  = int(details['video'][0]['width']  or '0')
+            videoheight = int(details['video'][0]['height'] or '0')
+            if videowidth > 1920 and videoheight > 1080: return True
         return False
         
         
     def is3D(self, item):
-        if   'is3D' in item: return item['is3D']
-        elif 'streamdetails' in item: item = item.get('streamdetails',{})
-        
-        if 'video' in item and item.get('video') != [] and len(item.get('video')) > 0:
-            stereomode = (item['video'][0]['stereomode'] or '')
+        if 'is3D' in item: return item['is3D']
+        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        details = item.get('streamdetails',{})
+        if 'video' in details and details.get('video') != [] and len(details.get('video')) > 0:
+            stereomode = (details['video'][0]['stereomode'] or '')
             if len(stereomode) > 0: return True
         return False
 
@@ -602,7 +589,7 @@ class Builder:
         citem['logo']  = cleanImage(citem['logo'])
         citem['group'] = cleanGroups(citem, self.enableGrouping)
         if citem['catchup']:
-            citem['catchup-source'] = SRC_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),source='&id={catchup-id}&starttime={Y}-{m}-{d}-{H}-{M}-{S}')
+            citem['catchup-source'] = SRC_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),source='&endtime={Y}-{m}-{d} {H}:{M}:{S}')
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
         

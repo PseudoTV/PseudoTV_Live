@@ -453,7 +453,7 @@ class JSONRPC:
             
     @cacheit(checksum=getInstanceID())
     def buildProvisionalPaths(self, value, type):
-        self.log('buildProvisional, value = %s, type = %s'%(value,type))
+        self.log('buildProvisionalPaths, value = %s, type = %s'%(value,type))
         paths   = []
         for request in PROVISIONAL_TYPES.get(type,{}).get('path',[]):
             items = self.getDirectory(param={"directory":request}, cache=False).get('files',[])
@@ -461,7 +461,7 @@ class JSONRPC:
                 if item.get('label') == value:
                     paths.append(item['file'])
                     break
-        self.log('buildProvisional, return paths = %s'%(paths))
+        self.log('buildProvisionalPaths, return paths = %s'%(paths))
         return paths
 
 

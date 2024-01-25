@@ -21,13 +21,13 @@
 from globals   import *
 from plugin    import Plugin
 
-def run(sysARG):  
+def run(sysARG):
     params    = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
     name      = (unquoteString(params.get("name",'')) or None)
     channel   = (params.get("channel",'')             or None)
     url       = (params.get("url",'')                 or None)
     id        = (params.get("id",'')                  or None)
-    starttime = (params.get("starttime",'')           or None)
+    endtime   = (params.get("endtime",'')             or None)
     mode      = (params.get("mode",'')                or 'guide')
     radio     = (params.get("radio",'')               or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
@@ -42,7 +42,7 @@ def run(sysARG):
     elif mode == 'vod': 
         threadit(Plugin(sysARG).playVOD)(name,id)
     elif mode == 'broadcast': 
-        threadit(Plugin(sysARG).playVOD)(name,id)
+        threadit(Plugin(sysARG).playBroadcast)(name,channel,datetime.datetime.fromtimestamp((datetime.datetime.timestamp(strpTime(endtime, DTJSONFORMAT)) - getTimeoffset())).strftime(DTJSONFORMAT))
     elif mode == 'play':
         if radio: threadit(Plugin(sysARG).playRadio)(name,channel)
         else:     threadit(Plugin(sysARG).playChannel)(name,channel,bool(SETTINGS.getSettingInt('Playback_Method')))

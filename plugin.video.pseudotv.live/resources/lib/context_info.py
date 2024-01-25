@@ -32,7 +32,7 @@ class Browse:
         with busy_dialog():
             target  = '%ss'%(writer.get('media','video'))
             orgpath = writer.get('originalpath','')
-            citem   = Builder().getProvisional(writer.get('citem',{}))
+            citem   = Builder().buildProvisional(writer.get('citem',{}))
 
             if '?xsp=' in orgpath:
                 path, params = orgpath.split('?xsp=')

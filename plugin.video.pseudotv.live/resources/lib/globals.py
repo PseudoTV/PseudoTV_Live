@@ -123,7 +123,6 @@ def escapeString(text, table=HTML_ESCAPE):
 def unescapeString(text, table=HTML_ESCAPE):
     return unescape(text,{v:k for k, v in list(table.items())})
 
-
 def getJSON(file):
     fle  = (FileAccess.open(file, 'r') or '')
     try:    data = loadJSON(fle.read())
@@ -278,21 +277,32 @@ def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
         
-def roundTimeDown(thetime, offset=30): # round the given time down to the nearest
-    n = datetime.datetime.fromtimestamp(thetime)
+def roundTimeDown(dt, offset=30): # round the given time down to the nearest
+    n = datetime.datetime.fromtimestamp(dt)
     delta = datetime.timedelta(minutes=offset)
     if n.minute > (offset-1): n = n.replace(minute=offset, second=0, microsecond=0)
     else: n = n.replace(minute=0, second=0, microsecond=0)
     return time.mktime(n.timetuple())
     
-def strpTime(datestring, format='%Y-%m-%d %H:%M:%S'): #convert json pvr datetime string to datetime obj, thread safe!
+def roundTimeUp(dt=None, roundTo=60):
+   if dt == None : dt = datetime.datetime.now()
+   seconds = (dt.replace(tzinfo=None) - dt.min).seconds
+   rounding = (seconds+roundTo/2) // roundTo * roundTo
+   return dt + datetime.timedelta(0,rounding-seconds,-dt.microsecond)
+   
+def strpTime(datestring, format=DTJSONFORMAT): #convert json pvr datetime string to datetime obj, thread safe!
     try:              return datetime.datetime.strptime(datestring, format)
     except TypeError: return datetime.datetime.fromtimestamp(time.mktime(time.strptime(datestring, format)))
     except:           return ''
 
-def getLocalTime():
-    offset = (datetime.datetime.utcnow() - datetime.datetime.now())
-    return time.time() + offset.total_seconds() #returns timestamp
+def getTimeoffset():
+    return (int((datetime.datetime.now() - datetime.datetime.utcnow()).days * 86400 + round((datetime.datetime.now() - datetime.datetime.utcnow()).seconds, -1)))
+    
+def getUTCstamp():
+    return time.time() - getTimeoffset()
+
+def getGMTstamp():
+    return time.time()
 
 def randomShuffle(items=[]):
     if len(items) > 0:

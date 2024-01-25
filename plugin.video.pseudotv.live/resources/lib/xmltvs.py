@@ -121,7 +121,7 @@ class XMLTVS:
     def loadStopTimes(self, channels=None, programmes=None, fallback=None):
         if channels   is None: channels   = self.getChannels()
         if programmes is None: programmes = self.getProgrammes()
-        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60)).strftime(DTFORMAT)
+        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
         
         for channel in channels:
             try: 
@@ -186,7 +186,7 @@ class XMLTVS:
 
     def cleanProgrammes(self, programmes): # remove expired content, ignore "recordings" ie. media=True
         try:
-            now = (datetime.datetime.fromtimestamp(float(getLocalTime())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
+            now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
             tmpProgrammes = [program for program in programmes if (strpTime(program['stop'].rstrip(),DTFORMAT) > now)]
         except Exception as e: 
             self.log("cleanProgrammes, Failed! %s"%(e), xbmc.LOGERROR)
@@ -239,7 +239,7 @@ class XMLTVS:
         else: 
             self.XMLTVDATA['recordings'][idx] = sitem # replace existing channel meta
 
-        fitem['start'] = getLocalTime()
+        fitem['start'] = getUTCstamp()
         fitem['stop']  = fitem['start'] + fitem['duration']
         if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem)):
             return self._save()
@@ -383,7 +383,7 @@ class XMLTVS:
     def chkImport(self, channels, programmes): # parse for empty programmes, inject single cell entry.
         try:
             def addSingleEntry(channel, start=None, length=10800): #create a single entry with min. channel meta, use as a filler.
-                if start is None: start = datetime.datetime.fromtimestamp(roundTimeDown(getLocalTime(),offset=60))
+                if start is None: start = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60))
                 pitem = {'channel'     : channel.get('id'),
                          'title'       : [(channel.get('display-name',[{'',LANG}])[0][0], LANG)],
                          'desc'        : [(xbmc.getLocalizedString(161), LANG)],

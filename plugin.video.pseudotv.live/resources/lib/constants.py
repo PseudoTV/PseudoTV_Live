@@ -37,6 +37,7 @@ LANGUAGE            = REAL_SETTINGS.getLocalizedString
 OVERLAY_DELAY       = 15    #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
+DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
 LANG                = 'en' #todo parse kodi region settings
 DEFAULT_ENCODING    = "utf-8"
 PROMPT_DELAY        = 4000 #msecs
