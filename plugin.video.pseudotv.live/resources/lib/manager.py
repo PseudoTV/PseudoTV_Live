@@ -1,4 +1,4 @@
-  # Copyright (C) 2023 Lunatixz
+  # Copyright (C) 2024 Lunatixz
 
 
 # This file is part of PseudoTV Live.
@@ -107,7 +107,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.cache        = Cache(mem_cache=True)
                 self.channels     = Channels()
                 self.jsonRPC      = JSONRPC()
-                self.rules        = RulesList()
+                self.rules        = RulesList(self.channels.getChannels())
                 self.xsp          = XSP()
                 self.m3u          = M3U()
                 self.resources    = Resources(self.jsonRPC, self.cache)

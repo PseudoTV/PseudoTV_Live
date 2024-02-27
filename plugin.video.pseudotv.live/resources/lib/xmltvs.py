@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -59,7 +59,8 @@ class XMLTVS:
             programmes = self.sortProgrammes(self.XMLTVDATA['programmes'])
             for channel in self.sortChannels(self.cleanChannels(self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels'], programmes)):
                 writer.addChannel(channel)
-            for program in programmes: writer.addProgramme(program)
+            for program in programmes:
+                writer.addProgramme(program)
             
             try:
                 self.log('_save, saving to %s'%(file))
@@ -485,10 +486,8 @@ class XMLTVS:
         item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
         fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
         item['date']          = fItem.get('premiered','')
-        
-        if citem['catchup']:
-            item['catchup-id']  = VOD_URL.format(addon=ADDON_ID,name=quoteString(item['title']),id=quoteString(encodeString((fItem.get('originalfile','') or fItem.get('file','')))),channel=quoteString(citem['id']))
-            fItem['catchup-id'] = item['catchup-id']
+        item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),vid=quoteString(encodeString((fItem.get('originalfile','') or fItem.get('file','')))),chid=quoteString(citem['id']))
+        fItem['catchup-id']   = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):
             item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1),

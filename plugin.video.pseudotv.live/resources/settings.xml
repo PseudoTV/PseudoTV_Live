@@ -190,6 +190,24 @@
                         <close>true</close>
 					</control>
 				</setting>
+				<setting id="Select_Music_Genres" type="string" label="32011" help="33011">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+							<and>
+								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
+							</and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Music_Genres)</data>
+                        <close>true</close>
+					</control>
+				</setting>
 				<setting id="Select_Mixed" type="string" label="32010" help="33010">
 					<level>0</level>
 					<default/>
@@ -241,24 +259,6 @@
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Services)</data>
-                        <close>true</close>
-					</control>
-				</setting>
-				<setting id="Select_Music_Genres" type="string" label="32011" help="33011">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-						<dependency type="enable">
-							<and>
-								<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
-							</and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/autotune.py, Music_Genres)</data>
                         <close>true</close>
 					</control>
 				</setting>

@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -35,11 +35,14 @@ class Channels:
 
     
     def _load(self, file=CHANNELFLEPATH):
-        return getJSON(file)
+        channelDATA = getJSON(file)
+        self.log('_load, channels = %s'%(len(channelDATA.get('channels',[]))))
+        return channelDATA
     
     
     def _save(self, file=CHANNELFLEPATH):
         self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=lambda k: k['number'])
+        self.log('_save, channels = %s'%(len(self.channelDATA['channels'])))
         return setJSON(file,self.channelDATA)
 
         
@@ -96,9 +99,6 @@ class Channels:
         self.channelDATA['uuid'] = data
         return self._save()
          
-    
-    # def getChannel(self, item):
-        # if item.get('id')
 
     def delChannel(self, citem):
         self.log('delChannel, id = %s'%(citem['id']), xbmc.LOGINFO)

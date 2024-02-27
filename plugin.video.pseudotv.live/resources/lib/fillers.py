@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -56,55 +56,56 @@ class Fillers:
             
 
     def injectBCTs(self, citem, fileList):
-        if not fileList: return fileList
-        self.log("injectBCTs, channel = %s, fileList = %s"%(citem.get('id'),len(fileList)))
-        ratings = self.buildResourceByType('ratings')
-        bumpers = self.buildResourceByType('bumpers')
-        
-        lstop     = 0
-        nFileList = list()
-        chname    = citem.get('name','')
-        chcats    = citem.get('groups',[])
-        
-        for idx,fileItem in enumerate(fileList):
-            fileItem['originalfile'] = fileItem.get('file','')
-            fileItem['start'] = fileItem['start'] if lstop == 0 else lstop
-            fileItem['stop']  = fileItem['start'] + fileItem['duration']
-        
-            paths  = [file]
-            oPaths = paths.copy()
-            stop   = fileItem['stop']
-            end    = abs(roundTimeUp(stop) - stop) #auto mode
-            
-            # print('duration',fileItem['duration'])
-            # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-            # print('stop',datetime.datetime.fromtimestamp(stop))
-            # print('end',end)
-            
-            if ratings and self.bctTypes['ratings'].get('enabled',True):
-                mpaa = cleanMPAA(fileItem.get('mpaa',''))
-                if self.builder.is3D(fileItem): mpaa += ' (3DSBS)'
-                rating = ratings.get(mpaa.lower(), {})
-                if rating:
-                    paths.insert(0,rating.get('file'))
-                    end -= rating.get('duration')
-                    # print('end ratings', end)
-                    # print('mpaa',mpaa)  
-                    # print('rating',rating) 
-        
-            if bumpers and self.bctTypes['bumpers'].get('enabled',True):
-                bumper = random.choice(bumpers)
-                paths.insert(0,bumper.get('file'))
-                end -= bumper.get('duration')
-                # print('end bumper', end)
-                # print('chname',chname)
-                # print('bumper',bumper)
-        
-        
-        
-        
-        
         return fileList
+        # if not fileList: return fileList
+        # self.log("injectBCTs, channel = %s, fileList = %s"%(citem.get('id'),len(fileList)))
+        # ratings = self.buildResourceByType('ratings')
+        # bumpers = self.buildResourceByType('bumpers')
+        
+        # lstop     = 0
+        # nFileList = list()
+        # chname    = citem.get('name','')
+        # chcats    = citem.get('groups',[])
+        
+        # for idx,fileItem in enumerate(fileList):
+            # fileItem['originalfile'] = fileItem.get('file','')
+            # fileItem['start'] = fileItem['start'] if lstop == 0 else lstop
+            # fileItem['stop']  = fileItem['start'] + fileItem['duration']
+        
+            # paths  = [file]
+            # oPaths = paths.copy()
+            # stop   = fileItem['stop']
+            # end    = abs(roundTimeUp(stop) - stop) #auto mode
+            
+            # # print('duration',fileItem['duration'])
+            # # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
+            # # print('stop',datetime.datetime.fromtimestamp(stop))
+            # # print('end',end)
+            
+            # if ratings and self.bctTypes['ratings'].get('enabled',True):
+                # mpaa = cleanMPAA(fileItem.get('mpaa',''))
+                # if self.builder.is3D(fileItem): mpaa += ' (3DSBS)'
+                # rating = ratings.get(mpaa.lower(), {})
+                # if rating:
+                    # paths.insert(0,rating.get('file'))
+                    # end -= rating.get('duration')
+                    # # print('end ratings', end)
+                    # # print('mpaa',mpaa)  
+                    # # print('rating',rating) 
+        
+            # if bumpers and self.bctTypes['bumpers'].get('enabled',True):
+                # bumper = random.choice(bumpers)
+                # paths.insert(0,bumper.get('file'))
+                # end -= bumper.get('duration')
+                # # print('end bumper', end)
+                # # print('chname',chname)
+                # # print('bumper',bumper)
+        
+        
+        
+        
+        
+        # return fileList
 
 
 

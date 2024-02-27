@@ -325,7 +325,7 @@ class JSONRPC:
         self.queueJSON(param[media])
         
 
-    def requestList(self, citem, item, media='video', page=PAGE_LIMIT, sort={}, filter={}, limits={}):
+    def requestList(self, citem, item, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
         getFile = True
         path    = item
         if isinstance(item, dict): #library json query
@@ -417,7 +417,7 @@ class JSONRPC:
         return limits
             
              
-    def randomPagination(self, page=PAGE_LIMIT, total=0):
+    def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), total=0):
         if total > page: start = random.randrange(0, (total-page), page)
         else:            start = 0
         return {"end": start, "start": start, "total":total}
@@ -465,7 +465,7 @@ class JSONRPC:
         return paths
 
 
-    def padItems(self, items, page=PAGE_LIMIT):
+    def padItems(self, items, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; items In = %s"%(len(items)))
         if len(items) < page:

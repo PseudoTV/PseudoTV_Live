@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -99,15 +99,19 @@ HTML_ESCAPE         = {"&": "&amp;",
                        ">": "&gt;",
                        "<": "&lt;"}    
 
-PVR_URL             = 'plugin://{addon}/?mode=play&name={name}&channel={channel}&radio={radio}.pvr'
-VOD_URL             = 'plugin://{addon}/?mode=vod&name={name}&id={id}&channel={channel}.pvr'
-SRC_URL             = 'plugin://{addon}/?mode=broadcast&name={name}&channel={channel}{source}.pvr'
+VOD_URL             = 'plugin://{addon}/?mode=vod&title={title}&chid={chid}&vid={vid}.pvr'
+TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
+RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
+LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={vid}&duration={duration}&start={start}.pvr'
+BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&vid={vid}&duration={duration}&start={start}.pvr'
               
 PTVL_REPO           = 'repository.pseudotv'
-PVR_CLIENT          = 'pvr.iptvsimple'
-      
+PVR_CLIENT_ID       = 'pvr.iptvsimple'
+PVR_CLIENT_NAME     = xbmcaddon.Addon(id=PVR_CLIENT_ID).getAddonInfo('name')
+
 #docs
 README_FLE          = os.path.join(ADDON_PATH,'README.md')
+WELCOME_FLE         = os.path.join(ADDON_PATH,'welcome.txt')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
@@ -160,15 +164,19 @@ HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plug
 
 #rules
 ##builder
-RULES_ACTION_CHANNEL       = 1 
-RULES_ACTION_BUILD_START   = 2
-RULES_ACTION_CHANNEL_START = 3
-RULES_ACTION_CHANNEL_CITEM = 4
-RULES_ACTION_CHANNEL_FLIST = 5
-RULES_ACTION_CHANNEL_STOP  = 6
-RULES_ACTION_PRE_TIME      = 7
-RULES_ACTION_POST_TIME     = 8
-RULES_ACTION_BUILD_STOP    = 9
+RULES_ACTION_CHANNEL_VERIFY              = 1 #inject citem changes
+RULES_ACTION_CHANNEL_START               = 2 #pre channel build trigger
+RULES_ACTION_CHANNEL_BUILD_START         = 3 #ammend citem 
+RULES_ACTION_CHANNEL_BUILD_GLOBAL        = 4 #per path global injection trigger
+RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE  = 5 #inject filelist before multi-path interleaving
+RULES_ACTION_CHANNEL_BUILD_FILELIST_POST = 6 #ammend filelist times
+RULES_ACTION_CHANNEL_BUILD_TIME_PRE      = 7 #filelist
+RULES_ACTION_CHANNEL_BUILD_TIME_POST     = 8 #filelist
+RULES_ACTION_CHANNEL_BUILD_STOP          = 9 #ammend filelist after scheduling.
+RULES_ACTION_CHANNEL_STOP                = 10 #restore globals before next channel build
+
+
+
 ##player
 RULES_ACTION_PLAYBACK      = 11
 RULES_ACTION_PLAYER_START  = 12

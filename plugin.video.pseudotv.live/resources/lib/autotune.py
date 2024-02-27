@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -108,6 +108,7 @@ class Autotune:
         
         
     def buildAUTOTUNE(self, ATtype, items):
+        if not items: return
         def buildAvailableRange(existing):
             # create number array for given type, excluding existing channel numbers.
             if existing:
@@ -118,7 +119,7 @@ class Autotune:
             stop  = (start + CHANNEL_LIMIT)
             self.log('buildAUTOTUNE, ATtype = %s, range = %s-%s, existingNUMBERS = %s'%(ATtype,start,stop,existingNUMBERS))
             return [num for num in range(start,stop) if num not in existingNUMBERS]
-                  
+      
         existingAUTOTUNE = self.channels.popChannels(ATtype,self.getAutotuned())
         usesableNUMBERS  = iter(buildAvailableRange(existingAUTOTUNE)) # available channel numbers
         for item in items:
@@ -128,10 +129,10 @@ class Autotune:
                           "type"    : ATtype,
                           "number"  : 0,
                           "name"    : getChannelSuffix(item['name'], ATtype),
-                          "logo"    : item['logo'],
-                          "path"    : item['path'],
-                          "group"   : [item['type']],
-                          "rules"   : [],
+                          "logo"    : item.get('logo',LOGO),
+                          "path"    : item.get('path',''),
+                          "group"   : [item.get('type','')],
+                          "rules"   : item.get('rules',[]),
                           "catchup" : ('vod' if not music else ''),
                           "radio"   : music,
                           "favorite": True})
@@ -143,6 +144,7 @@ class Autotune:
             else:
                 citem['number']   = eitem.get('number') 
                 citem['id']       = eitem.get('id')
+                citem['rules']    = eitem.get('rules')# "rules":[{"id":63,"index":{"0":{"value":3}}}]
                 citem['favorite'] = eitem.get('favorite')
             self.channels.addChannel(citem)
         return self.channels.setChannels()

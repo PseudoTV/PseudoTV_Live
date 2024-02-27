@@ -1150,6 +1150,10 @@ msgctxt "#32158"
 msgid "Syncing"
 msgstr ""
 
+msgctxt "#32159"
+msgid "Rebuild Library"
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1379,4 +1383,8 @@ msgstr ""
 
 msgctxt "#33150"
 msgid "Parse Library & Build Channels while playing."
+msgstr ""
+
+msgctxt "#33159"
+msgid "Force a complete rebuild of your Autotune library."
 msgstr ""

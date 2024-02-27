@@ -31,7 +31,7 @@ from variables   import *
 from kodi_six    import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
 from contextlib  import contextmanager, closing
 from socket      import gethostbyname, gethostname
-from itertools   import cycle, chain, zip_longest
+from itertools   import cycle, chain, zip_longest, islice
 from xml.sax.saxutils import escape, unescape
 from ast         import literal_eval
 
@@ -114,8 +114,11 @@ def encodeString(text):
     return base64_bytes.decode(DEFAULT_ENCODING)
 
 def decodeString(base64_bytes):
-    message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
-    return message_bytes.decode(DEFAULT_ENCODING)
+    try:
+        message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
+        return message_bytes.decode(DEFAULT_ENCODING)
+    except:
+        pass
 
 def escapeString(text, table=HTML_ESCAPE):
     return escape(text,table)
@@ -146,6 +149,9 @@ def setURL(url, file):
         return FileAccess.exists(file)
     except Exception as e: 
         log("saveURL, failed! %s"%e, xbmc.LOGERROR)
+
+def removeDUPDICT(d):
+    return [dict(t) for t in {tuple(d.items()) for d in l}]
 
 def diffLSTDICT(old, new):
     sOLD = set([dumpJSON(e) for e in old])
@@ -363,6 +369,7 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
             'pvrmanager.syncchannelgroups'       :'true',
             'pvrmanager.backendchannelorder'     :'true',
             'pvrmanager.usebackendchannelnumbers':'true',
+            'pvrplayback.autoplaynextprogramme'  :'true',
             # 'pvrmenu.iconpath':'',
             # 'pvrplayback.switchtofullscreenchanneltypes':1,
             # 'pvrplayback.confirmchannelswitch':'true',
@@ -400,10 +407,10 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             # 'useEpgGenreText'             :'true',
             'logoFromEpg'                 :'1',
             'catchupEnabled'              :'true',
+            'catchupPlayEpgAsLive'        :'false',
             'allChannelsCatchupMode'      :'0',
             'numberByOrder'               :'false',
             'startNum'                    :'1',
-            'epgTimeShift'                :'0',
             # 'epgTSOverride'               :'false',
             # 'useFFmpegReconnect'          :'true',
             # 'useInputstreamAdaptiveforHls':'true'
@@ -412,25 +419,22 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
 def togglePVR(state=True, reverse=False, waitTime=15):
     log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))
     BUILTIN.executebuiltin('ActivateWindow(home)')
-    try:    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
-    except: name = PVR_CLIENT
-    isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT),'System')
+    isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
     if (state and isEnabled) or (not state and not isEnabled): return
-    xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT,str(state).lower()))
+    xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
     xbmc.sleep(250)
     if reverse: timerit(togglePVR)(waitTime,[not bool(state)])
     else: waitTime = int(PROMPT_DELAY/1000)
-    DIALOG.notificationWait('%s: %s'%(name,LANGUAGE(32125)),wait=waitTime)
+    DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=waitTime)
               
 def bruteForcePVR(msg=''):
-    name = xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')
     if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = LANGUAGE(32128)
-    if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(name),(LANGUAGE(32121)%(name)),msg)):
+    if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(PVR_CLIENT_NAME),(LANGUAGE(32121)%(PVR_CLIENT_NAME)),msg)):
         brutePVR(True)
               
 def brutePVR(override=False, waitTime=15):
     if not override:
-        if not DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')))): return
+        if not DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): return
     togglePVR(False,True,waitTime)
     if MONITOR.waitForAbort(waitTime): return False
     return True
@@ -500,7 +504,12 @@ def setDiscovery(servers={}):
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-        
+
+def chunkDict(items, n):
+    it = iter(items)
+    for i in range(0, len(items), n):
+        yield {k:items[k] for k in islice(it, n)}
+
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True
     for path in item.get('path',[]):
@@ -585,4 +594,6 @@ def hasFile(file):
         else: return True
     else: return FileAccess.exists(file)
 
-              
+def timeString2Seconds(string): #hh:mm:ss
+    try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
+    except: return 0

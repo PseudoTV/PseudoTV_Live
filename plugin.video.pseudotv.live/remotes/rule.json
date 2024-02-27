@@ -1,8 +1,6 @@
 [{
 	"id": 0,
-	"name": "",
-	"description": "",
-	"options": {
+	"index": {
 		"0": {
 			"label": "",
 			"value": ""

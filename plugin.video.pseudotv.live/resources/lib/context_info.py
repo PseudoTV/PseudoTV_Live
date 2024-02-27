@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -66,7 +66,8 @@ class Match:
             self.SEARCH_SCRIPT = self.SIMILAR_SCRIPT
         elif hasAddon(self.GLOBAL_SCRIPT,install=True):
             self.SEARCH_SCRIPT = self.GLOBAL_SCRIPT
-        else: return DIALOG.notificationDialog(LANGUAGE(32000))
+        else: 
+            DIALOG.notificationDialog(LANGUAGE(32000))
         log('Match: SEARCH_SCRIPT = %s'%(self.SEARCH_SCRIPT))
         hasAddon(self.SEARCH_SCRIPT,enable=True)
 

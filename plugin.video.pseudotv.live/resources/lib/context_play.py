@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -19,24 +19,15 @@
 # -*- coding: utf-8 -*-
 from globals import *
 from plugin  import Plugin
-
-class Play:
-    def __init__(self, sysARG, writer):
-        with busy_dialog():
-            log('Play: __init__, sysARG = %s'%(sysARG))
-            Plugin(sysARG).contextPlay(writer,isPlaylist=False)
-            
-class Playlist:
-    def __init__(self, sysARG, writer):
-        with busy_dialog():
-            log('Playlist: __init__, sysARG = %s'%(sysARG))
-            Plugin(sysARG).contextPlay(writer,isPlaylist=True)
-            
+     
 if __name__ == '__main__': 
-    try:    param = sys.argv[1]
-    except: param = None
-    log('Play: __main__, param = %s'%(param))
-    if param == 'play':
-        Play(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
-    elif param == 'playlist':
-        Playlist(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+    try:    mode = sys.argv[1]
+    except: mode = None
+    citem = decodeWriter(BUILTIN.getInfoLabel('Writer')).get('citem',{})
+    sys.argv.append('?mode=%s&name=%s&chid=%s'%(mode,quoteString(citem.get('name')),quoteString(citem.get('id'))))
+    log('Context_Play: __main__, mode = %s, param = %s'%(mode, sys.argv))
+    if   mode == 'play':     Plugin(sys.argv).playTV(citem.get('name'),citem.get('id'))
+    elif mode == 'playlist': Plugin(sys.argv).playPlaylist(citem.get('name'),citem.get('id'))
+        
+        
+        

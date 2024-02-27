@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -276,7 +276,7 @@ class Settings:
                        'epgPath'       :os.path.join(userFolder,XMLTVFLE),
                        'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'genresPath'    :os.path.join(userFolder,GENREFLE)}
-        self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+        self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
         setPendingRestart()
         
         
@@ -294,10 +294,10 @@ class Settings:
                        'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
                        'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
-        self.chkPluginSettings(PVR_CLIENT,newSettings,prompt=False)
+        self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
         setPendingRestart()
-    
-    
+
+
     def chkPluginSettings(self, id, values, override=False, prompt=True):
         self.log('chkPluginSettings, id = %s, override=%s'%(id,override))
         try: 
@@ -331,13 +331,27 @@ class Settings:
             for s, v in list(values.items()):
                 if MONITOR.waitForAbort(1): return False
                 addon.setSetting(s, v[1])
-            self.forceMigration(id)
+            self.setPVRInstance(id)
             return self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
         except: self.dialog.notificationDialog(LANGUAGE(32034)%(id))
         return False
 
 
-    def forceMigration(self, id):
+    def chkPVRInstance(self, path):
+        for file in [filename for filename in FileAccess.listdir(path)[1] if filename.endswith('.xml')]:
+            if MONITOR.waitForAbort(1): break
+            elif file.startswith('instance-settings-'):
+                try:
+                    xml  = FileAccess.open(os.path.join(path,file), "r")
+                    name = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(xml.read()).group(1)
+                    xml.close()
+                    if name == ADDON_NAME:
+                        self.log('chkPVRInstance, found file = %s'%(file))
+                        return file
+                except Exception as e: self.log('chkPVRInstance, path = %s, failed to open file = %s\n%s'%(path,file,e))
+
+
+    def setPVRInstance(self, id):
         # # https://github.com/xbmc/xbmc/pull/23648
         # newid = REAL_SETTINGS.getFreeNewInstanceId()
         # addonsettingnew = REAL_SETTINGS.getSettings(newid)
@@ -352,26 +366,18 @@ class Settings:
             # printstring += "ID: " + str(x) + "\n"
             # printstring += "Test setting: " + REAL_SETTINGS.getSettings(x).getString('host') + "\n"
         # xbmcgui.Dialog().textviewer(ADDON_NAME, printstring)
-
-        pvrPath = 'special://profile/addon_data/%s'%(id)
-        settingInstance = 1
-        for file in [filename for filename in FileAccess.listdir(pvrPath)[1] if filename.endswith('.xml')]:
-            if   MONITOR.waitForAbort(5): break
-            elif file.startswith('instance-settings-'):
-                try:
-                    xml = FileAccess.open(os.path.join(pvrPath,file), "r")
-                    instanceName = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(xml.read()).group(1)
-                    xml.close()
-                    if instanceName == ADDON_NAME:  #delete old instance settings
-                        self.log('forceMigration, id = %s deleting %s...'%(id,file))
-                        FileAccess.delete(os.path.join(pvrPath,file))
-                except Exception as e: self.log('forceMigration, id = %s, failed to open/parse %s\n%s'%(id,file,e))
-                settingInstance += int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(file).group(1))
         
-        #todo open pvr simple settings prompt user to disable Migrated Add-on Config.
+        settingInstance = 1
+        pvrPath = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
+        pvrFile = self.chkPVRInstance(pvrPath)
+        if pvrFile:
+            self.log('setPVRInstance, id = %s deleting %s...'%(id,pvrFile))
+            FileAccess.delete(os.path.join(pvrPath,pvrFile))
+            settingInstance += int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(pvrFile).group(1))
+            
         #copy new instance settings
         if FileAccess.exists(os.path.join(pvrPath,'settings.xml')):
-            self.log('forceMigration, id = %s creating %s...'%(id,'instance-settings-%d.xml'%(settingInstance)))
+            self.log('setPVRInstance, id = %s creating %s...'%(id,'instance-settings-%d.xml'%(settingInstance)))
             return FileAccess.copy(os.path.join(pvrPath,'settings.xml'),os.path.join(pvrPath,'instance-settings-%d.xml'%(settingInstance)))
            
         

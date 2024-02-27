@@ -1,3 +1,17 @@
+v.0.4.5
+-Notice The following steps are required!.
+ - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
+ - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
+-Improved Channel loading times.
+-Improved Background tasks and services.
+-Improved Playback using new IPTV Simple methods *Thanks @phunkyfish.
+-Refactored all playback handlers, including radio.
+-WIP "Best Effort Marathon" mode added to Autotuned TV. Mixed Genres and Custom channels; TV Shows are grouped in blocks when applicable (Enable under global settings). 
+-Fixed a bug which caused duplicate XMLTV entries to share the same start time. This lead to empty EPG cells.
+-Fixed a rare instance where existing channels are not detect/imported when rebuilding the library database from scratch.
+-Added "Rebuild Library" to the utility menu. Forces a library rebuild which will detected recent Kodi library additions. Default behavior the library self updates every few days to hours. 
+-Added "Welcome" prompt to help new users understand and operate PseudoTV Live. Suggestions for improvements are welcome.
+
 v.0.4.4
 -Added "Network Folder" clients ability to edit Autotuned channels on server (W.I.P).
 -Moved "channels.json,library.json" files to "Centralized Folder" for network/client accessibility.

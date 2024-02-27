@@ -45,6 +45,7 @@ class Tasks():
         #first processes before service loop starts. Only runs once per instance.
         setInstanceID()
         setClient(isClient(),silent=False)
+        self.chkWelcome()
         self.chkVersion()
         self.chkDebugging()
         
@@ -85,6 +86,11 @@ class Tasks():
             self.myService._que(self.chkJSONQUE,4)
               
               
+    def chkWelcome(self):
+        self.log('chkWelcome')
+        BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
+              
+              
     def chkVersion(self):
         self.log('chkVersion')
         if ADDON_VERSION != SETTINGS.getCacheSetting('lastVersion', default='v.0.0.0'):
@@ -104,12 +110,14 @@ class Tasks():
 
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
-        # #todo limit to one initial. run, as base template. Allowing users to edit settings. All future changes only set local/remote paths.
-        # if hasAddon(PVR_CLIENT,install=True,enable=True):
-            # SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS()) #reconfigure iptv-simple, if needed.
-        # else: ... #todo okdialog user to explain IPTV PVR requirements. 
-
-
+        if hasAddon(PVR_CLIENT_ID,install=True,enable=True) and not SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)):
+            with busy_dialog():
+                if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
+                    DIALOG.notificationDialog(LANGUAGE(32152))
+                else:
+                    DIALOG.notificationDialog(LANGUAGE(32046))
+        
+     
     def chkUpdateTime(self, key, runEvery, nextUpdate=None):
         #schedule updates, first boot always forces run!
         if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
@@ -190,7 +198,7 @@ class Tasks():
         self.queueRunning = True
         queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
         params = queuePool.get('params',[])
-        for param in (list(chunkLst(params,PAGE_LIMIT)) or [[]])[0]:
+        for param in (list(chunkLst(params,SETTINGS.getSettingInt('Page_Limit'))) or [[]])[0]:
             if self.myService._interrupt():
                 self.log('runJSON, _interrupt')
                 break

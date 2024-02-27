@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -26,13 +26,22 @@ from channels   import Channels
 
 #constants
 REG_KEY = 'PseudoTV_Recommended.%s'
+class Service:
+    def _interrupt(self, wait=.001) -> bool: #break
+        return MONITOR.waitForAbort(wait)
+
+    def _suspend(self):
+        pass
 
 class Library:
     def __init__(self, service=None):
+        if service is None:
+            service = Service()
+            
+        self.service      = service
         self.parserCount  = 0
         self.parserMSG    = ''
         self.parserDialog = None
-        self.service      = service
         self.cache        = Cache()
         self.jsonRPC      = JSONRPC()
         self.predefined   = Predefined()
@@ -41,7 +50,19 @@ class Library:
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryDATA.update(self._load())
 
-        
+        self.libraryFUNCS = {"Playlists"    :self.getPlaylists,
+                             "TV Networks"  :self.getNetworks,
+                             "TV Shows"     :self.getTVShows,
+                             "TV Genres"    :self.getTVGenres,
+                             "Movie Genres" :self.getMovieGenres,
+                             "Movie Studios":self.getMovieStudios,
+                             "Mixed Genres" :self.getMixedGenres,
+                             "Mixed"        :self.getMixed,
+                             "Recommended"  :self.getRecommend,
+                             "Services"     :self.getServices,
+                             "Music Genres" :self.getMusicGenres}
+             
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -77,23 +98,12 @@ class Library:
     
     def fillItems(self):
         def fillItem(type):
-            funcs = {"Playlists"    :self.getPlaylists,
-                     "TV Networks"  :self.getNetworks,
-                     "TV Shows"     :self.getTVShows,
-                     "TV Genres"    :self.getTVGenres,
-                     "Movie Genres" :self.getMovieGenres,
-                     "Movie Studios":self.getMovieStudios,
-                     "Mixed Genres" :self.getMixedGenres,
-                     "Mixed"        :self.getMixed,
-                     "Recommended"  :self.getRecommend,
-                     "Services"     :self.getServices,
-                     "Music Genres" :self.getMusicGenres}
-            try: return funcs[type]()
+            try: return self.libraryFUNCS[type]()
             except Exception as e: 
                 self.log('fillItem failed! %s'%(e), xbmc.LOGERROR)
                 return []
                 
-        self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
+        self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
             if self.service._interrupt(): break
             elif self.service._suspend(): break
@@ -101,8 +111,8 @@ class Library:
             self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
             self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
             
-            if self.service._interrupt():
-                DIALOG.progressBGDialog(100,self.parserDialog) 
+            if (self.service._interrupt() or self.service._suspend()):
+                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog) 
                 break
                 
             self.log('fillItems, returning %s'%(type))
@@ -110,7 +120,7 @@ class Library:
                   
                   
     @timeit
-    def updateLibrary(self):
+    def updateLibrary(self, force=False):
         def _updateClient():
             for idx, type in enumerate(AUTOTUNE_TYPES):
                 if self.service._interrupt(): break
@@ -122,26 +132,33 @@ class Library:
             entry.update(item)
             #check existing library for enabled items
             for item in self.getEnabled(type):
-                if entry.get('name').lower() == item.get('name').lower():
+                if getChannelSuffix(entry.get('name'), type).lower() == item.get('name').lower(): 
                     entry['enabled'] = True
             #check existing channels for enabled items
             for channel in self.channels.getType(type):
-                if entry.get('name').lower() == channel.get('name').lower():
+                if getChannelSuffix(entry.get('name'), type).lower() == channel.get('name').lower():
                     entry['enabled'] = True
             return entry
            
-        complete   = True 
+        complete = True 
         if isClient():
             if SETTINGS.getSettingInt('Client_Mode') != 2: return True
             msg = LANGUAGE(32158)
             libraryItems = dict(_updateClient())
         else:
             msg = LANGUAGE(32022)
+            if force: 
+                with busy_dialog():
+                    for label, func in self.libraryFUNCS.items():
+                        cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
+                        DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
+                        self.cache.clear(cacheName,wait=5)
+                        if self.service._interrupt(5): break
             libraryItems = dict(self.fillItems())
         
-        dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+        self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
-            dia = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),dia,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
+            self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
             if self.service._interrupt(): break
             elif self.service._suspend():
                 complete = False
@@ -149,8 +166,8 @@ class Library:
             else:
                 items = libraryItems.get(type,[])
                 self.setLibrary(type, [_updateItem(type,item) for item in items])
-        DIALOG.progressBGDialog(100,dia,LANGUAGE(32025)) 
-        self.log('updateLibrary, complete = %s'%(complete))
+        DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
+        self.log('updateLibrary, force = %s, complete = %s'%(force, complete))
         return complete
         
 

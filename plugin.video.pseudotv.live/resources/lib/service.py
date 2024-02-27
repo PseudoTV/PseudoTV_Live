@@ -66,7 +66,7 @@ class Player(xbmc.Player):
     def onAVStarted(self):
         self.pendingPlay = False
         self.pvritem     = self.getPlayerPVRitem()
-        self.isPseudoTV  = not None in [self.pvritem.get('channelid'),self.pvritem.get('citem',{}).get('id')]
+        self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         
@@ -77,7 +77,7 @@ class Player(xbmc.Player):
     
     def onPlayBackError(self):
         self.log('onPlayBackError')
-        if isPseudoTV: self._onError()
+        if self.isPseudoTV: self._onError()
         
         
     def onPlayBackEnded(self):
@@ -93,20 +93,35 @@ class Player(xbmc.Player):
         self.pendingPlay = False
         
         
+    def isPseudoTVPlaying(self):
+        if self.pvritem.get('channelid'): return True
+        elif self.pvritem.get('citem',{}).get('id'): return True
+        else: return False
+        
+        
     def getPlayerPVRitem(self):
         pvritem = loadJSON((self.getPlayingItem().getProperty('pvritem') or '{"citem":{}}')) #Kodi v20.
-        pvritem.update({'citem':self.getPlayerCitem()})
         self.log('getPlayerPVRitem, pvritem = %s'%(pvritem))
         return pvritem
         
         
     def getPlayerCitem(self):
-        try:    citem = loadJSON(self.getPlayingItem().getProperty('citem')) #Kodi v20.
+        try:
+            citem = loadJSON(self.getPlayerPVRitem().getProperty('citem')) #Kodi v20.
+            if not citem: raise Exception('getPlayerCitem, trying writer')
         except: citem = decodeWriter(BUILTIN.getInfoLabel('Writer','VideoPlayer')).get('citem',{})
         self.log('getPlayerCitem, citem = %s'%(citem))
         return citem
         
-
+        
+    def getCallback(self):
+        # self.playingPVRitem.update(self.getPVRitem())
+        # callback = 'pvr://channels/tv/All%20channels/{pvr}_{id}.pvr'.format(pvr=PVR_CLIENT_ID,id=self.playingPVRitem.get('uniqueid',-1))
+        callback = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        self.log('getCallback, callback = %s\n%s\n%s'%(callback,BUILTIN.getInfoLabel('Folderpath','Player'),BUILTIN.getInfoLabel('Filename','Player')))
+        return callback
+        
+        
     def getPlayerFile(self):
         try:    return self.getPlayingFile()
         except: return ''
@@ -128,8 +143,7 @@ class Player(xbmc.Player):
 
 
     def getTimeRemaining(self, prop='TimeRemaining'): #prop='EpgEventElapsedTime'
-        try:    return int(sum(x*y for x, y in zip(list(map(float, BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player').split(':')[::-1])), (1, 60, 3600, 86400))))
-        except: return 0
+        return kodiLabel2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
 
 
     def setSubtitles(self, state):
@@ -146,6 +160,7 @@ class Player(xbmc.Player):
         if self.pvritem.get('citem',{}).get('id') != self.pvritem.get('citem',{}).get('id',random.random()): #playing new channel
             self.pvritem = self.runActions(RULES_ACTION_PLAYER_START, self.pvritem.get('citem'), self.pvritem, inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
+        if not self.pvritem.get('callback'): self.pvritem['callback'] = self.getCallback()
 
         
     def _onChange(self):
@@ -159,8 +174,8 @@ class Player(xbmc.Player):
                     self.pvritem['broadcastnow']  = broadcastnext.pop(0)
                     self.pvritem['broadcastnext'] = broadcastnext
                     self.log('_onChange, isPlaylist = %s, broadcastnext = %s'%(self.pvritem.get('isPlaylist'), len(self.pvritem['broadcastnext'])))
-                    if len(broadcastnext) == 0: raise Exception('empty broadcastnext')
-                else: raise Exception('using callback')
+                    if len(broadcastnext) == 0: raise Exception('Empty broadcastnext')
+                else: raise Exception('Using callback')
                 # JSONRPC().playerOpen('{"item":{"channelid":%s}}'%(self.pvritem["channelid"])) #slower than playmedia
                 # JSONRPC().playerOpen('{"item":{"broadcastid":%s}}'%(self.pvritem['broadcastnow']["broadcastid"])) #calls catchup vod
             except Exception as e:
@@ -306,11 +321,10 @@ class Service():
     currentChannels = []
     currentSettings = []
     
-    queue = PriorityQueue()
+    queue    = PriorityQueue()
     player   = Player()
     monitor  = Monitor()
     tasks    = Tasks()
-    
     
     def __init__(self):
         self.log('__init__')

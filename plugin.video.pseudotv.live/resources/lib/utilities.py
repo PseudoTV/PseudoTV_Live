@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -18,8 +18,6 @@
 
 # -*- coding: utf-8 -*-
 from globals          import *
-from manager          import Manager
-from channelbug       import ChannelBug
 from xml.dom.minidom  import parse, parseString
 
 class Utilities:
@@ -52,8 +50,8 @@ class Utilities:
         #todo change xmltv to display statistics not raw file.
         try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True,usethread=True)
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
-                
-                 
+
+
     def showReadme(self):
         with busy_dialog():
             def convertMD2TXT(md):
@@ -93,6 +91,7 @@ class Utilities:
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not PROPERTIES.getEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID)) == 'true':
             with suspendActivity():
+                from manager import Manager
                 chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
                 del chmanager
         
@@ -100,35 +99,45 @@ class Utilities:
     def openChannelBug(self):
         self.log('openChannelBug')
         if not PROPERTIES.getEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID)) == 'true':
+            from channelbug import ChannelBug
             channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
             del channelbug
 
 
-    def buildMenu(self, select=None):
-        with busy_dialog():
-            items    = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},    #"Rebuild M3U/XMLTV"
-                        {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},     #"Clean Start"
-                        {'label':LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT).getAddonInfo('name')),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR}, #"Force PVR reload"
-                        {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                            #"Force PTVL reload"
-                        {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)},              #"Show M3U"
-                        {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)}]            #"Show M3U"
+    def scanLibrary(self):
+        from library import Library 
+        library = Library()
+        library.updateLibrary(force=True)
+        del library
 
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in items]
+
+    def buildMenu(self, select=None):
+        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},    #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},     #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR}, #"Force PVR reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                            #"Force PTVL reload"
+                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)},              #"Show M3U"
+                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)},            #"Show XMLTV"
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary},
+                 ]            
+
+        with busy_dialog():
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=lambda x:x['label'])]
             if select is None: 
                 select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             
-            if not select is None:
-                try: 
-                    selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
-                    self.log('buildMenu, selectItem = %s'%selectItem)
-                    if selectItem.get('args'): 
-                        selectItem['func'](*selectItem['args'])
-                    else: 
-                        selectItem['func']()
-                except Exception as e: 
-                    self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
-                    return DIALOG.notificationDialog(LANGUAGE(32000))
-            else: openAddonSettings((7,1))
+        if not select is None:
+            try: 
+                selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
+                self.log('buildMenu, selectItem = %s'%selectItem)
+                if selectItem.get('args'): 
+                    selectItem['func'](*selectItem['args'])
+                else: 
+                    selectItem['func']()
+            except Exception as e: 
+                self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
+                return DIALOG.notificationDialog(LANGUAGE(32000))
+        else: openAddonSettings((7,1))
                 
 
 
@@ -168,15 +177,19 @@ class Utilities:
         if param == 'Apply_PVR_Settings':
             ctl = (7,9)
             with busy_dialog():
-                if SETTINGS.chkPluginSettings(PVR_CLIENT,IPTV_SIMPLE_SETTINGS(),override=True):
+                if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
-                else: DIALOG.notificationDialog(LANGUAGE(32046))
+                else:
+                    DIALOG.notificationDialog(LANGUAGE(32046))
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()
         elif param.startswith('Move_Channelbug'):
             ctl = (5,5)
             self.openChannelBug()
+        elif param == 'Show_Welcome':  
+            with busy_dialog():
+                return self.showWelcome()
         elif param == 'Show_Readme':  
             with busy_dialog():
                 return self.showReadme()

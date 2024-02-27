@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -62,7 +62,7 @@ class Builder:
         self.service    = service
         self.cache      = Cache()
         self.channels   = Channels()
-        self.rules      = RulesList()
+        self.rules      = RulesList(self.channels.getChannels())
         self.runActions = self.rules.runActions
         self.xmltv      = XMLTVS()
         self.jsonRPC    = JSONRPC()
@@ -84,7 +84,7 @@ class Builder:
                 self.log('verify, skipping - missing channel id\n%s'%(citem))
                 continue
             self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
-            yield self.runActions(RULES_ACTION_CHANNEL, citem, citem, inherited=self)
+            yield self.runActions(RULES_ACTION_CHANNEL_VERIFY, citem, citem, inherited=self)
             
             
     @timeit
@@ -98,35 +98,36 @@ class Builder:
         stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
         self.pDialog = DIALOG.progressBGDialog()
         
-        for idx, channel in enumerate(channels):
+        for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
             elif self.service._suspend():
                 self.completeBuild = False
                 break
             else:
-                channel = self.runActions(RULES_ACTION_BUILD_START, channel, channel, inherited=self)
-                self.pName  = channel['name']
+                self.runActions(RULES_ACTION_CHANNEL_START, citem, inherited=self)
+                self.pName  = citem['name']
                 self.pCount = int(idx*100//len(channels))
                 
-                if stopTimes.get(channel['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
+                if stopTimes.get(citem['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
                     self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                elif stopTimes.get(channel['id']):
+                elif stopTimes.get(citem['id']):
                     self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
                 else:
                     self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
-                                    
-               #cacheResponse = {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
-                cacheResponse = self.runActions(RULES_ACTION_BUILD_STOP, channel, self.getFileList(channel, now, stopTimes.get(channel['id'],start)), inherited=self)
+                
+                #cacheResponse = {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
+                cacheResponse = self.getFileList(citem, now, stopTimes.get(citem['id'],start))
                 if cacheResponse:
-                    if self.addChannelStation(channel) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
-                        self.addChannelProgrammes(channel, cacheResponse) #added xmltv lineup entries.
+                    if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
+                        self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
                 else: 
                     self.pErrors.append(LANGUAGE(32026))
                     chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
-                    self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, channel['id'],self.pName))
+                    self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, citem['id'],self.pName))
                     self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
-                    self.delChannelStation(channel)
+                    self.delChannelStation(citem)
                     self.service.monitor.waitForAbort(PROMPT_DELAY/1000)
+                self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                     
         self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
         self.log('build, completeBuild = %s, saved = %s'%(self.completeBuild,self.saveChannelLineups()))
@@ -136,12 +137,11 @@ class Builder:
     def getFileList(self, citem, now, start):
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:
-            start = self.runActions(RULES_ACTION_CHANNEL_START, citem, start, inherited=self)
+            citem = self.runActions(RULES_ACTION_CHANNEL_BUILD_START, self.buildProvisional(citem), citem, inherited=self)
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
             
-            citem = self.runActions(RULES_ACTION_CHANNEL_CITEM, self.buildProvisional(citem), citem, inherited=self)
             multi = len(citem['path']) > 1 #multi-path source
             radio = True if citem.get('radio',False) else False
             media = 'music' if radio else 'video'
@@ -150,13 +150,12 @@ class Builder:
             if radio: cacheResponse = self.buildRadio(citem)
             else:     cacheResponse = self.buildChannel(citem)
             
-            if not cacheResponse:
-                self.log('getFileList, cacheResponse in-valid!')
-                return False
-            else:
+            if cacheResponse:
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
-                if self.fillBCTs and not radio: cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
-                return sorted(self.runActions(RULES_ACTION_CHANNEL_STOP, citem, cacheResponse, inherited=self), key=lambda k: k['start'])
+                if self.fillBCTs and not radio: 
+                    cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
+                return sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_STOP, citem, cacheResponse, inherited=self), key=lambda k: k['start'])
+            else: raise Exception('cacheResponse in-valid!')
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
 
@@ -179,7 +178,7 @@ class Builder:
                     'episodetitle': (info.get('episodetitle','') or '|'.join(citem['group'])),
                     'plot'        : (info.get('plot' ,'')        or LANGUAGE(30161)),
                     'genre'       : (info.get('genre','')        or ['Undefined']),
-                    'file'        : (info.get('path','')         or citem['path']),
+                    'file'        : (info.get('path','')         or '|'.join(citem.get('path'))),
                     'type'        : type,
                     'duration'    : duration,
                     'start'       : 0,
@@ -191,7 +190,7 @@ class Builder:
     def addScheduling(self, citem, fileList, start):
         self.log("addScheduling; id: %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         tmpList  = []
-        fileList = self.runActions(RULES_ACTION_PRE_TIME, citem, fileList, inherited=self) #adv. scheduling rules start here.
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self) #adv. scheduling rules start here.
         for idx, item in enumerate(fileList):
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
@@ -201,13 +200,14 @@ class Builder:
             item['start'] = start
             item['stop']  = start + item['duration']
             start = item['stop']
+            # print('addScheduling',idx,item['title'],item['start'])
             tmpList.append(item)
             
         #force removal of channel with no current programmes
         if fileList[-1].get('stop') < getUTCstamp():
             self.log("addScheduling; id: %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
             tmpList = []
-        return self.runActions(RULES_ACTION_POST_TIME, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
+        return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         
     def buildRadio(self, citem):
@@ -224,22 +224,33 @@ class Builder:
                 if len(fileList) > 0: return True
 
         # refactor library queries and path queries, unify to path only queries and create table to convert json requests to dynamic xsp.
-        
         # # build multi-paths as individual arrays for easier interleaving.
+        cacheResponse = []
         if citem.get('provisional',None):
-            cacheResponse = [self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for query in citem['provisional'].get('json',[]) if not self.service._interrupt()]
+            for query in citem['provisional'].get('json',[]):
+                if self.service._interrupt(): break
+                self.runActions(RULES_ACTION_CHANNEL_BUILD_GLOBAL, citem, query, inherited=self)
+                cacheResponse.append(self.buildLibraryList(citem, citem['provisional'].get('value'), query, 'video', self.limit, self.sort, self.filter, self.limits))
         elif citem.get('seasonal',None):
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['seasonal']['path'] if not self.service._interrupt()]
+            for file in citem['seasonal']['path']:
+                if self.service._interrupt(): break
+                self.runActions(RULES_ACTION_CHANNEL_BUILD_GLOBAL, citem, file, inherited=self)
+                cacheResponse.append(self.buildFileList(citem, file, 'video', self.limit, self.sort, self.filter, self.limits))
         else:
-            cacheResponse = [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.service._interrupt()]
+            for file in citem['path']:
+                if self.service._interrupt(): break
+                self.runActions(RULES_ACTION_CHANNEL_BUILD_GLOBAL, citem, file, inherited=self)
+                cacheResponse.append(self.buildFileList(citem, file, 'video', self.limit, self.sort, self.filter, self.limits))
 
-        if not validFileList(cacheResponse):#check that at least one filelist array contains meta.
+        if not validFileList(cacheResponse):#check that at least one fileList array contains meta.
             self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
-        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_FLIST, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        #todo move all interleaving to a channel rule, apply rules by default when multi-path found.
+        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log("buildChannel, id: %s cacheResponse arrays = %s"%(citem['id'],len(cacheResponse)))
-        cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order.
+        cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order. 
+        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log('buildChannel, id: %s, cacheResponse items = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
         return cacheResponse
 
@@ -338,7 +349,7 @@ class Builder:
                         
                     item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
                     if citem.get('seasonal',{}).get('holiday'):
-                        item['plot'] = '[B]%s[/B]\n%s'%(citem.get('seasonal',{}).get('holiday'),item['plot'])
+                        item['plot'] = '[B]%s [/B]\n%s'%(citem.get('seasonal',{}).get('holiday'),item['plot'])
                     
                     item['art']  = item.get('art',{})
                     item.get('art',{})['icon'] = citem['logo']
@@ -414,7 +425,7 @@ class Builder:
         
         self.log("buildFileList, id: %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],limit,sort,filter,limits,path))
         while not self.service.monitor.abortRequested() and (len(fileList) < limit):
-            #Not all results are flat hierarchies; walk all paths until filelist limit is reached. ie. Plugins with [NEXT PAGE]
+            #Not all results are flat hierarchies; walk all paths until fileList limit is reached. ie. Plugins with [NEXT PAGE]
             if self.service._interrupt(): break
             elif self.service._suspend():
                 self.completeBuild = False
@@ -519,7 +530,7 @@ class Builder:
                             
                         item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
                         if citem.get('seasonal',{}).get('holiday'):
-                            item['plot'] = '[B]%s[/B]\n%s'%(citem.get('seasonal',{}).get('holiday'),item['plot'])
+                            item['plot'] = '[B]%s [/B]\n%s'%(citem.get('seasonal',{}).get('holiday'),item['plot'])
                         
                         item['art']  = (item.get('art',{})  or dirItem.get('art',{}))
                         item.get('art',{})['icon'] = citem['logo']
@@ -585,19 +596,25 @@ class Builder:
 
     def addChannelStation(self, citem):
         self.log('addChannelStation, id: %s'%(citem['id']))
-        citem['url']   = PVR_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),radio=str(citem['radio']))
+        if citem['catchup']:
+            citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',duration='{duration}',start='{Y}-{m}-{d} {H}:{M}:{S}')
+            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',duration='{duration}',start='{Y}-{m}-{d} {H}:{M}:{S}')
+        elif citem['radio']:
+            citem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),radio=str(citem['radio']),vid='{catchup-id}')
+        else:
+            citem['url'] = TV_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']))
+        
         citem['logo']  = cleanImage(citem['logo'])
         citem['group'] = cleanGroups(citem, self.enableGrouping)
-        if citem['catchup']:
-            citem['catchup-source'] = SRC_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),channel=quoteString(citem['id']),source='&endtime={Y}-{m}-{d} {H}:{M}:{S}')
         self.m3u.addStation(citem)
         return self.xmltv.addChannel(citem)
         
         
     def addChannelProgrammes(self, citem, fileList):
         self.log('addProgrammes, id: %s, fileList = %s'%(citem['id'],len(fileList)))
-        for idx, file in enumerate(fileList):
-            self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, file))
+        for idx, item in enumerate(fileList):
+            # print('addScheduling',idx,item['title'],item['start'])
+            self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item))
             
         
     def delChannelStation(self, citem):

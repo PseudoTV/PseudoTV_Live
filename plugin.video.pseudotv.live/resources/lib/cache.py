@@ -1,4 +1,4 @@
-#   Copyright (C) 2023 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -18,22 +18,24 @@
 #
 # -*- coding: utf-8 -*-
 
-from globals import *
+from globals   import *
+from functools import wraps
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
 def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
-    def decorator(func):
-        def decorated(*args, **kwargs):
+    def internal(method):
+        @wraps(method)
+        def wrapper(*args, **kwargs):
             method_class = args[0]
-            cacheName    = "%s.%s"%(method_class.__class__.__name__, func.__name__)
+            cacheName = "%s.%s"%(method_class.__class__.__name__, method.__name__)
             for item in args[1:]: cacheName += u".%s"%item
             results = method_class.cache.get(cacheName.lower(), checksum, json_data)
             if results: return results
-            return method_class.cache.set(cacheName.lower(), func(*args, **kwargs), checksum, expiration, json_data)
-        return decorated
-    return decorator
-
+            return method_class.cache.set(cacheName.lower(), method(*args, **kwargs), checksum, expiration, json_data)
+        return wrapper
+    return internal
+    
 class Cache:
     cache = SimpleCache()
     
@@ -60,17 +62,36 @@ class Cache:
 
     def set(self, name, data, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
         if data is not None or not DEBUG_CACHE:
-            if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
             with self.cacheLocker():
-                self.log('set, name = %s, checksum = %s'%(name,checksum))
-                self.cache.set(name.lower(),data,checksum,expiration,json_data)
+                self.log('set, name = %s, checksum = %s'%(self.getname(name),checksum))
+                self.cache.set(self.getname(name),data,checksum,expiration,json_data)
         return data
         
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False, default=None):
         if not DEBUG_CACHE:
-            if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
             with self.cacheLocker():
-                self.log('get, name = %s, checksum = %s, default = %s'%(name,checksum,default))
-                return (self.cache.get(name.lower(),checksum,json_data) or default)
+                self.log('get, name = %s, checksum = %s, default = %s'%(self.getname(name),checksum,default))
+                return (self.cache.get(self.getname(name),checksum,json_data) or default)
         return default
+        
+            
+    def clear(self, name, wait=15):
+        import sqlite3
+        self.log('clear, name = %s'%self.getname(name))
+        sc = xbmcvfs.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
+        dbpath = os.path.join(sc, 'simplecache.db')
+        connection = sqlite3.connect(dbpath, timeout=wait, isolation_level=None)
+        try:
+            connection.execute('DELETE FROM simplecache WHERE id LIKE ?', (self.getname(name) + '%',))
+            connection.commit()
+            connection.close()
+        except sqlite3.Error as e:
+            self.log('clear, failed! %s'%(e), xbmc.LOGERROR)
+        finally:
+            del connection
+            del sqlite3
+
+    def getname(self, name):
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
+        return name.lower()
