@@ -52,6 +52,21 @@ class Utilities:
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
 
 
+    def showWelcome(self):
+        try: 
+            fle = FileAccess.open(WELCOME_FLE, "r")
+            if SETTINGS.getCacheSetting('showWelcome', checksum=fle.size(), default='true') == 'true':
+                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fle.size())
+                DIALOG.textviewer(fle.read().format(addon_name=ADDON_NAME,
+                                                    pvr_name=PVR_CLIENT_NAME,
+                                                    m3u=M3UFLEPATH,
+                                                    xmltv=XMLTVFLEPATH,
+                                                    genre=GENREFLEPATH,
+                                                    logo=LOGO_LOC,
+                                                    lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=False)
+        except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
+        
+
     def showReadme(self):
         with busy_dialog():
             def convertMD2TXT(md):
@@ -187,7 +202,7 @@ class Utilities:
         elif param.startswith('Move_Channelbug'):
             ctl = (5,5)
             self.openChannelBug()
-        elif param == 'Show_Welcome':  
+        elif param == 'Show_Welcome':
             with busy_dialog():
                 return self.showWelcome()
         elif param == 'Show_Readme':  
