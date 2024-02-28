@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -100,18 +100,22 @@ class Player(xbmc.Player):
         
         
     def getPlayerPVRitem(self):
-        pvritem = loadJSON((self.getPlayingItem().getProperty('pvritem') or '{"citem":{}}')) #Kodi v20.
+        pvritem = loadJSON((self.getPlayingItem().getProperty('pvritem') or '{"citem":{},"sysinfo":{}}')) #Kodi v20.
         self.log('getPlayerPVRitem, pvritem = %s'%(pvritem))
         return pvritem
         
         
     def getPlayerCitem(self):
         try:
-            citem = loadJSON(self.getPlayerPVRitem().getProperty('citem')) #Kodi v20.
+            citem = loadJSON(self.getPlayerPVRitem().getProperty('citem'))
             if not citem: raise Exception('getPlayerCitem, trying writer')
         except: citem = decodeWriter(BUILTIN.getInfoLabel('Writer','VideoPlayer')).get('citem',{})
         self.log('getPlayerCitem, citem = %s'%(citem))
         return citem
+        
+        
+    def getPlayerSysInfo(self):
+        return loadJSON(self.getPlayerPVRitem().get('sysinfo',{}))
         
         
     def getCallback(self):
@@ -157,6 +161,14 @@ class Player(xbmc.Player):
         self.log('_onPlay')
         self.toggleBackground(False)
         BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+        
+        sysInfo = self.getPlayerSysInfo()
+        runtime = ceil(self.getPlayerTime())
+        if sysInfo.get('duration') != runtime and runtime > 0:
+            sysInfo['runtime'] = runtime
+            sysInfo['durationError'] = True
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
+        
         if self.pvritem.get('citem',{}).get('id') != self.pvritem.get('citem',{}).get('id',random.random()): #playing new channel
             self.pvritem = self.runActions(RULES_ACTION_PLAYER_START, self.pvritem.get('citem'), self.pvritem, inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 

@@ -338,17 +338,33 @@ class Settings:
 
 
     def chkPVRInstance(self, path):
+        found = False
         for file in [filename for filename in FileAccess.listdir(path)[1] if filename.endswith('.xml')]:
             if MONITOR.waitForAbort(1): break
             elif file.startswith('instance-settings-'):
                 try:
-                    xml  = FileAccess.open(os.path.join(path,file), "r")
-                    name = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(xml.read()).group(1)
+                    xml = FileAccess.open(os.path.join(path,file), "r")
+                    txt = xml.read()
                     xml.close()
-                    if name == ADDON_NAME:
-                        self.log('chkPVRInstance, found file = %s'%(file))
-                        return file
-                except Exception as e: self.log('chkPVRInstance, path = %s, failed to open file = %s\n%s'%(path,file,e))
+                except Exception as e:
+                    self.log('chkPVRInstance, path = %s, failed to open file = %s\n%s'%(path,file,e))
+                    continue
+                    
+                name = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                if name: name = name.group(1)
+                else:
+                    name = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                    if name: name = name.group(1)
+                    else: continue
+                
+                if name == ADDON_NAME:
+                    if found ==  False:
+                        found = file
+                    else:
+                        FileAccess.delete(os.path.join(path,file))
+                        self.log('chkPVRInstance, removing duplicate entry %s'%(file))
+        self.log('chkPVRInstance, found file = %s'%(found))
+        return found
 
 
     def setPVRInstance(self, id):
@@ -370,7 +386,7 @@ class Settings:
         settingInstance = 1
         pvrPath = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
         pvrFile = self.chkPVRInstance(pvrPath)
-        if pvrFile:
+        if pvrFile != False:
             self.log('setPVRInstance, id = %s deleting %s...'%(id,pvrFile))
             FileAccess.delete(os.path.join(pvrPath,pvrFile))
             settingInstance += int(re.compile('instance-settings-([0-9.]+).xml', re.IGNORECASE).search(pvrFile).group(1))

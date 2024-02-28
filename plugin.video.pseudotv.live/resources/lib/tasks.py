@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -110,12 +110,13 @@ class Tasks():
 
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
-        if hasAddon(PVR_CLIENT_ID,install=True,enable=True) and not SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)):
-            with busy_dialog():
-                if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
-                    DIALOG.notificationDialog(LANGUAGE(32152))
-                else:
-                    DIALOG.notificationDialog(LANGUAGE(32046))
+        if hasAddon(PVR_CLIENT_ID,install=True,enable=True):
+            if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
+                with busy_dialog():
+                    if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
+                        DIALOG.notificationDialog(LANGUAGE(32152))
+                    else:
+                        DIALOG.notificationDialog(LANGUAGE(32046))
         
      
     def chkUpdateTime(self, key, runEvery, nextUpdate=None):

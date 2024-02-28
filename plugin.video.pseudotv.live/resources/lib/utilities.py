@@ -40,10 +40,14 @@ class Utilities:
         with busy_dialog():
             def openFile(fle):
                 if fle.lower().endswith('xml'):
-                    dom = parse(FileAccess.open(fle, "r")) # or xml.dom.minidom.parseString(xml_string)
+                    fle = FileAccess.open(fle, "r")
+                    dom = parse(fle) # or xml.dom.minidom.parseString(xml_string)
+                    fle.close()
                     return dom.toprettyxml()
                 else:
-                    ppstring = FileAccess.open(fle, "r").read()
+                    fle = FileAccess.open(fle, "r")
+                    ppstring = fle.read()
+                    fle.close()
                     return ppstring.replace('#EXTINF:','\n[COLOR=cyan][B]#EXTINF:[/B][/COLOR]')
         openAddonSettings((7,1))
         #todo generate qrcode to server file location.
@@ -55,9 +59,12 @@ class Utilities:
     def showWelcome(self):
         try: 
             fle = FileAccess.open(WELCOME_FLE, "r")
-            if SETTINGS.getCacheSetting('showWelcome', checksum=fle.size(), default='true') == 'true':
-                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fle.size())
-                DIALOG.textviewer(fle.read().format(addon_name=ADDON_NAME,
+            txt = fle.read()
+            siz = fle.size()
+            fle.close()
+            if SETTINGS.getCacheSetting('showWelcome', checksum=siz, default='true') == 'true':
+                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=siz)
+                DIALOG.textviewer(txt.format(addon_name=ADDON_NAME,
                                                     pvr_name=PVR_CLIENT_NAME,
                                                     m3u=M3UFLEPATH,
                                                     xmltv=XMLTVFLEPATH,
@@ -78,7 +85,10 @@ class Utilities:
                 markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
                 return markdown
         openAddonSettings((7,1))
-        try: DIALOG.textviewer(convertMD2TXT(FileAccess.open(README_FLE, "r").read()), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+        fle = FileAccess.open(README_FLE, "r")
+        txt = fle.read()
+        fle.close()
+        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -97,8 +107,11 @@ class Utilities:
                 text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
                 text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
                 text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-                return text     
-        try: DIALOG.textviewer(addColor(FileAccess.open(CHANGELOG_FLE, "r").read()), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
+                return text   
+        fle = FileAccess.open(CHANGELOG_FLE, "r")
+        txt = fle.read()
+        fle.close()
+        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    

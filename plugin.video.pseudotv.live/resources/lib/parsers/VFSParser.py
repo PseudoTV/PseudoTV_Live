@@ -1,4 +1,4 @@
-#   Copyright (C) 2022 Lunatixz
+#   Copyright (C) 2024 Lunatixz
 #
 #
 # This file is part of PseudoTV Live.
@@ -45,6 +45,6 @@ class VFSParser:
             self.fileItem = self.walkVFS(filename, self.fileItem.get('originalpath',''))
         elif not filename.lower().startswith(self.fileItem.get('originalpath','')[:30].lower()): 
             return 0
-        duration = int(self.fileItem.get('runtime','') or self.fileItem.get('duration','') or (self.fileItem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        duration = ceil(self.fileItem.get('runtime','') or self.fileItem.get('duration','') or (self.fileItem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
         log("VFSParser: Duration is %s"%(duration))
         return duration

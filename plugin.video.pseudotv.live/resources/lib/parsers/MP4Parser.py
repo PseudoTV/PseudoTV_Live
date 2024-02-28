@@ -1,4 +1,4 @@
-#   Copyright (C) 2020 Jason Anderson, Lunatixz
+#   Copyright (C) 2024 Jason Anderson, Lunatixz
 #
 #
 # This file is part of PseudoTV Live.

@@ -6,7 +6,7 @@ v.0.4.5
 -Improved Background tasks and services.
 -Improved Playback using new IPTV Simple methods *Thanks @phunkyfish.
 -Refactored all playback handlers, including radio.
--WIP "Best Effort Marathon" mode added to Autotuned TV. Mixed Genres and Custom channels; TV Shows are grouped in blocks when applicable (Enable under global settings). 
+-Added "Best Effort Marathon" mode added to Autotuned TV. Mixed Genres and Custom channels; TV Shows are grouped in blocks when applicable (Enable under global settings) (W.I.P).
 -Fixed a bug which caused duplicate XMLTV entries to share the same start time. This lead to empty EPG cells.
 -Fixed a rare instance where existing channels are not detect/imported when rebuilding the library database from scratch.
 -Added "Rebuild Library" to the utility menu. Forces a library rebuild which will detected recent Kodi library additions. Default behavior the library self updates every few days to hours. 

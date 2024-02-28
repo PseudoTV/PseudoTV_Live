@@ -64,7 +64,9 @@ class XMLTVS:
             
             try:
                 self.log('_save, saving to %s'%(file))
-                writer.write(FileAccess.open(file, "w"), pretty_print=True)
+                fle = FileAccess.open(file, "w")
+                writer.write(fle, pretty_print=True)
+                fle.close()
             except Exception as e:
                 self.log("_save, failed!", xbmc.LOGERROR)
                 DIALOG.notificationDialog(LANGUAGE(32000))
@@ -95,7 +97,10 @@ class XMLTVS:
     def loadData(self, file=XMLTVFLEPATH):
         self.log('loadData, file = %s'%file)
         try: 
-            return (xmltv.read_data(FileAccess.open(file, 'r')) or self.resetData())
+            fle  = FileAccess.open(file, 'r')
+            data = (xmltv.read_data(fle) or self.resetData())
+            fle.close()
+            return data
         except Exception as e:
             self._error('loadData',file,e)
             return self.resetData()
@@ -104,7 +109,10 @@ class XMLTVS:
     def loadChannels(self, file=XMLTVFLEPATH):
         self.log('loadChannels, file = %s'%file)
         try:
-            return (xmltv.read_channels(FileAccess.open(file, 'r')) or [])
+            fle  = FileAccess.open(file, 'r')
+            data = (xmltv.read_channels(fle) or [])
+            fle.close()
+            return data
         except Exception as e:
             self._error('loadChannels',file,e)
             return []
@@ -113,7 +121,10 @@ class XMLTVS:
     def loadProgrammes(self, file=XMLTVFLEPATH):
         self.log('loadProgrammes, file = %s'%file)
         try: 
-            return self.sortProgrammes(xmltv.read_programmes(FileAccess.open(file, 'r')) or [])
+            fle  = FileAccess.open(file, 'r')
+            data = self.sortProgrammes(xmltv.read_programmes(fle) or [])
+            fle.close()
+            return data
         except Exception as e: 
             self._error('loadProgrammes',file,e)
             return []
@@ -441,7 +452,9 @@ class XMLTVS:
         
         if FileAccess.exists(GENREFLE_DEFAULT): 
             try:
-                dom = parse(FileAccess.open(GENREFLE_DEFAULT, "r"))
+                fle = FileAccess.open(GENREFLE_DEFAULT, "r")
+                dom = parse(fle)
+                fle.close()
                 epggenres = parseGenres(dom.getElementsByTagName('genre'))
                 matchGenres(self.XMLTVDATA.get('programmes',[]))
                 epggenres = dict(sorted(sorted(list(epggenres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   

@@ -4,27 +4,26 @@ __________________________
 
 [B]Getting Started:[/B]
 
-    Intro
-    _____
+    Introduction
+    ____________
     
-        {addon_name} will start by scanning Kodi's library in-order to populate the "AutoTune" list*.
-    When the library scan is complete you'll have an option to "AutoTune" sample channels or open settings and configure your own using the "Channel Manager"**.
+        {addon_name} starts by scanning Kodi's library to populate the "AutoTune" list*. 
+    When the library scan is complete, you'll have an option to "AutoTune" sample channels or open settings and configure your own using the "Channel Manager"**.
 
-        Once your channels are fully configured, {addon_name} will begin to build them. This process may take several minutes to complete; during this time your EPG may remain blank.
-    If after building your EPG remains blank, simply restart Kodi to force channel detection; otherwise they may take up to fifteen minutes to appear.
-
+        Once channels are fully configured, {addon_name} will begin building... This process may take several minutes to complete; during this time your EPG may remain blank.
+    Channels do not instantaneously appear on the EPG, There maybe factors that contribute to delays. If after building your EPG remains blank, simply restart Kodi to force channel detection.
 
     * "AutoTune" list - Predefined channels aggregated from your Kodi library; updated semi-regularly as you add media. You can force an Autotune list update using the utility menu found in miscellaneous settings.
        
     ** "Channel Manager" - Robust channel creation tool designed to let users create custom channels from any Kodi media source.
 
 
-    Configuration
-    ______________
+    PVR Configuration
+    _________________
 
         {addon_name} can not reliably self configure itself due to recent Kodi PVR changes. Users are advised to navigate Kodi "Addon" menu, select "My Addons", "PVR Clients" and open {pvr_name} settings.
-    If you do not see {addon_name} in {pvr_name} settings menu, exit settings. Open {addon_name} settings and select "{lang_30074}" found under miscellaneous settings. 
-    Repeat the previous actions and verify {pvr_name} has a {addon_name} entry, and that it is configured as follows.
+    If you do not see {addon_name} in {pvr_name} settings menu, exit settings. Open {addon_name} settings and select "{lang_30074}" found in miscellaneous settings. 
+    Repeat the previous actions and verify {pvr_name} has a {addon_name} entry, check that it is configured as follows.
 
         • M3U:
             [COLOR=yellow][B]{m3u}[/B][/COLOR]
