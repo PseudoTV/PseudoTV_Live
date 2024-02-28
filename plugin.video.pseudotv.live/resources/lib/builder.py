@@ -247,10 +247,10 @@ class Builder:
             return False
             
         #todo move all interleaving to a channel rule, apply rules by default when multi-path found.
-        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        cacheResponse = list([_f for _f in self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, cacheResponse, inherited=self) if _f]) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log("buildChannel, id: %s cacheResponse arrays = %s"%(citem['id'],len(cacheResponse)))
         cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order. 
-        cacheResponse = list(filter(None, self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, cacheResponse, inherited=self))) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        cacheResponse = list([_f for _f in self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, cacheResponse, inherited=self) if _f]) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log('buildChannel, id: %s, cacheResponse items = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
         return cacheResponse
 

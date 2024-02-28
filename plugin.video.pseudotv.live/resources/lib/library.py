@@ -149,7 +149,7 @@ class Library:
             msg = LANGUAGE(32022)
             if force: 
                 with busy_dialog():
-                    for label, func in self.libraryFUNCS.items():
+                    for label, func in list(self.libraryFUNCS.items()):
                         cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
                         DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
                         self.cache.clear(cacheName,wait=5)

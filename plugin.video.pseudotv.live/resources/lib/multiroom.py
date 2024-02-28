@@ -39,7 +39,7 @@ class Multiroom:
         if (not current_server or forced) and len(list(servers.keys())) == 1:
             #If one server found autoselect, set server host paths.
             self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
-            SETTINGS.setPVRRemote('http://%s'%(servers.keys()[0]))
+            SETTINGS.setPVRRemote('http://%s'%(list(servers.keys())[0]))
             #sync client resources with server.
             for key, value in list((servers[list(servers.keys())[0]].get('settings',{})).items()):
                 try:    self.setSetting(key, value)

@@ -312,7 +312,7 @@ def getGMTstamp():
 
 def randomShuffle(items=[]):
     if len(items) > 0:
-        random.seed() #reseed random for a "greater random effect".
+        random.seed(random.randint(0,999999999999)) #reseed random for a "greater random effect".
         random.shuffle(items)
     return items
     

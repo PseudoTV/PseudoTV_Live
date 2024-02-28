@@ -34,7 +34,7 @@ class Plugin:
                 PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'false')
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
         else:
-            yield self.playError(sysInfo)
+            yield self.playError(self.sysInfo)
 
 
     def __init__(self, sysARG=sys.argv):
@@ -272,10 +272,10 @@ class Plugin:
         if oldInfo is None: oldInfo = self.sysInfo
         self.log('playCHK, id = %s\n%s'%(oldInfo.get('chid','-1'),oldInfo))
         if oldInfo.get('chid',random.random()) == self.sysInfo.get('chid') and oldInfo.get('starttime',random.random()) == self.sysInfo.get('starttime'):
-            if oldInfo.get('durationError',False):
-                self.log('playCHK, failed! Duration error between player and pvr.')
-                return False
-            elif int(oldInfo['seek']) >= oldInfo['duration']:
+            # if oldInfo.get('durationError',False) and :
+                # self.log('playCHK, failed! Duration error between player and pvr.')
+                # return False
+            if int(oldInfo['seek']) >= oldInfo['duration']:
                 self.log('playCHK, failed! Seeking past duration.')
                 return False
             elif oldInfo['seek'] == self.sysInfo['seek']:
@@ -288,7 +288,7 @@ class Plugin:
         MONITOR.waitForAbort(1) #allow a full second to pass beyond any msecs differential.
         self.sysInfo['playcount'] = oldInfo.get('playcount',2) + 1
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
-        self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('id','-1'),self.sysInfo['playcount'],self.sysInfo))
+        self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo['playcount'],self.sysInfo))
         if   self.sysInfo['playcount'] == 1 and not PLAYER.isPlaying(): setInstanceID() #reset instance and force cache flush.
         elif self.sysInfo['playcount'] == 2:
             with busy_dialog():

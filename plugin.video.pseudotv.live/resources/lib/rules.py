@@ -56,7 +56,7 @@ class RulesList:
                     if rule.myId == chrule['id']:
                         ruleInstance = rule.copy()
                         optionindex  = chrule.get('index',{})
-                        for key in optionindex.keys():
+                        for key in list(optionindex.keys()):
                             ruleInstance.optionLabels[int(key)] = optionindex[str(key)].get('label')
                             ruleInstance.optionValues[int(key)] = optionindex[str(key)].get('value')
                         ruleList.setdefault(chid,[]).append(ruleInstance)
@@ -712,18 +712,17 @@ class BestEffort(BaseRule):
                 self.storedValues[1].append(fileItem)
             
         def _chunkShows():
-            for show, episodes in self.storedValues[0].items():
+            for show, episodes in list(self.storedValues[0].items()):
                 self.log("_chunkShows, show = %s, episodes = %s"%(show,len(episodes)))
                 yield show, list(chunkLst(episodes,self.optionValues[0]))
                 
         def _mergeShows(shows):
             nfileList = []
-            movies = list(chunkLst(self.storedValues[1],len(shows.keys())))
+            movies = list(chunkLst(self.storedValues[1],len(list(shows.keys()))))
             print('movies',len(movies),movies)
             
-         
             while not MONITOR.abortRequested() and shows:
-                for show, chunks in shows.items():
+                for show, chunks in list(shows.items()):
                     if len(chunks) == 0:
                         print('del',show)
                         del shows[show]

@@ -53,7 +53,7 @@ class Resources:
         logos.extend(self.getLogoResources(chname,type,select=True))
         logos.append(self.getTVShowLogo(chname))
         self.log('selectLogo, chname = %s, logos = %s'%(chname, len(logos)))
-        return list(filter(None,logos))
+        return list([_f for _f in logos if _f])
         
 
     def getLocalLogo(self, chname, select=False):
