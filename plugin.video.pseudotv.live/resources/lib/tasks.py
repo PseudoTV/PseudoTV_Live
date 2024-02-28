@@ -221,7 +221,7 @@ class Tasks():
     def runAutoTune(self):
         try:
             autotune = Autotune(service=self.myService)
-            autotune._runTune(samples=True)
+            autotune._runTune()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

@@ -44,11 +44,19 @@ class Autotune:
 
 
     def _runTune(self, samples=False, rebuild=False, dia=None):
-        self.log('_runTune, samples = %s'%(samples))
         if not hasAutotuned() and not isClient():
             setAutotuned()
             autoChannels = self.getAutotuned()
-            if len(autoChannels) == 0 and samples:
+            self.log('_runTune, autotune channels = %s'%(len(autoChannels)))
+            if   len(autoChannels) > 0: rebuild = True
+            elif len(autoChannels) == 0:
+                autoEnabled = []
+                for type in AUTOTUNE_TYPES: autoEnabled.extend(self.library.getEnabled(type))
+                self.log('_runTune, library enabled items = %s'%(len(autoEnabled)))
+                if len(autoEnabled) > 0: rebuild = True #recover empty channels.json with enabled library.json items.
+                else:                    samples = True #create sample channels "autotune".
+
+            if samples:
                 opt = ''
                 msg = (LANGUAGE(32042)%ADDON_NAME)
                 if Backup().hasBackup():
@@ -58,19 +66,15 @@ class Autotune:
                 if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 elif retval == 2: return Backup().recoverChannels()
                 else: return
-            elif len(autoChannels) > 0:
-                samples = False
-                rebuild = True
+            elif rebuild: PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             
-            if samples or rebuild:
-                PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
-                for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-                    if samples and dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                    self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
+            for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
+                if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
 
 
     def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
-        self.log('selectAUTOTUNE, ATtype = %s'%(ATtype))
+        self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))
         def _build(item):
             return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
         

@@ -33,7 +33,7 @@ class Channels:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-    
+
     def _load(self, file=CHANNELFLEPATH):
         channelDATA = getJSON(file)
         self.log('_load, channels = %s'%(len(channelDATA.get('channels',[]))))
