@@ -23,7 +23,6 @@ from rules       import RulesList
 from infotagger.listitem import ListItemInfoTag
 
 class Plugin:
-    @timeit
     @contextmanager
     def preparingPlayback(self):
         if self.playCHK(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
@@ -34,7 +33,7 @@ class Plugin:
                 PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'false')
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
         else:
-            yield self.playError(self.sysInfo)
+            yield self.playError()
 
 
     def __init__(self, sysARG=sys.argv):
@@ -180,9 +179,10 @@ class Plugin:
             self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
             if isPlaylistRandom(): channelPlaylist.unshuffle()
             PLAYER.play(channelPlaylist,windowed=True)
-        else: self.playError(self.sysInfo)
+        else: self.playError()
         
         
+    @timeit
     def matchChannel(self, chname, id, radio=False, isPlaylist=False):
         self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def getCallback(chname, id, radio=False, isPlaylist=False):
@@ -257,7 +257,7 @@ class Plugin:
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
         if not cacheResponse:
             pvritem = _match()
-            if not pvritem: return self.playError(self.sysInfo)
+            if not pvritem: return self.playError()
             pvritem['isPlaylist'] = isPlaylist
             pvritem['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem']      = (self.sysInfo.get('citem') or decodeWriter(pvritem.get('broadcastnow',{}).get('writer','')).get('citem',{}))
@@ -268,14 +268,15 @@ class Plugin:
         return cacheResponse
 
 
-    def playCHK(self, oldInfo=None):
-        if oldInfo is None: oldInfo = self.sysInfo
+    def playCHK(self, oldInfo={}):
         self.log('playCHK, id = %s\n%s'%(oldInfo.get('chid','-1'),oldInfo))
         if oldInfo.get('chid',random.random()) == self.sysInfo.get('chid') and oldInfo.get('starttime',random.random()) == self.sysInfo.get('starttime'):
-            # if oldInfo.get('durationError',False) and :
-                # self.log('playCHK, failed! Duration error between player and pvr.')
-                # return False
-            if int(oldInfo['seek']) >= oldInfo['duration']:
+            self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1
+            self.sysInfo['runtime']   = oldInfo.get('runtime',-1)
+            if self.sysInfo['duration'] > self.sysInfo['runtime']:
+                self.log('playCHK, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                return False
+            elif int(oldInfo['seek']) >= oldInfo['duration']:
                 self.log('playCHK, failed! Seeking past duration.')
                 return False
             elif oldInfo['seek'] == self.sysInfo['seek']:
@@ -284,18 +285,17 @@ class Plugin:
         return True
         
         
-    def playError(self, oldInfo):
+    def playError(self):
         MONITOR.waitForAbort(1) #allow a full second to pass beyond any msecs differential.
-        self.sysInfo['playcount'] = oldInfo.get('playcount',2) + 1
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo['playcount'],self.sysInfo))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
         if   self.sysInfo['playcount'] == 1 and not PLAYER.isPlaying(): setInstanceID() #reset instance and force cache flush.
         elif self.sysInfo['playcount'] == 2:
             with busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
             self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
             return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
-        elif self.sysInfo['playcount'] == 3: bruteForcePVR()
+        # elif self.sysInfo['playcount'] == 3: bruteForcePVR()
         elif self.sysInfo['playcount'] == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME),autoclose=90)
         else: DIALOG.notificationWait(LANGUAGE(32000))
         self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
