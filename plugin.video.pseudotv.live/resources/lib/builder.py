@@ -50,9 +50,9 @@ class Builder:
         self.epgArt           = SETTINGS.getSettingInt('EPG_Artwork')
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
-        self.filter           = {}                           #"filter":{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
-        self.sort             = {}                           #"sort":{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
-        self.limits           = {}                           #"limits":{"end":0,"start":0,"total":0}
+        self.filter           = {} #"filter":{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}]}
+        self.sort             = {} #"sort":{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
+        self.limits           = {} #"limits":{"end":0,"start":0,"total":0}
 
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS

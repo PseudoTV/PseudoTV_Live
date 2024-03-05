@@ -51,13 +51,16 @@ class Background(xbmcgui.WindowXML):
 
     def onInit(self):
         self.log('onInit')
+        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")#temp remove when rules finished.
         try:
-            self.showStatic = SETTINGS.getSettingBool("Static_Overlay")#temp remove when rules finished.
-            self.runActions(RULES_ACTION_OVERLAY, self.player.pvritem.get('citem',{}), inherited=self)
+            citem = self.player.pvritem.get('citem',{})
+            self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
-            self.getControl(40002).setImage(self.player.pvritem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or COLOR_LOGO)))
-            self.getControl(40003).setText(LANGUAGE(32104)%(self.player.pvritem.get('label',ADDON_NAME)))
-        except: self.close()
+            self.getControl(40002).setImage(citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or COLOR_LOGO)))
+            self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',ADDON_NAME)))
+        except:
+            self.runActions(RULES_ACTION_BACKGROUND_CLOSE, citem, inherited=self)
+            self.close()
         
 
 class MYPlayer(xbmc.Player):
@@ -196,7 +199,7 @@ class Overlay():
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
-        self.runActions(RULES_ACTION_OVERLAY, self.player.pvritem.get('citem',{}), inherited=self)
+        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.pvritem.get('citem',{}), inherited=self)
             
 
     def close(self):
@@ -205,8 +208,8 @@ class Overlay():
         self.cancelChannelBug()
         self.setImage(self._channelBug,'None')
         self.showingOverlay = False
-        for control, visible in list(self.controlManager.items()):
-            self._removeControl(control)
+        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.pvritem.get('citem',{}), inherited=self)
+        for control, visible in list(self.controlManager.items()): self._removeControl(control)
         try: del self.myPlayer
         except: pass
 
@@ -255,7 +258,8 @@ class Overlay():
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
-                logo = self.player.pvritem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+                citem = self.player.pvritem.get('citem',{})
+                logo  = citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
@@ -296,47 +300,38 @@ class Overlay():
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
             return showOnNext, intTime
 
-        if hasAddon('service.upnext') and self.player.pvritem.get('isPlaylist',False):
-            self.updateUpNext(self.player.pvritem)
-        else:
-            try:
-                showOnNext, intTime = getOnNextInterval()
-                wait   = {True:OVERLAY_DELAY,False:float(intTime)}[state]
-                nstate = not bool(state)
-                try: 
-                    if self._onNextThread.is_alive():
-                        self._onNextThread.cancel()
-                        self._onNextThread.join()
-                except: pass
-                    
-                if state and showOnNext and self.player.isPseudoTV:
-                    try:
-                        nowItem  = (self.player.pvritem.get('broadcastnow')  or {})      # current item
-                        nextItem = (self.player.pvritem.get('broadcastnext') or [{}])[0] # upcoming items
-                    except:
-                        self.log('toggleOnNext, pvritem = %s failed!'%(self.player.pvritem))
-                        return
-
-                    if not self._hasControl(self._onNext):
-                        self._addControl(self._onNext)
-                        self._onNext.setEnableCondition('[Player.Playing]')
-                                                
-                    if nowItem and nextItem:
-                        onNow  = '%s on %s'%('%s%s'%(nowItem['title'],' - %s'%(nowItem.get('episodename')) if nowItem.get('episodename') else ''), self.player.pvritem.get('label',ADDON_NAME))
-                        onNext = '%s%s'%(nextItem['title'],' - %s'%(nextItem.get('episodename')) if nextItem.get('episodename') else '')
-                        self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                        self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
-                        self._onNext.autoScroll(6000, 3000, 5000)
-                        self.setVisible(self._onNext,True)
-                        playSFX(BING_WAV)
-                else: 
-                    self.setVisible(self._onNext,False)
+        try:
+            showOnNext, intTime = getOnNextInterval()
+            wait   = {True:OVERLAY_DELAY,False:float(intTime)}[state]
+            nstate = not bool(state)
+            try: 
+                if self._onNextThread.is_alive():
+                    self._onNextThread.cancel()
+                    self._onNextThread.join()
+            except: pass
                 
-                self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
-                self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
-                self._onNextThread.name = "onNextThread"
-                self._onNextThread.start()
-            except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
+            if state and showOnNext and self.player.isPseudoTV:
+                citem = self.player.pvritem.get('citem',{})
+                if not self._hasControl(self._onNext):
+                    self._addControl(self._onNext)
+                    self._onNext.setEnableCondition('[Player.Playing]')
+                                            
+                if nowItem and nextItem:
+                    onNow  = '%s on %s'%(self.builtin.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
+                    onNext = self.builtin.getInfoLabel('NextTitle','VideoPlayer')
+                    self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                    self._onNext.autoScroll(6000, 3000, 5000)
+                    self.setVisible(self._onNext,True)
+                    playSFX(BING_WAV)
+            else: 
+                self.setVisible(self._onNext,False)
+            
+            self.log('toggleOnNext, state %s wait %s to new state %s'%(state,wait,nstate))
+            self._onNextThread = Timer(wait, self.toggleOnNext, [nstate])
+            self._onNextThread.name = "onNextThread"
+            self._onNextThread.start()
+        except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
 
 
     def cancelOnNext(self):
@@ -345,45 +340,3 @@ class Overlay():
         if self._onNextThread.is_alive():
             self._onNextThread.cancel()
             self._onNextThread.join()
-
-    
-    def updateUpNext(self, playingItem={}):
-        self.log('updateUpNext')
-        try:
-            # https://github.com/im85288/service.upnext/wiki/Example-source-code
-            data            = dict()
-            nowItem         = decodeWriter(playingItem['broadcastnow'].get('writer',{}))       
-            current_episode = {"current_episode":{"episodeid" :(nowItem.get("id"           ,"") or ""),
-                                                  "tvshowid"  :(nowItem.get("tvshowid"     ,"") or ""),
-                                                  "title"     :(nowItem.get("title"        ,"") or ""),
-                                                  "art"       :(nowItem.get("art"          ,"") or ""),
-                                                  "season"    :(nowItem.get("season"       ,"") or ""),
-                                                  "episode"   :(nowItem.get("episode"      ,"") or ""),
-                                                  "showtitle" :(nowItem.get("tvshowtitle"  ,"") or ""),
-                                                  "plot"      :(nowItem.get("plot"         ,"") or ""),
-                                                  "playcount" :(nowItem.get("playcount"    ,"") or ""),
-                                                  "rating"    :(nowItem.get("rating"       ,"") or ""),
-                                                  "firstaired":(nowItem.get("firstaired"   ,"") or ""),
-                                                  "runtime"   :(nowItem.get("runtime"      ,"") or "")}}
-            data.update(current_episode)
-        except: pass
-        try:
-            nextItem        = decodeWriter(playingItem['broadcastnext'][0].get('writer',{}))
-            next_episode    = {"next_episode"   :{"episodeid" :(nextItem.get("id"          ,"") or ""),
-                                                  "tvshowid"  :(nextItem.get("tvshowid"    ,"") or ""),
-                                                  "title"     :(nextItem.get("title"       ,"") or ""),
-                                                  "art"       :(nextItem.get("art"         ,"") or ""),
-                                                  "season"    :(nextItem.get("season"      ,"") or ""),
-                                                  "episode"   :(nextItem.get("episode"     ,"") or ""),
-                                                  "showtitle" :(nextItem.get("tvshowtitle" ,"") or ""),
-                                                  "plot"      :(nextItem.get("plot"        ,"") or ""),
-                                                  "playcount" :(nextItem.get("playcount"   ,"") or ""),
-                                                  "rating"    :(nextItem.get("rating"      ,"") or ""),
-                                                  "firstaired":(nextItem.get("firstaired"  ,"") or ""),
-                                                  "runtime"   :(nextItem.get("runtime"     ,"") or "")}}
-            data.update(next_episode)
-        except: pass
-        jsonRPC = JSONRPC()
-        jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))
-        del jsonRPC
-        

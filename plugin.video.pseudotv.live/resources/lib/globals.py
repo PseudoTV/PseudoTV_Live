@@ -55,6 +55,16 @@ LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
 @contextmanager
+def setRunning(key):
+    PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID,key),'true')
+    try: yield
+    finally:
+        PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID,key),'false')
+
+def isRunning(key):
+    return PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID,key)) == 'true'
+
+@contextmanager
 def suspendActivity(): #suspend/quit running background task.
     while not MONITOR.abortRequested():
         if MONITOR.waitForAbort(0.001): break
@@ -70,20 +80,6 @@ def isPendingSuspend():
 def setPendingSuspend(state=True):
     PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),str(state).lower())
 
-@contextmanager
-def open_dialog():
-    PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'true')
-    try: yield
-    finally:
-        PROPERTIES.setEXTProperty('%s.opendialog'%(ADDON_ID),'false')
-
-@contextmanager
-def open_window():
-    PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'true')
-    try: yield
-    finally:
-        PROPERTIES.setEXTProperty('%s.openwindow'%(ADDON_ID),'false')
-        
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()

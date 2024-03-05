@@ -36,6 +36,13 @@ class Autotune:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def getCustom(self):
+        #return autotuned channels ie. channels > CHANNEL_LIMIT
+        channels = self.channels.getCustom()
+        self.log('getCustom, channels = %s'%(len(channels)))
+        return channels
+
+
     def getAutotuned(self):
         #return autotuned channels ie. channels > CHANNEL_LIMIT
         channels = self.channels.getAutotuned()
@@ -46,31 +53,33 @@ class Autotune:
     def _runTune(self, samples=False, rebuild=False, dia=None):
         if not hasAutotuned() and not isClient():
             setAutotuned()
-            autoChannels = self.getAutotuned()
-            self.log('_runTune, autotune channels = %s'%(len(autoChannels)))
+            customChannels = self.getCustom()
+            autoChannels   = self.getAutotuned()
+            self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
             if   len(autoChannels) > 0: rebuild = True
-            elif len(autoChannels) == 0:
-                autoEnabled = []
-                for type in AUTOTUNE_TYPES: autoEnabled.extend(self.library.getEnabled(type))
-                self.log('_runTune, library enabled items = %s'%(len(autoEnabled)))
-                if len(autoEnabled) > 0: rebuild = True #recover empty channels.json with enabled library.json items.
-                else:                    samples = True #create sample channels "autotune".
+            elif len(customChannels) == 0:
+                if len(autoChannels) == 0:
+                    autoEnabled = []
+                    for type in AUTOTUNE_TYPES: autoEnabled.extend(self.library.getEnabled(type))
+                    self.log('_runTune, library enabled items = %s'%(len(autoEnabled)))
+                    if len(autoEnabled) > 0: rebuild = True #recover empty channels.json with enabled library.json items.
+                    else:                    samples = True #create sample channels "autotune".
 
-            if samples:
-                opt = ''
-                msg = (LANGUAGE(32042)%ADDON_NAME)
-                if Backup().hasBackup():
-                    opt = LANGUAGE(32112)
-                    msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
-                retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
-                if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                elif retval == 2: return Backup().recoverChannels()
-                else: return
-            elif rebuild: PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
-            
-            for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
-                if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
-                self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
+                if samples:
+                    opt = ''
+                    msg = (LANGUAGE(32042)%ADDON_NAME)
+                    if Backup().hasBackup():
+                        opt = LANGUAGE(32112)
+                        msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
+                    retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
+                    if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                    elif retval == 2: return Backup().recoverChannels()
+                    else: return
+                elif rebuild: PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
+                
+                for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
+                    if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
+                    self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
 
 
     def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):

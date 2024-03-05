@@ -17,8 +17,9 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals     import *
-      
+from globals    import *
+from jsonrpc    import JSONRPC
+
 class RulesList:
     def __init__(self, channels=None):
         if channels is None:
@@ -26,18 +27,19 @@ class RulesList:
             channels = Channels().getChannels()
         self.log('__init__, channels = %s'%(len(channels)))
         self.ruleList  = [BaseRule(),
-                          BestEffort()]
-                         # [BaseRule(),
-                         # ShowChannelBug(),
-                         # ShowOnNext(),
-                         # ShowStaticOverlay(),
-                         # DisableOverlay(),
-                         # SetScreenOverlay(),
-                         # HandleMethodOrder(),
-                         # HandleFilter(),
-                         # seekControl(),
-                         # ]
+                          BestEffort(),
+                          ShowChannelBug(),
+                          ShowOnNext(),
+                          ShowStaticOverlay(),
+                          DisableOverlay(),
+                          SetScreenOverlay(),
+                          HandleMethodOrder(),
+                          HandleFilter(),
+                          seekControl(),
+                         ]
+                         
         self.channels  = channels
+        self.allRules  = self.allRules()
         self.chanRules = self.loadRules(channels)
 
 
@@ -47,7 +49,7 @@ class RulesList:
         
     def loadRules(self, channels=[]): #load channel rules and their instances.
         def _loadRule(tmpruleList, channel={}):
-            ruleList = {}
+            ruleList = []
             chid     = channel.get('id','')
             chrules  = channel.get('rules',[])
             if chid is None: return None
@@ -59,27 +61,33 @@ class RulesList:
                         for key in list(optionindex.keys()):
                             ruleInstance.optionLabels[int(key)] = optionindex[str(key)].get('label')
                             ruleInstance.optionValues[int(key)] = optionindex[str(key)].get('value')
-                        ruleList.setdefault(chid,[]).append(ruleInstance)
-            return ruleList
+                        ruleList.append(ruleInstance)
+            return chid, ruleList
         
-        self.log('loadRules, channels = %s'%((channels)))
+        self.log('loadRules, channels = %s'%(len(channels)))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = poolit(_loadRule)(channels, tmpruleList)
-        print('loadRules',ruleList)
+        ruleList = dict(poolit(_loadRule)(channels, tmpruleList))
         return ruleList
       
+      
+    def allRules(self): #load all rules.
+        self.log('allRules')
+        tmpruleList = self.ruleList.copy()
+        tmpruleList.pop(0) #remove boilerplate baseRule()
+        ruleList = [rule.copy() for rule in tmpruleList]
+        return ruleList
+               
         
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
         if not citem.get('id',''): return parameter
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
-        for channel in self.chanRules:
-            for rule in channel.get(citem['id'],[]):
-                if action in rule.actions:
-                    self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
-                    print((action, citem, parameter, inherited))
-                    return rule.runAction(action, citem, parameter, inherited)
+        for rule in self.chanRules.get(citem['id'],[]):
+            if action in rule.actions:
+                self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
+                print((action, citem, parameter, inherited))
+                return rule.runAction(action, citem, parameter, inherited)
         return parameter
 
 
@@ -361,7 +369,7 @@ class ShowChannelBug(BaseRule):
         self.description      = ""
         self.optionLabels     = ['Show Channel Bug','Channel Bug Interval']
         self.optionValues     = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval")]
-        self.actions          = [RULES_ACTION_OVERLAY]
+        self.actions          = [RULES_ACTION_OVERLAY_OPEN]
         self.selectBoxOptions = [[True, False],list(range(-1,17))]
         #"Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
         
@@ -374,7 +382,7 @@ class ShowChannelBug(BaseRule):
         if self.optionValues[0]:
             return 'Hide Channel Bug'
         else:
-            return 'Show Channel Bug'
+            return 'Show Channel Bug (%s)'%(self.optionValues[1])
 
 
     def onAction(self, act, optionindex):
@@ -386,11 +394,10 @@ class ShowChannelBug(BaseRule):
 
 
     def runAction(self, actionid, citem, overlay):
-        if actionid == RULES_ACTION_OVERLAY:
+        if actionid == RULES_ACTION_OVERLAY_OPEN:
             overlay.showChannelBug = self.optionValues[0]
-            overlay.channelBugVal  = self.optionValues[1]            
-            self.log("runAction, setting showChannelBug = %s"%(overlay.showChannelBug))
-            self.log("runAction, setting channelBugVal = %s"%(overlay.channelBugVal))
+            overlay.channelBugVal  = self.optionValues[1]
+            self.log("runAction, setting showChannelBug = %s, channelBugVal = %s"%(overlay.showChannelBug,overlay.channelBugVal))
         return citem
 
 
@@ -401,7 +408,7 @@ class ShowOnNext(BaseRule):
         self.description      = ""
         self.optionLabels     = ["Show OnNext"]
         self.optionValues     = [SETTINGS.getSettingBool('Enable_OnNext')]
-        self.actions          = [RULES_ACTION_OVERLAY]
+        self.actions          = [RULES_ACTION_OVERLAY_OPEN]
         self.selectBoxOptions = [[True, False]]
 
 
@@ -422,7 +429,7 @@ class ShowOnNext(BaseRule):
 
 
     def runAction(self, actionid, citem, overlay):
-        if actionid == RULES_ACTION_OVERLAY:
+        if actionid == RULES_ACTION_OVERLAY_OPEN:
             overlay.showOnNext = self.optionValues[0]
             self.log("runAction, setting showOnNext = %s"%(overlay.showOnNext))
         return citem
@@ -435,7 +442,7 @@ class ShowStaticOverlay(BaseRule):
         self.description      = ""
         self.optionLabels     = ['Show Static Overlay']
         self.optionValues     = [SETTINGS.getSettingBool('Static_Overlay')]
-        self.actions          = [RULES_ACTION_OVERLAY]
+        self.actions          = [RULES_ACTION_OVERLAY_OPEN]
         self.selectBoxOptions = [[True, False]]
 
     def copy(self):
@@ -455,7 +462,7 @@ class ShowStaticOverlay(BaseRule):
 
 
     def runAction(self, actionid, citem, overlay):
-        if actionid == RULES_ACTION_OVERLAY:
+        if actionid == RULES_ACTION_OVERLAY_OPEN:
             overlay.showStatic = self.optionValues[0]
             self.log("runAction, setting showStatic = %s"%(overlay.showStatic))
         return citem
@@ -468,7 +475,7 @@ class SetScreenOverlay(BaseRule): #todo requires Kodi core changes.
         self.description      = ""
         self.optionLabels     = ['Enable Overlay','Select Image','X-POS','Y-POS']
         self.optionValues     = [False,'',0,0]
-        self.actions          = [RULES_ACTION_OVERLAY]
+        self.actions          = [RULES_ACTION_OVERLAY_OPEN]
         self.selectBoxOptions = [[True, False],[],[],[]]
 
             
@@ -607,7 +614,7 @@ class HandleMethodOrder(BaseRule):
         self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
         self.optionValues     = [int((REAL_SETTINGS.getSetting('Page_Limit') or "25")), 'random','ascending',False]
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions = [[n for n in range(25, 275, 25)], self.jsonRPC.getENUM(JSON_METHOD), self.jsonRPC.getENUM(JSON_ORDER), [True, False]]
+        self.selectBoxOptions = [[n for n in range(25, 275, 25)], JSONRPC().getEnums("List.Sort",type="method"), JSONRPC().getEnums("List.Sort",type="order"), [True, False]]
         self.storedValues     = []
         
         
@@ -649,7 +656,7 @@ class HandleFilter(BaseRule):
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.optionLabels     = ['Field','Operator','Value']
         self.optionValues     = ['showtitle','contains','']
-        self.selectBoxOptions = [self.jsonRPC.getENUM(JSON_FILE_ENUM), self.jsonRPC.getENUM(JSON_OPERATORS)]
+        self.selectBoxOptions = [JSONRPC().getEnums("List.Fields.Files", type='items'), JSONRPC().getEnums("List.Filter.Operators")]
         self.storedValues     = []
         
 

@@ -674,29 +674,15 @@ class ListItems:
         return listitem
              
                      
-    def buildMenuListItem(self, label1="", label2="", iconImage=None, url="", infoItem=None, artItem=None, propItem=None, oscreen=False, media='video'):
-        listitem  = xbmcgui.ListItem(label1, label2, path=url, offscreen=oscreen)
-        iconImage = (iconImage or COLOR_LOGO)
-        if propItem: 
-            listitem.setProperties(propItem)
-        if infoItem: 
-            if infoItem.get('label'):  listitem.setLabel(infoItem.pop('label',''))
-            if infoItem.get('label2'): listitem.setLabel2(infoItem.pop('label2',''))
-            infoTag = ListItemInfoTag(listitem, media)
-            infoTag.set_info(infoItem)
-        else: 
-            listitem.setLabel(label1)
-            listitem.setLabel2(label2)
-            infoTag = ListItemInfoTag(listitem, media)
-            infoTag.set_info({'mediatype': 'video', 'title' : label1})
-                                         
-        if artItem: 
-            listitem.setArt(artItem)
-        else: 
-            listitem.setArt({'thumb': iconImage,
-                             'logo' : iconImage,
-                             'icon' : iconImage})
-        return listitem
+    def buildMenuListItem(self, label1="", label2="", iconImage=None, url="", infoItem={}, artItem={}, propItem={}, oscreen=False, media='video'):
+        if label1: infoItem['label']  = label1
+        if label2: infoItem['label2'] = label2
+        if url:    infoItem['file']   = url
+        if iconImage: artItem = {'thumb': iconImage,'logo' : iconImage,'icon' : iconImage}
+        item = infoItem.copy()
+        item['art'] = artItem
+        item['customproperties'] = propItem
+        return self.buildItemListItem(item, media, oscreen, playable=False)
         
         
 class Builtin:

@@ -26,7 +26,9 @@ class Create:
         if not listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
         with suspendActivity():
             if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),listitem.getPath(),ADDON_NAME)):
-                with busy_dialog():
+                
+            if not isRunning('MANAGER_RUNNING'):
+                with setRunning('MANAGER_RUNNING'), busy_dialog(), suspendActivity():
                     manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", start=False)
                     channelData = manager.newChannel
                     channelData['type']     = 'Custom'

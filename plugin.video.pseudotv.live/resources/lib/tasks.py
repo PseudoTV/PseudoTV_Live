@@ -25,6 +25,7 @@ from autotune   import Autotune
 from builder    import Builder
 from backup     import Backup
 from multiroom  import Multiroom
+from manager    import Manager
 
 PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
 
@@ -69,8 +70,13 @@ class Tasks():
         self.log('chkLowPower')
         setLowPower(state=getLowPower())
         
-
+        
     def chkQueTimer(self):
+        if self.chkUpdateTime('chkQueTimer',runEvery=30):
+            self.myService._que(self._chkQueTimer,1)
+        
+        
+    def _chkQueTimer(self):
         self.log('chkQueTimer')
         if self.chkUpdateTime('chkFiles',runEvery=600):
             self.myService._que(self.chkFiles,1)
@@ -151,7 +157,7 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary()
             del library
-            if not complete: forceUpdateTime('chkLibrary')
+            if not complete: self.myService._que(self.chkLibrary,2)
             elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
@@ -176,7 +182,7 @@ class Tasks():
             if complete:
                 setFirstrun(state=True) #set init. boot status to true.
                 self.myService.currentChannels = list(channels)
-            else: forceUpdateTime('chkChannels')
+            else: self.myService._que(self.chkChannels,3)
         except Exception as e: self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
                
@@ -184,9 +190,9 @@ class Tasks():
         self.log('_chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun() and not isClient():
-            if not (FileAccess.exists(LIBRARYFLEPATH)): forceUpdateTime('chkLibrary')
+            if not (FileAccess.exists(LIBRARYFLEPATH)): self.myService._que(self.chkLibrary,2)
             if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                forceUpdateTime('chkChannels')
+                self.myService._que(self.chkChannels,3)
 
 
     def chkJSONQUE(self):
@@ -245,7 +251,7 @@ class Tasks():
             nChannels = self.getChannels()
             if channels != nChannels:
                 self.log('chkChannelChange, resetting chkChannels')
-                forceUpdateTime('chkChannels')
+                self.myService._que(self.chkChannels,3)
                 return nChannels
             return channels
 
@@ -296,4 +302,3 @@ class Tasks():
                         continue
                 dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
         SETTINGS.setPVRPath(newFolder)
-

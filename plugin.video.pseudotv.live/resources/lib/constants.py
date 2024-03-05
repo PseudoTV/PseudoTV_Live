@@ -166,21 +166,22 @@ HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plug
 ##builder
 RULES_ACTION_CHANNEL_VERIFY              = 1 #inject citem changes
 RULES_ACTION_CHANNEL_START               = 2 #pre channel build trigger
-RULES_ACTION_CHANNEL_BUILD_START         = 3 #ammend citem 
+RULES_ACTION_CHANNEL_BUILD_START         = 3 #amend citem 
 RULES_ACTION_CHANNEL_BUILD_GLOBAL        = 4 #per path global injection trigger
 RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE  = 5 #inject filelist before multi-path interleaving
-RULES_ACTION_CHANNEL_BUILD_FILELIST_POST = 6 #ammend filelist times
+RULES_ACTION_CHANNEL_BUILD_FILELIST_POST = 6 #amend filelist times
 RULES_ACTION_CHANNEL_BUILD_TIME_PRE      = 7 #filelist
 RULES_ACTION_CHANNEL_BUILD_TIME_POST     = 8 #filelist
-RULES_ACTION_CHANNEL_BUILD_STOP          = 9 #ammend filelist after scheduling.
+RULES_ACTION_CHANNEL_BUILD_STOP          = 9 #amend filelist after scheduling.
 RULES_ACTION_CHANNEL_STOP                = 10 #restore globals before next channel build
-
-
-
 ##player
 RULES_ACTION_PLAYBACK      = 11
 RULES_ACTION_PLAYER_START  = 12
-RULES_ACTION_PLAYER_STOP   = 13
-##overlay
-RULES_ACTION_OVERLAY       = 21
+RULES_ACTION_PLAYER_CHANGE = 13
+RULES_ACTION_PLAYER_STOP   = 14
+##overlay/background
+RULES_ACTION_OVERLAY_OPEN     = 21
+RULES_ACTION_OVERLAY_CLOSE    = 22
+RULES_ACTION_BACKGROUND_OPEN  = 23
+RULES_ACTION_BACKGROUND_CLOSE = 24
 

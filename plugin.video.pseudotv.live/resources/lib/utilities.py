@@ -117,8 +117,8 @@ class Utilities:
    
     def openChannelManager(self, chnum=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not PROPERTIES.getEXTProperty('%s.OVERLAY_MANAGER'%(ADDON_ID)) == 'true':
-            with suspendActivity():
+        if not isRunning('MANAGER_RUNNING'):
+            with setRunning('MANAGER_RUNNING'), suspendActivity():
                 from manager import Manager
                 chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
                 del chmanager

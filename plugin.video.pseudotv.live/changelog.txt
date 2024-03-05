@@ -1,3 +1,6 @@
+v.0.4.6
+
+
 v.0.4.5
 -Notice The following steps are required!.
  - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
@@ -11,6 +14,7 @@ v.0.4.5
 -Fixed a rare instance where existing channels are not detect/imported when rebuilding the library database from scratch.
 -Added "Rebuild Library" to the utility menu. Forces a library rebuild which will detected recent Kodi library additions. Default behavior the library self updates every few days to hours. 
 -Added "Welcome" prompt to help new users understand and operate PseudoTV Live. Suggestions for improvements are welcome.
+-Removed "UpNext" support.
 
 v.0.4.4
 -Added "Network Folder" clients ability to edit Autotuned channels on server (W.I.P).

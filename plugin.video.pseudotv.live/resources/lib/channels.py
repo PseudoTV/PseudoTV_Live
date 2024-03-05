@@ -53,13 +53,13 @@ class Channels:
     def getChannels(self):
         return self.channelDATA.get('channels',[])
         
-
-    def getPredefinedChannels(self):
-        return list([citem for citem in self.getChannels() if citem.get('number') > CHANNEL_LIMIT])
-
                 
     def popChannels(self, type, channels=[]):
         return [self.channelDATA['channels'].pop(self.channelDATA['channels'].index(citem)) for citem in list([c for c in channels if c.get('type') == type])]
+        
+        
+    def getCustom(self):
+        return list([citem for citem in self.getChannels() if citem.get('number') <= CHANNEL_LIMIT])
         
         
     def getAutotuned(self):
