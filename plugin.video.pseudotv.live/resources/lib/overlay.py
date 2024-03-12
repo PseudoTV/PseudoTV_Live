@@ -53,7 +53,7 @@ class Background(xbmcgui.WindowXML):
         self.log('onInit')
         self.showStatic = SETTINGS.getSettingBool("Static_Overlay")#temp remove when rules finished.
         try:
-            citem = self.player.pvritem.get('citem',{})
+            citem = self.player.sysInfo.get('citem',{})
             self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
             self.getControl(40002).setImage(citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or COLOR_LOGO)))
@@ -199,7 +199,7 @@ class Overlay():
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
-        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.pvritem.get('citem',{}), inherited=self)
+        self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
             
 
     def close(self):
@@ -208,7 +208,7 @@ class Overlay():
         self.cancelChannelBug()
         self.setImage(self._channelBug,'None')
         self.showingOverlay = False
-        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.pvritem.get('citem',{}), inherited=self)
+        self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         for control, visible in list(self.controlManager.items()): self._removeControl(control)
         try: del self.myPlayer
         except: pass
@@ -258,7 +258,7 @@ class Overlay():
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
-                citem = self.player.pvritem.get('citem',{})
+                citem = self.player.sysInfo.get('citem',{})
                 logo  = citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
@@ -311,7 +311,7 @@ class Overlay():
             except: pass
                 
             if state and showOnNext and self.player.isPseudoTV:
-                citem = self.player.pvritem.get('citem',{})
+                citem = self.player.sysInfo.get('citem',{})
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.Playing]')

@@ -619,7 +619,7 @@ msgid "Complete"
 msgstr ""
 
 msgctxt "#32026"
-msgid "No Content Found!"
+msgid "No Content Found"
 msgstr ""
 
 msgctxt "#32027"
@@ -1154,6 +1154,14 @@ msgctxt "#32159"
 msgid "Rebuild Library"
 msgstr ""
 
+msgctxt "#32160"
+msgid "Cancelling..."
+msgstr ""
+
+msgctxt "#32161"
+msgid "[COLOR=yellow][B]- Create Path[/B][/COLOR]"
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1375,6 +1383,10 @@ msgstr ""
 
 msgctxt "#33114"
 msgid "Save channel paths"
+msgstr ""
+
+msgctxt "#33115"
+msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33149"

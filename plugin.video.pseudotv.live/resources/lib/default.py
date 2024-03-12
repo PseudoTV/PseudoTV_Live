@@ -23,7 +23,6 @@ from plugin    import Plugin
 
 def run(sysARG):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-    params['playlist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
     
     name      = (unquoteString(params.get("name",''))  or None)
     title     = (unquoteString(params.get("title",'')) or None)
@@ -46,7 +45,7 @@ def run(sysARG):
     elif mode == 'vod': 
         threadit(Plugin(sysARG).playVOD)(title,vid)
     elif mode == 'live':
-        if params['playlist']:
+        if bool(SETTINGS.getSettingInt('Playback_Method')):
             threadit(Plugin(sysARG).playPlaylist)(name,chid)
         else:
             threadit(Plugin(sysARG).playLive)(name,chid,vid)

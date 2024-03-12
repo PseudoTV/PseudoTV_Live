@@ -325,54 +325,71 @@ class JSONRPC:
         self.queueJSON(param[media])
         
 
-    def requestList(self, citem, item, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, filter={}, limits={}):
-        getFile = True
-        path    = item
-        if isinstance(item, dict): #library json query
-            getFile = False
-            path    = item.get('value')
+    def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}):
+         # {"method": "VideoLibrary.GetEpisodes",
+         # "params": {
+         # "properties": ["title"],
+         # "sort": {"ignorearticle": true,
+                  # "method": "label",
+                  # "order": "ascending",
+                  # "useartistsortname": true},
+         # "limits": {"end": 0, "start": 0},
+         # "filter": {"and": [{"field": "title", "operator": "contains", "value": "Star Wars"}]}}}
+
+         ##################################
+
+         # {"method": "Files.GetDirectory",
+         # "params": {
+         # "directory": "videodb://tvshows/studios/-1/-1/-1/",
+         # "media": "video",
+         # "properties": ["title"],
+         # "sort": {"ignorearticle": true,
+                  # "method": "label",
+                  # "order": "ascending",
+                  # "useartistsortname": true},
+         # "limits": {"end": 25, "start": 0}}}
+         
+        param = {}
+        if query: #library query
+            getDirectory = False
+            param['filter']     = query.get('filter',{})
+            param["properties"] = self.getEnums(query['enum'], type='items')
+        else: #vfs path
+            getDirectory = True
+            param["media"]      = media
+            param["directory"]  = escapeDirJSON(path)
+            param["properties"] = self.getEnums("List.Fields.Files", type='items')
+        self.log("requestList, id: %s, getDirectory = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,page,sort,query,limits,path))
         
-        self.log("requestList, id: %s, getFile = %s, limit = %s, sort = %s, filter = %s, limits = %s\npath = %s"%(citem['id'],getFile,page,sort,filter,limits,path))
-        # todo use adv. channel rules to set autoPagination cache expiration & checksum to force refresh times.
         if not limits: 
-            limits = self.autoPagination(citem['id'], path) #get
-            if limits.get('total',0) > page and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
+            limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
+            if (limits.get('total',0) > page) and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
                 limits = self.randomPagination(page,limits.get('total',0))
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
-        param = {}
         param["limits"]          = {}
         param["limits"]["start"] = limits.get('end', 0)
         param["limits"]["end"]   = limits.get('end', 0) + page
-        
-        if sort:   param["sort"]   = sort
-        if filter: param['filter'] = filter
-
-        if getFile:
-            param["properties"] = self.getEnums("List.Fields.Files", type='items')
-            param["media"]      = media
-            param["directory"]  = escapeDirJSON(path)
-        else:
-            param["properties"] = self.getEnums(item['enum'], type='items')
+        if sort: param["sort"]   = sort
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         
-        if getFile:
+        if getDirectory:
             results = self.getDirectory(param)
-            limits  = results.get('limits', param["limits"])
             if 'filedetails' in results: key = 'filedetails'
             else:                        key = 'files'
         else:
-            results = self.getLibrary(item['method'],param)
-            limits  = results.pop('limits') 
-            key     = list(results.keys())[0]
-                                    
+            results = self.getLibrary(query['method'],param)
+            key     = query.get('key',list(results.keys())[0])
+            
+        limits = results.get('limits', param["limits"])
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):
             # restart page to 0, exceeding boundaries.
             self.log('requestList, id = %s, resetting limits to 0'%(citem['id']))
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
-        self.autoPagination(citem['id'], path, limits) #set 
+        self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #set 
         
-        items = results.get(key, [])
+        items  = results.get(key, [])
+        errors = {}
         try:
             if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == limits.get('total',0)):
                 #VFS paths ie.Plugin:// may fail to apply limits and return a full directory list. Instead use limits param to slice list.
@@ -380,28 +397,22 @@ class JSONRPC:
                 self.log('requestList, id = %s, items = %s sliced from VFS exceeding page %s'%(citem['id'], len(items), page))
         except Exception as e: self.log('requestList, id = %s, failed! to slice items %s'%(citem['id'],e), xbmc.LOGERROR)
 
-        if len(items) > page:
-            #in the rare (if at all possible) instance items exceed expected limits, truncate size.
-            items = items[:page]
-            self.log('requestList, id = %s, items = %s truncated to %s'%(citem['id'], len(items), page))
-        else:
-            self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
-            if (len(items) == 0 and limits.get('total',0) > 0) and not path.startswith(tuple(VFS_TYPES)):
-                # retry last request with fresh limits.
-                self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
-                return self.requestList(citem, item, media, page, sort, filter, {"end": 0, "start": 0, "total": limits.get('total',0)})
-            elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) < page):
-                # path total doesn't fill page limit; pad with duplicates.
-                self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-                items = self.padItems(items)
-            elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) > page):
-                # path total doesn't fill page limit; re-run with new limits
-                self.log("requestList, id = %s, extending items with new limits"%(citem['id']))
-                items.extend(self.requestList(citem, item, media, page-len(items), sort, filter, limits))
+        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
+        if (len(items) == 0 and limits.get('total',0) > 0) and not path.startswith(tuple(VFS_TYPES)):
+            # retry last request with fresh limits.
+            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
+            return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
+        elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) < page):
+            # path total doesn't fill page limit; pad with duplicates.
+            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
+            items = self.padItems(items)
+        elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) > page):
+            # path total doesn't fill page limit; re-run with new limits
+            self.log("requestList, id = %s, extending items with new limits"%(citem['id']))
+            items.extend(self.requestList(citem, path, media, page-len(items), sort, limits, query)[0])
 
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
-        if not getFile: items = {key:items}
-        return items
+        return items, limits, errors
 
 
     def autoPagination(self, id, path, limits={}, checksum='', life=datetime.timedelta(days=28)):

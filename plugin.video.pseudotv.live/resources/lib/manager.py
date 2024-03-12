@@ -317,7 +317,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 elif key == "path"  : value = '|'.join(value)
                 elif key == "rules" : value = ', '.join([rule.getTitle() for rule in self.rules.chanRules.get(channelData['id'],[])])#todo load rule names
             elif isinstance(value,bool): value = str(value)
-            if not value: value = ''
+            if not value: value = ' '
             prop = {'key':key,'value':value,'description':DESC.get(key,''),'channelData':dumpJSON(channelData, sortkey=False),'chname':channelData.get('name',''),'chnumber':channelData.get('number','')}
             listItems.append(LISTITEMS.buildMenuListItem(LABEL.get(key,''),str(value),url='|'.join(channelData.get("path",[])),iconImage=channelData.get("logo",COLOR_LOGO),propItem=prop))
             
@@ -368,13 +368,11 @@ class Manager(xbmcgui.WindowXMLDialog):
             lizLST.insert(0,LISTITEMS.buildMenuListItem(LANGUAGE(32100),LANGUAGE(33113),iconImage=COLOR_LOGO,url='add'))
             lizLST.insert(1,LISTITEMS.buildMenuListItem(LANGUAGE(32101),LANGUAGE(33114),iconImage=COLOR_LOGO,url='save'))
             select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), multi=False)
-            
             if lizLST[select].getPath() != 'add' and lizLST[select].getPath() in paths:
                 retval = DIALOG.yesnoDialog(LANGUAGE(32102), customlabel=LANGUAGE(32103))
                 if retval in [1,2]: paths.pop(paths.index(lizLST[select].getPath()))
                 if retval == 2:     npath, item = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),default=lizLST[select].getPath(),monitor=True), item)
-                
-            elif lizLST[select].getPath() == 'add':  npath, item = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),monitor=True), item)
+            elif lizLST[select].getPath() == 'add': npath, item = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),monitor=True), item)
             elif lizLST[select].getPath() == 'save': break
             if not npath is None: paths.append(npath)
         self.log('getPaths, paths = %s'%(paths))
@@ -400,7 +398,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getChannelName, path = %s'%(path))
         if  channelData.get('name'): return channelData
         elif path.strip('/').endswith(('.xml','.xsp')):
-            channelData['name'] = self.xsp.getSmartPlaylistName(path)
+            channelData['name'] = self.xsp.getName(path)
         elif path.startswith(('plugin://','upnp://','videodb://','musicdb://','library://','special://')):
             try: channelData['name'] = self.getMontiorList().getLabel()
             except: pass
@@ -411,7 +409,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def viewChannel(self, citem): #todo preview uncached filelist for visual breakdown of channel content.
         self.log('viewChannel, id = %s'%(citem['id']))
-        # [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.filter, self.limits) for file in citem['path'] if not self.myService._interrupt()]
+        # [self.buildFileList(citem, file, 'video', roundupDIV(self.limit,len(citem['path'])), self.sort, self.limits) for file in citem['path'] if not self.myService._interrupt()]
 
 
     def getMontiorList(self, key='label'):
@@ -509,18 +507,18 @@ class Manager(xbmcgui.WindowXMLDialog):
         media = 'music' if channelData['radio'] else 'video'
         dirs  = []
         if path.endswith('.xsp'): #smartplaylist
-            paths, ofilter, media, osort = self.xsp.parseSmartPlaylist(path)
+            paths, media, osort, ofilter, olimits = self.xsp.parseXSP(path)
             if len(paths) > 0: #treat 'mixed' smartplaylists as multi-path mixed content.
                 for path in paths:
                     result = self.validateVFS(path, channelData)
                     if result: return result
     
-        json_response = self.jsonRPC.requestList(channelData, path, media, limits={"end": 5, "start": 0}) #todo use another means to verify or bypass autopage set limits.
-        for idx, item in enumerate(json_response):
+        items, limits, errors = self.jsonRPC.requestList(channelData, path, media, limits={"end": 5, "start": 0}) #todo use another means to verify or bypass autopage set limits.
+        for idx, item in enumerate(items):
             file     = item.get('file', '')
             fileType = item.get('filetype', 'file')
             if fileType == 'file':
-                dia = DIALOG.progressDialog(int(((idx)*100)//len(json_response)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,file))
+                dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,file))
                 item['duration'] = self.jsonRPC.getDuration(file, item)
                 if item['duration'] == 0: continue
                 else:

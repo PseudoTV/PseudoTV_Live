@@ -866,6 +866,7 @@ class Dialog:
                 options = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1, "multi":False},
                            {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1, "multi":False},
                            {"label":"Mixed Playlists" , "label2":"Mixed Playlists"               , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1, "multi":False},
+                           # {"label":"Dynamic Playlist", "label2":"Dynamic Playlist"              , "default":""                                   , "mask":""                                , "type":0, "multi":False},
                            {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0, "multi":False},
                            {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0, "multi":False},
                            {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
@@ -873,6 +874,7 @@ class Dialog:
                            {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
                            {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
                            {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
+
                 if default:
                     default, file = os.path.split(default)
                     if file: type = 1
@@ -897,7 +899,9 @@ class Dialog:
                 
         self.log('browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
         if monitor: self.toggleInfoMonitor(True)
-        if multi == True:
+        if options[select]['label'] == "Dynamic Playlist":
+            retval = self.buildDXSP()
+        elif multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
             ## type integer - the type of browse dialog.
             ## 1	ShowAndGetFile
@@ -916,6 +920,103 @@ class Dialog:
         return retval
         
 
+    def buildDXSP(self, params={}):
+        # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
+        from jsonrpc import JSONRPC
+        jsonRPC = JSONRPC()
+        
+        def type():
+            enumLST = ['songs', 'albums', 'artists', 'movies', 'tvshows', 'episodes', 'musicvideos', 'mixed']
+            enumSEL = enumLST.index(params.get('type')) if params.get('type') else -1
+            select  = self.selectDialog(enumLST,header="Select Type",preselect=enumSEL,useDetails=False, multi=False)
+            if select > -1: return enumLST[select]
+            
+        def andor():
+            enumLST = ['and', 'or']
+            enumSEL = enumLST.index(params.get('rules',{}).keys()) if params.get('rules',{}) else -1
+            select  = self.selectDialog(enumLST,header="Select Conjunction",preselect=enumSEL,useDetails=False, multi=False)
+            if select > -1:
+                params.setdefault('rules',{})[enumLST[select]] = []
+                field(params.setdefault('rules',{})[enumLST[select]])
+                
+        def field(rules=[]): #rules = {"and":[]}
+            print('field',rules,params)
+            params['type'] = type()
+            if params['type'] == 'songs':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.Songs", type='items')
+            elif params['type'] ==  'albums':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.Albums", type='items')
+            elif params['type'] ==  'artists':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.Artists", type='items')
+            elif params['type'] ==  'tvshows':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.TVShows", type='items')
+            elif params['type'] ==  'episodes':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items')
+            elif params['type'] ==  'movies':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.Movies", type='items')
+            elif params['type'] == 'musicvideos':
+                enumLST = jsonRPC.getEnums("List.Filter.Fields.MusicVideos")
+            elif params['type'] == 'mixed':
+                enumLST = ['playlist', 'virtualfolder']
+            else: return
+            
+            if enumLST:
+                enumSEL = -1
+                select = self.selectDialog(enumLST,header="Select Filter",preselect=enumSEL,useDetails=False, multi=False)
+                if select > -1: rules.append(operator({"field":enumLST[select]}))
+                params['rules'].update(rules)
+            
+        def operator(rule): #rule = {"field":""}
+            print('operator',rule,params)
+            enumLST = jsonRPC.getEnums("List.Filter.Operators")
+            enumSEL = -1
+            if rule["field"] != 'date':
+                if 'inthelast'    in enumLST: enumLST.remove('inthelast')
+                if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
+            select = self.selectDialog(enumLST,header="Select Operator",preselect=enumSEL,useDetails=False, multi=False)
+            if select > -1: rule.update({"operator":enumLST[select]})
+            return value(rule)
+            
+        def value(rule): #rule = {"field":"","operator":""}
+            print('value',rule,params)
+            enumLST = ['Enter', 'browse', 'select']
+            KEY_INPUT = {'Enter'  :{'func':self.inputDialog,'args':None,'kwargs':None},
+                         'Browse' :{'func':self.browseDialog,'args':None,'kwargs':None},
+                         'Select' :{'func':self.selectDialog,'args':None,'kwargs':None}}
+            select = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
+            # try:
+            if select > -1:
+                option  = KEY_INPUT[enumLST[select]]
+                default = ''
+                input   = option['func'](*option['args'],**option['kwargs'])
+            # except:             input = None
+            # try:    input = KEY_INPUT.get(rule.get('field'))()
+            # if input: rule.update({"value":input})
+            return rule
+            
+        def order():
+            ...
+            # {"order":{"direction":"ascending","method":"random","ignorearticle":true,"useartistsortname":true}
+            jsonRPC.getEnums("List.Sort",type="method")
+            jsonRPC.getEnums("List.Sort",type="order")
+            
+        rules = andor()
+        if params['type'] in MUSIC_TYPES:
+            db = 'musicdb'
+        else:
+            db = 'videodb'
+            
+        if params['type'] in ['movies','tvshows','musicvideos']:
+            url = "%s://%s/titles/?xsp="%(db,params['type'])
+        elif params['type'] == 'episodes':
+            url = "%s://tvshows//titles/-1/-1/-1/?xsp="%(db)
+            
+        # # example* source = 
+        # #    *  '{"rules":{"and":[{"field":"%s","operator":"%s","value":["%s"]}]},"type":"%s"}' % (field,operator,field_value,xsp_type)
+        # #    *  '{"rules":{"and":[{"field":"actor","operator":"contains","value":["$VAR[videoinfo_cast_container_id]"]},{"field":"title","operator":"isnot","value":["$INFO[Window(home).Property(EncodedTitle)]"]}]},"type":"movies"}'
+        # source = '{"rules":{"%s":[%s]},"type":"%s"}' % (match,xsp_rules,xsp_type)
+
+
     def notificationWait(self, message, header=ADDON_NAME, wait=4):
         pDialog = self.progressBGDialog(message=message,header=header)
         for idx in range(int(wait)):
@@ -925,7 +1026,7 @@ class Dialog:
         return True
 
 
-    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
+    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None, wait=None):
         # if silent is None and self.settings.getSettingBool('Silent_OnPlayback'): 
             # silent = (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player'))
         
@@ -941,6 +1042,7 @@ class Dialog:
             if int(percent) == 100 or control.isFinished(): 
                 if hasattr(control, 'close'): control.close()
             elif hasattr(control, 'update'):  control.update(int(percent), header, message)
+            if wait: MONITOR.waitForAbort(wait/1000)
         return control
         
 

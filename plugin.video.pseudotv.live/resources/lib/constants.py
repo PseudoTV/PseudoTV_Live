@@ -56,23 +56,7 @@ AUTOTUNE_TYPES      = ["Playlists",
                        "Recommended",
                        "Services",
                        "Music Genres"]
-                          
 
-PROVISIONAL_TYPES   = {"TV Networks"  :{"path":["videodb://tvshows/studios/"],
-                                        "json":[{"method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","field":"studio","operator":"contains","sort":"episode"}]},
-                       "TV Shows"     :{"path":["videodb://tvshows/titles/"],
-                                        "json":[{"method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","field":"tvshow","operator":"is","sort":"episode"}]},
-                       "TV Genres"    :{"path":["videodb://tvshows/genres/"],
-                                        "json":[{"method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","field":"genre","operator":"contains","sort":"episode"}]},
-                       "Movie Genres" :{"path":["videodb://movies/genres/"] ,
-                                        "json":[{"method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"field":"genre","operator":"contains","sort":"random"}]},
-                       "Movie Studios":{"path":["videodb://movies/studios/"],
-                                        "json":[{"method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"field":"studio","operator":"contains","sort":"random"}]},
-                       "Mixed Genres" :{"path":["videodb://tvshows/genres/",
-                                                "videodb://movies/genres/"],
-                                        "json":[{"method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","field":"genre","operator":"contains","sort":"episode"},
-                                                {"method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"field":"genre","operator":"contains","sort":"year"}]}}
-                       
 GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', 'PVR', 'Plugin', 'Radio', 'Smartplaylist', 'UPNP', 'IPTV'] + AUTOTUNE_TYPES
 
 VFS_TYPES           = ["plugin://",
@@ -185,3 +169,17 @@ RULES_ACTION_OVERLAY_CLOSE    = 22
 RULES_ACTION_BACKGROUND_OPEN  = 23
 RULES_ACTION_BACKGROUND_CLOSE = 24
 
+PROVISIONAL_TYPES   = {"TV Shows"     : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
+                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                       "TV Networks"  : [{"path":"videodb://tvshows/studios/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                       "Movie Studios": [{"path":"videodb://movies/studios/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
+                       "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                       "Movie Genres" : [{"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
+                       "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
+                                         {"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}]}

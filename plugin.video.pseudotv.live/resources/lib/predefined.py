@@ -27,7 +27,7 @@ class Predefined:
     def __init__(self):
         ...
         
-
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -67,7 +67,7 @@ class Predefined:
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(network)]})
         if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
-        return ['videodb://tvshows/studios/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://tvshows/studios/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
     def createShowPlaylist(self, show, method='episode'):
@@ -82,7 +82,7 @@ class Predefined:
         except:
             param.setdefault("rules",{}).setdefault("and",[]).append({"field":"tvshow","operator":"is","value":[quoteString(show)]})
         if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
-        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
     def createTVGenrePlaylist(self, genre, method='episode'):
@@ -91,15 +91,15 @@ class Predefined:
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
         if not SETTINGS.getSettingBool('Enable_Extras'): param.setdefault("rules",{}).setdefault("and",[]).extend(self.EXCL_EXTRAS)
-        return ['videodb://tvshows/titles/-1/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://tvshows/genres/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createMovieGenrePlaylist(self, genre, method='random'):
+    def createMovieGenrePlaylist(self, genre, method='year'):
         param = self.getParams()
         param["type"] = "movies"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"genre","operator":"contains","value":[quoteString(genre)]})
-        return ['videodb://movies/titles/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://movies/genres/?xsp=%s'%(dumpJSON(param))]
 
 
     def createStudioPlaylist(self, studio, method='random'):
@@ -107,7 +107,7 @@ class Predefined:
         param["type"] = "movies"
         param["order"]["method"] = method
         param.setdefault("rules",{}).setdefault("and",[]).append({"field":"studio","operator":"contains","value":[quoteString(studio)]})
-        return ['videodb://movies/titles/?xsp=%s'%(dumpJSON(param))]
+        return ['videodb://movies/studios/?xsp=%s'%(dumpJSON(param))]
 
 
     def createMusicGenrePlaylist(self, genre, method='random'):
@@ -125,6 +125,7 @@ class Predefined:
         
         
     def createSeasonal(self):
+        #todo fix seasons. 
         return ["{Seasonal}"]
         
         

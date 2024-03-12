@@ -93,6 +93,7 @@ class M3U:
             
             chCount = 0
             data    = {}
+            filter  = []
             for idx, line in enumerate(lines):
                 line = line.rstrip()
                 
@@ -130,6 +131,12 @@ class M3U:
                              'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line),
                              'realtime'          :re.compile('realtime=\"(.*?)\"'           , re.IGNORECASE).search(line)}
                     
+                    
+                    if match['id'].group(1) in filter:
+                        self.log('_load, filtering duplicate %s'%(match['id'].group(1)))
+                        continue
+                    
+                    filter.append(match['id'].group(1)) #filter dups, todo find where dups originate from. 
                     mitem = self.getMitem()
                     mitem.update({'number' :chCount,
                                   'logo'   :LOGO,
@@ -300,7 +307,7 @@ class M3U:
         
     def addStation(self, citem):
         idx, line = self.findStation(citem)
-        self.log('addStation, channel item = %s, found existing = %s'%(citem,idx))
+        self.log('addStation, channel item = %s\nfound existing = %s'%(citem,line))
         mitem = self.getMitem()
         mitem.update(citem)            
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.

@@ -66,9 +66,9 @@ def isRunning(key):
 
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
-    while not MONITOR.abortRequested():
-        if MONITOR.waitForAbort(0.001): break
-        elif not isPendingSuspend(): break
+    # while not MONITOR.abortRequested():
+        # if MONITOR.waitForAbort(0.001): break
+        # elif not isPendingSuspend(): break
     setPendingSuspend(True)
     try: yield
     finally:
@@ -593,3 +593,10 @@ def hasFile(file):
 def timeString2Seconds(string): #hh:mm:ss
     try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
     except: return 0
+
+def isProvisional(path):
+    if '?xsp=' not in str(path).lower(): match = re.findall(r"\{(.*?)}",str(path))
+    if match:
+        if isinstance(match,list): match = match[0]
+        return match
+    return False

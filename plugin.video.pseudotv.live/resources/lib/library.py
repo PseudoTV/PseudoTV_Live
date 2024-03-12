@@ -26,6 +26,7 @@ from channels   import Channels
 
 #constants
 REG_KEY = 'PseudoTV_Recommended.%s'
+
 class Service:
     def _interrupt(self, wait=.001) -> bool: #break
         return MONITOR.waitForAbort(wait)
@@ -117,8 +118,8 @@ class Library:
                 
             self.log('fillItems, returning %s'%(type))
             yield (type,fillItem(type))
-                  
-                  
+
+
     @timeit
     def updateLibrary(self, force=False):
         def _updateClient():
@@ -128,16 +129,17 @@ class Library:
                 yield (type,self.getLibrary(type))
                 
         def _updateItem(type,item):
-            entry = self.getTemplate()
-            entry.update(item)
             #check existing library for enabled items
-            for item in self.getEnabled(type):
-                if getChannelSuffix(entry.get('name'), type).lower() == item.get('name').lower(): 
-                    entry['enabled'] = True
+            for eitem in self.getEnabled(type):
+                if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name').lower(): 
+                    item['enabled'] = True
             #check existing channels for enabled items
             for channel in self.channels.getType(type):
-                if getChannelSuffix(entry.get('name'), type).lower() == channel.get('name').lower():
-                    entry['enabled'] = True
+                if getChannelSuffix(item.get('name'), type).lower() == channel.get('name').lower():
+                    item['enabled'] = True
+
+            entry = self.getTemplate()
+            entry.update(item)
             return entry
            
         complete = True 
@@ -147,7 +149,7 @@ class Library:
             libraryItems = dict(_updateClient())
         else:
             msg = LANGUAGE(32022)
-            if force: 
+            if force: #clear library cache.
                 with busy_dialog():
                     for label, func in list(self.libraryFUNCS.items()):
                         cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)

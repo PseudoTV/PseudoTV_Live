@@ -557,7 +557,7 @@ class ForceSubtitles(BaseRule):
  
 class seekControl(BaseRule):
     def __init__(self):
-        self.myId             = 41
+        self.myId             = 23
         self.name             = "Seek Control, Threshold & Tolerance"
         self.description      = ''
         self.optionLabels     = ['Disable Seeking','Threshold Percentage','Tolerance Seconds']
@@ -608,7 +608,7 @@ class seekControl(BaseRule):
 
 class HandleMethodOrder(BaseRule):
     def __init__(self):
-        self.myId             = 61
+        self.myId             = 51
         self.name             = "Limits & Sort Methods"
         self.description      = ""
         self.optionLabels     = ['Page Limit','Method','Order','Ignore Folders']
@@ -650,7 +650,7 @@ class HandleMethodOrder(BaseRule):
 
 class HandleFilter(BaseRule):
     def __init__(self):
-        self.myId             = 62
+        self.myId             = 52
         self.name             = "Filter Content"
         self.description      = ""
         self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
@@ -691,10 +691,10 @@ class HandleFilter(BaseRule):
         self.log("runAction, setting filter = %s"%(builder.filter))
         return citem
  
-
+ 
 class BestEffort(BaseRule):
     def __init__(self):
-        self.myId         = 63
+        self.myId         = 54
         self.name         = "Best Effort Marathon"
         self.description  = "Sort shows in groups of user defined blocks."
         self.actions      = [RULES_ACTION_CHANNEL_BUILD_GLOBAL,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST,RULES_ACTION_CHANNEL_BUILD_STOP]
@@ -773,6 +773,7 @@ class BestEffort(BaseRule):
         return parameter
 
  
+
 # todo control rules
 # self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
 # self.inc3D            = SETTINGS.getSettingBool('Enable_3D')

@@ -24,7 +24,7 @@ from tasks      import Tasks
 from threading  import enumerate as thread_enumerate
 
 class Player(xbmc.Player):
-    pvritem      = {}
+    sysInfo      = {}
     background   = None
     myService    = False
     pendingPlay  = False
@@ -65,7 +65,7 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.pendingPlay = False
-        self.pvritem     = self.getPlayerPVRitem()
+        self.sysInfo     = self.getPlayerSysInfo()
         self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
@@ -88,39 +88,23 @@ class Player(xbmc.Player):
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
         if self.isPseudoTV: self._onStop()
-        self.pvritem     = {}
+        self.sysInfo     = {}
         self.isPseudoTV  = False
         self.pendingPlay = False
         
         
     def isPseudoTVPlaying(self):
-        if self.pvritem.get('channelid'): return True
-        elif self.pvritem.get('citem',{}).get('id'): return True
+        if (self.sysInfo.get('chid') or self.sysInfo.get('citem',{}).get('id')): return True
         else: return False
         
         
-    def getPlayerPVRitem(self):
-        pvritem = loadJSON((self.getPlayingItem().getProperty('pvritem') or '{"citem":{},"sysinfo":{}}')) #Kodi v20.
-        self.log('getPlayerPVRitem, pvritem = %s'%(pvritem))
-        return pvritem
-        
-        
-    def getPlayerCitem(self):
-        try:
-            citem = loadJSON(self.getPlayerPVRitem().getProperty('citem'))
-            if not citem: raise Exception('getPlayerCitem, trying writer')
-        except: citem = decodeWriter(BUILTIN.getInfoLabel('Writer','VideoPlayer')).get('citem',{})
-        self.log('getPlayerCitem, citem = %s'%(citem))
-        return citem
-        
-        
     def getPlayerSysInfo(self):
-        return loadJSON(self.getPlayerPVRitem().get('sysinfo',{}))
+        sysInfo = loadJSON(self.getPlayingItem().getProperty('sysInfo')) #Kodi v20.
+        self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+        return sysInfo
         
-        
+
     def getCallback(self):
-        # self.playingPVRitem.update(self.getPVRitem())
-        # callback = 'pvr://channels/tv/All%20channels/{pvr}_{id}.pvr'.format(pvr=PVR_CLIENT_ID,id=self.playingPVRitem.get('uniqueid',-1))
         callback = BUILTIN.getInfoLabel('Filenameandpath','Player')
         self.log('getCallback, callback = %s\n%s\n%s'%(callback,BUILTIN.getInfoLabel('Folderpath','Player'),BUILTIN.getInfoLabel('Filename','Player')))
         return callback
@@ -166,39 +150,37 @@ class Player(xbmc.Player):
         sysInfo['runtime'] = ceil(self.getPlayerTime())
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
         
-        if self.pvritem.get('citem',{}).get('id') != self.pvritem.get('citem',{}).get('id',random.random()): #playing new channel
-            self.pvritem = self.runActions(RULES_ACTION_PLAYER_START, self.pvritem.get('citem'), self.pvritem, inherited=self)
+        if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
+            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
-        if not self.pvritem.get('callback'): self.pvritem['callback'] = self.getCallback()
+        if not self.sysInfo.get('callback'): self.sysInfo['callback'] = self.getCallback()
 
         
     def _onChange(self):
-        self.log('_onChange, channelid = %s,'%(self.pvritem.get("channelid",'')))
+        self.log('_onChange')
         try:
             self.toggleBackground(True)
-            if self.pvritem.get('isPlaylist',False):
-                broadcastnext = self.pvritem['broadcastnext']
-                self.pvritem['broadcastnow']  = broadcastnext.pop(0)
-                self.pvritem['broadcastnext'] = broadcastnext
-                self.log('_onChange, isPlaylist = %s, broadcastnext = %s'%(self.pvritem.get('isPlaylist'), len(self.pvritem['broadcastnext'])))
+            if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
+                broadcastnext = self.sysInfo['pvritem']['broadcastnext']
+                self.sysInfo['pvritem']['broadcastnow']  = broadcastnext.pop(0)
+                self.sysInfo['pvritem']['broadcastnext'] = broadcastnext
+                self.log('_onChange, isPlaylist = %s, broadcastnext = %s'%(self.sysInfo['isPlaylist'], len(self.sysInfo['pvritem']['broadcastnext'])))
                 if len(broadcastnext) == 0: raise Exception('Empty broadcastnext')
             else: raise Exception('Using callback')
-            # JSONRPC().playerOpen('{"item":{"channelid":%s}}'%(self.pvritem["channelid"])) #slower than playmedia
-            # JSONRPC().playerOpen('{"item":{"broadcastid":%s}}'%(self.pvritem['broadcastnow']["broadcastid"])) #calls catchup vod
         except Exception as e:
-            self.pvritem = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.pvritem.get('citem'), self.pvritem, inherited=self)
-            self.log('_onChange, callback = %s: %s'%(self.pvritem.get('callback'),e))
-            BUILTIN.executebuiltin('PlayMedia(%s)'%(self.pvritem.get('callback')))
+            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
+            self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback'],e))
+            BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo['callback']))
         
         
     def _onStop(self):
         self.log('_onStop')
         self.toggleBackground(False)
-        if self.pvritem.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        self.pvritem = self.runActions(RULES_ACTION_PLAYER_STOP, self.pvritem.get('citem'), self.pvritem, inherited=self)
+        if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
 
 
-    def _onError(self, pvritem):
+    def _onError(self, sysInfo):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         self.onPlayBackStopped()
         
@@ -241,7 +223,7 @@ class Monitor(xbmc.Monitor):
             self.log('getIdleTime, Kodi waking up from sleep...')
             idleTime = 0
         idleState = (idleTime > OVERLAY_DELAY)
-        if (idleTime == 0 or idleTime <= 5): self.log("getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
+        if ((idleTime == 0 or idleState) and idleTime <= OVERLAY_DELAY): self.log("getIdle, idleState = %s, idleTime = %s"%(idleState,idleTime))
         return idleState, idleTime
 
 
