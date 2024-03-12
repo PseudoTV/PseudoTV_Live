@@ -66,9 +66,9 @@ def isRunning(key):
 
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
-    # while not MONITOR.abortRequested():
-        # if MONITOR.waitForAbort(0.001): break
-        # elif not isPendingSuspend(): break
+    while not MONITOR.abortRequested():
+        if MONITOR.waitForAbort(0.001): break
+        elif not isPendingSuspend(): break
     setPendingSuspend(True)
     try: yield
     finally:
@@ -595,8 +595,10 @@ def timeString2Seconds(string): #hh:mm:ss
     except: return 0
 
 def isProvisional(path):
-    if '?xsp=' not in str(path).lower(): match = re.findall(r"\{(.*?)}",str(path))
-    if match:
-        if isinstance(match,list): match = match[0]
-        return match
+    if '?xsp=' not in str(path).lower():
+        try:
+            match = re.findall(r"\{(.*?)}",str(path))
+            if isinstance(match,list): match = match[0]
+            return match
+        except: pass
     return False

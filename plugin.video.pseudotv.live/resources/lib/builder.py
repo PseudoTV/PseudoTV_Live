@@ -79,7 +79,7 @@ class Builder:
         if channels is None: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
-            elif not citem.get('id'):
+            elif not citem.get('id') or not citem.get('path'):
                 self.log('verify, skipping - missing channel id\n%s'%(citem))
                 continue
             else:
@@ -145,7 +145,7 @@ class Builder:
             multi = len(citem.get('path',[])) > 1 #multi-path source
             radio = True if citem.get('radio',False) else False
             media = 'music' if radio else 'video'
-            self.log('getFileList, id: %s, multipath = %s, radio = %s, media = %s, path = %s'%(citem['id'],multi,radio,media,citem['path']),xbmc.LOGINFO)
+            self.log('getFileList, id: %s, multipath = %s, radio = %s, media = %s, path = %s'%(citem['id'],multi,radio,media,citem.get('path')),xbmc.LOGINFO)
 
             if radio: cacheResponse = self.buildRadio(citem)
             else:     cacheResponse = self.buildChannel(citem)
@@ -220,6 +220,7 @@ class Builder:
                     if value == "Seasonal": queries = list(Seasonal().buildSeasonal())
                     else:                   queries = PROVISIONAL_TYPES.get(citem['type'],[])
                     for provisional in queries:
+                        print('provisional',provisional)
                         if self.service._interrupt() or self.service._suspend(): break
                         elif not provisional: continue
                         else:
@@ -228,7 +229,7 @@ class Builder:
                             if not self.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                                 provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                                    {"field":"episode","operator":"greaterthan","value":"0"}])
-                            cacheResponse.append(self.buildList(citem, provisional.pop('path'), media='video', page=(provisional.pop('limit') or SETTINGS.getSettingInt('Page_Limit')), sort=provisional.pop('sort'), limits={}, dirItem={}, query=provisional)[0])
+                            cacheResponse.append(self.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or SETTINGS.getSettingInt('Page_Limit')), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)[0])
                 else: cacheResponse.append(self.buildFileList(citem, file, 'video', self.limit, self.sort, self.limits))
 
         if not _validFileList(cacheResponse):#check that at least one fileList array contains meta.
@@ -288,7 +289,7 @@ class Builder:
             elif len(dirList) == 0:
                 self.log('buildFileList, id: %s, no more folders to parse'%(citem['id']))
                 break
-            else:
+            elif len(dirList) > 0:
                 dir = dirList.pop(0)
                 subfileList, subdirList = self.buildList(citem, dir.get('file'), media, limit, sort, limits, dir)
                 fileList += subfileList
@@ -410,9 +411,6 @@ class Builder:
             self.log("buildList, id: %s, random shuffling"%(citem['id']))
             if len(dirList)  > 0: dirList  = randomShuffle(dirList)
             if len(fileList) > 0: fileList = randomShuffle(fileList)
-
-        if len(fileList) < page and limits.get('total',0) > page: #try to fill channel if returned content was skipped.
-            return self.buildList(citem, path, media, page, sort, limits, dirItem, query)
             
         self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
         return fileList, dirList

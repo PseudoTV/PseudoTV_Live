@@ -93,7 +93,6 @@ class M3U:
             
             chCount = 0
             data    = {}
-            filter  = []
             for idx, line in enumerate(lines):
                 line = line.rstrip()
                 
@@ -131,12 +130,6 @@ class M3U:
                              'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line),
                              'realtime'          :re.compile('realtime=\"(.*?)\"'           , re.IGNORECASE).search(line)}
                     
-                    
-                    if match['id'].group(1) in filter:
-                        self.log('_load, filtering duplicate %s'%(match['id'].group(1)))
-                        continue
-                    
-                    filter.append(match['id'].group(1)) #filter dups, todo find where dups originate from. 
                     mitem = self.getMitem()
                     mitem.update({'number' :chCount,
                                   'logo'   :LOGO,
@@ -209,9 +202,9 @@ class M3U:
             fle = FileAccess.open(file, 'w')
             fle.write('%s\n'%(self.M3UDATA['data']))
             
-            opts = list(self.getMitem().keys())
-            mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
-            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            opts   = list(self.getMitem().keys())
+            mins   = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
+            line   = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
             self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]))
             self.log('_save, saving %s stations and %s recordings to %s'%(len(self.M3UDATA['stations']),len(self.M3UDATA['recordings']),file))
@@ -228,7 +221,7 @@ class M3U:
                 for key, value in list(station.items()):
                     if key in opts and str(value):
                         optional += '%s="%s" '%(key,value)
-                        
+
                 fle.write(line%(station['number'],
                                 station['id'],
                                 station['name'],
@@ -290,7 +283,7 @@ class M3U:
     def findStation(self, citem, stations=None):
         if stations is None: stations = self.getStations()
         for idx, eitem in enumerate(stations):
-            if (citem.get('id') == eitem.get('id',str(random.random())) or citem.get('url','').lower() == eitem.get('url',str(random.random())).lower()):
+            if (citem.get('id',str(random.random())) == eitem.get('id') or citem.get('url',str(random.random())).lower() == eitem.get('url','').lower()):
                 self.log('findStation, found citem = %s'%(eitem))
                 return idx, eitem
         return None, {}
@@ -307,7 +300,7 @@ class M3U:
         
     def addStation(self, citem):
         idx, line = self.findStation(citem)
-        self.log('addStation, channel item = %s\nfound existing = %s'%(citem,line))
+        self.log('addStation,\nchannel item = %s\nfound existing = %s'%(citem,line))
         mitem = self.getMitem()
         mitem.update(citem)            
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
@@ -316,31 +309,33 @@ class M3U:
         mitem['provider']      = ADDON_NAME
         mitem['provider-type'] = 'addon'
         mitem['provider-logo'] = HOST_LOGO
-        if idx is None:  self.M3UDATA.get('stations',[]).append(mitem)
-        else:            self.M3UDATA.get('stations',[])[idx] = mitem # replace existing channel
+        
+        if not idx is None: self.M3UDATA['stations'].pop(idx)
+        self.M3UDATA.get('stations',[]).append(mitem)
+        self.log('addStation, channels = %s'%(len(self.M3UDATA.get('stations',[]))))
         return True
         
         
     def addRecording(self, ritem):
         # https://github.com/kodi-pvr/pvr.iptvsimple/blob/Omega/README.md#media
         idx, line = self.findRecording(ritem)
-        self.log('addRecording, recording ritem = %s, found existing = %s'%(ritem,idx))
-        if idx is None:  self.M3UDATA.get('recordings',[]).append(ritem)
-        else:            self.M3UDATA.get('recordings',[])[idx] = ritem # replace existing channel
+        self.log('addRecording,\nrecording ritem = %s\nfound existing = %s'%(ritem,idx))
+        if not idx is None: self.M3UDATA['recordings'].pop(idx)
+        self.M3UDATA.get('recordings',[]).append(ritem)
         return self._save()
 
 
     def delStation(self, citem):
         self.log('delStation id = %s'%(citem['id']))
         idx, line = self.findStation(citem)
-        if idx is not None: self.M3UDATA['stations'].pop(idx)
+        if not idx is None: self.M3UDATA['stations'].pop(idx)
         return True
         
 
     def delRecording(self, ritem):
         self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
         idx, line = self.findRecording(ritem)
-        if idx is not None:
+        if not idx is None:
             self.M3UDATA['recordings'].pop(idx)
             return self._save()
     
