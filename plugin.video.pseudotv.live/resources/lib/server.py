@@ -60,6 +60,7 @@ class Discovery:
             else:
                 try: 
                     data, addr = sock.recvfrom(1024) #wait for a packet
+                    data = data.decode(DEFAULT_ENCODING)
                 except: pass #ignore except TimeoutError: timed out
                 print(data)
                 if data.startswith(ADDON_ID):

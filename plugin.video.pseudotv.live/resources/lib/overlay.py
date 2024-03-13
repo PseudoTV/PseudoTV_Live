@@ -315,15 +315,14 @@ class Overlay():
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.Playing]')
-                                            
-                if nowItem and nextItem:
-                    onNow  = '%s on %s'%(self.builtin.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
-                    onNext = self.builtin.getInfoLabel('NextTitle','VideoPlayer')
-                    self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
-                    self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
-                    self._onNext.autoScroll(6000, 3000, 5000)
-                    self.setVisible(self._onNext,True)
-                    playSFX(BING_WAV)
+                               
+                onNow  = '%s on %s'%(self.builtin.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
+                onNext = self.builtin.getInfoLabel('NextTitle','VideoPlayer')
+                self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
+                self._onNext.autoScroll(6000, 3000, 5000)
+                self.setVisible(self._onNext,True)
+                playSFX(BING_WAV)
             else: 
                 self.setVisible(self._onNext,False)
             

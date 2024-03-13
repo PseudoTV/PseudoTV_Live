@@ -177,8 +177,7 @@ class Builder:
     def addScheduling(self, citem, fileList, start):
         self.log("addScheduling; id: %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         tmpList  = []
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self) #adv. scheduling rules start here.
-        for idx, item in enumerate(fileList):
+        for idx, item in enumerate(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)):
             if not item.get('file',''):
                 self.log("addScheduling, id: %s, IDX = %s skipping missing playable file!"%(citem['id'],idx),xbmc.LOGINFO)
                 continue
@@ -385,7 +384,7 @@ class Builder:
                         item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
                         if query.get('holiday'):
                             holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])
-                            item["plot"] = "%s\n%s"%(holiday,item["plot"])
+                            item["plot"] = "%s \n%s"%(holiday,item["plot"])
 
                         item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                         item.get('art',{})['icon'] = citem['logo']

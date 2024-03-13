@@ -696,10 +696,8 @@ class BestEffort(BaseRule):
     def __init__(self):
         self.myId         = 54
         self.name         = "Best Effort Marathon"
-        self.description  = "Sort shows in groups of user defined blocks."
+        self.description  = "Sort shows in blocks."
         self.actions      = [RULES_ACTION_CHANNEL_BUILD_GLOBAL,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST,RULES_ACTION_CHANNEL_BUILD_STOP]
-        self.optionLabels = ["Group shows in blocks of x episodes"]
-        self.optionValues = [3]#todo add global user setting
         self.storedValues = [dict(),list(),dict(),int()]
         
 
@@ -712,45 +710,51 @@ class BestEffort(BaseRule):
 
 
     def runAction(self, actionid, citem, parameter, builder):
-        def _sortShows(fileItem):
-            if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
-                self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
-            else:
-                self.storedValues[1].append(fileItem)
+        ...
+        # save current limit, change limit for movies by half, restore saved limit.
+        # group all tv shows, chunk into equal parts.
+        # inject movies into every other tv show chunk.
+        
+        
+        # def _sortShows(fileItem):
+            # if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
+                # self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
+            # else:
+                # self.storedValues[1].append(fileItem)
             
-        def _chunkShows():
-            for show, episodes in list(self.storedValues[0].items()):
-                self.log("_chunkShows, show = %s, episodes = %s"%(show,len(episodes)))
-                yield show, list(chunkLst(episodes,self.optionValues[0]))
+        # def _chunkShows():
+            # for show, episodes in list(self.storedValues[0].items()):
+                # self.log("_chunkShows, show = %s, episodes = %s"%(show,len(episodes)))
+                # yield show, list(chunkLst(episodes,self.optionValues[0]))
                 
-        def _mergeShows(shows):
-            nfileList = []
-            movies = list(chunkLst(self.storedValues[1],len(list(shows.keys()))))
-            print('movies',len(movies),movies)
+        # def _mergeShows(shows):
+            # nfileList = []
+            # movies = list(chunkLst(self.storedValues[1],len(list(shows.keys()))))
+            # print('movies',len(movies),movies)
             
-            while not MONITOR.abortRequested() and shows:
-                for show, chunks in list(shows.items()):
-                    if len(chunks) == 0:
-                        print('del',show)
-                        del shows[show]
-                    print('show',show,len(chunks))
-                    for idx, chunk in enumerate(chunks):
-                        print('idx',idx,chunk)
-                        if len(chunk)  > 0: nfileList.extend(chunks.pop(idx))
-                        if len(movies) > 0: nfileList.extend(movies.pop(0))
-                    break
+            # while not MONITOR.abortRequested() and shows:
+                # for show, chunks in list(shows.items()):
+                    # if len(chunks) == 0:
+                        # print('del',show)
+                        # del shows[show]
+                    # print('show',show,len(chunks))
+                    # for idx, chunk in enumerate(chunks):
+                        # print('idx',idx,chunk)
+                        # if len(chunk)  > 0: nfileList.extend(chunks.pop(idx))
+                        # if len(movies) > 0: nfileList.extend(movies.pop(0))
+                    # break
                     
-            for chunk in movies:
-                nfileList.extend(chunk) #add any remaning movies to the end of sets.
+            # for chunk in movies:
+                # nfileList.extend(chunk) #add any remaning movies to the end of sets.
                 
-            print(nfileList)
-            self.log("_mergeShows, returning items = %s"%(len(nfileList)))
-            return nfileList
+            # print(nfileList)
+            # self.log("_mergeShows, returning items = %s"%(len(nfileList)))
+            # return nfileList
                    
-        if citem['type'] in ['TV Genres','Mixed Genres','Custom']:
-            if actionid == RULES_ACTION_CHANNEL_BUILD_GLOBAL:
-                self.storedValues[3] = builder.limit
-                builder.limit = builder.limit * 4
+        # if citem['type'] in ['TV Networks','TV Genres','Mixed Genres','Custom']:
+            # if actionid == RULES_ACTION_CHANNEL_BUILD_GLOBAL:
+                # self.storedValues[3] = builder.limit
+                # builder.limit = builder.limit * 4
                 # self.storedValues[2] = builder.sort
                 # if isinstance(parameter,dict):
                     # if parameter.get('sort','').startswith(tuple(TV_TYPES)):
@@ -760,16 +764,16 @@ class BestEffort(BaseRule):
                 # elif parameter.startswith('videodb://movies/'):
                     # builder.sort = {"ignorearticle":True,"method":"year","order":"ascending","useartistsortname":True}
                     
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s: Adding Rule %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                print(len(parameter),parameter)
-                poolit(_sortShows)(list(sorted(parameter, key=lambda k: k.get('episode',0))))
-                print(len(self.storedValues[0]),self.storedValues[0])
-                return _mergeShows(dict(_chunkShows()))
+            # elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
+                # builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s: Adding Rule %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                # print(len(parameter),parameter)
+                # poolit(_sortShows)(list(sorted(parameter, key=lambda k: k.get('episode',0))))
+                # print(len(self.storedValues[0]),self.storedValues[0])
+                # return _mergeShows(dict(_chunkShows()))
                 
-            elif actionid == RULES_ACTION_CHANNEL_BUILD_STOP:
-                builder.limit = self.storedValues[3]
-                    # builder.sort = self.storedValues[2]
+            # elif actionid == RULES_ACTION_CHANNEL_BUILD_STOP:
+                # builder.limit = self.storedValues[3]
+                    # # builder.sort = self.storedValues[2]
         return parameter
 
  
