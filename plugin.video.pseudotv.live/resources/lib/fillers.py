@@ -57,6 +57,9 @@ class Fillers:
 
     def injectBCTs(self, citem, fileList):
         return fileList
+        
+        # if self.fillBCTs and not citem.get('radio',False): cacheResponse = 
+        
         # if not fileList: return fileList
         # self.log("injectBCTs, channel = %s, fileList = %s"%(citem.get('id'),len(fileList)))
         # ratings = self.buildResourceByType('ratings')

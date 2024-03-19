@@ -637,7 +637,7 @@ class ProvisionalRule(BaseRule):
                         if len(fileList) > 0: self.storedValues[0].append(fileList)
 
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE: 
-            return list(filter(None,self.storedValues.pop(0)))
+            return [_f for _f in self.storedValues.pop(0) if _f]
             
         return parameter
         
@@ -681,7 +681,7 @@ class EvenShowsRule(BaseRule):
                     self.storedValues[1].append(fileItem)
 
         def _chunkShows():
-            for show, episodes in self.storedValues[0].items():
+            for show, episodes in list(self.storedValues[0].items()):
                 yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
 
         def _mergeShows(shows, movies):
@@ -697,7 +697,7 @@ class EvenShowsRule(BaseRule):
                 nfileList.extend(movies) #add any remaning movies to the end of sets.
                 
             self.log('runAction, _mergeShows returning items = %s'%(len(nfileList)))
-            return list(filter(None,nfileList))
+            return [_f for _f in nfileList if _f]
                 
         if actionid == RULES_ACTION_CHANNEL_BUILD_START:
             self.storedValues[2] = builder.limit # store global pagination limit

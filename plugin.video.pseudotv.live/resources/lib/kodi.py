@@ -899,9 +899,9 @@ class Dialog:
                 
         self.log('browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
         if monitor: self.toggleInfoMonitor(True)
-        if options[select]['label'] == "Dynamic Playlist":
-            retval = self.buildDXSP()
-        elif multi == True:
+        # if options[select]['label'] == "Dynamic Playlist":
+            # retval = self.buildDXSP()
+        if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
             ## type integer - the type of browse dialog.
             ## 1	ShowAndGetFile
@@ -927,7 +927,7 @@ class Dialog:
         
         def type():
             enumLST = ['songs', 'albums', 'artists', 'movies', 'tvshows', 'episodes', 'musicvideos', 'mixed']
-            enumSEL = enumLST.index(params.get('type')) if params.get('type') else -1
+            enumSEL = enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1
             select  = self.selectDialog(enumLST,header="Select Type",preselect=enumSEL,useDetails=False, multi=False)
             if select > -1: return enumLST[select]
             

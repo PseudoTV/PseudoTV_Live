@@ -808,7 +808,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         retval = DIALOG.yesnoDialog('%s Source'%LANGUAGE(32066), 
                                         nolabel=LANGUAGE(32067), #Select
                                        yeslabel=LANGUAGE(32068), #Browse
-                                    customlabel=LANGUAGE(32069)) #Match
+                                    customlabel=LANGUAGE(32069)) #Auto
                                              
         if   retval == 0: chlogo = select(chname)
         elif retval == 1: chlogo = browse(chname)

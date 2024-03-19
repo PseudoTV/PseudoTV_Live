@@ -806,7 +806,7 @@ msgid "Browse"
 msgstr ""
 
 msgctxt "#32069"
-msgid "Match"
+msgid "Auto"
 msgstr ""
 
 msgctxt "#32070"

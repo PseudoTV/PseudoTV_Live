@@ -115,7 +115,7 @@ class Channels:
                 
             if citem.get('favorite',False):
                 citem['group'].append(LANGUAGE(32019))
-                citem['group'] = sorted(list(set(citem['group'])))
+                citem['group'] = sorted(set(citem['group']))
                 
             self.log('addChannel, updating channel %s, id %s'%(citem["number"],citem["id"]), xbmc.LOGINFO)
             self.channelDATA['channels'][idx] = citem

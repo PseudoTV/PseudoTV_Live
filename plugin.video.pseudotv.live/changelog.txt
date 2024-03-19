@@ -1,3 +1,6 @@
+v.0.4.7
+
+
 v.0.4.6
 -Refactored Seasonal & Provisional Autotuning.
 -Added "Even Show Distribution" Rule; Enabled by default under global settings.

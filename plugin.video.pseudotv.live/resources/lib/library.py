@@ -424,7 +424,7 @@ class Library:
         
         
     def setWhiteList(self, data=[]):
-        self.libraryDATA['whitelist'] = sorted(list(set(data)))
+        self.libraryDATA['whitelist'] = sorted(set(data))
         return self._save()
         
         
@@ -434,7 +434,7 @@ class Library:
     
         
     def setBlackList(self, data=[]):
-        self.libraryDATA['blacklist'] = sorted(list(set(data)))
+        self.libraryDATA['blacklist'] = sorted(set(data))
         return self._save()
         
         

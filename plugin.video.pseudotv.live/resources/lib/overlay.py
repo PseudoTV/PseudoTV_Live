@@ -56,7 +56,7 @@ class Background(xbmcgui.WindowXML):
             citem = self.player.sysInfo.get('citem',{})
             self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
-            self.getControl(40002).setImage(citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or COLOR_LOGO)))
+            self.getControl(40002).setImage(citem.get('icon',COLOR_LOGO))
             self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',ADDON_NAME)))
         except:
             self.runActions(RULES_ACTION_BACKGROUND_CLOSE, citem, inherited=self)
@@ -259,7 +259,7 @@ class Overlay():
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
                 citem = self.player.sysInfo.get('citem',{})
-                logo  = citem.get('icon',(BUILTIN.getInfoLabel('Art(icon)','Player') or LOGO))
+                logo  = citem.get('icon',LOGO)
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)

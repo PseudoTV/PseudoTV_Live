@@ -349,7 +349,7 @@ def hasStack(path,file=None): #does path has stack paths, return paths
 
 def splitStacks(path): #split stack path for indv. files.
     if not isStack(path): return [path]
-    return list([_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f])
+    return [_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f]
             
 def percentDiff(org, new):
     try: return (abs(float(org) - float(new)) / float(new)) * 100.0
@@ -566,7 +566,7 @@ def cleanGroups(citem, enableGrouping=SETTINGS.getSettingBool('Enable_Grouping')
             citem['group'].append(LANGUAGE(32019))
         elif not citem.get('favorite',False) and LANGUAGE(32019) in citem['group']:
              citem['group'].remove(LANGUAGE(32019))
-    return sorted(list(set(citem['group'])))
+    return sorted(set(citem['group']))
         
 def cleanMPAA(mpaa):
     orgMPA = mpaa
