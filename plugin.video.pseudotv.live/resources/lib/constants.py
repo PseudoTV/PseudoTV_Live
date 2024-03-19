@@ -148,16 +148,16 @@ HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plug
 
 #rules
 ##builder
-RULES_ACTION_CHANNEL_VERIFY              = 1 #inject citem changes
-RULES_ACTION_CHANNEL_START               = 2 #pre channel build trigger
-RULES_ACTION_CHANNEL_BUILD_START         = 3 #amend citem 
-RULES_ACTION_CHANNEL_BUILD_GLOBAL        = 4 #per path global injection trigger
-RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE  = 5 #inject filelist before multi-path interleaving
-RULES_ACTION_CHANNEL_BUILD_FILELIST_POST = 6 #amend filelist times
-RULES_ACTION_CHANNEL_BUILD_TIME_PRE      = 7 #filelist
-RULES_ACTION_CHANNEL_BUILD_TIME_POST     = 8 #filelist
-RULES_ACTION_CHANNEL_BUILD_STOP          = 9 #amend filelist after scheduling.
-RULES_ACTION_CHANNEL_STOP                = 10 #restore globals before next channel build
+RULES_ACTION_CHANNEL_VERIFY              = 1 
+RULES_ACTION_CHANNEL_START               = 2 
+RULES_ACTION_CHANNEL_BUILD_START         = 3
+RULES_ACTION_CHANNEL_BUILD_PATH          = 4
+RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE  = 5
+RULES_ACTION_CHANNEL_BUILD_FILELIST_POST = 6
+RULES_ACTION_CHANNEL_BUILD_TIME_PRE      = 7
+RULES_ACTION_CHANNEL_BUILD_TIME_POST     = 8
+RULES_ACTION_CHANNEL_BUILD_STOP          = 9
+RULES_ACTION_CHANNEL_STOP                = 10
 ##player
 RULES_ACTION_PLAYBACK      = 11
 RULES_ACTION_PLAYER_START  = 12
@@ -168,18 +168,3 @@ RULES_ACTION_OVERLAY_OPEN     = 21
 RULES_ACTION_OVERLAY_CLOSE    = 22
 RULES_ACTION_BACKGROUND_OPEN  = 23
 RULES_ACTION_BACKGROUND_CLOSE = 24
-
-PROVISIONAL_TYPES   = {"TV Shows"     : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
-                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                       "TV Networks"  : [{"path":"videodb://tvshows/studios/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                       "Movie Studios": [{"path":"videodb://movies/studios/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
-                       "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                       "Movie Genres" : [{"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
-                       "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
-                                         {"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                          "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}]}

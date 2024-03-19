@@ -634,7 +634,7 @@
 					<constraints>
 						<minimum>25</minimum>
 						<step>25</step>
-						<maximum>250</maximum>
+						<maximum>500</maximum>
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
@@ -677,6 +677,26 @@
                             </and>
 						</dependency>
 					</dependencies>
+				</setting>
+				<setting id="Enable_Even" type="integer" label="30121" help="33121">
+					<level>1</level>
+					<default>2</default>
+					<constraints>
+						<options>
+							<option label="30079">0</option>
+							<option label="30122">1</option>
+							<option label="30123">2</option>
+							<option label="30124">3</option>
+						</options>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Enable_Extras" type="boolean" label="30053" help="33053">
 					<level>1</level>

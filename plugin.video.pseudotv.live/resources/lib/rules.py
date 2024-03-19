@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from globals    import *
 from jsonrpc    import JSONRPC
+from seasonal   import Seasonal
 
 class RulesList:
     def __init__(self, channels=None):
@@ -27,14 +28,14 @@ class RulesList:
             channels = Channels().getChannels()
         self.log('__init__, channels = %s'%(len(channels)))
         self.ruleList  = [BaseRule(),
-                          BestEffort(),
+                          EvenShowsRule(),
                           ShowChannelBug(),
                           ShowOnNext(),
                           ShowStaticOverlay(),
                           DisableOverlay(),
                           SetScreenOverlay(),
                           HandleMethodOrder(),
-                          HandleFilter(),
+                          ProvisionalRule(),
                           seekControl(),
                          ]
                          
@@ -51,24 +52,22 @@ class RulesList:
         def _loadRule(tmpruleList, channel={}):
             ruleList = []
             chid     = channel.get('id','')
-            chrules  = channel.get('rules',[])
+            chrules  = sorted(channel.get('rules',[]), key=lambda k: k['id'])
             if chid is None: return None
             for chrule in chrules:
                 for rule in tmpruleList:
                     if rule.myId == chrule['id']:
                         ruleInstance = rule.copy()
-                        optionindex  = chrule.get('index',{})
-                        for key in list(optionindex.keys()):
-                            ruleInstance.optionLabels[int(key)] = optionindex[str(key)].get('label')
-                            ruleInstance.optionValues[int(key)] = optionindex[str(key)].get('value')
+                        for idx in chrule.get('values',{}):
+                            if chrule['values'].get(idx):
+                                ruleInstance.optionValues[int(idx)] = chrule['values'][idx]
                         ruleList.append(ruleInstance)
             return chid, ruleList
         
         self.log('loadRules, channels = %s'%(len(channels)))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        ruleList = dict(poolit(_loadRule)(channels, tmpruleList))
-        return ruleList
+        return dict(poolit(_loadRule)(channels, tmpruleList))
       
       
     def allRules(self): #load all rules.
@@ -81,79 +80,14 @@ class RulesList:
         
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
-        if not citem.get('id',''): return parameter
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
         for rule in self.chanRules.get(citem['id'],[]):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
-                print((action, citem, parameter, inherited))
-                return rule.runAction(action, citem, parameter, inherited)
+                parameter = rule.runAction(action, citem, parameter, inherited)
         return parameter
 
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    # def buildRuleList(self, channels=[]): #load all rules instances and apply their per channel settings.
-        # ruleList = {}
-        # tmpruleList = self.ruleList.copy() #base rule instances
-        # tmpruleList.pop(0) #remove BaseRule()
-        # for channel in channels:
-            # chid = channel.get('id','')
-            # if not chid: continue
-            # ruleList[chid] = []
-            # chrules = channel.get('rules',[])
-            # for rule in tmpruleList:
-                # ruleInstance = rule.copy()
-                # for chrule in chrules:
-                    # if   chrule.get('id',0) == 0: continue #ignore template if exists
-                    # elif ruleInstance.myId == chrule['id']:#match rule instance by id
-                        # options = chrule.get('options',[])
-                        # for key in options.keys():
-                            # ruleInstance.optionLabels[int(key)] = options[str(key)].get('label')
-                            # ruleInstance.optionValues[int(key)] = options[str(key)].get('value')
-                        # break
-                # ruleList[chid].append(ruleInstance)
-        # self.log('buildRuleList, channels = %s\nruleList = %s'%(len(channels),ruleList))
-        # return ruleList
-     
-     
-        
-
-    # def addChannelRule(self, citem, ritem):
-        # if channelkey is None:
-            # channels = self.getChannels()
-        # log('ruleList: addChannelRule, id = %s, rule = %s'%(citem['id'],ritem))
-        # rules = self.getChannelRules(citem, channelkey)
-        # idx, rule = self.findChannelRule(citem, ritem, channelkey)
-        # if idx is None:
-            # rules.append(ritem)
-        # else:
-            # rules[idx].update(ritem)
-        # self.channelList['channels']['rules'] = sorted(rules, key=lambda k: k['id'])
-        # return True
-
-
-    # def findChannelRule(self, citem, ritem):
-        # if channelkey is None:
-            # channels = self.getChannels()
-        # log('Channels: findChannelRule, id = %s, rule = %s'%(citem['id'],ritem))
-        # rules = self.getChannelRules(citem,channels)
-        # for idx, rule in enumerate(rules):
-            # if rule['id'] == ritem['id']:
-                # return idx, rule
-        # return None, {}
-        
- 
 class BaseRule:
     dialog = Dialog()
     
@@ -648,139 +582,146 @@ class HandleMethodOrder(BaseRule):
         return citem
 
 
-class HandleFilter(BaseRule):
+class ProvisionalRule(BaseRule):
     def __init__(self):
-        self.myId             = 52
-        self.name             = "Filter Content"
-        self.description      = ""
-        self.actions          = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.optionLabels     = ['Field','Operator','Value']
-        self.optionValues     = ['showtitle','contains','']
-        self.selectBoxOptions = [JSONRPC().getEnums("List.Fields.Files", type='items'), JSONRPC().getEnums("List.Filter.Operators")]
-        self.storedValues     = []
+        self.myId             = 53
+        self.name             = "Provisional Placeholder"
+        self.description      = "Fill Provisional Placeholder"
+        self.optionLabels     = ["Provisional Label"]
+        self.optionValues     = [""]
+        self.actions          = [RULES_ACTION_CHANNEL_BUILD_PATH, RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
+        self.storedValues     = [list()]
         
 
     def copy(self): 
-        return HandleFilter()
+        return ProvisionalRule()
         
         
     def getTitle(self): 
         return self.name
         
-        
-    def onAction(self, optionindex):
-        if optionindex == 2:
-            self.onActionTextBox(optionindex)
-        else: 
-            self.onActionSelect(optionindex, 'Select Filter %s'%(self.optionLabels[optionindex]))
-        self.validate(optionindex)
-        return self.optionValues[optionindex]
-        
-        
-    def validate(self, optionindex):
-        if optionindex == 2:
-            self.validateTextBox(0, 240)
 
+    def runAction(self, actionid, citem, parameter, builder):
+        if actionid == RULES_ACTION_CHANNEL_BUILD_PATH: 
+            PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
+                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                                 "TV Networks"  : [{"path":"videodb://tvshows/studios/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                                 "Movie Studios": [{"path":"videodb://movies/studios/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
+                                 "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
+                                 "Movie Genres" : [{"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
+                                 "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
+                                                   {"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}]}
 
-    def runAction(self, actionid, citem, builder):
-        if actionid == RULES_ACTION_CHANNEL_START: 
-            self.storedValues[0] = builder.filter #"filter": {"and": [{"operator": "contains", "field": "title", "value": "Star Wars"}, {"operator": "contains", "field": "tag", "value": "Good"}]}
-            builder.filter = {"field": self.optionValues[0].lower(), "operator": self.optionValues[1].lower(), "value": quote((self.optionValues[2]))}
-        elif actionid == RULES_ACTION_CHANNEL_STOP: 
-            builder.filter = self.storedValues[0]
-        self.log("runAction, setting filter = %s"%(builder.filter))
-        return citem
+            if self.optionValues[0]:
+                self.log("%s: runAction, id: %s, provisional value = %s"%(self.__class__.__name__,citem['id'],self.optionValues[0]))
+                if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s - Rule: %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
+                else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
+                for provisional in queries:
+                    if builder.service._interrupt() or builder.service._suspend(): break
+                    elif not provisional: continue
+                    else:
+                        if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
+                        elif not parameter.startswith(provisional.get('path','')): continue
+                        else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
+                        if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
+                            provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
+                                                                               {"field":"episode","operator":"greaterthan","value":"0"}])
+                        fileList, dirList = builder.buildList(citem, parameter, media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
+                        if len(fileList) > 0: self.storedValues[0].append(fileList)
+
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE: 
+            return list(filter(None,self.storedValues.pop(0)))
+            
+        return parameter
+        
  
- 
-class BestEffort(BaseRule):
+class EvenShowsRule(BaseRule):
     def __init__(self):
         self.myId         = 54
-        self.name         = "Best Effort Marathon"
-        self.description  = "Sort shows in blocks."
-        self.actions      = [RULES_ACTION_CHANNEL_BUILD_GLOBAL,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST,RULES_ACTION_CHANNEL_BUILD_STOP]
-        self.storedValues = [dict(),list(),dict(),int()]
+        self.name         = "Even Show Distribution"
+        self.description  = "Sort shows in blocks." 
+        self.optionLabels = ['Same Show Eps in a Row','Pagination Limit']
+        self.optionValues = [2,PAGE_LIMIT]
+        self.actions      = [RULES_ACTION_CHANNEL_BUILD_START,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST,RULES_ACTION_CHANNEL_BUILD_STOP]
+        self.storedValues = [dict(),list(),PAGE_LIMIT]
         
 
     def copy(self): 
-        return BestEffort()
+        return EvenShowsRule()
         
         
     def getTitle(self): 
         return self.name
+
+
+    def onAction(self, act, optionindex):
+        self.onActionDigitBox(act, optionindex)
+        self.validate()
+        return self.optionValues[optionindex]
+
+
+    def validate(self):
+        self.validateDigitBox(0, 1, 20, 1)
 
 
     def runAction(self, actionid, citem, parameter, builder):
-        ...
-        # save current limit, change limit for movies by half, restore saved limit.
-        # group all tv shows, chunk into equal parts.
-        # inject movies into every other tv show chunk.
-        
-        
-        # def _sortShows(fileItem):
-            # if fileItem.get('type').startswith(tuple(TV_TYPES)) and fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
-                # self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
-            # else:
-                # self.storedValues[1].append(fileItem)
-            
-        # def _chunkShows():
-            # for show, episodes in list(self.storedValues[0].items()):
-                # self.log("_chunkShows, show = %s, episodes = %s"%(show,len(episodes)))
-                # yield show, list(chunkLst(episodes,self.optionValues[0]))
-                
-        # def _mergeShows(shows):
-            # nfileList = []
-            # movies = list(chunkLst(self.storedValues[1],len(list(shows.keys()))))
-            # print('movies',len(movies),movies)
-            
-            # while not MONITOR.abortRequested() and shows:
-                # for show, chunks in list(shows.items()):
-                    # if len(chunks) == 0:
-                        # print('del',show)
-                        # del shows[show]
-                    # print('show',show,len(chunks))
-                    # for idx, chunk in enumerate(chunks):
-                        # print('idx',idx,chunk)
-                        # if len(chunk)  > 0: nfileList.extend(chunks.pop(idx))
-                        # if len(movies) > 0: nfileList.extend(movies.pop(0))
-                    # break
+        def _sortShows(fileItem): #group by type & show; no duplicates. 
+            if fileItem.get('type').startswith(tuple(TV_TYPES)):
+                if fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
+                    self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
+            elif fileItem.get('type').startswith(tuple(MOVIE_TYPES)):
+                if fileItem not in self.storedValues[1]:
+                    self.storedValues[1].append(fileItem)
+
+        def _chunkShows():
+            for show, episodes in self.storedValues[0].items():
+                yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
+
+        def _mergeShows(shows, movies):
+            nfileList = []
+            while not MONITOR.abortRequested() and shows:
+                for show, chunks in list(shows.items()):
+                    if   len(chunks) == 0: del shows[show]
+                    elif len(chunks) > 0:  nfileList.extend(shows[show].pop(0))
+                    if len(movies) > 0:    nfileList.append(movies.pop(0))
                     
-            # for chunk in movies:
-                # nfileList.extend(chunk) #add any remaning movies to the end of sets.
+            if len(movies) > 0:
+                self.log('runAction, _mergeShows appending remaining movies, movie count = %s'%(len(movies)))
+                nfileList.extend(movies) #add any remaning movies to the end of sets.
                 
-            # print(nfileList)
-            # self.log("_mergeShows, returning items = %s"%(len(nfileList)))
-            # return nfileList
-                   
-        # if citem['type'] in ['TV Networks','TV Genres','Mixed Genres','Custom']:
-            # if actionid == RULES_ACTION_CHANNEL_BUILD_GLOBAL:
-                # self.storedValues[3] = builder.limit
-                # builder.limit = builder.limit * 4
-                # self.storedValues[2] = builder.sort
-                # if isinstance(parameter,dict):
-                    # if parameter.get('sort','').startswith(tuple(TV_TYPES)):
-                        # builder.sort = {"ignorearticle":True,"method":"episode","order":"ascending","useartistsortname":True}
-                # elif parameter.startswith('videodb://tvshows/'):
-                    # builder.sort = {"ignorearticle":True,"method":"episode","order":"ascending","useartistsortname":True}
-                # elif parameter.startswith('videodb://movies/'):
-                    # builder.sort = {"ignorearticle":True,"method":"year","order":"ascending","useartistsortname":True}
-                    
-            # elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
-                # builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s: Adding Rule %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
-                # print(len(parameter),parameter)
-                # poolit(_sortShows)(list(sorted(parameter, key=lambda k: k.get('episode',0))))
-                # print(len(self.storedValues[0]),self.storedValues[0])
-                # return _mergeShows(dict(_chunkShows()))
+            self.log('runAction, _mergeShows returning items = %s'%(len(nfileList)))
+            return list(filter(None,nfileList))
                 
-            # elif actionid == RULES_ACTION_CHANNEL_BUILD_STOP:
-                # builder.limit = self.storedValues[3]
-                    # # builder.sort = self.storedValues[2]
+        if actionid == RULES_ACTION_CHANNEL_BUILD_START:
+            self.storedValues[2] = builder.limit # store global pagination limit
+            self.log('runAction, saving limit %s'%(builder.limit))
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
+            if parameter:
+                if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
+                    builder.limit = self.storedValues[2] * self.optionValues[0]
+                else:
+                    builder.limit = self.storedValues[2]
+                self.log('runAction, changing limit %s'%(builder.limit))
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
+            try:
+                if parameter:
+                    if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s - Rule: %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    poolit(_sortShows)(list(sorted(parameter, key=lambda k: k.get('episode',0))))
+                    self.storedValues[0] = dict(_chunkShows())
+                    return _mergeShows(self.storedValues[0],self.storedValues[1])
+            except Exception as e: log("runAction, failed! %s"%(e), xbmc.LOGERROR)
+            
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_STOP:
+            builder.limit = self.storedValues[2] # restore global pagination limit
+            self.log('runAction, restoring limit %s'%(self.storedValues[2]))
+            
         return parameter
-
- 
-
-# todo control rules
-# self.incStrms         = SETTINGS.getSettingBool('Enable_Strms')
-# self.inc3D            = SETTINGS.getSettingBool('Enable_3D')
-# self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
-# self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
-# self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))

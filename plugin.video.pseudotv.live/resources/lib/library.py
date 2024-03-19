@@ -38,7 +38,6 @@ class Library:
     def __init__(self, service=None):
         if service is None:
             service = Service()
-            
         self.service      = service
         self.parserCount  = 0
         self.parserMSG    = ''
@@ -51,6 +50,7 @@ class Library:
         self.libraryDATA  = getJSON(LIBRARYFLE_DEFAULT)
         self.libraryDATA.update(self._load())
 
+        self.enableEvenTV = bool(SETTINGS.getSettingInt('Enable_Even'))
         self.libraryFUNCS = {"Playlists"    :self.getPlaylists,
                              "TV Networks"  :self.getNetworks,
                              "TV Shows"     :self.getTVShows,
@@ -213,8 +213,11 @@ class Library:
          
     @cacheit(json_data=True)
     def getMixedGenres(self):
-        MixedGenreList = [{'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createProvisional(tv.get('name')),'logo':tv.get('logo')}
-        for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]
+        MixedGenreList = []
+        for tv in [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]:
+            rules = [{"id":53,"values":{"0":tv.get('name')}}]
+            if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+            MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
         return sorted(MixedGenreList,key=lambda x:x['name'])
 
@@ -227,7 +230,9 @@ class Library:
         MixedList = []
         if hasTV() or hasMovie():
             MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
-            MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed")}) #"Seasonal"
+            rules = [{"id":53,"values":{"0":LANGUAGE(32002)}}]
+            if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+            MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
         
         if hasRecordings():
             MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
@@ -269,7 +274,7 @@ class Library:
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
                 if not info.get('label'): continue
-                TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createProvisional(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', '')}): info.get('episode', 0)})
+                TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', ''),'rules':[{"id":53,"values":{"0":info.get('label')}}]}): info.get('episode', 0)})
                 NetworkList.update([studio for studio in info.get('studio', [])])
                 ShowGenreList.update([genre for genre in info.get('genre', [])])
 
@@ -285,8 +290,19 @@ class Library:
                 ShowGenreList = (sorted(set(list(ShowGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            NetworkList   = [{'name':network, 'type':"TV Networks", 'path': self.predefined.createProvisional(network),'logo':self.resources.getLogo(network,"TV Networks")} for network in NetworkList]
-            ShowGenreList = [{'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createProvisional(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres")}   for tvgenre in ShowGenreList]
+            nNetworkList = []
+            for network in NetworkList:
+                rules = [{"id":53,"values":{"0":network}}]
+                if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+                nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo(network,"TV Networks"),'rules':rules})
+            NetworkList = nNetworkList
+            
+            nShowGenreList = []
+            for tvgenre in ShowGenreList:
+                rules = [{"id":53,"values":{"0":tvgenre}}]
+                if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+                nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres"),'rules':rules})
+            ShowGenreList = nShowGenreList
             
         else: NetworkList = ShowGenreList = TVShows = []
         self.log('getTVInfo, networks = %s, genres = %s, shows = %s' % (len(NetworkList), len(ShowGenreList), len(TVShows)))
@@ -317,8 +333,8 @@ class Library:
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createProvisional(studio) ,'logo':self.resources.getLogo(studio,"Movie Studios")} for studio in StudioList]
-            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createProvisional(genre)  ,'logo':self.resources.getLogo(genre ,"Movie Genres")} for genre in MovieGenreList]
+            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio) ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':[{"id":53,"values":{"0":studio}}]} for studio in StudioList]
+            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre)  ,'logo':self.resources.getLogo(genre ,"Movie Genres"),'rules':[{"id":53,"values":{"0":genre}}]} for genre in MovieGenreList]
             
         else: StudioList = MovieGenreList = []
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))

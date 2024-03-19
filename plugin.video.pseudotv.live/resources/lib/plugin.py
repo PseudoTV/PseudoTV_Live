@@ -115,7 +115,7 @@ class Plugin:
         self.log('playRadio, id = %s'%(chid))
         with self.preparingPlayback():
             jsonRPC = JSONRPC()
-            fileList = list(interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')]))#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
+            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
             if len(fileList) > 0:
                 channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
                 channelPlaylist.clear()

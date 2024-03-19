@@ -7,7 +7,7 @@ __________________________
     Introduction
     ____________
     
-        {addon_name} starts by scanning Kodi's library to populate the "AutoTune" list*. 
+        {addon_name} will start by scanning Kodi's library in-order to populate the "AutoTune" list*. 
     When the library scan is complete, you'll have an option to "AutoTune" sample channels or open settings and configure your own using the "Channel Manager"**.
 
         Once channels are fully configured, {addon_name} will begin building... This process may take several minutes to complete; during this time your EPG may remain blank.

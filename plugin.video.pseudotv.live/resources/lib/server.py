@@ -188,9 +188,10 @@ class HTTP:
     def __init__(self, monitor=None):
         self.log('__init__')
         self.monitor = monitor
-        self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
-        self.startThread.start()
+        threadit(self._start)
+        # self.startThread = Thread(target=self._start)
+        # self.startThread.daemon = True
+        # self.startThread.start()
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):

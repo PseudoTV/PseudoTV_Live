@@ -67,8 +67,7 @@ class JSONRPC:
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
                 
         if response.get('error',{}).get('message','').startswith('JSONRPC timed out!'):
-            if   timeout <= 15: return self.sendJSON(param, timeout=30)
-            elif timeout >= 30: return self.queueJSON(param)
+            if timeout <= 15: return self.sendJSON(param, timeout=30)
         return response
 
 
@@ -462,20 +461,6 @@ class JSONRPC:
         return '{0}://{1}{2}:{3}'.format(protocol,ip,username, port) 
             
             
-    @cacheit(checksum=getInstanceID())
-    def buildProvisionalPaths(self, value, type):
-        self.log('buildProvisionalPaths, value = %s, type = %s'%(value,type))
-        paths   = []
-        for request in PROVISIONAL_TYPES.get(type,{}).get('path',[]):
-            items = self.getDirectory(param={"directory":request}, cache=False).get('files',[])
-            for item in items:
-                if item.get('label') == value:
-                    paths.append(item['file'])
-                    break
-        self.log('buildProvisionalPaths, return paths = %s'%(paths))
-        return paths
-
-
     def padItems(self, items, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
         self.log("padItems; items In = %s"%(len(items)))

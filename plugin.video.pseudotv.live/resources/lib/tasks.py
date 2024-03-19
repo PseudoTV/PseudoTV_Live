@@ -27,8 +27,6 @@ from backup     import Backup
 from multiroom  import Multiroom
 from manager    import Manager
 
-PAGE_LIMIT = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
-
 class Tasks():
     queueRunning      = False
     backgroundRunning = False
@@ -196,7 +194,7 @@ class Tasks():
 
 
     def chkJSONQUE(self):
-        if not self.queueRunning and not isClient():
+        if not self.queueRunning:
             threadit(self.runJSON)
 
 
@@ -205,19 +203,15 @@ class Tasks():
         self.queueRunning = True
         queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
         params = queuePool.get('params',[])
-        for param in (list(chunkLst(params,SETTINGS.getSettingInt('Page_Limit'))) or [[]])[0]:
+        for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
             if self.myService._interrupt():
                 self.log('runJSON, _interrupt')
                 break
             elif not self.myService.isIdle or self.myService.player.isPlaying():
                 self.log('runJSON, waiting for idle...')
                 break
-            else:
-                runParam = params.pop(0)
-                if 'Files.GetDirectory' in runParam:
-                    self.myService._que(JSONRPC().cacheJSON,2,runParam, **{'life':datetime.timedelta(days=28),'timeout':90})
-                else:
-                    self.myService._que(JSONRPC().sendJSON,5,runParam)
+            elif len(params) > 0:
+                self.myService._que(JSONRPC().sendJSON,5,params.pop(0))
             queuePool['params'] = setDictLST(params)
             self.log('runJSON, remaining = %s'%(len(queuePool['params'])))
             SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)

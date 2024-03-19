@@ -154,12 +154,13 @@ class Autotune:
                           
             match, eitem = self.channels.findAutotuned(citem, channels=existingAUTOTUNE)
             if match is None:
-                citem['number'] = next(usesableNUMBERS,0)
-                citem['id']     = getChannelID(citem['name'],citem['path'],citem['number'])
+                citem['id']       = getChannelID(citem['name'],citem['path'],citem['number']) #generate new channelid
+                citem['number']   = next(usesableNUMBERS,0) #first available channel number
             else:
-                citem['number']   = eitem.get('number') 
                 citem['id']       = eitem.get('id')
-                citem['favorite'] = eitem.get('favorite')
+                citem['number']   = eitem.get('number')
+                citem['logo']     = eitem.get('logo',citem.get('logo',LOGO))
+                citem['favorite'] = eitem.get('favorite',False)
             self.channels.addChannel(citem)
         return self.channels.setChannels()
        

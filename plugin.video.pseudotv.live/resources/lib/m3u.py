@@ -93,6 +93,8 @@ class M3U:
             
             chCount = 0
             data    = {}
+            filter  = []
+            
             for idx, line in enumerate(lines):
                 line = line.rstrip()
                 
@@ -129,6 +131,11 @@ class M3U:
                              'media-dir'         :re.compile('media-dir=\"(.*?)\"'          , re.IGNORECASE).search(line),
                              'media-size'        :re.compile('media-size=\"(.*?)\"'         , re.IGNORECASE).search(line),
                              'realtime'          :re.compile('realtime=\"(.*?)\"'           , re.IGNORECASE).search(line)}
+                    
+                    if match['id'].group(1) in filter:
+                        self.log('_load, filtering duplicate %s'%(match['id'].group(1)))
+                        continue
+                    filter.append(match['id'].group(1)) #filter dups, todo find where dups originate from. 
                     
                     mitem = self.getMitem()
                     mitem.update({'number' :chCount,
@@ -167,13 +174,13 @@ class M3U:
                                     mitem['group'] = sorted(list(set(mitem['group'])))
                             elif nline.startswith('#KODIPROP:'):
                                 prop = re.compile('^#KODIPROP:(.*)$', re.IGNORECASE).search(nline)
-                                if prop is not None:
-                                    mitem.setdefault('kodiprops',[]).append(prop.group(1))
-                            # elif nline.startswith('#EXTVLCOPT'):
+                                if prop is not None: mitem.setdefault('kodiprops',[]).append(prop.group(1))
+                            elif nline.startswith('#EXTVLCOPT'):
+                                copt = re.compile('^#EXTVLCOPT:(.*)$', re.IGNORECASE).search(nline)
+                                if copt is not None:  mitem.setdefault('extvlcopt',[]).append(copt.group(1))
                             elif nline.startswith('#EXT-X-PLAYLIST-TYPE'):
                                 xplay = re.compile('^#EXT-X-PLAYLIST-TYPE:(.*)$', re.IGNORECASE).search(nline)
-                                if xplay is not None:
-                                    mitem['x-playlist-type'] = xplay.group(1)
+                                if xplay is not None: mitem['x-playlist-type'] = xplay.group(1)
                             elif nline.startswith('##'): continue
                             elif not nline: continue
                             else: mitem['url'] = nline
@@ -202,9 +209,9 @@ class M3U:
             fle = FileAccess.open(file, 'w')
             fle.write('%s\n'%(self.M3UDATA['data']))
             
-            opts   = list(self.getMitem().keys())
-            mins   = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
-            line   = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
+            opts = list(self.getMitem().keys())
+            mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
+            line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
             self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]))
             self.log('_save, saving %s stations and %s recordings to %s'%(len(self.M3UDATA['stations']),len(self.M3UDATA['recordings']),file))
@@ -213,10 +220,11 @@ class M3U:
                 optional  = ''
                 xplaylist = ''
                 kodiprops = {}
-                if not station: continue
+                extvlcopt = {}
                     
                 # write optional m3u parameters.
                 if 'kodiprops'       in station: kodiprops = station.pop('kodiprops')
+                if 'extvlcopt'       in station: extvlcopt = station.pop('extvlcopt')
                 if 'x-playlist-type' in station: xplaylist = station.pop('x-playlist-type')
                 for key, value in list(station.items()):
                     if key in opts and str(value):
@@ -232,10 +240,9 @@ class M3U:
                                 optional,
                                 station['label']))
                        
-                if kodiprops:
-                    fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop) for prop in kodiprops])))
-                if xplaylist:
-                    fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
+                if kodiprops:  fle.write('%s\n'%('\n'.join(['#KODIPROP:%s'%(prop)  for prop in kodiprops])))
+                if extvlcopt:  fle.write('%s\n'%('\n'.join(['#EXTVLCOPT:%s'%(prop) for prop in extvlcopt])))
+                if xplaylist:  fle.write('%s\n'%('#EXT-X-PLAYLIST-TYPE:%s'%(xplaylist)))
                 fle.write('%s\n'%(station['url']))
             fle.close()
         return self._reload()
@@ -280,20 +287,18 @@ class M3U:
         return recordings
                
                
-    def findStation(self, citem, stations=None):
-        if stations is None: stations = self.getStations()
-        for idx, eitem in enumerate(stations):
+    def findStation(self, citem):
+        for idx, eitem in enumerate(self.M3UDATA.get('stations',[])):
             if (citem.get('id',str(random.random())) == eitem.get('id') or citem.get('url',str(random.random())).lower() == eitem.get('url','').lower()):
-                self.log('findStation, found citem = %s'%(eitem))
+                self.log('findStation, found eitem = %s'%(eitem))
                 return idx, eitem
         return None, {}
         
                         
-    def findRecording(self, ritem, recordings=None):
-        if recordings is None: recordings = self.getRecordings()
-        for idx, eitem in enumerate(recordings):
-            if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label','').lower() == eitem.get('label',str(random.random())).lower()):
-                self.log('findRecording, found ritem = %s'%(eitem))
+    def findRecording(self, ritem):
+        for idx, eitem in enumerate(self.M3UDATA.get('recordings',[])):
+            if (ritem.get('id',str(random.random())) == eitem.get('id') or ritem.get('label',str(random.random())).lower() == eitem.get('label','').lower()):
+                self.log('findRecording, found eitem = %s'%(eitem))
                 return idx, eitem
         return None, {} 
         

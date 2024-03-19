@@ -22,7 +22,6 @@ from globals    import *
 from channels   import Channels
 from rules      import RulesList
 from xmltvs     import XMLTVS
-from seasonal   import Seasonal
 from jsonrpc    import JSONRPC
 from xsp        import XSP
 from m3u        import M3U
@@ -137,7 +136,6 @@ class Builder:
     def getFileList(self, citem, now, start):
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:
-            citem = self.runActions(RULES_ACTION_CHANNEL_BUILD_START, citem, citem, inherited=self)
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
                 self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
@@ -153,7 +151,7 @@ class Builder:
             if cacheResponse:
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
                 if self.fillBCTs and not radio: cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
-                return sorted(self.runActions(RULES_ACTION_CHANNEL_BUILD_STOP, citem, cacheResponse, inherited=self), key=lambda k: k['start'])
+                return sorted(cacheResponse, key=lambda k: k['start'])
             else: raise Exception('cacheResponse in-valid!\n%s'%(cacheResponse))
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
@@ -204,55 +202,41 @@ class Builder:
         
 
     def buildChannel(self, citem):
-        def _validFileList(cacheResponse):
-            for fileList in cacheResponse:
+        def _validFileList(fileArray):
+            for fileList in fileArray:
                 if len(fileList) > 0: return True
                 
-        cacheResponse = []
+        fileArray = []
+        self.runActions(RULES_ACTION_CHANNEL_BUILD_START, citem, inherited=self)
         for file in citem['path']:
             if self.service._interrupt() or self.service._suspend(): break
             else:
-                self.runActions(RULES_ACTION_CHANNEL_BUILD_GLOBAL, citem, file, inherited=self)
-                value = isProvisional(file)
-                if value:
-                    self.log("buildChannel, id: %s, provisional value = %s"%(citem['id'],value))
-                    if value == "Seasonal": queries = list(Seasonal().buildSeasonal())
-                    else:                   queries = PROVISIONAL_TYPES.get(citem['type'],[])
-                    for provisional in queries:
-                        print('provisional',provisional)
-                        if self.service._interrupt() or self.service._suspend(): break
-                        elif not provisional: continue
-                        else:
-                            if value == "Seasonal": citem['logo'] =  provisional.get('holiday',{}).get('logo',citem['logo'])
-                            else: provisional["filter"]["and"][0]['value'] = value
-                            if not self.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
-                                provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
-                                                                                   {"field":"episode","operator":"greaterthan","value":"0"}])
-                            cacheResponse.append(self.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or SETTINGS.getSettingInt('Page_Limit')), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)[0])
-                else: cacheResponse.append(self.buildFileList(citem, file, 'video', self.limit, self.sort, self.limits))
+                fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
 
-        if not _validFileList(cacheResponse):#check that at least one fileList array contains meta.
-            self.log("buildChannel, id: %s skipping channel cacheResponse empty!"%(citem['id']),xbmc.LOGINFO)
+        self.runActions(RULES_ACTION_CHANNEL_BUILD_STOP, citem, inherited=self)
+        fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, fileArray, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        if not _validFileList(fileArray):#check that at least one fileList array contains meta.
+            self.log("buildChannel, id: %s skipping channel fileArray empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
-        #todo move all interleaving to a channel rule, apply rules by default when multi-path found.
-        cacheResponse = list([_f for _f in self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, cacheResponse, inherited=self) if _f]) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
-        self.log("buildChannel, id: %s cacheResponse arrays = %s"%(citem['id'],len(cacheResponse)))
-        cacheResponse = list(interleave(cacheResponse)) # default interleave multi-paths, while keeping order. 
-        cacheResponse = list([_f for _f in self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, cacheResponse, inherited=self) if _f]) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
-        self.log('buildChannel, id: %s, cacheResponse items = %s'%(citem['id'],len(cacheResponse)),xbmc.LOGINFO)
-        return cacheResponse
+        self.log("buildChannel, id: %s fileArray arrays = %s"%(citem['id'],len(fileArray)))
+        fileList  = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, interleave(fileArray), inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        self.log('buildChannel, id: %s, fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
+        return fileList
 
           
     def buildFileList(self, citem, path, media='video', limit=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}): #build channel via vfs path.
         self.log("buildFileList, id: %s, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
+        if [True for rule in citem.get('rules',[]) if rule.get('id') == 53]:
+            self.log("buildFileList, id: %s, passing to rules"%(citem['id']))
+            return []
+        elif path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
             paths, media, osort, ofilter, olimit = self.xsp.parseXSP(path)
             sort   = (sort   or osort)
             limit  = (olimit or limit)
             if len(paths) > 0: #treat 'mixed' smartplaylists as mixed-path mixed content.
                 self.log("buildFileList, id: %s, mixed-path smartplaylist detected! changing limits to %s over %s paths\npaths = %s"%(citem['id'], roundupDIV(limit,len(paths)),len(paths),paths),xbmc.LOGINFO)
-                return list(interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, limits) for file in paths if not self.service._interrupt()]))
+                return interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, limits) for file in paths if not self.service._interrupt()])
 
         elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info.
             param = {}
@@ -269,7 +253,7 @@ class Builder:
             if not self.incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                 param["rules"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                             {"field":"episode","operator":"greaterthan","value":"0"}])
-                         
+
             if param["type"] == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
             else: flatten = ''
             path ='%s%s?xsp=%s'%(path,flatten,dumpJSON(param))
@@ -311,7 +295,6 @@ class Builder:
         else:self.pErrors.append(LANGUAGE(32026))
             
         for idx, item in enumerate(items):
-            print('buildList',idx,item)
             if self.service._interrupt() or self.service._suspend():
                 self.pErrors = [LANGUAGE(32160)]
                 self.completeBuild = False
@@ -466,7 +449,6 @@ class Builder:
     def addChannelProgrammes(self, citem, fileList):
         self.log('addProgrammes, id: %s, fileList = %s'%(citem['id'],len(fileList)))
         for idx, item in enumerate(fileList):
-            # print('addScheduling',idx,item['title'],item['start'])
             self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item))
             
         

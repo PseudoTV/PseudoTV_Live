@@ -501,6 +501,21 @@ msgctxt "#30120"
 msgid "[COLOR=red][B]Warning!! [/B][/COLOR]%s\nAlready Exists, override it?."
 msgstr ""
 
+msgctxt "#30121"
+msgid "Even Show Distribution"
+msgstr ""
+
+msgctxt "#30122"
+msgid "One Show"
+msgstr ""
+
+msgctxt "#30123"
+msgid "Two Shows"
+msgstr ""
+
+msgctxt "#30124"
+msgid "Three Shows"
+msgstr ""
 
 
 
@@ -1387,6 +1402,10 @@ msgstr ""
 
 msgctxt "#33115"
 msgid "Create dynamic path"
+msgstr ""
+
+msgctxt "#33121"
+msgid "Group TV shows in blocks of x. [0 Disabled, Two Shows Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and are not instantaneous."
 msgstr ""
 
 msgctxt "#33149"

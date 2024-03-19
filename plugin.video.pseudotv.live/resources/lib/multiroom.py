@@ -26,8 +26,8 @@ class Multiroom:
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG = sysARG
         HTTP(monitor)
-        Announcement(monitor)
-        Discovery(monitor)
+        # Announcement(monitor)
+        # Discovery(monitor)
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
