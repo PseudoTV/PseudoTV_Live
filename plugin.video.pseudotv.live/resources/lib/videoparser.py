@@ -37,6 +37,15 @@ class VideoParser:
         self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
 
 
+    def getFFProbe(self, filename):
+        try:
+            result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            return float(result.stdout)
+        except Exception as e:
+            log("VideoParser: getFFMPEG, FFMPEG failed! %s"%(e), xbmc.LOGERROR)
+            return 0
+
+
     def getVideoLength(self, filename, fileItem={}, jsonRPC=None):
         log("VideoParser: getVideoLength %s"%filename)
         if len(filename) == 0:
@@ -67,11 +76,12 @@ class VideoParser:
         else:
             log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
             return 0
-            
-        duration = int(self.parser.determineLength(filename))
-        if duration == 0 and not filename.startswith(tuple(self.VFSPaths)):
-            log("VideoParser: getVideoLength, Unable to find duration for %s, trying .nfo"%(ext))
-            self.parser = NFOParser.NFOParser()
-            duration = int(self.parser.determineLength(filename))
+       
+        duration = 0
+        if not filename.startswith(tuple(self.VFSPaths)):
+            duration = self.parser.determineLength(filename)
+            if duration == 0:
+                duration = NFOParser.NFOParser().determineLength(filename)
+                    
         log('VideoParser: getVideoLength, duration = %s'%(duration))
         return duration

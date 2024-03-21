@@ -855,7 +855,7 @@
 				</setting>
 				<setting id="Resource_Ratings" type="list[addon]" label="30028" help="">
 					<level>2</level>
-					<default></default>
+					<default>resource.videos.ratings.mpaa.classic</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>

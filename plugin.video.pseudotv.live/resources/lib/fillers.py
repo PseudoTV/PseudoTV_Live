@@ -20,6 +20,13 @@
 from globals    import *
 from resources  import Resources
 
+RATING_DESC = {"G"    :"General audiences – All ages admitted.\nNothing that would offend parents for viewing by children.",
+               "PG"   :"Parental guidance suggested – Some material may not be suitable for children.\nParents urged to give “parental guidance.” May contain some material parents might not like for their young children",
+               "PG-13":"Parents strongly cautioned – Some material may be inappropriate for children under 13.\nParents are urged to be cautious. Some material may be inappropriate for pre-teenagers.",
+               "R"    :"Restricted – Under 17 requires accompanying parent or adult guardian.\nContains some adult material. Parents are urged to learn more about the film before taking their young children with them.",
+               "NC-17":"Adults only – No one 17 and under admitted.\nClearly adult. Children are not admitted.",
+               "NR"   :"Film has not been submitted for a rating or it's rating is unknown."}
+               
 class Fillers:
     def __init__(self, builder):
         self.builder    = builder
@@ -29,8 +36,8 @@ class Fillers:
         self.resources  = Resources(self.jsonRPC,self.cache)
 
         #default global rules:
-        self.bctTypes   = {"ratings"    :{"min":1,"max":1,"auto":SETTINGS.getSettingInt('Fillers_Ratings') == 1,"enabled":SETTINGS.getSettingInt('Fillers_Ratings') > 0,"paths":(SETTINGS.getSetting('Resource_Ratings')).split('|')},
-                           "bumpers"    :{"min":1,"max":1,"auto":SETTINGS.getSettingInt('Fillers_Bumpers') == 1,"enabled":SETTINGS.getSettingInt('Fillers_Bumpers') > 0,"paths":(SETTINGS.getSetting('Resource_Bumpers')).split('|')},}
+        self.bctTypes   = {"ratings"    :{"min":1,"max":1,"auto":builder.incRatings == 1,"enabled":bool(builder.incRatings),"paths":builder.resRatings,"resources":{}},
+                           "bumpers"    :{"min":1,"max":1,"auto":builder.incBumpers == 1,"enabled":bool(builder.incBumpers),"paths":builder.resBumpers,"resources":{}},}
                                           
                            # "commercials":{"min":SETTINGS.getSettingInt('Fillers_Commercials'),"max":4,
                                           # "enabled":SETTINGS.getSettingInt('Fillers_Commercials') > 0,"paths":(SETTINGS.getSetting('Resource_Commericals')).split('|')},
@@ -38,28 +45,79 @@ class Fillers:
                            # "trailers"   :{"min":SETTINGS.getSettingInt('Fillers_Trailers')   ,"max":SETTINGS.getSettingInt('Fillers_Trailers') - 2,
                                           # "enabled":SETTINGS.getSettingInt('Fillers_Trailers') > 0,"paths":(SETTINGS.getSetting('Resource_Trailers')).split('|')}}
                                
+        # self.buildResourceByType('ratings',self.bctTypes['ratings']['paths'])
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
-   
-    def buildResource(self, type, path):
-        cacheName = 'buildResource.%s'%(getMD5(path))
-        # if not hasAddon(id): continue
-        # addonMeta = self.jsonRPC.getAddonDetails(addonid)
-        # self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
-        # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
+    def buildResourceByType(self, type, ids):
+        def _parse(ids):
+            for id in ids:
+                if not hasAddon(id): continue
+                yield self.resources.walkResource(id,exts=VIDEO_EXTS)
+                
+        for resource in list(_parse(ids)):
+            for path in resource:
+                for file in resource[path]:
+                    key = file.split('.')[0].replace(' (3DSBS)','')
+                    if '(3DSBS)' in file: self.bctTypes['ratings'].get('resources',{}).setdefault('3D',{}).setdefault(key,[]).append(os.path.join(path,file))
+                    else:                 self.bctTypes['ratings'].get('resources',{}).setdefault(key,[]).append(os.path.join(path,file))
+        print('buildResourceByType',self.bctTypes.get(type,{}))
+        
+        
+    def getRating(self, fileItem, mpaa):
+        def _convert(rating):
+            #https://www.spherex.com/tv-ratings-vs-movie-ratings
+            #https://www.spherex.com/which-is-more-regulated-film-or-tv
+            return rating.replace('TV-Y','G').replace('TV-Y7','G').replace('TV-G','G').replace('NA','NR').replace('TV-PG','PG').replace('TV-14','PG-13').replace('TV-MA','R')
             
-            
-    def buildResourceByType(self, type):
-        ...
-            
+        try:
+            mpaa = mpaa.upper()
+            mpaa = re.compile(":(.*?)/", re.IGNORECASE).search(mpaa).group(1)
+        except: pass
+        
+        files = []
+        print('getRating',mpaa)
+        if self.builder.is3D(fileItem): files = self.bctTypes['ratings']['resources'].get('3D',{}).get(mpaa,[])
+        if not files: files = self.bctTypes['ratings'].get('resources',{}).get(mpaa,[])
+        if not files:
+            mpaa = _convert(mpaa)
+            files = self.bctTypes['ratings'].get('resources',{}).get(mpaa,[])
+        if files: return mpaa, random.choice(files)
+        return mpaa, files
+        
 
     def injectBCTs(self, citem, fileList):
+        # nfileList = []
+        # for idx, fileItem in enumerate(fileList):
+            # if not fileItem: continue
+            # elif self.builder.service._interrupt() or self.builder.service._suspend(): break
+            # else:
+                # try:
+                    # #pre roll - ratings
+                    # if fileItem.get('type').startswith(tuple(MOVIE_TYPES)):
+                        # if self.bctTypes['ratings']['enabled']:
+                            # mpaa = fileItem.get('mpaa','NR')
+                            # mpaa, file = self.getRating(fileItem, mpaa)
+                            # print('injectBCTs',mpaa,file)
+                            # if file:
+                                # dur = self.jsonRPC.getDuration(file, accurate=True)
+                                # if dur > 0:
+                                    # self.log('injectBCTs, adding ratings %s\n%s - %s'%(fileItem.get('title'),file,dur))
+                                    # nfileList.append(self.builder.buildCells(citem,dur,entries=1,info={'title':mpaa,'genre':['ratings'],'plot':RATING_DESC.get(mpaa,''),'path':file})[0])
+                    # # #pre roll - bumpers
+                    # # elif fileItem.get('type').startswith(tuple(TV_TYPES)):
+                        # # ...
+                # except Exception as e: self.log('injectBCTs, pre roll failed! %s'%(e), xbmc.LOGERROR)
+                # nfileList.append(fileItem)
+                # #post roll - commercials/trailers
+        # return nfileList
+                    
+        
         return fileList
-        
-        # if self.fillBCTs and not citem.get('radio',False): cacheResponse = 
-        
         # if not fileList: return fileList
         # self.log("injectBCTs, channel = %s, fileList = %s"%(citem.get('id'),len(fileList)))
         # ratings = self.buildResourceByType('ratings')

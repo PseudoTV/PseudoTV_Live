@@ -47,7 +47,7 @@ class Plugin:
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
                              "vid"       : decodeString(self.sysInfo.get('vid','')),
-                             "duration"  : int(self.sysInfo.get('duration',str(timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)'))))),
+                             "duration"  : (timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or int(self.sysInfo.get('duration',0))),
                              "progress"  : (BUILTIN.getInfoLabel('Progress'),BUILTIN.getInfoLabel('PercentPlayed')),
                              "chlabel"   : BUILTIN.getInfoLabel('ChannelNumberLabel'),
                              "chpath"    : BUILTIN.getInfoLabel('FileNameAndPath'),
@@ -64,11 +64,13 @@ class Plugin:
             self.sysInfo["starttime"] = datetime.datetime.fromtimestamp((datetime.datetime.timestamp(strpTime(self.sysInfo['start'], DTJSONFORMAT)) - getTimeoffset())).strftime(DTJSONFORMAT)
             self.sysInfo['endtime']   = datetime.datetime.fromtimestamp(datetime.datetime.timestamp(strpTime(self.sysInfo['starttime'], DTJSONFORMAT) + datetime.timedelta(seconds=self.sysInfo['duration']))).strftime(DTJSONFORMAT)
             self.sysInfo["seek"]      = (getUTCstamp() - datetime.datetime.timestamp(strpTime(self.sysInfo['starttime'], DTJSONFORMAT)))
+            self.sysInfo["now"]       = datetime.datetime.fromtimestamp(getUTCstamp()).strftime(DTJSONFORMAT)
         except:
             self.sysInfo['epoch']     = None
             self.sysInfo["starttime"] = None
             self.sysInfo["endtime"]   = None
             self.sysInfo["seek"]      = None
+            self.sysInfo["now"]       = None
             
         self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
 
@@ -101,13 +103,10 @@ class Plugin:
     def playBroadcast(self, name, chid, vid):
         with self.preparingPlayback():
             self.log('playBroadcast, id = %s, start = %s, seek = %s'%(chid,self.sysInfo['start'],self.sysInfo['seek']))
-            if self.sysInfo['seek'] <= self.seekTOL: self.sysInfo['seek'] = 0
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',dumpJSON(self.sysInfo))
-            liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz, 'video')
-            infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
             self.resolveURL(True, liz)
             
             
@@ -290,10 +289,10 @@ class Plugin:
             if self.sysInfo['duration'] > self.sysInfo['runtime']:
                 self.log('playCHK, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
                 return False
-            elif int(oldInfo['seek']) >= oldInfo['duration']:
+            if int(oldInfo['seek']) >= oldInfo['duration']:
                 self.log('playCHK, failed! Seeking past duration.')
                 return False
-            elif oldInfo['seek'] == self.sysInfo['seek']:
+            if oldInfo['seek'] == self.sysInfo['seek']:
                 self.log('playCHK, failed! Seeking to same position.')
                 return False
         return True

@@ -52,7 +52,7 @@ class Utilities:
         openAddonSettings((7,1))
         #todo generate qrcode to server file location.
         #todo change xmltv to display statistics not raw file.
-        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True,usethread=True)
+        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True,usethread=False)
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -88,7 +88,7 @@ class Utilities:
         fle = FileAccess.open(README_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=True)
+        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=False)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -111,7 +111,7 @@ class Utilities:
         fle = FileAccess.open(CHANGELOG_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=True)
+        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=False)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -216,11 +216,9 @@ class Utilities:
             ctl = (5,5)
             self.openChannelBug()
         elif param == 'Show_Welcome':
-            with busy_dialog():
-                return self.showWelcome()
+            return self.showWelcome()
         elif param == 'Show_Readme':  
-            with busy_dialog():
-                return self.showReadme()
+            return self.showReadme()
         elif param == 'Show_Changelog':
             return self.showChangelog()
         elif param == 'User_Groups':

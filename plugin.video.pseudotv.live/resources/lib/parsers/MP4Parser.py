@@ -42,10 +42,7 @@ class MP4Parser:
 
     def determineLength(self, filename):
         log("MP4Parser: determineLength " + filename)
-
-        try:
-            # self.File = xbmcvfs.File(filename, "r")
-            self.File = FileAccess.open(filename, "rb", None)
+        try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MP4Parser: Unable to open the file")
             return
@@ -129,7 +126,6 @@ class MP4Parser:
             if box.size == 1:
                 box.size = struct.unpack('>q', self.File.readBytes(8))[0]
                 box.size -= 8
-    
             box.size -= 8
     
             if box.boxtype == 'uuid':

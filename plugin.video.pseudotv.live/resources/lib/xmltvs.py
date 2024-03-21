@@ -497,7 +497,7 @@ class XMLTVS:
         item['type']          = fItem.get('type','video')
         item['new']           = int(fItem.get('playcount','1')) == 0
         item['thumb']         = cleanImage(getThumb(fItem,EPG_ARTWORK)) #unify thumbnail by user preference 
-        fItem['art']['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
+        fItem.get('art',{})['thumb'] = getThumb(fItem,{0:1,1:0}[EPG_ARTWORK])  #unify thumbnail artwork, opposite of EPG_Artwork
         item['date']          = fItem.get('premiered','')
         item['catchup-id']    = VOD_URL.format(addon=ADDON_ID,title=quoteString(item['title']),vid=quoteString(encodeString((fItem.get('originalfile','') or fItem.get('file','')))),chid=quoteString(citem['id']))
         fItem['catchup-id']   = item['catchup-id']
