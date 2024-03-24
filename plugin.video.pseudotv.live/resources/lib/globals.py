@@ -375,24 +375,28 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
 
 def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
     CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
-    return {'kodi_addon_instance_name'    :ADDON_NAME,
-            'kodi_addon_instance_enabled' :'true',
-            'm3uRefreshMode'              :'1',
-            'm3uRefreshIntervalMins'      :'15',
-            'm3uRefreshHour'              :'0',
-            'm3uCache'                    :'true',
-            'logoPathType'                :'0',
-            'logoPath'                    :LOGO_LOC,
-            'm3uPathType'                 :'%s'%('1' if CLIENT_MODE == 1 else '0'),
-            'm3uPath'                     :M3UFLEPATH,
-            'm3uUrl'                      :SETTINGS.getSetting('Remote_M3U'),
-            'epgPathType'                 :'%s'%('1' if CLIENT_MODE == 1 else '0'),
-            'epgPath'                     :XMLTVFLEPATH,
-            'epgUrl'                      :SETTINGS.getSetting('Remote_XMLTV'),
-            'epgCache'                    :'true',
-            'genresPathType'              :'%s'%('1' if CLIENT_MODE == 1 else '0'),
-            'genresPath'                  :GENREFLEPATH,
-            'genresUrl'                   :SETTINGS.getSetting('Remote_GENRE'),
+    return {'kodi_addon_instance_name'      :ADDON_NAME,
+            'kodi_addon_instance_enabled'   :'true',
+            'm3uRefreshMode'                :'1',
+            'm3uRefreshIntervalMins'        :'15',
+            'm3uRefreshHour'                :'0',
+            'm3uCache'                      :'true',
+            'logoPathType'                  :'0',
+            'logoPath'                      :LOGO_LOC,
+            'm3uPathType'                   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'm3uPath'                       :M3UFLEPATH,
+            'm3uUrl'                        :SETTINGS.getSetting('Remote_M3U'),
+            'epgPathType'                   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'epgPath'                       :XMLTVFLEPATH,
+            'epgUrl'                        :SETTINGS.getSetting('Remote_XMLTV'),
+            'epgCache'                      :'true',
+            'genresPathType'                :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'genresPath'                    :GENREFLEPATH,
+            'genresUrl'                     :SETTINGS.getSetting('Remote_GENRE'),
+            'timeshiftEnabled'              :'false',
+            'catchupPlayEpgAsLive'          :'false',
+            'catchupWatchEpgEndBufferMins'  :'0',
+            'catchupWatchEpgBeginBufferMins':'0',
             # 'tvGroupMode'                 :'0',
             # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
             # 'radioGroupMode'              :'0',
@@ -406,11 +410,7 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             'catchupPlayEpgAsLive'        :'false',
             'allChannelsCatchupMode'      :'0',
             'numberByOrder'               :'false',
-            'startNum'                    :'1',
-            # 'epgTSOverride'               :'false',
-            # 'useFFmpegReconnect'          :'true',
-            # 'useInputstreamAdaptiveforHls':'true'
-            }
+            'startNum'                    :'1'}
 
 def togglePVR(state=True, reverse=False, waitTime=15):
     log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))

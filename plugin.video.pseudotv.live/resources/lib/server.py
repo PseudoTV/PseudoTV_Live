@@ -100,9 +100,9 @@ class Announcement:
     def getSettings(self):
         return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
                 'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
-                'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
-                'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
-                'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
+                'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),}
+                # 'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
+                # 'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
 
 
     def _start(self):

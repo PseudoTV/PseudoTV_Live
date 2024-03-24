@@ -147,7 +147,7 @@ class Player(xbmc.Player):
         BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
         
         sysInfo = self.getPlayerSysInfo()
-        sysInfo['runtime'] = ceil(self.getPlayerTime())
+        sysInfo['runtime'] = self.getPlayerTime()
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
         
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel

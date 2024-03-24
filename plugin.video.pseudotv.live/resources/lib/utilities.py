@@ -52,7 +52,7 @@ class Utilities:
         openAddonSettings((7,1))
         #todo generate qrcode to server file location.
         #todo change xmltv to display statistics not raw file.
-        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True,usethread=False)
+        try: DIALOG.textviewer(openFile(file), heading=('%s - %s')%(ADDON_NAME,os.path.basename(file)),usemono=True)
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -70,7 +70,7 @@ class Utilities:
                                                     xmltv=XMLTVFLEPATH,
                                                     genre=GENREFLEPATH,
                                                     logo=LOGO_LOC,
-                                                    lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=False)
+                                                    lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
         
 
@@ -88,7 +88,7 @@ class Utilities:
         fle = FileAccess.open(README_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,usethread=False)
+        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    
@@ -111,7 +111,7 @@ class Utilities:
         fle = FileAccess.open(CHANGELOG_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30, usethread=False)
+        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    

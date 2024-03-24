@@ -48,7 +48,7 @@ class ChannelBug(xbmcgui.WindowXML):
 
     def onInit(self):
         if not BUILTIN.getInfoBool('IsFullscreen','System'):
-            DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')), usethread=True)
+            DIALOG.okDialog(LANGUAGE(32097)%(BUILTIN.getInfoLabel('ScreenResolution','System')))
             
         self.log('onInit, channelbug posx,posy = (%s,%s)'%(self.userPOSX,self.userPOSY))
         self._channelBug  = xbmcgui.ControlImage(self.userPOSX, self.userPOSY, 128, 128, COLOR_LOGO, aspectRatio=2)

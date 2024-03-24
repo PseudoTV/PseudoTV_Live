@@ -517,6 +517,18 @@ msgctxt "#30124"
 msgid "Three Shows"
 msgstr ""
 
+msgctxt "#30125"
+msgid "IMDB Trailers"
+msgstr ""
+
+msgctxt "#30126"
+msgid "Kodi Trailers"
+msgstr ""
+
+msgctxt "#30127"
+msgid "Both Kodi/IMDB Trailers"
+msgstr ""
+
 
 
 

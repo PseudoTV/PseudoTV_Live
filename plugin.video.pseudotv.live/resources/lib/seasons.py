@@ -17,19 +17,19 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 KEYWORDS = {""         :{},
-            "hitch"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow",  "operator":"contains","value":["Alfred Hitchcock"]},
-                                                                                                                {"field":"plot",    "operator":"contains","value":["Alfred Hitchcock"]}]}]}}],
+            "hitchcock":{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Alfred Hitchcock"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Alfred Hitchcock"]}]}]}}],
                          "movies"  : [{"sort":{"method":"random", "order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Alfred Hitchcock"]},
-                                                                                                                {"field":"writers", "operator":"contains","value":["Alfred Hitchcock"]},
-                                                                                                                {"field":"plot",    "operator":"contains","value":["Alfred Hitchcock"]}]}]}}]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["Alfred Hitchcock"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Alfred Hitchcock"]}]}]}}]},
                                                                                                                 
-            "patrick"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow",  "operator":"contains","value":["It's Always Sunny"]}]}]}},
-                                      {"sort":{"method":"random", "order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot",    "operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"random", "order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot",    "operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}]},
+            "patrick"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["It's Always Sunny"]}]}]}},
+                                      {"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"plot"    ,"operator":"contains","value":["St. Patrick","Leprechaun","Irish","Luck","Lucky","Gold","Shamrock"]}]}]}}]},
             
             "lotr"     :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"  ,"order":"ascending"} ,"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]},
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"  ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Tolkien","Hobbit","Lord of the Rings"]}]}]}}]},
             
             "quentin"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Quentin Tarantino"]},
@@ -38,6 +38,33 @@ KEYWORDS = {""         :{},
                          "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"director","operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["Quentin Tarantino"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Quentin Tarantino"]}]}]}}]},
+                                                                                                                
+            "startrek" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Star Trek"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Star Trek"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Trek"]}]}]}}]},
+                                                                                                                
+            "othello"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["William Shakespeare","Shakespeare"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
+                                                                                                                {"field":"writers" ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["William Shakespeare","Shakespeare"]}]}]}}]},
+                                                                                                                
+            "super"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tag"     ,"operator":"contains","value":["Superhero","Marvel","DC"]},
+                                                                                                                {"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superhero"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"tag"     ,"operator":"contains","value":["Superhero","Marvel","DC"]},
+                                                                                                                {"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superhero"]}]}]}}]},
+                                                                                                                
+            "aliens"   :{"movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"is"      ,"value":["TED 2023","Prometheus","Alien: Covenant","Alien","Alien: Isolation","Alien: Out of the Shadows","Alien: Romulus","Aliens","Aliens: Colonial Marines","Fire and Stone","Alien3","Alien³","Aliens: Dark Descent","Aliens: Fireteam Elite","Aliens: Phalanx","Alien Resurrection"]},
+                                                                                                                {"field":"title"   ,"operator":"is"      ,"value":["Predator","Predator 2","Predators","The Predator","Prey","Badlands","Alien vs. Predator","Aliens vs. Predator: Requiem"]}]}]}}]},
+                                                                                                                
+            "starwars" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Star Wars"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Wars"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Star Wars"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Star Wars"]}]}]}}]},
             }
                        
      

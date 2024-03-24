@@ -53,31 +53,34 @@ class Builder:
         self.sort             = {} #{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
         self.limits           = {} #{"end":0,"start":0,"total":0}
 
-        self.incRatings = SETTINGS.getSettingInt('Fillers_Ratings')
-        self.resRatings = SETTINGS.getSetting('Resource_Ratings').split('|')
-        self.incBumpers = SETTINGS.getSettingInt('Fillers_Bumpers')
-        self.resBumpers = SETTINGS.getSetting('Resource_Bumpers').split('|')
-        self.incAdverts = SETTINGS.getSettingInt('Fillers_Commercials')
-        self.resAdverts = SETTINGS.getSetting('Resource_Commericals').split('|')
-        self.incTrailer = SETTINGS.getSettingInt('Fillers_Trailers')
-        self.resTrailer = SETTINGS.getSetting('Resource_Trailers').split('|')
+        self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
+        self.srcRatings       = {"RESC":SETTINGS.getSetting('Resource_Ratings').split('|')}
+        
+        self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
+        self.srcBumpers       = {"PATH":[SETTINGS.getSetting('Resource_Bumpers')]}
+        
+        self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
+        self.srcAdverts       = {"PATH":[SETTINGS.getSetting('Resource_Commericals')]}
+        
+        self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
+        self.srcTrailer       = {"PATH":[SETTINGS.getSettingInt('Resource_Trailers')]}
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = 10800 #Secs., Min. EPG guidedata
         
-        self.service    = service
-        self.cache      = Cache()
-        self.channels   = Channels()
-        self.rules      = RulesList(self.channels.getChannels())
-        self.runActions = self.rules.runActions
-        self.xmltv      = XMLTVS()
-        self.jsonRPC    = JSONRPC()
-        self.xsp        = XSP()
-        self.m3u        = M3U()
-        self.resources  = Resources(self.jsonRPC,self.cache)
+        self.service          = service
+        self.cache            = Cache()
+        self.channels         = Channels()
+        self.rules            = RulesList(self.channels.getChannels())
+        self.runActions       = self.rules.runActions
+        self.xmltv            = XMLTVS()
+        self.jsonRPC          = JSONRPC()
+        self.xsp              = XSP()
+        self.m3u              = M3U()
+        self.fillers          = Fillers(self)
+        self.resources        = Resources(self.jsonRPC,self.cache)
            
-
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -158,7 +161,8 @@ class Builder:
             else:     cacheResponse = self.buildChannel(citem)
             
             if cacheResponse:
-                if self.fillBCTs and not radio: cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
+                if self.fillBCTs and not radio:
+                    cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
                 return sorted(cacheResponse, key=lambda k: k['start'])
             else: raise Exception('cacheResponse in-valid!\n%s'%(cacheResponse))

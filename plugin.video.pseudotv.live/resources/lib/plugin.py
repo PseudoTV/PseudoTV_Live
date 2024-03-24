@@ -43,11 +43,10 @@ class Plugin:
 
         try:    self.sysInfo  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         except: self.sysInfo  = {}
-        
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
                              "vid"       : decodeString(self.sysInfo.get('vid','')),
-                             "duration"  : (timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or int(self.sysInfo.get('duration',0))),
+                             "duration"  : (int(self.sysInfo.get('duration',0)) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)'))),
                              "progress"  : (BUILTIN.getInfoLabel('Progress'),BUILTIN.getInfoLabel('PercentPlayed')),
                              "chlabel"   : BUILTIN.getInfoLabel('ChannelNumberLabel'),
                              "chpath"    : BUILTIN.getInfoLabel('FileNameAndPath'),
@@ -234,7 +233,7 @@ class Plugin:
                 callback = _matchVFS()
             else:
                 callback = _matchJSON() #use faster jsonrpc on high power devices. requires 'pvr://' json whitelisting.
-            if callback is None: return DIALOG.okDialog(LANGUAGE(32133), autoclose=90, usethread=True)
+            if callback is None: return DIALOG.okDialog(LANGUAGE(32133), autoclose=90)
             return callback
              
         def _extend(pvritem):
@@ -286,15 +285,15 @@ class Plugin:
         if oldInfo.get('chid',random.random()) == self.sysInfo.get('chid') and oldInfo.get('starttime',random.random()) == self.sysInfo.get('starttime'):
             self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1
             self.sysInfo['runtime']   = oldInfo.get('runtime',-1)
-            if self.sysInfo['duration'] > self.sysInfo['runtime']:
-                self.log('playCHK, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
-                return False
-            if int(oldInfo['seek']) >= oldInfo['duration']:
-                self.log('playCHK, failed! Seeking past duration.')
-                return False
-            if oldInfo['seek'] == self.sysInfo['seek']:
-                self.log('playCHK, failed! Seeking to same position.')
-                return False
+            # if self.sysInfo['duration'] > self.sysInfo['runtime']:
+                # self.log('playCHK, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                # return False
+            # if self.sysInfo['seek'] >= oldInfo['runtime']:
+                # self.log('playCHK, failed! Seeking past duration.')
+                # return False
+            # elif self.sysInfo['seek'] == oldInfo['seek']:
+                # self.log('playCHK, failed! Seeking to same position.')
+                # return False
         return True
         
         

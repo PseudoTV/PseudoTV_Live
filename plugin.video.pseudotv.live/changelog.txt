@@ -1,5 +1,8 @@
 v.0.4.7
 -Fixed misc. playback issues.
+-Fixed Movie ratings filler and resources.
+-Updated April Seasonal channels.
+-Fixed channel bug not displaying correct logo.
 
 v.0.4.6
 -Refactored Seasonal & Provisional Autotuning.

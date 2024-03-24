@@ -777,37 +777,18 @@ class Dialog:
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
              
 
-    def _okDialog(self, msg, heading, autoclose, url, wait=0.5):
-        timerit(self.okDialog)(wait,[msg, heading, autoclose, url])
-        
-        
-    def okDialog(self, msg, heading=ADDON_NAME, autoclose=900, url=None, usethread=False):
-        if usethread: return self._okDialog(msg, heading, autoclose, url)
-        else:
-            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
-            # todo add qr code support
-            # if not url is None and hasAddon('script.module.pyqrcode'):
-                # import pyqrcode
-                # imagefile = os.path.join(xbmcvfs.translatePath(PROFILE),'%s.png' % str(url.split('/')[-1]))
-                # qrIMG = pyqrcode.create(url)
-                # qrIMG.png(imagefile, scale=10)
-                # qr = QRCode( "main.xml" , ADDON_PATH, "default", image=imagefile, text=message)
-                # qr.doModal()
-                # del qr
-                # xbmcvfs.delete(imagefile)
-                # return
-            return xbmcgui.Dialog().ok(heading, msg)
+    def okDialog(self, msg, heading=ADDON_NAME, autoclose=900, url=None):
+        if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
+        return xbmcgui.Dialog().ok(heading, msg)
 
 
     def _textviewer(self, msg, heading, usemono, autoclose, wait=0.5):
         timerit(self.textviewer)(wait,[msg, heading, usemono, autoclose])
         
         
-    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=900, usethread=False):
-        if usethread: return self._textviewer(msg, heading, usemono, autoclose)
-        else:
-            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
-            return xbmcgui.Dialog().textviewer(heading, msg, usemono)
+    def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=900):
+        if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
+        return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
         
     def yesnoDialog(self, message, heading=ADDON_NAME, nolabel='', yeslabel='', customlabel='', autoclose=900): 

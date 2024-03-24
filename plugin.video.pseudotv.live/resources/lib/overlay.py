@@ -259,7 +259,7 @@ class Overlay():
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
                 citem = self.player.sysInfo.get('citem',{})
-                logo  = citem.get('icon',LOGO)
+                logo  = citem.get('logo',LOGO)
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
@@ -316,8 +316,8 @@ class Overlay():
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.Playing]')
                                
-                onNow  = '%s on %s'%(self.builtin.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
-                onNext = self.builtin.getInfoLabel('NextTitle','VideoPlayer')
+                onNow  = '%s on %s'%(BUILTIN.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
+                onNext = BUILTIN.getInfoLabel('NextTitle','VideoPlayer')
                 self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                 self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                 self._onNext.autoScroll(6000, 3000, 5000)

@@ -756,7 +756,6 @@
 					<default>1</default>
 					<constraints>
 						<options>
-							<option label="30021">0</option>
 							<option label="30022">1</option>
 						</options>
 					</constraints>
@@ -774,7 +773,6 @@
 					<default>1</default>
 					<constraints>
 						<options>
-							<option label="30021">0</option>
 							<option label="30022">1</option>
 						</options>
 					</constraints>
@@ -891,11 +889,14 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Resource_Commericals" type="list[addon]" label="30030" help="">
+                <setting id="Resource_Commericals" type="integer" label="30030" help="">
 					<level>2</level>
-					<default></default>
+					<default>0</default>
 					<constraints>
-						<addontype>kodi.resource.images</addontype>
+						<options>
+							<option label="">0</option>
+							<option label="">1</option>
+						</options>
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
@@ -904,17 +905,17 @@
                             </and>
 						</dependency>
 					</dependencies>
-					<control type="button" format="addon">
-						<heading>30070</heading>
-						<show more="true" details="true">installed</show>
-						<multiselect>true</multiselect>
-					</control>
+					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="Resource_Trailers" type="list[addon]" label="30031" help="">
+                <setting id="Resource_Trailers" type="integer" label="30031" help="">
 					<level>2</level>
-					<default></default>
+					<default>0</default>
 					<constraints>
-						<addontype>kodi.resource.images</addontype>
+						<options>
+							<option label="30127">0</option>
+							<option label="30126">1</option>
+							<option label="30125">2</option>
+						</options>
 					</constraints>
                     <dependencies>
 						<dependency type="visible">
@@ -923,11 +924,7 @@
                             </and>
 						</dependency>
 					</dependencies>
-					<control type="button" format="addon">
-						<heading>30071</heading>
-						<show more="true" details="true">installed</show>
-						<multiselect>true</multiselect>
-					</control>
+					<control type="spinner" format="string"/>
 				</setting>
 			</group>
 		</category>
