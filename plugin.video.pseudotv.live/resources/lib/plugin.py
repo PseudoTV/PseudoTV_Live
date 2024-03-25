@@ -43,6 +43,7 @@ class Plugin:
 
         try:    self.sysInfo  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         except: self.sysInfo  = {}
+        
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
                              "vid"       : decodeString(self.sysInfo.get('vid','')),

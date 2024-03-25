@@ -56,8 +56,8 @@ class Background(xbmcgui.WindowXML):
             citem = self.player.sysInfo.get('citem',{})
             self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
             self.getControl(40001).setVisible(self.showStatic)
-            self.getControl(40002).setImage(citem.get('logo',COLOR_LOGO))
-            self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',ADDON_NAME)))
+            self.getControl(40002).setImage(citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except:
             self.runActions(RULES_ACTION_BACKGROUND_CLOSE, citem, inherited=self)
             self.close()
@@ -258,8 +258,7 @@ class Overlay():
                     self._addControl(self._channelBug)
                     self._channelBug.setEnableCondition('[Player.Playing]')
 
-                citem = self.player.sysInfo.get('citem',{})
-                logo  = citem.get('logo',LOGO)
+                logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
@@ -316,8 +315,8 @@ class Overlay():
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.Playing]')
                                
-                onNow  = '%s on %s'%(BUILTIN.getInfoLabel('Title','VideoPlayer'), citem.get('name',ADDON_NAME))
-                onNext = BUILTIN.getInfoLabel('NextTitle','VideoPlayer')
+                onNow  = '%s on %s'%(BUILTIN.getInfoLabel('Title','VideoPlayer'),BUILTIN.getInfoLabel('ChannelName','VideoPlayer')) if BUILTIN.getInfoLabel('ChannelName','VideoPlayer') not in BUILTIN.getInfoLabel('Title','VideoPlayer') else BUILTIN.getInfoLabel('Title','VideoPlayer')
+                onNext = '%s @ %s'%(BUILTIN.getInfoLabel('NextTitle','VideoPlayer'),BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
                 self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                 self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                 self._onNext.autoScroll(6000, 3000, 5000)
