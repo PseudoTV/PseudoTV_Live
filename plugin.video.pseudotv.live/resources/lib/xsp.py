@@ -20,7 +20,6 @@
 
 from globals          import *
 from library          import Library
-from xml.dom.minidom  import parse, parseString, Document
 
 class XSP:
     def __init__(self):

@@ -106,7 +106,7 @@ class Tasks():
     def chkDebugging(self):
         self.log('chkDebugging')
         if SETTINGS.getSettingBool('Enable_Debugging'):
-            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=5):
+            if DIALOG.yesnoDialog(LANGUAGE(32142)):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Enable_Debugging',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))
@@ -286,7 +286,7 @@ class Tasks():
                 if FileAccess.exists(oldFilePath):
                     dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
                     if FileAccess.exists(newFilePath):
-                        if DIALOG.yesnoDialog((LANGUAGE(30120)%newFilePath),autoclose=90):
+                        if DIALOG.yesnoDialog((LANGUAGE(30120)%newFilePath)):
                             dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32151),os.path.join(newFolder,'%s.bak'%(file))))
                             if FileAccess.copy(newFilePath,bakFilePath): #backup existing file.
                                 dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32151),bakFilePath,LANGUAGE(32025)))

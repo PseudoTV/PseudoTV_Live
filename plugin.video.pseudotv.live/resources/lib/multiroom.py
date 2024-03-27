@@ -61,7 +61,7 @@ class Multiroom:
             color   = 'dimgray' if offline else 'white'
             labels.append('[COLOR=%s]%s %s[/COLOR]'%(color,servers[server].get('name'),offline))
             
-        select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, autoclose=90, multi=False)
+        select = DIALOG.selectDialog(labels, header=LANGUAGE(32048), preselect=idx, useDetails=False, multi=False)
         if select is not None:
             server = list(servers.keys())[select]
             SETTINGS.chkDiscovery({server:servers[server]}, forced=True)

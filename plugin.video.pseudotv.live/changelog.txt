@@ -1,6 +1,15 @@
 v.0.4.7
--Fixed misc. playback issues.
--Fixed Movie ratings filler and resources.
+-Notice The following steps are required!.
+ - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
+ - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
+ 
+-Fixed Misc. playback issues.
+-Fixed Movie rating filler and resources.
+ - Enable fillers under global settings, then verify MPAA resource installed under fillers.
+ - Ratings only added to prior to a Movie and currently only support the U.S. Rating system (MPAA). 
+ - If any overseas users would like support contact me @Lunatixz on the Kodi forums.
+ - MPAA resources are available via the Lunatixz or PseudoTV repository. 
+ 
 -Updated April Seasonal channels.
 -Fixed channel bug not displaying correct logo.
 

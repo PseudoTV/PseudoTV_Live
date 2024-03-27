@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from threading  import BoundedSemaphore, Timer
 
 #constants 
 DEFAULT_ENCODING           = "utf-8"

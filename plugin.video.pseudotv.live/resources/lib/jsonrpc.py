@@ -51,7 +51,7 @@ class JSONRPC:
         self.log('_sendJSON, command = %s'%(command))
         results = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
         if isLowPower(): xbmc.sleep(SETTINGS.getSettingInt('JSONRPC_Delay'))
-        #overcome overflow issue within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
+        #overcome overflow issues within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
         return results
 
 

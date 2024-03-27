@@ -72,7 +72,7 @@ class Autotune:
                     if Backup().hasBackup():
                         opt = LANGUAGE(32112)
                         msg = '%s\n%s'%((LANGUAGE(32042)%ADDON_NAME),LANGUAGE(32111))
-                    retval = DIALOG.yesnoDialog(message=msg,customlabel=opt,autoclose=90)
+                    retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                     if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                     elif retval == 2: return Backup().recoverChannels()
                     else: return

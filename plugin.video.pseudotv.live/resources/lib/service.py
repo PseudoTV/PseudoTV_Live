@@ -21,7 +21,6 @@ from globals    import *
 from overlay    import Overlay, Background
 from rules      import RulesList
 from tasks      import Tasks
-from threading  import enumerate as thread_enumerate
 
 class Player(xbmc.Player):
     sysInfo      = {}
@@ -65,7 +64,6 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.pendingPlay = False
-        self.sysInfo     = self.getPlayerSysInfo()
         self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
@@ -94,12 +92,19 @@ class Player(xbmc.Player):
         
         
     def isPseudoTVPlaying(self):
-        if (self.sysInfo.get('chid') or self.sysInfo.get('citem',{}).get('id')): return True
+        if loadJSON(self.getPlayingItem().getProperty('sysInfo')).get('citem',{}).get('id'): return True
         else: return False
         
         
     def getPlayerSysInfo(self):
         sysInfo = loadJSON(self.getPlayingItem().getProperty('sysInfo')) #Kodi v20.
+        sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
+                        'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
+                        'callback':self.getCallback(),
+                        'runtime' :self.getPlayerTime()})
+        if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
+        if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
@@ -146,14 +151,10 @@ class Player(xbmc.Player):
         self.toggleBackground(False)
         BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
         
-        sysInfo = self.getPlayerSysInfo()
-        sysInfo['runtime'] = self.getPlayerTime()
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
-        
+        self.sysInfo = self.getPlayerSysInfo()
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
-        if not self.sysInfo.get('callback'): self.sysInfo['callback'] = self.getCallback()
 
         
     def _onChange(self):
@@ -180,7 +181,7 @@ class Player(xbmc.Player):
         self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
 
 
-    def _onError(self, sysInfo):
+    def _onError(self):
         self.log('_onError, playing file = %s'%(self.getPlayerFile()))
         self.onPlayBackStopped()
         

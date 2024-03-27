@@ -22,22 +22,22 @@ from m3u        import M3U
 from xmltvs     import XMLTVS
 
 class Record:
-    def __init__(self, sysARG, listitem, writer):
-        log('Record: __init__, sysARG = %s, writer = %s\npath = %s'%(sysARG,writer,listitem.getPath()))
+    def __init__(self, sysARG, listitem, plot):
+        log('Record: __init__, sysARG = %s, plot = %s\npath = %s'%(sysARG,plot,listitem.getPath()))
         self.sysARG   = sysARG
-        self.writer   = writer
+        self.plot   = plot
         self.listitem = listitem
         
         
     def add(self):
         with suspendActivity():
-            self.writer['label'] = (self.writer.get('label') or self.listitem.getLabel())
+            self.plot['label'] = (self.plot.get('label') or self.listitem.getLabel())
             m3u = M3U()
-            ritem = m3u.getRecordItem(self.writer)
+            ritem = m3u.getRecordItem(self.plot)
             if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
                 with busy_dialog():
                     xmltv = XMLTVS()
-                    if m3u.addRecording(ritem) and xmltv.addRecording(ritem,self.writer):
+                    if m3u.addRecording(ritem) and xmltv.addRecording(ritem,self.plot):
                         DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
                     del xmltv
             del m3u
@@ -45,9 +45,9 @@ class Record:
             
     def remove(self):
         with suspendActivity():
-            self.writer['label'] = (self.writer.get('label') or self.listitem.getLabel())
+            self.plot['label'] = (self.plot.get('label') or self.listitem.getLabel())
             m3u = M3U()
-            ritem = m3u.getRecordItem(self.writer)
+            ritem = m3u.getRecordItem(self.plot)
             if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
                 with busy_dialog():
                     xmltv = XMLTVS()
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     except: param = None
     log('Record: __main__, param = %s'%(param))
     if param == 'add':
-        Record(sys.argv,listitem=sys.listitem,writer=decodeWriter(BUILTIN.getInfoLabel('Writer'))).add()
+        Record(sys.argv,listitem=sys.listitem,plot=decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
     elif param == 'del':
-        Record(sys.argv,listitem=sys.listitem,writer=decodeWriter(BUILTIN.getInfoLabel('Writer'))).remove()
+        Record(sys.argv,listitem=sys.listitem,plot=decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
     

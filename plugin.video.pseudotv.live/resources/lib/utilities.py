@@ -17,8 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals          import *
-from xml.dom.minidom  import parse, parseString
+from globals import *
 
 class Utilities:
     def __init__(self, sysARG=sys.argv):
@@ -65,12 +64,12 @@ class Utilities:
             if SETTINGS.getCacheSetting('showWelcome', checksum=siz, default='true') == 'true':
                 SETTINGS.setCacheSetting('showWelcome', 'false', checksum=siz)
                 DIALOG.textviewer(txt.format(addon_name=ADDON_NAME,
-                                                    pvr_name=PVR_CLIENT_NAME,
-                                                    m3u=M3UFLEPATH,
-                                                    xmltv=XMLTVFLEPATH,
-                                                    genre=GENREFLEPATH,
-                                                    logo=LOGO_LOC,
-                                                    lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+                                             pvr_name=PVR_CLIENT_NAME,
+                                             m3u=M3UFLEPATH,
+                                             xmltv=XMLTVFLEPATH,
+                                             genre=GENREFLEPATH,
+                                             logo=LOGO_LOC,
+                                             lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,autoclose=90)
         except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
         
 
@@ -88,7 +87,7 @@ class Utilities:
         fle = FileAccess.open(README_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90)
         except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
    
    

@@ -529,6 +529,10 @@ msgctxt "#30127"
 msgid "Both Kodi/IMDB Trailers"
 msgstr ""
 
+msgctxt "#30128"
+msgid "Searching for %s logo"
+msgstr ""
+
 
 
 

@@ -23,7 +23,7 @@ from plugin  import Plugin
 if __name__ == '__main__': 
     try:    mode = sys.argv[1]
     except: mode = None
-    citem = decodeWriter(BUILTIN.getInfoLabel('Writer')).get('citem',{})
+    citem = decodePlot(BUILTIN.getInfoLabel('Plot')).get('citem',{})
     sys.argv.append('?mode=%s&name=%s&chid=%s'%(mode,quoteString(citem.get('name')),quoteString(citem.get('id'))))
     log('Context_Play: __main__, mode = %s, param = %s'%(mode, sys.argv))
     if   mode == 'play':     Plugin(sys.argv).playTV(citem.get('name'),citem.get('id'))

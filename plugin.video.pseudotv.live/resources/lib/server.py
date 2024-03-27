@@ -18,7 +18,6 @@
 #
 # -*- coding: utf-8 -*-
 from globals                   import *
-from threading                 import Thread
 from functools                 import partial
 from six.moves.BaseHTTPServer  import BaseHTTPRequestHandler, HTTPServer
 from six.moves.socketserver    import ThreadingMixIn
@@ -34,7 +33,7 @@ class Discovery:
         self.log('__init__')
         self.monitor = monitor
         self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
+        self.startThread.daemon=True
         self.startThread.start()
         
         
@@ -89,7 +88,7 @@ class Announcement:
         self.log('__init__')
         self.monitor = monitor
         self.startThread = Thread(target=self._start)
-        self.startThread.daemon = True
+        self.startThread.daemon=True
         self.startThread.start()
         
             
@@ -188,10 +187,9 @@ class HTTP:
     def __init__(self, monitor=None):
         self.log('__init__')
         self.monitor = monitor
-        threadit(self._start)
-        # self.startThread = Thread(target=self._start)
-        # self.startThread.daemon = True
-        # self.startThread.start()
+        self.startThread = Thread(target=self._start)
+        self.startThread.daemon=True
+        self.startThread.start()
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -218,7 +216,7 @@ class HTTP:
 
     def _start(self):
         while not self.monitor.abortRequested():
-            if self.monitor.myService._interrupt(5): break
+            if self.monitor.myService._interrupt(15): break
             elif isClient(): break
             elif self.isRunning: continue
             else:
@@ -240,7 +238,7 @@ class HTTP:
                     self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.monitor))
                     self._server.allow_reuse_address = True
                     self._httpd_thread = Thread(target=self._server.serve_forever)
-                    self._httpd_thread.daemon = True
+                    self._httpd_thread.daemon=True
                     self._httpd_thread.start()
                 except Exception as e: 
                     self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
@@ -256,7 +254,7 @@ class HTTP:
                 self._server.server_close()
                 self._server.socket.close()
                 if self._httpd_thread.is_alive():
-                    self._httpd_thread.join(5.5)
+                    self._httpd_thread.join(5)
         except Exception as e: self.log("_stop, Failed! %s"%(e), xbmc.LOGERROR)
         self.isRunning = False
 

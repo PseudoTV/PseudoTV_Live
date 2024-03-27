@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals         import *
-from xml.dom.minidom import parse, parseString
+from globals import *
 
 class NFOParser:
     ## NFO EXAMPLE ##

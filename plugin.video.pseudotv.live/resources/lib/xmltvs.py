@@ -19,8 +19,7 @@
 # -*- coding: utf-8 -*-
 
 import xmltv
-from globals          import *
-from xml.dom.minidom  import parse, parseString, Document
+from globals import *
 
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
@@ -273,10 +272,9 @@ class XMLTVS:
 
     def addProgram(self, id, item):
         pitem = {'channel'     : id,
-                 'credits'     : {'writer':[encodeWriter(self.cleanString(item['writer']),item['fitem'])]},
                  'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                  'title'       : [(self.cleanString(item['title']), LANG)],
-                 'desc'        : [(self.cleanString(item['desc']), LANG)],
+                 'desc'        : [(encodePlot(self.cleanString(item['desc']),item['fitem']), LANG)],
                  'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
                  'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
                  'icon'        : [{'src': item['thumb']}],
@@ -287,12 +285,15 @@ class XMLTVS:
 
         if item.get('stars'):
             pitem['star-rating'] = [{'value': '%s/10'%(int(round(float(item['stars']))))}]
-                      
+ 
+        if item.get('writer'):
+            pitem.setdefault('credits',{})['writer'] = [self.cleanString(writer) for writer in item['writer']]
+            
         if item.get('director'):
-            pitem['credits']['director'] = [self.cleanString(director) for director in item['director']]
+            pitem.setdefault('credits',{})['director'] = [self.cleanString(director) for director in item['director']]
             
         if item.get('actor'):
-            pitem['credits']['actor'] = [self.cleanString(actor) for actor in item['actor']]
+            pitem.setdefault('credits',{})['actor'] = [self.cleanString(actor) for actor in item['actor']]
 
         if item.get('catchup-id'):
             pitem['catchup-id'] = item['catchup-id']
@@ -508,12 +509,12 @@ class XMLTVS:
 
         item['rating']      = cleanMPAA(fItem.get('mpaa','') or 'NA')
         item['stars']       = (fItem.get('rating','')        or '0')
-        item['writer']      = ', '.join(fItem.get('writer',[])[:5])
-        item['director']    = fItem.get('director',[])[:5]
+        item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
+        item['director']    = fItem.get('director',[])[:5] #trim list to five
         item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
 
         fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference.
-        item['fitem']       = fItem  #raw kodi fileitem/listitem, contains citem both passed through 'writer' xmltv param.
+        item['fitem']       = fItem  #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
         
         streamdetails = fItem.get('streamdetails',{})
         if streamdetails:

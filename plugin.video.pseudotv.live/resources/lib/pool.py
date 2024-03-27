@@ -20,7 +20,6 @@
  
 from globals            import *
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from threading          import Event, Thread, Timer, enumerate
 from itertools          import repeat, count
 from functools          import partial, wraps, reduce    
 
@@ -132,7 +131,7 @@ def timerit(method):
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
-        for thread in enumerate():
+        for thread in thread_enumerate():
             if thread.name == thread_name and thread.is_alive():
                 try: 
                     thread.cancel()
@@ -141,6 +140,7 @@ def timerit(method):
                 except: pass
         threadTimer = Timer(wait, method, *args, **kwargs)
         threadTimer.name = thread_name
+        threadTimer.daemon=True
         threadTimer.start()
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
         return threadTimer

@@ -41,6 +41,7 @@ DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
 LANG                = 'en' #todo parse kodi region settings
 DEFAULT_ENCODING    = "utf-8"
 PROMPT_DELAY        = 4000 #msecs
+AUTOCLOSE_DELAY     = 8    #secs
 RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3

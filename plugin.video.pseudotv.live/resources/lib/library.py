@@ -113,7 +113,7 @@ class Library:
             self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
             
             if (self.service._interrupt() or self.service._suspend()):
-                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog) 
+                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
                 
             self.log('fillItems, returning %s'%(type))
@@ -315,7 +315,7 @@ class Library:
         if hasMovie():        
             StudioList     = Counter()
             MovieGenreList = Counter()
-            json_response  = self.jsonRPC.getMovies()
+            json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
 
             for idx, info in enumerate(json_response):
                 if not self.parserDialog is None:
@@ -325,7 +325,7 @@ class Library:
                 MovieGenreList.update([genre for genre in info.get('genre', [])])
 
             if sortbycount:
-                StudioList = [x[0] for x in sorted(StudioList.most_common(25))]
+                StudioList     = [x[0] for x in sorted(StudioList.most_common(25))]
                 MovieGenreList = [x[0] for x in sorted(MovieGenreList.most_common(25))]
             else:
                 StudioList = (sorted(set(list(StudioList.keys()))))
@@ -333,8 +333,8 @@ class Library:
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio) ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':[{"id":53,"values":{"0":studio}}]} for studio in StudioList]
-            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre)  ,'logo':self.resources.getLogo(genre ,"Movie Genres"),'rules':[{"id":53,"values":{"0":genre}}]} for genre in MovieGenreList]
+            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':[{"id":53,"values":{"0":studio}}]} for studio in StudioList]
+            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo(genre ,"Movie Genres") ,'rules':[{"id":53,"values":{"0":genre}}]}  for genre  in MovieGenreList]
             
         else: StudioList = MovieGenreList = []
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))
@@ -469,7 +469,7 @@ class Library:
         
         try:
             if len(addonNames) > 1:
-                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056), autoclose=90)
+                retval = DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,', '.join(addonNames))), customlabel=LANGUAGE(32056))
                 self.log('importPrompt, prompt retval = %s'%(retval))
                 if   retval == 1: raise Exception('Single Entry')
                 elif retval == 2: 
@@ -481,7 +481,7 @@ class Library:
             self.log('importPrompt, %s'%(e))
             for addonid, item in list(addonList.items()):
                 if item.get('meta',{}).get('name') in addonNames:
-                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name',''))), autoclose=90):
+                    if not DIALOG.yesnoDialog('%s'%(LANGUAGE(32055)%(ADDON_NAME,item['meta'].get('name','')))):
                         self.addBlackList(addonid)
                     else:
                         self.addWhiteList(addonid)

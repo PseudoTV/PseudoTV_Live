@@ -736,7 +736,7 @@
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
-					<default>false</default>
+					<default>true</default>
 					<dependencies>
 						<dependency type="visible">
                             <and>

@@ -20,19 +20,19 @@
 from globals import *
 
 class Info:
-    def __init__(self, sysARG, writer):
+    def __init__(self, sysARG, plot):
         with busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
-            listitem = LISTITEMS.buildItemListItem(writer)
+            listitem = LISTITEMS.buildItemListItem(plot)
         DIALOG.infoDialog(listitem)
             
 class Browse:
-    def __init__(self, sysARG, writer):
+    def __init__(self, sysARG, plot):
         log('Browse: __init__, sysARG = %s'%(sysARG))
         with busy_dialog():
-            target  = '%ss'%(writer.get('media','video'))
-            orgpath = writer.get('originalpath','')
-            citem   = Builder().buildProvisional(writer.get('citem',{}))
+            target  = '%ss'%(plot.get('media','video'))
+            orgpath = plot.get('originalpath','')
+            citem   = Builder().buildProvisional(plot.get('citem',{}))
 
             if '?xsp=' in orgpath:
                 path, params = orgpath.split('?xsp=')
@@ -57,9 +57,9 @@ class Match:
         with busy_dialog():
             title  = BUILTIN.getInfoLabel('Title')
             name   = BUILTIN.getInfoLabel('EpisodeName')
-            writer = decodeWriter(BUILTIN.getInfoLabel('Writer'))
-            dbtype = writer.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')
-            dbid   = (writer.get('tvshowid') or writer.get('movieid'))
+            plot = decodePlot(BUILTIN.getInfoLabel('Plot'))
+            dbtype = plot.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')
+            dbid   = (plot.get('tvshowid') or plot.get('movieid'))
             log('Match: __init__, sysARG = %s, title = %s, dbtype = %s, dbid = %s'%(sysARG,'%s - %s'%(title,name),dbtype,dbid))
 
         if hasAddon(self.SIMILAR_SCRIPT,install=True) and dbid:
@@ -75,7 +75,7 @@ class Match:
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=tvshow&tag=HDR
             # plugin://script.embuary.helper/?info=getsimilar&dbid=$INFO[ListItem.DBID]&type=movie&tag=HDR
             # tag = optional, additional filter option to filter by library tag
-            BUILTIN.executebuiltin('ReplaceWindow(%s,%s)'%('%ss'%(writer.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(self.SEARCH_SCRIPT,dbid,dbtype)))
+            BUILTIN.executebuiltin('ReplaceWindow(%s,%s)'%('%ss'%(plot.get('media','video')),'plugin://%s/?info=getsimilar&dbid=%d&type=%s'%(self.SEARCH_SCRIPT,dbid,dbtype)))
         else:
             # - the addon is executed by another addon/skin: RunScript(script.globalsearch,searchstring=foo)
             # You can specify which categories should be searched (this overrides the user preferences set in the addon settings):
@@ -90,10 +90,10 @@ if __name__ == '__main__':
     except: param = None
     log('Info: __main__, param = %s'%(param))
     if param == 'info':
-        Info(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+        Info(sys.argv,plot=decodePlot(BUILTIN.getInfoLabel('Plot')))
     elif param == 'browse':
         from builder   import Builder
-        Browse(sys.argv,writer=decodeWriter(BUILTIN.getInfoLabel('Writer')))
+        Browse(sys.argv,plot=decodePlot(BUILTIN.getInfoLabel('Plot')))
     elif param == 'match':
         Match(sys.argv)
    

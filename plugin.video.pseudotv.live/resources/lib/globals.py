@@ -24,8 +24,10 @@ import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
 
-from threading  import Thread, Event
-from queue      import Empty, PriorityQueue
+from threading        import Thread, Event, Timer, BoundedSemaphore
+from threading        import enumerate as thread_enumerate
+from queue            import Empty, PriorityQueue
+from xml.dom.minidom  import parse, parseString, Document
 
 from variables   import *
 from kodi_six    import xbmc, xbmcaddon, xbmcplugin, xbmcgui, xbmcvfs
@@ -248,7 +250,7 @@ def hasAddon(id, install=False, enable=False, force=False, notify=False):
         if BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(id),'System'): return True
         elif enable: 
             if not force:
-                if not DIALOG.yesnoDialog(message=LANGUAGE(32156)%(id),autoclose=90): return False
+                if not DIALOG.yesnoDialog(message=LANGUAGE(32156)%(id)): return False
             return BUILTIN.executebuiltin('EnableAddon(%s)'%(id),wait=True)
     elif install: return BUILTIN.executebuiltin('InstallAddon(%s)'%(id),wait=True)
     if notify: DIALOG.notificationDialog(LANGUAGE(32034)%(id))
@@ -447,15 +449,15 @@ def isPlaylistRandom():
 def isPlaylistRepeat():
     return BUILTIN.getInfoLabel('IsRepeat','Playlist').lower() == 'true' # Disable auto playlist repeat if it's on #todo
         
-def decodeWriter(text):
+def decodePlot(text):
     if isinstance(text,list): text = text[0]
     if isinstance(text, str):
-        writer = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-        if writer: return loadJSON(decodeString(writer.group(1)))
+        plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
+        if plot: return loadJSON(decodeString(plot.group(1)))
     return {}
     
-def encodeWriter(writer, text):
-    return '%s [COLOR item="%s"][/COLOR]'%(writer,encodeString(dumpJSON(text)))
+def encodePlot(plot, text):
+    return '%s [COLOR item="%s"][/COLOR]'%(plot,encodeString(dumpJSON(text)))
     
 def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
