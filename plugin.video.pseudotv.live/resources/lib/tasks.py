@@ -26,12 +26,13 @@ from builder    import Builder
 from backup     import Backup
 from multiroom  import Multiroom
 from manager    import Manager
+from server     import HTTP
 
 class Tasks():
     queueRunning      = False
     backgroundRunning = False
     
-
+    
     def __init__(self):
         self.log('__init__')
 
@@ -51,14 +52,9 @@ class Tasks():
         self.chkBackup()
         self.chkLowPower()
         self.chkPVRBackend()
-        self.chkMultiroom()
+        self.httpServer = HTTP(self.myService.monitor)
         
-        
-    def chkMultiroom(self):
-        self.log('chkMultiroom')
-        Multiroom(monitor=self.myService.monitor)
-        
-        
+    
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
@@ -69,6 +65,10 @@ class Tasks():
         setLowPower(state=getLowPower())
         
         
+    def chkHTTP(self):
+        self.httpServer._start()
+            
+        
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=30):
             self.myService._que(self._chkQueTimer,1)
@@ -76,6 +76,8 @@ class Tasks():
         
     def _chkQueTimer(self):
         self.log('chkQueTimer')
+        if self.chkUpdateTime('chkHTTP',runEvery=900):
+            self.myService._que(self.chkHTTP,1)
         if self.chkUpdateTime('chkFiles',runEvery=600):
             self.myService._que(self.chkFiles,1)
         if self.chkUpdateTime('chkPVRSettings',runEvery=(MAX_GUIDEDAYS*3600)):
@@ -88,7 +90,7 @@ class Tasks():
             self.myService._que(self.chkChannels,3)
         if self.chkUpdateTime('chkJSONQUE',runEvery=600):
             self.myService._que(self.chkJSONQUE,4)
-              
+
               
     def chkWelcome(self):
         self.log('chkWelcome')

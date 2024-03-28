@@ -69,8 +69,8 @@ def isRunning(key):
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
     while not MONITOR.abortRequested():
-        if MONITOR.waitForAbort(0.001): break
-        elif not isPendingSuspend(): break
+        if not isPendingSuspend(): break
+        elif MONITOR.waitForAbort(0.001): break
     setPendingSuspend(True)
     try: yield
     finally:
@@ -492,7 +492,8 @@ def isClient():
 def setClient(state=False,silent=True):
     PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
     if not silent and state: DIALOG.notificationWait(LANGUAGE(32115))
-           
+    return state
+    
 def getDiscovery():
     return loadJSON(PROPERTIES.getEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID)))
 

@@ -87,8 +87,8 @@ HTML_ESCAPE         = {"&": "&amp;",
 VOD_URL             = 'plugin://{addon}/?mode=vod&title={title}&chid={chid}&vid={vid}.pvr'
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
 RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
-LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={vid}&duration={duration}&start={start}.pvr'
-BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&vid={vid}&duration={duration}&start={start}.pvr'
+LIVE_URL            = 'plugin://{addon}/?mode=live&name={name}&chid={chid}&vid={vid}&now={now}&start={start}&duration={duration}&stop={stop}.pvr'
+BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&vid={vid}&now={now}&start={start}&duration={duration}&stop={stop}.pvr'
               
 PTVL_REPO           = 'repository.pseudotv'
 PVR_CLIENT_ID       = 'pvr.iptvsimple'

@@ -19,19 +19,70 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from server     import HTTP, Discovery, Announcement
+from server     import Discovery, Announcement
 
 class Multiroom:
+    client = setClient(isClient())
+    
     def __init__(self, sysARG=sys.argv, monitor=None):
-        self.log('__init__, sysARG = %s'%(sysARG))
+        self.log('__init__, sysARG = %s, isClient = %s'%(sysARG,self.client))
         self.sysARG = sysARG
-        HTTP(monitor)
-        # Announcement(monitor)
-        # Discovery(monitor)
+        if monitor is None:
+            self.monitor = MONITOR
+        else:
+            self.monitor = monitor
 
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def pairAnnouncement(self,wait=900):
+        if not self.client and not isRunning('pairAnnouncement'):
+            with setRunning('pairAnnouncement'):
+                with suspendActivity():
+                    self.log('pairAnnouncement')
+                    sec = 0
+                    inc = int(100/wait)
+                    dia = DIALOG.progressDialog(message=LANGUAGE(30078))
+                    while not self.monitor.abortRequested() and (sec < wait):
+                        sec += 1
+                        msg = LANGUAGE(32163)%(ADDON_NAME,LANGUAGE(30130),(wait-sec))
+                        dia = DIALOG.progressDialog((inc*sec),dia, msg)
+                        Announcement()
+                        if self.monitor.waitForAbort(1) or dia is None:
+                            break
+                    DIALOG.progressDialog(100,dia)
+        
+            
+    def pairDiscovery(self,wait=60):
+        pair = None
+        if self.client and not isRunning('pairDiscovery'):
+            with setRunning('pairDiscovery'):
+                with suspendActivity():
+                    self.log('pairDiscovery')
+                    sec = 0
+                    inc = int(100/wait)
+                    dia = DIALOG.progressDialog(message=LANGUAGE(30078))
+                    while not self.monitor.abortRequested() and (sec < wait):
+                        sec += 1
+                        msg = LANGUAGE(32162)%(ADDON_NAME,(wait-sec))
+                        dia = DIALOG.progressDialog((inc*sec),dia, msg)
+                        pay = Discovery()._start()
+                        print('pairDiscovery',pay)
+                        if self.monitor.waitForAbort(1) or dia is None or pay:
+                            break
+                    DIALOG.progressDialog(100,dia)
+
+                    # servers = getDiscovery()
+                    # if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
+                        # DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
+                    # servers[host] = payload
+                    # setDiscovery(servers)
+                    # SETTINGS.chkDiscovery(servers)
+
+
+    
 
 
     def chkDiscovery(self, servers, forced=False):
@@ -67,7 +118,7 @@ class Multiroom:
             SETTINGS.chkDiscovery({server:servers[server]}, forced=True)
 
 
-    def run(self):  
+    def run(self):
         ctl = (7,1) #settings return focus
         try:    param = self.sysARG[1]
         except: param = None
@@ -76,7 +127,13 @@ class Multiroom:
         if param == 'Select_Server': 
             ctl = (6,7)
             self.selectServer()
-        return openAddonSettings(ctl)
+        elif param == 'Pair_Announcement': 
+            ctl = (6,7)
+            self.pairAnnouncement()
+        elif param == 'Pair_Discovery': 
+            ctl = (6,7)
+            self.pairDiscovery()
+        # return openAddonSettings(ctl)
 
 
 if __name__ == '__main__': Multiroom(sys.argv).run()

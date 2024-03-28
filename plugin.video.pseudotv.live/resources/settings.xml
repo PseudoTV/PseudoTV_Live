@@ -834,7 +834,7 @@
 			<group id="2" label="30032">
 				<setting id="Resource_Logos" type="list[addon]" label="30027" help="">
 					<level>2</level>
-					<default></default>
+					<default>resource.images.pseudotv.logos</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -1010,6 +1010,24 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
+                <setting id="Network_Folder" type="string" label="30102" help="30012" parent="Client_Mode">
+					<level>1</level>
+					<default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
+					<constraints>
+						<sources>
+							<source>files</source>
+						</sources>
+						<writable>true</writable>
+					</constraints>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Client_Mode">2</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="path">
+						<heading>30012</heading>
+					</control>
+				</setting>
                 <setting id="Remote_URL" type="string" label="30101" help="" parent="Client_Mode">
 					<level>1</level>
 					<default/>
@@ -1029,22 +1047,59 @@
                         <close>true</close>
 					</control>
 				</setting>
-                <setting id="Network_Folder" type="string" label="30102" help="30012" parent="Client_Mode">
-					<level>1</level>
-					<default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
+                <setting id="Select_server" type="action" label="32048" help="33048" parent="Client_Mode">
+					<level>0</level>
+					<default/>
 					<constraints>
-						<sources>
-							<source>files</source>
-						</sources>
-						<writable>true</writable>
+						<allowempty>true</allowempty>
 					</constraints>
-					<dependencies>
+                    <dependencies>
                         <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">2</condition>
+                            <and>
+                                <condition on="property" name="InfoBool">!String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.SERVER_DISCOVERY))</condition>
+                                <condition operator="is" setting="Client_Mode">1</condition>
+                            </and>
 						</dependency>
 					</dependencies>
-					<control type="button" format="path">
-						<heading>30012</heading>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)</data>
+						<close>true</close>
+					</control>
+				</setting>
+                <setting id="Pair_Announcement" type="action" label="30129" help="33129" parent="Client_Mode">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Client_Mode">0</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Announcement)</data>
+						<close>true</close>
+					</control>
+				</setting>
+                <setting id="Pair_Discovery" type="action" label="30130" help="33130" parent="Client_Mode">
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <dependencies>
+						<dependency type="visible">
+                            <and>
+                                <condition operator="is" setting="Client_Mode">1</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Discovery)</data>
+						<close>true</close>
 					</control>
 				</setting>
 			</group>

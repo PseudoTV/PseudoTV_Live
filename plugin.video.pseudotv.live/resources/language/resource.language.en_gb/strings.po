@@ -422,11 +422,11 @@ msgid "Client Mode"
 msgstr ""
 
 msgctxt "#30101"
-msgid "Remote url"
+msgid "Remote Server"
 msgstr ""
 
 msgctxt "#30102"
-msgid "Network Folder"
+msgid "Centralized Folder"
 msgstr ""
 
 msgctxt "#30103"
@@ -533,6 +533,13 @@ msgctxt "#30128"
 msgid "Searching for %s logo"
 msgstr ""
 
+msgctxt "#30129"
+msgid "Start Server Announcement"
+msgstr ""
+
+msgctxt "#30130"
+msgid "Start Client Pairing"
+msgstr ""
 
 
 
@@ -1193,6 +1200,14 @@ msgctxt "#32161"
 msgid "[COLOR=yellow][B]- Create Path[/B][/COLOR]"
 msgstr ""
 
+msgctxt "#32162"
+msgid "Searching your network for %s Server\nTimeout in %s seconds."
+msgstr ""
+
+msgctxt "#32163"
+msgid "Announcing %s server!\n[B]%s[/B] on your client instance.\nTimeout in %s seconds, cancel when finished."
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1300,6 +1315,10 @@ msgctxt "#33046"
 msgid "Display emulated static between broadcasts for a retro experience."
 msgstr ""
 
+msgctxt "#33048"
+msgid "Select from a list of discovered servers."
+msgstr ""
+
 msgctxt "#33049"
 msgid "Prefer Kodi Library - Use less accurate runtimes from metadata providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see readme for details."
 msgstr ""
@@ -1377,7 +1396,7 @@ msgid "Only recommend you change port if a conflict exists."
 msgstr ""
 
 msgctxt "#33100"
-msgid "Denote this instance of PseudoTV Live as a client.\nRemote Path (Auto-Discover) | Network Folder configure under options 'Centralized file location'."
+msgid "Denote this instance of PseudoTV Live as a client.\nRemote Server | Centralized Folder."
 msgstr ""
 
 msgctxt "#33104"
@@ -1422,6 +1441,14 @@ msgstr ""
 
 msgctxt "#33121"
 msgid "Group TV shows in blocks of x. [0 Disabled, Two Shows Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and are not instantaneous."
+msgstr ""
+
+msgctxt "#33129"
+msgid "Bonjour Announcement over your local network"
+msgstr ""
+
+msgctxt "#33130"
+msgid "Detect Bonjour Announcement over your local network"
 msgstr ""
 
 msgctxt "#33149"

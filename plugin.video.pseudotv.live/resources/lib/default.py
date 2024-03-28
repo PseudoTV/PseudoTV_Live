@@ -24,14 +24,11 @@ from plugin    import Plugin
 def run(sysARG):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
     
+    mode      = (params.get("mode",'')                 or 'guide')
     name      = (unquoteString(params.get("name",''))  or None)
     title     = (unquoteString(params.get("title",'')) or None)
     chid      = (params.get("chid",'')                 or None)
-    url       = (params.get("url",'')                  or None)
     vid       = decodeString(params.get("vid",'')      or None)
-    start     = (params.get("start",'')                or None)
-    duration  = (params.get("duration",'')             or None)
-    mode      = (params.get("mode",'')                 or 'guide')
     radio     = (params.get("radio",'')                or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
     
@@ -57,6 +54,3 @@ def run(sysARG):
         threadit(Plugin(sysARG).playTV)(name,chid)
 
 if __name__ == '__main__': run(sys.argv)
-
-
-

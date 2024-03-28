@@ -24,7 +24,7 @@ from infotagger.listitem import ListItemInfoTag
 class Plugin:
     @contextmanager
     def preparingPlayback(self):
-        if self.playCHK(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
+        if self.playCheck(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
             PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'true')
             try: yield
             finally:
@@ -42,8 +42,8 @@ class Plugin:
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
         self.nowTime    = getUTCstamp()
 
-        try:    self.sysInfo  = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-        except: self.sysInfo  = {}
+        try:    self.sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+        except: self.sysInfo = {}
         
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
@@ -55,23 +55,11 @@ class Plugin:
                              "fitem"     : decodePlot(BUILTIN.getInfoLabel('Plot')),
                              "isPlaylist": bool(SETTINGS.getSettingInt('Playback_Method'))})
                              
-        if self.sysInfo.get('fitem',{}).get('citem'):
-            self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
-        else:
-            self.sysInfo["citem"] = {'id':self.sysInfo['chid']}
-            
-        try:
-            self.sysInfo['epoch']     = datetime.datetime.timestamp(strpTime(self.sysInfo['start'], DTJSONFORMAT))
-            self.sysInfo["starttime"] = datetime.datetime.fromtimestamp((datetime.datetime.timestamp(strpTime(self.sysInfo['start'], DTJSONFORMAT)) - getTimeoffset())).strftime(DTJSONFORMAT)
-            self.sysInfo['endtime']   = datetime.datetime.fromtimestamp(datetime.datetime.timestamp(strpTime(self.sysInfo['starttime'], DTJSONFORMAT) + datetime.timedelta(seconds=self.sysInfo['duration']))).strftime(DTJSONFORMAT)
-            self.sysInfo["seek"]      = (self.nowTime - datetime.datetime.timestamp(strpTime(self.sysInfo['starttime'], DTJSONFORMAT)))
-            self.sysInfo["now"]       = datetime.datetime.fromtimestamp(self.nowTime).strftime(DTJSONFORMAT)
-        except:
-            self.sysInfo['epoch']     = None
-            self.sysInfo["starttime"] = None
-            self.sysInfo["endtime"]   = None
-            self.sysInfo["seek"]      = None
-            self.sysInfo["now"]       = None
+        try:    self.sysInfo['seek'] = (float(self.sysInfo['start']) + self.sysInfo['duration']) - float(self.sysInfo['now'])
+        except: self.sysInfo['seek'] = None
+        
+        try:    self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
+        except: self.sysInfo["citem"] = {'id':self.sysInfo['chid']}
             
         self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
 
@@ -90,7 +78,7 @@ class Plugin:
 
     def playLive(self, name, chid, vid):
         with self.preparingPlayback():
-            self.log('playLive, id = %s, start = %s, seek = %s'%(chid,self.sysInfo['starttime'],self.sysInfo['seek']))
+            self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             if self.sysInfo['seek'] <= self.seekTOL: self.sysInfo['seek'] = 0
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
@@ -103,7 +91,7 @@ class Plugin:
 
     def playBroadcast(self, name, chid, vid):
         with self.preparingPlayback():
-            self.log('playBroadcast, id = %s, start = %s, seek = %s'%(chid,self.sysInfo['start'],self.sysInfo['seek']))
+            self.log('playBroadcast, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',dumpJSON(self.sysInfo))
@@ -152,7 +140,7 @@ class Plugin:
             
             for pos, nextitem in enumerate(nextitems):
                 fitem = decodePlot(nextitem.get('plot',{}))
-                if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')) or (nextitem.get('starttime') ==  self.sysInfo.get('starttime',random.random())):
+                if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')) or (nextitem.get('start') == datetime.datetime.fromtimestamp((datetime.datetime.timestamp(strpTime(self.sysInfo['start',random.random()], DTJSONFORMAT)) - getTimeoffset())).strftime(DTJSONFORMAT)):
                     del nextitems[0:pos] # start array at correct position
                     break
                    
@@ -197,8 +185,7 @@ class Plugin:
         def getCallback(chname, id, radio=False, isPlaylist=False):
             self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
             def _matchVFS():
-                pvrType = 'radio' if radio else 'tv'
-                pvrRoot = "pvr://channels/{dir}/".format(dir=pvrType)
+                pvrRoot = "pvr://channels/{dir}/".format(dir={True:'radio',False:'tv'}[radio])
                 results = jsonRPC.walkListDirectory(pvrRoot,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[0]
                 for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                     for result in results:
@@ -212,8 +199,7 @@ class Plugin:
                 self.log('getCallback: _matchVFS, no callback found!\nresults = %s'%(results))
                 
             def _matchJSON():
-                pvrType = 'radio' if radio else 'tv'
-                results = jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir=pvrType)}, cache=True).get('files',[])
+                results = jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={True:'radio',False:'tv'}[radio])}, cache=True).get('files',[])
                 for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                     for result in results:
                         if result.get('label','').lower().startswith(dir.lower()):
@@ -236,6 +222,16 @@ class Plugin:
             if callback is None: return DIALOG.okDialog(LANGUAGE(32133))
             return callback
              
+        def _match():
+            channels = jsonRPC.getPVRChannels(radio)
+            for channel in channels:
+                if channel.get('label').lower() == chname.lower():
+                    for key in ['broadcastnow', 'broadcastnext']:
+                        if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
+                            channel['broadcastnext'] = [channel.get('broadcastnext',{})]
+                            self.log('matchChannel, id = %s, found pvritem = %s'%(id,channel))
+                            return channel
+        
         def _extend(pvritem):
             channelItem = {}
             def _parseBroadcast(broadcast={}):
@@ -250,48 +246,34 @@ class Plugin:
             self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        def _match():
-            channels = jsonRPC.getPVRChannels(radio)
-            for channel in channels:
-                if channel.get('label').lower() == chname.lower():
-                    for key in ['broadcastnow', 'broadcastnext']:
-                        if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
-                            channel['broadcastnext'] = [channel.get('broadcastnext',{})]
-                            self.log('matchChannel, id = %s, found pvritem = %s'%(id,channel))
-                            return channel
-        
-        jsonRPC       = JSONRPC()
-        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
+        jsonRPC = JSONRPC()
+        cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
         if not cacheResponse:
             pvritem = _match()
-            jsonRPC = JSONRPC()
             if not pvritem: return self.playError()
             self.sysInfo['isPlaylist'] = isPlaylist
-            self.sysInfo['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
-            pvritem['citem']      = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
-            
-            try:    pvritem['epgurl'] = 'pvr://guide/%s/{starttime}.epg'%(re.compile('pvr://guide/(.*)/', re.IGNORECASE).search(self.sysInfo.get('path')).group(1))
-            except: pvritem['epgurl'] = self.sysInfo.get('path','')#"pvr://guide/1197/2022-02-14 18:22:24.epg"
+            self.sysInfo['callback'] = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
+            pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
             if isPlaylist and not radio: pvritem = _extend(pvritem)
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         del jsonRPC
         return cacheResponse
 
 
-    def playCHK(self, oldInfo={}):
-        self.log('playCHK, id = %s\n%s'%(oldInfo.get('chid','-1'),oldInfo))
-        if oldInfo.get('chid',random.random()) == self.sysInfo.get('chid') and oldInfo.get('starttime',random.random()) == self.sysInfo.get('starttime'):
+    def playCheck(self, oldInfo={}):
+        self.log('playCheck, id = %s\n%s'%(oldInfo.get('chid','-1'),oldInfo))
+        if oldInfo.get('chid',random.random()) == self.sysInfo.get('chid') and oldInfo.get('start',random.random()) == self.sysInfo.get('start'):
             self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1
             self.sysInfo['runtime']   = oldInfo.get('runtime',-1)
             if self.sysInfo['duration'] > self.sysInfo['runtime']:
-                self.log('playCHK, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                self.log('playCheck, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
                 # return False
             elif self.sysInfo['seek'] >= oldInfo['runtime']:
-                self.log('playCHK, failed! Seeking past duration.')
+                self.log('playCheck, failed! Seeking past duration.')
                 # return False
             elif self.sysInfo['seek'] == oldInfo['seek']:
-                self.log('playCHK, failed! Seeking to same position.')
+                self.log('playCheck, failed! Seeking to same position.')
                 # return False
         return True
         

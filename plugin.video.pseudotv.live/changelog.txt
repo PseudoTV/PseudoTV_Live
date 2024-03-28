@@ -1,3 +1,11 @@
+v.0.4.8
+-Notice The following steps are required!.
+ - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
+ - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
+ 
+-Refactored Announcements & Discoveries for server/client multi-room (W.I.P).
+-Refactored HTTP server
+
 v.0.4.7
 -Notice The following steps are required!.
  - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".

@@ -130,8 +130,8 @@ class Fillers:
                             dur = self.jsonRPC.getDuration(file, accurate=True)
                             if dur > 0:
                                 self.log('injectBCTs, adding ratings %s\n%s - %s'%(fileItem.get('title'),file,dur))
-                                nfileList.append(self.builder.buildCells(citem,dur,entries=1,info={'title':'%s (%s)'%(fileItem.get('title'),mpaa),'genre':['ratings'],'plot':RATING_DESC.get(mpaa,''),'path':file})[0])
-                # #pre roll - bumpers
+                                nfileList.append(self.builder.buildCells(citem,dur,entries=1,info={'title':fileItem.get('title'),'genre':['ratings'],'plot':'[B]%s (%s)[/B]\n%s'%(fileItem.get('title'),mpaa,RATING_DESC.get(mpaa,'')),'path':file})[0])
+                # #pre roll - bumpers 
                 # elif fileItem.get('type').startswith(tuple(TV_TYPES)):
                     # ...
                 nfileList.append(fileItem)

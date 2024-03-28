@@ -165,7 +165,7 @@ class Builder:
                     cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
                 return sorted(cacheResponse, key=lambda k: k['start'])
-            else: raise Exception('cacheResponse in-valid!\n%s'%(cacheResponse))
+            return cacheResponse
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
 
@@ -446,8 +446,9 @@ class Builder:
     def addChannelStation(self, citem):
         self.log('addChannelStation, id: %s'%(citem['id']))
         if citem['catchup']:
-            citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',duration='{duration}',start='{Y}-{m}-{d} {H}:{M}:{S}')
-            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',duration='{duration}',start='{Y}-{m}-{d} {H}:{M}:{S}')
+            citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
+            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
+            
         elif citem['radio']:
             citem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),radio=str(citem['radio']),vid='{catchup-id}')
         else:
