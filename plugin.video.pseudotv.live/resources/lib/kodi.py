@@ -819,7 +819,7 @@ class Dialog:
         return True
              
              
-    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=AUTOCLOSE_DELAY, multi=True, custom=False):
+    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
         if multi == True:
             if preselect is None: preselect = [-1]
             if custom: ... #todo domodel custom selectDialog for library select.

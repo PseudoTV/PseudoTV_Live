@@ -97,7 +97,7 @@ class Resources:
                     for path in paths:
                         for image in paths[path]:
                             name, ext = os.path.splitext(image)
-                            if self.matchName(chname, name):
+                            if self.matchName(chname, name, type):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
                                 if select: logos.append('%s/%s'%(path,image))
                                 else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
@@ -124,8 +124,8 @@ class Resources:
         return cacheResponse
         
         
-    def matchName(self, chname, name):
-        patterns = list(set([cleanChannelSuffix(chname, type),stripRegion(chname),splitYear(chname)[0],slugify(chname),slugify(stripRegion(chname))]))
+    def matchName(self, chname, name, type='Custom'):
+        patterns = list(set([getChannelSuffix(chname,type),cleanChannelSuffix(chname, type),stripRegion(chname),splitYear(chname)[0],slugify(chname),slugify(stripRegion(chname))]))
         patterns.insert(0,chname)#make sure unaltered channel name first to parse.
         for pattern in patterns:
             if name.lower() == pattern.lower():

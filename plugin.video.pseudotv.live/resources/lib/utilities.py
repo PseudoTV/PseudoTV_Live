@@ -69,7 +69,7 @@ class Utilities:
                                              xmltv=XMLTVFLEPATH,
                                              genre=GENREFLEPATH,
                                              logo=LOGO_LOC,
-                                             lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True,autoclose=90)
+                                             lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
         
 
@@ -110,7 +110,7 @@ class Utilities:
         fle = FileAccess.open(CHANGELOG_FLE, "r")
         txt = fle.read()
         fle.close()
-        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=30)
+        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
