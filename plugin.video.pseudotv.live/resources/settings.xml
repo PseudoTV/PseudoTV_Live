@@ -839,11 +839,6 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
                     <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                            </and>
-						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30067</heading>
@@ -857,13 +852,6 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-                    <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                            </and>
-						</dependency>
-					</dependencies>
 					<control type="button" format="addon">
 						<heading>30069</heading>
 						<show more="true" details="true">installed</show>
