@@ -108,7 +108,7 @@ class Tasks():
     def chkDebugging(self):
         self.log('chkDebugging')
         if SETTINGS.getSettingBool('Enable_Debugging'):
-            if DIALOG.yesnoDialog(LANGUAGE(32142)):
+            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=PROMPT_DELAY):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Enable_Debugging',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))

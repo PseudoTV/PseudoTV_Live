@@ -34,7 +34,6 @@ MAX_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Max_Days')    or "3"))
 EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 
 #file paths
-PLS_LOC             = os.path.join(USER_LOC,'playlists')
 LOGO_LOC            = os.path.join(USER_LOC,'logos')
 TEMP_LOC            = os.path.join(USER_LOC,'temp')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)

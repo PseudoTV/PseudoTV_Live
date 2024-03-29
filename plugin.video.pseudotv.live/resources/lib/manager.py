@@ -569,19 +569,6 @@ class Manager(xbmcgui.WindowXMLDialog):
 
         
     def validatePlaylist(self, path, channelData):
-        # if path.strip('/').endswith(('.xml','.xsp')):
-            # self.log('validatePlaylist, path = %s'%(path))
-        #cache playlists to PLS_LOC?
-        # if path.strip('/').endswith('.xml'):
-            # newPath = path.strip('/').replace('library://','special://userdata/library/')
-            # dir, file = (os.path.split(newPath))
-            # cachefile = os.path.join(dir.replace('special://userdata/library',PLS_LOC),file)
-        # elif path.endswith('.xsp'):
-            # cachefile = os.path.join(PLS_LOC,os.path.basename(path))
-        # else: 
-            # return path, channelData
-        # self.log('validatePlaylist, path = %s, cachefile = %s'%(path,cachefile))
-        # FileAccess.copy(path, cachefile): 
         return channelData
 
 

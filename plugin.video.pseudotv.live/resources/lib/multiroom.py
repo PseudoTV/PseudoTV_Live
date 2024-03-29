@@ -74,6 +74,7 @@ class Multiroom:
                             break
                     DIALOG.progressDialog(100,dia)
 
+                    # setSetting('Select_server',)
                     # servers = getDiscovery()
                     # if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
                         # DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
@@ -133,7 +134,7 @@ class Multiroom:
         elif param == 'Pair_Discovery': 
             ctl = (6,7)
             self.pairDiscovery()
-        # return openAddonSettings(ctl)
+        return openAddonSettings(ctl)
 
 
 if __name__ == '__main__': Multiroom(sys.argv).run()

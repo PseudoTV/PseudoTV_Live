@@ -291,9 +291,7 @@ class Overlay():
             intTime    = roundupDIV(showTime,interval)
             showOnNext = remaining <= showTime
             
-            if remaining < intTime:
-                return getOnNextInterval(interval + 1)
-
+            if remaining < intTime: return getOnNextInterval(interval + 1)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
             return showOnNext, intTime
 
@@ -313,12 +311,11 @@ class Overlay():
                     self._addControl(self._onNext)
                     self._onNext.setEnableCondition('[Player.Playing]')
                              
-                citem     = self.player.sysInfo.get('citem',{})
-                fitem     = self.player.sysInfo.get('fitem',{})
-                nitem     = self.player.sysInfo.get('nitem',{})
+                citem = self.player.sysInfo.get('citem',{})
+                fitem = self.player.sysInfo.get('fitem',{})
+                nitem = self.player.sysInfo.get('nitem',{})
                 
-                if self.player.sysInfo.get('isPlaylist',False):
-                    self.updateUpNext(fitem,nitem)
+                if self.player.sysInfo.get('isPlaylist',False): self.updateUpNext(fitem,nitem)
                 else:
                     chname    = citem.get('name',BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                     nowTitle  = fitem.get('label',BUILTIN.getInfoLabel('Title','VideoPlayer'))

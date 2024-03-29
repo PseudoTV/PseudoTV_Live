@@ -55,7 +55,7 @@ class Plugin:
                              "fitem"     : decodePlot(BUILTIN.getInfoLabel('Plot')),
                              "isPlaylist": bool(SETTINGS.getSettingInt('Playback_Method'))})
                              
-        try:    self.sysInfo['seek'] = (float(self.sysInfo['start']) + self.sysInfo['duration']) - float(self.sysInfo['now'])
+        try:    self.sysInfo['seek'] = float(self.sysInfo['now']) - float(self.sysInfo['start'])
         except: self.sysInfo['seek'] = None
         
         try:    self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
@@ -78,8 +78,8 @@ class Plugin:
 
     def playLive(self, name, chid, vid):
         with self.preparingPlayback():
+            # if self.sysInfo['seek'] <= self.seekTOL: self.sysInfo['seek'] = 0
             self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
-            if self.sysInfo['seek'] <= self.seekTOL: self.sysInfo['seek'] = 0
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',dumpJSON(self.sysInfo))

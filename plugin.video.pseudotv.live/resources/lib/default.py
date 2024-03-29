@@ -24,12 +24,12 @@ from plugin    import Plugin
 def run(sysARG):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
     
-    mode      = (params.get("mode",'')                 or 'guide')
-    name      = (unquoteString(params.get("name",''))  or None)
-    title     = (unquoteString(params.get("title",'')) or None)
-    chid      = (params.get("chid",'')                 or None)
-    vid       = decodeString(params.get("vid",'')      or None)
-    radio     = (params.get("radio",'')                or 'False').lower() == "true"
+    mode  = (params.get("mode",'')                 or 'guide')
+    name  = (unquoteString(params.get("name",''))  or None)
+    title = (unquoteString(params.get("title",'')) or None)
+    chid  = (params.get("chid",'')                 or None)
+    vid   = decodeString(params.get("vid",'')      or None)
+    radio = (params.get("radio",'')                or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
     
     if mode == 'guide':
