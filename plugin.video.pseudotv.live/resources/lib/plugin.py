@@ -107,7 +107,7 @@ class Plugin:
     def playRadio(self, name, chid, vid):
         self.log('playRadio, id = %s'%(chid))
         with self.preparingPlayback():
-            jsonRPC = JSONRPC()
+            jsonRPC = JSONRPC(self.cache)
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
             if len(fileList) > 0:
                 channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
@@ -136,7 +136,8 @@ class Plugin:
         found     = False
         listitems = [xbmcgui.ListItem()]
         fitem     = self.sysInfo.get('fitem')
-        pvritem   = self.matchChannel(name,chid,radio=False,isPlaylist=True)
+        with busy_dialog(), suspendActivity():
+            pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
         if pvritem.get('citem'): self.sysInfo['citem'].update(pvritem.pop('citem'))
         
         if pvritem:
@@ -193,6 +194,7 @@ class Plugin:
         
     
     @timeit
+    @cacheit(expiration=datetime.timedelta(seconds=15),json_data=True)
     def matchChannel(self, chname, id, radio=False, isPlaylist=False):
         self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def getCallback(chname, id, radio=False, isPlaylist=False):
@@ -261,7 +263,7 @@ class Plugin:
             self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        jsonRPC = JSONRPC()
+        jsonRPC = JSONRPC(self.cache)
         cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
         cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
         if not cacheResponse:

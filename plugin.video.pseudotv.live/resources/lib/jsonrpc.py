@@ -26,8 +26,9 @@ MIN_DIR_PARAMS = ["title", "showtitle", "episode", "season", "runtime", "duratio
                   "premiered", "playcount", "studio"]
 
 class JSONRPC:
-    def __init__(self):
-        self.cache       = Cache()
+    def __init__(self, cache=None):
+        if cache is None: self.cache = Cache()
+        else:             self.cache = cache
         self.videoParser = VideoParser()
 
 
@@ -268,12 +269,22 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
+    # @cacheit(expiration=datetime.timedelta(days=28))
+    def parseYoutubeRuntime(self, id):
+        runtime = 0
+        #todo user api keys.
+        # from youtube_requests import get_videos
+        # https://github.com/anxdpanic/plugin.video.youtube/blob/master/resources/lib/youtube_requests.py#L62
+        self.log("parseYoutubeRuntime, id = %s, runtime = %s" % (id, runtime))
+        return runtime
+
+
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
-        for runtime in [float(item.get('runtime' , '0') or '0'),
-                        float(item.get('duration', '0') or '0'),
-                        float((item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')]:
-            if runtime > 0: break
+        runtime = float((item.get('runtime') or item.get('duration') or (item.get('streamdetails', {}).get('video') or [{}])[0].get('duration','0')))
+        if not runtime and not item and path.startswith('plugin://plugin.video.youtube/play/?video_id='):
+            try:    runtime = self.parseYoutubeRuntime(path.split('?video_id=')[1])
+            except: runtime = 0
 
         if (runtime == 0 or accurate):
             if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
@@ -410,7 +421,7 @@ class JSONRPC:
             else:                        key = 'files'
         else:
             results = self.getLibrary(query['method'],param)
-            key     = query.get('key',list(results.keys())[0])
+            key = query.get('key',list(results.keys())[0])
             
         limits = results.get('limits', param["limits"])
         if (limits.get('end',0) >= limits.get('total',0) or limits.get('start',0) >= limits.get('total',0)):

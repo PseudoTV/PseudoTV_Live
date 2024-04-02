@@ -123,8 +123,8 @@ class Seasonal:
         dt = datetime.datetime.now()
         adjusted_dom = dt.day + dt.replace(day=1).weekday()
         week = (adjusted_dom/7.0)
-        if week > 4.0: return int(ceil(week))
-        else:          return int(floor(week))
+        if week < 1 or week > 4: return int(ceil(week))
+        else:                    return int(floor(week))
 
 
     def getCurrentHoliday(self):

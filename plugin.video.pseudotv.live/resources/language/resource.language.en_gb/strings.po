@@ -1289,7 +1289,7 @@ msgid "Pagination Limit, How many entries are requested and parsed per call. [25
 msgstr ""
 
 msgctxt "#33016"
-msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]\nGlobal Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nChanges will propagate slowly over time and are not instantaneous."
 msgstr ""
 
 msgctxt "#33023"

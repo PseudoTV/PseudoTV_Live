@@ -1,3 +1,6 @@
+v.0.4.9
+-Fixed seasons returning incorrect holiday for the first week of April.
+
 v.0.4.8
 -Notice The following steps are required!.
  - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".

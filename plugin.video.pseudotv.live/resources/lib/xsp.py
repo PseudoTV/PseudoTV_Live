@@ -23,7 +23,7 @@ from library          import Library
 
 class XSP:
     def __init__(self):
-        self.cache = Cache()
+        ...
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):

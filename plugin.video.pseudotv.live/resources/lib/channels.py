@@ -24,7 +24,6 @@ from globals    import *
 class Channels:
              
     def __init__(self):
-        self.cache       = Cache()
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())

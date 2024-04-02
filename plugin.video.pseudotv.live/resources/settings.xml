@@ -316,6 +316,9 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
                     <dependencies>
+						<dependency type="visible">
+							<condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
 						<heading>30067</heading>
@@ -775,7 +778,7 @@
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
-					<default>true</default>
+					<default>false</default>
 					<dependencies>
 						<dependency type="visible">
                             <and>

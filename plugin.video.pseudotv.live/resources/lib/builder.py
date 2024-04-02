@@ -297,7 +297,7 @@ class Builder:
     def buildList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, dirItem={}, query={}):
         self.log("buildList, id: %s, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist = [], [], []
-        items, limits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
+        items, olimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
         if items == self.loopback:# malformed jsonrpc queries will return root response, catch a re-parse and return.
             self.pErrors.append(LANGUAGE(32030))
             self.log("buildList, id: %s, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
@@ -309,7 +309,6 @@ class Builder:
             if self.service._interrupt() or self.service._suspend():
                 self.pErrors = [LANGUAGE(32160)]
                 self.completeBuild = False
-                limits["end"] = limits.get('end', 0) - page
                 self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits 
                 return [], []
             else:

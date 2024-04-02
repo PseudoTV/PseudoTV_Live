@@ -65,7 +65,7 @@ class Fillers:
                 # values['items'].update(self.getfilelist(ftype,id))
         
 
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
+    # @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def buildResource(self, ftype, addonid):
         self.log('buildResource, type = %s, addonid = %s'%(ftype, addonid))
         def _parse(addonid):
@@ -125,41 +125,35 @@ class Fillers:
 
 
     def getRating(self, keys=[]):
-        def _parse(key):
-            tmpLST.extend(self.bctTypes['ratings'].get('items',{}).get(key,[]))
         try:
             tmpLST = []
-            poolit(_parse)(keys)
+            for key in keys: tmpLST.extend(self.bctTypes['ratings'].get('items',{}).get(key,[]))
             return random.choice(tmpLST)
         except: return None, 0
         
 
     def getBumper(self, keys=['resources']):
-        def _parse(key):
-            tmpLST.extend(self.bctTypes['bumpers'].get('items',{}).get(key.lower(),[]))
         try:
             tmpLST = []
-            poolit(_parse)(keys)
+            for key in keys: tmpLST.extend(self.bctTypes['bumpers'].get('items',{}).get(key.lower(),[]))
             random.shuffle(tmpLST)
             return random.choice(tmpLST)
         except: return None, 0
     
 
     def getAdverts(self, keys=['resources'], count=1):
-        def _parse(key):
-            return self.bctTypes['adverts'].get('items',{}).get(key.lower(),[])
         try:
-            tmpLST = poolit(_parse)(keys)
+            tmpLST = []
+            for key in keys: tmpLST.extend(self.bctTypes['adverts'].get('items',{}).get(key.lower(),[]))
             random.shuffle(tmpLST)
             removeDUPDICT(random.choices(tmpLST,k=count))
         except: return [(None, 0)]
     
 
     def getTrailers(self, keys=['resources'], count=1):
-        def _parse(key):
-            return self.bctTypes['trailers'].get('items',{}).get(key.lower(),[])
         try:
-            tmpLST = poolit(_parse)(keys)
+            tmpLST = []
+            for key in keys: tmpLST.extend(self.bctTypes['trailers'].get('items',{}).get(key.lower(),[]))
             random.shuffle(tmpLST)
             removeDUPDICT(random.choices(tmpLST,k=count))
         except: return [(None, 0)]
@@ -167,21 +161,24 @@ class Fillers:
 
     def buildKodiTrailers(self, fileList):
         def _parse(fileItem):
-            if fileItem.get('trailer') and not fileItem.get('trailer','').startswith(tuple(VFS_TYPES)):
+            if fileItem.get('trailer') and not fileItem.get('trailer','').startswith(('http','upnp','ftp')):
                 dur = self.jsonRPC.getDuration(fileItem.get('trailer'), accurate=True)
-                if dur > 0: tmpLST.append((fileItem.get('trailer'), dur))
-        tmpLST = []
-        poolit(_parse)(fileList)
+                if dur > 0: (fileItem.get('trailer'), dur)
+                
+        tmpLST = poolit(_parse)(fileList)
         if len(tmpLST) > 0:
+            resLST = self.bctTypes['trailers']['items'].get('resources',[])
             tmpLST.reverse()
-            self.bctTypes['trailers']['items'].setdefault("resources",[]).extend(tmpLST)
-            self.bctTypes['trailers']['items']['resources'] = [t for t in (set(tuple(i) for i in self.bctTypes['trailers']['items']['resources']))]
-            print('buildKodiTrailers',self.bctTypes['trailers']['items']['resources'])
-
-
+            resLST.extend(tmpLST)
+            resLST = [t for t in (set(tuple(i) for i in resLST))]
+            resLST.shuffle()
+            self.bctTypes['trailers']['items']['resources'] = resLST
+            
+            
     def injectBCTs(self, citem, fileList):
         nfileList = []
         if self.bctTypes['trailers']['enabled'] and SETTINGS.getSettingInt('Include_Trailers') < 2:
+            if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='%s - Parsing Kodi for Trailers...'%(self.builder.pName),header='%s, %s'%(ADDON_NAME,self.builder.pMSG))                   
             self.buildKodiTrailers(fileList)
             
         for idx, fileItem in enumerate(fileList):
@@ -262,82 +259,3 @@ class Fillers:
                     pfileList.shuffle()
                     nfileList.extend(pfileList)
         return nfileList
-                    
-        # getSettingInt('Include_Trailers')
-        # HasAddon(plugin.video.imdb.trailers)
-        # HasContent(Movies)
-        # return fileList
-        # if not fileList: return fileList
-        # self.log("injectBCTs, channel = %s, fileList = %s"%(citem.get('id'),len(fileList)))
-        # ratings = self.buildResourceByType('ratings')
-        # bumpers = self.buildResourceByType('bumpers')
-        
-        # lstop     = 0
-        # nFileList = list()
-        # chname    = citem.get('name','')
-        # chcats    = citem.get('groups',[])
-        
-        # for idx,fileItem in enumerate(fileList):
-            # fileItem['originalfile'] = fileItem.get('file','')
-            # fileItem['start'] = fileItem['start'] if lstop == 0 else lstop
-            # fileItem['stop']  = fileItem['start'] + fileItem['duration']
-        
-            # paths  = [file]
-            # oPaths = paths.copy()
-            # stop   = fileItem['stop']
-            # end    = abs(roundTimeUp(stop) - stop) #auto mode
-            
-            # # print('duration',fileItem['duration'])
-            # # print('start',datetime.datetime.fromtimestamp(fileItem['start']))
-            # # print('stop',datetime.datetime.fromtimestamp(stop))
-            # # print('end',end)
-            
-            # if ratings and self.bctTypes['ratings'].get('enabled',True):
-                # mpaa = cleanMPAA(fileItem.get('mpaa',''))
-                # if self.builder.is3D(fileItem): mpaa += ' (3DSBS)'
-                # rating = ratings.get(mpaa.lower(), {})
-                # if rating:
-                    # paths.insert(0,rating.get('file'))
-                    # end -= rating.get('duration')
-                    # # print('end ratings', end)
-                    # # print('mpaa',mpaa)  
-                    # # print('rating',rating) 
-        
-            # if bumpers and self.bctTypes['bumpers'].get('enabled',True):
-                # bumper = random.choice(bumpers)
-                # paths.insert(0,bumper.get('file'))
-                # end -= bumper.get('duration')
-                # # print('end bumper', end)
-                # # print('chname',chname)
-                # # print('bumper',bumper)
-        
-        
-        
-        
-        
-        # return fileList
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#settings
-# Fillers_Ratings #0=disabled,1=auto,2=1 insert,3=2 insert, 4=3 insert, 5=4 insert.
-# Fillers_Bumpers
-# Fillers_Commercials
-# Fillers_Trailers
-
-# Resource_Ratings #ex resource.videos.trailers.sample
-# Resource_Bumpers #ex resource.videos.bumpers.pseudotv|resource.videos.bumpers.sample
-# Resource_Commericals
-# Resource_Trailers
