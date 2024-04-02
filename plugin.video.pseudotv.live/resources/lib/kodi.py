@@ -108,6 +108,18 @@ def getMD5(text,hash=0,hexit=True):
     if hexit: return hex(hash)[2:].upper().zfill(8)
     else:     return hash
 
+def convertString(data):
+    if isinstance(data, dict):
+        return dumpJSON(data)
+    elif isinstance(data, list):
+        return ', '.join(data)
+    elif isinstance(data, bytes):
+        return data.decode(DEFAULT_ENCODING)
+    elif not isinstance(data, str):
+        return str(data)
+    else:
+        return data
+             
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
@@ -119,18 +131,19 @@ class Settings:
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
 
+    def getRealSettings(self):
+        try:    return xbmcaddon.Addon(id=ADDON_ID)
+        except: return REAL_SETTINGS
+
+
     def updateSettings(self):
         self.log('updateSettings')
         #todo build json of third-party addon settings
         # self.pluginMeta.setdefault(addonID,{})['settings'] = [{'key':'value'}]
  
         
-    def getRealSettings(self):
-        try:    return xbmcaddon.Addon(id=ADDON_ID)
-        except: return REAL_SETTINGS
-
-
-    def openSettings(self):     
+    def openSettings(self):
+        self.log('openSettings')
         REAL_SETTINGS.openSettings()
     
     
@@ -138,7 +151,7 @@ class Settings:
     def _getSetting(self, func, key):
         try: 
             value = func(key)
-            self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
+            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((convertString(value)[:128]))))
             return value
         except Exception as e: 
             self.log("_getSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
@@ -203,7 +216,7 @@ class Settings:
     #SET
     def _setSetting(self, func, key, value):
         try:
-            self.log('%s, key = %s, value = %s'%(func.__name__,key,value))
+            self.log('%s, key = %s, value = %s'%(func.__name__,key,'%s...'%((convertString(value)[:128]))))
             return func(key, value)
         except Exception as e: 
             self.log("_setSetting, failed! %s - key = %s"%(e,key), xbmc.LOGERROR)
@@ -416,42 +429,53 @@ class Properties:
         log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def setInstanceID(self):
+        instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
+        if instanceID: self.clearTrash(instanceID)
+        self.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
+
+
     def getInstanceID(self):
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-        if not instanceID: self.setEXTProperty('%s.InstanceID'%(ADDON_ID),uuid.uuid4())
+        if not instanceID: self.setInstanceID()
         return self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
       
 
     def getKey(self, key, instanceID=True):
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
-            if instanceID: return '%s.%s.%s'%(ADDON_ID,key,getMD5(self.InstanceID))
+            if instanceID: return self.setTrash('%s.%s.%s'%(ADDON_ID,key,self.InstanceID))
             else:          return '%s.%s'%(ADDON_ID,key)
         return key
 
         
     #CLEAR
     def clearEXTProperty(self, key):
+        self.log('clearEXTProperty, id = %s, key = %s'%(10000,key))
         return xbmcgui.Window(10000).clearProperty(key)
         
         
     def clearProperties(self):
+        self.log('clearProperties')
         return self.window.clearProperties()
         
         
     def clearProperty(self, key):
-        return self.window.clearProperty(self.getKey(key))
+        key = self.getKey(key)
+        self.log('clearProperty, id = %s, key = %s'%(self.winID,key))
+        return self.window.clearProperty(key)
 
 
     #GET
     def getEXTProperty(self, key):
         value = xbmcgui.Window(10000).getProperty(key)
-        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,value))
+        self.log('getEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%(convertString(value)[:128])))
         return value
         
         
     def getProperty(self, key):
-        value = self.window.getProperty(self.getKey(key))
-        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,self.getKey(key),value))
+        key   = self.getKey(key)
+        value = self.window.getProperty(key)
+        self.log('getProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%(convertString(value)[:128])))
         return value
         
         
@@ -477,13 +501,13 @@ class Properties:
 
     #SET
     def setEXTProperty(self, key, value):
-        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,str(value)))
+        self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((convertString(value)[:128]))))
         return xbmcgui.Window(10000).setProperty(key,str(value))
         
         
     def setProperty(self, key, value: str) -> bool:
         key = self.getKey(key)
-        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,value))
+        self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((convertString(value)[:128]))))
         self.window.setProperty(key, str(value))
         return True
         
@@ -507,6 +531,19 @@ class Properties:
     def setPropertyFloat(self, key, value):
         return self.setProperty(key, float(value))
 
+    
+    def setTrash(self, key): #catalog instance properties that may become abandoned. 
+        tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
+        if key not in tmpDCT.setdefault(self.InstanceID,[]):
+            tmpDCT.setdefault(self.InstanceID,[]).append(key)
+        self.setEXTProperty('%s.TRASH'%(ADDON_ID),dumpJSON(tmpDCT))
+        return key
+
+        
+    def clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
+        tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
+        for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
+        
         
 class ListItems:
     def __init__(self):
@@ -910,7 +947,6 @@ class Dialog:
     def buildDXSP(self, params={}):
         # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
         from jsonrpc import JSONRPC
-        jsonRPC = JSONRPC()
         
         def type():
             enumLST = ['songs', 'albums', 'artists', 'movies', 'tvshows', 'episodes', 'musicvideos', 'mixed']
@@ -930,19 +966,19 @@ class Dialog:
             print('field',rules,params)
             params['type'] = type()
             if params['type'] == 'songs':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.Songs", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.Songs", type='items')
             elif params['type'] ==  'albums':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.Albums", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.Albums", type='items')
             elif params['type'] ==  'artists':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.Artists", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.Artists", type='items')
             elif params['type'] ==  'tvshows':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.TVShows", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.TVShows", type='items')
             elif params['type'] ==  'episodes':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.Episodes", type='items')
             elif params['type'] ==  'movies':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.Movies", type='items')
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.Movies", type='items')
             elif params['type'] == 'musicvideos':
-                enumLST = jsonRPC.getEnums("List.Filter.Fields.MusicVideos")
+                enumLST = JSONRPC().getEnums("List.Filter.Fields.MusicVideos")
             elif params['type'] == 'mixed':
                 enumLST = ['playlist', 'virtualfolder']
             else: return
@@ -955,7 +991,7 @@ class Dialog:
             
         def operator(rule): #rule = {"field":""}
             print('operator',rule,params)
-            enumLST = jsonRPC.getEnums("List.Filter.Operators")
+            enumLST = JSONRPC().getEnums("List.Filter.Operators")
             enumSEL = -1
             if rule["field"] != 'date':
                 if 'inthelast'    in enumLST: enumLST.remove('inthelast')

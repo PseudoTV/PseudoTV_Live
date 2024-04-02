@@ -126,7 +126,7 @@ msgid "Four Inserts"
 msgstr ""
 
 msgctxt "#30027"
-msgid "Logos"
+msgid "Logo Resource"
 msgstr ""
 
 msgctxt "#30028"
@@ -526,7 +526,7 @@ msgid "Kodi Trailers"
 msgstr ""
 
 msgctxt "#30127"
-msgid "Both Kodi/IMDB Trailers"
+msgid "Kodi/IMDB Trailers"
 msgstr ""
 
 msgctxt "#30128"
@@ -541,8 +541,25 @@ msgctxt "#30130"
 msgid "Start Client Pairing"
 msgstr ""
 
+msgctxt "#30131"
+msgid "Disable Trakt scrobbling during playback"
+msgstr ""
 
+msgctxt "#30132"
+msgid "Rollback watched playcount after playback"
+msgstr ""
 
+msgctxt "#30133"
+msgid "Player"
+msgstr ""
+
+msgctxt "#30134"
+msgid "Random Filler (Percentage)"
+msgstr ""
+
+msgctxt "#30135"
+msgid "Include"
+msgstr ""
 
 
 
@@ -705,7 +722,7 @@ msgid "%s settings updated."
 msgstr ""
 
 msgctxt "#32038"
-msgid "Something went wrong! wait while we try again... (%s)"
+msgid "Something went wrong! wait while we try again...\nPlayback Attempt (%s)"
 msgstr ""
 
 msgctxt "#32039"
@@ -1089,7 +1106,7 @@ msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR] Something went wrong, Please doubl
 msgstr ""
 
 msgctxt "#32134"
-msgid "Playback failed! This maybe because %s is building this channel.\nPlease check your channel configuration."
+msgid "Playback failed! This maybe because %s is building this channel.\nPlease check your channel settings."
 msgstr ""
 
 msgctxt "#32135"
@@ -1208,6 +1225,10 @@ msgctxt "#32163"
 msgid "Announcing %s server!\n[B]%s[/B] on your client instance.\nTimeout in %s seconds, cancel when finished."
 msgstr ""
 
+msgctxt "#32164"
+msgid "Can not locate broadcast!"
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1271,7 +1292,7 @@ msgctxt "#33016"
 msgid "[COLOR=red][B]Currently Unavailable (Coming Soon)![/B][/COLOR]\nGlobal Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details."
 msgstr ""
 
-msgctxt "#33022"
+msgctxt "#33023"
 msgid "Artwork changes will propagate slowly over time and are not instantaneous."
 msgstr ""
 
@@ -1451,6 +1472,18 @@ msgctxt "#33130"
 msgid "Detect Bonjour Announcement over your local network"
 msgstr ""
 
+msgctxt "#33131"
+msgid "Prevent Trakt scrobbling during PseudoTV usage."
+msgstr ""
+
+msgctxt "#33132"
+msgid "Restore the previous playcount and resume points at the end of playback. ie. Passive PseudoTV usage."
+msgstr ""
+
+msgctxt "#33134"
+msgid "Probability a non-channel specific i.e generic video will be injected when no match is found.\n[0% Disabled, 25% Default] [Lower == Less Probable]"
+msgstr ""
+
 msgctxt "#33149"
 msgid "Override Low-Power background pausing and performance throttling."
 msgstr ""
@@ -1462,3 +1495,7 @@ msgstr ""
 msgctxt "#33159"
 msgid "Force a complete rebuild of your Autotune library."
 msgstr ""
+
+msgctxt "#33160"
+msgid "Select one or more logo resource packs."
+msgstr "

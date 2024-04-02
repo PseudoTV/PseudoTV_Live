@@ -64,6 +64,7 @@ def killit(timeout=15.0, default={}):
                     try:    self.result = method(*args, **kwargs)
                     except: self.error  = sys.exc_info()[0]
             timer = waiter()
+            timer.daemon=True
             timer.start()
             timer.join(timeout)
             if timer.is_alive():
@@ -111,8 +112,7 @@ def poolit(method):
                 results = pool.executors(method, items, *args, **kwargs)
             else:
                 results = pool.generator(method, items, *args, **kwargs)
-        except Exception as e:
-            log('poolit, failed! %s'%(e), xbmc.LOGERROR)
+        except Exception as e: log('poolit, failed! %s'%(e), xbmc.LOGERROR)
         results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return list([_f for _f in results if _f])

@@ -104,6 +104,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.resources    = Resources(self.jsonRPC, self.cache)
                 
                 self.newChannel   = self.channels.getTemplate()
+                print('newChannel',self.newChannel)
                 self.channelList  = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
                 self.channelList.extend(self.channels.getAutotuned())
                 self.newChannels  = self.channelList.copy()

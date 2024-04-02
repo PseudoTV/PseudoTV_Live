@@ -19,7 +19,6 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-from jsonrpc    import JSONRPC
 from predefined import Predefined
 from resources  import Resources
 from channels   import Channels
@@ -28,6 +27,8 @@ from channels   import Channels
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
+    from jsonrpc import JSONRPC
+    jsonRPC  = JSONRPC()
     def _interrupt(self, wait=.001) -> bool: #break
         return MONITOR.waitForAbort(wait)
 
@@ -43,7 +44,7 @@ class Library:
         self.parserMSG    = ''
         self.parserDialog = None
         self.cache        = Cache()
-        self.jsonRPC      = JSONRPC()
+        self.jsonRPC      = service.jsonRPC
         self.predefined   = Predefined()
         self.channels     = Channels()
         self.resources    = Resources(self.jsonRPC,self.cache)

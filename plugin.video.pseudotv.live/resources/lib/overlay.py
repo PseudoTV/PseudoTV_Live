@@ -20,7 +20,6 @@
 
 # -*- coding: utf-8 -*-
 from globals   import *
-from jsonrpc   import JSONRPC
 from resources import Resources
 
 # class Video(xbmcgui.WindowXML):
@@ -95,7 +94,8 @@ class Overlay():
     showingOverlay = False
     controlManager = dict()
     
-    def __init__(self, player, runActions):
+    def __init__(self, jsonRPC, player, runActions):
+        self.jsonRPC    = jsonRPC
         self.player     = player
         self.runActions = runActions
         
@@ -260,11 +260,9 @@ class Overlay():
                 
                 if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
                 elif hasAddon('script.module.pil'):
-                    jsonRPC   = JSONRPC()
-                    resources = Resources(jsonRPC,jsonRPC.cache)
+                    resources = Resources(self.jsonRPC,self.jsonRPC.cache)
                     if resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
                     del resources
-                    del jsonRPC
                 
                 self.setVisible(self._channelBug,True)
                 self.setImage(self._channelBug,logo)
@@ -319,7 +317,7 @@ class Overlay():
                 else:
                     chname    = citem.get('name',BUILTIN.getInfoLabel('ChannelName','VideoPlayer'))
                     nowTitle  = fitem.get('label',BUILTIN.getInfoLabel('Title','VideoPlayer'))
-                    nextTitle = fitem.get('showlabel',BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
+                    nextTitle = nitem.get('showlabel',BUILTIN.getInfoLabel('NextTitle','VideoPlayer'))
                     
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in nowTitle else fitem.get('showlabel',nowTitle)
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
@@ -381,6 +379,4 @@ class Overlay():
                                                   "runtime"   :(nextItem.get("runtime"     ,"") or "")}}
             data.update(next_episode)
         except: pass
-        jsonRPC = JSONRPC()
-        jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))
-        del jsonRPC
+        self.jsonRPC.notifyAll(message='upnext_data', data=binascii.hexlify(json.dumps(data).encode('utf-8')).decode('utf-8'), sender='%s.SIGNAL'%(ADDON_ID))

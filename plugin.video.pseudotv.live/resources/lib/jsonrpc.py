@@ -39,8 +39,8 @@ class JSONRPC:
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
         if PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true':
             while not MONITOR.abortRequested():
-                if MONITOR.waitForAbort(0.001): break
-                elif not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
+                if not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
+                elif MONITOR.waitForAbort(0.001): break
         PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'true')
         try: yield
         finally:
@@ -57,7 +57,6 @@ class JSONRPC:
 
     def sendJSON(self, param, timeout=15): #todo dynamic timeout based on parmas and timeout history.
         with self.sendLocker():
-            self.log('sendJSON, timeout = %s'%(timeout))
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
@@ -75,8 +74,9 @@ class JSONRPC:
         queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
         params = queuePool.setdefault('params',[])
         params.append(param)
-        queuePool['params'] = setDictLST(params)
-        self.log("queueJSON, queueing = %s"%(len(queuePool['params'])))
+        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
+        queuePool['params'].reverse() #prioritize playcount rollback over duration amendments.
+        self.log("queueJSON, queueing = %s\n%s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
         
@@ -270,18 +270,19 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
-        duration = 0
-        for runtime in [int(item.get('runtime', '0') or '0'),int(item.get('duration', '0') or '0'),int((item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')]:
-            if runtime != 0: break
+        for runtime in [float(item.get('runtime' , '0') or '0'),
+                        float(item.get('duration', '0') or '0'),
+                        float((item.get('streamdetails', {}).get('video',[]) or [{}])[0].get('duration','') or '0')]:
+            if runtime > 0: break
 
         if (runtime == 0 or accurate):
             if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
+                duration = 0
                 if isStack(path):# handle "stacked" videos
                     paths = splitStacks(path)
                     for file in paths: 
                         duration += self.parseDuration(file)
-                else: 
-                    duration = self.parseDuration(path, item)
+                else: duration = self.parseDuration(path, item)
                 if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
         return runtime
@@ -309,20 +310,51 @@ class JSONRPC:
             runsafe = True
         self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
         ## save parsed duration to Kodi database, if enabled.
-        if save and runsafe and (item.get('id', -1) > 0): self.queDuration(item['type'], item.get('id', -1), duration)
+        if save and runsafe and item.get('type'): self.queDuration(item, duration)
         if runsafe: runtime = duration
         self.log("parseDuration, returning runtime = %s" % (runtime))
         return runtime
   
   
-    def queDuration(self, media, dbid, dur):
-        self.log('queDuration, media = %s, dbid = %s, dur = %s' % (media, dbid, dur))
-        param = {'movie'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid":dbid, "runtime":dur}},
-                 'episode'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid":dbid, "runtime":dur}},
-                 'musicvideo': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":dbid, "runtime":dur}},
-                 'song'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid":dbid, "runtime":dur}}}
-        self.queueJSON(param[media])
+    def queDuration(self, item, dur):
+        #overcome inconsistent keys from Kodis jsonRPC.
+        param = {'video'      : {},
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "runtime": dur}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "runtime": dur}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "runtime": dur}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "runtime": dur}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "runtime": dur}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "runtime": dur}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "runtime": dur}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "runtime": dur}}}
+        try:
+            params = param[item['type']]
+            if -1 in params: raise Exception('no dbid found')
+            elif params:
+                self.log('queDuration, media = %s, dur = %s' % (item['type'], dur))
+                self.queueJSON(params)
+        except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         
+        
+    def quePlaycount(self, item):
+        #overcome inconsistent keys from Kodis jsonRPC.
+        param = {'video'      : {},
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}}}
+        try:
+            params = param[item['type']]
+            if -1 in params: raise Exception('no dbid found')
+            elif params: 
+                self.log('quePlaycount, media = %s, count = %s' % (item['type'],item.get('playcount',0)))
+                self.queueJSON(params)
+        except Exception as e: self.log("quePlaycount, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
+
 
     def requestList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, query={}):
          # {"method": "VideoLibrary.GetEpisodes",

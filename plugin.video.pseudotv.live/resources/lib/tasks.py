@@ -20,7 +20,6 @@
 
 from globals    import *
 from library    import Library
-from jsonrpc    import JSONRPC
 from autotune   import Autotune
 from builder    import Builder
 from backup     import Backup
@@ -29,12 +28,11 @@ from manager    import Manager
 from server     import HTTP
 
 class Tasks():
-    queueRunning      = False
-    backgroundRunning = False
+    queue = PriorityQueue()
     
-    
-    def __init__(self):
+    def __init__(self, jsonRPC=None):
         self.log('__init__')
+        self.jsonRPC = jsonRPC
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -55,6 +53,28 @@ class Tasks():
         self.httpServer = HTTP(self.myService.monitor)
         
     
+    def _queue(self):
+        try:
+            priority, randomheap, package = self.queue.get(block=False)
+            try:
+                func, args, kwargs = package
+                self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
+                func(*args,**kwargs)
+            except Exception as e:
+                self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
+        except Empty: self.log("_queue, empty!")
+
+
+    def _que(self, func, priority=-1, *args, **kwargs):
+        try:  # priority -1 autostack, 1 Highest, 5 Lowest
+            if priority == -1: priority = self.queue.qsize() + 1
+            self.queue.put((priority, random.random(), (func, args, kwargs)), block=False)
+            self.log('_que, func = %s, args = %s, kwargs = %s' % (func.__name__, args, kwargs))
+        except TypeError: pass
+        except Exception as e:
+            self.log("_que, failed! %s" % (e), xbmc.LOGERROR)
+
+
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
@@ -71,25 +91,25 @@ class Tasks():
         
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=30):
-            self.myService._que(self._chkQueTimer,1)
+            self._que(self._chkQueTimer)
         
         
     def _chkQueTimer(self):
         self.log('chkQueTimer')
         if self.chkUpdateTime('chkHTTP',runEvery=900):
-            self.myService._que(self.chkHTTP,1)
+            self._que(self.chkHTTP)
         if self.chkUpdateTime('chkFiles',runEvery=600):
-            self.myService._que(self.chkFiles,1)
+            self._que(self.chkFiles)
         if self.chkUpdateTime('chkPVRSettings',runEvery=(MAX_GUIDEDAYS*3600)):
-            self.myService._que(self.chkPVRSettings,1)
+            self._que(self.chkPVRSettings)
         if self.chkUpdateTime('chkRecommended',runEvery=900):
-            self.myService._que(self.chkRecommended,2)
+            self._que(self.chkRecommended)
         if self.chkUpdateTime('chkLibrary',runEvery=(MAX_GUIDEDAYS*3600)):
-            self.myService._que(self.chkLibrary,2)
+            self._que(self.chkLibrary)
         if self.chkUpdateTime('chkChannels',runEvery=(MAX_GUIDEDAYS*3600)):
-            self.myService._que(self.chkChannels,3)
+            self._que(self.chkChannels)
         if self.chkUpdateTime('chkJSONQUE',runEvery=600):
-            self.myService._que(self.chkJSONQUE,4)
+            self._que(self.chkJSONQUE)
 
               
     def chkWelcome(self):
@@ -108,7 +128,7 @@ class Tasks():
     def chkDebugging(self):
         self.log('chkDebugging')
         if SETTINGS.getSettingBool('Enable_Debugging'):
-            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=PROMPT_DELAY):
+            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
                 self.log('_chkDebugging, disabling debugging.')
                 SETTINGS.setSettingBool('Enable_Debugging',False)
                 DIALOG.notificationDialog(LANGUAGE(321423))
@@ -139,15 +159,13 @@ class Tasks():
         try:
             if isClient(): return
             with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
-                jsonRPC = JSONRPC()
-                if (jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
+                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
                     SETTINGS.setSettingInt('Min_Days',min)
                     
-                if (jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
+                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
                     SETTINGS.setSettingInt('Max_Days',max)
 
-                PROPERTIES.setPropertyBool('hasPVRSource',jsonRPC.hasPVRSource())
-                del jsonRPC
+                PROPERTIES.setPropertyBool('hasPVRSource',self.jsonRPC.hasPVRSource())
         except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
          
 
@@ -157,7 +175,7 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary()
             del library
-            if not complete: self.myService._que(self.chkLibrary,2)
+            if not complete: self._que(self.chkLibrary,2)
             elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
@@ -182,7 +200,7 @@ class Tasks():
             if complete:
                 setFirstrun(state=True) #set init. boot status to true.
                 self.myService.currentChannels = list(channels)
-            else: self.myService._que(self.chkChannels,3)
+            else: self._que(self.chkChannels,3)
         except Exception as e: self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
                
@@ -190,35 +208,33 @@ class Tasks():
         self.log('_chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun() and not isClient():
-            if not (FileAccess.exists(LIBRARYFLEPATH)): self.myService._que(self.chkLibrary,2)
+            if not (FileAccess.exists(LIBRARYFLEPATH)): self._que(self.chkLibrary,2)
             if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                self.myService._que(self.chkChannels,3)
+                self._que(self.chkChannels,1)
 
 
     def chkJSONQUE(self):
-        if not self.queueRunning:
-            threadit(self.runJSON)
+        if not isRunning('runJSONQUE'):
+            timerit(self.runJSONQUE)(0.5)
 
 
-    def runJSON(self):
-        #Only run after idle for 2mins to reduce system impact. Check interval every 15mins, run in chunks set by PAGE_LIMIT.
-        self.queueRunning = True
-        queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
-        params = queuePool.get('params',[])
-        for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-            if self.myService._interrupt():
-                self.log('runJSON, _interrupt')
-                break
-            elif not self.myService.isIdle or self.myService.player.isPlaying():
-                self.log('runJSON, waiting for idle...')
-                break
-            elif len(params) > 0:
-                self.myService._que(JSONRPC().sendJSON,5,params.pop(0))
-            queuePool['params'] = setDictLST(params)
-            self.log('runJSON, remaining = %s'%(len(queuePool['params'])))
-            SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
-        self.queueRunning = False
-
+    def runJSONQUE(self):
+        with setRunning('runJSONQUE'):
+            queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
+            params = queuePool.get('params',[])
+            for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
+                if self.myService._interrupt() or self.myService._suspend():
+                    self.log('runJSONQUE, _interrupt or _suspend, cancelling.')
+                    break
+                elif self.myService._playing():
+                    self.log('runJSONQUE, playback detected, cancelling.')
+                    break
+                elif len(params) > 0:
+                    self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
+                queuePool['params'] = setDictLST(params)
+                self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+        
 
     def runAutoTune(self):
         try:
@@ -247,7 +263,7 @@ class Tasks():
             nChannels = self.getChannels()
             if channels != nChannels:
                 self.log('chkChannelChange, resetting chkChannels')
-                self.myService._que(self.chkChannels,3)
+                self._que(self.chkChannels,2)
                 return nChannels
             return channels
 
@@ -268,7 +284,7 @@ class Tasks():
                 if nSettings.get(setting) != value and actions.get(setting):
                     with sudo_dialog(LANGUAGE(32157)):
                         self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                        self.myService._que(actions[setting].get('func'),1,*actions[setting].get('args',()),**actions[setting].get('kwargs',{}))
+                        self._que(actions[setting].get('func'),-1,*actions[setting].get('args',()),**actions[setting].get('kwargs',{}))
             return nSettings
 
 

@@ -158,9 +158,7 @@ class Seasonal:
                 holiday.pop("query")
                 item["holiday"] = holiday
                 item_sort = SORT.copy()
-                if param.get('sort'):
-                    item_sort.update(param.pop("sort"))
-                item["sort"] = item_sort
-                if param.get('filter'):
-                    item["filter"] = param.pop("filter")
+                if param.get("sort"): item_sort.update(param.get("sort"))
+                item["sort"]   = item_sort
+                if param.get("filter"): item["filter"] = param.get("filter")
                 yield item

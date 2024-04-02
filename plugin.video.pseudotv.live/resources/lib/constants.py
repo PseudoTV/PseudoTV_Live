@@ -106,7 +106,7 @@ IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
 MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
 SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
-CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache') #default User_Folder path
+CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -135,7 +135,8 @@ NOTE_WAV            = os.path.join(SFX_LOC,'notify.wav')
 
 #remotes
 IMPORT_ASSET        = os.path.join(ADDON_PATH,'remotes','asset.json')
-RULEFLE_DEFAULT     = os.path.join(ADDON_PATH,'remotes','rule.json')
+RULEFLE_ITEM        = os.path.join(ADDON_PATH,'remotes','rule.json')
+CHANNEL_ITEM        = os.path.join(ADDON_PATH,'remotes','channel.json')
 M3UFLE_DEFAULT      = os.path.join(ADDON_PATH,'remotes','m3u.json')
 GROUPFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes','groups.xml')
 LIBRARYFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',LIBRARYFLE)

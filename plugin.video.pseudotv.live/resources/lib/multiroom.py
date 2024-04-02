@@ -83,9 +83,6 @@ class Multiroom:
                     # SETTINGS.chkDiscovery(servers)
 
 
-    
-
-
     def chkDiscovery(self, servers, forced=False):
         current_server = self.getSetting('Remote_URL')
         if (not current_server or forced) and len(list(servers.keys())) == 1:

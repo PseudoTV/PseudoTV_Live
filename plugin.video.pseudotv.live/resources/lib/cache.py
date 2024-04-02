@@ -43,8 +43,8 @@ class Cache:
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
         if xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
             while not xbmc.Monitor().abortRequested():
-                if xbmc.Monitor().waitForAbort(0.001): break
-                elif not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
+                if not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
+                elif xbmc.Monitor().waitForAbort(0.001): break
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
         try: yield
         finally:
@@ -60,18 +60,21 @@ class Cache:
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def set(self, name, data, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
-        if data is not None or not DEBUG_CACHE:
+    def getname(self, name):
+        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
+        return name.lower()
+        
+        
+    def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
+        if value is not None or not DEBUG_CACHE:
             with self.cacheLocker():
-                self.log('set, name = %s, checksum = %s'%(self.getname(name),checksum))
-                self.cache.set(self.getname(name),data,checksum,expiration,json_data)
-        return data
+                self.cache.set(self.getname(name),value,checksum,expiration,json_data)
+        return value
         
     
     def get(self, name, checksum=ADDON_VERSION, json_data=False, default=None):
         if not DEBUG_CACHE:
             with self.cacheLocker():
-                self.log('get, name = %s, checksum = %s, default = %s'%(self.getname(name),checksum,default))
                 return (self.cache.get(self.getname(name),checksum,json_data) or default)
         return default
         
@@ -91,7 +94,3 @@ class Cache:
         finally:
             del connection
             del sqlite3
-
-    def getname(self, name):
-        if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
-        return name.lower()

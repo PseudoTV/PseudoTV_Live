@@ -274,7 +274,7 @@ class FileLock(object):
         if not FileAccess.exists(lockpath):
             if FileAccess.makedirs(lockpath):
                 return lockpath
-            else:
+            else:#fallback to local folder.
                 #todo log error with lock path
                 lockpath = os.path.join(SETTINGS_LOC,'cache')
                 if not FileAccess.exists(lockpath):

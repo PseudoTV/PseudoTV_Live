@@ -22,7 +22,6 @@ from globals    import *
 from channels   import Channels
 from rules      import RulesList
 from xmltvs     import XMLTVS
-from jsonrpc    import JSONRPC
 from xsp        import XSP
 from m3u        import M3U
 from fillers    import Fillers
@@ -54,16 +53,16 @@ class Builder:
         self.limits           = {} #{"end":0,"start":0,"total":0}
 
         self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
-        self.srcRatings       = {"RESC":SETTINGS.getSetting('Resource_Ratings').split('|')}
+        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|')}
         
         self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
-        self.srcBumpers       = {"PATH":[SETTINGS.getSetting('Resource_Bumpers')]}
+        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|')}
         
         self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
-        self.srcAdverts       = {"PATH":[SETTINGS.getSetting('Resource_Commericals')]}
+        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|')}
         
         self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
-        self.srcTrailer       = {"PATH":[SETTINGS.getSettingInt('Resource_Trailers')]}
+        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|')}
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
@@ -75,10 +74,9 @@ class Builder:
         self.rules            = RulesList(self.channels.getChannels())
         self.runActions       = self.rules.runActions
         self.xmltv            = XMLTVS()
-        self.jsonRPC          = JSONRPC()
+        self.jsonRPC          = service.jsonRPC
         self.xsp              = XSP()
         self.m3u              = M3U()
-        self.fillers          = Fillers(self)
         self.resources        = Resources(self.jsonRPC,self.cache)
            
 
@@ -162,7 +160,7 @@ class Builder:
             
             if cacheResponse:
                 if self.fillBCTs and not radio:
-                    cacheResponse = self.fillers.injectBCTs(citem, cacheResponse)
+                    cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
                 return sorted(cacheResponse, key=lambda k: k['start'])
             return cacheResponse

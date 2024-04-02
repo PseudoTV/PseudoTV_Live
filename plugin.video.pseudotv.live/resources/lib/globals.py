@@ -90,7 +90,6 @@ def slugify(s, lowercase=False):
   s = re.sub(r'^-+|-+$', '', s)
   return s
         
-        
 def stripNumber(s):
     return re.sub(r'\d+','',s)
     
@@ -100,7 +99,10 @@ def stripRegion(s):
         if match.group(1): return match.group(1)
     except: pass
     return s
-
+    
+def chanceBool(percent=25):
+    return random.randrange(100) < percent
+    
 def unquoteString(text):
     return urllib.parse.unquote(text)
     
@@ -148,7 +150,7 @@ def setURL(url, file):
     except Exception as e: 
         log("saveURL, failed! %s"%e, xbmc.LOGERROR)
 
-def removeDUPDICT(d):
+def removeDUPDICT(l):
     return [dict(t) for t in {tuple(d.items()) for d in l}]
 
 def diffLSTDICT(old, new):
@@ -158,7 +160,9 @@ def diffLSTDICT(old, new):
     return setDictLST([loadJSON(e) for e in sDIFF])
 
 def setInstanceID():
-    PROPERTIES.setEXTProperty('%s.InstanceID'%(ADDON_ID),uuid.uuid4())
+    instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
+    if instanceID: PROPERTIES.clearTrash(instanceID)
+    PROPERTIES.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
 
 def getInstanceID():
     instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
@@ -281,6 +285,12 @@ def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
         
+def roundRuntimeUP(runtime):
+    runtime = datetime.datetime.fromtimestamp(runtime)
+    next_half_hour = runtime.replace(minute=0, second=0) + datetime.timedelta(minutes=30)
+    if next_half_hour < runtime: next_half_hour += datetime.timedelta(days=1)
+    return (next_half_hour - runtime).total_seconds()
+    
 def roundTimeDown(dt, offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(dt)
     delta = datetime.timedelta(minutes=offset)
@@ -499,6 +509,12 @@ def getDiscovery():
 
 def setDiscovery(servers={}):
     return PROPERTIES.setEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID),dumpJSON(servers))
+
+def disableTrakt():
+    PROPERTIES.setEXTProperty('script.trakt.paused','true')
+
+def clearTrakt():
+    PROPERTIES.clearEXTProperty('script.trakt.paused')
 
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):

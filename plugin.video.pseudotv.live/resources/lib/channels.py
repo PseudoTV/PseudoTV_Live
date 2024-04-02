@@ -19,13 +19,14 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
-
+#todo create dataclasses for all jsons
+# https://pypi.org/project/dataclasses-json/
 class Channels:
              
     def __init__(self):
         self.cache       = Cache()
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
-        self.channelTEMP = self.channelDATA.get('channels',[]).pop(0)
+        self.channelTEMP = getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
         self.setChannels()
         

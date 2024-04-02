@@ -4,7 +4,12 @@ v.0.4.8
  - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
  
 -Refactored Announcements & Discoveries for server/client multi-room (W.I.P).
--Refactored HTTP server
+-Refactored HTTP server.
+-Added Disable Trakt scrobbling during playback to global options.
+-Added Rollback watched playcount & resume points to global options.
+-Fixed TV bumpers and resources (W.I.P); See readme for details.
+-Added TV adverts and resources (W.I.P); See readme for details.
+-Added Trailers and resources (W.I.P); See readme for details.
 
 v.0.4.7
 -Notice The following steps are required!.

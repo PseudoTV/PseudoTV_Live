@@ -38,9 +38,9 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 ------------
 
 # Features:
-- "Autotuned" Channels based on your Kodi library; categorized by: `"TV Networks", "TV Shows", "TV Genres", "Movie Genres", "Movie Studios", "Mixed Genres", "Playlists", "Music Genres"`
+- "Autotuned" Channels based on your Kodi library; categorized by: `"TV Networks", "TV Shows", "TV Genres", "Movie Genres", "Movie Studios", "Mixed Genres", "Playlists", "Music Genres", "Mixed"`
 
-- Automatic Channel logos; sourced from Kodi resource packs.
+- Automatic Channel logos, Rating, bumpers; sourced from Kodi resource packs.
 
 - Optional video overlay to display channel bug and other informative information.
 
@@ -62,13 +62,15 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 - Option to save "accurate" (Parsed) duration meta to your Kodi database.
 
+- Option to disable Trakt scrobbling and rollback media playcount and resume points for passive viewing.
+
 - "on the fly" channel creation, with automated background building.
 
 - Ease of use; User Interface provided by Kodi PVR frontend.
 
 - Music Genre PVR "Radio" Channels.
 
-- Multi-Room channel configurations w/Automatic client detection.
+- Multi-Room channel configurations w/Client pairing via bonjour network announcement.
 
 - Your choice of "Playback Methods". See post below for details.
 
@@ -80,28 +82,20 @@ PseudoTV Live transforms your Kodi Library and Sources (Plugins, UPnP, etc...) i
 
 - "Recommended Channels" & "Recommended Services" Plugins preconfigured for easy import into PseudoTV Live.
 
+- "Add to PseudoTV Live" Content option allows quick channel creation from any Kodi source.
+
 - Much more...
 
 ------------
 
-# Supported Plugins:
+# Supported Plugins: (Temporarily unavailable)
 *All plugins are supported by PseudoTV Live through the channel manager. The list below contains configuration free channels.
 
 [PlutoTV](https://forum.kodi.tv/showthread.php?tid=315513)
 
 [ChannelsDVR](https://forum.kodi.tv/showthread.php?tid=334947)
 
-[Locast](https://forum.kodi.tv/showthread.php?tid=357406)
-
 [HDhomerun Simple](https://forum.kodi.tv/showthread.php?tid=327117)
-
-[AiryTV](https://forum.kodi.tv/showthread.php?tid=361486)
-
-[Discovery+](https://forum.kodi.tv/showthread.php?tid=340055)
-
-[Crackle](https://forum.kodi.tv/showthread.php?tid=)
-
-[TubiTV](https://forum.kodi.tv/showthread.php?tid=)
 
 ------------
 
@@ -136,14 +130,13 @@ Adjusting seek threshold(percentage). threshold to which the current content can
 
 - In-order to reduce parsing times when using "Prefer File Metadata" PseudoTV Live can store the new accurate duration meta to the Kodi library, there are no downsides. If you notice performance penalties when enabled, disable it... There is a fallback 28 day cache to avoid unnecessary file parsing. 
 
-## Recommended Services:
+## Recommended Services: (Temporarily unavailable)
 
 Recommended Services are considered "third-party" and are not treated as "PseudoTV" channels. Channel configurations, channel numbering, onscreen overlays are all disabled. Imports are 1:1 m3u/xmltv imports with the exception of channel numbers which maybe altered as described below.
 
 ## Options:
     
 - Centralized file location: Location to store PseudoTV Live M3U/XMLTV and other shared resources. ie. Playlists, Nodes and Channel Logos.
-
     
 ------------
 
@@ -182,9 +175,9 @@ For "Multi-Room", Select an instance of Kodi/PseudoTV Live that will act as your
 
 Enable under "Multi-Room", select between two options.
 
-	1 Remote Path - Use a remote url hosted by your server instance which is auto-detected. *http://localhost:50001/pseudotv.m3u **http://localhost:50001/pseudotv.xml ***http://localhost:50001/genres.xml
+	1 Remote URL - Use a remote url hosted by your server instance which can be selected in settings. *http://localhost:50001/pseudotv.m3u **http://localhost:50001/pseudotv.xml ***http://localhost:50001/genres.xml
 
-	1 Network Path - Select a shared network path same as configure on the server instance.
+	1 Network Folder - Select a shared network path same as configure on the server instance.
 
 ## - Channel Ordering (Numbering):
 
@@ -209,7 +202,7 @@ Each import is limited to 9999 (assuming each channel is an interger. Sub-Number
 
 #### - IPTV Simple Settings:
 
-"only number by order" must be disbled if you would like to respect the channel numbers assigned in PseudoTV Live.
+"only number by order" must be disabled if you would like to respect the channel numbers assigned in PseudoTV Live.
 *NOTE: PseudoTV Live automatically applies the optimal settings to IPTV Simple in-order to maximize the user experience.
 
 #### - Kodi PVR & LiveTV Settings:
@@ -230,6 +223,8 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 ------------
 
 # FYI & Known Issues:
+
+- .mp4 files are not recommend there is a high probability PseudoTV Live will not properly parse its runtime.
 
 - If you experience poor performance using PseudoTV Live; Try disabling "Accurate Duration" parsing, and setting "Playback Method" to playlists. 
   It is recommend on low power devices like AndroidTV/AppleTV to outsource channel building to a "server" instance of Kodi running on a PC; then configure all other Kodi instances as a client.

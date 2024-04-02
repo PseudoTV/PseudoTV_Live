@@ -21,6 +21,7 @@ from globals    import *
 from overlay    import Overlay, Background
 from rules      import RulesList
 from tasks      import Tasks
+from jsonrpc    import JSONRPC
 
 class Player(xbmc.Player):
     sysInfo      = {}
@@ -35,6 +36,8 @@ class Player(xbmc.Player):
     def __init__(self):
         self.log('__init__')
         xbmc.Player.__init__(self)
+        self.disableTrakt = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
+        self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
         
         """ 
         Player() Trigger Order
@@ -150,7 +153,7 @@ class Player(xbmc.Player):
         self.log('_onPlay')
         self.toggleBackground(False)
         BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-        
+        if self.disableTrakt: disableTrakt()
         self.sysInfo = self.getPlayerSysInfo()
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
@@ -160,7 +163,9 @@ class Player(xbmc.Player):
     def _onChange(self):
         self.log('_onChange')
         try:
+            clearTrakt()
             self.toggleBackground(True)
+            if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.jsonRPC.quePlaycount(self.sysInfo['fitem'])
             if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
                 broadcastnext = self.sysInfo['pvritem']['broadcastnext']
                 self.sysInfo['pvritem']['broadcastnow']  = broadcastnext.pop(0)
@@ -176,6 +181,7 @@ class Player(xbmc.Player):
         
     def _onStop(self):
         self.log('_onStop')
+        clearTrakt()
         self.toggleBackground(False)
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
@@ -192,8 +198,7 @@ class Player(xbmc.Player):
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, runActions=self.runActions)
             self.background.show()
         elif not state and hasattr(self.background, 'close'):
-            self.background.close()
-            self.background = None
+            self.background = self.background.close()
             if self.isPlaying():
                 BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
@@ -243,7 +248,7 @@ class Monitor(xbmc.Monitor):
         if state and self.overlay is None:
             conditions = self.enableOverlay & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if conditions:
-                self.overlay = Overlay(player=self.myService.player, runActions=self.myService.player.runActions)
+                self.overlay = Overlay(jsonRPC=self.myService.jsonRPC,player=self.myService.player, runActions=self.myService.player.runActions)
                 self.overlay.open()
         elif not state and hasattr(self.overlay, 'close'):
             self.overlay.close()
@@ -296,7 +301,7 @@ class Monitor(xbmc.Monitor):
         
     def onSettingsChangedTimer(self):
         self.log('onSettingsChangedTimer')
-        self.myService._que(self.myService.monitor._onSettingsChanged,1)
+        self.tasks._que(self.myService.monitor._onSettingsChanged,1)
                 
                 
     def _onSettingsChanged(self):
@@ -310,10 +315,10 @@ class Service():
     currentChannels = []
     currentSettings = []
     
-    queue    = PriorityQueue()
+    jsonRPC  = JSONRPC()
     player   = Player()
     monitor  = Monitor()
-    tasks    = Tasks()
+    tasks    = Tasks(jsonRPC)
     
     def __init__(self):
         self.log('__init__')
@@ -346,39 +351,20 @@ class Service():
     
          
     def _run(self):
-        self.monitor.chkIdle()
+        with setRunning('_run'):
+            self.monitor.chkIdle()
    
-        
+   
     def _tasks(self):
-        self.tasks.chkQueTimer()
-        self._queue()
+        with setRunning('_tasks'):
+            self.tasks.chkQueTimer()
+            self.tasks._queue()
         
         
-    def _queue(self):
-        try:
-            priority, randomheap, package = self.queue.get(block=False)
-            try:
-                func, args, kwargs = package
-                self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                func(*args,**kwargs)
-            except Exception as e:
-                self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
-        except Empty: self.log("_queue, empty!")
-
-
-    def _que(self, func, priority=3, *args, **kwargs):
-        try:  # priority 1 Highest, 5 Lowest
-            self.queue.put((self.queue.qsize()+priority, random.random(), (func, args, kwargs)), block=False)
-            self.log('_que, func = %s, args = %s, kwargs = %s' % (func.__name__, args, kwargs))
-        except TypeError: pass
-        except Exception as e:
-            self.log("_que, failed! %s" % (e), xbmc.LOGERROR)
-
-
     def _initialize(self):
         self.log('_initialize')
         if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
-        self.currentSettings = dict(SETTINGS.getCurrentSettings()) #startup settings
+        self.currentSettings   = dict(SETTINGS.getCurrentSettings()) #startup settings
         self.player.myService  = self
         self.monitor.myService = self
         self.tasks.myService   = self
@@ -389,10 +375,11 @@ class Service():
         self.log('start')
         self._initialize()
         while not self.monitor.abortRequested():
-            self._run()
-            if    self._interrupt(wait=1): break
+            if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
-            else: self._tasks()
+            else: 
+                if not isRunning('_run'): self._run()
+                if not isRunning('_tasks'): self._tasks()
         self.stop()
 
 
