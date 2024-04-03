@@ -66,9 +66,8 @@ def closeBusyDialog():
 def busy_dialog():
     if not isBusyDialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
-    try: yield
-    finally:
-        if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
+        try: yield
+        finally:
             Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
          
 @contextmanager
