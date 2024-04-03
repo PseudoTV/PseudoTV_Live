@@ -490,8 +490,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('validatePath, path = %s'%path)
         if not path: return None, channelData
         if spinner: self.toggleSpinner(self.itemList,True)
-        file = self.validateVFS(path, channelData)
-        if not file:
+        if not self.validateVFS(path, channelData):
             path = None
             DIALOG.notificationDialog(LANGUAGE(32030))
         else:
@@ -513,9 +512,11 @@ class Manager(xbmcgui.WindowXMLDialog):
                 for path in paths:
                     result = self.validateVFS(path, channelData)
                     if result: return result
-    
-        items, limits, errors = self.jsonRPC.requestList(channelData, path, media, limits={"end": 5, "start": 0}) #todo use another means to verify or bypass autopage set limits.
+            
+        items, limits, errors = self.jsonRPC.requestList(channelData, path, media, limits={"end": PAGE_LIMIT, "start": 0}) #todo use another means to verify or bypass autopage set limits.
+        print('validateVFS',path,items)
         for idx, item in enumerate(items):
+            print('validateVFS item',path,item)
             file     = item.get('file', '')
             fileType = item.get('filetype', 'file')
             if fileType == 'file':
@@ -530,7 +531,8 @@ class Manager(xbmcgui.WindowXMLDialog):
                     DIALOG.progressDialog(100,control=dia)
                     closeBusyDialog()
                     return file
-            else: dirs.append(file)
+            elif item.get('label','').lower() not in ['search','keyword']:
+                dirs.append(file) #filter any plugin vfs that triggers user input.
                 
         for dir in dirs: 
             result = self.validateVFS(dir, channelData)

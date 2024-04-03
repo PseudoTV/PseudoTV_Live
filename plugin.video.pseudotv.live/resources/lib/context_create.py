@@ -33,6 +33,7 @@ class Create:
                         channelData['type']     = 'Custom'
                         channelData['favorite'] = True
                         channelData['number']   = manager.getFirstAvailChannel()
+                        channelData['radio']    = True if listitem.getPath().startswith('musicdb://') else False
                         channelData['name'], channelData   = manager.validateLabel(cleanLabel(listitem.getLabel()),channelData)
                         path, channelData   = manager.validatePath(listitem.getPath(),channelData,spinner=False)
                         if path is None: return

@@ -159,7 +159,7 @@ class Fillers:
         except: return [(None, 0)]
 
 
-    def buildKodiTrailers(self, fileList):
+    def buildTrailers(self, fileList):
         def _parse(fileItem):
             if fileItem.get('trailer') and not fileItem.get('trailer','').startswith(('http','upnp','ftp')):
                 dur = self.jsonRPC.getDuration(fileItem.get('trailer'), accurate=True)
@@ -179,7 +179,7 @@ class Fillers:
         nfileList = []
         if self.bctTypes['trailers']['enabled'] and SETTINGS.getSettingInt('Include_Trailers') < 2:
             if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='%s - Parsing Kodi for Trailers...'%(self.builder.pName),header='%s, %s'%(ADDON_NAME,self.builder.pMSG))                   
-            self.buildKodiTrailers(fileList)
+            if len(fileList) > 0: self.buildTrailers(fileList)
             
         for idx, fileItem in enumerate(fileList):
             if not fileItem: continue

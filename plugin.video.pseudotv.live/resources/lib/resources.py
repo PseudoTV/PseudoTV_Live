@@ -39,10 +39,10 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, chname, type="Custom"):
-        logo = self.getLocalLogo(chname)                        #local
-        if not logo: logo = self.getLogoResources(chname, type) #resource
-        if not logo: logo = self.getTVShowLogo(chname)          #tvshow 
+    def getLogo(self, chname, type="Custom", logo=None):
+        if not logo: logo = self.getLocalLogo(chname)              #local
+        if not logo: logo = self.getLogoResources(chname, type)    #resource
+        if not logo: logo = self.getTVShowLogo(chname)             #tvshow 
         self.log('getLogo, chname = %s, logo = %s'%(chname, logo))
         return (logo or LOGO)
         
@@ -54,7 +54,7 @@ class Resources:
         logos.append(self.getTVShowLogo(chname))
         self.log('selectLogo, chname = %s, logos = %s'%(chname, len(logos)))
         return list([_f for _f in logos if _f])
-        
+
 
     def getLocalLogo(self, chname, select=False):
         logos = []

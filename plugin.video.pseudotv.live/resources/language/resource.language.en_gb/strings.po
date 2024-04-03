@@ -1086,7 +1086,7 @@ msgid "Player will be stop!"
 msgstr ""
 
 msgctxt "#32129"
-msgid "Error detected! %s is out of sync with Kodi."
+msgid "Error detected! %s is out of sync with Kodi.\nTry clearing Kodi's PVR & LiveTV guide data."
 msgstr ""
 
 msgctxt "#32130"

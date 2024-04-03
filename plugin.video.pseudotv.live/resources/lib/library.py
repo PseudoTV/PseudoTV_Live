@@ -234,7 +234,7 @@ class Library:
             rules = [{"id":53,"values":{"0":LANGUAGE(32002)}}]
             if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
-        
+
         if hasRecordings():
             MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
         
@@ -353,7 +353,7 @@ class Library:
                 if not self.parserDialog is None:
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
-                MusicGenreList.update([genre for genre in info.get('label','').split(';')])
+                MusicGenreList.update([genre.strip() for genre in info.get('label','').split(';')])
             
             if sortbycount:
                 MusicGenreList = [x[0] for x in sorted(MusicGenreList.most_common(50))]

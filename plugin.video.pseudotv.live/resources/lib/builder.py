@@ -26,6 +26,7 @@ from xsp        import XSP
 from m3u        import M3U
 from fillers    import Fillers
 from resources  import Resources
+from seasonal   import Seasonal 
 
 class Builder:
     loopback   = {}
@@ -92,6 +93,7 @@ class Builder:
                 self.log('verify, skipping - missing channel id\n%s'%(citem))
                 continue
             else:
+                citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
                 self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
                 yield self.runActions(RULES_ACTION_CHANNEL_VERIFY, citem, citem, inherited=self)
             

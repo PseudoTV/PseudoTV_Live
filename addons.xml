@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.pseudotv.live" version="0.4.8c" name="PseudoTV Live" provider-name="Lunatixz">
+<addon id="plugin.video.pseudotv.live" version="0.4.8d" name="PseudoTV Live" provider-name="Lunatixz">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
         <import addon="pvr.iptvsimple" version="21.8.0"/>
@@ -29,11 +29,11 @@
         <menu id="kodi.core.main">
             <item library="resources/lib/context_record.py" args="add">
                 <label>30115</label>
-                <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.HasEpg] +	[Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+                <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>
             <item library="resources/lib/context_record.py" args="del">
                 <label>30117</label>
-                <visible>[Window.IsVisible(tvrecordings)]</visible>
+                <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.Path] + [Window.IsVisible(tvrecordings)]</visible>
             </item>
             <item library="resources/lib/context_play.py" args="playlist">
                 <label>30076</label>
@@ -45,7 +45,7 @@
             </item>
             <item library="resources/lib/context_info.py" args="match">
                 <label>30091</label>
-                <visible>[ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
+                <visible>[String.Contains(ListItem.Plot,"item=") + ListItem.HasEpg] + [Window.IsVisible(tvguide)|Window.IsVisible(tvsearch)|Window.IsVisible(tvchannels)]</visible>
             </item>
             <item library="resources/lib/context_info.py" args="browse">
                 <label>30087</label>

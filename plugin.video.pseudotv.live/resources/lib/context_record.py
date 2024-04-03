@@ -22,38 +22,34 @@ from m3u        import M3U
 from xmltvs     import XMLTVS
 
 class Record:
-    def __init__(self, sysARG, listitem, plot):
-        log('Record: __init__, sysARG = %s, plot = %s\npath = %s'%(sysARG,plot,listitem.getPath()))
+    def __init__(self, sysARG, listitem, fitem):
+        log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
         self.sysARG   = sysARG
-        self.plot   = plot
+        self.fitem     = fitem
         self.listitem = listitem
         
         
     def add(self):
         with suspendActivity():
-            self.plot['label'] = (self.plot.get('label') or self.listitem.getLabel())
+            self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
             m3u = M3U()
-            ritem = m3u.getRecordItem(self.plot)
+            ritem = m3u.getRecordItem(self.fitem)
             if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
                 with busy_dialog():
-                    xmltv = XMLTVS()
-                    if m3u.addRecording(ritem) and xmltv.addRecording(ritem,self.plot):
+                    if (m3u.addRecording(ritem) and XMLTVS().addRecording(ritem,self.fitem)):
                         DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
-                    del xmltv
             del m3u
     
             
     def remove(self):
         with suspendActivity():
-            self.plot['label'] = (self.plot.get('label') or self.listitem.getLabel())
+            self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
             m3u = M3U()
-            ritem = m3u.getRecordItem(self.plot)
+            ritem = m3u.getRecordItem(self.fitem)
             if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
                 with busy_dialog():
-                    xmltv = XMLTVS()
-                    if m3u.delRecording(ritem) and xmltv.delRecording(ritem):
+                    if (m3u.delRecording(ritem) and XMLTVS().delRecording(ritem)):
                         DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)),wait=2)
-                    del xmltv
             del m3u
             
             
@@ -61,8 +57,6 @@ if __name__ == '__main__':
     try:    param = sys.argv[1]
     except: param = None
     log('Record: __main__, param = %s'%(param))
-    if param == 'add':
-        Record(sys.argv,listitem=sys.listitem,plot=decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
-    elif param == 'del':
-        Record(sys.argv,listitem=sys.listitem,plot=decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
+    if   param == 'add': Record(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot'))).add()
+    elif param == 'del': Record(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot'))).remove()
     

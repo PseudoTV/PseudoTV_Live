@@ -52,7 +52,7 @@ SEASONS     = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':
                               '4':{'name':"J.R.R. Tolkien Week"     , 'tagline':"“One ring to rule them all.“"                                    , 'keyword':'lotr'     , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png'},
                               '5':{'name':"Quentin Tarantino Week"  , 'tagline':"“If you just love movies enough, you can make a good one.”"      , 'keyword':'quentin'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://rat.in.ua/wp-content/uploads/2019/11/4758-Written-and-Directed-by-Quentin-Tarantino.png'}},
                           
-               "April"     : {'1':{'name':"Star Trek Week"          , 'tagline':"“To Boldly Go...“"                                               , 'keyword':'startrek' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Star_Trek_TOS_logo.svg/2560px-Star_Trek_TOS_logo.svg.png'}, 
+               "April"     : {'1':{'name':"Star Trek Week"          , 'tagline':"“To Boldly Go...“"                                               , 'keyword':'startrek' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/images/613794434b96600004f67704.png'}, 
                               '2':{'name':"Shakespeare Week"        , 'tagline':"“Non Sans Droict“"                                               , 'keyword':'othello'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                               '3':{'name':"Superhero Week"          , 'tagline':"“I Can Do This All Day!“"                                        , 'keyword':'super'    , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                               '4':{'name':"Alien Week"              , 'tagline':"“In space, no one can hear you scream.“"                         , 'keyword':'aliens'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
@@ -82,7 +82,7 @@ SEASONS     = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':
                               '4':{'name':"Power Rangers Week"      , 'tagline':"“Everyone gets to be a Ranger!”"                                 , 'keyword':'ranger'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                               '5':{'name':''                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
                               
-               "September" : {'1':{'name':"Star Trek Week"          , 'tagline':"“To Boldly Go...“"                                               , 'keyword':'startrek' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Star_Trek_TOS_logo.svg/2560px-Star_Trek_TOS_logo.svg.png'},
+               "September" : {'1':{'name':"Star Trek Week"          , 'tagline':"“To Boldly Go...“"                                               , 'keyword':'startrek' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/images/613794434b96600004f67704.png'},
                               '2':{'name':"Batman Week"             , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                               '3':{'name':"Hobbit Week"             , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                               '4':{'name':"Comic Book Week"         , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
@@ -126,7 +126,13 @@ class Seasonal:
         if week < 1 or week > 4: return int(ceil(week))
         else:                    return int(floor(week))
 
-
+        
+    def getHoliday(self, nearest=SETTINGS.getSettingBool('NEAREST_SEASON')):
+        self.log('getHoliday, nearest = %s'%(nearest))
+        if nearest: return self.getNearestHoliday()
+        else:       return self.getCurrentHoliday()
+        
+        
     def getCurrentHoliday(self):
         return SEASONS.get(self.getMonth(),{}).get(self.getWeek(),{})
         
@@ -147,10 +153,9 @@ class Seasonal:
         return holiday
         
         
-    def buildSeasonal(self, nearest=SETTINGS.getSettingBool('NEAREST_SEASON')):
-        self.log('buildSeasonal, nearest = %s'%(nearest))
-        if nearest: season = self.getNearestHoliday()
-        else:       season = self.getCurrentHoliday()
+    def buildSeasonal(self):
+        self.log('buildSeasonal')
+        season = self.getHoliday()
         for query in season.get('query',[]):
             for param in KEYWORDS.get(season.get('keyword',{})).get(query.get('key',{})):
                 item = query.copy()

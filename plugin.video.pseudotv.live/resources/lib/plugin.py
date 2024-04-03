@@ -106,7 +106,7 @@ class Plugin:
             
     def playRadio(self, name, chid, vid):
         self.log('playRadio, id = %s'%(chid))
-        with self.preparingPlayback():
+        with busy_dialog(), suspendActivity():
             jsonRPC = JSONRPC(self.cache)
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
             if len(fileList) > 0:
@@ -138,53 +138,54 @@ class Plugin:
         fitem     = self.sysInfo.get('fitem')
         with busy_dialog(), suspendActivity():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
-        if pvritem.get('citem'): self.sysInfo['citem'].update(pvritem.pop('citem'))
+            if pvritem.get('citem'): self.sysInfo['citem'].update(pvritem.pop('citem'))
         
         if pvritem:
-            pastItems = pvritem.get('broadcastpast',[])
-            nowitem   = pvritem.get('broadcastnow',{})
-            nextitems = pvritem.get('broadcastnext',[]) # upcoming items
-            nextitems.insert(0,nowitem)
-            for pos, nextitem in enumerate(pastItems + nextitems):
-                fitem = decodePlot(nextitem.get('plot',{}))
-                if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')):
-                    found = True
-                    del nextitems[0:pos] # start array at correct position
-                    break
+            with busy_dialog(), suspendActivity():
+                pastItems = pvritem.get('broadcastpast',[])
+                nowitem   = pvritem.get('broadcastnow',{})
+                nextitems = pvritem.get('broadcastnext',[]) # upcoming items
+                nextitems.insert(0,nowitem)
+                for pos, nextitem in enumerate(pastItems + nextitems):
+                    fitem = decodePlot(nextitem.get('plot',{}))
+                    if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')):
+                        found = True
+                        del nextitems[0:pos] # start array at correct position
+                        break
                     
             if found:
-                nowitem = nextitems.pop(0)
-                liz = LISTITEMS.buildItemListItem(fitem)
-                if round(nowitem['progresspercentage']) > self.seekTHD:
-                    self.log('playPlaylist, progress past threshold advance to nextitem')
+                with busy_dialog(), suspendActivity():
                     nowitem = nextitems.pop(0)
-                
-                if round(nowitem['progress']) <= self.seekTOL:
-                    self.log('playPlaylist, progress start at the beginning')
-                    nowitem['progress']           = 0
-                    nowitem['progresspercentage'] = 0
+                    liz = LISTITEMS.buildItemListItem(fitem)
+                    if round(nowitem['progresspercentage']) > self.seekTHD:
+                        self.log('playPlaylist, progress past threshold advance to nextitem')
+                        nowitem = nextitems.pop(0)
                     
-                if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                    self.log('playPlaylist, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
-                    liz.setProperty('startoffset', str(nowitem['progress'])) #secs
-                    infoTag = ListItemInfoTag(liz, 'video')
-                    infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
-                    
-                del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
-                self.sysInfo['fitem']    = fitem
-                pvritem['broadcastnow']  = nowitem   # current item
-                pvritem['broadcastnext'] = nextitems # upcoming items
-                self.sysInfo['pvritem']  = pvritem
-                liz.setProperty('sysInfo',dumpJSON(self.sysInfo))
-                listitems = [liz]
-                listitems.extend(poolit(buildfItem)(nextitems))
-                channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-                channelPlaylist.clear()
-                xbmc.sleep(100)
-                
-                for idx,lz in enumerate(listitems):
-                    lz.setProperty('sysInfo',dumpJSON(self.sysInfo))
-                    channelPlaylist.add(lz.getPath(),lz,idx)
+                    if round(nowitem['progress']) <= self.seekTOL:
+                        self.log('playPlaylist, progress start at the beginning')
+                        nowitem['progress']           = 0
+                        nowitem['progresspercentage'] = 0
+                        
+                    if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
+                        self.log('playPlaylist, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                        liz.setProperty('startoffset', str(nowitem['progress'])) #secs
+                        infoTag = ListItemInfoTag(liz, 'video')
+                        infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
+                        
+                    del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                    self.sysInfo['fitem']    = fitem
+                    pvritem['broadcastnow']  = nowitem   # current item
+                    pvritem['broadcastnext'] = nextitems # upcoming items
+                    self.sysInfo['pvritem']  = pvritem
+                    liz.setProperty('sysInfo',dumpJSON(self.sysInfo))
+                    listitems = [liz]
+                    listitems.extend(poolit(buildfItem)(nextitems))
+                    channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+                    channelPlaylist.clear()
+                    xbmc.sleep(100)
+                    for idx,lz in enumerate(listitems):
+                        lz.setProperty('sysInfo',dumpJSON(self.sysInfo))
+                        channelPlaylist.add(lz.getPath(),lz,idx)
                     
                 self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
                 if isPlaylistRandom(): channelPlaylist.unshuffle()
@@ -227,8 +228,6 @@ class Plugin:
                 self.log('getCallback: _matchJSON, no callback found!\nresults = %s'%(results))
 
             if (isPlaylist or radio) and len(self.sysARG) > 2:
-                #omega changed pvr paths, requiring double jsonRPC calls to return true file path. maybe more efficient to call through plugin rather than direct pvr. 
-                #this breaks "pvr" should only apply to playlists, avoid unnecessary jsonRPC calls which are slow on lowpower devices. 
                 callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
             elif isLowPower() or not PROPERTIES.getPropertyBool('hasPVRSource'):
                 callback = _matchVFS()
@@ -280,19 +279,44 @@ class Plugin:
 
     def playCheck(self, oldInfo={}):
         #check that resource or plugin installed?
-        self.log('playCheck, id = %s\n%s'%(oldInfo.get('chid','-1'),oldInfo))
-        if self.sysInfo.get('chid') == oldInfo.get('chid',random.random()) and self.sysInfo.get('start') == oldInfo.get('start',random.random()):
-            self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1 #carry over playcount
-            self.sysInfo['runtime']   = oldInfo.get('runtime',-1)      #carry over previous player runtime
-                        
-            if self.sysInfo['now'] >= self.sysInfo['stop']:
-                self.log('playCheck, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
-            elif self.sysInfo['duration'] > self.sysInfo['runtime']:
-                self.log('playCheck, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
-            elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
-                self.log('playCheck, failed! Seeking to a position (%s) past contents runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
-            elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
-                self.log('playCheck, failed! Seeking to same position.')
+        self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
+        def _chkPlugin():
+            if self.sysInfo.get('vid','').startswith(('plugin://','special://')):
+                id = getIDbyPath(self.sysInfo.get('vid',''))
+                if not hasAddon(id,install=True,enable=True):
+                    self.log('playCheck _chkPlugin, failed! Plugin (%s) not installed.'%(id))
+                    return True
+            return False
+            
+        def _chkGuide():
+            if (self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()) and self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title'))):
+                self.log('playCheck _chkGuide, failed! Current EPG cell (%s) does not match PVR backend (%s).'%(self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')),self.sysInfo.get('title')))
+                return DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+            return False
+
+        def _chkLoop():
+            if (self.sysInfo.get('chid') == oldInfo.get('chid',random.random()) and self.sysInfo.get('start') == oldInfo.get('start',random.random())):
+                self.sysInfo['playcount'] = oldInfo.get('playcount',0) + 1 #carry over playcount
+                self.sysInfo['runtime']   = oldInfo.get('runtime',-1)      #carry over previous player runtime
+                
+                if self.sysInfo['now'] >= self.sysInfo['stop']:
+                    self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
+                    return True
+                elif self.sysInfo['duration'] > self.sysInfo['runtime']:
+                    self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                    return True
+                elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
+                    self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past contents runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                    return True
+                elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
+                    self.log('playCheck _chkLoop, failed! Seeking to same position.')
+                    return True
+            return False
+
+        _chkPlugin()
+        _chkGuide()
+        _chkLoop()
+        #todo take action on fail. for now log events to strategize actions. 
         return True
         
         

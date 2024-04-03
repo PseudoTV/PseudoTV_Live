@@ -301,7 +301,7 @@ class Monitor(xbmc.Monitor):
         
     def onSettingsChangedTimer(self):
         self.log('onSettingsChangedTimer')
-        self.tasks._que(self.myService.monitor._onSettingsChanged,1)
+        self.myService.tasks._que(self._onSettingsChanged,1)
                 
                 
     def _onSettingsChanged(self):
@@ -322,7 +322,7 @@ class Service():
     
     def __init__(self):
         self.log('__init__')
-        DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
+        DIALOG.notificationWait(LANGUAGE(32054),wait=30)#startup delay; give Kodi PVR time to initialize. 
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
