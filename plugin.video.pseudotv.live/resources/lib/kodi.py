@@ -64,11 +64,10 @@ def closeBusyDialog():
 
 @contextmanager
 def busy_dialog():
-    if not isBusyDialog():
-        Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
-        try: yield
-        finally:
-            Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
+    try: yield
+    finally:
+        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
          
 @contextmanager
 def sudo_dialog(msg):
@@ -280,8 +279,6 @@ class Settings:
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
         self.setSetting('User_Folder'   ,userFolder)
-        self.setSetting('Network_Folder',userFolder)
-        
         CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
         newSettings = {'m3uPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),
@@ -412,7 +409,7 @@ class Settings:
         
     def getCurrentSettings(self):
         self.log('getCurrentSettings')
-        settings = ['User_Folder','Network_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
+        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
         for setting in settings:
             yield (setting,self.getSetting(setting))
                

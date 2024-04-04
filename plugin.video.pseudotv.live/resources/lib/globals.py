@@ -496,8 +496,7 @@ def setFirstrun(state=True):
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient():
-    client = PROPERTIES.getEXTProperty('%s.isClient'%(ADDON_ID)) == "true"
-    return (client | bool(SETTINGS.getSettingInt('Client_Mode')))
+    return PROPERTIES.getEXTProperty('%s.isClient'%(ADDON_ID)) == "true"
    
 def setClient(state=False,silent=True):
     PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())

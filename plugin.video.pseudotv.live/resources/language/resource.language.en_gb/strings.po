@@ -242,7 +242,7 @@ msgid "Include 3D Media."
 msgstr ""
 
 msgctxt "#30056"
-msgid "Insert Fillers"
+msgid "Include Fillers"
 msgstr ""
 
 msgctxt "#30057"
@@ -1227,6 +1227,10 @@ msgstr ""
 
 msgctxt "#32164"
 msgid "Can not locate broadcast!"
+msgstr ""
+
+msgctxt "#32165"
+msgid "No Changes Applied!
 msgstr ""
 
 

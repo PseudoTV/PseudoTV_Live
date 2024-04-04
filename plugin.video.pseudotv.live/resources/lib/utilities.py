@@ -207,7 +207,7 @@ class Utilities:
                 if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else:
-                    DIALOG.notificationDialog(LANGUAGE(32046))
+                    DIALOG.notificationDialog(LANGUAGE(32165))
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()

@@ -233,13 +233,17 @@ class Monitor(xbmc.Monitor):
         return idleState, idleTime
 
 
+    def chkRemaining(self):
+        if self.myService.player.isPlaying() and self.myService.player.getTimeRemaining() < 2:
+            self.myService.player.toggleBackground(True)
+
+
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
-        if self.myService.player.isPseudoTV: 
-            if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): #3hr increments
-                if self.triggerSleep(): return False
-            if self.isIdle: self.toggleOverlay(True)
-            else:           self.toggleOverlay(False)
+        if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): #3hr increments
+            if self.triggerSleep(): return False
+        if self.isIdle: self.toggleOverlay(True)
+        else:           self.toggleOverlay(False)
         return self.isIdle
         
         
@@ -351,9 +355,11 @@ class Service():
     
          
     def _run(self):
-        with setRunning('_run'):
-            self.monitor.chkIdle()
-   
+        if self.player.isPseudoTV: 
+            with setRunning('_run'):
+                self.monitor.chkIdle()
+                self.monitor.chkRemaining()
+       
    
     def _tasks(self):
         with setRunning('_tasks'):
@@ -378,7 +384,7 @@ class Service():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
             else: 
-                if not isRunning('_run'): self._run()
+                if not isRunning('_run'):   self._run()
                 if not isRunning('_tasks'): self._tasks()
         self.stop()
 

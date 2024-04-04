@@ -94,23 +94,23 @@ class Tasks():
             self._que(self._chkQueTimer)
         
         
-    def _chkQueTimer(self):
+    def _chkQueTimer(self, client = isClient()):
         self.log('chkQueTimer')
-        if self.chkUpdateTime('chkHTTP',runEvery=900):
-            self._que(self.chkHTTP)
-        if self.chkUpdateTime('chkFiles',runEvery=600):
+        if self.chkUpdateTime('chkFiles',runEvery=600) and not client:
             self._que(self.chkFiles)
-        if self.chkUpdateTime('chkPVRSettings',runEvery=(MAX_GUIDEDAYS*3600)):
-            self._que(self.chkPVRSettings)
-        if self.chkUpdateTime('chkRecommended',runEvery=900):
+        if self.chkUpdateTime('chkRecommended',runEvery=900) and not client:
             self._que(self.chkRecommended)
         if self.chkUpdateTime('chkLibrary',runEvery=(MAX_GUIDEDAYS*3600)):
             self._que(self.chkLibrary)
-        if self.chkUpdateTime('chkChannels',runEvery=(MAX_GUIDEDAYS*3600)):
+        if self.chkUpdateTime('chkChannels',runEvery=(MAX_GUIDEDAYS*3600)) and not client:
             self._que(self.chkChannels)
+        if self.chkUpdateTime('chkPVRSettings',runEvery=(MAX_GUIDEDAYS*3600)) and not client:
+            self._que(self.chkPVRSettings)
+        if self.chkUpdateTime('chkHTTP',runEvery=900) and not client:
+            self._que(self.chkHTTP)
         if self.chkUpdateTime('chkJSONQUE',runEvery=600):
             self._que(self.chkJSONQUE)
-
+              
               
     def chkWelcome(self):
         self.log('chkWelcome')
@@ -157,7 +157,6 @@ class Tasks():
 
     def chkPVRSettings(self):
         try:
-            if isClient(): return
             with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
                 if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
                     SETTINGS.setSettingInt('Min_Days',min)
@@ -182,17 +181,14 @@ class Tasks():
     
     def chkRecommended(self):
         try:
-            if isClient(): return
-            else:
-                library = Library(service=self.myService)
-                library.searchRecommended()
-                del library
+            library = Library(service=self.myService)
+            library.searchRecommended()
+            del library
         except Exception as e: self.log('chkRecommended failed! %s'%(e), xbmc.LOGERROR)
 
         
     def chkChannels(self):
         try:
-            if isClient(): return
             builder  = Builder(self.myService)
             complete = builder.build()
             channels = builder.verify()
@@ -207,7 +203,7 @@ class Tasks():
     def chkFiles(self):
         self.log('_chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
-        if hasFirstrun() and not isClient():
+        if hasFirstrun():
             if not (FileAccess.exists(LIBRARYFLEPATH)): self._que(self.chkLibrary,2)
             if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
                 self._que(self.chkChannels,1)
@@ -274,7 +270,6 @@ class Tasks():
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
                 actions = {'User_Folder'    :{'func':self.setUserPath     ,'args':(value,nSettings.get(setting))},
-                           'Network_Folder' :{'func':SETTINGS.setPVRPath  ,'args':(nSettings.get(setting))},
                            'Remote_URL'     :{'func':SETTINGS.setPVRRemote,'args':(nSettings.get(setting))},
                            'UDP_PORT'       :{'func':setPendingRestart},
                            'TCP_PORT'       :{'func':setPendingRestart},
