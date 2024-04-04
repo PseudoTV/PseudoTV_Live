@@ -54,16 +54,23 @@ class Builder:
         self.limits           = {} #{"end":0,"start":0,"total":0}
 
         self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
-        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|')}
-        
+        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|'),
+                                 "paths":[]}
+                                 
         self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
-        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|')}
+        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|'),
+                                 "paths":[]}
         
         self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
-        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|')}
+        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
+                                 "paths":[]}
         
         self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
-        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|')}
+        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
+                                 "paths":[]}
+                                 
+        if SETTINGS.getSettingInt('Include_Trailers') in [0,2]:
+            self.srcTrailer["paths"].extend(IMDB_PATHS)
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS

@@ -1,7 +1,8 @@
 v.0.4.9
 -Fixed seasons returning incorrect holiday for the first week of April.
 -Fixed seasonal logos disappearing.
--Improved playback error detection. 
+-Improved playback error detection.
+-Improved Trailer parsing from Kodi & IMDB Trailers plugin.
 
 v.0.4.8
 -Notice The following steps are required!.

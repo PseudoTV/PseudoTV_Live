@@ -227,9 +227,9 @@ class Tasks():
                     break
                 elif len(params) > 0:
                     self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
-                queuePool['params'] = setDictLST(params)
-                self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
-                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+            queuePool['params'] = setDictLST(params)
+            self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
+            SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
         
 
     def runAutoTune(self):

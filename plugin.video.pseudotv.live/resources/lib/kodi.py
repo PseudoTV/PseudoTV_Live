@@ -279,12 +279,12 @@ class Settings:
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
         self.setSetting('User_Folder'   ,userFolder)
-        CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),
-                       'epgPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'epgPath'       :os.path.join(userFolder,XMLTVFLE),
-                       'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
+                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
                        'genresPath'    :os.path.join(userFolder,GENREFLE)}
         self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
         setPendingRestart()
@@ -297,12 +297,12 @@ class Settings:
         self.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
         self.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
         
-        CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
-                       'epgPathType'   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
-                       'genresPathType':'%s'%('1' if CLIENT_MODE == 1 else '0'),
+                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
                        'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
         self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
         setPendingRestart()

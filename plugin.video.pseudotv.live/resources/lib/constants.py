@@ -171,3 +171,7 @@ RULES_ACTION_OVERLAY_OPEN     = 21
 RULES_ACTION_OVERLAY_CLOSE    = 22
 RULES_ACTION_BACKGROUND_OPEN  = 23
 RULES_ACTION_BACKGROUND_CLOSE = 24
+
+IMDB_PATHS  = ['plugin://plugin.video.imdb.trailers/?action=list1&key=showing',
+               'plugin://plugin.video.imdb.trailers/?action=list1&key=coming']
+    

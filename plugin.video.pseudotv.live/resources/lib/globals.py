@@ -150,9 +150,6 @@ def setURL(url, file):
     except Exception as e: 
         log("saveURL, failed! %s"%e, xbmc.LOGERROR)
 
-def removeDUPDICT(l):
-    return [dict(t) for t in {tuple(d.items()) for d in l}]
-
 def diffLSTDICT(old, new):
     sOLD = set([dumpJSON(e) for e in old])
     sNEW = set([dumpJSON(e) for e in new])
@@ -259,7 +256,7 @@ def hasAddon(id, install=False, enable=False, force=False, notify=False):
     elif install: return BUILTIN.executebuiltin('InstallAddon(%s)'%(id),wait=True)
     if notify: DIALOG.notificationDialog(LANGUAGE(32034)%(id))
     return False
-    
+
 def openAddonSettings(ctl=(0,1),id=ADDON_ID):
     ## ctl[0] is the Category (Tab) offset (0=first, 1=second, 2...etc)
     ## ctl[1] is the Setting (Control) offset (1=first, 2=second, 3...etc)# addonId is the Addon ID
@@ -386,7 +383,7 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
-    CLIENT_MODE = SETTINGS.getSettingInt('Client_Mode')
+    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
     return {'kodi_addon_instance_name'      :ADDON_NAME,
             'kodi_addon_instance_enabled'   :'true',
             'm3uRefreshMode'                :'1',
@@ -395,14 +392,14 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             'm3uCache'                      :'true',
             'logoPathType'                  :'0',
             'logoPath'                      :LOGO_LOC,
-            'm3uPathType'                   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'm3uPathType'                   :'%s'%('1' if Client_Mode == 1 else '0'),
             'm3uPath'                       :M3UFLEPATH,
             'm3uUrl'                        :SETTINGS.getSetting('Remote_M3U'),
-            'epgPathType'                   :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'epgPathType'                   :'%s'%('1' if Client_Mode == 1 else '0'),
             'epgPath'                       :XMLTVFLEPATH,
             'epgUrl'                        :SETTINGS.getSetting('Remote_XMLTV'),
             'epgCache'                      :'true',
-            'genresPathType'                :'%s'%('1' if CLIENT_MODE == 1 else '0'),
+            'genresPathType'                :'%s'%('1' if Client_Mode == 1 else '0'),
             'genresPath'                    :GENREFLEPATH,
             'genresUrl'                     :SETTINGS.getSetting('Remote_GENRE'),
             'timeshiftEnabled'              :'false',

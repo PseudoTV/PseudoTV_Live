@@ -234,7 +234,7 @@ class Monitor(xbmc.Monitor):
 
 
     def chkRemaining(self):
-        if self.myService.player.isPlaying() and self.myService.player.getTimeRemaining() < 2:
+        if self.myService.player.isPlaying() and self.myService.player.getTimeRemaining() == 1:
             self.myService.player.toggleBackground(True)
 
 
@@ -340,7 +340,7 @@ class Service():
 
 
     def _suspend(self) -> bool: #continue
-        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend())
+        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend() | self._playing())
         self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
         return self.monitor.pendingSuspend
 
@@ -358,7 +358,7 @@ class Service():
         if self.player.isPseudoTV: 
             with setRunning('_run'):
                 self.monitor.chkIdle()
-                self.monitor.chkRemaining()
+                # self.monitor.chkRemaining() #todo needs more testing, not toggling off on short video playback.
        
    
     def _tasks(self):

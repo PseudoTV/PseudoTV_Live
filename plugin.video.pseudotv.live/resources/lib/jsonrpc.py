@@ -91,6 +91,17 @@ class JSONRPC:
         return cacheResponse
 
 
+    def walkFileDirectory(self, path, append_items=False):
+        walk = dict()
+        dirs = [path]
+        for dir in dirs:
+            for item in self.getDirectory(param={"directory":dir}, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)).get('files',[]):
+                if not item.get('file'): continue
+                elif item.get('filetype') == 'directory': dirs.append(item.get('file'))
+                elif item.get('filetype') == 'file': walk.setdefault(dir,[]).append(item if append_items else item.get('file'))
+        return walk
+                
+
     def walkListDirectory(self, path, depth=3, hasruntime=False, append_path=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)):
         def chkruntime(file):
             return self.getDuration(file) > 0

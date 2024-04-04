@@ -108,7 +108,7 @@ class Plugin:
         self.log('playRadio, id = %s'%(chid))
         with busy_dialog(), suspendActivity():
             jsonRPC = JSONRPC(self.cache)
-            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])#todo replace RADIO_ITEM_LIMIT with cacluated runtime to EPG_HRS
+            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
             if len(fileList) > 0:
                 channelPlaylist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
                 channelPlaylist.clear()
@@ -291,7 +291,8 @@ class Plugin:
         def _chkGuide():
             if (self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()) and self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title'))):
                 self.log('playCheck _chkGuide, failed! Current EPG cell (%s) does not match PVR backend (%s).'%(self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')),self.sysInfo.get('title')))
-                return DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+                return True
+                # return DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
             return False
 
         def _chkLoop():

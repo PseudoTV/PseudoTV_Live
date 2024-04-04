@@ -620,7 +620,7 @@ class ProvisionalRule(BaseRule):
 
             if self.optionValues[0]:
                 self.log("%s: runAction, id: %s, provisional value = %s"%(self.__class__.__name__,citem['id'],self.optionValues[0]))
-                if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s - Applying Rule: %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                 if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                 else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
                 for provisional in queries:
@@ -714,7 +714,7 @@ class EvenShowsRule(BaseRule):
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
             try:
                 if parameter:
-                    if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='%s - Applying Rule: %s'%(builder.pName,self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
+                    if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     poolit(_sortShows)(list(sorted(parameter, key=lambda k: k.get('episode',0))))
                     self.storedValues[0] = dict(_chunkShows())
                     return _mergeShows(self.storedValues[0],self.storedValues[1])
