@@ -305,7 +305,7 @@ class Builder:
 
     def buildList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, dirItem={}, query={}):
         self.log("buildList, id: %s, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
-        dirList, fileList, seasoneplist = [], [], []
+        dirList, fileList, seasoneplist, trailerslist = [], [], [], {}
         items, olimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
         if items == self.loopback:# malformed jsonrpc queries will return root response, catch a re-parse and return.
             self.pErrors.append(LANGUAGE(32030))
@@ -391,6 +391,12 @@ class Builder:
                         item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                         item.get('art',{})['icon'] = citem['logo']
                         
+                        if item.get('trailer') and bool(self.incTrailer) and SETTINGS.getSettingInt('Include_Trailers') < 2:
+                            titem = item.copy()
+                            titem['runtime'] = self.jsonRPC.getDuration(item.get('trailer'), accurate=True)
+                            for genre in (titem.get('genre',[]) or ['resources']):
+                                if titem['runtime'] > 0: trailerslist.setdefault(genre.lower(),[]).append(titem)
+                        
                         if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                             seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                         else: 
@@ -413,6 +419,7 @@ class Builder:
             if len(dirList)  > 0: dirList  = randomShuffle(dirList)
             if len(fileList) > 0: fileList = randomShuffle(fileList)
             
+        self.setTrailers(trailerslist)
         self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
         return fileList, dirList
 
@@ -480,3 +487,15 @@ class Builder:
     def saveChannelLineups(self):
         self.log('saveChannelLineups')
         return self.m3u._save() & self.xmltv._save()
+
+
+    def getTrailers(self):
+        items = (self.cache.get('getTrailers', json_data=True) or {})
+        self.log('getTrailers, items: %s'%(len(items)))
+        return items
+        
+        
+    def setTrailers(self, nitems={}):
+        items = mergeDictLST(self.getTrailers(),nitems)
+        self.log('setTrailers, trailers: %s'%(len(items)))
+        self.cache.set('getTrailers', items, expiration=datetime.timedelta(days=28), json_data=True)

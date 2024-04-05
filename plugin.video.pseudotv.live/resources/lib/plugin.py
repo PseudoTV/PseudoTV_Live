@@ -207,7 +207,7 @@ class Plugin:
                     for result in results:
                         if result.lower().startswith(quoteString(dir.lower())):
                             self.log('getCallback: _matchVFS, found dir = %s'%(os.path.join(pvrRoot,result)))
-                            response = jsonRPC.walkListDirectory(os.path.join(pvrRoot,result),append_path=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
+                            response = jsonRPC.walkListDirectory(os.path.join(pvrRoot,result),appendPath=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
                             for pvr in response:
                                 if pvr.lower().endswith('%s.pvr'%(id)):
                                     self.log('getCallback: _matchVFS, found file = %s'%(pvr))

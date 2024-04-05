@@ -100,15 +100,17 @@ class Player(xbmc.Player):
         
         
     def getPlayerSysInfo(self):
-        sysInfo = loadJSON(self.getPlayingItem().getProperty('sysInfo')) #Kodi v20.
-        sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
-                        'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
-                        'callback':self.getCallback(),
-                        'runtime' :self.getPlayerTime()})
-        if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
-        if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
-        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
-        self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+        sysInfo = {}
+        if self.isPlaying():
+            sysInfo = loadJSON(self.getPlayingItem().getProperty('sysInfo')) #Kodi v20.
+            sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
+                            'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
+                            'callback':self.getCallback(),
+                            'runtime' :self.getPlayerTime()})
+            if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
+            if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
+            self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
 
@@ -304,7 +306,7 @@ class Monitor(xbmc.Monitor):
         
         
     def onSettingsChangedTimer(self):
-        self.log('onSettingsChangedTimer')
+        self.log('onSettingsChangedTimer') 
         self.myService.tasks._que(self._onSettingsChanged,1)
                 
                 
@@ -371,9 +373,9 @@ class Service():
         self.log('_initialize')
         if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
         self.currentSettings   = dict(SETTINGS.getCurrentSettings()) #startup settings
+        self.tasks.myService   = self
         self.player.myService  = self
         self.monitor.myService = self
-        self.tasks.myService   = self
         self.tasks._startProcess()
         
         
