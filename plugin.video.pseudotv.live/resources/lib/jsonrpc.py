@@ -104,7 +104,7 @@ class JSONRPC:
                         if chkDuration:
                             dur = self.getDuration(item.get('file'),item, accurate=True)
                             if dur == 0: continue
-                            item['runtime'] = dur
+                            item['duration'] = dur
                         walk.setdefault(dir,[]).append(item if retItem else item.get('file'))
         return walk
                 
