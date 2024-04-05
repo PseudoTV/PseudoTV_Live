@@ -49,7 +49,18 @@ class Fillers:
             for id in values.get("sources",{}).get("resource",[]): values['items'].update(self.buildSource(ftype,id))   #parse resource packs
             for path in values.get("sources",{}).get("paths",[]):  values['items'].update(self.buildSource(ftype,path)) #parse vfs paths
                 
-
+                
+    def buildTrailers(self, fileList):
+        tmpLST = {}
+        for fileItem in fileList:
+            if fileItem.get('trailer') and not fileItem.get('trailer','').startswith(('http','upnp','ftp')):
+                dur = self.jsonRPC.getDuration(fileItem.get('trailer'), accurate=True)
+                if dur == 0: continuex
+                for key in (fileItem.get('genre',[]) or ['resources']):
+                    tmpDCT.setdefault(key.lower(),[]).append((fileItem.get('trailer'),dur,fileItem))
+        for k, v in tmpLST.items(): self.bctTypes['trailers']['items'].setdefault(k,[]).extend(v)
+          
+          
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def buildSource(self, ftype, path):
         self.log('buildSource, type = %s, path = %s'%(ftype, path))
@@ -60,9 +71,12 @@ class Fillers:
         def _parseVFS(path):
             tmpDCT = {}
             if hasAddon(path, install=True):
-                for url, items in self.jsonRPC.walkFileDirectory(path,append_items=True).items():
-                    tmpDCT.setdefault('resources',[]).extend([(item.get('file'),item.get('runtime'),item) for item in items if item.get('runtime',0) > 0])
-            return tmpDCT #todo parse item meta and create genre / studio folders.
+                for url, fileItems in self.jsonRPC.walkFileDirectory(path,append_items=True).items():
+                    for fileItem in fileItems:
+                        if fileItem.get('runtime',0) == 0: continue
+                        for key in (fileItem.get('genre',[]) or ['resources']): 
+                            tmpDCT.setdefault(key.lower(),[]).append((fileItem.get('file'),fileItem.get('runtime'),fileItem))
+            return tmpDCT
             
         def _parseLocal(path):
             tmpDCT = {}
@@ -167,20 +181,6 @@ class Fillers:
         except: return [(None, 0 ,{})]
 
 
-    def buildTrailers(self, fileList):
-        def _parse(fileItem):
-            if fileItem.get('trailer') and not fileItem.get('trailer','').startswith(('http','upnp','ftp')):
-                dur = self.jsonRPC.getDuration(fileItem.get('trailer'), accurate=True)
-                if dur > 0: (fileItem.get('trailer'), dur, fileItem)
-                
-        tmpLST = poolit(_parse)(fileList)
-        if len(tmpLST) > 0:
-            resLST = self.bctTypes['trailers']['items'].get('resources',[])
-            tmpLST.reverse()
-            resLST.extend(tmpLST)
-            self.bctTypes['trailers']['items']['resources'] = resLST
-            
-            
     def injectBCTs(self, citem, fileList):
         nfileList = []
         if self.bctTypes['trailers']['enabled'] and SETTINGS.getSettingInt('Include_Trailers') < 2:
