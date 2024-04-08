@@ -608,6 +608,6 @@ def getIDbyPath(path):
     elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path)
     
 def mergeDictLST(dict1,dict2):
-    for k, v in dict2.items():
+    for k, v in list(dict2.items()):
         dict1.setdefault(k,[]).extend(v)
     return dict1

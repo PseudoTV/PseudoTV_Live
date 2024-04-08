@@ -1230,14 +1230,12 @@ msgid "Can not locate broadcast!"
 msgstr ""
 
 msgctxt "#32165"
-msgid "No Changes Applied!
+msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32166"
 msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under % minutes"
 msgstr ""
-
-msgc
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

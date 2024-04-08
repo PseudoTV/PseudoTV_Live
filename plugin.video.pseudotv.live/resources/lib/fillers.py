@@ -48,7 +48,7 @@ class Fillers:
         if self.bctTypes['trailers'].get('enabled',False) and SETTINGS.getSettingInt('Include_Trailers') < 2:
             self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.getTrailers())
             
-        for ftype, values in self.bctTypes.items():
+        for ftype, values in list(self.bctTypes.items()):
             for id in values.get("sources",{}).get("resource",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
             for path in values.get("sources",{}).get("paths",[]):  values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
                 
@@ -59,7 +59,7 @@ class Fillers:
         def _parseVFS(path):
             tmpDCT = {}
             if not hasAddon(path, install=True): return {}
-            for url, items in self.jsonRPC.walkFileDirectory(path,retItem=True).items():
+            for url, items in list(self.jsonRPC.walkFileDirectory(path,retItem=True).items()):
                 for item in items:
                     for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
@@ -83,7 +83,7 @@ class Fillers:
                 
         def _sortbyfile(data):
             tmpDCT = {}
-            for path, files in data.items():
+            for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
                     if dur > 0: tmpDCT.setdefault(file.split('.')[0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':file.split('.')[0]})
@@ -91,7 +91,7 @@ class Fillers:
  
         def _sortbyfolder(data):
             tmpDCT = {}
-            for path, files in data.items():
+            for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
                     if dur > 0: tmpDCT.setdefault(os.path.basename(path).lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':os.path.basename(path)})

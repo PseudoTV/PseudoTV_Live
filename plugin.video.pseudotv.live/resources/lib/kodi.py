@@ -953,11 +953,10 @@ class Dialog:
             
         def andor():
             enumLST = ['and', 'or']
-            enumSEL = enumLST.index(params.get('rules',{}).keys()) if params.get('rules',{}) else -1
+            enumSEL = enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1
             select  = self.selectDialog(enumLST,header="Select Conjunction",preselect=enumSEL,useDetails=False, multi=False)
             if select > -1:
                 params.setdefault('rules',{})[enumLST[select]] = []
-                field(params.setdefault('rules',{})[enumLST[select]])
                 
         def field(rules=[]): #rules = {"and":[]}
             print('field',rules,params)
