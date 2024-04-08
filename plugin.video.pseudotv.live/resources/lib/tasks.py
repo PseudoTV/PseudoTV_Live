@@ -29,6 +29,7 @@ from server     import HTTP
 
 class Tasks():
     queue = PriorityQueue()
+    runningJSONQUE = False
     
     def __init__(self, jsonRPC=None):
         self.log('__init__')
@@ -210,27 +211,28 @@ class Tasks():
 
 
     def chkJSONQUE(self):
-        if not isRunning('runJSONQUE'):
+        if not self.runningJSONQUE:
             timerit(self.runJSONQUE)(0.5)
 
 
     def runJSONQUE(self):
-        with setRunning('runJSONQUE'):
-            queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
-            params = queuePool.get('params',[])
-            for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-                if self.myService._interrupt() or self.myService._suspend():
-                    self.log('runJSONQUE, _interrupt or _suspend, cancelling.')
-                    break
-                elif self.myService._playing():
-                    self.log('runJSONQUE, playback detected, cancelling.')
-                    break
-                elif len(params) > 0:
-                    self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
-            queuePool['params'] = setDictLST(params)
-            self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
-            SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
-        
+        self.runningJSONQUE = True
+        queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
+        params = queuePool.get('params',[])
+        for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
+            if self.myService._interrupt() or self.myService._suspend():
+                self.log('runJSONQUE, _interrupt or _suspend, cancelling.')
+                break
+            elif self.myService._playing():
+                self.log('runJSONQUE, playback detected, cancelling.')
+                break
+            elif len(params) > 0:
+                self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
+        queuePool['params'] = setDictLST(params)
+        self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
+        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
+        self.runningJSONQUE = False
+
 
     def runAutoTune(self):
         try:

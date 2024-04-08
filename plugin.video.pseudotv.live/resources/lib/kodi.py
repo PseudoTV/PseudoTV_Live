@@ -1060,7 +1060,9 @@ class Dialog:
             control.create(header, message)
         elif control:
             if int(percent) == 100 or control.isFinished(): 
-                if hasattr(control, 'close'): control.close()
+                if hasattr(control, 'close'):
+                    control.close()
+                    return None
             elif hasattr(control, 'update'):  control.update(int(percent), header, message)
             if wait: MONITOR.waitForAbort(wait/1000)
         return control
@@ -1072,7 +1074,9 @@ class Dialog:
             control.create(header, message)
         elif control:
             if int(percent) == 100 or control.iscanceled(): 
-                if hasattr(control, 'close'): control.close()
+                if hasattr(control, 'close'):
+                    control.close()
+                    return None
             elif hasattr(control, 'update'):  control.update(int(percent), message)
         return control
         

@@ -281,13 +281,7 @@ def openAddonSettings(ctl=(0,1),id=ADDON_ID):
 def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
-        
-def roundRuntimeUP(runtime):
-    runtime = datetime.datetime.fromtimestamp(runtime)
-    next_half_hour = runtime.replace(minute=0, second=0) + datetime.timedelta(minutes=30)
-    if next_half_hour < runtime: next_half_hour += datetime.timedelta(days=1)
-    return (next_half_hour - runtime).total_seconds()
-    
+
 def roundTimeDown(dt, offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(dt)
     delta = datetime.timedelta(minutes=offset)

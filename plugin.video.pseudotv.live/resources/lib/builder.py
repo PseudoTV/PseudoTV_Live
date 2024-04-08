@@ -230,8 +230,7 @@ class Builder:
         self.runActions(RULES_ACTION_CHANNEL_BUILD_START, citem, inherited=self)
         for file in citem['path']:
             if self.service._interrupt() or self.service._suspend(): break
-            else:
-                fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+            else: fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
 
         self.runActions(RULES_ACTION_CHANNEL_BUILD_STOP, citem, inherited=self)
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, fileArray, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
@@ -419,7 +418,7 @@ class Builder:
             if len(dirList)  > 0: dirList  = randomShuffle(dirList)
             if len(fileList) > 0: fileList = randomShuffle(fileList)
             
-        self.setTrailers(trailerslist)
+        if len(trailerslist) > 0: self.setTrailers(trailerslist)
         self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
         return fileList, dirList
 

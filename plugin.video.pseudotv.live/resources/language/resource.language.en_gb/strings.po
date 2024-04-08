@@ -1233,6 +1233,11 @@ msgctxt "#32165"
 msgid "No Changes Applied!
 msgstr ""
 
+msgctxt "#32166"
+msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under % minutes"
+msgstr ""
+
+msgc
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1317,7 +1322,7 @@ msgid "Clear all Pre-defined selections and remove their channels."
 msgstr ""
 
 msgctxt "#33041"
-msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel regardless of its Advanced Rules."
+msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel."
 msgstr ""
 
 msgctxt "#33042"
@@ -1465,7 +1470,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group TV shows in blocks of x. [0 Disabled, Two Shows Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and are not instantaneous."
+msgid "Group TV shows in blocks of x. [0 Disabled, 2 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and are not instantaneous."
 msgstr ""
 
 msgctxt "#33129"

@@ -31,14 +31,16 @@ def run(sysARG):
     vid   = decodeString(params.get("vid",'')      or None)
     radio = (params.get("radio",'')                or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
-    
+
     if mode == 'guide':
         hasAddon(PVR_CLIENT_ID,install=True,enable=True)
         BUILTIN.executebuiltin("Dialog.Close(all)") 
         BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
     elif mode == 'settings': 
         hasAddon(PVR_CLIENT_ID,install=True,enable=True)
-        BUILTIN.executebuiltin('Addon.OpenSettings(%s)'%ADDON_ID)
+        SETTINGS.openSettings()
+    elif chid and not vid:
+        return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
     elif mode == 'vod': 
         threadit(Plugin(sysARG).playVOD)(title,vid)
     elif mode == 'live':

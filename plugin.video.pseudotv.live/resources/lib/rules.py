@@ -36,7 +36,6 @@ class RulesList:
                           SetScreenOverlay(),
                           HandleMethodOrder(),
                           ProvisionalRule(),
-                          seekControl(),
                          ]
                          
         self.channels  = channels
@@ -305,7 +304,7 @@ class ShowChannelBug(BaseRule):
         self.optionValues     = [SETTINGS.getSettingBool('Enable_ChannelBug'),SETTINGS.getSettingInt("Channel_Bug_Interval")]
         self.actions          = [RULES_ACTION_OVERLAY_OPEN]
         self.selectBoxOptions = [[True, False],list(range(-1,17))]
-        #"Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Random]"
+        #"Interval between channel bug appearances (Minutes). [-1 Indefinitely, 0 Randomly]"
         
 
     def copy(self):
@@ -314,16 +313,16 @@ class ShowChannelBug(BaseRule):
 
     def getTitle(self):
         if self.optionValues[0]:
-            return 'Hide Channel Bug'
+            return 'Show Channel Bug (%s)'%({'-1':'Indefinitely','0':'Randomly'}.get(str(self.optionValues[1]),'Every %s Minutes'%(self.optionValues[1])))
         else:
-            return 'Show Channel Bug (%s)'%(self.optionValues[1])
+            return 'Hide Channel Bug'
 
 
     def onAction(self, act, optionindex):
         if optionindex == 0:
             self.onActionToggleBool(optionindex)
         elif optionindex == 1:
-            self.onActionSelect(optionindex, 'Select Interval [-1 Indefinitely, 0 Random]',self.optionValues[optionindex])
+            self.onActionSelect(optionindex, 'Select Interval [-1 = Indefinitely, 0 = Randomly]',self.optionValues[optionindex])
         return self.optionValues[optionindex]
 
 
@@ -487,57 +486,6 @@ class ForceSubtitles(BaseRule):
             player.lastSubState = self.storedValues[0]
         self.log("runAction, setting lastSubState = %s"%(player.lastSubState))
         return pvritem
-
- 
-class seekControl(BaseRule):
-    def __init__(self):
-        self.myId             = 23
-        self.name             = "Seek Control, Threshold & Tolerance"
-        self.description      = ''
-        self.optionLabels     = ['Disable Seeking','Threshold Percentage','Tolerance Seconds']
-        self.optionValues     = [False,SETTINGS.getSettingInt('Seek_Threshold'),SETTINGS.getSettingInt('Seek_Tolerance')]
-        self.actions          = [RULES_ACTION_PLAYBACK]
-        self.selectBoxOptions = [[True,False],list(range(85,101)),list(range(0,901,5))]
-        
-
-    def copy(self):
-        return seekControl()
-
-
-    def getTitle(self):
-        if self.optionValues[0]:
-            return 'Disable seek'
-        else: 
-            return 'Enabled seek'
-            
-
-    def onAction(self, act, optionindex):
-        if optionindex == 0:
-            self.onActionToggleBool(act, optionindex)
-        elif optionindex == 1:
-            self.onActionDigitBox(act, optionindex)
-        elif optionindex == 2:
-            self.onActionDigitBox(act, optionindex)
-        self.validate(optionindex)
-        return self.optionValues[optionindex]
-
-
-    def validate(self, optionindex):
-        if optionindex > 0:
-            self.validateDigitBox(optionindex,self.selectBoxOptions[optionindex][0],self.selectBoxOptions[optionindex][-1],self.optionValues[optionindex])
-            
-            
-    def runAction(self, actionid, citem, nowitem, plugin):
-        if actionid == RULES_ACTION_PLAYBACK:
-            if self.optionValues[0]:
-                self.log("runAction, disabling seek progress")
-                nowitem['progress'] = 0
-                
-            plugin.seekTHLD  = self.optionValues[1]
-            plugin.seekTLRNC = self.optionValues[2]
-            self.log("runAction, setting seekTHLD = %s"%(plugin.seekTHLD))
-            self.log("runAction, setting seekTLRNC = %s"%(plugin.seekTLRNC))
-        return nowitem
 
 
 class HandleMethodOrder(BaseRule):
@@ -704,12 +652,12 @@ class EvenShowsRule(BaseRule):
             self.log('runAction, saving limit %s'%(builder.limit))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
-            if parameter:
-                if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
-                    builder.limit = self.storedValues[2] * self.optionValues[0]
-                else:
-                    builder.limit = self.storedValues[2]
-                self.log('runAction, changing limit %s'%(builder.limit))
+            print('RULES_ACTION_CHANNEL_BUILD_PATH',parameter)
+            if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
+                builder.limit = self.storedValues[2] * self.optionValues[0]
+            elif parameter:
+                builder.limit = self.storedValues[2]
+            self.log('runAction, changing limit %s'%(builder.limit))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
             try:

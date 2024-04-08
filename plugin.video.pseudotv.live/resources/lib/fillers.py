@@ -32,12 +32,12 @@ class Fillers:
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC,self.cache)
+        
         self.bctTypes   = {"ratings"  :{"max":1                 ,"auto":builder.incRatings == 1,"enabled":bool(builder.incRatings),"sources":builder.srcRatings,"items":{}},
                            "bumpers"  :{"max":1                 ,"auto":builder.incBumpers == 1,"enabled":bool(builder.incBumpers),"sources":builder.srcBumpers,"items":{}},
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
-        print('bctTypes',self.bctTypes)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -45,7 +45,7 @@ class Fillers:
 
 
     def fillSources(self):
-        if self.bctTypes['trailers']['enabled'] and SETTINGS.getSettingInt('Include_Trailers') < 2:
+        if self.bctTypes['trailers'].get('enabled',False) and SETTINGS.getSettingInt('Include_Trailers') < 2:
             self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.getTrailers())
             
         for ftype, values in self.bctTypes.items():
@@ -81,31 +81,15 @@ class Fillers:
             if not hasAddon(path, install=True): return {}
             return self.resources.walkResource(path,exts=VIDEO_EXTS)
                 
-        def _rating(data):
+        def _sortbyfile(data):
             tmpDCT = {}
             for path, files in data.items():
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
                     if dur > 0: tmpDCT.setdefault(file.split('.')[0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':file.split('.')[0]})
             return tmpDCT
-            
-        def _bumper(data):
-            tmpDCT = {}
-            for path, files in data.items():
-                for file in files:
-                    dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(os.path.basename(path).lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':os.path.basename(path)})
-            return tmpDCT
-                
-        def _advert(data):
-            tmpDCT = {}
-            for path, files in data.items():
-                for file in files:
-                    dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(os.path.basename(path).lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':os.path.basename(path)})
-            return tmpDCT
-            
-        def _trailer(data):
+ 
+        def _sortbyfolder(data):
             tmpDCT = {}
             for path, files in data.items():
                 for file in files:
@@ -114,11 +98,11 @@ class Fillers:
             return tmpDCT
             
         if   path.startswith('plugin://'): return _parseVFS(path)
-        if   ftype == 'ratings':  return _rating(_parseResource(path))
-        elif ftype == 'bumpers':  return _bumper(_parseResource(path))
-        elif ftype == 'adverts':  return _advert(_parseResource(path))
-        elif ftype == 'trailers': return _trailer(_parseResource(path))
-        return {}
+        if   ftype == 'ratings':           return _sortbyfile(_parseResource(path))
+        elif ftype == 'bumpers':           return _sortbyfolder(_parseResource(path))
+        elif ftype == 'adverts':           return _sortbyfolder(_parseResource(path))
+        elif ftype == 'trailers':          return _sortbyfolder(_parseResource(path))
+        else:                              return {}
         
         
     def convertMPAA(self, ompaa):
@@ -132,37 +116,21 @@ class Fillers:
         return mpaa, tmpLST
 
 
-    def getRating(self, keys=[]):
+    def getSingle(self, type, keys=['resources']):
         try:
             tmpLST = []
-            for key in keys: tmpLST.extend(self.bctTypes['ratings'].get('items',{}).get(key.lower(),[]))
+            for key in keys: tmpLST.extend(self.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
             return random.choice(tmpLST)
         except: return {}
-        
 
-    def getBumper(self, keys=['resources']):
+
+    def getMulti(self, type, keys=['resources'], count=1):
         try:
             tmpLST = []
-            for key in keys: tmpLST.extend(self.bctTypes['bumpers'].get('items',{}).get(key.lower(),[]))
-            return random.choice(tmpLST)
-        except: return {}
-    
-
-    def getAdverts(self, keys=['resources'], count=1):
-        try:
-            tmpLST = []
-            for key in keys: tmpLST.extend(self.bctTypes['adverts'].get('items',{}).get(key.lower(),[]))
+            for key in keys: tmpLST.extend(self.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
             return setDictLST(random.choices(tmpLST,k=count))
         except: return []
     
-
-    def getTrailers(self, keys=['resources'], count=1):
-        try:
-            tmpLST = []
-            for key in keys: tmpLST.extend(self.bctTypes['trailers'].get('items',{}).get(key.lower(),[]))
-            return setDictLST(random.choices(tmpLST,k=count))
-        except: return []
-
 
     def injectBCTs(self, citem, fileList):
         nfileList = []
@@ -176,17 +144,26 @@ class Fillers:
                 chtype  = citem.get('type','')
                 chname  = citem.get('name','')
                 fitem   = fileItem.copy()
+                # nitem   = fileList[idx + 1].copy()
                 ftype   = fileItem.get('type','')
                 fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
-
+                
+                addRatings  = self.bctTypes['ratings'].get('enabled',False)
+                addBumpers  = self.bctTypes['bumpers'].get('enabled',False)
+                addAdverts  = self.bctTypes['adverts'].get('enabled',False)
+                addTrailers = self.bctTypes['trailers'].get('enabled',False)
+                
+                cntAdverts  = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
+                cntTrailers = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
+                
                 #pre roll - bumpers
-                if self.bctTypes['bumpers']['enabled']:
+                if addBumpers:
                     # #todo movie bumpers for audio/video codecs? imax bumpers?
                     if ftype.startswith(tuple(TV_TYPES)):
                         if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
                             bkeys = ['resources',chname, fgenre] if chanceBool(SETTINGS.getSettingInt('Random_Bumper_Chance')) else [chname, fgenre]
-                            bitem = self.getBumper(bkeys)
+                            bitem = self.getSingle('bumper',bkeys)
                             if bitem.get('file') and bitem.get('duration',0) > 0:
                                 runtime += bitem.get('duration')
                                 self.log('injectBCTs, adding bumper %s - %s'%(bitem.get('file'),bitem.get('duration')))
@@ -195,10 +172,10 @@ class Fillers:
                                 nfileList.append(self.builder.buildCells(citem,bitem.get('duration'),entries=1,info=item)[0])
                 
                 #pre roll - ratings
-                if self.bctTypes['ratings']['enabled']:
+                if addRatings:
                     if ftype.startswith(tuple(MOVIE_TYPES)):
                         mpaa, rkeys = self.convertMPAA(fileItem.get('mpaa','NR'))
-                        ritem = self.getRating(rkeys)
+                        ritem = self.getSingle('rating',rkeys)
                         if ritem.get('file') and ritem.get('duration',0) > 0:
                             runtime += ritem.get('duration')
                             self.log('injectBCTs, adding rating %s - %s'%(ritem.get('file'),ritem.get('duration')))
@@ -212,18 +189,17 @@ class Fillers:
                 
                 # post roll - commercials
                 pfileList    = []
-                pfillRuntime = roundRuntimeUP(runtime)
+                pfillRuntime = ((runtime *60) // 900) * 60 #time between nears half hour for auto fill.
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
                 
                 self.log('injectBCTs, post roll current runtime %s, available runtime %s'%(runtime, pfillRuntime))
-                if self.bctTypes['adverts']['enabled']:
-                    acnt = PAGE_LIMIT if self.bctTypes['adverts']['auto'] else self.bctTypes['adverts']['max']
-                    afillRuntime = (pfillRuntime // 2) if self.bctTypes['trailers']['enabled'] else pfillRuntime #if trailers enabled only fill half the required space, leaving room for trailers.  
+                if addAdverts:
+                    afillRuntime = (pfillRuntime // 2) if addTrailers else pfillRuntime #if trailers enabled only fill half the required space, leaving room for trailers.  
                     pfillRuntime -= afillRuntime
                     self.log('injectBCTs, advert fill runtime %s'%(afillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
                         akeys = ['resources',chname, fgenre] if pchance else [chname, fgenre]
-                        for aitem in self.getAdverts(akeys, acnt): 
+                        for aitem in self.getMulti('adverts',akeys, cntAdverts): 
                             if aitem.get('file') and aitem.get('duration',0) > 0:
                                 if afillRuntime <= 0: break
                                 afillRuntime -= aitem.get('duration')
@@ -233,13 +209,11 @@ class Fillers:
                                 pfileList.append(self.builder.buildCells(citem,aitem.get('duration'),entries=1,info=item)[0])
                             
                 # post roll - trailers
-                if self.bctTypes['trailers']['enabled']:
-                    self.log('injectBCTs, trailers fill runtime %s'%(pfillRuntime))
-                    tcnt = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
+                if addTrailers:
                     self.log('injectBCTs, trailers fill runtime %s'%(pfillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Movie Genres','Movie Studios','Mixed Genres','Custom']:
                         tkeys = ['resources',chname, fgenre] if pchance else [chname, fgenre]
-                        for titem in self.getTrailers(tkeys, tcnt):
+                        for titem in self.getMulti('trailers',tkeys, cntTrailers):
                             if titem.get('file') and titem.get('duration',0) > 0:
                                 if pfillRuntime <= 0: break
                                 pfillRuntime -= titem.get('duration')

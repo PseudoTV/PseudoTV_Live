@@ -235,11 +235,6 @@ class Monitor(xbmc.Monitor):
         return idleState, idleTime
 
 
-    def chkRemaining(self):
-        if self.myService.player.isPlaying() and self.myService.player.getTimeRemaining() == 1:
-            self.myService.player.toggleBackground(True)
-
-
     def chkIdle(self):
         self.isIdle, self.idleTime = self.getIdle()
         if self.sleepTime > 0 and (self.idleTime > (self.sleepTime * 10800)): #3hr increments
@@ -293,9 +288,7 @@ class Monitor(xbmc.Monitor):
             
             
     def isSettingsOpened(self):
-        isSettingDialog = (PROPERTIES.getPropertyBool('addonsettings') or BUILTIN.getInfoBool('IsVisible(addonsettings)','Window'))
-        isSelectDialog  = (PROPERTIES.getPropertyBool('selectdialog')  or BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
-        state = (isSettingDialog | isSelectDialog)
+        state = (BUILTIN.getInfoBool('IsVisible(addonsettings)','Window') | BUILTIN.getInfoBool('IsVisible(selectdialog)' ,'Window'))
         self.log("isSettingsOpened, state = %s"%(state))
         return state
 
@@ -320,6 +313,8 @@ class Service():
     setClient(isClient())
     currentChannels = []
     currentSettings = []
+    runningRun      = False
+    runningTask     = False
     
     jsonRPC  = JSONRPC()
     player   = Player()
@@ -357,16 +352,18 @@ class Service():
     
          
     def _run(self):
-        if self.player.isPseudoTV: 
-            with setRunning('_run'):
-                self.monitor.chkIdle()
-                # self.monitor.chkRemaining() #todo needs more testing, not toggling off on short video playback.
+        if not self.runningRun and self.player.isPseudoTV:
+            self.runningRun = True
+            self.monitor.chkIdle()
+            self.runningRun = False
        
    
     def _tasks(self):
-        with setRunning('_tasks'):
+        if not self.runningTask:
+            self.runningTask = True
             self.tasks.chkQueTimer()
             self.tasks._queue()
+            self.runningTask = False
         
         
     def _initialize(self):
@@ -385,9 +382,9 @@ class Service():
         while not self.monitor.abortRequested():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
-            else: 
-                if not isRunning('_run'):   self._run()
-                if not isRunning('_tasks'): self._tasks()
+            elif not self.monitor.isSettingsOpened(): 
+                if not self.runningRun:  self._run()
+                if not self.runningTask: self._tasks()
         self.stop()
 
 

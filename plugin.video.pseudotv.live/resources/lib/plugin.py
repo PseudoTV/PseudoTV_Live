@@ -22,14 +22,16 @@ from jsonrpc     import JSONRPC
 from infotagger.listitem import ListItemInfoTag
 
 class Plugin:
+    preparingPlayback = False
+
     @contextmanager
     def preparingPlayback(self):
         if self.playCheck(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
-            PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'true')
+            self.preparingPlayback = True
             try: yield
             finally:
-                PROPERTIES.setEXTProperty('%s.preparingPlayback'%(ADDON_ID),'false')
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
+                self.preparingPlayback = False
         else:
             yield self.playError()
 
@@ -48,7 +50,7 @@ class Plugin:
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
                              "vid"       : decodeString(self.sysInfo.get('vid','')),
-                             "duration"  : (int(self.sysInfo.get('duration',0)) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)'))),
+                             "duration"  : (int(self.sysInfo.get('duration','0')) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)'))),
                              "progress"  : (BUILTIN.getInfoLabel('Progress'),BUILTIN.getInfoLabel('PercentPlayed')),
                              "chlabel"   : BUILTIN.getInfoLabel('ChannelNumberLabel'),
                              "chpath"    : BUILTIN.getInfoLabel('FileNameAndPath'),

@@ -299,11 +299,11 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
-        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails', {}).get('video',[{}])[0].get('duration',0)))
-        if not runtime and path.startswith('plugin://plugin.video.youtube/play/?video_id='):
+        runtime = (item.get('runtime') or item.get('duration') or item.get('streamdetails', {}).get('video',[{}])[0].get('duration') or 0)
+        if not runtime and path.startswith(('plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious')):
             try:    runtime = self.parseYoutubeRuntime(path.split('?video_id=')[1])
             except: runtime = 0
-
+        
         if (runtime == 0 or accurate):
             if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
                 duration = 0
