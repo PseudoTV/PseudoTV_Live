@@ -282,6 +282,12 @@ def pagination(list, end):
     for start in range(0, len(list), end):
         yield seq[start:start+end]
 
+def diffRuntime(dur, roundto=15):
+    def ceil_dt(dt, delta):
+        return dt + (datetime.datetime.min - dt) % delta
+    now = datetime.datetime.fromtimestamp(dur)
+    return (ceil_dt(now, datetime.timedelta(minutes=roundto)) - now).total_seconds()
+
 def roundTimeDown(dt, offset=30): # round the given time down to the nearest
     n = datetime.datetime.fromtimestamp(dt)
     delta = datetime.timedelta(minutes=offset)

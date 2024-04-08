@@ -149,13 +149,12 @@ class Fillers:
                 fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
                 
-                addRatings  = self.bctTypes['ratings'].get('enabled',False)
-                addBumpers  = self.bctTypes['bumpers'].get('enabled',False)
-                addAdverts  = self.bctTypes['adverts'].get('enabled',False)
-                addTrailers = self.bctTypes['trailers'].get('enabled',False)
-                
-                cntAdverts  = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
-                cntTrailers = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
+                addRatings   = self.bctTypes['ratings'].get('enabled',False)
+                addBumpers   = self.bctTypes['bumpers'].get('enabled',False)
+                addAdverts   = self.bctTypes['adverts'].get('enabled',False)
+                addTrailers  = self.bctTypes['trailers'].get('enabled',False)
+                cntAdverts   = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
+                cntTrailers  = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
                 
                 #pre roll - bumpers
                 if addBumpers:
@@ -189,7 +188,8 @@ class Fillers:
                 
                 # post roll - commercials
                 pfileList    = []
-                pfillRuntime = ((runtime *60) // 900) * 60 #time between nears half hour for auto fill.
+                afillRuntime = 0
+                pfillRuntime = diffRuntime(runtime) #time between nears half hour for auto fill.
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
                 
                 self.log('injectBCTs, post roll current runtime %s, available runtime %s'%(runtime, pfillRuntime))
@@ -210,6 +210,7 @@ class Fillers:
                             
                 # post roll - trailers
                 if addTrailers:
+                    pfillRuntime += afillRuntime
                     self.log('injectBCTs, trailers fill runtime %s'%(pfillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Movie Genres','Movie Studios','Mixed Genres','Custom']:
                         tkeys = ['resources',chname, fgenre] if pchance else [chname, fgenre]

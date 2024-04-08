@@ -1234,7 +1234,7 @@ msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32166"
-msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under % minutes"
+msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under %s minutes"
 msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
