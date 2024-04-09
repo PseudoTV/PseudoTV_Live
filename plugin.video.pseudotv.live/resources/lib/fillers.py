@@ -38,6 +38,7 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
+        
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -149,8 +150,8 @@ class Fillers:
                 fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
                 
-                addRatings   = self.bctTypes['ratings'].get('enabled',False)
                 addBumpers   = self.bctTypes['bumpers'].get('enabled',False)
+                addRatings   = self.bctTypes['ratings'].get('enabled',False)
                 addAdverts   = self.bctTypes['adverts'].get('enabled',False)
                 addTrailers  = self.bctTypes['trailers'].get('enabled',False)
                 cntAdverts   = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
@@ -162,7 +163,7 @@ class Fillers:
                     if ftype.startswith(tuple(TV_TYPES)):
                         if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
                             bkeys = ['resources',chname, fgenre] if chanceBool(SETTINGS.getSettingInt('Random_Bumper_Chance')) else [chname, fgenre]
-                            bitem = self.getSingle('bumper',bkeys)
+                            bitem = self.getSingle('bumpers',bkeys)
                             if bitem.get('file') and bitem.get('duration',0) > 0:
                                 runtime += bitem.get('duration')
                                 self.log('injectBCTs, adding bumper %s - %s'%(bitem.get('file'),bitem.get('duration')))
@@ -174,7 +175,7 @@ class Fillers:
                 if addRatings:
                     if ftype.startswith(tuple(MOVIE_TYPES)):
                         mpaa, rkeys = self.convertMPAA(fileItem.get('mpaa','NR'))
-                        ritem = self.getSingle('rating',rkeys)
+                        ritem = self.getSingle('ratings',rkeys)
                         if ritem.get('file') and ritem.get('duration',0) > 0:
                             runtime += ritem.get('duration')
                             self.log('injectBCTs, adding rating %s - %s'%(ritem.get('file'),ritem.get('duration')))
@@ -189,10 +190,10 @@ class Fillers:
                 # post roll - commercials
                 pfileList    = []
                 afillRuntime = 0
-                pfillRuntime = diffRuntime(runtime) #time between nears half hour for auto fill.
+                pfillRuntime = diffRuntime(runtime) #time betwen nears half hour for auto fill.
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
-                
                 self.log('injectBCTs, post roll current runtime %s, available runtime %s'%(runtime, pfillRuntime))
+                
                 if addAdverts:
                     afillRuntime = (pfillRuntime // 2) if addTrailers else pfillRuntime #if trailers enabled only fill half the required space, leaving room for trailers.  
                     pfillRuntime -= afillRuntime

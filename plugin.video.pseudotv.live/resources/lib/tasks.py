@@ -43,7 +43,7 @@ class Tasks():
     def _startProcess(self):
         #first processes before service loop starts. Only runs once per instance.
         setInstanceID()
-        setClient(isClient(),silent=False)
+        isClient(silent=False)
         self.chkWelcome()
         self.chkVersion()
         self.chkDebugging()
@@ -281,11 +281,11 @@ class Tasks():
                 if nSettings.get(setting) != value and actions.get(setting):
                     with sudo_dialog(LANGUAGE(32157)):
                         self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                        self._que(actions[setting].get('func'),-1,*actions[setting].get('args',()),**actions[setting].get('kwargs',{}))
+                        self._que(actions[setting].get('func'),1,*actions[setting].get('args',()),**actions[setting].get('kwargs',{}))
             return nSettings
 
 
-    def setUserPath(self, userFolders, forceOverride=False):
+    def setUserPath(self, userFolders):
         oldFolder, newFolder = userFolders
         self.log('setUserPath, oldFolder = %s, newFolder = %s, isClient = %s'%(oldFolder,newFolder,isClient()))
         if not isClient():

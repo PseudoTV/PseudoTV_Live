@@ -492,14 +492,12 @@ def setFirstrun(state=True):
     if state == hasFirstrun(): return
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
-def isClient():
-    return PROPERTIES.getEXTProperty('%s.isClient'%(ADDON_ID)) == "true"
-   
-def setClient(state=False,silent=True):
+def isClient(silent=True):
+    state =  (SETTINGS.getSettingBool('Client_Mode') or False)
     PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
-    if not silent and state: DIALOG.notificationWait(LANGUAGE(32115))
+    if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
     return state
-    
+
 def getDiscovery():
     return loadJSON(PROPERTIES.getEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID)))
 

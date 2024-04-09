@@ -186,6 +186,7 @@ class Plugin:
                     channelPlaylist.clear()
                     xbmc.sleep(100)
                     for idx,lz in enumerate(listitems):
+                        if not FileAccess.exists(lz.getPath()): continue
                         lz.setProperty('sysInfo',dumpJSON(self.sysInfo))
                         channelPlaylist.add(lz.getPath(),lz,idx)
                     
@@ -282,13 +283,12 @@ class Plugin:
     def playCheck(self, oldInfo={}):
         #check that resource or plugin installed?
         self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
-        def _chkPlugin():
-            if self.sysInfo.get('vid','').startswith(('plugin://','special://')):
-                id = getIDbyPath(self.sysInfo.get('vid',''))
-                if not hasAddon(id,install=True,enable=True):
-                    self.log('playCheck _chkPlugin, failed! Plugin (%s) not installed.'%(id))
-                    return True
-            return False
+        def _chkPath():
+            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES+["special://"])):
+                if hasAddon(getIDbyPath(self.sysInfo.get('vid','')),install=True,enable=True): return False
+            elif FileAccess.exists(self.sysInfo.get('vid','')): return False
+            self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
+            return True
             
         def _chkGuide():
             if (self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()) and self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title'))):
@@ -316,7 +316,7 @@ class Plugin:
                     return True
             return False
 
-        _chkPlugin()
+        _chkPath()
         _chkGuide()
         _chkLoop()
         #todo take action on fail. for now log events to strategize actions. 

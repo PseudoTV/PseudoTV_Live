@@ -310,7 +310,7 @@ class Monitor(xbmc.Monitor):
 
 
 class Service():
-    setClient(isClient())
+    isClient()
     currentChannels = []
     currentSettings = []
     runningRun      = False
@@ -382,9 +382,9 @@ class Service():
         while not self.monitor.abortRequested():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
-            elif not self.monitor.isSettingsOpened(): 
-                if not self.runningRun:  self._run()
-                if not self.runningTask: self._tasks()
+            else: 
+                self._run()
+                self._tasks()
         self.stop()
 
 

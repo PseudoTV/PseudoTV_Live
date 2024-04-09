@@ -1030,7 +1030,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#32115"
-msgid "Running in client mode!"
+msgid "Running as a client."
 msgstr ""
 
 msgctxt "#32116"

@@ -22,10 +22,8 @@ from globals    import *
 from server     import Discovery, Announcement
 
 class Multiroom:
-    client = setClient(isClient())
-    
     def __init__(self, sysARG=sys.argv, monitor=None):
-        self.log('__init__, sysARG = %s, isClient = %s'%(sysARG,self.client))
+        self.log('__init__, sysARG = %s, isClient = %s'%(sysARG,isClient()))
         self.sysARG = sysARG
         self.runningAnnouncment = False
         self.runningDiscovery   = False

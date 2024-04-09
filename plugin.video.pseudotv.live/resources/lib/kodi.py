@@ -64,11 +64,11 @@ def closeBusyDialog():
 
 @contextmanager
 def busy_dialog():
-    # if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
+    if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
-    finally: pass #todo debug kodi crashing.
-        # Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
-         
+    finally: #todo debug kodi crashing.
+        if isBusyDialog(): Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+                  
 @contextmanager
 def sudo_dialog(msg):
     dia = Dialog().progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
@@ -278,7 +278,7 @@ class Settings:
 
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
-        self.setSetting('User_Folder'   ,userFolder)
+        self.setSetting('User_Folder',userFolder)
         Client_Mode = SETTINGS.getSettingInt('Client_Mode')
         newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),
