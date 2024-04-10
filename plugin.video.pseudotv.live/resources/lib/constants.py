@@ -123,6 +123,8 @@ CHANNELRESTOREFLE   = 'channels.restore'
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
+IMG_EXTS            = ['.png','.jpg','.gif']
+TEXTURES            = 'Textures.xbt'
 
 #file paths
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')

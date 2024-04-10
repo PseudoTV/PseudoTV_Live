@@ -91,14 +91,16 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, depth=3, chkDuration=True, retItem=False):
+    def walkFileDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        self.log('walkFileDirectory, path = %s, exts = %s'%(path,exts))
         walk = dict()
         dirs = [path]
         for idx, dir in enumerate(dirs):
             if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
-                for item in self.getDirectory(param={"directory":dir}, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)).get('files',[]):
-                    if not item.get('file'): continue
+                self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
+                for item in self.getDirectory(param={"directory":dir}).get('files',[]):
+                    if not item.get('file') or not item.get('file','').endswith(tuple(exts)): continue
                     elif item.get('filetype') == 'directory': dirs.append(item.get('file'))
                     elif item.get('filetype') == 'file':
                         if chkDuration:
@@ -109,29 +111,33 @@ class JSONRPC:
         return walk
                 
 
-    def walkListDirectory(self, path, depth=3, hasruntime=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)):
-        def chkruntime(file):
-            return self.getDuration(file) > 0
-    
-        dirs  = [path]
-        files = []
-        for idx, dir in enumerate(dirs):
+    def walkListDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, appendPath=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        def _chkfile(path, f):
+            if appendPath: f = os.path.join(path,f)
+            if chkDuration:
+                if self.getDuration(f, accurate=True) == 0: return
+            return f
+            
+        def _parseXBT():
+            resource = path.replace('/resources','').replace('special://home/addons/','resource://')
+            walk.setdefault(resource,[]).extend(self.getListDirectory(resource,checksum,expiration)[1])
+            return walk
+             
+        self.log('walkListDirectory, path = %s, exts = %s'%(path,exts))
+        walk = dict()
+        path = path.replace('\\','/')
+        dirs, files = self.getListDirectory(path,checksum,expiration)
+        if TEXTURES in files: return _parseXBT()
+        else: walk.setdefault(path,[]).extend(list(filter(None,[_chkfile(path, f) for f in files if f.endswith(tuple(exts))])))
+        for idx, dir in enumerate(dirs): 
             if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
-                ndirs, nfiles = self.getListDirectory(dir, checksum, expiration)
-                if hasruntime: nfiles = [file for file in nfiles if chkruntime(file)]
-                if appendPath:
-                    dirs.extend([os.path.join(path,dir) for dir in ndirs])
-                    files.extend([os.path.join(path,fle) for fle in nfiles])
-                else:
-                    dirs.extend(ndirs)
-                    files.extend(nfiles)
-
-        self.log('walkListDirectory, return dirs = %s, files = %s\npath = %s'%(len(dirs), len(files),path))
-        return dirs, files
-
+                self.log('walkListDirectory, walking %s/%s directory'%(idx,len(dirs)))
+                walk.update(self.walkListDirectory(os.path.join(path, dir),exts,checksum))
+        return walk
         
-    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(days=MAX_GUIDEDAYS)):
+        
+    def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         cacheName = 'getListDirectory.%s'%(getMD5(path))
         results   = self.cache.get(cacheName, checksum)
         if not results:
@@ -535,11 +541,3 @@ class JSONRPC:
                     items.append(item)
         self.log("padItems; items Out = %s"%(len(items)))
         return items
-        
-        
-    def hasPVRSource(self):
-        for item in self.getSources():
-            if item.get('file','').lower().startswith('pvr://'):
-                return True
-        return False
-               

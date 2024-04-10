@@ -942,6 +942,22 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
+				<setting id="Include_Adverts" type="boolean" label="30136" help="" parent="Resource_Commericals">
+					<level>1</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+                        <dependency type="visible">
+                            <and>
+                                <condition on="property" name="InfoBool">System.HasAddon(plugin.video.ispot.tv)</condition>
+                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+                            </and>
+                        </dependency>
+						<dependency type="enable">
+                            <condition operator="!is" setting="Fillers_Commercials">0</condition>
+						</dependency>
+					</dependencies>
+				</setting>
 				<setting id="Random_Advert_Chance" type="integer" label="30134" help="33134" parent="Resource_Commericals">
 					<level>2</level>
 					<default>25</default>

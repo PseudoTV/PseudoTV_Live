@@ -38,6 +38,7 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
+        print('self.bctTypes',self.bctTypes)
         
 
 
@@ -48,38 +49,37 @@ class Fillers:
     def fillSources(self):
         if self.bctTypes['trailers'].get('enabled',False) and SETTINGS.getSettingInt('Include_Trailers') < 2:
             self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.getTrailers())
-            
-        for ftype, values in list(self.bctTypes.items()):
-            for id in values.get("sources",{}).get("resource",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
-            for path in values.get("sources",{}).get("paths",[]):  values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
                 
-          
+        for ftype, values in list(self.bctTypes.items()):
+            for id in values.get("sources",{}).get("resource",[]):
+                if self.bctTypes[ftype].get('enabled',False): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
+            for path in values.get("sources",{}).get("paths",[]):
+                if self.bctTypes[ftype].get('enabled',False): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
+                
+
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def buildSource(self, ftype, path):
         self.log('buildSource, type = %s, path = %s'%(ftype, path))
         def _parseVFS(path):
             tmpDCT = {}
-            if not hasAddon(path, install=True): return {}
-            for url, items in list(self.jsonRPC.walkFileDirectory(path,retItem=True).items()):
-                for item in items:
-                    for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
+            if hasAddon(path, install=True):
+                for url, items in list(self.jsonRPC.walkFileDirectory(path,chkDuration=True,retItem=True).items()):
+                    for item in items:
+                        for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
             
         def _parseLocal(path):
             tmpDCT = {}
-            print('_parseLocal',self.jsonRPC.walkListDirectory(path,appendPath=True))
-            # dirs, files = self.jsonRPC.walkListDirectory(path,appendPath=True)
-            # for idx, dir in enumerate(dirs):
-                # for file in files[idx]
-                # tmpDCT.setdefault(os.path.basename(dir).lower(),[]).append([ for file in])
-                
-            
-            # dur = self.jsonRPC.getDuration(item.get('file'),item, accurate=True)
-            # tmpDCT.setdefault('resources',[]).append([(item.get('file'),item.get('duration')) for item in items if item.get('duration',0) > 0])
+            print('_parseLocal',path,FileAccess.exists(path))
+            if FileAccess.exists(path):
+                for paths, items in list(self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=50, chkDuration=True).items()):
+                    print('_parseLocal',path,items)
+                    for item in items:
+                        for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
 
         def _parseResource(path):
-            if not hasAddon(path, install=True): return {}
+            if not hasAddon(path, install=True): return [],[]
             return self.resources.walkResource(path,exts=VIDEO_EXTS)
                 
         def _sortbyfile(data):
@@ -92,18 +92,22 @@ class Fillers:
  
         def _sortbyfolder(data):
             tmpDCT = {}
+            print('_sortbyfolder',data)
             for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
                     if dur > 0: tmpDCT.setdefault(os.path.basename(path).lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':os.path.basename(path)})
             return tmpDCT
             
-        if   path.startswith('plugin://'): return _parseVFS(path)
-        if   ftype == 'ratings':           return _sortbyfile(_parseResource(path))
-        elif ftype == 'bumpers':           return _sortbyfolder(_parseResource(path))
-        elif ftype == 'adverts':           return _sortbyfolder(_parseResource(path))
-        elif ftype == 'trailers':          return _sortbyfolder(_parseResource(path))
-        else:                              return {}
+        if not path: return {}
+        elif path.startswith('resource.'):
+            if   ftype == 'ratings':                return _sortbyfile(_parseResource(path))
+            elif ftype == 'bumpers':                return _sortbyfolder(_parseResource(path))
+            elif ftype == 'adverts':                return _sortbyfolder(_parseResource(path))
+            elif ftype == 'trailers':               return _sortbyfolder(_parseResource(path))
+        elif     path.startswith('plugin://'):      return _parseVFS(path)
+        elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
+        else:                                       return {}
         
         
     def convertMPAA(self, ompaa):

@@ -164,8 +164,6 @@ class Tasks():
                     
                 if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
                     SETTINGS.setSettingInt('Max_Days',max)
-
-                PROPERTIES.setPropertyBool('hasPVRSource',self.jsonRPC.hasPVRSource())
         except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
          
 

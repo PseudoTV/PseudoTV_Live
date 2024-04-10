@@ -493,7 +493,7 @@ def setFirstrun(state=True):
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient(silent=True):
-    state =  (SETTINGS.getSettingBool('Client_Mode') or False)
+    state = SETTINGS.getSettingInt('Client_Mode') > 0
     PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
     if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
     return state

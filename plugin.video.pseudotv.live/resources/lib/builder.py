@@ -63,7 +63,7 @@ class Builder:
         
         self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
         self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
-                                 "paths":[]}
+                                 "paths":[self.getAdvertPath()]}
         
         self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
         self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
@@ -107,6 +107,7 @@ class Builder:
             
     @timeit
     def build(self):
+        PROPERTIES.setEXTProperty('PseudoTVRunning','True')
         channels = sorted(self.verify(self.channels.getChannels()), key=lambda k: k['number'])
         if not channels:
             self.log('build, no verified channels found!')
@@ -149,6 +150,7 @@ class Builder:
                     
         self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
         self.log('build, completeBuild = %s, saved = %s'%(self.completeBuild,self.saveChannelLineups()))
+        PROPERTIES.setEXTProperty('PseudoTVRunning','False')
         return self.completeBuild
 
         
@@ -498,3 +500,13 @@ class Builder:
         items = mergeDictLST(self.getTrailers(),nitems)
         self.log('setTrailers, trailers: %s'%(len(items)))
         self.cache.set('getTrailers', items, expiration=datetime.timedelta(days=28), json_data=True)
+        
+        
+    def getAdvertPath(self):
+        if bool(self.incAdverts) and SETTINGS.getSettingBool('Include_Adverts'):
+            if hasAddon('plugin.video.ispot.tv'):
+                try:    folder = os.path.join(xbmcaddon.Addon('plugin.video.ispot.tv').getSetting('Download_Folder'),'')
+                except: folder = 'special://profile/addon_data/plugin.video.ispot.tv/resources/'
+                self.log('getAdvertPath, folder: %s'%(folder))
+                return folder
+        return ''

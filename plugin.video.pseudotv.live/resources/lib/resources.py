@@ -21,9 +21,6 @@
 from globals    import *
 from functools  import reduce
 
-TEXTURES        = 'Textures.xbt'
-IMG_EXTS        = ['.png','.jpg','.gif']
-
 LOCAL_RESOURCES = [LOGO_LOC, IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
 GENRE_RESOURCE  = ["resource.images.moviegenreicons.transparent"]
@@ -93,9 +90,8 @@ class Resources:
                     continue
                 else:
                     self.log('getLogoResources, checking %s'%(id))
-                    paths = self.walkResource(id)
-                    for path in paths:
-                        for image in paths[path]:
+                    for path, images in list(self.walkResource(id).items()):
+                        for image in images:
                             name, ext = os.path.splitext(image)
                             if self.matchName(chname, name, type):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
@@ -133,32 +129,9 @@ class Resources:
         
         
     def walkResource(self, id, exts=IMG_EXTS): #convert path from id to vfs, include version checksum for cache expiration
-        return self.walkDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts,checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION))
-        
-        
-    @cacheit(expiration=datetime.timedelta(days=28),json_data=True)
-    def walkDirectory(self, path, exts=IMG_EXTS, checksum=ADDON_VERSION): #recursively walk all folders, parse xbt textures.
-        def _parseXBT():
-            self.log('walkDirectory, %s Found'%(TEXTURES))
-            resource = path.replace('/resources','').replace('special://home/addons/','resource://')
-            walk.setdefault(resource,[]).extend(self.jsonRPC.getListDirectory(resource,checksum,datetime.timedelta(days=MAX_GUIDEDAYS))[1])
-            return walk
-            
-        walk = dict()
-        path = path.replace('\\','/')
-        self.log('walkDirectory, path = %s, exts = %s'%(path,exts))
-        dirs, files = self.jsonRPC.getListDirectory(path,checksum,datetime.timedelta(days=MAX_GUIDEDAYS))
-        if TEXTURES in files: return _parseXBT()
-        else: walk.setdefault(path,[]).extend(list([f for f in files if f.endswith(tuple(exts))]))
-        for idx, dir in enumerate(dirs): 
-            if MONITOR.waitForAbort(0.001): 
-                self.log('walkDirectory, waitForAbort')
-                break
-            else:
-                self.log('walkDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                walk.update(self.walkDirectory(os.path.join(path, dir),exts,checksum))
-        return walk
-            
+        return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts, depth=50, appendPath=False, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+
+
 
     def buildWebImage(self, image):
         if image.startswith(('resource://','special://','image://','http://')): return image

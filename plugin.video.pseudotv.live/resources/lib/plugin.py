@@ -27,9 +27,11 @@ class Plugin:
     @contextmanager
     def preparingPlayback(self):
         if self.playCheck(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
+            PROPERTIES.setEXTProperty('PseudoTVRunning','True')
             self.preparingPlayback = True
             try: yield
             finally:
+                PROPERTIES.setEXTProperty('PseudoTVRunning','False')
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
                 self.preparingPlayback = False
         else:
@@ -203,20 +205,6 @@ class Plugin:
         self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def getCallback(chname, id, radio=False, isPlaylist=False):
             self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
-            def _matchVFS():
-                pvrRoot = "pvr://channels/{dir}/".format(dir={True:'radio',False:'tv'}[radio])
-                results = jsonRPC.walkListDirectory(pvrRoot,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[0]
-                for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
-                    for result in results:
-                        if result.lower().startswith(quoteString(dir.lower())):
-                            self.log('getCallback: _matchVFS, found dir = %s'%(os.path.join(pvrRoot,result)))
-                            response = jsonRPC.walkListDirectory(os.path.join(pvrRoot,result),appendPath=True,checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY))[1]
-                            for pvr in response:
-                                if pvr.lower().endswith('%s.pvr'%(id)):
-                                    self.log('getCallback: _matchVFS, found file = %s'%(pvr))
-                                    return pvr
-                self.log('getCallback: _matchVFS, no callback found!\nresults = %s'%(results))
-                
             def _matchJSON():
                 results = jsonRPC.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={True:'radio',False:'tv'}[radio])}, cache=True).get('files',[])
                 for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
@@ -232,8 +220,6 @@ class Plugin:
 
             if (isPlaylist or radio) and len(self.sysARG) > 2:
                 callback = '%s%s'%(self.sysARG[0],self.sysARG[2])
-            elif isLowPower() or not PROPERTIES.getPropertyBool('hasPVRSource'):
-                callback = _matchVFS()
             else:
                 callback = _matchJSON() #use faster jsonrpc on high power devices. requires 'pvr://' json whitelisting.
             if callback is None: return DIALOG.okDialog(LANGUAGE(32133))
@@ -285,10 +271,10 @@ class Plugin:
         self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
         def _chkPath():
             if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES+["special://"])):
-                if hasAddon(getIDbyPath(self.sysInfo.get('vid','')),install=True,enable=True): return False
-            elif FileAccess.exists(self.sysInfo.get('vid','')): return False
+                if hasAddon(getIDbyPath(self.sysInfo.get('vid','')),install=True,enable=True): return True
+            elif FileAccess.exists(self.sysInfo.get('vid','')): return True
             self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
-            return True
+            return False
             
         def _chkGuide():
             if (self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()) and self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title'))):
