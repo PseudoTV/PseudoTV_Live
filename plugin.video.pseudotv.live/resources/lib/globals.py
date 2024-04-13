@@ -247,6 +247,7 @@ def hasMovie():
     return BUILTIN.getInfoBool('HasContent(Movies)','Library')
  
 def hasAddon(id, install=False, enable=False, force=False, notify=False):
+    id = getIDbyPath(id)
     if BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
         if BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(id),'System'): return True
         elif enable: 
@@ -536,18 +537,6 @@ def roundupDIV(p, q):
 def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
     
-def isLowPower():
-    return PROPERTIES.getEXTProperty('%s.isLowPower'%(ADDON_ID)) == 'true'
-
-def getLowPower():
-    if (BUILTIN.getInfoBool('Platform.Windows','System') | BUILTIN.getInfoBool('Platform.OSX','System') | SETTINGS.getSettingBool('Force_HighPower')):
-        return False
-    return True
-
-def setLowPower(state=getLowPower()):
-    PROPERTIES.setEXTProperty('%s.isLowPower'%(ADDON_ID),str(state).lower())
-    return state
-
 def forceUpdateTime(key):
     PROPERTIES.setPropertyInt(key,0)
 
@@ -610,6 +599,7 @@ def timeString2Seconds(string): #hh:mm:ss
 def getIDbyPath(path):
     if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path)
     elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path)
+    return path
     
 def mergeDictLST(dict1,dict2):
     for k, v in list(dict2.items()):

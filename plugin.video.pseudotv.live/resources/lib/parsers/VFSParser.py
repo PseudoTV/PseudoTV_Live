@@ -19,32 +19,11 @@
 from globals import *
 
 class VFSParser:
-    def __init__(self, fileItem={}, jsonRPC=None):
-        self.jsonRPC  = jsonRPC
-        self.fileItem = fileItem
-        
-        
-    def walkVFS(self, filename, originalPath):
-        log("VFSParser: walkVFS, originalPath = %s"%(originalPath))
-        #todo parse json for item, walk dir.
-        # results = []
-        # json_response = self.jsonRPC.getDirectory('{"directory":"%s","media":"%s","properties":["duration","runtime"]}'%(path, media), cache=False).get('files', [])
-        # for item in json_response:
-            # file = item['file']
-            # if item['filetype'] == 'file':
-                # results.append({'label': item['label'], 'duration': dur, 'path': path, 'file': file})
-            # else:
-                # results.extend(self.getFileDirectory(file, media, ignoreDuration, checksum, expiration))
-
-        return {}
-         
-         
-    def determineLength(self, filename={}):
-        log("VFSParser: determineLength, file = %s, item = %s"%(filename,self.fileItem))
-        if not self.fileItem: 
-            self.fileItem = self.walkVFS(filename, self.fileItem.get('originalpath',''))
-        elif not filename.lower().startswith(self.fileItem.get('originalpath','')[:30].lower()): 
-            return 0
-        duration = ceil(self.fileItem.get('runtime','') or self.fileItem.get('duration','') or (self.fileItem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+    def determineLength(self, filename, fileitem={}, jsonRPC=None):
+        log("VFSParser: determineLength, file = %s\nitem = %s"%(filename,fileitem))
+        duration = (fileitem.get('runtime') or fileitem.get('duration') or (fileitem.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        if duration == 0 and not filename.lower().startswith(fileitem.get('originalpath','').lower()):
+            metadata = self.jsonRPC.sendJSON('{"jsonrpc":"2.0","method":"Files.GetFileDetails","params":{"file":"%s","media":"video","properties":["duration","runtime"]}}'%(fileitem.get('originalpath'))).get('filedetails',{})
+            duration = (metadata.get('runtime') or metadata.get('duration') or (metadata.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         log("VFSParser: Duration is %s"%(duration))
         return duration

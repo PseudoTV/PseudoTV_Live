@@ -1443,7 +1443,7 @@ msgid "Create custom channels from Smartplaylists, Nodes, Plugins and more..."
 msgstr ""
 
 msgctxt "#33109"
-msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes on non-windows platforms.\nReducing number improves performance; while adding instability. [2000 Default]"
+msgid "Adjust delay between JSONRPC requests (in milliseconds) to avoid crashes.\nReducing number improves performance; while adding instability. [1 Default]"
 msgstr ""
 
 msgctxt "#33110"

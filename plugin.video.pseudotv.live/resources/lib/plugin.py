@@ -271,7 +271,7 @@ class Plugin:
         self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
         def _chkPath():
             if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES+["special://"])):
-                if hasAddon(getIDbyPath(self.sysInfo.get('vid','')),install=True,enable=True): return True
+                if hasAddon(self.sysInfo.get('vid',''),install=True,enable=True): return True
             elif FileAccess.exists(self.sysInfo.get('vid','')): return True
             self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
             return False

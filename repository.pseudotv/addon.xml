@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.5" provider-name="Lunatixz">
+<addon id="repository.pseudotv" name="PseudoTV Repository" version="1.0.6" provider-name="Lunatixz">
     <extension point="xbmc.addon.repository" name="PseudoTV Repository">
         <dir>
           <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/addons.xml</info>
@@ -9,7 +9,7 @@
         <dir>
           <info compressed="false">https://raw.githubusercontent.com/PseudoTV/PseudoTV_Resources/master/addons.xml</info>
           <checksum>https://raw.githubusercontent.com/PseudoTV/PseudoTV_Resources/master/addons.xml.md5</checksum>
-          <datadir zip="true">https://media.githubusercontent.com/media/PseudoTV/PseudoTV_Resources/master/zips</datadir>
+          <datadir zip="true">>https://raw.githubusercontent.com/PseudoTV/PseudoTV_Resources/master/zips</datadir>
         </dir>
     </extension>
     <extension point="xbmc.addon.metadata">

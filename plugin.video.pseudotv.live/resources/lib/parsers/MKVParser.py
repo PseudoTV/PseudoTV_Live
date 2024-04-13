@@ -78,7 +78,7 @@ class MKVParser:
                 if timecode != 0 and duration != 0:
                     break
             else:
-                try:
+                try:    
                     self.File.seek(datasize, 1)
                 except:
                     log('MKVParser: Error while seeking')

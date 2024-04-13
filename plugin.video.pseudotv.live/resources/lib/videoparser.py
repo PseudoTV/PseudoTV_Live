@@ -26,6 +26,19 @@ from parsers    import TSParser
 from parsers    import NFOParser
 from parsers    import VFSParser
  
+EXTERNAL_PARSER = []
+try:
+    import hachoir
+    from parsers import Hachoir
+    EXTERNAL_PARSER.append(Hachoir.Hachoir)
+except: pass
+    
+try:
+    import ffmpeg
+    from parsers import FFProbe
+    EXTERNAL_PARSER.append(FFProbe.FFProbe)
+except: pass
+    
 class VideoParser:
     def __init__(self):
         self.AVIExts   = ['.avi']
@@ -37,51 +50,45 @@ class VideoParser:
         self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
 
 
-    def getFFProbe(self, filename):
-        try:
-            result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            return float(result.stdout)
-        except Exception as e:
-            log("VideoParser: getFFMPEG, FFMPEG failed! %s"%(e), xbmc.LOGERROR)
+    def getExt(self, filename):
+        ext = os.path.splitext(filename)[1].lower()
+        if ext in self.AVIExts:
+            return AVIParser.AVIParser().determineLength(filename)
+        elif ext in self.MP4Exts:
+            return MP4Parser.MP4Parser().determineLength(filename)
+        elif ext in self.MKVExts:
+            return MKVParser.MKVParser().determineLength(filename)
+        elif ext in self.FLVExts:
+            return FLVParser.FLVParser().determineLength(filename)
+        elif ext in self.TSExts:
+            return TSParser.TSParser().determineLength(filename)
+        elif ext in self.STRMExts:
+            return NFOParser.NFOParser().determineLength(filename)
+        else: 
             return 0
 
 
-    def getVideoLength(self, filename, fileItem={}, jsonRPC=None):
+    def getRPC(self, filename, fileitem, jsonRPC):
+        return VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
+        
+
+    def getVideoLength(self, filename, fileitem={}, jsonRPC=None):
         log("VideoParser: getVideoLength %s"%filename)
         if len(filename) == 0:
             log("VideoParser: getVideoLength, No file name specified")
             return 0
 
-        if FileAccess.exists(filename) == False:
+        if not FileAccess.exists(filename):
             log("VideoParser: getVideoLength, Unable to find the file")
             return 0
 
-        base, ext = os.path.splitext(filename)
-        ext = ext.lower()
-        
         if filename.startswith(tuple(self.VFSPaths)):
-            self.parser = VFSParser.VFSParser(fileItem, jsonRPC)
-        elif ext in self.AVIExts:
-            self.parser = AVIParser.AVIParser()
-        elif ext in self.MP4Exts:
-            self.parser = MP4Parser.MP4Parser()
-        elif ext in self.MKVExts:
-            self.parser = MKVParser.MKVParser()
-        elif ext in self.FLVExts:
-            self.parser = FLVParser.FLVParser()
-        elif ext in self.TSExts:
-            self.parser = TSParser.TSParser()
-        elif ext in self.STRMExts:
-            self.parser = NFOParser.NFOParser()
+            dur = self.getRPC(filename, fileitem, jsonRPC)
         else:
-            log("VideoParser: getVideoLength, No parser found for extension %s"%(ext))
-            return 0
-       
-        duration = 0
-        if not filename.startswith(tuple(self.VFSPaths)):
-            duration = self.parser.determineLength(filename)
-            if duration == 0:
-                duration = NFOParser.NFOParser().determineLength(filename)
-                    
-        log('VideoParser: getVideoLength, duration = %s'%(duration))
-        return duration
+            dur = self.getExt(filename)
+            if dur == 0:
+                for parser in EXTERNAL_PARSER:
+                    dur = parser().determineLength(filename)
+                    if MONITOR.waitForAbort(0.001) or dur > 0: break
+        log('VideoParser: getVideoLength, duration = %s'%(dur))
+        return dur

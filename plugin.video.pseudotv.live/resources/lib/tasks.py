@@ -49,7 +49,6 @@ class Tasks():
         self.chkDebugging()
         
         self.chkBackup()
-        self.chkLowPower()
         self.chkPVRBackend()
         self.httpServer = HTTP(self.myService.monitor)
         
@@ -79,13 +78,8 @@ class Tasks():
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
-        
-        
-    def chkLowPower(self):
-        self.log('chkLowPower')
-        setLowPower(state=getLowPower())
-        
-        
+
+
     def chkHTTP(self):
         self.httpServer._start()
             
@@ -270,6 +264,7 @@ class Tasks():
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
                 actions = {'User_Folder'    :{'func':self.setUserPath     ,'args':(value,nSettings.get(setting))},
+                           'Network_Folder' :{'func':self.setPVRPath      ,'args':(value,nSettings.get(setting))},
                            'Remote_URL'     :{'func':SETTINGS.setPVRRemote,'args':(nSettings.get(setting))},
                            'UDP_PORT'       :{'func':setPendingRestart},
                            'TCP_PORT'       :{'func':setPendingRestart},

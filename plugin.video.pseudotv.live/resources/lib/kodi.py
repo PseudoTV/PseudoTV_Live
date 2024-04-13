@@ -410,7 +410,7 @@ class Settings:
         
     def getCurrentSettings(self):
         self.log('getCurrentSettings')
-        settings = ['User_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
+        settings = ['User_Folder','Network_Folder','UDP_PORT','TCP_PORT','Client_Mode','Remote_URL','Disable_Cache']
         for setting in settings:
             yield (setting,self.getSetting(setting))
                

@@ -2,7 +2,7 @@
 <settings version="1">
 	<section id="plugin.video.pseudotv.live">
         <category id="channels" label="30108" help="">
-			<group id="1" label="30106">
+			<group id="1">
 				<setting id="Select_Channels" type="string" label="30107" help="33107">
 					<level>1</level>
 					<constraints>
@@ -28,6 +28,9 @@
                         <dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
 						</dependency>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
+						</dependency>
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Backup_Channels)</data>
@@ -42,11 +45,11 @@
 					</constraints>
 					<dependencies>
                         <dependency type="visible">
-                            <and>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-                                <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
-                            </and>
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
                         </dependency>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
+						</dependency>
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/backup.py, Recover_Channels)</data>
@@ -385,19 +388,6 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Force_HighPower" type="boolean" label="32149" help="33149">
-					<level>3</level>
-					<default>false</default>
-					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isLowPower),true)</condition>
-						</dependency>
-						<dependency type="enable">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-						</dependency>
-					</dependencies>
-				</setting>
 				<setting id="Run_While_Playing" type="boolean" label="32150" help="33150">
 					<level>3</level>
 					<default>true</default>
@@ -412,7 +402,7 @@
 				</setting>
 			</group>               
             <group id="2" label="30011">
-                <setting id="User_Folder" type="path" label="30012" help="33012">
+                <setting id="Network_Folder" type="path" label="30012" help="33012">
                     <level>1</level>
                     <default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
                     <constraints>
@@ -1386,19 +1376,18 @@
 				</setting>
 			</group>
 			<group id="5" label="30111">
-                <setting id="JSONRPC_Delay" type="integer" label="30110" help="33109">
+                <setting id="RPC_Delay" type="integer" label="30110" help="33109">
 					<level>3</level>
-					<default>2000</default>
+					<default>1</default>
 					<constraints>
-						<minimum>0</minimum>
-						<step>500</step>
-						<maximum>4000</maximum>
+						<minimum>1</minimum>
+						<step>10</step>
+						<maximum>2000</maximum>
 					</constraints>
 					<dependencies>
 						<dependency type="visible">
 							<and>
                                 <condition operator="is" setting="Enable_Debugging">true</condition>
-                                <condition on="property" name="InfoBool">!System.Platform.Windows</condition>
 							</and>
 						</dependency>
 					</dependencies>
