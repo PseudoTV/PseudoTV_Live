@@ -38,7 +38,7 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
-        print('self.bctTypes',self.bctTypes)
+        # print('self.bctTypes',self.bctTypes)
         
 
 
@@ -70,10 +70,10 @@ class Fillers:
             
         def _parseLocal(path):
             tmpDCT = {}
-            print('_parseLocal',path,FileAccess.exists(path))
+            # print('_parseLocal',path,FileAccess.exists(path))
             if FileAccess.exists(path):
                 for paths, items in list(self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=50, chkDuration=True).items()):
-                    print('_parseLocal',path,items)
+                    # print('_parseLocal',path,items)
                     for item in items:
                         for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
@@ -92,7 +92,7 @@ class Fillers:
  
         def _sortbyfolder(data):
             tmpDCT = {}
-            print('_sortbyfolder',data)
+            # print('_sortbyfolder',data)
             for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
@@ -106,7 +106,7 @@ class Fillers:
             elif ftype == 'adverts':                return _sortbyfolder(_parseResource(path))
             elif ftype == 'trailers':               return _sortbyfolder(_parseResource(path))
         elif     path.startswith('plugin://'):      return _parseVFS(path)
-        elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
+        # elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
         else:                                       return {}
         
         

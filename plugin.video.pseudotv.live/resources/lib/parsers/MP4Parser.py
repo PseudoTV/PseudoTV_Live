@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-from globals import *
+from globals     import *
 
 class MP4DataBlock:
     def __init__(self):
@@ -34,7 +34,6 @@ class MP4MovieHeader:
         self.scale = 0
         self.duration = 0
 
-
 class MP4Parser:
     def __init__(self):
         self.MovieHeader = MP4MovieHeader()
@@ -46,10 +45,9 @@ class MP4Parser:
         except:
             log("MP4Parser: Unable to open the file")
             return
-
         dur = self.readHeader()
         self.File.close()
-        log("MP4Parser: Duration is " + str(dur))
+        log("MP4Parser: Duration is %s"%(dur))
         return dur
 
 

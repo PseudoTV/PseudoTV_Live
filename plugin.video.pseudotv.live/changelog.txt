@@ -1,4 +1,5 @@
 v.0.4.9
+-Improved MP4 duration meta detection.
 -Fixed Seasons returning incorrect holiday for the first week of April.
 -Fixed Seasonal logos disappearing.
 -Improved Playback error detection.

@@ -17,7 +17,8 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
 # -*- coding: utf-8 -*-
-from globals import *
+from globals    import *
+from seasonal   import Seasonal 
 
 class Info:
     def __init__(self, sysARG, fitem):
