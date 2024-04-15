@@ -129,7 +129,7 @@ class Resources:
         
         
     def walkResource(self, id, exts=IMG_EXTS): #convert path from id to vfs, include version checksum for cache expiration
-        return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts, depth=50, appendPath=False, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+        return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts, depth=CHANNEL_LIMIT, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
 
 
 

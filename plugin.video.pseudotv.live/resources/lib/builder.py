@@ -49,7 +49,7 @@ class Builder:
         self.epgArt           = SETTINGS.getSettingInt('EPG_Artwork')
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
-        self.filter           = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
+        self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
         self.sort             = {} #{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
         self.limits           = {} #{"end":0,"start":0,"total":0}
 
@@ -63,14 +63,14 @@ class Builder:
         
         self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
         self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
-                                 "paths":[self.getAdvertPath()]}
+                                 "paths":[]}
         
         self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
         self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
                                  "paths":[]}
                                  
-        if SETTINGS.getSettingInt('Include_Trailers') in [0,2]:
-            self.srcTrailer["paths"].extend(IMDB_PATHS)
+        if SETTINGS.getSettingInt('Include_Trailers') in [0,2]: self.srcTrailer["paths"].extend(IMDB_PATHS)
+        if SETTINGS.getSettingBool('Include_Adverts'):          self.srcAdverts["paths"].extend(self.getAdvertPath())
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
@@ -502,11 +502,10 @@ class Builder:
         self.cache.set('getTrailers', items, expiration=datetime.timedelta(days=28), json_data=True)
         
         
-    def getAdvertPath(self):
-        if bool(self.incAdverts) and SETTINGS.getSettingBool('Include_Adverts'):
-            if hasAddon('plugin.video.ispot.tv'):
-                try:    folder = os.path.join(xbmcaddon.Addon('plugin.video.ispot.tv').getSetting('Download_Folder'),'')
-                except: folder = 'special://profile/addon_data/plugin.video.ispot.tv/resources/'
-                self.log('getAdvertPath, folder: %s'%(folder))
-                return folder
-        return ''
+    def getAdvertPath(self, id='plugin.video.ispot.tv'):
+        if hasAddon(id):
+            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'')
+            except: folder = 'special://profile/addon_data/%s/resources/'%(id)
+            self.log('getAdvertPath, folder: %s'%(folder))
+            return [folder]
+        return []

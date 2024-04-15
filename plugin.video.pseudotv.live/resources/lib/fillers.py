@@ -38,8 +38,6 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
-        # print('self.bctTypes',self.bctTypes)
-        
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -69,17 +67,11 @@ class Fillers:
             return tmpDCT
             
         def _parseLocal(path):
-            tmpDCT = {}
-            # print('_parseLocal',path,FileAccess.exists(path))
-            if FileAccess.exists(path):
-                for paths, items in list(self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=50, chkDuration=True).items()):
-                    # print('_parseLocal',path,items)
-                    for item in items:
-                        for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
-            return tmpDCT
+            if not FileAccess.exists(path): return {}
+            return self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=CHANNEL_LIMIT, chkDuration=True)
 
         def _parseResource(path):
-            if not hasAddon(path, install=True): return [],[]
+            if not hasAddon(path, install=True): return {}
             return self.resources.walkResource(path,exts=VIDEO_EXTS)
                 
         def _sortbyfile(data):
@@ -87,16 +79,15 @@ class Fillers:
             for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(file.split('.')[0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':file.split('.')[0]})
+                    if dur > 0: tmpDCT.setdefault(file.split('.')[0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
             return tmpDCT
  
         def _sortbyfolder(data):
             tmpDCT = {}
-            # print('_sortbyfolder',data)
             for path, files in list(data.items()):
                 for file in files:
                     dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(os.path.basename(path).lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':os.path.basename(path)})
+                    if dur > 0: tmpDCT.setdefault(path.strip('/').split('/')[-1:][0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
             return tmpDCT
             
         if not path: return {}
@@ -106,7 +97,7 @@ class Fillers:
             elif ftype == 'adverts':                return _sortbyfolder(_parseResource(path))
             elif ftype == 'trailers':               return _sortbyfolder(_parseResource(path))
         elif     path.startswith('plugin://'):      return _parseVFS(path)
-        # elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
+        elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
         else:                                       return {}
         
         
@@ -190,16 +181,17 @@ class Fillers:
                 # original media
                 nfileList.append(fileItem)
                 self.log('injectBCTs, adding media %s - %s'%(fileItem.get('file'),fileItem.get('duration')))
-                
-                # post roll - commercials
+
+                # post roll init
                 pfileList    = []
                 afillRuntime = 0
                 pfillRuntime = diffRuntime(runtime) #time betwen nears half hour for auto fill.
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
-                self.log('injectBCTs, post roll current runtime %s, available runtime %s'%(runtime, pfillRuntime))
+                self.log('injectBCTs, post roll current runtime %s, available runtime %s, chance insert = %s'%(runtime, pfillRuntime,pchance))
                 
+                # post roll - commercials
                 if addAdverts:
-                    afillRuntime = (pfillRuntime // 2) if addTrailers else pfillRuntime #if trailers enabled only fill half the required space, leaving room for trailers.  
+                    afillRuntime = (pfillRuntime // 2) if addTrailers else pfillRuntime #if trailers enabled only fill half the required space with adverts, leaving room for trailers.  
                     pfillRuntime -= afillRuntime
                     self.log('injectBCTs, advert fill runtime %s'%(afillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
@@ -227,7 +219,8 @@ class Fillers:
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Trailers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
                                 item = {'title':'Trailer','episodetitle':titem.get('label',titem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Trailers'],'plot':titem.get('plot',titem.get('file')),'path':titem.get('file')}
                                 pfileList.append(self.builder.buildCells(citem,titem.get('duration'),entries=1,info=item)[0])
-                                
+                        
+                self.log('injectBCTs, unused post roll runtime %s'%(pfillRuntime))
                 if len(pfileList) > 0:
                     nfileList.extend(randomShuffle(pfileList))
         return nfileList

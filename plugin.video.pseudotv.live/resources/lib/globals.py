@@ -19,7 +19,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re, json, struct, errno 
-import shutil, subprocess
+import shutil, subprocess, io
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime

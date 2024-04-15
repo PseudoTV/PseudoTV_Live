@@ -25,7 +25,7 @@ from parsers    import FLVParser
 from parsers    import TSParser
 from parsers    import NFOParser
 from parsers    import VFSParser
-from parsers    import MP4ParserAlt
+from parsers    import MP4ParserNew
  
 EXTERNAL_PARSER = []
 try:
@@ -57,7 +57,7 @@ class VideoParser:
             return AVIParser.AVIParser().determineLength(filename)
         elif ext in self.MP4Exts:
             dur = MP4Parser.MP4Parser().determineLength(filename)
-            # if not dur: return MP4ParserAlt.MP4ParserAlt().determineLength(filename) #todo replace older parser after testing.
+            if not dur: return MP4ParserNew.MP4ParserNew().determineLength(filename) #todo replace older parser after testing.
             return dur
         elif ext in self.MKVExts:
             return MKVParser.MKVParser().determineLength(filename)

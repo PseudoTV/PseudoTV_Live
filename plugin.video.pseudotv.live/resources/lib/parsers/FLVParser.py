@@ -97,7 +97,7 @@ class FLVParser:
         if maximum < 0:
             maximum = 8
 
-        while curloc > maximum:
+        while not MONITOR.abortRequested() and curloc > maximum:
             try:
                 self.File.seek(-4, 1)
                 data = int(struct.unpack('>I', self.File.readBytes(4))[0])

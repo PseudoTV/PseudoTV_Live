@@ -111,12 +111,12 @@ class JSONRPC:
         return walk
                 
 
-    def walkListDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, appendPath=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
-            if appendPath: f = os.path.join(path,f)
             if chkDuration:
-                if self.getDuration(f, accurate=True) == 0: return
-            return f
+                if self.getDuration(os.path.join(path,f), accurate=True) == 0: return
+            if appendPath: return os.path.join(path,f)
+            else:          return f
             
         def _parseXBT():
             resource = path.replace('/resources','').replace('special://home/addons/','resource://')
@@ -293,7 +293,7 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    # @cacheit(expiration=datetime.timedelta(days=28))
+    #@cacheit(expiration=datetime.timedelta(days=28))
     def parseYoutubeRuntime(self, id):
         runtime = 0
         #todo user api keys.

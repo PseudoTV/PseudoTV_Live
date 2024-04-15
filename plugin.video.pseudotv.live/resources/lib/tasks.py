@@ -41,15 +41,15 @@ class Tasks():
 
 
     def _startProcess(self):
-        #first processes before service loop starts. Only runs once per instance.
         setInstanceID()
         isClient(silent=False)
-        self.chkWelcome()
-        self.chkVersion()
-        self.chkDebugging()
-        
-        self.chkBackup()
-        self.chkPVRBackend()
+        for func in [self.chkWelcome,
+                     self.chkVersion,
+                     self.chkDebugging,
+                     self.chkBackup,
+                     self.chkPVRBackend]:
+            if self.myService._interrupt(): return
+            else: func()
         self.httpServer = HTTP(self.myService.monitor)
         
     

@@ -1,10 +1,15 @@
+v.0.5.0
+-Added iSpot Adverts support.
+-Finalized global fillers.
+
 v.0.4.9
 -Improved MP4 duration meta detection.
 -Fixed Seasons returning incorrect holiday for the first week of April.
 -Fixed Seasonal logos disappearing.
 -Improved Playback error detection.
 -Improved Trailer parsing from Kodi & IMDB Trailers plugin.
--Improved "Auto" calculations for fillers
+-Improved "Auto" calculations for fillers. 
+ "Auto" attempts to fill the time between media to the nearest 15 minute mark.
 -Fixed Client detection issues introduced in the last build.
 
 v.0.4.8

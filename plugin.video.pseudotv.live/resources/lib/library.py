@@ -226,7 +226,7 @@ class Library:
     @cacheit(json_data=True)
     def getMixed(self):
         def hasRecordings():
-            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/') #todo add infobool to Kodi core.
+            return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True) #todo add infobool to Kodi core.
                
         MixedList = []
         if hasTV() or hasMovie():
