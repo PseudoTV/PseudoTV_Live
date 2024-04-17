@@ -572,8 +572,8 @@ class ProvisionalRule(BaseRule):
                 if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                 else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
                 for provisional in queries:
-                    if builder.service._interrupt() or builder.service._suspend(): break
-                    elif not provisional: continue
+                    if not provisional: continue
+                    elif builder.service._interrupt() or builder.service._suspend(): break
                     else:
                         if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
                         elif not parameter.startswith(provisional.get('path','')): continue

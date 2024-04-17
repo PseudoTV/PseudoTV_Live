@@ -26,7 +26,7 @@ DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 't
 DEBUG_LEVELS        = {0:xbmc.LOGDEBUG,1:xbmc.LOGINFO,2:xbmc.LOGWARNING,3:xbmc.LOGERROR}
 DEBUG_LEVEL         = DEBUG_LEVELS[int((REAL_SETTINGS.getSetting('Debugging_Level') or "1"))]
 DEBUG_CACHE_ENABLED = REAL_SETTINGS.getSetting('Disable_Cache').lower() == 'true'
-DEBUG_CACHE         = (DEBUG_ENABLED & DEBUG_CACHE_ENABLED) #Only enable DEBUG_CACHE when DEBUG_ENABLED
+DISABLE_CACHE       = (DEBUG_ENABLED & DEBUG_CACHE_ENABLED) #Only enable DISABLE_CACHE when DEBUG_ENABLED
 
 PAGE_LIMIT          = int((REAL_SETTINGS.getSetting('Page_Limit')  or "25"))
 MIN_GUIDEDAYS       = int((REAL_SETTINGS.getSetting('Min_Days')    or "1"))

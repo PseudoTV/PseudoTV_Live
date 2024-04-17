@@ -542,7 +542,6 @@
                     <visible>!String.IsEmpty(Control.GetLabel(9004))</visible>
                 </control>
             </control>
-
             <control type="label">
                 <description>version label</description>
                 <left>1710</left>

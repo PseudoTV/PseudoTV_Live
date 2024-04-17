@@ -26,7 +26,7 @@ from jsonrpc    import JSONRPC
 class Player(xbmc.Player):
     sysInfo      = {}
     background   = None
-    myService    = False
+    myService    = None
     pendingPlay  = False
     isPseudoTV   = False
     lastSubState = False
@@ -95,14 +95,14 @@ class Player(xbmc.Player):
         
         
     def isPseudoTVPlaying(self):
-        if loadJSON(self.getPlayingItem().getProperty('sysInfo')).get('citem',{}).get('id'): return True
+        if loadJSON(self.getPlayerItem().getProperty('sysInfo')).get('citem',{}).get('id'): return True
         else: return False
         
         
     def getPlayerSysInfo(self):
         sysInfo = {}
         if self.isPlaying():
-            sysInfo = loadJSON(self.getPlayingItem().getProperty('sysInfo')) #Kodi v20.
+            sysInfo = loadJSON(self.getPlayerItem().getProperty('sysInfo')) #Kodi v20.
             sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
                             'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
                             'callback':self.getCallback(),
@@ -114,6 +114,11 @@ class Player(xbmc.Player):
         return sysInfo
         
 
+    def getPlayerItem(self):
+        try:    return self.getPlayingItem()
+        except: return xbmcgui.ListItem()
+        
+        
     def getCallback(self):
         callback = BUILTIN.getInfoLabel('Filenameandpath','Player')
         self.log('getCallback, callback = %s\n%s\n%s'%(callback,BUILTIN.getInfoLabel('Folderpath','Player'),BUILTIN.getInfoLabel('Filename','Player')))
@@ -206,9 +211,10 @@ class Player(xbmc.Player):
                     
 
 class Monitor(xbmc.Monitor):
-    isIdle   = False
-    idleTime = 0
-    overlay  = None
+    isIdle    = False
+    idleTime  = 0
+    overlay   = None
+    myService = None
     
     
     def __init__(self):
@@ -295,7 +301,7 @@ class Monitor(xbmc.Monitor):
   
     def onSettingsChanged(self):
         self.log('onSettingsChanged')
-        timerit(self.onSettingsChangedTimer)(15.0)
+        if self.myService is not None: timerit(self.onSettingsChangedTimer)(15.0)
         
         
     def onSettingsChangedTimer(self):

@@ -56,6 +56,43 @@
                         <close>true</close>
 					</control>
 				</setting>
+				<setting id="Launch_NodeEditor" type="string" label="30137" help="">
+					<level>1</level>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="visible">
+                            <and>
+                                <condition on="property" name="InfoBool">System.HasAddon(plugin.library.node.editor)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(plugin.library.node.editor)</condition>
+                            </and>
+						</dependency>
+                        <dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>ActivateWindow(10001,plugin://plugin.library.node.editor,return)</data>
+                        <close>true</close>
+					</control>
+				</setting>
+				<setting id="Launch_SmartplaylistEditor" type="string" label="30138" help="" parent="">
+					<level>1</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<data>ActivateWindow(10025,"library://video/playlists.xml/",return)</data>
+                        <close>true</close>
+					</control>
+				</setting>
 			</group>
         </category>
         
@@ -223,6 +260,16 @@
                         <close>true</close>
 					</control>
 				</setting>
+				<setting id="Nearest_Holiday" type="boolean" label="30068" help="33068" parent="Select_Mixed">
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
+						</dependency>
+					</dependencies>
+				</setting>
 				<setting id="Select_Recommended" type="string" label="32012" help="33003">
 					<level>0</level>
 					<default/>
@@ -377,16 +424,6 @@
 						</options>
 					</constraints>
 					<control type="spinner" format="string"/>
-				</setting>
-				<setting id="NEAREST_SEASON" type="boolean" label="30068" help="33068">
-					<level>0</level>
-					<default>true</default>
-					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.isClient),false)</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="Run_While_Playing" type="boolean" label="32150" help="33150">
 					<level>3</level>
@@ -1153,7 +1190,7 @@
                     </control>
                 </setting>
                 <setting id="Select_server" type="action" label="32048" help="33048" parent="Client_Mode">
-					<level>0</level>
+					<level>1</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -1172,7 +1209,7 @@
 					</control>
 				</setting>
                 <setting id="Pair_Announcement" type="action" label="30129" help="33129" parent="Client_Mode">
-					<level>0</level>
+					<level>1</level>
 					<default/>
 					<constraints>
 						<allowempty>true</allowempty>

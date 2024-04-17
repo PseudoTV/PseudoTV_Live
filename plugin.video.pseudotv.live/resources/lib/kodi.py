@@ -64,11 +64,11 @@ def closeBusyDialog():
 
 @contextmanager
 def busy_dialog():
-    # if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
+    if not isBusyDialog():
+        Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
-    finally: #todo debug kodi crashing.
-        pass
-        # if isBusyDialog(): Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    finally:
+        if isBusyDialog(): closeBusyDialog()
                   
 @contextmanager
 def sudo_dialog(msg):

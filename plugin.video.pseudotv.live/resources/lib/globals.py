@@ -245,7 +245,13 @@ def hasTV():
     
 def hasMovie():
     return BUILTIN.getInfoBool('HasContent(Movies)','Library')
- 
+               
+def hasFile(file):
+    if file.startswith(tuple(VFS_TYPES)):
+        if file.startswith('plugin://'): return hasAddon(file)
+        else: return True
+    else: return FileAccess.exists(file)
+
 def hasAddon(id, install=False, enable=False, force=False, notify=False):
     id = getIDbyPath(id)
     if BUILTIN.getInfoBool('HasAddon(%s)'%(id),'System'):
@@ -585,12 +591,6 @@ def cleanMPAA(mpaa):
     except: 
         mpaa = mpaa.strip()
     return mpaa
-              
-def hasFile(file):
-    if file.startswith(tuple(VFS_TYPES)):
-        if file.startswith('plugin://'): return BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(file),'System')
-        else: return True
-    else: return FileAccess.exists(file)
 
 def timeString2Seconds(string): #hh:mm:ss
     try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))

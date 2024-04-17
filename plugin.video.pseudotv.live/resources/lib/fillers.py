@@ -70,10 +70,10 @@ class Fillers:
             if not FileAccess.exists(path): return {}
             return self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=CHANNEL_LIMIT, chkDuration=True)
 
-        def _parseResource(path):
-            if not hasAddon(path, install=True): return {}
-            return self.resources.walkResource(path,exts=VIDEO_EXTS)
-                
+        def _parseResource(id):
+            if not hasAddon(id, install=True): return {}
+            return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts=VIDEO_EXTS, depth=CHANNEL_LIMIT, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+
         def _sortbyfile(data):
             tmpDCT = {}
             for path, files in list(data.items()):
@@ -163,8 +163,8 @@ class Fillers:
                                 runtime += bitem.get('duration')
                                 self.log('injectBCTs, adding bumper %s - %s'%(bitem.get('file'),bitem.get('duration')))
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Bumpers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                item = {'title':'%s (%s)'%(fitem.get('showlabel'),chname),'episodetitle':bitem.get('label',bitem.get('title','Bumper')),'genre':['Bumpers'],'plot':fitem.get('plot',bitem.get('file')),'path':bitem.get('file')}
-                                nfileList.append(self.builder.buildCells(citem,bitem.get('duration'),entries=1,info=item)[0])
+                                bitem.update({'title':'%s (%s)'%(fitem.get('showlabel'),chname),'episodetitle':bitem.get('label',bitem.get('title','Bumper')),'genre':['Bumpers'],'plot':fitem.get('plot',bitem.get('file')),'path':bitem.get('file')})
+                                nfileList.append(self.builder.buildCells(citem,bitem.get('duration'),entries=1,info=bitem)[0])
                 
                 #pre roll - ratings
                 if addRatings:
@@ -175,8 +175,8 @@ class Fillers:
                             runtime += ritem.get('duration')
                             self.log('injectBCTs, adding rating %s - %s'%(ritem.get('file'),ritem.get('duration')))
                             if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Ratings',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                            item = {'title':'%s (%s)'%(fitem.get('showlabel'),mpaa),'episodetitle':ritem.get('label',ritem.get('title','Rating')),'genre':['Ratings'],'plot':fitem.get('plot',ritem.get('file')),'path':ritem.get('file')}
-                            nfileList.append(self.builder.buildCells(citem,ritem.get('duration'),entries=1,info=item)[0])
+                            ritem.update({'title':'%s (%s)'%(fitem.get('showlabel'),mpaa),'episodetitle':ritem.get('label',ritem.get('title','Rating')),'genre':['Ratings'],'plot':fitem.get('plot',ritem.get('file')),'path':ritem.get('file')})
+                            nfileList.append(self.builder.buildCells(citem,ritem.get('duration'),entries=1,info=ritem)[0])
                             
                 # original media
                 nfileList.append(fileItem)
@@ -202,8 +202,8 @@ class Fillers:
                                 afillRuntime -= aitem.get('duration')
                                 self.log('injectBCTs, adding advert %s - %s'%(aitem.get('file'),aitem.get('duration')))
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Adverts',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                item = {'title':'Advert','episodetitle':aitem.get('label',aitem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Adverts'],'plot':aitem.get('plot',aitem.get('file')),'path':aitem.get('file')}
-                                pfileList.append(self.builder.buildCells(citem,aitem.get('duration'),entries=1,info=item)[0])
+                                aitem.update({'title':'Advert','episodetitle':aitem.get('label',aitem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Adverts'],'plot':aitem.get('plot',aitem.get('file')),'path':aitem.get('file')})
+                                pfileList.append(self.builder.buildCells(citem,aitem.get('duration'),entries=1,info=aitem)[0])
                             
                 # post roll - trailers
                 if addTrailers:
@@ -217,8 +217,8 @@ class Fillers:
                                 pfillRuntime -= titem.get('duration')
                                 self.log('injectBCTs, adding trailers %s - %s'%(titem.get('file'),titem.get('duration')))
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Trailers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                item = {'title':'Trailer','episodetitle':titem.get('label',titem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Trailers'],'plot':titem.get('plot',titem.get('file')),'path':titem.get('file')}
-                                pfileList.append(self.builder.buildCells(citem,titem.get('duration'),entries=1,info=item)[0])
+                                titem.update({'title':'Trailer','episodetitle':titem.get('label',titem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Trailers'],'plot':titem.get('plot',titem.get('file')),'path':titem.get('file')})
+                                pfileList.append(self.builder.buildCells(citem,titem.get('duration'),entries=1,info=titem)[0])
                         
                 self.log('injectBCTs, unused post roll runtime %s'%(pfillRuntime))
                 if len(pfileList) > 0:

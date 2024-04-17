@@ -49,7 +49,7 @@ class Seasonal:
         else:                    return int(floor(week))
 
         
-    def getHoliday(self, nearest=SETTINGS.getSettingBool('NEAREST_SEASON')):
+    def getHoliday(self, nearest=SETTINGS.getSettingBool('Nearest_Holiday')):
         self.log('getHoliday, nearest = %s'%(nearest))
         if nearest: return self.getNearestHoliday()
         else:       return self.getCurrentHoliday()

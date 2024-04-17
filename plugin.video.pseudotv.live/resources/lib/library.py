@@ -107,16 +107,13 @@ class Library:
                 
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt(): break
-            elif self.service._suspend(): break
-            self.parserMSG    = AUTOTUNE_TYPES[idx]
-            self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-            self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-            
             if (self.service._interrupt() or self.service._suspend()):
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
-                
+            else:
+                self.parserMSG    = AUTOTUNE_TYPES[idx]
+                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
             self.log('fillItems, returning %s'%(type))
             yield (type,fillItem(type))
 
@@ -125,8 +122,7 @@ class Library:
     def updateLibrary(self, force=False):
         def _updateClient():
             for idx, type in enumerate(AUTOTUNE_TYPES):
-                if self.service._interrupt(): break
-                elif self.service._suspend(): break
+                if self.service._interrupt() or self.service._suspend(): break
                 yield (type,self.getLibrary(type))
                 
         def _updateItem(type,item):
@@ -153,17 +149,17 @@ class Library:
             if force: #clear library cache.
                 with busy_dialog():
                     for label, func in list(self.libraryFUNCS.items()):
-                        cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
-                        DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
-                        self.cache.clear(cacheName,wait=5)
-                        if self.service._interrupt(5): break
+                        if self.service._interrupt(): break
+                        else:
+                            cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
+                            DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
+                            self.cache.clear(cacheName,wait=5)
             libraryItems = dict(self.fillItems())
         
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-            if self.service._interrupt(): break
-            elif self.service._suspend():
+            if self.service._interrupt() or self.service._suspend():
                 complete = False
                 break
             else:

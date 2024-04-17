@@ -213,12 +213,30 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
 ## - Channel Manager:
 
 ### - Color Legend:
-- In-use (White)      - Existing channel configuration.
-- Unused (Dim-Grey)   - Available for configuration.
-- Favorite (Yellow)   - User Favorites.
-- Radio (Cyan)        - User-defined Radio/Music channel.
-- Uneditable (Orange) - Pre-defined or Parental Locked channels are displayed as "Uneditable" within the manager.
-- Warnings (Red)      - Indicates either a new channel that hasn't populated or an existing channel without content.
+- In-use (White)       - Existing channel configuration.
+- Unused (Dim-Grey)    - Available for configuration.
+- Favorite (Yellow)    - User Favorites.
+- Radio (Cyan)         - User-defined Radio/Music channel.
+- Un-editable (Orange) - Pre-defined or Parental Locked channels are displayed as "un-editable" within the manager.
+- Warnings (Red)       - Indicates either a new channel that hasn't populated or an existing channel without content.
+
+## - Fillers:
+"Auto" - Attempts to fill the gap between the nearest 15min time block with a mix of adverts and trailers depending on user configuration.
+"Random Filler" - Add content that does not match channels name or subject genre at random in-order to fulfill users configuration. 
+
+- Rating   - MPAA video before a movie.
+- Bumpers  - Bumper video before tv content.
+- Adverts  - Commercials after content.
+    "iSpot" - Internet adverts injected randomly between channel content.
+- Trailers - Trailers after context and shuffled with adverts when applicable. 
+    "Kodi Trailers" - Local trailers curated by subject genre and later used in matching genre channels.
+    "IMDB Trailers" - Internet trailers curated by subject genre and either used in matching genre channels.
+
+### Custom Fillers:
+- Root folders have a chance for random placement on any channel.
+- Subfolders must match channel name or genre type exactly, not cap sensitive.
+- See resources [README.md](https://github.com/PseudoTV/PseudoTV_Resources/raw/master/README.md)
+
 
 ------------
 

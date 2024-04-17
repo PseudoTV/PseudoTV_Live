@@ -180,7 +180,8 @@ class Utilities:
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
             with busy_dialog():
-                [DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':',''))) for key in keys if FileAccess.delete(files[key])]
+                 for key in keys:
+                    if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: setPendingRestart()
 
 

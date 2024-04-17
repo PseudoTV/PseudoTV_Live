@@ -565,6 +565,14 @@ msgctxt "#30136"
 msgid "Include iSpot Adverts"
 msgstr ""
 
+msgctxt "#30137"
+msgid "Node Editor"
+msgstr ""
+
+msgctxt "#30138"
+msgid "Smartplaylist Editor"
+msgstr ""
+
 
 
 # Skin - strings 31000 thru 31999 reserved for skins

@@ -504,7 +504,7 @@ class Builder:
         
     def getAdvertPath(self, id='plugin.video.ispot.tv'):
         if hasAddon(id):
-            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'')
+            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources').replace('/resources/resources','/resources')
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)
             self.log('getAdvertPath, folder: %s'%(folder))
             return [folder]
