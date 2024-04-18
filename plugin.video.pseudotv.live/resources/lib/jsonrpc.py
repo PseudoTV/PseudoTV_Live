@@ -296,6 +296,7 @@ class JSONRPC:
     #@cacheit(expiration=datetime.timedelta(days=28))
     def parseYoutubeRuntime(self, id):
         runtime = 0
+        # vid = .split('?video_id=')
         #todo user api keys.
         # from youtube_requests import get_videos
         # https://github.com/anxdpanic/plugin.video.youtube/blob/master/resources/lib/youtube_requests.py#L62
@@ -307,8 +308,7 @@ class JSONRPC:
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
         runtime = (item.get('runtime') or item.get('duration') or item.get('streamdetails', {}).get('video',[{}])[0].get('duration') or 0)
         if not runtime and path.startswith(('plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious')):
-            try:    runtime = self.parseYoutubeRuntime(path.split('?video_id=')[1])
-            except: runtime = 0
+            runtime = self.parseYoutubeRuntime(path)
         
         if (runtime == 0 or accurate):
             if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
@@ -326,7 +326,7 @@ class JSONRPC:
         self.log("parseDuration, path = %s, save = %s" % (path, save))
         cacheCHK  = getMD5(path)
         cacheName = 'parseDuration.%s'%(cacheCHK)
-        runtime   = int(item.get('runtime', '') or item.get('duration', '') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration','') or '0')
+        runtime   = (item.get('runtime') or item.get('duration') or item.get('streamdetails', {}).get('video',[{}])[0].get('duration') or 0)
         duration  = self.cache.get(cacheName, checksum=cacheCHK, json_data=False)
         if not duration:
             try:

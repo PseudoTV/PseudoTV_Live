@@ -263,7 +263,7 @@ class Tasks():
         with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
-                actions = {'User_Folder'    :{'func':SETTINGS.setUserPath  ,'args':(value,nSettings.get(setting))},
+                actions = {'User_Folder'    :{'func':self.setUserPath      ,'args':(value,nSettings.get(setting))},
                            'Network_Folder' :{'func':SETTINGS.setPVRPath   ,'args':(value,nSettings.get(setting))},
                            'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'args':(nSettings.get(setting))},
                            'UDP_PORT'       :{'func':setPendingRestart},

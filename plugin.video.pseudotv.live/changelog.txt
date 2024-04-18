@@ -1,6 +1,7 @@
 v.0.5.0
 -Added iSpot Adverts support.
 -Finalized global fillers.
+-Temporarily disabled new MP4 parser due to poor performance.
 
 v.0.4.9
 -Improved MP4 duration meta detection.

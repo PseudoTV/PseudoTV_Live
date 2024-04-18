@@ -122,8 +122,7 @@ class Resources:
         
         
     def matchName(self, chname, name, type='Custom'):
-        patterns = list(set([getChannelSuffix(chname,type),cleanChannelSuffix(chname, type),stripRegion(chname),splitYear(chname)[0],slugify(chname),slugify(stripRegion(chname))]))
-        patterns.insert(0,chname)#make sure unaltered channel name first to parse.
+        patterns = list(set([chname, getChannelSuffix(chname,type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(chname)[0], slugify(chname), slugify(stripRegion(chname))]))
         for pattern in patterns:
             if name.lower() == pattern.lower():
                 return True

@@ -209,9 +209,10 @@ class Builder:
             tmpList.append(item)
             
         #force removal of channel with no current programmes
-        if fileList[-1].get('stop') < getUTCstamp():
-            self.log("addScheduling; id: %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
-            tmpList = []
+        if len(fileList) > 0:
+            if fileList[-1].get('stop') < getUTCstamp():
+                self.log("addScheduling; id: %s, last stop = %s, returning empty fileList\nNo Current Programs!!"%(citem['id'],fileList[-1].get('stop')))
+                tmpList = []
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         

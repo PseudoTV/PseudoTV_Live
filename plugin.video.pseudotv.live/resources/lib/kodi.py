@@ -569,7 +569,7 @@ class ListItems:
                               'discnumber'              : (int,),  #integer (2)
                               'duration'                : (int,),  #integer (245) - duration in seconds
                               'year'                    : (int,),  #integer (1998)
-                              'genre'                   : (str,),  
+                              'genre'                   : (tuple,list),  
                               'album'                   : (str,),  
                               'artist'                  : (str,),  
                               'title'                   : (str,),  
@@ -581,16 +581,16 @@ class ListItems:
                               'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
                               'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
                               'listeners'               : (int,),  #integer (25614)
-                              'musicbrainztrackid'      : (str,),
-                              'musicbrainzartistid'     : (str,),
-                              'musicbrainzalbumid'      : (str,),
-                              'musicbrainzalbumartistid': (str,),
+                              'musicbrainztrackid'      : (tuple,list),
+                              'musicbrainzartistid'     : (tuple,list),
+                              'musicbrainzalbumid'      : (tuple,list),
+                              'musicbrainzalbumartistid': (tuple,list),
                               'comment'                 : (str,),  
                               'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                               # 'size'                    : (int,), #long (1024) - size in bytes
                               'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
         else:      
-            LISTITEM_TYPES = {'genre'                   : (str,list),
+            LISTITEM_TYPES = {'genre'                   : (tuple,list),
                               'country'                 : (str,list),
                               'year'                    : (int,),  #integer (2009)
                               'episode'                 : (int,),  #integer (4)
