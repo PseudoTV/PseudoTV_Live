@@ -395,9 +395,11 @@ class Builder:
                         
                         if item.get('trailer') and bool(self.incTrailer) and SETTINGS.getSettingInt('Include_Trailers') < 2:
                             titem = item.copy()
-                            titem['duration'] = self.jsonRPC.getDuration(item.get('trailer'), accurate=True)
-                            for genre in (titem.get('genre',[]) or ['resources']):
-                                if titem['duration'] > 0: trailerslist.setdefault(genre.lower(),[]).append(titem)
+                            tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
+                            if tdur > 0:
+                                titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
+                                for genre in (titem.get('genre',[]) or ['resources']):
+                                    trailerslist.setdefault(genre.lower(),[]).append(titem)
                         
                         if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                             seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])

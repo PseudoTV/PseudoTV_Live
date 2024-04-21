@@ -154,7 +154,7 @@ class Fillers:
                 
                 #pre roll - bumpers
                 if addBumpers:
-                    # #todo movie bumpers for audio/video codecs? imax bumpers?
+                    # #todo movie bumpers for audio/video codecs? imax, cinema experience bumpers?
                     if ftype.startswith(tuple(TV_TYPES)):
                         if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
                             bkeys = ['resources',chname, fgenre] if chanceBool(SETTINGS.getSettingInt('Random_Bumper_Chance')) else [chname, fgenre]
@@ -185,7 +185,7 @@ class Fillers:
                 # post roll init
                 pfileList    = []
                 afillRuntime = 0
-                pfillRuntime = diffRuntime(runtime) #time betwen nears half hour for auto fill.
+                pfillRuntime = diffRuntime(runtime)
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
                 self.log('injectBCTs, post roll current runtime %s, available runtime %s, chance insert = %s'%(runtime, pfillRuntime,pchance))
                 
