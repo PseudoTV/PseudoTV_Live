@@ -91,17 +91,16 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        self.log('walkFileDirectory, path = %s, exts = %s'%(path,exts))
+    def walkFileDirectory(self, path, media='files', depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+        self.log('walkFileDirectory, path = %s, media = %s'%(path,media))
         walk = dict()
         dirs = [path]
         for idx, dir in enumerate(dirs):
             if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
                 self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                for item in self.getDirectory(param={"directory":dir}).get('files',[]):
-                    if not item.get('file') or not item.get('file','').endswith(tuple(exts)): continue
-                    elif item.get('filetype') == 'directory': dirs.append(item.get('file'))
+                for item in self.getDirectory(param={"directory":dir,"media":media}).get('files',[]):
+                    if   item.get('filetype') == 'directory': dirs.append(item.get('file'))
                     elif item.get('filetype') == 'file':
                         if chkDuration:
                             dur = self.getDuration(item.get('file'),item, accurate=True)
@@ -111,7 +110,7 @@ class JSONRPC:
         return walk
                 
 
-    def walkListDirectory(self, path, exts=VIDEO_EXTS, depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts='', depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if chkDuration:
                 if self.getDuration(os.path.join(path,f), accurate=True) == 0: return
@@ -306,7 +305,7 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
-        runtime = (item.get('runtime') or item.get('duration') or item.get('streamdetails', {}).get('video',[{}])[0].get('duration') or 0)
+        runtime = (item.get('runtime') or item.get('duration') or item.get('streamdetails',{}).get('video',[{}])[0].get('duration') or 0)
         if not runtime and path.startswith(('plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious')):
             runtime = self.parseYoutubeRuntime(path)
         

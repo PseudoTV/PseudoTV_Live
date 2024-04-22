@@ -500,8 +500,9 @@ def setFirstrun(state=True):
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient(silent=True):
-    state = SETTINGS.getSettingInt('Client_Mode') > 0
-    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
+    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+    state = Client_Mode > 0
+    PROPERTIES.setEXTProperty('%s.Client_Mode'%(ADDON_ID),str(Client_Mode))
     if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
     return state
 
@@ -528,8 +529,13 @@ def chunkDict(items, n):
 
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True
-    for path in item.get('path',[]):
+    for path in item.get('path',[item.get('file','')]):
         if path.lower().startswith(('musicdb://','special://profile/playlists/music/','special://musicplaylists/')): return True
+    return False
+    
+def isMixed(item):
+    for path in item.get('path',[item.get('file','')]):
+        if path.lower().startswith('special://profile/playlists/mixed/'): return True
     return False
     
 def roundupDIV(p, q):

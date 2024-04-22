@@ -120,9 +120,9 @@ PROVIDERFLE         = 'providers.xml'
 CHANNELBACKUPFLE    = 'channels.backup'
 CHANNELRESTOREFLE   = 'channels.restore'
 
-VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')
-MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')
-IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')
+VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[-1]
+MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')[-1]
+IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')[-1]
 IMG_EXTS            = ['.png','.jpg','.gif']
 TEXTURES            = 'Textures.xbt'
 

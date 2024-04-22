@@ -526,7 +526,7 @@ msgid "Kodi Trailers"
 msgstr ""
 
 msgctxt "#30127"
-msgid "Kodi/IMDB Trailers"
+msgid "Kodi & IMDB Trailers"
 msgstr ""
 
 msgctxt "#30128"
@@ -554,7 +554,7 @@ msgid "Player"
 msgstr ""
 
 msgctxt "#30134"
-msgid "Random Filler (Percentage)"
+msgid "Random Filler"
 msgstr ""
 
 msgctxt "#30135"

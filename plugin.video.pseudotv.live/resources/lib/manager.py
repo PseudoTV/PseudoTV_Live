@@ -503,43 +503,30 @@ class Manager(xbmcgui.WindowXMLDialog):
         
     def validateVFS(self, path, channelData):
         self.log('validateVFS, path %s'%(path))
-        dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
-        media = 'music' if channelData['radio'] else 'video'
-        dirs  = []
-        if path.endswith('.xsp'): #smartplaylist
-            paths, media, osort, ofilter, olimits = self.xsp.parseXSP(path)
-            if len(paths) > 0: #treat 'mixed' smartplaylists as multi-path mixed content.
-                for path in paths:
-                    result = self.validateVFS(path, channelData)
-                    if result: return result
+        if isRadio({'path':[path]}) or isMixed({'path':[path]}): return True
+        else:
+            valid = False
+            dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
+            with busy_dialog():
+                items = self.jsonRPC.walkFileDirectory(path, 'music' if isRadio({'path':[path]}) else 'video', retItem=True)
             
-        items, limits, errors = self.jsonRPC.requestList(channelData, path, media, limits={"end": PAGE_LIMIT, "start": 0}) #todo use another means to verify or bypass autopage set limits.
-        print('validateVFS',path,items)
-        for idx, item in enumerate(items):
-            print('validateVFS item',path,item)
-            file     = item.get('file', '')
-            fileType = item.get('filetype', 'file')
-            if fileType == 'file':
-                dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,file))
-                item['duration'] = self.jsonRPC.getDuration(file, item)
-                if item['duration'] == 0: continue
-                else:
-                    self.log('validateVFS, found playable file %s'%(file))
-                    #todo use seekable to set channel seek locks.
-                    seekable = self.validateSeek(item, channelData)
-                    self.log('validateVFS, seekable path = %s' % (seekable))
-                    DIALOG.progressDialog(100,control=dia)
-                    closeBusyDialog()
-                    return file
-            elif item.get('label','').lower() not in ['search','keyword']:
-                dirs.append(file) #filter any plugin vfs that triggers user input.
-                
-        for dir in dirs: 
-            result = self.validateVFS(dir, channelData)
-            if result: return result
-            
-        closeBusyDialog()
-        DIALOG.progressDialog(100,control=dia)
+            for dir in items:
+                for idx, item in enumerate(items.get(dir,[])):
+                    dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,item.get('file','')))
+                    if MONITOR.waitForAbort(1): break
+                    else:
+                        dur = self.jsonRPC.getDuration(item.get('file'), item, accurate=True)
+                        item.update({'duration':dur,'runtime':dur})
+                        if dur == 0: continue
+                        dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking',path,item.get('file','')))
+                        if self.validateSeek(item, channelData):
+                            self.log('validateVFS, found playable and seek-able file %s'%(item.get('file')))
+                            valid = True
+                            break
+                            
+            closeBusyDialog()
+            DIALOG.progressDialog(100,control=dia)
+            return valid
         
         
     def validateSeek(self, item, channelData):
@@ -553,10 +540,10 @@ class Manager(xbmcgui.WindowXMLDialog):
         liz.setProperty('startoffset', str(int(dur/4)))
         infoTag = ListItemInfoTag(liz, 'video')
         infoTag.set_resume_point({'ResumeTime':int(dur/4),'TotalTime':int(dur/4)})
-        PLAYER.play(file, liz, windowed=True)
     
         getTime  = 0
         waitTime = 30
+        PLAYER.play(file, liz, windowed=True)
         while not MONITOR.abortRequested():
             waitTime -= 1
             if MONITOR.waitForAbort(1) or waitTime < 1:
@@ -611,18 +598,6 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.channelList = self.validateChannels(self.channelList)
         difference = sorted(diffLSTDICT(self.channelList,self.newChannels), key=lambda k: k['number'])
         self.log('saveChannels, difference = %s\n%s'%(len(difference),difference))
-        
-        # pDialog = DIALOG.progressDialog(message=LANGUAGE(32075))
-        # for idx, citem in enumerate(difference):
-            # print(idx,citem,citem in self.channelList,citem in self.newChannels)
-            # pDialog = DIALOG.progressDialog(int(((idx + 1)*100)//len(difference)),pDialog,message="%s: %s"%(LANGUAGE(32074),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30152)))
-            # #remove abandoned or stale settings.
-            # if citem in self.channelList:
-                # self.channels.delChannel(citem)
-            # #add new or updated settings
-            # elif citem in self.newChannels:
-                # self.channels.addChannel(citem)
-                
         self.channels.setChannels(self.newChannels)
         self.toggleSpinner(self.chanList,False)
         self.closeManager()

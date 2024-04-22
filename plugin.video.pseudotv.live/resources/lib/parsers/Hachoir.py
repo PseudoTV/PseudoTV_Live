@@ -21,12 +21,15 @@ from globals    import *
 class Hachoir:
     def determineLength(self, filename):
         try:
+            meta = {}
             from hachoir.parser   import createParser
             from hachoir.metadata import extractMetadata
             log("Hachoir: determineLength %s"%(filename))
-            dur = extractMetadata(createParser(FileAccess.open(filename,'r'))).get('duration').total_seconds()
+            meta = extractMetadata(createParser(FileAccess.open(filename,'r')))
+            if not meta: raise Exception('No meta found')
+            dur  = meta.get('duration').total_seconds()
             log('Hachoir: Duration is %s'%(dur))
             return dur
         except Exception as e:
-            log("Hachoir: failed! %s"%(e), xbmc.LOGERROR)
+            log("Hachoir: failed! %s\nmeta = %s"%(e,meta), xbmc.LOGERROR)
             return 0
