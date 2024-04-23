@@ -38,7 +38,7 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
-
+        
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -129,6 +129,14 @@ class Fillers:
     
 
     def injectBCTs(self, citem, fileList):
+        addBumpers   = self.bctTypes['bumpers'].get('enabled',False)
+        addRatings   = self.bctTypes['ratings'].get('enabled',False)
+        addAdverts   = self.bctTypes['adverts'].get('enabled',False)
+        addTrailers  = self.bctTypes['trailers'].get('enabled',False)
+        cntAdverts   = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
+        cntTrailers  = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
+        self.log('injectBCTs, Bumpers = %s, Ratings = %s, Adverts = %s, Trailers = %s'%(addBumpers,addRatings,addAdverts,addTrailers))
+        
         nfileList = []
         for idx, fileItem in enumerate(fileList):
             if not fileItem: continue
@@ -144,13 +152,6 @@ class Fillers:
                 ftype   = fileItem.get('type','')
                 fgenre  = (fileItem.get('genre') or citem.get('group') or '')
                 if isinstance(fgenre,list) and len(fgenre) > 0: fgenre = fgenre[0]
-                
-                addBumpers   = self.bctTypes['bumpers'].get('enabled',False)
-                addRatings   = self.bctTypes['ratings'].get('enabled',False)
-                addAdverts   = self.bctTypes['adverts'].get('enabled',False)
-                addTrailers  = self.bctTypes['trailers'].get('enabled',False)
-                cntAdverts   = PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max']
-                cntTrailers  = PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max']
                 
                 #pre roll - bumpers
                 if addBumpers:

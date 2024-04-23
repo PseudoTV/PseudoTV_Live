@@ -510,11 +510,16 @@ class Manager(xbmcgui.WindowXMLDialog):
             with busy_dialog():
                 items = self.jsonRPC.walkFileDirectory(path, 'music' if isRadio({'path':[path]}) else 'video', retItem=True)
             
+            attempts = 3
             for dir in items:
+                tries = 3
+                attempts -= 1
+                if MONITOR.waitForAbort(0.001) or attempts < 1: break
                 for idx, item in enumerate(items.get(dir,[])):
                     dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,item.get('file','')))
-                    if MONITOR.waitForAbort(1): break
+                    if MONITOR.waitForAbort(1) or tries < 1: break
                     else:
+                        tries -= 1
                         dur = self.jsonRPC.getDuration(item.get('file'), item, accurate=True)
                         item.update({'duration':dur,'runtime':dur})
                         if dur == 0: continue

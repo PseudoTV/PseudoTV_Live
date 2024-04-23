@@ -276,6 +276,20 @@ class Settings:
     def setPropertySetting(self, key, value):
         return self.property.setProperty(key, value)
 
+        
+    def getEXTMeta(self, id):
+        addon = xbmcaddon.Addon(id)
+        properties = ['name', 'version', 'summary', 'description', 'path', 'author', 'icon', 'disclaimer', 'fanart', 'changelog', 'id', 'profile', 'stars', 'type']
+        for property in properties: yield (property, addon.getAddonInfo(property))
+
+
+    def getEXTSetting(self, id, key):
+        return xbmcaddon.Addon(id).getSetting(key)
+        
+        
+    def setEXTSetting(self, id, key, value):
+        return xbmcaddon.Addon(id).setSetting(key,value)
+        
 
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
