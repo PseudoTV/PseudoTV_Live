@@ -49,12 +49,11 @@ class Background(xbmcgui.WindowXML):
 
     def onInit(self):
         self.log('onInit')
-        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")#temp remove when rules finished.
         try:
             citem = self.player.sysInfo.get('citem',{})
             self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
-            self.getControl(40001).setVisible(self.showStatic)
-            self.getControl(40002).setImage(citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            logo = (citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except:
             self.runActions(RULES_ACTION_BACKGROUND_CLOSE, citem, inherited=self)

@@ -389,8 +389,8 @@ class Service():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
             else: 
-                self._run()
-                self._tasks()
+                timerit(self._run)(0.1)
+                timerit(self._tasks)(1.0)
         self.stop()
 
 

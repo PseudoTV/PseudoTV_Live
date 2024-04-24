@@ -105,13 +105,12 @@ def poolit(method):
     def wrapper(items=[], *args, **kwargs):
         results  = []
         cpucount = Cores().CPUcount()
-        threads  = cpucount * 2
-        pool = Concurrent(threads)
+        pool = Concurrent(cpucount)
         try:
-            if cpucount > 1 and len(items) > 1:
-                results = pool.executors(method, items, *args, **kwargs)
-            else:
+            if cpucount < 2 or not items:
                 results = pool.generator(method, items, *args, **kwargs)
+            else:
+                results = pool.executors(method, items, *args, **kwargs)
         except Exception as e: log('poolit, failed! %s'%(e), xbmc.LOGERROR)
         results = pool.generator(method, items, *args, **kwargs)
         log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))

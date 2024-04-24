@@ -79,8 +79,8 @@ class RulesList:
         
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
-        self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem['id']))
-        for rule in self.chanRules.get(citem['id'],[]):
+        self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
+        for rule in self.chanRules.get(citem.get('id'),[]):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
                 parameter = rule.runAction(action, citem, parameter, inherited)
@@ -567,7 +567,7 @@ class ProvisionalRule(BaseRule):
                                                     "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}]}
 
             if self.optionValues[0]:
-                self.log("%s: runAction, id: %s, provisional value = %s"%(self.__class__.__name__,citem['id'],self.optionValues[0]))
+                self.log("%s: runAction, id: %s, provisional value = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0]))
                 if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                 if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                 else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])

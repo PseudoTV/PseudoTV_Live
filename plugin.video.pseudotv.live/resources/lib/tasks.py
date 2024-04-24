@@ -59,7 +59,7 @@ class Tasks():
             try:
                 func, args, kwargs = package
                 self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                func(*args,**kwargs)
+                threadit(func)(*args,**kwargs)
             except Exception as e:
                 self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
         except Empty: self.log("_queue, empty!")

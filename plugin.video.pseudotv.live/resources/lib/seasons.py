@@ -22,7 +22,7 @@ TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limit":"","sort":{},"filter"
 MOVIE_QUERY = {"path":"videodb://movies/titles/"  ,"limit":"","sort":{},"filter":{},
                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"}
                
-SEASONS = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':"“You're traveling through another dimension...“"                 , 'keyword':'newyear'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://cdn-icons-png.flaticon.com/512/3763/3763123.png'},
+SEASONS = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':"“You're traveling through another dimension...“"                 , 'keyword':'newyear'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/images/580b57fcd9996e24bc43c410.png'},
                           '2':{'name':"Science Fiction Week"    , 'tagline':"“Science fiction frees you to go anyplace and examine anything.“", 'keyword':'scifi'    , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://www.pngall.com/wp-content/uploads/6/Science-Fiction-PNG-Free-Download.png'},
                           '3':{'name':"J.R.R. Tolkien Week"     , 'tagline':"“One ring to rule them all.“"                                    , 'keyword':'lotr'     , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://www.pngall.com/wp-content/uploads/12/Lord-Of-The-Rings-Logo-PNG-Picture.png'},
                           '4':{'name':'Lego Week'               , 'tagline':"“With a bucket of Lego, you can tell any story.“"                , 'keyword':'lego'     , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://pngimg.com/d/lego_PNG99.png'},
@@ -46,15 +46,15 @@ SEASONS = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':"“
                           '4':{'name':"Alien Week"              , 'tagline':"“In space, no one can hear you scream.“"                         , 'keyword':'aliens'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                           '5':{'name':"Star Wars Week"          , 'tagline':"“May the force be with you.“"                                    , 'keyword':'starwars' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
                           
-           "May"       : {'1':{'name':"Star Wars Week"          , 'tagline':"“May the force be with you.“"                                    , 'keyword':'starwars' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '2':{'name':"Twilight Zone Week"      , 'tagline':"“You are about to enter another dimension...“"                   , 'keyword':'twilight' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '3':{'name':"Sherlock Holmes Week"    , 'tagline':"“The Game is Afoot!“"                                            , 'keyword':'watson'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '4':{'name':"Dracula Week"            , 'tagline':"“Fidelis et mortem“"                                             , 'keyword':'vampire'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
+           "May"       : {'1':{'name':"Star Wars Week"          , 'tagline':"“May the force be with you.“"                                    , 'keyword':'starwars' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/thumbs/602176580ad3230004b93c22.png'},
+                          '2':{'name':"Twilight Zone Week"      , 'tagline':"“You are about to enter another dimension...“"                   , 'keyword':'twilight' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://media.themoviedb.org/t/p/w500/4xJR8vKOczmaIYZ7BbWlEApqR0m.png'},
+                          '3':{'name':"Sherlock Holmes Week"    , 'tagline':"“The Game is Afoot!“"                                            , 'keyword':'watson'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://picfiles.alphacoders.com/123/123200.png'},
+                          '4':{'name':"Dracula Week"            , 'tagline':"“Fidelis et mortem“"                                             , 'keyword':'vampire'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/thumbs/59f876c13cec115efb36237e.png'},
                           '5':{'name':""                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
                           
            "June"      : {'1':{'name':""                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '2':{'name':"Ghostbusters Week"       , 'tagline':"“Who You Gonna Call?“"                                           , 'keyword':'ghosts'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
-                          '3':{'name':"Superman Week"           , 'tagline':"“Truth, justice, and the American way.“"                         , 'keyword':'superman' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Superman_S_symbol.svg/2560px-Superman_S_symbol.svg.png'},
+                          '2':{'name':"Ghostbusters Week"       , 'tagline':"“Who You Gonna Call?“"                                           , 'keyword':'ghosts'   , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://images.fineartamerica.com/images/artworkimages/medium/3/ghostbusters-original-logo-harlem-nellie-transparent.png'},
+                          '3':{'name':"Superman Week"           , 'tagline':"“Truth, justice, and the American way.“"                         , 'keyword':'superman' , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Superman_shield.svg/1200px-Superman_shield.svg.png'},
                           '4':{'name':''                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''},
                           '5':{'name':''                        , 'tagline':''                                                                , 'keyword':''         , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':''}},
                           
@@ -129,11 +129,9 @@ KEYWORDS = {"":{},
                                                                                                                 {"field":"writers" ,"operator":"contains","value":["William Shakespeare","Shakespeare"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["William Shakespeare","Shakespeare"]}]}]}}]},
                                                                                                                 
-            "super"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tag"     ,"operator":"contains","value":["Superhero","Marvel","DC"]},
-                                                                                                                {"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
+            "super"    :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Superhero"]}]}]}}],
-                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"tag"     ,"operator":"contains","value":["Superhero","Marvel","DC"]},
-                                                                                                                {"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"studio"  ,"operator":"contains","value":["Marvel","DC"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Superhero"]}]}]}}]},
                                                                                                                 
             "aliens"   :{"movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"is"      ,"value":["TED 2023","Prometheus","Alien: Covenant","Alien","Alien: Isolation","Alien: Out of the Shadows","Alien: Romulus","Aliens","Aliens: Colonial Marines","Fire and Stone","Alien3","Alien³","Aliens: Dark Descent","Aliens: Fireteam Elite","Aliens: Phalanx","Alien Resurrection"]},
@@ -143,6 +141,31 @@ KEYWORDS = {"":{},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Star Wars"]}]}]}}],
                          "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Star Wars"]},
                                                                                                                 {"field":"plot"    ,"operator":"contains","value":["Star Wars"]}]}]}}]},
+            
+            "twilight" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Twilight Zone", "Rod Serling"]}]}]}}]},
+            
+            "watson"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Sherlock", "Holmes", "Sher-lock", "Sherlock Holmes", "Watson", "Arthur Conan Doyle"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Sherlock", "Holmes", "Sher-lock", "Sherlock Holmes", "Watson", "Arthur Conan Doyle"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Sherlock", "Holmes", "Sher-lock", "Sherlock Holmes", "Watson", "Arthur Conan Doyle"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Sherlock", "Holmes", "Sher-lock", "Sherlock Holmes", "Watson", "Arthur Conan Doyle"]}]}]}}]},
+            
+            "vampire"  :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Vampire", "Dracula" ,"Nosferatu", "Vamp", "Bloodsucker"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Vampire", "Dracula" ,"Nosferatu", "Vamp", "Bloodsucker"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Vampire", "Dracula" ,"Nosferatu", "Vamp", "Bloodsucker"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Vampire", "Dracula" ,"Nosferatu", "Vamp", "Bloodsucker"]}]}]}}]},
+            
+            "ghosts"   :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Ghostbusters"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Ghostbusters"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Ghostbusters"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Ghostbusters"]}]}]}}]},
+            
+            "superman" :{"episodes": [{"sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"or" :[{"field":"tvshow"  ,"operator":"contains","value":["Superman"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superman"]}]}]}}],
+                         "movies"  : [{"sort":{"method":"year"   ,"order":"ascending"},"filter":{"and":[{"or" :[{"field":"title"   ,"operator":"contains","value":["Superman"]},
+                                                                                                                {"field":"plot"    ,"operator":"contains","value":["Superman"]}]}]}}]},
             }
                        
      

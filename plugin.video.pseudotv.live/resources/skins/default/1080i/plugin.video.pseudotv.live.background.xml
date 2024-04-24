@@ -26,6 +26,34 @@
                     <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
                 </control>
                 <control type="grouplist">
+                    <posx>704</posx>
+                    <posy>284</posy>
+                    <itemgap>5</itemgap>
+                    <orientation>vertical</orientation>
+                    <control type="image" id="40002">
+                        <description>Background Logo</description>
+                        <height>512</height>
+                        <width>512</width>
+                        <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                        <animation effect="fade" start="95" end="95" condition="True">Conditional</animation>
+                        <texture></texture>
+                    </control>
+                </control>
+                <control type="textbox" id="40003">
+                    <posx>128</posx>
+                    <posy>952</posy>
+                    <height>36</height>
+                    <width>1418</width>
+                    <font>font27</font>
+                    <scroll>true</scroll>
+                    <textcolor>white</textcolor>
+                    <shadowcolor>text_shadow</shadowcolor>
+                    <scrolltime>600</scrolltime>
+                    <autoscroll delay="5000" time="1000">false</autoscroll>
+                    <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
+                    <label></label>
+                </control>
+                <control type="grouplist">
                     <posx>1440</posx>
                     <posy>850</posy>
                     <width>480</width>
@@ -39,57 +67,15 @@
                         <shadowcolor>text_shadow</shadowcolor>
                         <height>60</height>
                         <label>[B]$INFO[System.Time][/B]</label>
+                        <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     </control>
                     <control type="image">
                         <height>90</height>
                         <texture>splashtext.png</texture>
                         <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
+                        <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     </control>
                 </control>
-                <control type="grouplist">
-                    <centertop>65%</centertop>
-                    <centerleft>50%</centerleft>
-                    <width>960</width>
-                    <itemgap>5</itemgap>
-                    <orientation>vertical</orientation>
-                    <control type="image" id="40002">
-                        <description>Background Logo</description>
-                        <height>240</height>
-                        <aspectratio scalediffuse="true" align="center" aligny="top">keep</aspectratio>
-                        <texture></texture>
-                    </control>
-                    <control type="textbox" id="40003">
-                        <height>90</height>
-                        <width>auto</width>
-                        <font>font27</font>
-                        <scroll>true</scroll>
-                        <align>center</align>
-                        <aligny>center</aligny>
-                        <textcolor>white</textcolor>
-                        <shadowcolor>text_shadow</shadowcolor>
-                        <scrolltime>600</scrolltime>
-                        <autoscroll delay="5000" time="1000">false</autoscroll>
-                        <label></label>
-                    </control>
-                </control>
-            </control>
-            <control type="image" id="40001">
-                <description>Background Static</description>
-                <width>auto</width>
-                <height>auto</height>
-                <aspectratio scalediffuse="true" align="center" aligny="center">scale</aspectratio>
-                <!-- <texture>backgrounds/static.gif</texture> -->
-                <visible>!Player.HasMedia + !Player.Playing</visible>
-            </control>
-            <control type="image">
-                <centertop>50%</centertop>
-                <centerleft>50%</centerleft>
-                <width>960</width>
-                <height>auto</height>
-                <texture>splashtext.png</texture>
-                <visible>Control.IsVisible(40001)</visible>
-                <aspectratio scalediffuse="true" align="center" aligny="center">keep</aspectratio>
-                <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
             </control>
         </control>
     </controls>

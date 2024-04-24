@@ -106,7 +106,6 @@ class JSONRPC:
                 else: chks.append(dir)
                 self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
                 for item in self.getDirectory(param={"directory":dir,"media":media}).get('files',[]):
-                    print('walkFileDirectory',item,dirs)
                     if   item.get('filetype') == 'directory': dirs.append(item.get('file'))
                     elif item.get('filetype') == 'file':
                         if chkDuration:

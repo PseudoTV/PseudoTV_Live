@@ -32,7 +32,7 @@ class Fillers:
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC,self.cache)
-        
+
         self.bctTypes   = {"ratings"  :{"max":1                 ,"auto":builder.incRatings == 1,"enabled":bool(builder.incRatings),"sources":builder.srcRatings,"items":{}},
                            "bumpers"  :{"max":1                 ,"auto":builder.incBumpers == 1,"enabled":bool(builder.incBumpers),"sources":builder.srcBumpers,"items":{}},
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
@@ -155,17 +155,23 @@ class Fillers:
                 
                 #pre roll - bumpers
                 if addBumpers:
-                    # #todo movie bumpers for audio/video codecs? imax, cinema experience bumpers?
+                    bchance = chanceBool(SETTINGS.getSettingInt('Random_Bumper_Chance'))
                     if ftype.startswith(tuple(TV_TYPES)):
                         if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
-                            bkeys = ['resources',chname, fgenre] if chanceBool(SETTINGS.getSettingInt('Random_Bumper_Chance')) else [chname, fgenre]
+                            bkeys = [chname, fgenre]
+                            if bchance: bkeys.insert(0,'resources')
                             bitem = self.getSingle('bumpers',bkeys)
                             if bitem.get('file') and bitem.get('duration',0) > 0:
                                 runtime += bitem.get('duration')
                                 self.log('injectBCTs, adding bumper %s - %s'%(bitem.get('file'),bitem.get('duration')))
                                 if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Bumpers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                bitem.update({'title':'%s (%s)'%(fitem.get('showlabel'),chname),'episodetitle':bitem.get('label',bitem.get('title','Bumper')),'genre':['Bumpers'],'plot':fitem.get('plot',bitem.get('file')),'path':bitem.get('file')})
+                                bitem.update({'title':'%s (%s)'%(fitem.get('showlabel'),chname),'episodetitle':bitem.get('label',bitem.get('title','Bumper')),'genre':['Bumper'],'plot':fitem.get('plot',bitem.get('file')),'path':bitem.get('file')})
                                 nfileList.append(self.builder.buildCells(citem,bitem.get('duration'),entries=1,info=bitem)[0])
+                    # elif ftype.startswith(tuple(MOVIE_TYPES)):
+                        # # #todo movie bumpers for audio/video codecs? imax, cinema experience bumpers?
+                        # if chtype in ['Playlists','Movie Genres','Movie Studios','Mixed Genres','Custom']:
+                            # bkeys = [fitem.get('streamdetails',{}).get('audio',[{}])[0].get('codec')]
+                            # if bchance: bkeys.insert(0,'resources')
                 
                 #pre roll - ratings
                 if addRatings:
@@ -176,7 +182,7 @@ class Fillers:
                             runtime += ritem.get('duration')
                             self.log('injectBCTs, adding rating %s - %s'%(ritem.get('file'),ritem.get('duration')))
                             if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Ratings',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                            ritem.update({'title':'%s (%s)'%(fitem.get('showlabel'),mpaa),'episodetitle':ritem.get('label',ritem.get('title','Rating')),'genre':['Ratings'],'plot':fitem.get('plot',ritem.get('file')),'path':ritem.get('file')})
+                            ritem.update({'title':'%s (%s)'%(fitem.get('showlabel'),mpaa),'episodetitle':ritem.get('label',ritem.get('title','Rating')),'genre':['Rating'],'plot':fitem.get('plot',ritem.get('file')),'path':ritem.get('file')})
                             nfileList.append(self.builder.buildCells(citem,ritem.get('duration'),entries=1,info=ritem)[0])
                             
                 # original media
@@ -188,6 +194,8 @@ class Fillers:
                 afillRuntime = 0
                 pfillRuntime = diffRuntime(runtime)
                 pchance      = (chanceBool(SETTINGS.getSettingInt('Random_Advert_Chance')) | chanceBool(SETTINGS.getSettingInt('Random_Trailers_Chance')))
+                pkeys        = [chname, fgenre]
+                if pchance: pkeys.insert(0,'resources')
                 self.log('injectBCTs, post roll current runtime %s, available runtime %s, chance insert = %s'%(runtime, pfillRuntime,pchance))
                 
                 # post roll - commercials
@@ -196,32 +204,33 @@ class Fillers:
                     pfillRuntime -= afillRuntime
                     self.log('injectBCTs, advert fill runtime %s'%(afillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Mixed Genres','Custom']:
-                        akeys = ['resources',chname, fgenre] if pchance else [chname, fgenre]
-                        for aitem in self.getMulti('adverts',akeys, cntAdverts): 
+                        for aitem in self.getMulti('adverts',pkeys, cntAdverts): 
                             if aitem.get('file') and aitem.get('duration',0) > 0:
-                                if afillRuntime <= 0: break
-                                afillRuntime -= aitem.get('duration')
-                                self.log('injectBCTs, adding advert %s - %s'%(aitem.get('file'),aitem.get('duration')))
-                                if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Adverts',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                aitem.update({'title':'Advert','episodetitle':aitem.get('label',aitem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Adverts'],'plot':aitem.get('plot',aitem.get('file')),'path':aitem.get('file')})
-                                pfileList.append(self.builder.buildCells(citem,aitem.get('duration'),entries=1,info=aitem)[0])
+                                if   afillRuntime <= 0: break
+                                elif afillRuntime < aitem.get('duration'): continue
+                                else:
+                                    afillRuntime -= aitem.get('duration')
+                                    self.log('injectBCTs, adding advert %s - %s'%(aitem.get('file'),aitem.get('duration')))
+                                    if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Adverts',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                                    aitem.update({'title':'Advert','episodetitle':aitem.get('label',aitem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Advert'],'plot':aitem.get('plot',aitem.get('file')),'path':aitem.get('file')})
+                                    pfileList.append(self.builder.buildCells(citem,aitem.get('duration'),entries=1,info=aitem)[0])
                             
                 # post roll - trailers
                 if addTrailers:
                     pfillRuntime += afillRuntime
                     self.log('injectBCTs, trailers fill runtime %s'%(pfillRuntime))
                     if chtype in ['Playlists','TV Networks','TV Genres','Movie Genres','Movie Studios','Mixed Genres','Custom']:
-                        tkeys = ['resources',chname, fgenre] if pchance else [chname, fgenre]
-                        for titem in self.getMulti('trailers',tkeys, cntTrailers):
+                        for titem in self.getMulti('trailers',pkeys, cntTrailers):
                             if titem.get('file') and titem.get('duration',0) > 0:
-                                if pfillRuntime <= 0: break
-                                pfillRuntime -= titem.get('duration')
-                                self.log('injectBCTs, adding trailers %s - %s'%(titem.get('file'),titem.get('duration')))
-                                if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Trailers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                                titem.update({'title':'Trailer','episodetitle':titem.get('label',titem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Trailers'],'plot':titem.get('plot',titem.get('file')),'path':titem.get('file')})
-                                pfileList.append(self.builder.buildCells(citem,titem.get('duration'),entries=1,info=titem)[0])
+                                if   pfillRuntime <= 0: break
+                                elif pfillRuntime < titem.get('duration'): continue
+                                else:
+                                    pfillRuntime -= titem.get('duration')
+                                    self.log('injectBCTs, adding trailers %s - %s'%(titem.get('file'),titem.get('duration')))
+                                    if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Injecting Filler: Trailers',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                                    titem.update({'title':'Trailer','episodetitle':titem.get('label',titem.get('title','%s (%s)'%(chname,fgenre))),'genre':['Trailer'],'plot':titem.get('plot',titem.get('file')),'path':titem.get('file')})
+                                    pfileList.append(self.builder.buildCells(citem,titem.get('duration'),entries=1,info=titem)[0])
                         
                 self.log('injectBCTs, unused post roll runtime %s'%(pfillRuntime))
-                if len(pfileList) > 0:
-                    nfileList.extend(randomShuffle(pfileList))
+                if len(pfileList) > 0: nfileList.extend(randomShuffle(pfileList))
         return nfileList

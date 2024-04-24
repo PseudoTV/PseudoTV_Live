@@ -68,7 +68,8 @@ def busy_dialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        if isBusyDialog(): closeBusyDialog()
+        if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
+            Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
                   
 @contextmanager
 def sudo_dialog(msg):

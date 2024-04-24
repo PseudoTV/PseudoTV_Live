@@ -40,8 +40,9 @@ class Resources:
         if not logo: logo = self.getLocalLogo(chname)              #local
         if not logo: logo = self.getLogoResources(chname, type)    #resource
         if not logo: logo = self.getTVShowLogo(chname)             #tvshow 
+        if not logo: logo = LOGO
         self.log('getLogo, chname = %s, logo = %s'%(chname, logo))
-        return (logo or LOGO)
+        return logo
         
         
     def selectLogo(self, chname, type="Custom"):
@@ -114,7 +115,7 @@ class Resources:
                 if self.matchName(chname, item.get('title','')):
                     keys = ['clearlogo','logo','logos','clearart','icon']
                     for key in keys:
-                        art = item.get('art',{}).get(key)
+                        art = item.get('art',{}).get(key,'').replace('image://DefaultFolder.png/','')
                         if art:
                             self.log('getTVShowLogo, found %s'%(art))
                             return self.cache.set(cacheName, art, expiration=datetime.timedelta(days=MAX_GUIDEDAYS))

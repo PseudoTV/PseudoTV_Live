@@ -68,9 +68,9 @@ class Builder:
         self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
         self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
                                  "paths":[]}
-                                 
+        
         if SETTINGS.getSettingInt('Include_Trailers') in [0,2]: self.srcTrailer["paths"].extend(IMDB_PATHS)
-        if SETTINGS.getSettingBool('Include_Adverts'):          self.srcAdverts["paths"].extend(self.getAdvertPath())
+        if SETTINGS.getSettingBool('Include_Adverts'): self.srcAdverts["paths"].extend(self.getAdvertPath())
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
@@ -509,6 +509,7 @@ class Builder:
         if hasAddon(id):
             try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources').replace('/resources/resources','/resources')
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)
-            self.log('getAdvertPath, folder: %s'%(folder))
-            return [folder]
+            paths = ['plugin://%s'%(id),folder]
+            self.log('getAdvertPath, paths = %s'%(paths))
+            return paths
         return []
