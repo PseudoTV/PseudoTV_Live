@@ -45,10 +45,55 @@ class MP4Parser:
         except:
             log("MP4Parser: Unable to open the file")
             return
+            
         dur = self.readHeader()
+        if not dur:
+            boxes = self.find_boxes(self.File)
+            # Sanity check that this really is a movie file.
+            if (boxes[b"ftyp"][0] == 0):
+                moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
+                trak_boxes = self.find_boxes(self.File, moov_boxes[b"trak"][0] + 8, moov_boxes[b"trak"][1])
+                udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])
+                dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
         self.File.close()
         log("MP4Parser: Duration is %s"%(dur))
         return dur
+
+
+    def find_boxes(self, f, start_offset=0, end_offset=float("inf")):
+        """Returns a dictionary of all the data boxes and their absolute starting
+        and ending offsets inside the mp4 file. Specify a start_offset and end_offset to read sub-boxes."""
+        s = struct.Struct("> I 4s")
+        boxes  = {}
+        offset = start_offset
+        last_offset = -1
+        f.seek(offset, 0)
+        while not MONITOR.abortRequested() and offset < end_offset:
+            if last_offset == offset: break
+            else: last_offset = offset
+            data = f.readBytes(8)  # read box header
+            if data == b"": break  # EOF
+            length, text = s.unpack(data)
+            f.seek(length - 8, 1)  # skip to next box
+            boxes[text] = (offset, offset + length)
+            offset += length
+        return boxes
+
+
+    def scan_mvhd(self, f, offset):
+        f.seek(offset, 0)
+        f.seek(8, 1)  # skip box header
+        data = f.readBytes(1)  # read version number
+        version = int.from_bytes(data, "big")
+        word_size = 8 if version == 1 else 4
+        f.seek(3, 1)  # skip flags
+        f.seek(word_size * 2, 1)  # skip dates
+        timescale = int.from_bytes(f.readBytes(4), "big")
+        if timescale == 0: timescale = 600
+        duration = int.from_bytes(f.readBytes(word_size), "big")
+        duration = round(duration / timescale)
+        log("MP4Parser - Using New Parser")
+        return duration
 
 
     def readHeader(self):

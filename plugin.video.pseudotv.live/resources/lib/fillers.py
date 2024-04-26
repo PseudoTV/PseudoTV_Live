@@ -46,7 +46,7 @@ class Fillers:
 
     def fillSources(self):
         if self.bctTypes['trailers'].get('enabled',False) and SETTINGS.getSettingInt('Include_Trailers') < 2:
-            self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.getTrailers())
+            self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.kodiTrailers())
                 
         for ftype, values in list(self.bctTypes.items()):
             for id in values.get("sources",{}).get("resource",[]):

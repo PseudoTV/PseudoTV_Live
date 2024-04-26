@@ -25,7 +25,6 @@ from parsers    import FLVParser
 from parsers    import TSParser
 from parsers    import VFSParser
 from parsers    import NFOParser
-from parsers    import MP4ParserNew
  
 EXTERNAL_PARSER = [NFOParser.NFOParser]
 try:
@@ -56,9 +55,7 @@ class VideoParser:
         if ext in self.AVIExts:
             return AVIParser.AVIParser().determineLength(filename)
         elif ext in self.MP4Exts:
-            dur = MP4Parser.MP4Parser().determineLength(filename)
-            # if not dur: return MP4ParserNew.MP4ParserNew().determineLength(filename) #todo replace older parser after testing. Parser to slow, optimize 
-            return dur
+            return MP4Parser.MP4Parser().determineLength(filename)
         elif ext in self.MKVExts:
             return MKVParser.MKVParser().determineLength(filename)
         elif ext in self.FLVExts:

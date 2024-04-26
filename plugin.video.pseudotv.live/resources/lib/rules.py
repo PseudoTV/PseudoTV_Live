@@ -652,9 +652,8 @@ class EvenShowsRule(BaseRule):
             self.log('runAction, saving limit %s'%(builder.limit))
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
-            print('RULES_ACTION_CHANNEL_BUILD_PATH',parameter)
             if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
-                builder.limit = self.storedValues[2] * self.optionValues[0]
+                builder.limit = self.storedValues[2] * self.optionValues[0] #Double parser limit for tv content inorder to aid even distro. 
             elif parameter:
                 builder.limit = self.storedValues[2]
             self.log('runAction, changing limit %s'%(builder.limit))

@@ -307,7 +307,7 @@ class Builder:
 
     def buildList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, dirItem={}, query={}):
         self.log("buildList, id: %s, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
-        dirList, fileList, seasoneplist, trailerslist = [], [], [], {}
+        dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, olimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
         if items == self.loopback:# malformed jsonrpc queries will return root response, catch a re-parse and return.
             self.pErrors.append(LANGUAGE(32030))
@@ -399,7 +399,7 @@ class Builder:
                             if tdur > 0:
                                 titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
                                 for genre in (titem.get('genre',[]) or ['resources']):
-                                    trailerslist.setdefault(genre.lower(),[]).append(titem)
+                                    trailersdict.setdefault(genre.lower(),[]).append(titem)
                         
                         if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                             seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
@@ -423,7 +423,7 @@ class Builder:
             if len(dirList)  > 0: dirList  = randomShuffle(dirList)
             if len(fileList) > 0: fileList = randomShuffle(fileList)
             
-        if len(trailerslist) > 0: self.setTrailers(trailerslist)
+        if len(trailersdict) > 0: self.kodiTrailers(trailersdict)
         self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
         return fileList, dirList
 
@@ -493,17 +493,11 @@ class Builder:
         return self.m3u._save() & self.xmltv._save()
 
 
-    def getTrailers(self):
-        items = (self.cache.get('getTrailers', json_data=True) or {})
-        self.log('getTrailers, items: %s'%(len(items)))
+    def kodiTrailers(self, nitems={}):
+        items = (self.cache.get('kodiTrailers', json_data=True) or {})
+        if nitems: return self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
         return items
-        
-        
-    def setTrailers(self, nitems={}):
-        items = mergeDictLST(self.getTrailers(),nitems)
-        self.log('setTrailers, trailers: %s'%(len(items)))
-        self.cache.set('getTrailers', items, expiration=datetime.timedelta(days=28), json_data=True)
-        
+
         
     def getAdvertPath(self, id='plugin.video.ispot.tv'):
         if hasAddon(id):

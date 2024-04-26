@@ -68,6 +68,7 @@ class Cache:
     def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
         if value and not DISABLE_CACHE:
             with self.cacheLocker():
+                self.log('set, name = %s'%self.getname(name))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)
         return value
         
@@ -75,6 +76,7 @@ class Cache:
     def get(self, name, checksum=ADDON_VERSION, json_data=False, default=None):
         if not DISABLE_CACHE:
             with self.cacheLocker():
+                self.log('get, name = %s'%self.getname(name))
                 return (self.cache.get(self.getname(name),checksum,json_data) or default)
         return default
         

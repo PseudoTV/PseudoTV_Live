@@ -827,6 +827,11 @@ class Dialog:
         return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
     
     
+    def _closeOkDialog(self):
+        if Builtin().getInfoBool('IsActive(okdialog)','Window'):
+            Builtin().executebuiltin('Dialog.Close(okdialog)')
+        
+        
     def _okDialog(self, msg, heading, autoclose, url):
         timerit(self.okDialog)(0.5,[msg, heading, autoclose])
 
@@ -834,18 +839,23 @@ class Dialog:
     def okDialog(self, msg, heading=ADDON_NAME, autoclose=AUTOCLOSE_DELAY, usethread=False):
         if usethread: return self._okDialog(msg, heading, autoclose)
         else:
-            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(okdialog)'])
+            if autoclose > 0: timerit(self._closeOkDialog)(autoclose)
             return xbmcgui.Dialog().ok(heading, msg)
 
 
-    def _textviewer(self, msg, heading, usemono, autoclose):
+    def _closeTextViewer(self):
+        if Builtin().getInfoBool('IsActive(textviewer)','Window'):
+            Builtin().executebuiltin('Dialog.Close(textviewer)')
+        
+        
+    def _textViewer(self, msg, heading, usemono, autoclose):
         timerit(self.textviewer)(0.5,[msg, heading, usemono, autoclose])
         
         
     def textviewer(self, msg, heading=ADDON_NAME, usemono=False, autoclose=AUTOCLOSE_DELAY, usethread=False):
-        if usethread: return self._textviewer(msg, heading, usemono, autoclose)
+        if usethread: return self._textViewer(msg, heading, usemono, autoclose)
         else:
-            if autoclose > 0: timerit(Builtin().executebuiltin)(autoclose,['Dialog.Close(textviewer)'])
+            if autoclose > 0: timerit(self._closeTextViewer)(autoclose)
             return xbmcgui.Dialog().textviewer(heading, msg, usemono)
         
         
