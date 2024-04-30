@@ -139,17 +139,18 @@ class Utilities:
 
 
     def buildMenu(self, select=None):
-        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)},    #"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)},     #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR}, #"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart},                                            #"Force PTVL reload"
-                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)},              #"Show M3U"
-                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)},            #"Show XMLTV"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary},
+        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False), 'hide':True},     #"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True) , 'hide':True},     #"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':brutePVR                              , 'hide':False},    #"Force PVR reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                        , 'hide':False},    #"Force PTVL reload"
+                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)          , 'hide':False},    #"Show M3U"
+                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)        , 'hide':False},    #"Show XMLTV"
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary                                         , 'hide':True},    #Rescan library
                  ]            
 
         with busy_dialog():
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=lambda x:x['label'])]
+            client    = isClient()
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=lambda x:x['label']) if not (item.get('hide') & client)]
             if select is None: 
                 select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             

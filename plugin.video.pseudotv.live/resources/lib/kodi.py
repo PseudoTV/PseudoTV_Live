@@ -124,7 +124,7 @@ def convertString(data):
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
-        self.cache    = Cache(mem_cache=True)
+        self.cache    = Cache(mem_cache=False)
         self.property = Properties()
 
         
@@ -294,7 +294,11 @@ class Settings:
 
     def setPVRPath(self, userFolder):
         self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
-        self.setSetting('User_Folder',userFolder)
+        self.setSetting('User_Folder' ,userFolder)
+        self.setSetting('Remote_M3U'  ,'%s'%(os.path.join(userFolder,M3UFLE).replace('special://profile/addon_data','/addon_data')))
+        self.setSetting('Remote_XMLTV','%s'%(os.path.join(userFolder,XMLTVFLE).replace('special://profile/addon_data','/addon_data')))
+        self.setSetting('Remote_GENRE','%s'%(os.path.join(userFolder,GENREFLE).replace('special://profile/addon_data','/addon_data')))
+        
         Client_Mode = SETTINGS.getSettingInt('Client_Mode')
         newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),

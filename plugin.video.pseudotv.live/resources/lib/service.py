@@ -158,20 +158,19 @@ class Player(xbmc.Player):
    
     def _onPlay(self):
         self.log('_onPlay')
-        self.toggleBackground(False)
-        BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
         if self.disableTrakt: disableTrakt()
         self.sysInfo = self.getPlayerSysInfo()
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
+        self.toggleBackground(False)
 
         
     def _onChange(self):
         self.log('_onChange')
+        self.toggleBackground(True)
+        clearTrakt()
         try:
-            clearTrakt()
-            self.toggleBackground(True)
             if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.jsonRPC.quePlaycount(self.sysInfo['fitem'])
             if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
                 broadcastnext = self.sysInfo['pvritem']['broadcastnext']
@@ -188,10 +187,10 @@ class Player(xbmc.Player):
         
     def _onStop(self):
         self.log('_onStop')
-        clearTrakt()
-        self.toggleBackground(False)
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
+        self.toggleBackground(False)
+        clearTrakt()
 
 
     def _onError(self):
@@ -202,12 +201,11 @@ class Player(xbmc.Player):
     def toggleBackground(self, state=True):
         self.log('toggleBackground, state = %s'%(state))
         if state and self.background is None:
-            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", player=self, runActions=self.runActions)
+            self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
             self.background.show()
         elif not state and hasattr(self.background, 'close'):
             self.background = self.background.close()
-            if self.isPlaying():
-                BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
+        if self.isPlaying(): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
                     
 
 class Monitor(xbmc.Monitor):
@@ -249,7 +247,7 @@ class Monitor(xbmc.Monitor):
         else:           self.toggleOverlay(False)
         return self.isIdle
         
-        
+
     def toggleOverlay(self, state):
         self.log("toggleOverlay, state = %s"%(state))
         if state and self.overlay is None:

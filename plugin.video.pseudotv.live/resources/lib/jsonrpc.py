@@ -91,21 +91,20 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='files', depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkFileDirectory(self, path, media='files', depth=5, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         self.log('walkFileDirectory, path = %s, media = %s'%(path,media))
         chks = list()
         walk = dict()
         dirs = [path]
         
         for idx, dir in enumerate(dirs):
-            depth -= 1
-            if MONITOR.waitForAbort(0.001) or depth < 1: break
+            if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
-                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir))
+                self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
+                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir)).replace('\\','/')
                 if dir in chks: continue
                 else: chks.append(dir)
-                self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                for item in self.getDirectory(param={"directory":dir,"media":media}).get('files',[]):
+                for item in self.getDirectory({"directory":dir,"media":media},True,checksum,expiration).get('files',[]):
                     if   item.get('filetype') == 'directory': dirs.append(item.get('file'))
                     elif item.get('filetype') == 'file':
                         if chkDuration:
@@ -115,12 +114,12 @@ class JSONRPC:
         return walk
                 
 
-    def walkListDirectory(self, path, exts='', depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         self.log('walkListDirectory, path = %s, exts = %s'%(path,exts))
         def _chkfile(path, f):
             if chkDuration:
                 if self.getDuration(os.path.join(path,f), accurate=True) == 0: return
-            if appendPath: return os.path.join(path,f)
+            if appendPath: return os.path.join(path,f).replace('\\','/')
             else:          return f
             
         def _parseXBT():
@@ -130,23 +129,22 @@ class JSONRPC:
              
         chks = list()
         walk = dict()
-        path = path.replace('\\','/')
-        dirs, files = self.getListDirectory(path,checksum,expiration)
-        if TEXTURES in files: return _parseXBT()
-        else:
-            walk.setdefault(path,[]).extend(list(filter(None,[_chkfile(path, f) for f in files if f.endswith(tuple(exts))])))
+        dirs = [path]
         
-        for idx, dir in enumerate(dirs): 
-            depth -= 1
-            if MONITOR.waitForAbort(0.001) or depth < 1: break
+        for idx, dir in enumerate(dirs):
+            if MONITOR.waitForAbort(0.001) or idx > depth: break
             else:
-                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir))
+                self.log('walkListDirectory, walking %s/%s directory'%(idx,len(dirs)))
+                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir)).replace('\\','/')
                 if dir in chks: continue
                 else: chks.append(dir)
-                self.log('walkListDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                walk.update(self.walkListDirectory(os.path.join(path, dir),exts,checksum))
+                subs, files = self.getListDirectory(dir,checksum,expiration)
+                if len(subs)  > 0: dirs.extend(subs)
+                if len(files) > 0:
+                    if TEXTURES in files: return _parseXBT()
+                    else: walk.setdefault(dir,[]).extend(list(filter(None,[_chkfile(dir, f) for f in files if f.endswith(tuple(exts))])))
         return walk
-        
+                
         
     def getListDirectory(self, path, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         cacheName = 'getListDirectory.%s'%(getMD5(path))
@@ -304,31 +302,16 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    #@cacheit(expiration=datetime.timedelta(days=28))
-    def parseYoutubeRuntime(self, id):
-        runtime = 0
-        # vid = .split('?video_id=')
-        #todo user api keys.
-        # from youtube_requests import get_videos
-        # https://github.com/anxdpanic/plugin.video.youtube/blob/master/resources/lib/youtube_requests.py#L62
-        self.log("parseYoutubeRuntime, id = %s, runtime = %s" % (id, runtime))
-        return runtime
-
-
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
         self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
         runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        if not runtime and path.startswith(('plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious')):
-            runtime = self.parseYoutubeRuntime(path)
-        
         if (runtime == 0 or accurate):
-            if not path.startswith(tuple(VFS_TYPES)):# no additional parsing needed item[runtime] has only meta available.
-                duration = 0
-                if isStack(path):# handle "stacked" videos
-                    for file in splitStacks(path): 
-                        duration += self.parseDuration(file)
-                else: duration = self.parseDuration(path, item)
-                if duration > 0: runtime = duration
+            duration = 0
+            if isStack(path):# handle "stacked" videos
+                for file in splitStacks(path): 
+                    duration += self.parseDuration(file)
+            else: duration = self.parseDuration(path, item)
+            if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
         return runtime
 
@@ -342,8 +325,7 @@ class JSONRPC:
         if not duration:
             try:
                 duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-                if duration > 0:
-                    self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
+                if duration > 0: self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
             except Exception as e:
                 log("parseDuration, failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0

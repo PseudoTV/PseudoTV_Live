@@ -50,7 +50,7 @@ class MP4Parser:
         if not dur:
             boxes = self.find_boxes(self.File)
             # Sanity check that this really is a movie file.
-            if (boxes[b"ftyp"][0] == 0):
+            if (boxes.get(b"ftyp",[-1])[0] == 0):
                 moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
                 trak_boxes = self.find_boxes(self.File, moov_boxes[b"trak"][0] + 8, moov_boxes[b"trak"][1])
                 udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])

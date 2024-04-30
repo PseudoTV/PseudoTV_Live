@@ -518,15 +518,15 @@ msgid "Three Shows"
 msgstr ""
 
 msgctxt "#30125"
-msgid "IMDB Trailers"
+msgid "Include IMDB Trailers"
 msgstr ""
 
 msgctxt "#30126"
-msgid "Kodi Trailers"
+msgid "Include Kodi Trailers"
 msgstr ""
 
 msgctxt "#30127"
-msgid "Kodi & IMDB Trailers"
+msgid ""
 msgstr ""
 
 msgctxt "#30128"
@@ -1245,8 +1245,13 @@ msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32166"
-msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under %s minutes"
+msgid "Playback Unavailable! Guide data is outdated.\n%s will refresh in under %s minutes."
 msgstr ""
+
+msgctxt "#32167"
+msgid "Playback Failed! No Media found."
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

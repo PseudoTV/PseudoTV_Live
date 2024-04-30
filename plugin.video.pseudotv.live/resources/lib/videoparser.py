@@ -25,6 +25,7 @@ from parsers    import FLVParser
 from parsers    import TSParser
 from parsers    import VFSParser
 from parsers    import NFOParser
+from parsers    import YTParser
  
 EXTERNAL_PARSER = [NFOParser.NFOParser]
 try:
@@ -48,45 +49,39 @@ class VideoParser:
         self.TSExts    = ['.ts', '.m2ts']
         self.STRMExts  = ['.strm']
         self.VFSPaths  = ['resource://','plugin://','upnp://','pvr://']
+        self.YTPaths   = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
 
-
-    def getExt(self, filename):
-        ext = os.path.splitext(filename)[1].lower()
-        if ext in self.AVIExts:
-            return AVIParser.AVIParser().determineLength(filename)
-        elif ext in self.MP4Exts:
-            return MP4Parser.MP4Parser().determineLength(filename)
-        elif ext in self.MKVExts:
-            return MKVParser.MKVParser().determineLength(filename)
-        elif ext in self.FLVExts:
-            return FLVParser.FLVParser().determineLength(filename)
-        elif ext in self.TSExts:
-            return TSParser.TSParser().determineLength(filename)
-        elif ext in self.STRMExts:
-            return NFOParser.NFOParser().determineLength(filename)
-        else: 
-            return 0
-
-
-    def getRPC(self, filename, fileitem, jsonRPC):
-        return VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
-        
 
     def getVideoLength(self, filename, fileitem={}, jsonRPC=None):
         log("VideoParser: getVideoLength %s"%filename)
-        if len(filename) == 0:
-            log("VideoParser: getVideoLength, No file name specified")
+        if not filename:
+            log("VideoParser: getVideoLength, no filename.")
             return 0
-
-        if not FileAccess.exists(filename):
-            log("VideoParser: getVideoLength, Unable to find the file")
-            return 0
-
-        if filename.startswith(tuple(self.VFSPaths)):
-            dur = self.getRPC(filename, fileitem, jsonRPC)
+        elif filename.lower().startswith(tuple(self.YTPaths)):
+            dur = YTParser.YTParser().determineLength(filename)
+        elif filename.lower().startswith(tuple(self.VFSPaths)):
+            dur = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
         else:
-            dur = self.getExt(filename)
-            if not dur:
+            ext = os.path.splitext(filename)[1].lower()
+            if not FileAccess.exists(filename):
+                log("VideoParser: getVideoLength, Unable to find the file")
+                return 0
+            elif ext in self.AVIExts:
+                dur = AVIParser.AVIParser().determineLength(filename)
+            elif ext in self.MP4Exts:
+                dur = MP4Parser.MP4Parser().determineLength(filename)
+            elif ext in self.MKVExts:
+                dur = MKVParser.MKVParser().determineLength(filename)
+            elif ext in self.FLVExts:
+                dur = FLVParser.FLVParser().determineLength(filename)
+            elif ext in self.TSExts:
+                dur = TSParser.TSParser().determineLength(filename)
+            elif ext in self.STRMExts:
+                dur = NFOParser.NFOParser().determineLength(filename)
+            else: 
+                dur = 0
+
+            if dur == 0:
                 for parser in EXTERNAL_PARSER:
                     dur = parser().determineLength(filename)
                     if MONITOR.waitForAbort(0.001) or dur > 0: break

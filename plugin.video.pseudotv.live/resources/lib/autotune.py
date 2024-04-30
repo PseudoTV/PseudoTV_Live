@@ -56,7 +56,9 @@ class Autotune:
             customChannels = self.getCustom()
             autoChannels   = self.getAutotuned()
             self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
-            if   len(autoChannels) > 0: rebuild = True
+            if len(autoChannels) > 0:
+                rebuild = True
+                PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             elif len(customChannels) == 0:
                 autoEnabled = []
                 for type in AUTOTUNE_TYPES:
@@ -76,7 +78,6 @@ class Autotune:
                     if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                     elif retval == 2: return Backup().recoverChannels()
                     else: return
-                elif rebuild: PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             else: return
             
             for idx, ATtype in enumerate(AUTOTUNE_TYPES): 

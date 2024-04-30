@@ -38,9 +38,7 @@ from resources import Resources
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.player     = kwargs.get('player')
-        self.runActions = kwargs.get('runActions')
-        self.showStatic = SETTINGS.getSettingBool("Static_Overlay")
+        self.citem = kwargs.get('citem')
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -50,13 +48,10 @@ class Background(xbmcgui.WindowXML):
     def onInit(self):
         self.log('onInit')
         try:
-            citem = self.player.sysInfo.get('citem',{})
-            self.runActions(RULES_ACTION_BACKGROUND_OPEN, citem, inherited=self)
-            logo = (citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            logo = (self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
-            self.getControl(40003).setText(LANGUAGE(32104)%(citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
+            self.getControl(40003).setText(LANGUAGE(32104)%(self.citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except:
-            self.runActions(RULES_ACTION_BACKGROUND_CLOSE, citem, inherited=self)
             self.close()
         
 
@@ -286,7 +281,7 @@ class Overlay():
             remaining  = floor(self.player.getTimeRemaining())
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
-            showOnNext = remaining <= showTime
+            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY
             
             if remaining < intTime: return getOnNextInterval(interval + 1)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))
@@ -302,7 +297,7 @@ class Overlay():
                     self._onNextThread.join()
             except: pass
                 
-            if state and showOnNext and self.player.isPseudoTV:
+            if state and showOnNext and self.player.isPseudoTV and self.enableOnNext:
                 citem = self.player.sysInfo.get('citem',{})
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)

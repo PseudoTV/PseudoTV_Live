@@ -53,29 +53,6 @@ class Builder:
         self.sort             = {} #{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
         self.limits           = {} #{"end":0,"start":0,"total":0}
 
-        self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
-        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|'),
-                                 "paths":[]}
-                                 
-        self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
-        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|'),
-                                 "paths":[]}
-        
-        self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
-        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
-                                 "paths":[]}
-        
-        self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
-        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
-                                 "paths":[]}
-        
-        if SETTINGS.getSettingInt('Include_Trailers') in [0,2]: self.srcTrailer["paths"].extend(IMDB_PATHS)
-        if SETTINGS.getSettingBool('Include_Adverts'): self.srcAdverts["paths"].extend(self.getAdvertPath())
-        
-        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
-        self.maxDays          = MAX_GUIDEDAYS
-        self.minEPG           = 10800 #Secs., Min. EPG guidedata
-        
         self.service          = service
         self.cache            = Cache()
         self.channels         = Channels()
@@ -87,7 +64,30 @@ class Builder:
         self.m3u              = M3U()
         self.resources        = Resources(self.jsonRPC,self.cache)
            
-
+        self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
+        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|'),
+                                 "paths":[]}
+                                 
+        self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
+        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|'),
+                                 "paths":[]}
+        
+        self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
+        self.incIspot         = SETTINGS.getSettingBool('Include_Adverts_iSpot')
+        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
+                                 "paths":self.getAdvertPath() if self.incIspot else []}
+        
+        self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
+        self.incIMDB          = SETTINGS.getSettingBool('Include_Trailers_IMDB')
+        self.incKODI          = SETTINGS.getSettingBool('Include_Trailers_KODI')
+        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
+                                 "paths":IMDB_PATHS if self.incIMDB else []}
+        
+        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
+        self.maxDays          = MAX_GUIDEDAYS
+        self.minEPG           = 10800 #Secs., Min. EPG guidedata
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
@@ -393,7 +393,7 @@ class Builder:
                         item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                         item.get('art',{})['icon'] = citem['logo']
                         
-                        if item.get('trailer') and bool(self.incTrailer) and SETTINGS.getSettingInt('Include_Trailers') < 2:
+                        if item.get('trailer') and bool(self.incTrailer) and self.incKODI:
                             titem = item.copy()
                             tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
                             if tdur > 0:
@@ -501,9 +501,8 @@ class Builder:
         
     def getAdvertPath(self, id='plugin.video.ispot.tv'):
         if hasAddon(id):
-            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources').replace('/resources/resources','/resources')
+            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)
-            paths = ['plugin://%s'%(id),folder]
-            self.log('getAdvertPath, paths = %s'%(paths))
-            return paths
+            self.log('getAdvertPath, folder = %s'%(folder))
+            return [folder]
         return []

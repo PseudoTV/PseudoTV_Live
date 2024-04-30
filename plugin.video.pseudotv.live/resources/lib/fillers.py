@@ -38,6 +38,7 @@ class Fillers:
                            "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
                            "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
+        print(self.bctTypes['adverts'])
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -45,7 +46,7 @@ class Fillers:
 
 
     def fillSources(self):
-        if self.bctTypes['trailers'].get('enabled',False) and SETTINGS.getSettingInt('Include_Trailers') < 2:
+        if self.bctTypes['trailers'].get('enabled',False) and self.builder.incKODI:
             self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.kodiTrailers())
                 
         for ftype, values in list(self.bctTypes.items()):
@@ -61,7 +62,7 @@ class Fillers:
         def _parseVFS(path):
             tmpDCT = {}
             if hasAddon(path, install=True):
-                for url, items in list(self.jsonRPC.walkFileDirectory(path,chkDuration=True,retItem=True).items()):
+                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=CHANNEL_LIMIT,chkDuration=True,retItem=True).items()):
                     for item in items:
                         for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
