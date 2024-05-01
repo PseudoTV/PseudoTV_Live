@@ -33,5 +33,5 @@ class YTParser:
             log('YTParser: Duration is %s'%(dur))
             return dur
         except Exception as e:
-            log("YTParser: failed! %s"%(e), xbmc.LOGERROR)
+            log("YTParser: failed!", xbmc.LOGERROR)
             return 0

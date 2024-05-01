@@ -97,7 +97,7 @@ class Plugin:
                 if len(listitems) > 0:
                     liz = listitems[0]
                     self.sysInfo['duration'] = liz.getProperty('duration')
-                else: self.playError()
+                else: return self.playError()
             else: 
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")

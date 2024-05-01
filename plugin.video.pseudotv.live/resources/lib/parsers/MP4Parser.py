@@ -48,13 +48,18 @@ class MP4Parser:
             
         dur = self.readHeader()
         if not dur:
+            log("MP4Parser - Using New Parser")
             boxes = self.find_boxes(self.File)
             # Sanity check that this really is a movie file.
             if (boxes.get(b"ftyp",[-1])[0] == 0):
-                moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
-                trak_boxes = self.find_boxes(self.File, moov_boxes[b"trak"][0] + 8, moov_boxes[b"trak"][1])
-                udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])
-                dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
+                try:
+                    moov_boxes = self.find_boxes(self.File, boxes[b"moov"][0] + 8, boxes[b"moov"][1])
+                    trak_boxes = self.find_boxes(self.File, moov_boxes[b"trak"][0] + 8, moov_boxes[b"trak"][1])
+                    udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])
+                    dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
+                except Exception as e:
+                    self.log("MP4Parser, failed! %s\nboxes = %s"%(e,boxes), xbmc.LOGERROR)
+                    dur = 0
         self.File.close()
         log("MP4Parser: Duration is %s"%(dur))
         return dur
@@ -92,7 +97,6 @@ class MP4Parser:
         if timescale == 0: timescale = 600
         duration = int.from_bytes(f.readBytes(word_size), "big")
         duration = round(duration / timescale)
-        log("MP4Parser - Using New Parser")
         return duration
 
 

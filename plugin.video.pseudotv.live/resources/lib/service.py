@@ -28,14 +28,16 @@ class Player(xbmc.Player):
     background   = None
     myService    = None
     pendingPlay  = False
+    pendingStop  = False
     isPseudoTV   = False
     lastSubState = False
     rules        = RulesList()
     runActions   = rules.runActions
     
-    def __init__(self):
+    def __init__(self, jsonRPC=None):
         self.log('__init__')
         xbmc.Player.__init__(self)
+        self.jsonRPC = jsonRPC
         self.disableTrakt = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
         
@@ -67,6 +69,7 @@ class Player(xbmc.Player):
         
     def onAVStarted(self):
         self.pendingPlay = False
+        self.pendingStop = True
         self.isPseudoTV  = self.isPseudoTVPlaying()
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
@@ -79,11 +82,13 @@ class Player(xbmc.Player):
     def onPlayBackError(self):
         self.log('onPlayBackError')
         if self.isPseudoTV: self._onError()
+        self.pendingStop = False
         
         
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded')
         if self.isPseudoTV: self._onChange()
+        self.pendingStop = False
 
         
     def onPlayBackStopped(self):
@@ -92,6 +97,7 @@ class Player(xbmc.Player):
         self.sysInfo     = {}
         self.isPseudoTV  = False
         self.pendingPlay = False
+        self.pendingStop = False
         
         
     def isPseudoTVPlaying(self):
@@ -159,9 +165,10 @@ class Player(xbmc.Player):
     def _onPlay(self):
         self.log('_onPlay')
         if self.disableTrakt: disableTrakt()
-        self.sysInfo = self.getPlayerSysInfo()
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.jsonRPC.quePlaycount(self.sysInfo['fitem']) #rollback previous sysInfo
+        self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
-            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
+            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem'), inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
         self.toggleBackground(False)
 
@@ -170,8 +177,8 @@ class Player(xbmc.Player):
         self.log('_onChange')
         self.toggleBackground(True)
         clearTrakt()
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.jsonRPC.quePlaycount(self.sysInfo['fitem']) #rollback previous sysInfo
         try:
-            if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.jsonRPC.quePlaycount(self.sysInfo['fitem'])
             if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
                 broadcastnext = self.sysInfo['pvritem']['broadcastnext']
                 self.sysInfo['pvritem']['broadcastnow']  = broadcastnext.pop(0)
@@ -180,15 +187,17 @@ class Player(xbmc.Player):
                 if len(broadcastnext) == 0: raise Exception('Empty broadcastnext')
             else: raise Exception('Using callback')
         except Exception as e:
-            self.sysInfo = self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
+            self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem'), inherited=self)
             self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback'],e))
             BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo['callback']))
         
         
     def _onStop(self):
         self.log('_onStop')
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.jsonRPC.quePlaycount(self.sysInfo['fitem']) #rollback previous sysInfo
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        self.sysInfo = self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), self.sysInfo, inherited=self)
+        self.sysInfo = {}
+        self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem'), inherited=self)
         self.toggleBackground(False)
         clearTrakt()
 
@@ -215,9 +224,10 @@ class Monitor(xbmc.Monitor):
     myService = None
     
     
-    def __init__(self):
+    def __init__(self, jsonRPC=None):
         self.log('__init__')
         xbmc.Monitor.__init__(self)
+        self.jsonRPC = jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
         
@@ -253,7 +263,7 @@ class Monitor(xbmc.Monitor):
         if state and self.overlay is None:
             conditions = self.enableOverlay & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if conditions:
-                self.overlay = Overlay(jsonRPC=self.myService.jsonRPC,player=self.myService.player, runActions=self.myService.player.runActions)
+                self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.myService.player, runActions=self.myService.player.runActions)
                 self.overlay.open()
         elif not state and hasattr(self.overlay, 'close'):
             self.overlay.close()
@@ -321,8 +331,8 @@ class Service():
     runningTask     = False
     
     jsonRPC  = JSONRPC()
-    player   = Player()
-    monitor  = Monitor()
+    player   = Player(jsonRPC)
+    monitor  = Monitor(jsonRPC)
     tasks    = Tasks(jsonRPC)
     
     def __init__(self):

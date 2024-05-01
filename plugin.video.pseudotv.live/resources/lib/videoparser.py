@@ -40,6 +40,24 @@ try:
     EXTERNAL_PARSER.append(FFProbe.FFProbe)
 except: pass
     
+try:
+    import cv2
+    from parsers import OpenCV
+    EXTERNAL_PARSER.append(OpenCV.OpenCV)
+except: pass
+    
+try:
+    import moviepy
+    from parsers import MoviePY
+    EXTERNAL_PARSER.append(MoviePY.MoviePY)
+except: pass
+    
+try:
+    import pymediainfo
+    from parsers import MediaInfo
+    EXTERNAL_PARSER.append(MediaInfo.MediaInfo)
+except: pass
+    
 class VideoParser:
     def __init__(self):
         self.AVIExts   = ['.avi']

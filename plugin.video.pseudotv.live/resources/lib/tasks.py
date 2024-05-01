@@ -85,7 +85,7 @@ class Tasks():
             
         
     def chkQueTimer(self):
-        if self.chkUpdateTime('chkQueTimer',runEvery=30):
+        if self.chkUpdateTime('chkQueTimer',runEvery=60):
             self._que(self._chkQueTimer)
         
         
@@ -103,7 +103,7 @@ class Tasks():
             self._que(self.chkPVRSettings)
         if self.chkUpdateTime('chkHTTP',runEvery=900) and not client:
             self._que(self.chkHTTP)
-        if self.chkUpdateTime('chkJSONQUE',runEvery=600):
+        if self.chkUpdateTime('chkJSONQUE',runEvery=300):
             self._que(self.chkJSONQUE)
               
               

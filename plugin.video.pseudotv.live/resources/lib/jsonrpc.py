@@ -20,11 +20,6 @@
 from globals     import *
 from videoparser import VideoParser
 
-MIN_DIR_PARAMS = ["title", "showtitle", "episode", "season", "runtime", "duration",
-                  "streamdetails", "year", "plot", "plotoutline","description", 
-                  "art", "writer", "cast", "rating", "genre", "director", "mpaa",
-                  "premiered", "playcount", "studio"]
-
 class JSONRPC:
     def __init__(self, cache=None):
         if cache is None: self.cache = Cache()
@@ -329,16 +324,18 @@ class JSONRPC:
             except Exception as e:
                 log("parseDuration, failed! %s"%(e), xbmc.LOGERROR)
                 duration = 0
-
-        ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
-        rundiff = int(percentDiff(runtime, duration))
-        runsafe = False
-        if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime):
-            runsafe = True
-        self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
-        ## save parsed duration to Kodi database, if enabled.
-        if save and runsafe and item.get('type'): self.queDuration(item, duration)
-        if runsafe: runtime = duration
+                
+        if not path.startswith(tuple(VFS_TYPES)):
+            ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
+            rundiff = int(percentDiff(runtime, duration))
+            runsafe = False
+            if (rundiff <= 45 and rundiff > 0) or (rundiff == 100 and (duration == 0 or runtime == 0)) or (rundiff == 0 and (duration > 0 and runtime > 0)) or (duration > runtime):
+                runsafe = True
+            self.log("parseDuration, path = %s, runtime = %s, duration = %s, difference = %s%%, safe = %s" % (path, runtime, duration, rundiff, runsafe))
+            ## save parsed duration to Kodi database, if enabled.
+            if save and runsafe and item.get('type'): self.queDuration(item, duration)
+            if runsafe: runtime = duration
+        else: runtime = duration
         self.log("parseDuration, returning runtime = %s" % (runtime))
         return runtime
   
@@ -358,27 +355,28 @@ class JSONRPC:
             params = param[item['type']]
             if -1 in params: raise Exception('no dbid found')
             elif params:
-                self.log('queDuration, media = %s, dur = %s' % (item['type'], dur))
+                id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
+                self.log('queDuration, id = %s, media = %s, count = %s'%(id,item['type'],dur))
                 self.queueJSON(params)
         except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         
         
     def quePlaycount(self, item):
-        #overcome inconsistent keys from Kodis jsonRPC.
         param = {'video'      : {},
-                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}},
-                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0), "total": item.get('total',0)}}}}
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}}}
         try:
             params = param[item['type']]
             if -1 in params: raise Exception('no dbid found')
-            elif params: 
-                self.log('quePlaycount, media = %s, count = %s' % (item['type'],item.get('playcount',0)))
+            elif params:
+                id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
+                self.log('quePlaycount, id = %s, media = %s, playcount = %s, resume = %s'%(id,item['type'],item.get('playcount',0),item.get('resume',{})))
                 self.queueJSON(params)
         except Exception as e: self.log("quePlaycount, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
 
@@ -417,7 +415,7 @@ class JSONRPC:
             param["media"]      = media
             param["directory"]  = escapeDirJSON(path)
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
-        self.log("requestList, id: %s, getDirectory = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,page,sort,query,limits,path))
+        self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
         if not limits: 
             limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
@@ -446,29 +444,34 @@ class JSONRPC:
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
         self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #set 
         
-        items  = results.get(key, [])
         errors = {}
-        try:
-            if param.get("directory","").startswith(tuple(VFS_TYPES)) and (len(items) > page and len(items) == limits.get('total',0)):
-                #VFS paths ie.Plugin:// may fail to apply limits and return a full directory list. Instead use limits param to slice list.
-                items = items[param["limits"]["start"]:param["limits"]["end"]]
-                self.log('requestList, id = %s, items = %s sliced from VFS exceeding page %s'%(citem['id'], len(items), page))
-        except Exception as e: self.log('requestList, id = %s, failed! to slice items %s'%(citem['id'],e), xbmc.LOGERROR)
-
-        self.log('requestList, id = %s, items = %s, result limits = %s'%(citem['id'], len(items), limits))
-        if (len(items) == 0 and limits.get('total',0) > 0) and not path.startswith(tuple(VFS_TYPES)):
+        items  = results.get(key, [])
+        dirs, files = [], []
+        for item in items:
+            if   item.get('filetype') == 'directory': dirs.append(item)
+            elif item.get('filetype') == 'file':     files.append(item)
+        self.log('requestList, id = %s, items = %s, dirs = %s, files = %s, limits = %s'%(citem['id'], len(items), len(dirs), len(files), limits))
+        
+        if path.startswith(tuple(VFS_TYPES)) and len(files) > page:
+            #VFS paths ie.Plugin:// fail to apply limits and return a full directory list. limits do not apply to paged plugins. ie >>Next, instead use param to slice list.
+            try:
+                items = dirs.extend(files[param["limits"]["start"]:param["limits"]["end"]])
+                self.log('requestList, id = %s, files = %s sliced from VFS exceeding page %s'%(citem['id'],len(files),page))
+            except Exception as e:
+                self.log('requestList, id = %s, failed! to slice files %s'%(citem['id'],e), xbmc.LOGERROR)
+                if len(dirs) > 0: items = dirs
+                else:             items = []
+        
+        if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits.
-            self.log("requestList, id = %s, trying again with start at 0"%(citem['id']))
+            self.log("requestList, id = %s, trying again with start limits at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
-        elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) < page):
+        
+        elif len(files) > 0 and len(files) < page and len(dirs) == 0 and limits.get('total',0) > 0 and limits.get('total',0) < page:
             # path total doesn't fill page limit; pad with duplicates.
             self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-            items = self.padItems(items)
-        elif (len(items) > 0 and len(items) < page) and (limits.get('total',0) > 0 and limits.get('total',0) > page):
-            # path total doesn't fill page limit; re-run with new limits
-            self.log("requestList, id = %s, extending items with new limits"%(citem['id']))
-            items.extend(self.requestList(citem, path, media, page-len(items), sort, limits, query)[0])
-
+            items = self.padItems(files)
+            
         self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
         return items, limits, errors
 
@@ -520,17 +523,16 @@ class JSONRPC:
         return '{0}://{1}{2}:{3}'.format(protocol,ip,username, port) 
             
             
-    def padItems(self, items, page=SETTINGS.getSettingInt('Page_Limit')):
+    def padItems(self, files, page=SETTINGS.getSettingInt('Page_Limit')):
         # Balance media limits, by filling with duplicates to meet min. pagination.
-        self.log("padItems; items In = %s"%(len(items)))
-        if len(items) < page:
-            iters = cycle(items)
-            while not MONITOR.abortRequested() and (len(items) < page and len(items) > 0):
+        self.log("padItems; files In = %s"%(len(files)))
+        if len(files) < page:
+            iters = cycle(files)
+            while not MONITOR.abortRequested() and (len(files) < page and len(files) > 0):
                 item = next(iters).copy()
                 if self.getDuration(item.get('file'),item) == 0:
-                    try: items.pop(items.index(item))
+                    try: files.pop(files.index(item))
                     except: break
-                else:
-                    items.append(item)
-        self.log("padItems; items Out = %s"%(len(items)))
-        return items
+                else: files.append(item)
+        self.log("padItems; files Out = %s"%(len(files)))
+        return files

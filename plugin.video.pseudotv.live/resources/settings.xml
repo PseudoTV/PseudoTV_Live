@@ -949,9 +949,9 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Random_Bumper_Chance" type="integer" label="30134" help="33134" parent="Resource_Bumpers">
+				<setting id="Random_Pre_Chance" type="integer" label="30139" help="33134">
 					<level>2</level>
-					<default>25</default>
+					<default>50</default>
 					<constraints>
 						<minimum>0</minimum>
 						<step>1</step>
@@ -1005,26 +1005,6 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Random_Advert_Chance" type="integer" label="30134" help="33134" parent="Resource_Commericals">
-					<level>2</level>
-					<default>25</default>
-					<constraints>
-						<minimum>0</minimum>
-						<step>1</step>
-						<maximum>100</maximum>
-					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Commercials">0</condition>
-						</dependency>
-					</dependencies>
-					<control type="slider" format="percentage">
-						<popup>false</popup>
-					</control>
-				</setting>
                 <setting id="Resource_Trailers" type="list[addon]" label="30031" help="">
 					<level>2</level>
 					<default>resource.videos.trailers.pseudotv</default>
@@ -1071,9 +1051,9 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Random_Trailers_Chance" type="integer" label="30134" help="33134" parent="Resource_Trailers">
+				<setting id="Random_Post_Chance" type="integer" label="30134" help="33134">
 					<level>2</level>
-					<default>25</default>
+					<default>50</default>
 					<constraints>
 						<minimum>0</minimum>
 						<step>1</step>
@@ -1084,7 +1064,10 @@
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Trailers">0</condition>
+                            <or>
+                                <condition operator="!is" setting="Fillers_Commercials">0</condition>
+                                <condition operator="!is" setting="Fillers_Trailers">0</condition>
+                            </or>
 						</dependency>
 					</dependencies>
 					<control type="slider" format="percentage">

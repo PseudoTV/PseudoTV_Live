@@ -313,119 +313,122 @@ class Builder:
             self.pErrors.append(LANGUAGE(32030))
             self.log("buildList, id: %s, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
             return fileList, dirList
-        elif items: self.loopback = items
-        else:self.pErrors.append(LANGUAGE(32026))
-            
-        for idx, item in enumerate(items):
-            if self.service._interrupt() or self.service._suspend():
-                self.pErrors = [LANGUAGE(32160)]
-                self.completeBuild = False
-                self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits 
-                return [], []
-            else:
-                file         = item.get('file','')
-                fileType     = item.get('filetype','file')
-                if not item.get('type'): item['type'] = query.get('key','')
+        elif not items:
+            self.pErrors.append(LANGUAGE(32026))
+            self.log("buildList, id: %s, no request items found using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+            return fileList, dirList
+        else:
+            self.loopback = items
+            for idx, item in enumerate(items):
+                if self.service._interrupt() or self.service._suspend():
+                    self.pErrors = [LANGUAGE(32160)]
+                    self.completeBuild = False
+                    self.jsonRPC.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #rollback pagination limits
+                    return [], []
+                else:
+                    file         = item.get('file','')
+                    fileType     = item.get('filetype','file')
+                    if not item.get('type'): item['type'] = query.get('key','')
 
-                if fileType == 'directory':
-                    dirList.append(item)
-                    self.log("buildList, id: %s, IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                    
-                elif fileType == 'file':
-                    if not file:
-                        self.pErrors.append(LANGUAGE(32031))
-                        self.log("buildList, id: %s, IDX = %s, skipping missing playable file! path = %s"%(citem['id'],idx,path),xbmc.LOGINFO)
-                        continue
+                    if fileType == 'directory':
+                        dirList.append(item)
+                        self.log("buildList, id: %s, IDX = %s, appending directory: %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                         
-                    elif (file.lower().endswith('strm') and not self.incStrms): 
-                        self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
-                        self.log("buildList, id: %s, IDX = %s, skipping strm file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                        continue
-                        
-                    if not item.get('streamdetails',{}).get('video',[]) and not file.startswith(tuple(VFS_TYPES)): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
-                        item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
-
-                    if (self.is3D(item) and not self.inc3D): 
-                        self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
-                        self.log("buildList, id: %s, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                        continue
-
-                    dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
-                    if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
-                        item['duration']     = dur
-                        item['media']        = media
-                        item['originalpath'] = path #use for path sorting/playback verification 
-                        if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
+                    elif fileType == 'file':
+                        if not file:
+                            self.pErrors.append(LANGUAGE(32031))
+                            self.log("buildList, id: %s, IDX = %s, skipping missing playable file! path = %s"%(citem['id'],idx,path),xbmc.LOGINFO)
+                            continue
                             
-                        title   = (item.get("title",'')     or item.get("label",'')     or dirItem.get('label',''))
-                        tvtitle = (item.get("showtitle",'') or dirItem.get('label',''))
-
-                        if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
-                            season  = int(item.get("season","0"))
-                            episode = int(item.get("episode","0"))
-                            if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
-                                self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
-                                self.log("buildList, id: %s, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                                continue
-
-                            label = tvtitle
-                            item["tvshowtitle"]  = tvtitle
-                            item["episodetitle"] = title
-                            item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
-                            item["showlabel"]    = '%s %s'%(item["tvshowtitle"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                        else: # This is a Movie
-                            label = title
-                            item["episodetitle"] = item.get("tagline","")
-                            item["episodelabel"] = item.get("tagline","")
-                            item["showlabel"]    = '%s %s'%(item["title"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
-                    
-                        if not label: continue
-                        spTitle, spYear = splitYear(label)
-                        item['label'] = spTitle
-                        if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
-                            item['year'] = spYear
+                        elif (file.lower().endswith('strm') and not self.incStrms): 
+                            self.pErrors.append('%s STRM'%(LANGUAGE(32027)))
+                            self.log("buildList, id: %s, IDX = %s, skipping strm file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                            continue
                             
-                        item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
-                        if query.get('holiday'):
-                            holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])
-                            item["plot"] = "%s \n%s"%(holiday,item["plot"])
+                        if not item.get('streamdetails',{}).get('video',[]) and not file.startswith(tuple(VFS_TYPES)): #parsing missing meta, kodi rpc bug fails to return streamdetails during Files.GetDirectory.
+                            item['streamdetails'] = self.jsonRPC.getStreamDetails(file, media)
 
-                        item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
-                        item.get('art',{})['icon'] = citem['logo']
+                        if (self.is3D(item) and not self.inc3D): 
+                            self.pErrors.append('%s 3D'%(LANGUAGE(32027)))
+                            self.log("buildList, id: %s, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                            continue
+
+                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
+                        if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
+                            item['duration']     = dur
+                            item['media']        = media
+                            item['originalpath'] = path #use for path sorting/playback verification 
+                            if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
+                                
+                            title   = (item.get("title",'')     or item.get("label",'')     or dirItem.get('label',''))
+                            tvtitle = (item.get("showtitle",'') or dirItem.get('label',''))
+
+                            if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
+                                season  = int(item.get("season","0"))
+                                episode = int(item.get("episode","0"))
+                                if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
+                                    self.pErrors.append('%s Extras'%(LANGUAGE(32027)))
+                                    self.log("buildList, id: %s, IDX = %s skipping extras! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                                    continue
+
+                                label = tvtitle
+                                item["tvshowtitle"]  = tvtitle
+                                item["episodetitle"] = title
+                                item["episodelabel"] = '%s (%sx%s)'%(title,season,str(episode).zfill(2)) #Episode Title (SSxEE) Mimic Kodi's PVR label format
+                                item["showlabel"]    = '%s %s'%(item["tvshowtitle"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
+                            else: # This is a Movie
+                                label = title
+                                item["episodetitle"] = item.get("tagline","")
+                                item["episodelabel"] = item.get("tagline","")
+                                item["showlabel"]    = '%s %s'%(item["title"], '- %s'%(item['episodelabel']) if item['episodelabel'] else '')
                         
-                        if item.get('trailer') and bool(self.incTrailer) and self.incKODI:
-                            titem = item.copy()
-                            tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
-                            if tdur > 0:
-                                titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
-                                for genre in (titem.get('genre',[]) or ['resources']):
-                                    trailersdict.setdefault(genre.lower(),[]).append(titem)
-                        
-                        if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
-                            seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
+                            if not label: continue
+                            spTitle, spYear = splitYear(label)
+                            item['label'] = spTitle
+                            if item.get('year',0) == 0 and spYear: #replace missing item year with one parsed from show title
+                                item['year'] = spYear
+                                
+                            item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
+                            if query.get('holiday'):
+                                holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])
+                                item["plot"] = "%s \n%s"%(holiday,item["plot"])
+
+                            item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
+                            item.get('art',{})['icon'] = citem['logo']
+                            
+                            if item.get('trailer') and bool(self.incTrailer) and self.incKODI:
+                                titem = item.copy()
+                                tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
+                                if tdur > 0:
+                                    titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
+                                    for genre in (titem.get('genre',[]) or ['resources']):
+                                        trailersdict.setdefault(genre.lower(),[]).append(titem)
+                            
+                            if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
+                                seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
+                            else: 
+                                fileList.append(item)
+                                
+                            if self.pDialog: 
+                                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                         else: 
-                            fileList.append(item)
-                            
-                        if self.pDialog: 
-                            self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
-                    else: 
-                        self.pErrors.append(LANGUAGE(32032))
-                        self.log("buildList, id: %s, IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                            self.pErrors.append(LANGUAGE(32032))
+                            self.log("buildList, id: %s, IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
+                    
+            if sort.get("method","") == 'episode':
+                self.log("buildList, id: %s, sorting by episode"%(citem['id']))
+                seasoneplist.sort(key=lambda seep: seep[1])
+                seasoneplist.sort(key=lambda seep: seep[0])
+                for seepitem in seasoneplist: 
+                    fileList.append(seepitem[2])
+            elif sort.get("method","") == 'random':
+                self.log("buildList, id: %s, random shuffling"%(citem['id']))
+                if len(dirList)  > 0: dirList  = randomShuffle(dirList)
+                if len(fileList) > 0: fileList = randomShuffle(fileList)
                 
-        if sort.get("method","") == 'episode':
-            self.log("buildList, id: %s, sorting by episode"%(citem['id']))
-            seasoneplist.sort(key=lambda seep: seep[1])
-            seasoneplist.sort(key=lambda seep: seep[0])
-            for seepitem in seasoneplist: 
-                fileList.append(seepitem[2])
-        elif sort.get("method","") == 'random':
-            self.log("buildList, id: %s, random shuffling"%(citem['id']))
-            if len(dirList)  > 0: dirList  = randomShuffle(dirList)
-            if len(fileList) > 0: fileList = randomShuffle(fileList)
-            
-        if len(trailersdict) > 0: self.kodiTrailers(trailersdict)
-        self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
-        return fileList, dirList
+            if len(trailersdict) > 0: self.kodiTrailers(trailersdict)
+            self.log("buildList, id: %s returning (%s) files, (%s) dirs."%(citem['id'],len(fileList),len(dirList)))
+            return fileList, dirList
 
  
     def isHD(self, item):
@@ -495,7 +498,7 @@ class Builder:
 
     def kodiTrailers(self, nitems={}):
         items = (self.cache.get('kodiTrailers', json_data=True) or {})
-        if nitems: return self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
+        if nitems: items = self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
         return items
 
         

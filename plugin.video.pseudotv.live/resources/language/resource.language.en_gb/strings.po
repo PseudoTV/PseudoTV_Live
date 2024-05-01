@@ -554,7 +554,7 @@ msgid "Player"
 msgstr ""
 
 msgctxt "#30134"
-msgid "Random Filler"
+msgid "Random Post-Roll Filler"
 msgstr ""
 
 msgctxt "#30135"
@@ -571,6 +571,10 @@ msgstr ""
 
 msgctxt "#30138"
 msgid "Smartplaylist Editor"
+msgstr ""
+
+msgctxt "#30139"
+msgid "Random Pre-Roll Filler"
 msgstr ""
 
 
@@ -1504,7 +1508,7 @@ msgid "Restore the previous playcount and resume points at the end of playback. 
 msgstr ""
 
 msgctxt "#33134"
-msgid "Probability a non-channel specific i.e generic video will be injected when no match is found.\n[0% Disabled, 25% Default] [Lower == Less Probable]"
+msgid "Probability a non-channel specific i.e generic video will be used when no match is found.\n[0% Disabled, 50% Default] [Lower == Less Probable]"
 msgstr ""
 
 msgctxt "#33149"

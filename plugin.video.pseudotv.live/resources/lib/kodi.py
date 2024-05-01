@@ -124,7 +124,7 @@ def convertString(data):
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
     def __init__(self):
-        self.cache    = Cache(mem_cache=False)
+        self.cache    = Cache()
         self.property = Properties()
 
         
