@@ -57,19 +57,19 @@ class Utilities:
 
     def showWelcome(self):
         try: 
-            fle = FileAccess.open(WELCOME_FLE, "r")
-            txt = fle.read()
-            siz = fle.size()
+            fle   = FileAccess.open(WELCOME_FLE, "r")
+            ftext = fle.read()
+            fsize = fle.size()
             fle.close()
-            if SETTINGS.getCacheSetting('showWelcome', checksum=siz, default='true') == 'true':
-                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=siz)
-                DIALOG.textviewer(txt.format(addon_name=ADDON_NAME,
-                                             pvr_name=PVR_CLIENT_NAME,
-                                             m3u=M3UFLEPATH,
-                                             xmltv=XMLTVFLEPATH,
-                                             genre=GENREFLEPATH,
-                                             logo=LOGO_LOC,
-                                             lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+            if (SETTINGS.getCacheSetting('showWelcome', checksum=fsize) or 'true') == 'true':
+                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
+                DIALOG.textviewer(ftext.format(addon_name=ADDON_NAME,
+                                               pvr_name=PVR_CLIENT_NAME,
+                                               m3u=M3UFLEPATH,
+                                               xmltv=XMLTVFLEPATH,
+                                               genre=GENREFLEPATH,
+                                               logo=LOGO_LOC,
+                                               lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
         
 

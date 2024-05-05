@@ -46,6 +46,14 @@ SELECT_DELAY        = 900  #secs
 RADIO_ITEM_LIMIT    = 250
 CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3
+FILLER_LIMIT        = 250
+
+FILLER_TYPES        = ['Rating',
+                       'Bumper',
+                       'Advert',
+                       'Trailer',
+                       'Pre-Roll',
+                       'Post-Roll']
 
 AUTOTUNE_TYPES      = ["Playlists",
                        "TV Networks",

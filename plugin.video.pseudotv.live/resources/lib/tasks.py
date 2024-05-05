@@ -114,7 +114,7 @@ class Tasks():
               
     def chkVersion(self):
         self.log('chkVersion')
-        if ADDON_VERSION != SETTINGS.getCacheSetting('lastVersion', default='v.0.0.0'):
+        if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
             #todo check kodi repo addon.xml version number, prompt user if outdated.
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
@@ -209,7 +209,7 @@ class Tasks():
 
     def runJSONQUE(self):
         self.runningJSONQUE = True
-        queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
+        queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
         params = queuePool.get('params',[])
         for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
             if self.myService._interrupt() or self.myService._suspend():
@@ -265,7 +265,7 @@ class Tasks():
             for setting, value in list(settings.items()):
                 actions = {'User_Folder'    :{'func':self.setUserPath      ,'args':(value,nSettings.get(setting))},
                            'Network_Folder' :{'func':SETTINGS.setPVRPath   ,'args':(value,nSettings.get(setting))},
-                           'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'args':(nSettings.get(setting))},
+                           'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'args':(value,nSettings.get(setting))},
                            'UDP_PORT'       :{'func':setPendingRestart},
                            'TCP_PORT'       :{'func':setPendingRestart},
                            'Client_Mode'    :{'func':setPendingRestart},

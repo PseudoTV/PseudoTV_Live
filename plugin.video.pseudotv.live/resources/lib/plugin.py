@@ -273,7 +273,7 @@ class Plugin:
             
         jsonRPC = JSONRPC(self.cache)
         cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
-        cacheResponse = self.cache.get(cacheName, checksum=getInstanceID(), json_data=True, default={})
+        cacheResponse = (self.cache.get(cacheName, checksum=getInstanceID(), json_data=True) or {})
         if not cacheResponse:
             pvritem = _match()
             if not pvritem: return self.playError()

@@ -73,12 +73,11 @@ class Cache:
         return value
         
     
-    def get(self, name, checksum=ADDON_VERSION, json_data=False, default=None):
+    def get(self, name, checksum=ADDON_VERSION, json_data=False):
         if not DISABLE_CACHE:
             with self.cacheLocker():
                 self.log('get, name = %s'%self.getname(name))
-                return (self.cache.get(self.getname(name),checksum,json_data) or default)
-        return default
+                return (self.cache.get(self.getname(name),checksum,json_data))
         
             
     def clear(self, name, wait=15):

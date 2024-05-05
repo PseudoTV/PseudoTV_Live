@@ -68,8 +68,7 @@ def busy_dialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally:
-        if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
-            Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
                   
 @contextmanager
 def sudo_dialog(msg):
@@ -206,8 +205,8 @@ class Settings:
         return loadJSON(self.getSetting(key))
     
     
-    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False, default=None):
-        return self.cache.get(key, checksum, json_data, default)
+    def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
+        return self.cache.get(key, checksum, json_data)
         
         
     def getPropertySetting(self, key):

@@ -64,24 +64,16 @@ class Builder:
         self.m3u              = M3U()
         self.resources        = Resources(self.jsonRPC,self.cache)
            
-        self.incRatings       = SETTINGS.getSettingInt('Fillers_Ratings')
-        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|'),
-                                 "paths":[]}
-                                 
-        self.incBumpers       = SETTINGS.getSettingInt('Fillers_Bumpers')
-        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|'),
-                                 "paths":[]}
-        
-        self.incAdverts       = SETTINGS.getSettingInt('Fillers_Commercials')
+        self.incPreroll       = SETTINGS.getSettingInt('Enable_Preroll')
+        self.incPostroll      = SETTINGS.getSettingInt('Enable_Postroll')
         self.incIspot         = SETTINGS.getSettingBool('Include_Adverts_iSpot')
-        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Commericals').split('|'),
-                                 "paths":self.getAdvertPath() if self.incIspot else []}
-        
-        self.incTrailer       = SETTINGS.getSettingInt('Fillers_Trailers')
-        self.incIMDB          = SETTINGS.getSettingBool('Include_Trailers_IMDB')
         self.incKODI          = SETTINGS.getSettingBool('Include_Trailers_KODI')
-        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'),
-                                 "paths":IMDB_PATHS if self.incIMDB else []}
+        self.incIMDB          = SETTINGS.getSettingBool('Include_Trailers_IMDB')
+                  
+        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|') , "paths":[]}
+        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|') , "paths":[]}
+        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Adverts').split('|') , "paths":self.getAdvertPath() if self.incIspot else []}
+        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'), "paths":IMDB_PATHS if self.incIMDB else []}
         
         self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
@@ -396,7 +388,7 @@ class Builder:
                             item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                             item.get('art',{})['icon'] = citem['logo']
                             
-                            if item.get('trailer') and bool(self.incTrailer) and self.incKODI:
+                            if item.get('trailer') and bool(self.incPostroll) and self.incKODI:
                                 titem = item.copy()
                                 tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
                                 if tdur > 0:

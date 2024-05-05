@@ -67,7 +67,7 @@ class JSONRPC:
 
 
     def queueJSON(self, param):
-        queuePool = SETTINGS.getCacheSetting('queuePool', json_data=True, default={})
+        queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
@@ -137,7 +137,7 @@ class JSONRPC:
                 if len(subs)  > 0: dirs.extend(subs)
                 if len(files) > 0:
                     if TEXTURES in files: return _parseXBT()
-                    else: walk.setdefault(dir,[]).extend(list(filter(None,[_chkfile(dir, f) for f in files if f.endswith(tuple(exts))])))
+                    else: walk.setdefault(dir,[]).extend(list([_f for _f in [_chkfile(dir, f) for f in files if f.endswith(tuple(exts))] if _f]))
         return walk
                 
         
@@ -476,15 +476,14 @@ class JSONRPC:
         return items, limits, errors
 
 
-    def autoPagination(self, id, path, limits={}, checksum='', life=datetime.timedelta(days=28)):
+    def autoPagination(self, id, path, limits={}):
         cacheName = 'autoPagination.%s.%s'%(id,getMD5(path))
-        if not checksum: checksum = id
         if not limits:
             msg = 'get'
-            limits = self.cache.get(cacheName, checksum=checksum, json_data=True, default={"end": 0, "start": 0, "total":0})
+            limits = (self.cache.get(cacheName, checksum=id, json_data=True) or {"end": 0, "start": 0, "total":0})
         else:
             msg = 'set'
-            self.cache.set(cacheName, limits, checksum=checksum, expiration=life, json_data=True)
+            self.cache.set(cacheName, limits, checksum=id, expiration=datetime.timedelta(days=28), json_data=True)
         self.log("%s autoPagination; id = %s, limits = %s, path = %s"%(msg,id,limits,path))
         return limits
             

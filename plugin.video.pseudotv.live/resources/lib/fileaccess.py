@@ -27,7 +27,7 @@ FILE_LOCK_NAME             = "pseudotv"
 
 #variables
 DEBUG_ENABLED       = REAL_SETTINGS.getSetting('Enable_Debugging').lower() == 'true'
-
+       
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())

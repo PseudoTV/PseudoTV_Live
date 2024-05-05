@@ -86,19 +86,19 @@ msgid "Fillers"
 msgstr ""
 
 msgctxt "#30017"
-msgid "Enable Ratings"
+msgid "Enable Pre-Roll"
 msgstr ""
 
 msgctxt "#30018"
-msgid "Enable Bumpers"
+msgid "Add Ratings & Bumpers"
 msgstr ""
 
 msgctxt "#30019"
-msgid "Enable Commercials"
+msgid "Enable Post-Roll"
 msgstr ""
 
 msgctxt "#30020"
-msgid "Enable Trailers"
+msgid "Add Adverts & Trailers"
 msgstr ""
 
 msgctxt "#30021"
@@ -138,7 +138,7 @@ msgid "Bumpers"
 msgstr ""
 
 msgctxt "#30030"
-msgid "Commercials"
+msgid "Adverts"
 msgstr ""
 
 msgctxt "#30031"
@@ -576,6 +576,11 @@ msgstr ""
 msgctxt "#30139"
 msgid "Random Pre-Roll Filler"
 msgstr ""
+
+msgctxt "#30140"
+msgid "Build Subfolders for Post-Roll Content"
+msgstr ""
+
 
 
 
@@ -1340,7 +1345,7 @@ msgid "Clear all Pre-defined selections and remove their channels."
 msgstr ""
 
 msgctxt "#33041"
-msgid "Global rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel."
+msgid "Global rules set the default for all channels, Advanced Channel Rules apply per channel. *see readme for details.\nGlobals are the default setting for every channel."
 msgstr ""
 
 msgctxt "#33042"
@@ -1384,7 +1389,7 @@ msgid "Include .strm files *see readme for details."
 msgstr ""
 
 msgctxt "#33056"
-msgid "Include content fillers (Ratings/Bumpers/Commercials/Trailers). *see readme for details."
+msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers). *see readme for details."
 msgstr ""
 
 msgctxt "#33058"
@@ -1510,6 +1515,10 @@ msgstr ""
 msgctxt "#33134"
 msgid "Probability a non-channel specific i.e generic video will be used when no match is found.\n[0% Disabled, 50% Default] [Lower == Less Probable]"
 msgstr ""
+
+msgctxt "#33140"
+msgid "Create Channel & Genre subfolders in template resource pack."
+msgstr 
 
 msgctxt "#33149"
 msgid "Override Low-Power background pausing and performance throttling."

@@ -458,7 +458,7 @@ class XMLTVS:
                 fle.close()
                 epggenres = parseGenres(dom.getElementsByTagName('genre'))
                 matchGenres(self.XMLTVDATA.get('programmes',[]))
-                epggenres = dict(sorted(sorted(list(epggenres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))   
+                epggenres = dict(sorted(sorted(list(epggenres.items()), key=lambda v:v[1]['name']), key=lambda v:v[1]['genreId']))
                 
                 doc  = Document()
                 root = doc.createElement('genres')

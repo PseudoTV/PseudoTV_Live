@@ -36,12 +36,12 @@ class Fillers:
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC,self.cache)
 
-        self.bctTypes   = {"ratings"  :{"max":1                 ,"auto":builder.incRatings == 1,"enabled":bool(builder.incRatings),"sources":builder.srcRatings,"items":{}},
-                           "bumpers"  :{"max":1                 ,"auto":builder.incBumpers == 1,"enabled":bool(builder.incBumpers),"sources":builder.srcBumpers,"items":{}},
-                           "adverts"  :{"max":builder.incAdverts,"auto":builder.incAdverts == 1,"enabled":bool(builder.incAdverts),"sources":builder.srcAdverts,"items":{}},
-                           "trailers" :{"max":builder.incTrailer,"auto":builder.incTrailer == 1,"enabled":bool(builder.incTrailer),"sources":builder.srcTrailer,"items":{}}}
+        self.bctTypes   = {"ratings"  :{"max":builder.incPreroll ,"auto":builder.incPreroll  == -1,"enabled":bool(builder.incPreroll) ,"sources":builder.srcRatings,"items":{}},
+                           "bumpers"  :{"max":builder.incPreroll ,"auto":builder.incPreroll  == -1,"enabled":bool(builder.incPreroll) ,"sources":builder.srcBumpers,"items":{}},
+                           "adverts"  :{"max":builder.incPostroll,"auto":builder.incPostroll == -1,"enabled":bool(builder.incPostroll),"sources":builder.srcAdverts,"items":{}},
+                           "trailers" :{"max":builder.incPostroll,"auto":builder.incPostroll == -1,"enabled":bool(builder.incPostroll),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
-        print(self.bctTypes['adverts'])
+        #todo create subfolders for template resources. channels & genres: Build_Post_Folders
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -173,16 +173,17 @@ class Fillers:
                 # post roll
                 postFillRuntime = diffRuntime(runtime)
                 postKeys        = [chname, fgenre]
-                
-                postFileList  = []
-                postChance    = chanceBool(SETTINGS.getSettingInt('Random_Post_Chance'))
-                if self.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, PAGE_LIMIT if self.bctTypes['adverts']['auto']  else self.bctTypes['adverts']['max'],postChance))
+                postChance      = chanceBool(SETTINGS.getSettingInt('Random_Post_Chance'))
+                postFileList    = []
+                if self.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, PAGE_LIMIT if self.bctTypes['adverts']['auto'] else self.bctTypes['adverts']['max'],postChance))
                 if self.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max'],postChance))
-                postFileList  = randomShuffle(postFileList)
-                postFillCount = len(postFileList)
+                postFileList    = randomShuffle(postFileList)
+                postFillCount   = len(postFileList)
+                
+                print(len(postFileList),postFileList)
                 
                 # post roll - adverts/trailers
-                self.log('injectBCTs, post roll current runtime %s, available runtime %s, available meta %s'%(runtime, postFillRuntime,len(postFileList)))
+                self.log('injectBCTs, post roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
                 while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and postFillCount > 0:
                     if self.builder.service._interrupt() or self.builder.service._suspend(): break
                     item = postFileList.pop(0)

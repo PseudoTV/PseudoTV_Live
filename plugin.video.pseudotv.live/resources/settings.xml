@@ -822,13 +822,13 @@
     
 		<category id="fillers" label="30016" help="33016">
 			<group id="1">
-				<setting id="Fillers_Ratings" type="integer" label="30017" help="">
+				<setting id="Enable_Preroll" type="integer" label="30017" help="30018">
 					<level>2</level>
-					<default>1</default>
+					<default>-1</default>
 					<constraints>
 						<options>
+							<option label="30022">-1</option>
 							<option label="30021">0</option>
-							<option label="30022">1</option>
 						</options>
 					</constraints>
 					<dependencies>
@@ -841,36 +841,33 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="Fillers_Bumpers" type="integer" label="30018" help="">
+				<setting id="Random_Pre_Chance" type="integer" label="30139" help="33134" parent="Enable_Preroll">
 					<level>2</level>
-					<default>1</default>
+					<default>50</default>
 					<constraints>
-						<options>
-							<option label="30021">0</option>
-							<option label="30022">1</option>
-						</options>
+						<minimum>0</minimum>
+						<step>1</step>
+						<maximum>100</maximum>
 					</constraints>
 					<dependencies>
                         <dependency type="visible">
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="is" setting="Enable_Fillers">true</condition>
-                        </dependency>
+                            <condition operator="!is" setting="Enable_Preroll">0</condition>
+						</dependency>
 					</dependencies>
-					<control type="spinner" format="string"/>
+					<control type="slider" format="percentage">
+						<popup>false</popup>
+					</control>
 				</setting>
-				<setting id="Fillers_Commercials" type="integer" label="30019" help="">
+				<setting id="Enable_Postroll" type="integer" label="30019" help="30020">
 					<level>2</level>
 					<default>0</default>
 					<constraints>
 						<options>
+							<option label="30022">-1</option>
 							<option label="30021">0</option>
-							<option label="30022">1</option>
-							<option label="30023">2</option>
-							<option label="30024">3</option>
-							<option label="30025">4</option>
-							<option label="30026">5</option>
 						</options>
 					</constraints>
 					<dependencies>
@@ -883,31 +880,40 @@
 					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
-				<setting id="Fillers_Trailers" type="integer" label="30020" help="">
+				<setting id="Random_Post_Chance" type="integer" label="30134" help="33134" parent="Enable_Postroll">
 					<level>2</level>
-					<default>0</default>
+					<default>50</default>
 					<constraints>
-						<options>
-							<option label="30021">0</option>
-							<option label="30022">1</option>
-							<option label="30023">2</option>
-							<option label="30024">3</option>
-							<option label="30025">4</option>
-							<option label="30026">5</option>
-						</options>
+						<minimum>0</minimum>
+						<step>1</step>
+						<maximum>100</maximum>
 					</constraints>
 					<dependencies>
                         <dependency type="visible">
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="is" setting="Enable_Fillers">true</condition>
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
 					</dependencies>
-					<control type="spinner" format="string"/>
+					<control type="slider" format="percentage">
+						<popup>false</popup>
+					</control>
+				</setting>
+				<setting id="Build_Post_Folders" type="boolean" label="30140" help="33140" parent="Enable_Postroll">
+					<level>1</level>
+					<default>false</default>
+					<control type="toggle"/>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Client_Mode">3</condition>
+						</dependency>
+						<dependency type="enable">
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
+						</dependency>
+					</dependencies>
 				</setting>
 			</group>
-      
 			<group id="2" label="30032">
 				<setting id="Resource_Ratings" type="list[addon]" label="30028" help="">
 					<level>2</level>
@@ -920,7 +926,7 @@
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Ratings">0</condition>
+                            <condition operator="!is" setting="Enable_Preroll">0</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
@@ -940,7 +946,7 @@
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Bumpers">0</condition>
+                            <condition operator="!is" setting="Enable_Preroll">0</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
@@ -949,27 +955,7 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Random_Pre_Chance" type="integer" label="30139" help="33134">
-					<level>2</level>
-					<default>50</default>
-					<constraints>
-						<minimum>0</minimum>
-						<step>1</step>
-						<maximum>100</maximum>
-					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Bumpers">0</condition>
-						</dependency>
-					</dependencies>
-					<control type="slider" format="percentage">
-						<popup>false</popup>
-					</control>
-				</setting>
-                <setting id="Resource_Commericals" type="list[addon]" label="30030" help="">
+                <setting id="Resource_Adverts" type="list[addon]" label="30030" help="">
 					<level>2</level>
 					<default>resource.videos.adverts.pseudotv</default>
 					<constraints>
@@ -980,7 +966,7 @@
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Commercials">0</condition>
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
@@ -989,7 +975,7 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Commericals">
+				<setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Adverts">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -999,7 +985,7 @@
                         </dependency>
 						<dependency type="enable">
                             <and>
-                                <condition operator="!is" setting="Fillers_Commercials">0</condition>
+                                <condition operator="!is" setting="Enable_Postroll">0</condition>
                                 <condition on="property" name="InfoBool">System.HasAddon(plugin.video.ispot.tv)</condition>
                             </and>
 						</dependency>
@@ -1016,7 +1002,7 @@
                             <condition operator="is" setting="Client_Mode">0</condition>
 						</dependency>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Fillers_Trailers">0</condition>
+                            <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
@@ -1050,29 +1036,6 @@
                             <condition on="property" name="InfoBool">System.HasAddon(plugin.video.imdb.trailers)</condition>
 						</dependency>
 					</dependencies>
-				</setting>
-				<setting id="Random_Post_Chance" type="integer" label="30134" help="33134">
-					<level>2</level>
-					<default>50</default>
-					<constraints>
-						<minimum>0</minimum>
-						<step>1</step>
-						<maximum>100</maximum>
-					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-						<dependency type="enable">
-                            <or>
-                                <condition operator="!is" setting="Fillers_Commercials">0</condition>
-                                <condition operator="!is" setting="Fillers_Trailers">0</condition>
-                            </or>
-						</dependency>
-					</dependencies>
-					<control type="slider" format="percentage">
-						<popup>false</popup>
-					</control>
 				</setting>
 			</group>
 		</category>

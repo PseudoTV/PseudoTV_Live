@@ -58,7 +58,7 @@ class MP4Parser:
                     udta_boxes = self.find_boxes(self.File, moov_boxes[b"udta"][0] + 8, moov_boxes[b"udta"][1])
                     dur = self.scan_mvhd(self.File, moov_boxes[b"mvhd"][0])
                 except Exception as e:
-                    self.log("MP4Parser, failed! %s\nboxes = %s"%(e,boxes), xbmc.LOGERROR)
+                    log("MP4Parser, failed! %s\nboxes = %s"%(e,boxes), xbmc.LOGERROR)
                     dur = 0
         self.File.close()
         log("MP4Parser: Duration is %s"%(dur))

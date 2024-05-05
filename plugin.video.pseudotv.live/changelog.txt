@@ -5,6 +5,7 @@ v.0.5.0
 -Finalized global fillers.
 -Fixed "On Next" global setting and limited notifications to content above 15mins.
 -Finalized playcount rollback.
+-Simplified filler settings. Advanced Channel Rules will feature more controls on release.
 
 v.0.4.9
 -Improved MP4 duration meta detection.

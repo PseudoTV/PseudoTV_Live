@@ -67,8 +67,9 @@ class Announcement:
         
     def getSettings(self):
         return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
+                'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
                 'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
-                'Resource_Commericals':SETTINGS.getSetting('Resource_Commericals'),
+                'Resource_Adverts'    :SETTINGS.getSetting('Resource_Adverts'),
                 'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
 
 
