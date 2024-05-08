@@ -770,23 +770,6 @@
 					</dependencies>
 					<control type="toggle"/>
 				</setting>
-                <setting id="Enable_Even" type="integer" label="30121" help="33121">
-                    <level>1</level>
-                    <default>2</default>
-                    <constraints>
-                        <minimum>0</minimum>
-                        <step>1</step>
-                        <maximum>5</maximum>
-                    </constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
-                    <control type="slider" format="integer">
-                        <popup>false</popup>
-                    </control>
-                </setting>
 				<setting id="Enable_Extras" type="boolean" label="30053" help="33053">
 					<level>1</level>
 					<default>false</default>
@@ -817,6 +800,23 @@
 						</dependency>
 					</dependencies>
 				</setting>
+                <setting id="Enable_Even" type="integer" label="30121" help="33121">
+                    <level>1</level>
+                    <default>2</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>1</step>
+                        <maximum>5</maximum>
+                    </constraints>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Client_Mode">0</condition>
+						</dependency>
+					</dependencies>
+                    <control type="slider" format="integer">
+                        <popup>false</popup>
+                    </control>
+                </setting>
 			</group>
 		</category>
     
@@ -915,7 +915,7 @@
 				</setting>
 			</group>
 			<group id="2" label="30032">
-				<setting id="Resource_Ratings" type="list[addon]" label="30028" help="">
+				<setting id="Resource_Ratings" type="list[addon]" label="30028" help="" parent="Enable_Preroll">
 					<level>2</level>
 					<default>resource.videos.ratings.mpaa.classic</default>
 					<constraints>
@@ -935,7 +935,7 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-				<setting id="Resource_Bumpers" type="list[addon]" label="30029" help="">
+				<setting id="Resource_Bumpers" type="list[addon]" label="30029" help="" parent="Enable_Preroll">
 					<level>2</level>
 					<default>resource.videos.bumpers.pseudotv</default>
 					<constraints>
@@ -955,7 +955,7 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-                <setting id="Resource_Adverts" type="list[addon]" label="30030" help="">
+                <setting id="Resource_Adverts" type="list[addon]" label="30030" help="" parent="Enable_Postroll">
 					<level>2</level>
 					<default>resource.videos.adverts.pseudotv</default>
 					<constraints>
@@ -977,7 +977,7 @@
 				</setting>
 				<setting id="Include_Adverts_iSpot" type="boolean" label="30136" help="" parent="Resource_Adverts">
 					<level>1</level>
-					<default>false</default>
+					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
                         <dependency type="visible">
@@ -991,7 +991,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-                <setting id="Resource_Trailers" type="list[addon]" label="30031" help="">
+                <setting id="Resource_Trailers" type="list[addon]" label="30031" help="" parent="Enable_Postroll">
 					<level>2</level>
 					<default>resource.videos.trailers.pseudotv</default>
 					<constraints>
@@ -1026,7 +1026,7 @@
 				</setting>
                 <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="" parent="Resource_Trailers">
 					<level>1</level>
-					<default>false</default>
+					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
                         <dependency type="visible">

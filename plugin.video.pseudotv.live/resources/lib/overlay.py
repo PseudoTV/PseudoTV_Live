@@ -281,7 +281,7 @@ class Overlay():
             remaining  = floor(self.player.getTimeRemaining())
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
-            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and BUILTIN.getInfoLabel('NextGenre','VideoPlayer').split(' / ') not in FILLER_TYPES
+            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPES
             
             if remaining < intTime: return getOnNextInterval(interval + 1)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))

@@ -537,7 +537,7 @@ class ProvisionalRule(BaseRule):
         self.description      = "Fill Provisional Placeholder"
         self.optionLabels     = ["Provisional Label"]
         self.optionValues     = [""]
-        self.actions          = [RULES_ACTION_CHANNEL_BUILD_PATH, RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE]
+        self.actions          = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE]
         self.storedValues     = [list()]
         
 
@@ -550,43 +550,39 @@ class ProvisionalRule(BaseRule):
         
 
     def runAction(self, actionid, citem, parameter, builder):
-        if actionid == RULES_ACTION_CHANNEL_BUILD_PATH: 
-            PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
+            PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
                                  "TV Networks"  : [{"path":"videodb://tvshows/studios/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
                                  "Movie Studios": [{"path":"videodb://movies/studios/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
-                                 "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
+                                 "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Genres" : [{"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}],
-                                 "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                 "Movie Genres" : [{"path":"videodb://movies/genres/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
+                                 "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
-                                                   {"path":"videodb://movies/genres/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
-                                                    "method":"VideoLibrary.GetMovies","enum":"Video.Fields.Movie","key":"movies"}]}
+                                                   {"path":"videodb://movies/genres/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                    "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
 
             if self.optionValues[0]:
-                self.log("%s: runAction, id: %s, provisional value = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0]))
                 if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                 if self.optionValues[0] == "Seasonal": queries = list(Seasonal().buildSeasonal())
                 else:                                  queries = PROVISIONAL_TYPES.get(citem['type'],[])
+                self.log("%s: runAction, id: %s, provisional value = %s\nqueries = %s"%(self.__class__.__name__,citem.get('id'),self.optionValues[0],queries))
                 for provisional in queries:
                     if not provisional: continue
                     elif builder.service._interrupt() or builder.service._suspend(): break
                     else:
                         if self.optionValues[0] == "Seasonal": citem['logo'] = provisional.get('holiday',{}).get('logo',citem['logo'])
-                        elif not parameter.startswith(provisional.get('path','')): continue
                         else: provisional["filter"]["and"][0]['value'] = self.optionValues[0]
                         if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                             provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                                {"field":"episode","operator":"greaterthan","value":"0"}])
-                        fileList, dirList = builder.buildList(citem, parameter, media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
+                        fileList, dirList = builder.buildList(citem, self.optionValues[0], media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
                         if len(fileList) > 0: self.storedValues[0].append(fileList)
-
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE: 
-            return [_f for _f in self.storedValues.pop(0) if _f]
-            
+                return [_f for _f in self.storedValues.pop(0) if _f]
         return parameter
         
  
@@ -597,7 +593,7 @@ class EvenShowsRule(BaseRule):
         self.description  = "Sort shows in blocks." 
         self.optionLabels = ['Same Show Eps in a Row','Pagination Limit']
         self.optionValues = [2,PAGE_LIMIT]
-        self.actions      = [RULES_ACTION_CHANNEL_BUILD_START,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST_POST,RULES_ACTION_CHANNEL_BUILD_STOP]
+        self.actions      = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST,RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST]
         self.storedValues = [dict(),list(),PAGE_LIMIT]
         
 
@@ -647,7 +643,7 @@ class EvenShowsRule(BaseRule):
             self.log('runAction, _mergeShows returning items = %s'%(len(nfileList)))
             return [_f for _f in nfileList if _f]
                 
-        if actionid == RULES_ACTION_CHANNEL_BUILD_START:
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
             self.storedValues[2] = builder.limit # store global pagination limit
             self.log('runAction, saving limit %s'%(builder.limit))
             
@@ -658,7 +654,7 @@ class EvenShowsRule(BaseRule):
                 builder.limit = self.storedValues[2]
             self.log('runAction, changing limit %s'%(builder.limit))
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST_POST:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
             try:
                 if parameter:
                     if builder.pDialog: builder.pDialog = DIALOG.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.getTitle()),header='%s, %s'%(ADDON_NAME,builder.pMSG))
@@ -667,7 +663,7 @@ class EvenShowsRule(BaseRule):
                     return _mergeShows(self.storedValues[0],self.storedValues[1])
             except Exception as e: log("runAction, failed! %s"%(e), xbmc.LOGERROR)
             
-        elif actionid == RULES_ACTION_CHANNEL_BUILD_STOP:
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:
             builder.limit = self.storedValues[2] # restore global pagination limit
             self.log('runAction, restoring limit %s'%(self.storedValues[2]))
             

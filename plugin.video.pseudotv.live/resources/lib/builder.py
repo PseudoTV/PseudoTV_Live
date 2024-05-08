@@ -94,7 +94,7 @@ class Builder:
             else:
                 citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
                 self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
-                yield self.runActions(RULES_ACTION_CHANNEL_VERIFY, citem, citem, inherited=self)
+                yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
             
             
     @timeit
@@ -105,7 +105,7 @@ class Builder:
             self.log('build, no verified channels found!')
             return False
             
-        now = getUTCstamp()
+        now   = getUTCstamp()
         start = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour
         stopTimes = dict(self.xmltv.loadStopTimes(fallback=datetime.datetime.fromtimestamp(start).strftime(DTFORMAT)))
         self.pDialog = DIALOG.progressBGDialog()
@@ -221,30 +221,26 @@ class Builder:
             for fileList in fileArray:
                 if len(fileList) > 0: return True
                 
-        fileArray = []
-        self.runActions(RULES_ACTION_CHANNEL_BUILD_START, citem, inherited=self)
-        for file in citem['path']:
-            if self.service._interrupt() or self.service._suspend(): break
-            else: fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
-
-        self.runActions(RULES_ACTION_CHANNEL_BUILD_STOP, citem, inherited=self)
-        fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_PRE, citem, fileArray, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
-        if not _validFileList(fileArray):#check that at least one fileList array contains meta.
+        fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
+        if not _validFileList(fileArray):
+            for file in citem['path']:
+                if self.service._interrupt() or self.service._suspend(): break
+                else: fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+        fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
+        
+        if not _validFileList(fileArray):#check that at least one fileList in array contains meta.
             self.log("buildChannel, id: %s skipping channel fileArray empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
         self.log("buildChannel, id: %s fileArray arrays = %s"%(citem['id'],len(fileArray)))
-        fileList  = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST_POST, citem, interleave(fileArray), inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, interleave(fileArray), inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log('buildChannel, id: %s, fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         return fileList
 
           
     def buildFileList(self, citem, path, media='video', limit=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}): #build channel via vfs path.
         self.log("buildFileList, id: %s, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        if [True for rule in citem.get('rules',[]) if rule.get('id') == 53]:
-            self.log("buildFileList, id: %s, passing to rules"%(citem['id']))
-            return []
-        elif path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
+        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
             paths, media, osort, ofilter, olimit = self.xsp.parseXSP(path)
             sort   = (sort   or osort)
             limit  = (olimit or limit)

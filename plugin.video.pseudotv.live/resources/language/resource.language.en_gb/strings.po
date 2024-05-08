@@ -1518,7 +1518,7 @@ msgstr ""
 
 msgctxt "#33140"
 msgid "Create Channel & Genre subfolders in template resource pack."
-msgstr 
+msgstr ""
 
 msgctxt "#33149"
 msgid "Override Low-Power background pausing and performance throttling."
@@ -1534,4 +1534,4 @@ msgstr ""
 
 msgctxt "#33160"
 msgid "Select one or more logo resource packs."
-msgstr "
+msgstr ""

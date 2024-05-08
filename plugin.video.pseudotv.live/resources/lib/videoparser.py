@@ -75,10 +75,10 @@ class VideoParser:
         if not filename:
             log("VideoParser: getVideoLength, no filename.")
             return 0
-        elif filename.lower().startswith(tuple(self.YTPaths)):
-            dur = YTParser.YTParser().determineLength(filename)
         elif filename.lower().startswith(tuple(self.VFSPaths)):
             dur = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
+            if dur == 0 and filename.lower().startswith(tuple(self.YTPaths)):
+                dur = YTParser.YTParser().determineLength(filename)
         else:
             ext = os.path.splitext(filename)[1].lower()
             if not FileAccess.exists(filename):
