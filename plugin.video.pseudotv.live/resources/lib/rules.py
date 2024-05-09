@@ -77,7 +77,7 @@ class RulesList:
         return ruleList
                
         
-    def runActions(self, action, citem, parameter=None, inherited=None):
+    def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
         for rule in self.chanRules.get(citem.get('id'),[]):

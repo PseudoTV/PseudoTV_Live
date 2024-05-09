@@ -348,8 +348,8 @@ class Builder:
                             item['originalpath'] = path #use for path sorting/playback verification 
                             if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
                                 
-                            title   = (item.get("title",'')     or item.get("label",'')     or dirItem.get('label',''))
-                            tvtitle = (item.get("showtitle",'') or dirItem.get('label',''))
+                            title   = (item.get("title",'')     or item.get("label",'') or dirItem.get('label',''))
+                            tvtitle = (item.get("showtitle",'') or item.get("label",'') or dirItem.get('label',''))
 
                             if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
                                 season  = int(item.get("season","0"))

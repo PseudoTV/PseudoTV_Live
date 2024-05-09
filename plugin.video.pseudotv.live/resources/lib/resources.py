@@ -91,7 +91,7 @@ class Resources:
                     continue
                 else:
                     self.log('getLogoResources, checking %s'%(id))
-                    results = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts=IMG_EXTS, depth=CHANNEL_LIMIT, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+                    results = self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s/resources'%id), exts=IMG_EXTS, depth=CHANNEL_LIMIT, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
                     for path, images in list(results.items()):
                         for image in images:
                             name, ext = os.path.splitext(image)

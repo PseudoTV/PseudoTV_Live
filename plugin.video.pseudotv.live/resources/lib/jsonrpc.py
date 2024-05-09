@@ -117,8 +117,8 @@ class JSONRPC:
             if appendPath: return os.path.join(path,f).replace('\\','/')
             else:          return f
             
-        def _parseXBT():
-            resource = path.replace('/resources','').replace('special://home/addons/','resource://')
+        def _parseXBT(resource):
+            self.log('walkListDirectory, parsing XBT = %s'%(resource))
             walk.setdefault(resource,[]).extend(self.getListDirectory(resource,checksum,expiration)[1])
             return walk
              
@@ -136,7 +136,7 @@ class JSONRPC:
                 subs, files = self.getListDirectory(dir,checksum,expiration)
                 if len(subs)  > 0: dirs.extend(subs)
                 if len(files) > 0:
-                    if TEXTURES in files: return _parseXBT()
+                    if TEXTURES in files: return _parseXBT(re.sub('/resources','',dir).replace('special://home/addons/','resource://'))
                     else: walk.setdefault(dir,[]).extend(list([_f for _f in [_chkfile(dir, f) for f in files if f.endswith(tuple(exts))] if _f]))
         return walk
                 

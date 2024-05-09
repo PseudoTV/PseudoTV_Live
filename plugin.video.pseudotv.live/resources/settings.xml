@@ -373,7 +373,7 @@
 			<group id="1">
 				<setting id="Resource_Logos" type="list[addon]" label="30027" help="33160">
 					<level>2</level>
-					<default>resource.images.pseudotv.logos</default>
+					<default>resource.images.studios.coloured|resource.images.pseudotv.logos</default>
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
@@ -819,7 +819,6 @@
                 </setting>
 			</group>
 		</category>
-    
 		<category id="fillers" label="30016" help="33016">
 			<group id="1">
 				<setting id="Enable_Preroll" type="integer" label="30017" help="30018">

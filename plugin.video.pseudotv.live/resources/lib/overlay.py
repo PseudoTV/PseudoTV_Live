@@ -39,51 +39,17 @@ class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
         self.citem = kwargs.get('citem')
-        
-        
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
     def onInit(self):
-        self.log('onInit')
         try:
             logo = (self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(self.citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except:
             self.close()
-        
-
-class MYPlayer(xbmc.Player):
-    def __init__(self, overlay):
-        xbmc.Player.__init__(self)
-        self.overlay = overlay
-
-        
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def onAVStarted(self):
-        self.log('onAVStarted')
-        if not self.overlay.player.isPseudoTV:
-            self.onPlayBackEnded()
-        else:
-            self.overlay.toggleBug()
-            self.overlay.toggleOnNext()
             
-
-    def onPlayBackStopped(self):
-        self.log('onPlayBackStopped')
-        self.onPlayBackEnded()
             
-
-    def onPlayBackEnded(self):
-        self.log('onPlayBackEnded')
-        self.overlay.close()
-
-
 class Overlay():
     showingOverlay = False
     controlManager = dict()
@@ -106,7 +72,7 @@ class Overlay():
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
-        
+
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
@@ -156,7 +122,14 @@ class Overlay():
         except Exception as e: self.log('_removeControl failed! %s'%(e), xbmc.LOGERROR)
         
         
-    def setImage(self, control, image, cache=True):
+    def setText(self, control, text):
+        try: 
+            if self._hasControl(control):
+                control.setText(text)
+        except Exception as e: self.log('setText failed! %s'%(e), xbmc.LOGERROR)
+        
+        
+    def setImage(self, control, image, cache=False):
         try: 
             if self._hasControl(control):
                 control.setImage(image, useCache=cache)
@@ -183,35 +156,43 @@ class Overlay():
         if not self.player.isPseudoTV: 
             return self.close()
             
-        self.showingOverlay = True
-        self.myPlayer = MYPlayer(overlay=self)
-        self.myPlayer.onAVStarted()
-        
+        self.showingOverlay   = True
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
+        
+        self.toggleBug()
+        self.toggleOnNext()
+        
             
-
     def close(self):
         self.log('close')
         self.cancelOnNext()
         self.cancelChannelBug()
-        self.setImage(self._channelBug,'None')
         self.showingOverlay = False
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        for control, visible in list(self.controlManager.items()): self._removeControl(control)
-        try: del self.myPlayer
-        except: pass
+        
+        for control, visible in list(self.controlManager.items()):
+            self._removeControl(control)
+            
 
-    
+    def cancelOnNext(self):
+        self.log('cancelOnNext')
+        self.setText(self._onNext,' ')
+        self.setVisible(self._onNext,False)
+        if self._onNextThread.is_alive():
+            self._onNextThread.cancel()
+            self._onNextThread.join()
+            
+            
     def cancelChannelBug(self):
         self.log('cancelChannelBug')
+        self.setImage(self._channelBug,'None')
         self.setVisible(self._channelBug,False)
-        try: 
+        if self._channelBugThread.is_alive():
             self._channelBugThread.cancel()
             self._channelBugThread.join()
-        except: pass
 
 
     def toggleBug(self, state=True):
@@ -244,10 +225,10 @@ class Overlay():
                 self._channelBug.setPosition(self._channelBugX, self._channelBugY)
             except: pass
             
-            if state and self.player.isPseudoTV and self.enableChannelBug:
+            if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPES:
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
-                    self._channelBug.setEnableCondition('[Player.Playing]')
+                    self._channelBug.setEnableCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
 
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
@@ -301,7 +282,7 @@ class Overlay():
                 citem = self.player.sysInfo.get('citem',{})
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
-                    self._onNext.setEnableCondition('[Player.Playing]')
+                    self._channelBug.setEnableCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                              
                 citem = self.player.sysInfo.get('citem',{})
                 fitem = self.player.sysInfo.get('fitem',{})
@@ -315,7 +296,7 @@ class Overlay():
                     
                     onNow  = '%s on %s'%(nowTitle,chname) if chname not in nowTitle else fitem.get('showlabel',nowTitle)
                     onNext = '%s @ %s'%(nextTitle,BUILTIN.getInfoLabel('NextStartTime','VideoPlayer'))
-                    self._onNext.setText('%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
+                    self.setText(self._onNext,'%s\n%s'%(LANGUAGE(32104)%(onNow),LANGUAGE(32116)%(onNext)))
                     self._onNext.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=1000 condition=True reversible=True')])
                     self._onNext.autoScroll(6000, 3000, 5000)
                     self.setVisible(self._onNext,True)
@@ -331,14 +312,6 @@ class Overlay():
         except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def cancelOnNext(self):
-        self.log('cancelOnNext')
-        self.setVisible(self._onNext,False)
-        if self._onNextThread.is_alive():
-            self._onNextThread.cancel()
-            self._onNextThread.join()
-            
-            
     def updateUpNext(self, nowItem={}, nextItem={}):
         self.log('updateUpNext')
         try:
