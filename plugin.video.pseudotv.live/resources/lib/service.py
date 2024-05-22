@@ -337,7 +337,7 @@ class Service():
     
     def __init__(self):
         self.log('__init__')
-        DIALOG.notificationWait(LANGUAGE(32054),wait=30)#startup delay; give Kodi PVR time to initialize. 
+        DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -397,8 +397,8 @@ class Service():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
             else: 
-                timerit(self._run)(0.1)
-                timerit(self._tasks)(1.0)
+                threadit(self._run)
+                self._tasks()
         self.stop()
 
 
@@ -413,7 +413,7 @@ class Service():
                     except: pass
             except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        if self._restart(): Service().start()
+        if self._restart(): timerit(Service().start)(OVERLAY_DELAY)
 
   
-if __name__ == '__main__': Service().start()
+if __name__ == '__main__': timerit(Service().start)(OVERLAY_DELAY)

@@ -39,7 +39,7 @@ from ast         import literal_eval
 
 from logger      import *
 from cache       import Cache, cacheit
-from pool        import killJSON, killit, timeit, poolit, threadit, timerit
+from pool        import killit, timeit, poolit, threadit, timerit
 from kodi        import *
 from fileaccess  import FileAccess, FileLock
 from collections import Counter, OrderedDict

@@ -22,9 +22,9 @@ from videoparser import VideoParser
 
 class JSONRPC:
     def __init__(self, cache=None):
+        self.videoParser = VideoParser()
         if cache is None: self.cache = Cache()
         else:             self.cache = cache
-        self.videoParser = VideoParser()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -51,18 +51,14 @@ class JSONRPC:
         return results
 
 
-    def sendJSON(self, param, timeout=15): #todo dynamic timeout based on parmas and timeout history.
+    def sendJSON(self, param, wait=60):
         with self.sendLocker():
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
-            # response = killJSON(self._sendJSON)(timeout, command)
-            response = self._sendJSON(command)
+            response = (self._sendJSON(command) or {'error':{'message':'JSONRPC timed out!'}})
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
-                
-        if response.get('error',{}).get('message','').startswith('JSONRPC timed out!'):
-            if timeout <= 15: return self.sendJSON(param, timeout=30)
         return response
 
 
@@ -196,7 +192,7 @@ class JSONRPC:
         self.queueJSON(param)
 
 
-    def getSources(self, media='video', cache=True):
+    def getSources(self, media='video', cache=False):
         param = {"method":"Files.GetSources","params":{"media":media}}
         if cache: return self.cacheJSON(param).get('result', {}).get('sources', [])
         else:     return self.sendJSON(param).get('result', {}).get('sources', [])
@@ -430,7 +426,7 @@ class JSONRPC:
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         
         if getDirectory:
-            results = self.getDirectory(param)
+            results = self.getDirectory(param, cache=False)
             if 'filedetails' in results: key = 'filedetails'
             else:                        key = 'files'
         else:

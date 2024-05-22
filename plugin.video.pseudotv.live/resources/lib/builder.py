@@ -88,10 +88,11 @@ class Builder:
         if channels is None: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
-            elif not citem.get('id') or not citem.get('path'):
-                self.log('verify, skipping - missing channel id\n%s'%(citem))
+            elif not citem.get('name') or not citem.get('id') or not citem.get('path'):
+                self.log('verify, skipping - missing necessary channel meta\n%s'%(citem))
                 continue
             else:
+                #update channel logo and verify.
                 citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
                 self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
@@ -259,7 +260,7 @@ class Builder:
             else:                                       param["type"], media, dsort = ('files'   ,'video',{"method": "random"})  #other
 
             param["order"] = (sort or osort or dsort)
-            sort   = {} #clear no longer needed injected into param
+            sort   = {} #clear sort; no longer needed! injected into param
             if not self.incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                 param["rules"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                             {"field":"episode","operator":"greaterthan","value":"0"}])
@@ -342,7 +343,7 @@ class Builder:
                             continue
 
                         dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
-                        if dur > self.minDuration: #ignore media that's duration is under the players seek tolerance.
+                        if dur > self.minDuration: #include media that's duration is above the players seek tolerance.
                             item['duration']     = dur
                             item['media']        = media
                             item['originalpath'] = path #use for path sorting/playback verification 
@@ -351,7 +352,7 @@ class Builder:
                             title   = (item.get("title",'')     or item.get("label",'') or dirItem.get('label',''))
                             tvtitle = (item.get("showtitle",'') or item.get("label",'') or dirItem.get('label',''))
 
-                            if (tvtitle or item['type'].startswith(tuple(TV_TYPES))):# This is a TV show
+                            if (item['type'].startswith(tuple(TV_TYPES)) or item.get("showtitle")):# This is a TV show
                                 season  = int(item.get("season","0"))
                                 episode = int(item.get("episode","0"))
                                 if not file.startswith(tuple(VFS_TYPES)) and not self.incExtras and (season == 0 or episode == 0):
@@ -378,6 +379,7 @@ class Builder:
                                 
                             item['plot'] = (item.get("plot","") or item.get("plotoutline","") or item.get("description","") or LANGUAGE(30161)).strip()
                             if query.get('holiday'):
+                                citem['holiday'] = query.get('holiday')
                                 holiday = "[B]%s[/B] - [I]%s[/I]"%(query["holiday"]["name"],query["holiday"]["tagline"]) if query["holiday"]["tagline"] else "[B]%s[/B]"%(query["holiday"]["name"])
                                 item["plot"] = "%s \n%s"%(holiday,item["plot"])
 
@@ -426,7 +428,7 @@ class Builder:
         if 'video' in details and len(details.get('video')) > 0:
             videowidth  = int(details['video'][0]['width']  or '0')
             videoheight = int(details['video'][0]['height'] or '0')
-            if videowidth >= 1280 and videoheight >= 720: return True
+            if videowidth >= 1280 or videoheight >= 720: return True
         return False
 
 
@@ -437,7 +439,7 @@ class Builder:
         if 'video' in details and len(details.get('video')) > 0:
             videowidth  = int(details['video'][0]['width']  or '0')
             videoheight = int(details['video'][0]['height'] or '0')
-            if videowidth > 1920 and videoheight > 1080: return True
+            if videowidth > 1920 or videoheight > 1080: return True
         return False
         
         
@@ -456,7 +458,6 @@ class Builder:
         if citem['catchup']:
             citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
             citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
-            
         elif citem['radio']:
             citem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),radio=str(citem['radio']),vid='{catchup-id}')
         else:

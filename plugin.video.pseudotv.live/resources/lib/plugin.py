@@ -162,7 +162,7 @@ class Plugin:
         
         
     def getPVRItems(self, name, chid):
-        self.log('playPlaylist, id = %s'%(chid))
+        self.log('getPVRItems, id = %s'%(chid))
         def buildfItem(item={}, media='video'):
             return LISTITEMS.buildItemListItem(decodePlot(item.get('plot','')), media)
             
@@ -191,16 +191,16 @@ class Plugin:
                     nowitem = nextitems.pop(0)
                     liz = LISTITEMS.buildItemListItem(fitem)
                     if round(nowitem['progresspercentage']) > self.seekTHD:
-                        self.log('playPlaylist, progress past threshold advance to nextitem')
+                        self.log('getPVRItems, progress past threshold advance to nextitem')
                         nowitem = nextitems.pop(0)
                     
                     if round(nowitem['progress']) <= self.seekTOL:
-                        self.log('playPlaylist, progress start at the beginning')
+                        self.log('getPVRItems, progress start at the beginning')
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
                         
                     if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                        self.log('playPlaylist, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
+                        self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
                         liz.setProperty('startoffset', str(nowitem['progress'])) #secs
                         infoTag = ListItemInfoTag(liz, 'video')
                         infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})

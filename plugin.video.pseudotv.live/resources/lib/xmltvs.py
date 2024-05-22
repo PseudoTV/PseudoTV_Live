@@ -19,7 +19,8 @@
 # -*- coding: utf-8 -*-
 
 import xmltv
-from globals import *
+from globals    import *
+from seasonal   import Seasonal 
 
 #todo check for empty recordings/channel meta and trigger refresh/rebuild empty xmltv via Kodi json rpc?
 
@@ -195,14 +196,25 @@ class XMLTVS:
         return tmpChannels
 
 
-    def cleanProgrammes(self, programmes): # remove expired content, ignore "recordings" ie. media=True
-        try:
-            now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
-            tmpProgrammes = [program for program in programmes if (strpTime(program['stop'].rstrip(),DTFORMAT) > now)]
-        except Exception as e: 
-            self.log("cleanProgrammes, Failed! %s"%(e), xbmc.LOGERROR)
-            tmpProgrammes = programmes
+    def cleanProgrammes(self, programmes):
+        now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
+        def filterProgrames(program):
+            if (strpTime(program.get('stop',now).rstrip(),DTFORMAT) > now): return program
+            
+        tmpProgrammes = poolit(filterProgrames)(programmes) # remove expired content, ignore "recordings" ie. media=True
         self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
+        return self.cleanHolidays(tmpProgrammes)
+
+
+    def cleanHolidays(self, programmes):
+        holiday = Seasonal().getHoliday()
+        def filterHoliday(program):
+            citem = decodePlot(program.get('desc')[0][0]).get('citem',{})
+            if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
+            return program
+            
+        tmpProgrammes = poolit(filterHoliday)(programmes) # remove expired seasons.
+        self.log('cleanHolidays, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
 
 
