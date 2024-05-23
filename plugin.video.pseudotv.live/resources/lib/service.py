@@ -397,8 +397,8 @@ class Service():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
             else: 
-                threadit(self._run)
-                self._tasks()
+                timerit(self._run)(0.1)
+                timerit(self._tasks)(1.0)
         self.stop()
 
 
@@ -413,7 +413,7 @@ class Service():
                     except: pass
             except Exception as e: log("_start, failed! %s"%(e), xbmc.LOGERROR)
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        if self._restart(): timerit(Service().start)(OVERLAY_DELAY)
+        if self._restart(): Service().start()
 
   
-if __name__ == '__main__': timerit(Service().start)(OVERLAY_DELAY)
+if __name__ == '__main__': Service().start()
