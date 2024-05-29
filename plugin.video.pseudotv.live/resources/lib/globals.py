@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 
-import os, sys, re, json, struct, errno 
+import os, sys, re, json, struct, errno, zlib
 import shutil, subprocess, io
 import codecs, random
 import uuid, base64, binascii, hashlib
@@ -39,7 +39,7 @@ from ast         import literal_eval
 
 from logger      import *
 from cache       import Cache, cacheit
-from pool        import killit, timeit, poolit, threadit, timerit
+from pool        import killit, timeit, poolit, executeit, timerit, threadit
 from kodi        import *
 from fileaccess  import FileAccess, FileLock
 from collections import Counter, OrderedDict
@@ -101,7 +101,7 @@ def stripRegion(s):
     return s
     
 def chanceBool(percent=25):
-    return random.randrange(100) < percent
+    return random.randrange(100) <= percent
     
 def unquoteString(text):
     return urllib.parse.unquote(text)
@@ -110,16 +110,26 @@ def quoteString(text):
     return urllib.parse.quote(text)
 
 def encodeString(text):
-    base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))
+    base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
     return base64_bytes.decode(DEFAULT_ENCODING)
 
 def decodeString(base64_bytes):
     try:
-        message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
+        message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
         return message_bytes.decode(DEFAULT_ENCODING)
     except:
-        pass
-
+        return ''
+        
+def decodePlot(text):
+    if isinstance(text,list): text = text[0]
+    if isinstance(text, str):
+        plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
+        if plot: return loadJSON(decodeString(plot.group(1)))
+    return {}
+    
+def encodePlot(plot, text):
+    return '%s [COLOR item="%s"][/COLOR]'%(plot,encodeString(dumpJSON(text)))
+    
 def escapeString(text, table=HTML_ESCAPE):
     return escape(text,table)
     
@@ -462,17 +472,7 @@ def isPlaylistRandom():
     
 def isPlaylistRepeat():
     return BUILTIN.getInfoLabel('IsRepeat','Playlist').lower() == 'true' # Disable auto playlist repeat if it's on #todo
-        
-def decodePlot(text):
-    if isinstance(text,list): text = text[0]
-    if isinstance(text, str):
-        plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-        if plot: return loadJSON(decodeString(plot.group(1)))
-    return {}
-    
-def encodePlot(plot, text):
-    return '%s [COLOR item="%s"][/COLOR]'%(plot,encodeString(dumpJSON(text)))
-    
+
 def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
     

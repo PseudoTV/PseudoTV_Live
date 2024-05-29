@@ -179,7 +179,7 @@ class Player(xbmc.Player):
         if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.jsonRPC.quePlaycount(self.sysInfo['fitem']) #rollback previous sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
-            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
+            # self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel. 
 
         
@@ -197,9 +197,9 @@ class Player(xbmc.Player):
                 if len(broadcastnext) == 0: raise Exception('Empty broadcastnext')
             else: raise Exception('Using callback')
         except Exception as e:
-            self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
+            # self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
             self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback'],e))
-            BUILTIN.executebuiltin('PlayMedia(%s)'%(self.sysInfo['callback']))
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(self.sysInfo['callback']))
         
         
     def _onStop(self):
@@ -207,7 +207,7 @@ class Player(xbmc.Player):
         self.toggleBackground(False)
         if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.jsonRPC.quePlaycount(self.sysInfo['fitem']) #rollback previous sysInfo
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
-        self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
+        # self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
         clearTrakt()
         self.sysInfo = {}
 
@@ -327,8 +327,6 @@ class Service():
     isClient()
     currentChannels = []
     currentSettings = []
-    runningRun      = False
-    runningTask     = False
     
     jsonRPC  = JSONRPC()
     player   = Player(jsonRPC)
@@ -366,20 +364,14 @@ class Service():
     
          
     def _run(self):
-        if not self.runningRun and self.player.isPseudoTV:
-            self.runningRun = True
-            self.monitor.chkIdle()
-            self.runningRun = False
-       
-   
-    def _tasks(self):
-        if not self.runningTask:
-            self.runningTask = True
-            self.tasks.chkQueTimer()
-            self.tasks._queue()
-            self.runningTask = False
-        
-        
+        if not isRunning('_run'):
+            with setRunning('_run'):
+                if self.player.isPseudoTV:
+                    self.monitor.chkIdle()
+                self.tasks.chkQueTimer()
+                self.tasks._queue()
+                
+                
     def _initialize(self):
         self.log('_initialize')
         if self.player.isPlaying(): self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
@@ -396,9 +388,7 @@ class Service():
         while not self.monitor.abortRequested():
             if    self._interrupt(wait=2): break
             elif  self._suspend(): continue
-            else: 
-                timerit(self._run)(0.1)
-                timerit(self._tasks)(1.0)
+            else: self._run()
         self.stop()
 
 

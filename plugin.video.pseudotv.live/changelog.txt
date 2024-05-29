@@ -7,6 +7,8 @@ v.0.5.0
 -Fixed "On Next" global setting; limited notifications to content above 15mins and ignore fillers.
 -Finalized playcount rollback.
 -Simplified filler settings. Advanced Channel Rules will feature more controls on release.
+-Refactored internal references and compressed data strings using zlib. This will reduce memory burden and Kodi EPG database size.
+-Tweaked onChange logic to improve callback performance. 
 
 v.0.4.9
 -Improved MP4 duration meta detection.

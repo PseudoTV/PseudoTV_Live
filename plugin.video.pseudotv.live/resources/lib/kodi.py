@@ -17,7 +17,7 @@
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 #
 # -*- coding: utf-8 -*-
-import json, uuid
+import json, uuid, zlib, base64
 
 from globals     import *
 from fileaccess  import FileAccess
@@ -38,7 +38,18 @@ def log(event, level=xbmc.LOGDEBUG):
 def convertString2Num(value):
     try:    return literal_eval(value)
     except: return None
-       
+    
+def encodeString(text):
+    base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
+    return base64_bytes.decode(DEFAULT_ENCODING)
+
+def decodeString(base64_bytes):
+    try:
+        message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
+        return message_bytes.decode(DEFAULT_ENCODING)
+    except:
+        return ''
+         
 def getThumb(item={},opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
             1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
@@ -202,7 +213,7 @@ class Settings:
         
 
     def getSettingDict(self, key):
-        return loadJSON(self.getSetting(key))
+        return loadJSON(decodeString(self.getSetting(key)))
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
@@ -266,7 +277,7 @@ class Settings:
         
         
     def setSettingDict(self, key, values):
-        self.setSetting(key,dumpJSON(values))
+        self.setSetting(key,encodeString(dumpJSON(values)))
             
             
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84), json_data=False):
@@ -504,7 +515,7 @@ class Properties:
         
         
     def getPropertyDict(self, key=''):
-        return loadJSON(self.getProperty(key))
+        return loadJSON(decodeString(self.getProperty(key)))
         
         
     def getPropertyInt(self, key):
@@ -537,7 +548,7 @@ class Properties:
         
         
     def setPropertyDict(self, key, value={}):
-        return self.setProperty(key, dumpJSON(value))
+        return self.setProperty(key, encodeString(dumpJSON(value)))
         
                 
     def setPropertyInt(self, key, value):

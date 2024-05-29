@@ -59,7 +59,7 @@ class Tasks():
             try:
                 func, args, kwargs = package
                 self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                threadit(func)(*args,**kwargs)
+                executeit(func)(*args,**kwargs)
             except Exception as e:
                 self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
         except Empty: self.log("_queue, empty!")
@@ -204,7 +204,7 @@ class Tasks():
 
     def chkJSONQUE(self):
         if not self.runningJSONQUE:
-            timerit(self.runJSONQUE)(0.5)
+            threadit(self.runJSONQUE)
 
 
     def runJSONQUE(self):
