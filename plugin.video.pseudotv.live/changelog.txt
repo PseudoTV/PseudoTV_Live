@@ -1,4 +1,8 @@
 v.0.5.0
+-Notice The following steps are required!.
+ - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
+ - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
+ 
 -Added Seasonal channel cleanup.
 -Added Youtube duration detection *Requires Youtube_DL.
 -Improved MP4 duration detection.
