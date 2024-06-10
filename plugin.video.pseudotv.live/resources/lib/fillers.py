@@ -153,7 +153,7 @@ class Fillers:
                 preFileList = []
                 preKeys     = [chname, fgenre]
                 if self.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(TV_TYPES))    and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',preKeys,chanceBool(SETTINGS.getSettingInt('Random_Pre_Chance'))))
-                if self.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',[fitem.get('streamdetails',{}).get('audio',[{}])[0].get('codec')]))
+                if self.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',[(fitem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]))
                 if self.bctTypes['ratings'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('ratings',self.convertMPAA(fileItem.get('mpaa','NR'))[1]))
 
                 #pre roll - bumpers/ratings

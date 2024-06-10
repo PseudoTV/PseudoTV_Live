@@ -19,7 +19,7 @@
 from globals    import *
 
 class Hachoir:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         try:
             meta = {}
             from hachoir.parser   import createParser

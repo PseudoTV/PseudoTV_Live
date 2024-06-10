@@ -47,7 +47,7 @@ def timeit(method):
         result     = method(*args, **kwargs)
         end_time   = time.time()
         if DEBUG_ENABLED:
-            log('%s => %s ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
+            log('%s => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper
     
@@ -72,6 +72,7 @@ def killit(method):
     return wrapper
 
 def poolit(method):
+    @timeit
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
         results  = []
@@ -89,6 +90,7 @@ def poolit(method):
     return wrapper
 
 def executeit(method):
+    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         pool   = Concurrent(roundupDIV(Cores().CPUcount(),2))
@@ -98,6 +100,7 @@ def executeit(method):
     return wrapper
 
 def threadit(method):
+    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread_name = '%s.%s'%('threadit',method.__qualname__.replace('.',': '))
@@ -113,16 +116,18 @@ def threadit(method):
     return wrapper
 
 def timerit(method):
+    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
         threadTimer = Timer(wait, method, *args, **kwargs)
-        if threadTimer.is_alive():
-            try: 
-                threadTimer.cancel()
-                threadTimer.join()
-                log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
-            except: pass
+        for thread in thread_enumerate():
+            if thread.name == thread_name and thread.is_alive():
+                try: 
+                    thread.cancel()
+                    thread.join()
+                    log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
+                except: pass
         threadTimer = Timer(wait, method, *args, **kwargs)
         threadTimer.name = thread_name
         threadTimer.daemon=True

@@ -19,7 +19,7 @@
 from globals    import *
 
 class OpenCV:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         try:
             import cv2
             log("OpenCV: determineLength %s"%(filename))

@@ -119,6 +119,9 @@ def getMD5(text,hash=0,hexit=True):
     if hexit: return hex(hash)[2:].upper().zfill(8)
     else:     return hash
 
+def getCRC32(text):
+    return binascii.crc32(text.encode('utf8'))
+    
 def convertString(data):
     if isinstance(data, dict):
         return dumpJSON(data)
@@ -213,7 +216,7 @@ class Settings:
         
 
     def getSettingDict(self, key):
-        return loadJSON(decodeString(self.getSetting(key)))
+        return loadJSON(self.getSetting(key))
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
@@ -277,7 +280,7 @@ class Settings:
         
         
     def setSettingDict(self, key, values):
-        self.setSetting(key,encodeString(dumpJSON(values)))
+        self.setSetting(key,dumpJSON(values))
             
             
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84), json_data=False):
@@ -515,7 +518,7 @@ class Properties:
         
         
     def getPropertyDict(self, key=''):
-        return loadJSON(decodeString(self.getProperty(key)))
+        return loadJSON(self.getProperty(key))
         
         
     def getPropertyInt(self, key):
@@ -529,10 +532,11 @@ class Properties:
     #SET
     def setEXTProperty(self, key, value):
         self.log('setEXTProperty, id = %s, key = %s, value = %s'%(10000,key,'%s...'%((convertString(value)[:128]))))
-        return xbmcgui.Window(10000).setProperty(key,str(value))
+        xbmcgui.Window(10000).setProperty(key,str(value))
+        return True
         
         
-    def setProperty(self, key, value: str) -> bool:
+    def setProperty(self, key, value):
         key = self.getKey(key)
         self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((convertString(value)[:128]))))
         self.window.setProperty(key, str(value))
@@ -540,23 +544,28 @@ class Properties:
         
         
     def setPropertyList(self, key, values):
-        return self.setProperty(key, '|'.join(values))
+        if self.setProperty(key, '|'.join(values)):
+            return value
         
         
     def setPropertyBool(self, key, value):
-        return self.setProperty(key, value)
+        if self.setProperty(key, value):
+            return value
         
         
     def setPropertyDict(self, key, value={}):
-        return self.setProperty(key, encodeString(dumpJSON(value)))
+        if self.setProperty(key, dumpJSON(value)):
+            return value
         
                 
     def setPropertyInt(self, key, value):
-        return self.setProperty(key, int(value))
+        if self.setProperty(key, int(value)):
+            return value
                 
                 
     def setPropertyFloat(self, key, value):
-        return self.setProperty(key, float(value))
+        if self.setProperty(key, float(value)):
+            return value
 
     
     def setTrash(self, key): #catalog instance properties that may become abandoned. 
@@ -803,8 +812,7 @@ class Dialog:
 
     def toggleInfoMonitor(self, state, wait=0.1):
         self.log('toggleInfoMonitor, state = %s'%(state))
-        self.properties.setPropertyBool('chkInfoMonitor',state)
-        if state: 
+        if self.properties.setPropertyBool('chkInfoMonitor',state): 
             self.properties.clearProperty('monitor.montiorList')
             timerit(self.doInfoMonitor)(wait)
 

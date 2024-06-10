@@ -362,7 +362,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#30086"
-msgid "Channel Bug visibility Interval"
+msgid "Channel Bug Visibility"
 msgstr "" 
 
 msgctxt "#30087"
@@ -1473,7 +1473,7 @@ msgid "Backup channel configurations & rules."
 msgstr ""
 
 msgctxt "#33111"
-msgid "Apply diffuse color to channel bug regardless of non-monochromatic"
+msgid "Apply diffuse color to channel bug regardless of monochromatics"
 msgstr ""
 
 msgctxt "#33112"

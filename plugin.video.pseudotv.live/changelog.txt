@@ -5,7 +5,8 @@ v.0.5.0
  
 -Added Seasonal channel cleanup.
 -Added Youtube duration detection *Requires Youtube_DL.
--Improved MP4 duration detection.
+-Added Third-Party duration parsing via external python libraries (Hachoir,MediaInfo,FFProbe,MoviePY,OpenCV).
+-Improved MP4 duration parsing.
 -Added iSpot Adverts support.
 -Finalized global fillers.
 -Fixed "On Next" global setting; limited notifications to content above 15mins and ignore fillers.

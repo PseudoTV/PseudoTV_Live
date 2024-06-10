@@ -299,8 +299,7 @@ class JSONRPC:
         if (runtime == 0 or accurate):
             duration = 0
             if isStack(path):# handle "stacked" videos
-                for file in splitStacks(path): 
-                    duration += self.parseDuration(file)
+                for file in splitStacks(path): duration += self.parseDuration(file)
             else: duration = self.parseDuration(path, item)
             if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
@@ -309,17 +308,9 @@ class JSONRPC:
 
     def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("parseDuration, path = %s, save = %s" % (path, save))
-        cacheCHK  = getMD5(path)
-        cacheName = 'parseDuration.%s'%(cacheCHK)
-        runtime   = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        duration  = self.cache.get(cacheName, checksum=cacheCHK, json_data=False)
-        if not duration:
-            try:
-                duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-                if duration > 0: self.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
-            except Exception as e:
-                log("parseDuration, failed! %s"%(e), xbmc.LOGERROR)
-                duration = 0
+        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        try:    duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
+        except: duration = 0
                 
         if not path.startswith(tuple(VFS_TYPES)):
             ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.

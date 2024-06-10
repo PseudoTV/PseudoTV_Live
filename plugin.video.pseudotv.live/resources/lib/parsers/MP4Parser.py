@@ -39,12 +39,12 @@ class MP4Parser:
         self.MovieHeader = MP4MovieHeader()
 
 
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         log("MP4Parser: determineLength " + filename)
         try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("MP4Parser: Unable to open the file")
-            return
+            return 0
             
         dur = self.readHeader()
         if not dur:

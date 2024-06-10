@@ -46,15 +46,13 @@ class FLVTagHeader:
 
 
 class FLVParser:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         log("FLVParser: determineLength " + filename)
 
-        try:
-            # self.File = xbmcvfs.File(filename, "r")
-            self.File = FileAccess.open(filename, "rb", None)
+        try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("FLVParser: Unable to open the file")
-            return
+            return 0
 
         if self.verifyFLV() == False:
             log("FLVParser: Not a valid FLV")

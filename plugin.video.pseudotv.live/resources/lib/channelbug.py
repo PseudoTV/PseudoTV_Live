@@ -36,6 +36,7 @@ class ChannelBug(xbmcgui.WindowXML):
     userPOSX, userPOSY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (self.posx, self.posy))
     
     def __init__(self, *args, **kwargs):
+        self.log('__init__')
         self.posx, self.posy = (1556, 920)
         if BUILTIN.getInfoBool('Playing','Player'):
             BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
@@ -57,6 +58,7 @@ class ChannelBug(xbmcgui.WindowXML):
 
 
     def save(self):
+        self.log('save')
         if (self.posx != self.userPOSX or self.posy != self.userPOSY):
             if DIALOG.yesnoDialog(LANGUAGE(32096)%(self.posx, self.posy)):
                 self.log('save, channelbug posx,posy = (%s,%s)'%(self.posx, self.posy))

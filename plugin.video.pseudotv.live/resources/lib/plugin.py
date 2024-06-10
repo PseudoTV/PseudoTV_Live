@@ -27,11 +27,9 @@ class Plugin:
     @contextmanager
     def preparingPlayback(self):
         if self.playCheck(loadJSON(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID)))):
-            PROPERTIES.setEXTProperty('PseudoTVRunning','True')
             self.preparingPlayback = True
             try: yield
             finally:
-                PROPERTIES.setEXTProperty('PseudoTVRunning','False')
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(self.sysInfo))
                 self.preparingPlayback = False
         else:
@@ -45,7 +43,7 @@ class Plugin:
         self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
         self.nowTime    = getUTCstamp()
-
+        
         try:    self.sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         except: self.sysInfo = {}
         
@@ -78,16 +76,16 @@ class Plugin:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def playVOD(self, title, vid):
-        with self.preparingPlayback():
+    def playVOD(self, title: str, vid: str):
+        with self.preparingPlayback(), legacy():
             self.log('playVOD, title = %s, vid = %s'%(title,vid))
             liz = xbmcgui.ListItem(title,path=vid)
             liz.setProperty("IsPlayable","true")
             self.resolveURL(True, liz)
 
 
-    def playLive(self, name, chid, vid):
-        with self.preparingPlayback():
+    def playLive(self, name: str, chid: str, vid: str):
+        with self.preparingPlayback(), legacy():
             self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             if round(self.sysInfo['seek']) <= self.seekTOL or round(self.sysInfo['progresspercentage']) > self.seekTHD:
                 self.sysInfo['seek'] = 0
@@ -109,8 +107,8 @@ class Plugin:
             self.resolveURL(True, liz)
 
 
-    def playBroadcast(self, name, chid, vid):
-        with self.preparingPlayback():
+    def playBroadcast(self, name: str, chid: str, vid: str):
+        with self.preparingPlayback(), legacy():
             self.log('playBroadcast, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
@@ -119,7 +117,7 @@ class Plugin:
             self.resolveURL(True, liz)
             
             
-    def playRadio(self, name, chid, vid):
+    def playRadio(self, name: str, chid: str, vid: str):
         self.log('playRadio, id = %s'%(chid))
         with busy_dialog(), suspendActivity():
             jsonRPC = JSONRPC(self.cache)
@@ -138,12 +136,12 @@ class Plugin:
             self.resolveURL(False, xbmcgui.ListItem())
     
         
-    def playTV(self, name, chid):
+    def playTV(self, name: str, chid: str):
         self.log('playTV, id = %s'%(chid))
         DIALOG.okDialog("Error! Outdated M3U/XMLTV detected!\nPlease open %s settings, Misc. Utility Menu and select %s."%(ADDON_NAME,LANGUAGE(32117)))
 
 
-    def playPlaylist(self, name, chid):
+    def playPlaylist(self, name: str, chid: str):
         self.log('playPlaylist, id = %s'%(chid))
         listitems = self.getPVRItems(name, chid)
         if listitems:
@@ -161,7 +159,7 @@ class Plugin:
             PLAYER.play(channelPlaylist,windowed=True)
         
         
-    def getPVRItems(self, name, chid):
+    def getPVRItems(self, name: str, chid: str) -> list:
         self.log('getPVRItems, id = %s'%(chid))
         def buildfItem(item={}, media='video'):
             return LISTITEMS.buildItemListItem(decodePlot(item.get('plot','')), media)
@@ -221,7 +219,7 @@ class Plugin:
     
     @timeit
     @cacheit(expiration=datetime.timedelta(seconds=15),json_data=True)
-    def matchChannel(self, chname, id, radio=False, isPlaylist=False):
+    def matchChannel(self, chname: str, id: str, radio: bool=False, isPlaylist: bool=False) -> str:
         self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def getCallback(chname, id, radio=False, isPlaylist=False):
             self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
@@ -255,7 +253,7 @@ class Plugin:
                             self.log('matchChannel, id = %s, found pvritem = %s'%(id,channel))
                             return channel
         
-        def _extend(pvritem):
+        def _extend(pvritem: dict={}) -> dict:
             channelItem = {}
             def _parseBroadcast(broadcast={}):
                 if broadcast.get('progresspercentage',0) == 100:
@@ -278,7 +276,7 @@ class Plugin:
             pvritem = _match()
             if not pvritem: return self.playError()
             self.sysInfo['isPlaylist'] = isPlaylist
-            self.sysInfo['callback'] = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
+            self.sysInfo['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
             pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
             if isPlaylist and not radio: pvritem = _extend(pvritem)
             cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
@@ -286,12 +284,11 @@ class Plugin:
         return cacheResponse
 
 
-    def playCheck(self, oldInfo={}):
+    def playCheck(self, oldInfo: dict={}) -> bool:
         #check that resource or plugin installed?
         self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
         def _chkPath():
-            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES+["special://"])):
-                if hasAddon(self.sysInfo.get('vid',''),install=True,enable=True): return True
+            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''),install=True,enable=True)
             elif FileAccess.exists(self.sysInfo.get('vid','')): return True
             else:
                 self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))

@@ -29,7 +29,7 @@ class Predefined:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
         
-    def getParams(self):
+    def getParams(self) -> dict:
         params = {}
         params["order"] = {"direction"        :"ascending",
                            "method"           :"random",
@@ -38,26 +38,26 @@ class Predefined:
         return params.copy()
 
         
-    def createRECOMMENDED(self, type):
+    def createRECOMMENDED(self, type: str) -> list:
         return []
         
     
-    def createPVRRecordings(self):
+    def createPVRRecordings(self) -> list:
         return ['pvr://recordings/tv/active/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
-    def createMixedRecent(self):
+    def createMixedRecent(self) -> list:
         param = self.getParams()
         param["order"]["method"] = "episode"
         return ['videodb://recentlyaddedepisodes/?xsp=%s'%(dumpJSON(param)),
                 'videodb://recentlyaddedmovies/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
-    def createMusicRecent(self):
+    def createMusicRecent(self) -> list:
         return ['musicdb://recentlyaddedalbums/?xsp=%s'%(dumpJSON(self.getParams()))]
         
         
-    def createNetworkPlaylist(self, network, method='episode'):
+    def createNetworkPlaylist(self, network: str, method: str='episode') -> list:
         param = self.getParams()
         param["type"] = "episodes"
         param["order"]["method"] = method
@@ -65,7 +65,7 @@ class Predefined:
         return ['videodb://tvshows/studios/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createShowPlaylist(self, show, method='episode'):
+    def createShowPlaylist(self, show: str, method: str='episode') -> list:
         param = self.getParams()
         param["type"] = "episodes"
         param["order"]["method"] = method
@@ -78,7 +78,7 @@ class Predefined:
         return ['videodb://tvshows/titles/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createTVGenrePlaylist(self, genre, method='episode'):
+    def createTVGenrePlaylist(self, genre: str, method: str='episode') -> list:
         param = self.getParams()
         param["type"] = "episodes"
         param["order"]["method"] = method
@@ -86,7 +86,7 @@ class Predefined:
         return ['videodb://tvshows/genres/-1/-1/-1/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createMovieGenrePlaylist(self, genre, method='year'):
+    def createMovieGenrePlaylist(self, genre: str, method: str='year') -> list:
         param = self.getParams()
         param["type"] = "movies"
         param["order"]["method"] = method
@@ -94,7 +94,7 @@ class Predefined:
         return ['videodb://movies/genres/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createStudioPlaylist(self, studio, method='random'):
+    def createStudioPlaylist(self, studio: str, method: str='random') -> list:
         param = self.getParams()
         param["type"] = "movies"
         param["order"]["method"] = method
@@ -102,7 +102,7 @@ class Predefined:
         return ['videodb://movies/studios/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createMusicGenrePlaylist(self, genre, method='random'):
+    def createMusicGenrePlaylist(self, genre: str, method: str='random') -> list:
         param = self.getParams()
         param["type"] = "music"
         param["order"]["method"] = method
@@ -110,16 +110,16 @@ class Predefined:
         return ['musicdb://songs/?xsp=%s'%(dumpJSON(param))]
 
 
-    def createGenreMixedPlaylist(self, genre):
+    def createGenreMixedPlaylist(self, genre: str) -> list:
         mixed = self.createTVGenrePlaylist(genre)
         mixed.extend(self.createMovieGenrePlaylist(genre))
         return mixed
         
         
-    def createSeasonal(self):
+    def createSeasonal(self) -> list:
         #todo fix seasons. 
         return ["{Seasonal}"]
         
         
-    def createProvisional(self, value):
+    def createProvisional(self, value: str) -> list:
         return ["{%s}"%(value)]

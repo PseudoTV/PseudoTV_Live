@@ -32,13 +32,13 @@ class NFOParser:
     ##  </fileinfo>
     ##</episodedetails>
     
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         duration = 0
         fleName, fleExt = os.path.splitext(filename)
         fleName += '.nfo'
         if not FileAccess.exists(fleName):
             log("NFOParser: Unable to locate NFO %s"%(fleName), xbmc.LOGERROR)
-            return duration
+            return 0
             
         log("NFOParser: determineLength, file = %s, nfo = %s"%(filename,fleName))
         try:

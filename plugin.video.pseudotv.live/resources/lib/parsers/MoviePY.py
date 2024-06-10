@@ -19,7 +19,7 @@
 from globals    import *
 
 class MoviePY:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         try:
             from moviepy.editor import VideoFileClip
             log("MoviePY: determineLength %s"%(filename))

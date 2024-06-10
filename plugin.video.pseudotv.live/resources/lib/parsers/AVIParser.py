@@ -109,11 +109,10 @@ class AVIParser:
         self.StreamHeader = AVIStreamHeader()
 
 
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         log("AVIParser: determineLength " + filename)
 
-        try:
-            self.File = FileAccess.open(filename, "rb", None)
+        try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("AVIParser: Unable to open the file")
             return 0

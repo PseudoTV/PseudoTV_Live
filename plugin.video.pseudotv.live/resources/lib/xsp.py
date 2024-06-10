@@ -30,22 +30,22 @@ class XSP:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
     
     
-    def isNode(self, path):
+    def isNode(self, path: str) -> bool:
         if path.lower().endswith('.xml'): return True
         return False
     
 
-    def isXSP(self, path):
+    def isXSP(self, path: str) -> bool:
         if path.lower().endswith('.xsp'): return True
         return False
         
     
-    def isDXSP(self, path):
+    def isDXSP(self, path: str) -> bool:
         if '?xsp=' in path.lower(): return True
         return False
         
         
-    def getName(self, fle):
+    def getName(self, fle: str) -> str:
         try:
             name = ''
             key  = 'name'
@@ -61,7 +61,7 @@ class XSP:
         return name
 
 
-    def findXSP(self, name):
+    def findXSP(self, name: str) -> str:
         self.log("findXSP, name = %s"%(name))
         library   = Library()
         playlists = library.getPlaylists()
@@ -73,7 +73,7 @@ class XSP:
         return ""
         
 
-    def parseXSP(self, file):
+    def parseXSP(self, file: str):
         self.log("parseXSP, file = %s"%(file))
         type   = ''
         media  = 'video'
@@ -106,7 +106,7 @@ class XSP:
         return paths, media, sort, filter, limit
 
 
-    def parseDXSP(self, path):
+    def parseDXSP(self, path: str):
         media  = 'video'
         sort   = {}
         filter = {}

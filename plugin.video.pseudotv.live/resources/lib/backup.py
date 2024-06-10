@@ -33,7 +33,7 @@ class Backup:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def getFileDate(self, file):
+    def getFileDate(self, file: str) -> str:
         try:
             fname = pathlib.Path(xbmcvfs.translatePath(file))
             mtime = datetime.datetime.fromtimestamp(fname.stat().st_mtime)
@@ -44,7 +44,7 @@ class Backup:
             return LANGUAGE(32105) #Unknown
         
         
-    def hasBackup(self, file=CHANNELFLE_BACKUP):
+    def hasBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
         with busy_dialog():
             self.log('hasBackup')
             if FileAccess.exists(file):
@@ -62,12 +62,12 @@ class Backup:
             return False
             
             
-    def getChannels(self, file=CHANNELFLE_BACKUP):
+    def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
         self.log('getChannels')
         return Channels()._load(file).get('channels',[])
         
         
-    def backupChannels(self, file=CHANNELFLE_BACKUP):
+    def backupChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
         self.log('backupChannels')
         if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
         elif FileAccess.exists(file):
@@ -84,7 +84,7 @@ class Backup:
         return self.hasBackup()
         
         
-    def recoverChannels(self, file=CHANNELFLE_BACKUP):
+    def recoverChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
         self.log('recoverChannels, file = %s'%(file))
         if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
         elif not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
@@ -94,7 +94,7 @@ class Backup:
         return True
         
         
-    def recoverChannelsFromBackup(self, file=CHANNELFLE_BACKUP):
+    def recoverChannelsFromBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
         FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_RESTORE) #flex/temp backup existing channels prior to recover channels.
         channels    = Channels()
         newChannels = self.getChannels()

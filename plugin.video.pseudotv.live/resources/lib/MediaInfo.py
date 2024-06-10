@@ -19,7 +19,7 @@
 from globals    import *
 
 class MediaInfo:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         try:
             from pymediainfo import MediaInfo
             log("MediaInfo: determineLength %s"%(filename))

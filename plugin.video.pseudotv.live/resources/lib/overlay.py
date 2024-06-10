@@ -34,7 +34,6 @@ from resources import Resources
 # self.videoOverlay.setHeight(0)
 # self.videoOverlay.setWidth(0)
 # xbmcgui.unlock()
-
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
@@ -54,10 +53,10 @@ class Overlay():
     showingOverlay = False
     controlManager = dict()
     
-    def __init__(self, jsonRPC, player, runActions):
-        self.jsonRPC    = jsonRPC
-        self.player     = player
-        self.runActions = runActions
+    def __init__(self, jsonRPC, player=None, runActions=None):
+        self.jsonRPC      = jsonRPC
+        self.player       = player
+        self.runActions   = runActions
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
@@ -66,8 +65,9 @@ class Overlay():
         
         #init controls
         self._channelBugX, self._channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
-        self._channelBug = xbmcgui.ControlImage(self._channelBugX, self._channelBugY, 128, 128, 'None', aspectRatio=2)
+        self._channelBug = xbmcgui.ControlImage(self._channelBugX, self._channelBugY, 128, 128, 'None', aspectRatio=2)        
         self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
+        self._background = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
         
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
@@ -122,21 +122,21 @@ class Overlay():
         except Exception as e: self.log('_removeControl failed! %s'%(e), xbmc.LOGERROR)
         
         
-    def setText(self, control, text):
+    def setText(self, control, text: str):
         try: 
             if self._hasControl(control):
                 control.setText(text)
         except Exception as e: self.log('setText failed! %s'%(e), xbmc.LOGERROR)
         
         
-    def setImage(self, control, image, cache=False):
+    def setImage(self, control, image: str, cache: bool=False):
         try: 
             if self._hasControl(control):
                 control.setImage(image, useCache=cache)
         except Exception as e: self.log('setImage failed! %s'%(e), xbmc.LOGERROR)
         
         
-    def setVisible(self, control, state):
+    def setVisible(self, control, state: bool=False):
         try:
             if self._hasControl(control):
                 self._setControl(control,state)
@@ -149,8 +149,8 @@ class Overlay():
     def isVisible(self, control):
         try:    return control.isVisible()
         except: return (self._getControl(control) or False)
+    
         
-
     def open(self):
         self.log('open')
         if not self.player.isPseudoTV: 
@@ -164,7 +164,8 @@ class Overlay():
         
         self.toggleBug()
         self.toggleOnNext()
-        
+        self.toggleBackground()
+            
             
     def close(self):
         self.log('close')
@@ -194,12 +195,22 @@ class Overlay():
             self._channelBugThread.cancel()
             self._channelBugThread.join()
 
-
-    def toggleBug(self, state=True):
+        
+    def toggleBackground(self, state: bool=True):
+        self.log('toggleBackground, state = %s'%(state))
+        if state and not self._hasControl(self._background):
+            self._addControl(self._background)
+            self._background.setVisibleCondition('[!Player.Playing]', True)
+            self.setVisible(self._background,True)
+        else:
+            self.setVisible(self._background,False)
+        
+        
+    def toggleBug(self, state: bool=True):
         def getWait(state):
             _channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
             if _channelBugInterval == -1: 
-                onVAL  = self.player.getTimeRemaining()
+                onVAL  = self.player.getTimeLabel('TimeRemaining')
                 offVAL = 0.1
             elif _channelBugInterval == 0:
                 onVAL  = random.randint(300,900)
@@ -228,7 +239,7 @@ class Overlay():
             if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPES:
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
-                    self._channelBug.setEnableCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
+                    self._channelBug.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
 
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
@@ -239,13 +250,13 @@ class Overlay():
                     if resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
                     del resources
                 
-                self.setVisible(self._channelBug,True)
                 self.setImage(self._channelBug,logo)
+                self.setVisible(self._channelBug,True)
                 self._channelBug.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=2000 delay=500 condition=True reversible=False'),
                                                 ('Conditional', 'effect=fade start=100 end=25 time=1000 delay=2000 condition=True reversible=False')])
             else: 
-                self.setImage(self._channelBug,'None')
                 self.setVisible(self._channelBug,False)
+                self.setImage(self._channelBug,'None')
                 
             self.log('toggleBug, state %s wait %s to new state %s'%(state,wait,nstate))
             self._channelBugThread = Timer(wait, self.toggleBug, [nstate])
@@ -255,11 +266,11 @@ class Overlay():
         except Exception as e: self.log("toggleBug, failed! %s"%(e), xbmc.LOGERROR)
           
           
-    def toggleOnNext(self, state=True):
+    def toggleOnNext(self, state: bool=True):
         def getOnNextInterval(interval=3):
             #split totalTime time into quarters, last quarter trigger nextup split by equal intervals of 3. 
             totalTime  = int(int(self.player.getPlayerTime()))
-            remaining  = floor(self.player.getTimeRemaining())
+            remaining  = floor(self.player.getTimeLabel('TimeRemaining'))
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
             showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPES
@@ -282,7 +293,7 @@ class Overlay():
                 citem = self.player.sysInfo.get('citem',{})
                 if not self._hasControl(self._onNext):
                     self._addControl(self._onNext)
-                    self._channelBug.setEnableCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
+                    self._onNext.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
                              
                 citem = self.player.sysInfo.get('citem',{})
                 fitem = self.player.sysInfo.get('fitem',{})
@@ -312,7 +323,7 @@ class Overlay():
         except Exception as e: self.log("toggleOnNext, failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def updateUpNext(self, nowItem={}, nextItem={}):
+    def updateUpNext(self, nowItem: dict={}, nextItem: dict={}):
         self.log('updateUpNext')
         try:
             # https://github.com/im85288/service.upnext/wiki/Example-source-code

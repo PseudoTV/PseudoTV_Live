@@ -55,16 +55,29 @@ PROPERTIES          = DIALOG.properties
 SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
+@contextmanager
+def legacy():
+    if not getLegacy():
+        setLegacy(True)
+        try: yield
+        finally:
+            setLegacy(False)
+
+def setLegacy(state=True):
+    PROPERTIES.setEXTProperty('PseudoTVRunning',str(state).lower() == "true")
+
+def getLegacy():
+    return PROPERTIES.getEXTProperty('PseudoTVRunning') == 'True'
 
 @contextmanager
 def setRunning(key):
-    PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID,key),'true')
+    PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
     try: yield
     finally:
-        PROPERTIES.setEXTProperty('%s.%s'%(ADDON_ID,key),'false')
+        PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
 
 def isRunning(key):
-    return PROPERTIES.getEXTProperty('%s.%s'%(ADDON_ID,key)) == 'true'
+    return PROPERTIES.getEXTProperty('%s.Running.%s'%(ADDON_ID,key)) == 'true'
 
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
@@ -120,11 +133,9 @@ def decodeString(base64_bytes):
     except:
         return ''
         
-def decodePlot(text):
-    if isinstance(text,list): text = text[0]
-    if isinstance(text, str):
-        plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
-        if plot: return loadJSON(decodeString(plot.group(1)))
+def decodePlot(text: str = '') -> dict:
+    plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
+    if plot: return loadJSON(decodeString(plot.group(1)))
     return {}
     
 def encodePlot(plot, text):
@@ -363,15 +374,8 @@ def distribute(*seq):
         except StopIteration:
             iters.remove(it)
 
-def isStack(path,file=None): #is path a stack
-    if file is not None: 
-        return path.startswith('stack://%s'%(file))
-    else:
-        return path.startswith('stack://')
-
-def hasStack(path,file=None): #does path has stack paths, return paths
-    if isStack(path,file): 
-        return splitStacks(path)
+def isStack(path): #is path a stack
+    return path.startswith('stack://')
 
 def splitStacks(path): #split stack path for indv. files.
     if not isStack(path): return [path]
@@ -502,6 +506,7 @@ def setFirstrun(state=True):
 def isClient(silent=True):
     Client_Mode = SETTINGS.getSettingInt('Client_Mode')
     state = Client_Mode > 0
+    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
     PROPERTIES.setEXTProperty('%s.Client_Mode'%(ADDON_ID),str(Client_Mode))
     if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
     return state
@@ -600,7 +605,7 @@ def cleanMPAA(mpaa):
 
 def timeString2Seconds(string): #hh:mm:ss
     try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
-    except: return 0
+    except: return -1
 
 def getIDbyPath(path):
     if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path)

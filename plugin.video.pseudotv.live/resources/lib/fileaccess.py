@@ -76,6 +76,9 @@ class FileAccess:
         
     @staticmethod
     def exists(filename):
+        if filename.startswith('stack://'):
+            try:    filename = (filename.split('stack://')[1].split(' , '))[0]
+            except: pass
         try:
             return xbmcvfs.exists(filename)
         except UnicodeDecodeError:

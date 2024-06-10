@@ -19,7 +19,7 @@
 from globals    import *
 
 class YTParser:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         try:
             if hasAddon('script.module.youtube.dl'):
                 from youtube_dl import YoutubeDL

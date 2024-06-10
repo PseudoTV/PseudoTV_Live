@@ -114,7 +114,7 @@ class Utilities:
         except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
    
    
-    def openChannelManager(self, chnum=-1):
+    def openChannelManager(self, chnum: int=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not isRunning('MANAGER_RUNNING'):
             with setRunning('MANAGER_RUNNING'), suspendActivity():
@@ -145,7 +145,7 @@ class Utilities:
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                        , 'hide':False},    #"Force PTVL reload"
                  {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)          , 'hide':False},    #"Show M3U"
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)        , 'hide':False},    #"Show XMLTV"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary                                         , 'hide':True},    #Rescan library
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary                                         , 'hide':True},     #Rescan library
                  ]            
 
         with busy_dialog():
@@ -169,7 +169,7 @@ class Utilities:
                 
 
 
-    def deleteFiles(self, msg, full=False):
+    def deleteFiles(self, msg, full: bool=False):
         self.log('deleteFiles, full = %s'%(full))
         files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
                  LANGUAGE(30095):XMLTVFLEPATH,  #"XMLTV"

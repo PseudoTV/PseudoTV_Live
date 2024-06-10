@@ -508,7 +508,8 @@ class Manager(xbmcgui.WindowXMLDialog):
             valid = False
             dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
             with busy_dialog():
-                items = self.jsonRPC.walkFileDirectory(path, 'music' if isRadio({'path':[path]}) else 'video', retItem=True)
+                media = 'music' if isRadio({'path':[path]}) else 'video'
+                items = self.jsonRPC.walkFileDirectory(path, media, depth=CHANNEL_LIMIT, retItem=True)
             
             attempts = 3
             for dir in items:

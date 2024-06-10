@@ -72,7 +72,8 @@ GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', '
 VFS_TYPES           = ["plugin://",
                        "pvr://",
                        "upnp://",
-                       "resource://"]
+                       "resource://",
+                       "special://home/addons/resource"]
                        
 TV_TYPES            = ['episode',
                        'episodes',
@@ -156,7 +157,7 @@ PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
 
 #images
 LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
-COLOR_LOGO          = os.path.join(ADDON_PATH,'resources','skins','default','media','logo.png')
+COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
 
 #rules

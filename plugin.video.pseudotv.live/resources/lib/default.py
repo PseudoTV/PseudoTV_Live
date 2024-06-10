@@ -23,13 +23,12 @@ from plugin    import Plugin
 
 def run(sysARG):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
-    
-    mode  = (params.get("mode",'')                 or 'guide')
-    name  = (unquoteString(params.get("name",''))  or None)
-    title = (unquoteString(params.get("title",'')) or None)
-    chid  = (params.get("chid",'')                 or None)
-    vid   = decodeString(params.get("vid",'')      or None)
-    radio = (params.get("radio",'')                or 'False').lower() == "true"
+    mode   = (params.get("mode",'')                 or 'guide')
+    name   = (unquoteString(params.get("name",''))  or None)
+    title  = (unquoteString(params.get("title",'')) or None)
+    chid   = (params.get("chid",'')                 or None)
+    vid    = decodeString(params.get("vid",'')      or None)
+    radio  = (params.get("radio",'')                or 'False').lower() == "true"
     log("Default: run, params = %s"%(params))
 
     if mode == 'guide':
@@ -37,22 +36,15 @@ def run(sysARG):
         BUILTIN.executebuiltin("Dialog.Close(all)") 
         BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
     elif mode == 'settings': 
-        hasAddon(PVR_CLIENT_ID,install=True,enable=True)
-        SETTINGS.openSettings()
+        if hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
     elif chid and not vid:
         return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
-    elif mode == 'vod': 
-        threadit(Plugin(sysARG).playVOD)(title,vid)
+    elif mode == 'vod':                                     threadit(Plugin(sysARG).playVOD)(title,vid)
     elif mode == 'live':
-        if bool(SETTINGS.getSettingInt('Playback_Method')):
-            threadit(Plugin(sysARG).playPlaylist)(name,chid)
-        else:
-            threadit(Plugin(sysARG).playLive)(name,chid,vid)
-    elif mode == 'broadcast': 
-        threadit(Plugin(sysARG).playBroadcast)(name,chid,vid)
-    elif mode == 'radio':
-        threadit(Plugin(sysARG).playRadio)(name,chid,vid)
-    elif mode == 'tv':
-        threadit(Plugin(sysARG).playTV)(name,chid)
+        if bool(SETTINGS.getSettingInt('Playback_Method')): threadit(Plugin(sysARG).playPlaylist)(name,chid)
+        else:                                               threadit(Plugin(sysARG).playLive)(name,chid,vid)
+    elif mode == 'broadcast':                               threadit(Plugin(sysARG).playBroadcast)(name,chid,vid)
+    elif mode == 'radio':                                   threadit(Plugin(sysARG).playRadio)(name,chid,vid)
+    elif mode == 'tv':                                      threadit(Plugin(sysARG).playTV)(name,chid)
 
 if __name__ == '__main__': run(sys.argv)

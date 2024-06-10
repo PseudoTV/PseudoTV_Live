@@ -59,7 +59,9 @@ class Tasks():
             try:
                 func, args, kwargs = package
                 self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                executeit(func)(*args,**kwargs)
+                if not isRunning(func.__name__):
+                    with setRunning(func.__name__):
+                        executeit(func)(*args,**kwargs)
             except Exception as e:
                 self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
         except Empty: self.log("_queue, empty!")
@@ -87,6 +89,7 @@ class Tasks():
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=60):
             self._que(self._chkQueTimer)
+        self._queue()
         
         
     def _chkQueTimer(self, client = isClient()):

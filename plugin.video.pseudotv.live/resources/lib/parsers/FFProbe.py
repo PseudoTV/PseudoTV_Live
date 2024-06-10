@@ -19,7 +19,7 @@
 from globals    import *
 
 class FFProbe:
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float :
         try:
             import ffmpeg
             log("FFProbe: determineLength %s"%(filename))

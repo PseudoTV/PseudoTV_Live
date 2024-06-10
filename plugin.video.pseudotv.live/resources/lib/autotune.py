@@ -36,21 +36,21 @@ class Autotune:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getCustom(self):
+    def getCustom(self) -> dict:
         #return autotuned channels ie. channels > CHANNEL_LIMIT
         channels = self.channels.getCustom()
         self.log('getCustom, channels = %s'%(len(channels)))
         return channels
 
 
-    def getAutotuned(self):
+    def getAutotuned(self) -> dict:
         #return autotuned channels ie. channels > CHANNEL_LIMIT
         channels = self.channels.getAutotuned()
         self.log('getAutotuned, channels = %s'%(len(channels)))
         return channels
 
 
-    def _runTune(self, samples=False, rebuild=False, dia=None):
+    def _runTune(self, samples: bool=False, rebuild: bool=False, dia=None):
         if not hasAutotuned() and not isClient():
             setAutotuned()
             customChannels = self.getCustom()
@@ -85,7 +85,7 @@ class Autotune:
                 self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
 
 
-    def selectAUTOTUNE(self, ATtype, autoSelect=False, rebuildChannels=False):
+    def selectAUTOTUNE(self, ATtype: str, autoSelect: bool=False, rebuildChannels: bool=False):
         self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))
         def _build(item):
             return LISTITEMS.buildMenuListItem(item['name'],item['type'],item['logo'])
@@ -123,8 +123,8 @@ class Autotune:
         return self.buildAUTOTUNE(ATtype, self.library.getEnabled(ATtype))
         
         
-    def buildAUTOTUNE(self, ATtype, items):
-        if not items: return
+    def buildAUTOTUNE(self, ATtype: str, items: list=[]):
+        if not list: return
         def buildAvailableRange(existing):
             # create number array for given type, excluding existing channel numbers.
             if existing:

@@ -32,16 +32,14 @@ class TSParser:
     def __init__(self):
         pass
 
-    def determineLength(self, filename):
+    def determineLength(self, filename: str) -> int and float:
         log("TSParser: determineLength " + filename)
         self.pid = -1
 
-        try:
-            # self.File = xbmcvfs.File(filename, "r")
-            self.File = FileAccess.open(filename, "rb", None)
+        try: self.File = FileAccess.open(filename, "rb", None)
         except:
             log("TSParser: Unable to open the file")
-            return
+            return 0
 
         self.filesize = self.getFileSize()
         self.packetLength = self.findPacketLength()

@@ -36,7 +36,7 @@ class Resources:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def getLogo(self, chname, type="Custom", logo=None):
+    def getLogo(self, chname: str, type: str="Custom", logo=None) -> str:
         if not logo: logo = self.getLocalLogo(chname)              #local
         if not logo: logo = self.getLogoResources(chname, type)    #resource
         if not logo: logo = self.getTVShowLogo(chname)             #tvshow 
@@ -45,7 +45,7 @@ class Resources:
         return logo
         
         
-    def selectLogo(self, chname, type="Custom"):
+    def selectLogo(self, chname: str, type: str="Custom") -> list:
         logos = []
         logos.extend(self.getLocalLogo(chname,select=True))
         logos.extend(self.getLogoResources(chname,type,select=True))
@@ -54,7 +54,7 @@ class Resources:
         return list([_f for _f in logos if _f])
 
 
-    def getLocalLogo(self, chname, select=False):
+    def getLocalLogo(self, chname: str, select: bool=False) -> list:
         logos = []
         for path in LOCAL_RESOURCES:
             for ext in IMG_EXTS:
@@ -64,7 +64,7 @@ class Resources:
         if select: return logos
         
     
-    def getLogoResources(self, chname, type, select=False):
+    def getLogoResources(self, chname: str, type: str, select: bool=False) -> dict and None:
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
         if type in ["TV Genres","Movie Genres"]:
@@ -105,7 +105,7 @@ class Resources:
         return cacheResponse
         
         
-    def getTVShowLogo(self, chname):
+    def getTVShowLogo(self, chname: str) -> dict and None:
         self.log('getTVShowLogo, chname = %s'%(chname))
         cacheName = 'getTVShowLogo.%s'%(getMD5(chname))
         cacheResponse = self.cache.get(cacheName)
@@ -122,20 +122,20 @@ class Resources:
         return cacheResponse
         
         
-    def matchName(self, chname, name, type='Custom'):
+    def matchName(self, chname: str, name: str, type: str='Custom') -> bool and None:
         patterns = list(set([chname, getChannelSuffix(chname,type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(chname)[0], slugify(chname), slugify(stripRegion(chname))]))
         for pattern in patterns:
             if name.lower() == pattern.lower():
                 return True
         
 
-    def buildWebImage(self, image):
+    def buildWebImage(self, image: str) -> str:
         if image.startswith(('resource://','special://','image://','http://')): return image
         # return '%s/image/%s'%(self.jsonRPC.buildWebBase(),'image://%s'%(quoteString(image))) #todo debug
         return image
             
             
-    def isMono(self, file):
+    def isMono(self, file: str) -> bool:
         if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True
         elif hasAddon('script.module.pil'):

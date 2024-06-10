@@ -21,13 +21,13 @@ from globals    import *
 from seasonal   import Seasonal 
 
 class Info:
-    def __init__(self, sysARG, fitem):
+    def __init__(self, sysARG: dict={}, fitem: dict={}):
         with busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
         DIALOG.infoDialog(LISTITEMS.buildItemListItem(fitem))
             
 class Browse:
-    def __init__(self, sysARG, fitem):
+    def __init__(self, sysARG: dict={}, fitem: dict={}):
         log('Browse: __init__, sysARG = %s'%(sysARG))
         with busy_dialog():
             media = '%ss'%(fitem.get('media','video'))
@@ -44,7 +44,7 @@ class Match:
     GLOBAL_SCRIPT  = 'script.globalsearch'
     SIMILAR_SCRIPT = 'script.embuary.helper'
 
-    def __init__(self, sysARG, fitem):
+    def __init__(self, sysARG: dict={}, fitem: dict={}):
         with busy_dialog():
             title  = BUILTIN.getInfoLabel('Title')
             name   = BUILTIN.getInfoLabel('EpisodeName')

@@ -21,11 +21,11 @@ from globals     import *
 from manager     import Manager
 
 class Create:
-    def __init__(self, sysARG, listitem):
+    def __init__(self, sysARG: dict, listitem: xbmcgui.ListItem=xbmcgui.ListItem()):
         log('Create: __init__, sysARG = %s'%(sysARG))
         if not listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
         with suspendActivity():
-            if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),listitem.getPath(),ADDON_NAME)):
+            if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),ADDON_NAME)):
                 if not isRunning('MANAGER_RUNNING'):
                     with setRunning('MANAGER_RUNNING'), busy_dialog():
                         manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", start=False)
@@ -35,7 +35,7 @@ class Create:
                         channelData['number']   = manager.getFirstAvailChannel()
                         channelData['radio']    = True if listitem.getPath().startswith('musicdb://') else False
                         channelData['name'], channelData   = manager.validateLabel(cleanLabel(listitem.getLabel()),channelData)
-                        path, channelData   = manager.validatePath(listitem.getPath(),channelData,spinner=False)
+                        path, channelData   = manager.validatePath(unquoteString(listitem.getPath()),channelData,spinner=False)
                         if path is None: return
                         channelData['path'] = [path.strip('/')] 
                         channelData['id'] = getChannelID(channelData['name'], channelData['path'], channelData['number'])

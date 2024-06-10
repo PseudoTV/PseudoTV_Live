@@ -70,38 +70,46 @@ class VideoParser:
         self.YTPaths   = ['plugin://plugin.video.youtube','plugin://plugin.video.tubed','plugin://plugin.video.invidious']
 
 
-    def getVideoLength(self, filename, fileitem={}, jsonRPC=None):
+    def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
         log("VideoParser: getVideoLength %s"%filename)
-        if not filename:
-            log("VideoParser: getVideoLength, no filename.")
-            return 0
-        elif filename.lower().startswith(tuple(self.VFSPaths)):
-            dur = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
-            if dur == 0 and filename.lower().startswith(tuple(self.YTPaths)):
-                dur = YTParser.YTParser().determineLength(filename)
-        else:
-            ext = os.path.splitext(filename)[1].lower()
-            if not FileAccess.exists(filename):
-                log("VideoParser: getVideoLength, Unable to find the file")
-                return 0
-            elif ext in self.AVIExts:
-                dur = AVIParser.AVIParser().determineLength(filename)
-            elif ext in self.MP4Exts:
-                dur = MP4Parser.MP4Parser().determineLength(filename)
-            elif ext in self.MKVExts:
-                dur = MKVParser.MKVParser().determineLength(filename)
-            elif ext in self.FLVExts:
-                dur = FLVParser.FLVParser().determineLength(filename)
-            elif ext in self.TSExts:
-                dur = TSParser.TSParser().determineLength(filename)
-            elif ext in self.STRMExts:
-                dur = NFOParser.NFOParser().determineLength(filename)
-            else: 
-                dur = 0
+        cacheCHK  = getMD5(path)
+        cacheName = 'parseDuration.%s'%(cacheCHK)
+        duration  = jsonRPC.cache.get(cacheName, checksum=cacheCHK, json_data=False)
+        
+        if not duration:
+            if not filename:
+                log("VideoParser: getVideoLength, no filename.")
+                duration = 0
+            elif filename.lower().startswith(tuple(self.VFSPaths)):
+                duration = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
+                if duration == 0 and filename.lower().startswith(tuple(self.YTPaths)):
+                    duration = YTParser.YTParser().determineLength(filename)
+            else:
+                ext = os.path.splitext(filename)[1].lower()
+                if not FileAccess.exists(filename):
+                    log("VideoParser: getVideoLength, Unable to find the file")
+                    duration = 0
+                elif ext in self.AVIExts:
+                    duration = AVIParser.AVIParser().determineLength(filename)
+                elif ext in self.MP4Exts:
+                    duration = MP4Parser.MP4Parser().determineLength(filename)
+                elif ext in self.MKVExts:
+                    duration = MKVParser.MKVParser().determineLength(filename)
+                elif ext in self.FLVExts:
+                    duration = FLVParser.FLVParser().determineLength(filename)
+                elif ext in self.TSExts:
+                    duration = TSParser.TSParser().determineLength(filename)
+                elif ext in self.STRMExts:
+                    duration = NFOParser.NFOParser().determineLength(filename)
+                else: 
+                    duration = 0
 
-            if dur == 0:
-                for parser in EXTERNAL_PARSER:
-                    dur = parser().determineLength(filename)
-                    if MONITOR.waitForAbort(0.001) or dur > 0: break
-        log('VideoParser: getVideoLength, duration = %s'%(dur))
-        return dur
+                if duration == 0:
+                    for parser in EXTERNAL_PARSER:
+                        duration = parser().determineLength(filename)
+                        if MONITOR.waitForAbort(0.001) or duration > 0: break
+                        
+                if duration > 0: jsonRPC.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
+        
+        log('VideoParser: getVideoLength, duration = %s'%(duration))
+        return duration
