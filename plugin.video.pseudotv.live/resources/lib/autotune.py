@@ -29,9 +29,8 @@ class Autotune:
         self.sysARG   = sysARG 
         self.library  = Library(service)
         self.channels = Channels()
-        #todo allow autotune lists shared with client for configuration, list via filesharing... library.json
-
-
+        
+        
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 

@@ -245,6 +245,10 @@ class VFSFile:
         return self.currentFile.read().split('\n')
 
 
+    def readline(self):
+        return self.currentFile.read().split('\n')
+
+
     def tell(self):
         try:    return self.currentFile.tell()
         except: return self.currentFile.seek(0, 1)
@@ -293,18 +297,19 @@ class FileLock(object):
         """
         start_time = time.time()
         while not xbmc.Monitor().abortRequested():
-            try:
-                self.fd = FileAccess.open(self.lockfile, 'w')
-                self.is_locked = True #moved to ensure tag only when locked
-                break;
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
-                if self.timeout is None:
-                    raise FileLockException("Could not acquire lock on {}".format(self.file_name))
-                if (time.time() - start_time) >= self.timeout:
-                    raise FileLockException("Timeout occured.")
-                if xbmc.Monitor().waitForAbort(self.delay): break
+            if xbmc.Monitor().waitForAbort(self.delay): break
+            else:
+                try:
+                    self.fd = FileAccess.open(self.lockfile, 'w')
+                    self.is_locked = True #moved to ensure tag only when locked
+                    break;
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise
+                    if self.timeout is None:
+                        raise FileLockException("Could not acquire lock on {}".format(self.file_name))
+                    if (time.time() - start_time) >= self.timeout:
+                        raise FileLockException("Timeout occured.")
  
  
     def release(self):

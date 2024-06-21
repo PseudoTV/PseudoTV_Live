@@ -57,11 +57,9 @@ LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 @contextmanager
 def legacy():
-    if not getLegacy():
-        setLegacy(True)
-        try: yield
-        finally:
-            setLegacy(False)
+    setLegacy(True)
+    try: yield
+    finally: setLegacy(False)
 
 def setLegacy(state=True):
     PROPERTIES.setEXTProperty('PseudoTVRunning',str(state).lower() == "true")
@@ -73,8 +71,7 @@ def getLegacy():
 def setRunning(key):
     PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
     try: yield
-    finally:
-        PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
+    finally: PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
 
 def isRunning(key):
     return PROPERTIES.getEXTProperty('%s.Running.%s'%(ADDON_ID,key)) == 'true'
@@ -86,8 +83,7 @@ def suspendActivity(): #suspend/quit running background task.
         elif MONITOR.waitForAbort(0.001): break
     setPendingSuspend(True)
     try: yield
-    finally:
-        setPendingSuspend(False)
+    finally: setPendingSuspend(False)
 
 def isPendingSuspend():
     return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
@@ -479,15 +475,10 @@ def isPlaylistRepeat():
 
 def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
-    
-def isPendingRestart():
-    state = PROPERTIES.getPropertyBool('pendingRestart')
-    setPendingRestart(False)
-    return state
-    
+
 def setPendingRestart(state=True):
     if state: DIALOG.notificationWait(LANGUAGE(32124))
-    return PROPERTIES.setPropertyBool('pendingRestart',state)
+    return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
                            
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')

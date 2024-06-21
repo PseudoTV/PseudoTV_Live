@@ -304,7 +304,9 @@ If you want the exact channel numbers from PseudoTV Live to reflect onscreen, yo
   
 ------------
 
-# Plugin Integration.
+# Plugin Integration for Developers.
+It is recommend developers disable pagination on content and turn off listitems onscreen ui render when `xbmcgui.Window(10000).getProperty("PseudoTVRunning") == 'True'`.
+
 - PseudoTV Live features two integration methods. 
 
 1. "Recommend Services" Full m3u/xmltv import provide by [IPTV Manager](https://github.com/add-ons/service.iptv.manager). *see imports

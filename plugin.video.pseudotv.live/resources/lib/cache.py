@@ -45,10 +45,10 @@ class Cache:
             while not xbmc.Monitor().abortRequested():
                 if not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
                 elif xbmc.Monitor().waitForAbort(0.001): break
+                self.log('cacheLocker, waiting...')
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
-        try: yield
-        finally:
-            xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
+        try: yield self.log('cacheLocker, Locked? (%s)'%(xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID))))
+        finally: xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
 
 
     def __init__(self, mem_cache=False, is_json=False):

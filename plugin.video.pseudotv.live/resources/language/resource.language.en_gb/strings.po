@@ -218,7 +218,7 @@ msgid "Parse for Accurate Duration Meta"
 msgstr ""
 
 msgctxt "#30050"
-msgid "Prefer Kodi Library"
+msgid "Prefer Kodi Metadata"
 msgstr ""
 
 msgctxt "#30051"
@@ -1373,7 +1373,7 @@ msgid "Select from a list of discovered servers."
 msgstr ""
 
 msgctxt "#33049"
-msgid "Prefer Kodi Library - Use less accurate runtimes from metadata providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see readme for details."
+msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file's for accurate runtimes.\nCan impact system performance! *see readme for details."
 msgstr ""
 
 msgctxt "#33052"

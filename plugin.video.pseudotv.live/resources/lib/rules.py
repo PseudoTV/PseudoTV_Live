@@ -66,7 +66,7 @@ class RulesList:
         self.log('loadRules, channels = %s'%(len(channels)))
         tmpruleList = self.ruleList.copy()
         tmpruleList.pop(0) #remove boilerplate baseRule()
-        return dict(poolit(_loadRule)(channels, tmpruleList))
+        return dict([_loadRule(tmpruleList,channel) for channel in channels ])
       
       
     def allRules(self): #load all rules.
@@ -77,7 +77,7 @@ class RulesList:
         return ruleList
                
         
-    def runActions(self, action, citem={}, parameter=None, inherited=None):
+    def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
         for rule in self.chanRules.get(citem.get('id'),[]):

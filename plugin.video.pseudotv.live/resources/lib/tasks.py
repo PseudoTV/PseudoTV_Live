@@ -27,13 +27,13 @@ from multiroom  import Multiroom
 from manager    import Manager
 from server     import HTTP
 
+
 class Tasks():
     queue = PriorityQueue()
-    runningJSONQUE = False
     
     def __init__(self, jsonRPC=None):
         self.log('__init__')
-        self.jsonRPC = jsonRPC
+        self.jsonRPC   = jsonRPC
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -52,26 +52,29 @@ class Tasks():
             else: func()
         self.httpServer = HTTP(self.myService.monitor)
         
-    
+        
+    @timeit
     def _queue(self):
-        try:
-            priority, randomheap, package = self.queue.get(block=False)
-            try:
-                func, args, kwargs = package
-                self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                if not isRunning(func.__name__):
-                    with setRunning(func.__name__):
-                        executeit(func)(*args,**kwargs)
-            except Exception as e:
-                self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
-        except Empty: self.log("_queue, empty!")
+        if not isRunning('_queue'):
+            with setRunning('_queue'):
+                try:
+                    priority, randomheap, package = self.queue.get(block=False)
+                    try:
+                        func, args, kwargs = package
+                        self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
+                        if not isRunning(func.__name__):
+                            with setRunning(func.__name__):
+                                executeit(func)(*args,**kwargs)
+                    except Exception as e:
+                        self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
+                except Empty: self.log("_queue, empty!")
 
 
     def _que(self, func, priority=-1, *args, **kwargs):
         try:  # priority -1 autostack, 1 Highest, 5 Lowest
             if priority == -1: priority = self.queue.qsize() + 1
             self.queue.put((priority, random.random(), (func, args, kwargs)), block=False)
-            self.log('_que, func = %s, args = %s, kwargs = %s' % (func.__name__, args, kwargs))
+            self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
         except TypeError: pass
         except Exception as e:
             self.log("_que, failed! %s" % (e), xbmc.LOGERROR)
@@ -83,6 +86,7 @@ class Tasks():
 
 
     def chkHTTP(self):
+        self.log('chkHTTP')
         self.httpServer._start()
             
         
@@ -139,11 +143,11 @@ class Tasks():
                 with busy_dialog():
                     if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
                         DIALOG.notificationDialog(LANGUAGE(32152))
-                    else:
+                    else: 
                         DIALOG.notificationDialog(LANGUAGE(32046))
         
      
-    def chkUpdateTime(self, key, runEvery, nextUpdate=None):
+    def chkUpdateTime(self, key: str, runEvery: int, nextUpdate=None) -> bool:
         #schedule updates, first boot always forces run!
         if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
         epoch = int(time.time())
@@ -155,12 +159,12 @@ class Tasks():
 
     def chkPVRSettings(self):
         try:
-            with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
-                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
-                    SETTINGS.setSettingInt('Min_Days',min)
-                    
-                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
-                    SETTINGS.setSettingInt('Max_Days',max)
+            # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
+            if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
+                SETTINGS.setSettingInt('Min_Days',min)
+                
+            if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
+                SETTINGS.setSettingInt('Max_Days',max)
         except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
          
 
@@ -206,27 +210,22 @@ class Tasks():
 
 
     def chkJSONQUE(self):
-        if not self.runningJSONQUE:
-            threadit(self.runJSONQUE)
-
-
-    def runJSONQUE(self):
-        self.runningJSONQUE = True
-        queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
-        params = queuePool.get('params',[])
-        for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-            if self.myService._interrupt() or self.myService._suspend():
-                self.log('runJSONQUE, _interrupt or _suspend, cancelling.')
-                break
-            elif self.myService._playing():
-                self.log('runJSONQUE, playback detected, cancelling.')
-                break
-            elif len(params) > 0:
-                self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
-        queuePool['params'] = setDictLST(params)
-        self.log('runJSONQUE, remaining = %s'%(len(queuePool['params'])))
-        SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
-        self.runningJSONQUE = False
+        if not isRunning('chkJSONQUE'):
+            with setRunning('chkJSONQUE'):
+                queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
+                params = queuePool.get('params',[])
+                for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
+                    if self.myService._interrupt() or self.myService._suspend():
+                        self.log('chkJSONQUE, _interrupt or _suspend, cancelling.')
+                        break
+                    elif self.myService._playing():
+                        self.log('chkJSONQUE, playback detected, cancelling.')
+                        break
+                    elif len(params) > 0:
+                        self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
+                queuePool['params'] = setDictLST(params)
+                self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
+                SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
 
     def runAutoTune(self):
@@ -252,33 +251,33 @@ class Tasks():
 
     def chkChannelChange(self, channels=[]):
         if isClient(): return channels
-        with sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
-            nChannels = self.getChannels()
-            if channels != nChannels:
-                self.log('chkChannelChange, resetting chkChannels')
-                self._que(self.chkChannels,2)
-                return nChannels
-            return channels
+        # with sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
+        nChannels = self.getChannels()
+        if channels != nChannels:
+            self.log('chkChannelChange, resetting chkChannels')
+            self._que(self.chkChannels,2)
+            return nChannels
+        return channels
 
         
     def chkSettingsChange(self, settings=[]):
         self.log('chkSettingsChange')
-        with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
-            nSettings = dict(SETTINGS.getCurrentSettings())
-            for setting, value in list(settings.items()):
-                actions = {'User_Folder'    :{'func':self.setUserPath      ,'args':(value,nSettings.get(setting))},
-                           'Network_Folder' :{'func':SETTINGS.setPVRPath   ,'args':(value,nSettings.get(setting))},
-                           'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'args':(value,nSettings.get(setting))},
-                           'UDP_PORT'       :{'func':setPendingRestart},
-                           'TCP_PORT'       :{'func':setPendingRestart},
-                           'Client_Mode'    :{'func':setPendingRestart},
-                           'Disable_Cache'  :{'func':setPendingRestart}}
-                           
-                if nSettings.get(setting) != value and actions.get(setting):
-                    with sudo_dialog(LANGUAGE(32157)):
-                        self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                        self._que(actions[setting].get('func'),1,*actions[setting].get('args',()),**actions[setting].get('kwargs',{}))
-            return nSettings
+        # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
+        nSettings = dict(SETTINGS.getCurrentSettings())
+        for setting, value in list(settings.items()):
+            actions = {'User_Folder'    :{'func':self.setUserPath      ,'kwargs':{'userFolders':nSettings.get(setting)}},
+                       'Network_Folder' :{'func':SETTINGS.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
+                       'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
+                       'UDP_PORT'       :{'func':setPendingRestart},
+                       'TCP_PORT'       :{'func':setPendingRestart},
+                       'Client_Mode'    :{'func':setPendingRestart},
+                       'Disable_Cache'  :{'func':setPendingRestart}}
+                       
+            if nSettings.get(setting) != value and actions.get(setting):
+                # with sudo_dialog(LANGUAGE(32157)):
+                self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
+                self._que(actions[setting].get('func'),**actions[setting].get('kwargs',{}))
+        return nSettings
 
 
     def setUserPath(self, userFolders):

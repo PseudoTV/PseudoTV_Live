@@ -506,31 +506,23 @@ class Manager(xbmcgui.WindowXMLDialog):
         if isRadio({'path':[path]}) or isMixed({'path':[path]}): return True
         else:
             valid = False
+            media = 'music' if isRadio({'path':[path]}) else 'video'
             dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
             with busy_dialog():
-                media = 'music' if isRadio({'path':[path]}) else 'video'
-                items = self.jsonRPC.walkFileDirectory(path, media, depth=CHANNEL_LIMIT, retItem=True)
+                items = self.jsonRPC.walkFileDirectory(path, media, depth=3, retItem=True)
             
-            attempts = 3
-            for dir in items:
-                tries = 3
-                attempts -= 1
-                if MONITOR.waitForAbort(0.001) or attempts < 1: break
-                for idx, item in enumerate(items.get(dir,[])):
-                    dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',path,item.get('file','')))
-                    if MONITOR.waitForAbort(1) or tries < 1: break
-                    else:
-                        tries -= 1
-                        dur = self.jsonRPC.getDuration(item.get('file'), item, accurate=True)
-                        item.update({'duration':dur,'runtime':dur})
-                        if dur == 0: continue
-                        dia = DIALOG.progressDialog(int(((idx)*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking',path,item.get('file','')))
-                        if self.validateSeek(item, channelData):
-                            self.log('validateVFS, found playable and seek-able file %s'%(item.get('file')))
-                            valid = True
-                            break
-                            
-            closeBusyDialog()
+            for idx, dir in enumerate(items):
+                if MONITOR.waitForAbort(.001): break
+                else:
+                    item = random.choice(items.get(dir,[]))
+                    dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',dir,item.get('file','')))
+                    item.update({'duration':self.jsonRPC.getDuration(item.get('file'), item, accurate=True)})
+                    if item.get('duration',0) == 0: continue
+                    dia = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Seeking',dir,item.get('file','')))
+                    if self.validateSeek(item, channelData):
+                        self.log('validateVFS, found playable and seek-able file %s'%(item.get('file')))
+                        valid = True
+                        break
             DIALOG.progressDialog(100,control=dia)
             return valid
         

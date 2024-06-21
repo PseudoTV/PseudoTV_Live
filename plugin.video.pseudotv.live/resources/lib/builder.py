@@ -84,8 +84,8 @@ class Builder:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def verify(self, channels=None):
-        if channels is None: channels = self.channels.getChannels()
+    def verify(self, channels: list=[]):
+        if not channels: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
             elif not citem.get('name') or not citem.get('id') or not citem.get('path'):
@@ -99,7 +99,7 @@ class Builder:
             
             
     @timeit
-    def build(self):
+    def build(self) -> bool:
         with legacy():
             channels = sorted(self.verify(self.channels.getChannels()), key=lambda k: k['number'])
             if not channels:
@@ -147,7 +147,7 @@ class Builder:
 
         
     @timeit
-    def getFileList(self, citem, now, start):
+    def getFileList(self, citem: dict, now: time, start: time) -> bool and list:
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
@@ -172,7 +172,7 @@ class Builder:
         return False
 
 
-    def buildCells(self, citem, duration=10800, type='video', entries=3, info={}):
+    def buildCells(self, citem: dict={}, duration: int=10800, type: str='video', entries: int=3, info: dict={}) -> list:
         self.log("buildCells; id: %s"%(citem.get('id')))
         tmpItem  = {'label'       : (info.get('title','')        or citem['name']),
                     'episodetitle': (info.get('episodetitle','') or '|'.join(citem['group'])),
@@ -187,7 +187,7 @@ class Builder:
         return [tmpItem.copy() for idx in range(entries)]
 
 
-    def addScheduling(self, citem, fileList, start):
+    def addScheduling(self, citem: dict, fileList: list, start: time) -> list:
         self.log("addScheduling; id: %s, fileList = %s, start = %s"%(citem['id'],len(fileList),start))
         tmpList  = []
         for idx, item in enumerate(self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_PRE, citem, fileList, inherited=self)):
@@ -209,7 +209,7 @@ class Builder:
         return self.runActions(RULES_ACTION_CHANNEL_BUILD_TIME_POST, citem, tmpList, inherited=self) #adv. scheduling second pass and cleanup.
         
         
-    def buildRadio(self, citem):
+    def buildRadio(self, citem: dict) -> list:
         self.log("buildRadio; id: %s"%(citem.get('id')))
         #todo insert custom radio labels,plots based on genre type?
         # https://www.musicgenreslist.com/
@@ -217,7 +217,7 @@ class Builder:
         return self.buildCells(citem, self.minEPG, 'music', ((self.maxDays * 8)), info={'genre':["Music"],'art':{'thumb':citem['logo'],'icon':citem['logo'],'fanart':citem['logo']},'plot':LANGUAGE(32029)%(citem['name'])})
         
 
-    def buildChannel(self, citem):
+    def buildChannel(self, citem: dict) -> bool and list:
         def _validFileList(fileArray):
             for fileList in fileArray:
                 if len(fileList) > 0: return True
@@ -239,7 +239,7 @@ class Builder:
         return fileList
 
           
-    def buildFileList(self, citem, path, media='video', limit=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}): #build channel via vfs path.
+    def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("buildFileList, id: %s, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
         if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
             paths, media, osort, ofilter, olimit = self.xsp.parseXSP(path)
@@ -294,17 +294,20 @@ class Builder:
         return fileList
 
 
-    def buildList(self, citem, path, media='video', page=SETTINGS.getSettingInt('Page_Limit'), sort={}, limits={}, dirItem={}, query={}):
+    def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}, dirItem: dict={}, query: dict={}) -> tuple:
         self.log("buildList, id: %s, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
         items, olimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
-        if items == self.loopback:# malformed jsonrpc queries will return root response, catch a re-parse and return.
-            self.pErrors.append(LANGUAGE(32030))
-            self.log("buildList, id: %s, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+        if errors.get('message'):
+            self.pErrors.append(errors['message'])
             return fileList, dirList
-        elif not items:
-            self.pErrors.append(LANGUAGE(32026))
+        elif items == self.loopback and limits != olimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.
+            self.log("buildList, id: %s, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+            self.pErrors.append(LANGUAGE(32030))
+            return fileList, dirList
+        elif not items and len(fileList) == 0:
             self.log("buildList, id: %s, no request items found using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
+            self.pErrors.append(LANGUAGE(32026))
             return fileList, dirList
         else:
             self.loopback = items
@@ -421,7 +424,7 @@ class Builder:
             return fileList, dirList
 
  
-    def isHD(self, item):
+    def isHD(self, item: dict) -> bool:
         if 'isHD' in item: return item['isHD']
         elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
@@ -432,7 +435,7 @@ class Builder:
         return False
 
 
-    def isUHD(self, item):
+    def isUHD(self, item: dict) -> bool:
         if 'isUHD' in item: return item['isUHD']
         elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
@@ -443,7 +446,7 @@ class Builder:
         return False
         
         
-    def is3D(self, item):
+    def is3D(self, item: dict) -> bool:
         if 'is3D' in item: return item['is3D']
         elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
@@ -453,7 +456,7 @@ class Builder:
         return False
 
 
-    def addChannelStation(self, citem):
+    def addChannelStation(self, citem: dict) -> bool:
         self.log('addChannelStation, id: %s'%(citem['id']))
         if citem['catchup']:
             citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
@@ -469,29 +472,29 @@ class Builder:
         return self.xmltv.addChannel(citem)
         
         
-    def addChannelProgrammes(self, citem, fileList):
+    def addChannelProgrammes(self, citem: dict, fileList: list):
         self.log('addProgrammes, id: %s, fileList = %s'%(citem['id'],len(fileList)))
         for idx, item in enumerate(fileList):
             self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item))
             
         
-    def delChannelStation(self, citem):
+    def delChannelStation(self, citem: dict) -> bool:
         self.log('delChannelStation, id: %s'%(citem['id']))
         return self.m3u.delStation(citem) & self.xmltv.delBroadcast(citem)
         
         
-    def saveChannelLineups(self):
+    def saveChannelLineups(self) -> bool:
         self.log('saveChannelLineups')
         return self.m3u._save() & self.xmltv._save()
 
 
-    def kodiTrailers(self, nitems={}):
+    def kodiTrailers(self, nitems: dict={}) -> dict:
         items = (self.cache.get('kodiTrailers', json_data=True) or {})
         if nitems: items = self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
         return items
 
         
-    def getAdvertPath(self, id='plugin.video.ispot.tv'):
+    def getAdvertPath(self, id: str='plugin.video.ispot.tv') -> list:
         if hasAddon(id):
             try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)

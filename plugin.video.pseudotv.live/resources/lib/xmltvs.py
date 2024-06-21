@@ -34,7 +34,7 @@ class XMLTVS:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _load(self, file=XMLTVFLEPATH):
+    def _load(self, file: str=XMLTVFLEPATH) -> dict:
         self.log('_load')
         channels, recordings = self.cleanSelf(self.loadChannels(file),'id')
         return {'data'       : self.loadData(file),
@@ -43,7 +43,7 @@ class XMLTVS:
                 'programmes' : self.cleanSelf(self.loadProgrammes(file),'channel')}
 
 
-    def _save(self, file=XMLTVFLEPATH, reset=True):
+    def _save(self, file: str=XMLTVFLEPATH, reset: bool=True) -> bool:
         self.log('_save')
         if reset: data = self.resetData()
         else:     data = self.XMLTVDATA['data']
@@ -74,7 +74,7 @@ class XMLTVS:
         return self._reload()
         
         
-    def _reload(self):
+    def _reload(self) -> bool:
         self.log('_reload') 
         self.__init__()
         return True
@@ -94,7 +94,7 @@ class XMLTVS:
             except Exception as en: self.log('%s, failed! %s\n%s'%(name,e,en), xbmc.LOGERROR)
     
     
-    def loadData(self, file=XMLTVFLEPATH):
+    def loadData(self, file: str=XMLTVFLEPATH) -> dict:
         self.log('loadData, file = %s'%file)
         try: 
             fle  = FileAccess.open(file, 'r')
@@ -106,7 +106,7 @@ class XMLTVS:
             return self.resetData()
 
 
-    def loadChannels(self, file=XMLTVFLEPATH):
+    def loadChannels(self, file: str=XMLTVFLEPATH) -> list:
         self.log('loadChannels, file = %s'%file)
         try:
             fle  = FileAccess.open(file, 'r')
@@ -118,7 +118,7 @@ class XMLTVS:
             return []
         
         
-    def loadProgrammes(self, file=XMLTVFLEPATH):
+    def loadProgrammes(self, file: str=XMLTVFLEPATH) -> list:
         self.log('loadProgrammes, file = %s'%file)
         try: 
             fle  = FileAccess.open(file, 'r')
@@ -130,10 +130,10 @@ class XMLTVS:
             return []
 
             
-    def loadStopTimes(self, channels=None, programmes=None, fallback=None):
-        if channels   is None: channels   = self.getChannels()
-        if programmes is None: programmes = self.getProgrammes()
-        if fallback   is None: fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
+    def loadStopTimes(self, channels: list=[], programmes: list=[], fallback=None):
+        if not channels:   channels   = self.getChannels()
+        if not programmes: programmes = self.getProgrammes()
+        if not fallback:   fallback   = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60)).strftime(DTFORMAT)
         
         for channel in channels:
             try: 
@@ -147,17 +147,17 @@ class XMLTVS:
                 yield channel['id'],datetime.datetime.timestamp(strpTime(fallback, DTFORMAT))
              
              
-    def getRecordings(self):
+    def getRecordings(self) -> list:
         self.log('getRecordings')
         return self.sortChannels(self.XMLTVDATA.get('recordings',[]))   
                 
                 
-    def getChannels(self):
+    def getChannels(self) -> list:
         self.log('getChannels')
         return self.sortChannels(self.XMLTVDATA.get('channels',[]))
         
         
-    def getProgrammes(self):
+    def getProgrammes(self) -> list:
         self.log('getProgrammes')
         return self.sortProgrammes(self.XMLTVDATA.get('programmes',[]))
 
@@ -171,12 +171,12 @@ class XMLTVS:
                 'source-info-url'     : self.cleanString(ADDON_ID)}
 
 
-    def cleanString(self, text):
+    def cleanString(self, text: str) -> str:
         if text == ', ' or not text: text = LANGUAGE(32020) #"Unavailable"
         return bytes(text,DEFAULT_ENCODING).decode(DEFAULT_ENCODING,'ignore')
 
              
-    def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
+    def cleanSelf(self, items: list, key: str='id', slug: str='@%s'%(slugify(ADDON_NAME))) -> list: # remove imports (Non PseudoTV Live), key = {'id':channels,'channel':programmes}
         if not slug: return items
         channels   = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 32])
         recordings = list([item for item in items if item.get(key,'').endswith(slug) and len(item.get(key,'').replace(slug,'')) == 16])
@@ -189,14 +189,14 @@ class XMLTVS:
             return self.sortProgrammes(programmes)
         
         
-    def cleanChannels(self, channels, programmes): # remove stations with no guidedata
+    def cleanChannels(self, channels: list, programmes: list) -> list: # remove stations with no guidedata
         stations    = list(set([program.get('channel') for program in programmes]))
         tmpChannels = [channel for station in stations for channel in channels if channel.get('id') == station]
         self.log('cleanChannels, before = %s, after = %s'%(len(channels),len(tmpChannels)))
         return tmpChannels
 
 
-    def cleanProgrammes(self, programmes):
+    def cleanProgrammes(self, programmes: list) -> list:
         now = (datetime.datetime.fromtimestamp(float(getUTCstamp())) - datetime.timedelta(days=MIN_GUIDEDAYS)) #allow some old programmes to avoid empty cells.
         def filterProgrames(program):
             if (strpTime(program.get('stop',now).rstrip(),DTFORMAT) > now): return program
@@ -206,7 +206,7 @@ class XMLTVS:
         return self.cleanHolidays(tmpProgrammes)
 
 
-    def cleanHolidays(self, programmes):
+    def cleanHolidays(self, programmes: list) -> list:
         holiday = Seasonal().getHoliday()
         def filterHoliday(program):
             citem = decodePlot(program.get('desc')[0][0]).get('citem',{})
@@ -218,21 +218,21 @@ class XMLTVS:
         return tmpProgrammes
 
 
-    def sortChannels(self, channels):
+    def sortChannels(self, channels: list) -> list:
         try: channels.sort(key=lambda x:x.get('display-name'))
         except: pass
         return channels
 
 
-    def sortProgrammes(self, programmes):
+    def sortProgrammes(self, programmes: list) -> list:
         programmes.sort(key=lambda x:x['start'])
         programmes.sort(key=lambda x:x['channel'])
         self.log('sortProgrammes, programmes = %s'%(len(programmes)))
         return programmes
 
 
-    def findChannel(self, citem, channels=None):
-        if channels is None: channels = self.getChannels()
+    def findChannel(self, citem: dict, channels: list=[]) -> tuple:
+        if not channels: channels = self.getChannels()
         for idx, eitem in enumerate(channels):
             if citem.get('id') == eitem.get('id',str(random.random())):
                 self.log('findChannel, found citem = %s'%(eitem))
@@ -240,8 +240,8 @@ class XMLTVS:
         return None, {}
         
         
-    def findRecording(self, ritem, recordings=None):
-        if recordings is None: recordings = self.getRecordings()
+    def findRecording(self, ritem: dict, recordings: list=[]) -> tuple:
+        if not recordings: recordings = self.getRecordings()
         for idx, eitem in enumerate(recordings):
             if (ritem.get('id') == eitem.get('id',str(random.random())) or ritem.get('label').lower() == eitem.get('display-name')[0][0].lower()):
                 self.log('findRecording, found ritem = %s'%(eitem))
@@ -249,7 +249,7 @@ class XMLTVS:
         return None, {}
         
         
-    def addRecording(self, ritem, fitem):
+    def addRecording(self, ritem: dict, fitem: dict):
         self.log('addRecording = %s'%(ritem.get('id')))
         sitem = ({'id'           : ritem['id'],
                   'display-name' : [(self.cleanString(ritem['name']), LANG)],
@@ -268,7 +268,7 @@ class XMLTVS:
             return self._save()
         
     
-    def addChannel(self, citem):
+    def addChannel(self, citem: dict) -> bool:
         mitem = ({'id'           : citem['id'],
                   'display-name' : [(self.cleanString(citem['name']), LANG)],
                   'icon'         : [{'src':citem['logo']}]})
@@ -282,7 +282,7 @@ class XMLTVS:
         return True
 
 
-    def addProgram(self, id, item):
+    def addProgram(self, id: str, item: dict) -> bool:
         pitem = {'channel'     : id,
                  'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                  'title'       : [(self.cleanString(item['title']), LANG)],
@@ -349,7 +349,7 @@ class XMLTVS:
         return True
 
     
-    def delBroadcast(self, citem):# remove single channel and all programmes from XMLTVDATA
+    def delBroadcast(self, citem: dict) -> bool:# remove single channel and all programmes from XMLTVDATA
         channels   = self.XMLTVDATA['channels'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
         self.XMLTVDATA['channels']   = list([channel for channel in channels if channel.get('id') != citem.get('id')])
@@ -358,7 +358,7 @@ class XMLTVS:
         return True
         
         
-    def delRecording(self, ritem):
+    def delRecording(self, ritem: dict):
         self.log('delRecording id = %s'%((ritem.get('id') or ritem.get('label'))))
         recordings = self.XMLTVDATA['recordings'].copy()
         programmes = self.XMLTVDATA['programmes'].copy()
@@ -370,7 +370,7 @@ class XMLTVS:
             return self._save()
         
 
-    def importXMLTV(self, file, m3uChannels={}):
+    def importXMLTV(self, file: str, m3uChannels: dict={}):
         self.log('importXMLTV, file = %s, m3uChannels = %s'%(file,len(m3uChannels)))
         def matchChannel(channel, channels, programmes):
             importChannels.extend(list([chan for chan in channels if chan.get('id') == channel.get('id')]))
@@ -402,10 +402,9 @@ class XMLTVS:
                 self.XMLTVDATA.get('channels',[]).extend(self.sortChannels(importChannels))
                 self.XMLTVDATA.get('programmes',[]).extend(self.sortProgrammes(importProgrammes))
         except Exception as e: self.log("importXMLTV, failed! %s"%(e), xbmc.LOGERROR)
-        return True
 
 
-    def chkImport(self, channels, programmes): # parse for empty programmes, inject single cell entry.
+    def chkImport(self, channels: list, programmes: list) -> tuple: # parse for empty programmes, inject single cell entry.
         try:
             def addSingleEntry(channel, start=None, length=10800): #create a single entry with min. channel meta, use as a filler.
                 if start is None: start = datetime.datetime.fromtimestamp(roundTimeDown(getUTCstamp(),offset=60))
@@ -491,11 +490,10 @@ class XMLTVS:
                         xmlData.write(doc.toprettyxml(indent='\t'))
                         xmlData.close()
                     except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
-                    return True
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
 
 
-    def getProgramItem(self, citem, fItem):
+    def getProgramItem(self, citem: dict, fItem: dict) -> dict:
         ''' Convert fileItem to Programme (XMLTV) item '''
         item = {}
         item['channel']       = citem['id']

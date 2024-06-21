@@ -78,15 +78,14 @@ def busy_dialog():
     if not isBusyDialog():
         Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
-    finally:
-        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    finally: Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
                   
 @contextmanager
 def sudo_dialog(msg):
     dia = Dialog().progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
     try: 
         yield
-    finally:
+    finally: 
         dia = Dialog().progressBGDialog(100,dia)
 
 def setDictLST(lst=[]):
@@ -312,7 +311,7 @@ class Settings:
         self.setSetting('Remote_XMLTV','%s'%(os.path.join(userFolder,XMLTVFLE).replace('special://profile/addon_data','/addon_data')))
         self.setSetting('Remote_GENRE','%s'%(os.path.join(userFolder,GENREFLE).replace('special://profile/addon_data','/addon_data')))
         
-        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        Client_Mode = self.getSettingInt('Client_Mode')
         newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
                        'm3uPath'       :os.path.join(userFolder,M3UFLE),
                        'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
@@ -320,7 +319,7 @@ class Settings:
                        'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
                        'genresPath'    :os.path.join(userFolder,GENREFLE)}
         self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        setPendingRestart()
+        self.property.setEXTProperty('pendingRestart',True)
         
         
     def setPVRRemote(self, userURL):
@@ -330,15 +329,15 @@ class Settings:
         self.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
         self.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
         
-        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        Client_Mode = self.getSettingInt('Client_Mode')
         newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
+                       'm3uUrl'        :self.getSetting('Remote_M3U'),
                        'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
+                       'epgUrl'        :self.getSetting('Remote_XMLTV'),
                        'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
-                       'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
+                       'genresUrl'     :self.getSetting('Remote_GENRE')}
         self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        setPendingRestart()
+        self.property.setEXTProperty('pendingRestart',True)
 
 
     def chkPluginSettings(self, id, values, override=False, prompt=True):
@@ -819,7 +818,7 @@ class Dialog:
 
     def doInfoMonitor(self):
         while not MONITOR.abortRequested():
-            if not self.fillInfoMonitor() or MONITOR.waitForAbort(1): break
+            if not self.fillInfoMonitor() or MONITOR.waitForAbort(0.5): break
             
 
     def fillInfoMonitor(self, type='ListItem'):

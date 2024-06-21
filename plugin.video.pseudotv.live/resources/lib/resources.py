@@ -142,7 +142,7 @@ class Resources:
             try:
                 from PIL import Image, ImageStat
                 file = unquoteString(file.replace('resource://','special://home/addons/').replace('image://','')).replace('\\','/')
-                mono = reduce(lambda x, y: x and y < 0.005, ImageStat.Stat(Image.open(FileAccess.open(file))).var, True)
+                mono = reduce(lambda x, y: x and y < 0.005, ImageStat.Stat(Image.open(FileAccess.open(file,'rb'))).var, True)
                 self.log('isMono, mono = %s, file = %s'%(mono,file))
                 return mono
             except Exception as e: self.log("isMono, failed! %s"%(e), xbmc.LOGWARNING)

@@ -65,7 +65,7 @@ class Fillers:
         def _parseVFS(path):
             tmpDCT = {}
             if hasAddon(path, install=True):
-                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=CHANNEL_LIMIT,chkDuration=True,retItem=True).items()):
+                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=3,chkDuration=True,retItem=True).items()):
                     for item in items:
                         for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT

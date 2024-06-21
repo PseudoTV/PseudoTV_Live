@@ -77,7 +77,7 @@ class Plugin:
         
 
     def playVOD(self, title: str, vid: str):
-        with self.preparingPlayback(), legacy():
+        with self.preparingPlayback():
             self.log('playVOD, title = %s, vid = %s'%(title,vid))
             liz = xbmcgui.ListItem(title,path=vid)
             liz.setProperty("IsPlayable","true")
@@ -85,7 +85,7 @@ class Plugin:
 
 
     def playLive(self, name: str, chid: str, vid: str):
-        with self.preparingPlayback(), legacy():
+        with self.preparingPlayback():
             self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             if round(self.sysInfo['seek']) <= self.seekTOL or round(self.sysInfo['progresspercentage']) > self.seekTHD:
                 self.sysInfo['seek'] = 0
@@ -108,7 +108,7 @@ class Plugin:
 
 
     def playBroadcast(self, name: str, chid: str, vid: str):
-        with self.preparingPlayback(), legacy():
+        with self.preparingPlayback():
             self.log('playBroadcast, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")

@@ -21,7 +21,7 @@
 from globals            import *
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from itertools          import repeat, count
-from functools          import partial, wraps, reduce    
+from functools          import partial, wraps, reduce, update_wrapper
 
 def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
@@ -40,6 +40,11 @@ def roundupDIV(p, q):
     except ZeroDivisionError: 
         return 1
         
+def wrapped_partial(func, *args, **kwargs):
+    partial_func = partial(func, *args, **kwargs)
+    update_wrapper(partial_func, func)
+    return partial_func
+    
 def timeit(method):
     @wraps(method)
     def wrapper(*args, **kwargs):
@@ -47,11 +52,12 @@ def timeit(method):
         result     = method(*args, **kwargs)
         end_time   = time.time()
         if DEBUG_ENABLED:
-            log('%s => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
+            log('%s timeit => %.2f ms'%(method.__qualname__.replace('.',': '),(end_time-start_time)*1000))
         return result
     return wrapper
     
 def killit(method):
+    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         class waiter(Thread):
@@ -63,10 +69,12 @@ def killit(method):
                 try:    self.result = method(*args, **kwargs)
                 except: self.error  = sys.exc_info()[0]
         timer = waiter()
+        timer.name = '%s.%s'%('killit',method.__qualname__.replace('.',': '))
         timer.daemon=True
         timer.start()
         timer.join(wait)
-        if timer.is_alive() or timer.error:
+        log('%s, starting %s'%(method.__qualname__.replace('.',': '),timer.name))
+        if (timer.is_alive() or timer.error):
             log('%s, Timed out! Errors: %s'%(method.__qualname__.replace('.',': '),timer.error), xbmc.LOGERROR)
         return timer.result
     return wrapper
@@ -77,42 +85,29 @@ def poolit(method):
     def wrapper(items=[], *args, **kwargs):
         results  = []
         cpucount = Cores().CPUcount()
-        pool = Concurrent(cpucount)
+        pool     = Concurrent(cpucount)
         try:
-            if cpucount < 2 or not items:
-                results = pool.generator(method, items, *args, **kwargs)
-            else:
-                results = pool.executors(method, items, *args, **kwargs)
-        except Exception as e: log('poolit, failed! %s'%(e), xbmc.LOGERROR)
-        results = pool.generator(method, items, *args, **kwargs)
-        log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
+            name = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
+            log('%s, starting %s'%(method.__qualname__.replace('.',': '),name))
+            if cpucount < 2 or not items: results = pool.generator(method, items, *args, **kwargs)
+            else:                         results = pool.executors(method, items, *args, **kwargs)
+        except Exception as e:
+            log('poolit, failed! %s'%(e), xbmc.LOGERROR)
+            results = pool.generator(method, items, *args, **kwargs)
+        log('%s poolit => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
         return list([_f for _f in results if _f])
-    return wrapper
-
-def executeit(method):
-    @timeit
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        pool   = Concurrent(roundupDIV(Cores().CPUcount(),2))
-        result = pool.executor(method, None, *args, **kwargs)
-        log('%s => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
-        return result
     return wrapper
 
 def threadit(method):
     @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
-        thread_name = '%s.%s'%('threadit',method.__qualname__.replace('.',': '))
         thread = Thread(None, method, None, args, kwargs)
-        if not thread.is_alive():
-            thread = Thread(None, method, None, args, kwargs)
-            thread.name = thread_name
-            thread.daemon=True
-            thread.start()
-            thread.join()
-            log('%s, starting %s'%(method.__qualname__.replace('.',': '),thread_name))
-            return thread
+        thread.name = '%s.%s'%('threadit',method.__qualname__.replace('.',': '))
+        thread.daemon=True
+        thread.start()
+        log('%s, starting %s'%(method.__qualname__.replace('.',': '),thread.name))
+        return thread
     return wrapper
 
 def timerit(method):
@@ -120,22 +115,28 @@ def timerit(method):
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
-        threadTimer = Timer(wait, method, *args, **kwargs)
-        for thread in thread_enumerate():
-            if thread.name == thread_name and thread.is_alive():
+        for timer in thread_enumerate():
+            if timer.name == thread_name and timer.is_alive():
                 try: 
-                    thread.cancel()
-                    thread.join()
+                    timer.cancel()
+                    timer.join()
                     log('%s, canceling %s'%(method.__qualname__.replace('.',': '),thread_name))
                 except: pass
-        threadTimer = Timer(wait, method, *args, **kwargs)
-        threadTimer.name = thread_name
-        threadTimer.daemon=True
-        threadTimer.start()
+        timer = Timer(wait, method, *args, **kwargs)
+        timer.name = thread_name
+        timer.start()
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
-        return threadTimer
+        return timer
     return wrapper  
 
+def executeit(method):
+    @timeit
+    @wraps(method)
+    def wrapper(*args, **kwargs):
+        pool = Concurrent(roundupDIV(Cores().CPUcount(),2))
+        log('%s executeit => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
+        return threadit(pool.executor(method, None, *args, **kwargs))
+    return wrapper
 
 class Concurrent:
     def __init__(self, cpuCount=None):
@@ -150,20 +151,19 @@ class Concurrent:
 
 
     def executor(self, func, timeout=None, *args, **kwargs):
+        self.log("executor, func = %s"%(func.__name__))
         with ThreadPoolExecutor(roundupDIV(self.cpuCount,2)) as executor:
-            future = executor.submit(func, *args, **kwargs)
-            return future.result(timeout)
+            return executor.submit(func, *args, **kwargs).result(timeout)
 
 
-    @timeit
     def executors(self, func, items=[], timeout=None, *args, **kwargs):
-        return [self.executor((partial(func, *args, **kwargs)), timeout, item) for item in items]
+        self.log("executors, items = %s"%(len(items)))
+        return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
 
 
-    @timeit
     def generator(self, func, items=[], *args, **kwargs):
         self.log("generator, items = %s"%(len(items)))
-        return [partial(func, *args, **kwargs)(i) for i in items]
+        return [wrapped_partial(func, *args, **kwargs)(i) for i in items]
 
 
 class Cores:

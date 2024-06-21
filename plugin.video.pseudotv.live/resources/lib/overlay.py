@@ -72,6 +72,9 @@ class Overlay():
         self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
         self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
         self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
+        
+        self._channelBugThread = Timer(0.1, self.toggleBug, [False])
+        self._onNextThread     = Timer(0.1, self.toggleOnNext, [False])
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -184,7 +187,6 @@ class Overlay():
         self.setVisible(self._onNext,False)
         if self._onNextThread.is_alive():
             self._onNextThread.cancel()
-            self._onNextThread.join()
             
             
     def cancelChannelBug(self):
@@ -193,7 +195,6 @@ class Overlay():
         self.setVisible(self._channelBug,False)
         if self._channelBugThread.is_alive():
             self._channelBugThread.cancel()
-            self._channelBugThread.join()
 
         
     def toggleBackground(self, state: bool=True):

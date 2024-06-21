@@ -37,10 +37,10 @@ class JSONRPC:
             while not MONITOR.abortRequested():
                 if not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
                 elif MONITOR.waitForAbort(0.001): break
+                self.log('sendLocker, waiting...')
         PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'true')
-        try: yield
-        finally:
-            PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'false')
+        try: yield self.log('sendLocker, Locked? (%s)'%(PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID))))
+        finally: PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'false')
 
 
     def _sendJSON(self, command):
@@ -51,14 +51,15 @@ class JSONRPC:
         return results
 
 
-    def sendJSON(self, param, wait=60):
+    def sendJSON(self, param, timeout=30):
         with self.sendLocker():
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
-            response = (self._sendJSON(command) or {'error':{'message':'JSONRPC timed out!'}})
+            response = (killit(self._sendJSON)(timeout,command) or {'error':{'message':'JSONRPC timed out!'}})
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
+                response.setdefault('result',{})['error'] = response.pop('error')
         return response
 
 
@@ -82,31 +83,22 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='files', depth=5, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        self.log('walkFileDirectory, path = %s, media = %s'%(path,media))
-        chks = list()
+    def walkFileDirectory(self, path, media='files', depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = dict()
-        dirs = [path]
-        
-        for idx, dir in enumerate(dirs):
-            if MONITOR.waitForAbort(0.001) or idx > depth: break
-            else:
-                self.log('walkFileDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir)).replace('\\','/')
-                if dir in chks: continue
-                else: chks.append(dir)
-                for item in self.getDirectory({"directory":dir,"media":media},True,checksum,expiration).get('files',[]):
-                    if   item.get('filetype') == 'directory': dirs.append(item.get('file'))
-                    elif item.get('filetype') == 'file':
-                        if chkDuration:
-                            item['duration'] = self.getDuration(item.get('file'),item, accurate=True)
-                            if item['duration'] == 0: continue
-                        walk.setdefault(dir,[]).append(item if retItem else item.get('file'))
+        self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
+        for idx, item in enumerate(self.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])):
+            if item.get('filetype') == 'file':
+                if chkDuration:
+                    item['duration'] = self.getDuration(item.get('file'),item, accurate=True)
+                    if item['duration'] == 0: continue
+                walk.setdefault(path,[]).append(item if retItem else item.get('file'))
+            elif item.get('filetype') == 'directory' and depth > 0:
+                depth -= 1
+                walk.update(self.walkFileDirectory(item.get('file'), media, depth, chkDuration, retItem, checksum, expiration))
         return walk
                 
 
-    def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
-        self.log('walkListDirectory, path = %s, exts = %s'%(path,exts))
+    def walkListDirectory(self, path, exts='', depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if chkDuration:
                 if self.getDuration(os.path.join(path,f), accurate=True) == 0: return
@@ -117,23 +109,17 @@ class JSONRPC:
             self.log('walkListDirectory, parsing XBT = %s'%(resource))
             walk.setdefault(resource,[]).extend(self.getListDirectory(resource,checksum,expiration)[1])
             return walk
-             
-        chks = list()
+
         walk = dict()
-        dirs = [path]
-        
-        for idx, dir in enumerate(dirs):
-            if MONITOR.waitForAbort(0.001) or idx > depth: break
-            else:
-                self.log('walkListDirectory, walking %s/%s directory'%(idx,len(dirs)))
-                if len(dirs) > 0: dir = dirs.pop(dirs.index(dir)).replace('\\','/')
-                if dir in chks: continue
-                else: chks.append(dir)
-                subs, files = self.getListDirectory(dir,checksum,expiration)
-                if len(subs)  > 0: dirs.extend(subs)
-                if len(files) > 0:
-                    if TEXTURES in files: return _parseXBT(re.sub('/resources','',dir).replace('special://home/addons/','resource://'))
-                    else: walk.setdefault(dir,[]).extend(list([_f for _f in [_chkfile(dir, f) for f in files if f.endswith(tuple(exts))] if _f]))
+        self.log('walkListDirectory, walking %s, depth = %s\n exts = %s'%(path,depth,exts))
+        subs, files = self.getListDirectory(path,checksum,expiration)
+        if len(files) > 0:
+            if TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
+            else: walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, f) for f in files if f.endswith(tuple(exts))] if _f]))
+        for sub in subs:
+            if depth == 0:break
+            depth -= 1
+            walk.update(self.walkListDirectory(sub, exts, depth, chkDuration, appendPath, checksum, expiration))
         return walk
                 
         
@@ -250,6 +236,7 @@ class JSONRPC:
     def getDirectory(self, param={}, cache=True, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         param["properties"] = self.getEnums("List.Fields.Files", type='items')
         param = {"method":"Files.GetDirectory","params":param}
+        #todo carry over "error" to requestlist for user message.
         if cache: return self.cacheJSON(param, expiration, checksum).get('result', {})
         else:     return self.sendJSON(param).get('result', {})
         
@@ -261,6 +248,7 @@ class JSONRPC:
 
 
     def getStreamDetails(self, path, media='video'):
+        if isStack(path): path = splitStacks(path)[0]
         param = {"method":"Files.GetFileDetails","params":{"file":path,"media":media,"properties":["streamdetails"]}}
         return self.cacheJSON(param, life=datetime.timedelta(days=MAX_GUIDEDAYS), checksum=getMD5(path)).get('result',{}).get('filedetails',{}).get('streamdetails',{})
 
@@ -406,7 +394,7 @@ class JSONRPC:
         
         if not limits: 
             limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
-            if (limits.get('total',0) > page) and sort.get("method","") == "random" and not path.startswith(tuple(VFS_TYPES)):
+            if limits.get('total',0) > page and sort.get("method","") == "random":
                 limits = self.randomPagination(page,limits.get('total',0))
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
@@ -431,36 +419,16 @@ class JSONRPC:
             limits = {"end": 0, "start": 0, "total": limits.get('total',0)}
         self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)]), limits) #set 
         
-        errors = {}
+        errors = results.get('error',{})
         items  = results.get(key, [])
-        dirs, files = [], []
-        for item in items:
-            if   item.get('filetype') == 'directory': dirs.append(item)
-            elif item.get('filetype') == 'file':     files.append(item)
-        self.log('requestList, id = %s, items = %s, dirs = %s, files = %s, limits = %s'%(citem['id'], len(items), len(dirs), len(files), limits))
-        
-        if path.startswith(tuple(VFS_TYPES)) and len(files) > page:
-            #VFS paths ie.Plugin:// fail to apply limits and return a full directory list. limits do not apply to paged plugins. ie >>Next, instead use param to slice list.
-            try:
-                items = dirs.extend(files[param["limits"]["start"]:param["limits"]["end"]])
-                self.log('requestList, id = %s, files = %s sliced from VFS exceeding page %s'%(citem['id'],len(files),page))
-            except Exception as e:
-                self.log('requestList, id = %s, failed! to slice files %s'%(citem['id'],e), xbmc.LOGERROR)
-                if len(dirs) > 0: items = dirs
-                else:             items = []
         
         if len(items) == 0 and limits.get('total',0) > 0:
             # retry last request with fresh limits.
             self.log("requestList, id = %s, trying again with start limits at 0"%(citem['id']))
             return self.requestList(citem, path, media, page, sort, {"end": 0, "start": 0, "total": limits.get('total',0)}, query)
-        
-        elif len(files) > 0 and len(files) < page and len(dirs) == 0 and limits.get('total',0) > 0 and limits.get('total',0) < page:
-            # path total doesn't fill page limit; pad with duplicates.
-            self.log("requestList, id = %s, padding items with duplicates"%(citem['id']))
-            items = self.padItems(files)
-            
-        self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
-        return items, limits, errors
+        else:
+            self.log("requestList, id = %s, return items = %s" % (citem['id'], len(items)))
+            return items, limits, errors
 
 
     def autoPagination(self, id, path, limits={}):
