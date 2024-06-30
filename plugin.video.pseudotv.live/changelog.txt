@@ -259,8 +259,8 @@ v.0.2.7
 -Fixed XMLTV Unicode characters.
 -Fixed content filling for channels with limited content.
 -Improved M3U channel imports.
--Refactored Settings, Caching, Dialogs and Concurrent/Parallel methods.
--Added CPU affinity (pinning) control under "Tweaks" settings tab. Delegate Disable|Single|Half|Full CPU cores during Concurrent/Parallel calls.
+-Refactored Settings, Caching, Dialogs and ThreadPool/Parallel methods.
+-Added CPU affinity (pinning) control under "Tweaks" settings tab. Delegate Disable|Single|Half|Full CPU cores during ThreadPool/Parallel calls.
 -Optimized Memory and I/O usage, limited redundant calls.
 -Miscellaneous improvements, visual tweaks and performance boosts.
 

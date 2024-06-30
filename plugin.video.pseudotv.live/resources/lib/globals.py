@@ -23,10 +23,10 @@ import shutil, subprocess, io
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
+import heapq
 
-from threading        import Thread, Event, Timer, BoundedSemaphore
+from threading        import Lock, Thread, Event, Timer, BoundedSemaphore
 from threading        import enumerate as thread_enumerate
-from queue            import Empty, PriorityQueue
 from xml.dom.minidom  import parse, parseString, Document
 
 from variables   import *
@@ -42,7 +42,7 @@ from cache       import Cache, cacheit
 from pool        import killit, timeit, poolit, executeit, timerit, threadit
 from kodi        import *
 from fileaccess  import FileAccess, FileLock
-from collections import Counter, OrderedDict
+from collections import defaultdict, Counter, OrderedDict
 from six.moves   import urllib 
 from socket      import timeout
 from math        import ceil,  floor
@@ -80,7 +80,7 @@ def isRunning(key):
 def suspendActivity(): #suspend/quit running background task.
     while not MONITOR.abortRequested():
         if not isPendingSuspend(): break
-        elif MONITOR.waitForAbort(0.001): break
+        elif MONITOR.waitForAbort(0.0001): break
     setPendingSuspend(True)
     try: yield
     finally: setPendingSuspend(False)
@@ -194,7 +194,7 @@ def getIP(wait=5):
     while not MONITOR.abortRequested() and wait > 0:
         ip = xbmc.getIPAddress()
         if ip: return ip
-        elif (MONITOR.waitForAbort(1)): break
+        elif (MONITOR.waitForAbort(1.0)): break
         else: wait -= 1
     return gethostbyname(gethostname())
            
@@ -454,7 +454,7 @@ def bruteForcePVR(msg=''):
     if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(PVR_CLIENT_NAME),(LANGUAGE(32121)%(PVR_CLIENT_NAME)),msg)):
         brutePVR(True)
               
-def brutePVR(override=False, waitTime=15):
+def brutePVR(override=False, waitTime: float=15.0):
     if not override:
         if not DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): return
     togglePVR(False,True,waitTime)

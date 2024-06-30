@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 
 from globals    import *
+from cqueue     import *
 from library    import Library
 from autotune   import Autotune
 from builder    import Builder
@@ -29,11 +30,12 @@ from server     import HTTP
 
 
 class Tasks():
-    queue = PriorityQueue()
-    
-    def __init__(self, jsonRPC=None):
+    def __init__(self, service=None):
         self.log('__init__')
-        self.jsonRPC   = jsonRPC
+        self.service     = service
+        self.jsonRPC     = service.jsonRPC
+        self.httpServer  = HTTP(service.monitor)
+        self.quePriority = CustomQueue(priority=True,service=self.service)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -43,43 +45,21 @@ class Tasks():
     def _startProcess(self):
         setInstanceID()
         isClient(silent=False)
-        for func in [self.chkWelcome,
-                     self.chkVersion,
-                     self.chkDebugging,
-                     self.chkBackup,
-                     self.chkPVRBackend]:
-            if self.myService._interrupt(): break
-            else: func()
-        self.httpServer = HTTP(self.myService.monitor)
+        tasks = [self.chkWelcome,
+                 self.chkVersion,
+                 self.chkDebugging,
+                 self.chkBackup,
+                 self.chkPVRBackend]
+        [self._que(func) for func in tasks if not self.service._interrupt()]
+        self.log('_startProcess, finished...')
         
+
+    def _que(self, func, priority=-1, *args, **kwargs):# priority -1 autostack, 1 Highest, 5 Lowest
+        if priority == -1: priority = self.quePriority.qsize + 1
+        self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
+        self.quePriority._push((func,args,kwargs),priority)
         
-    @timeit
-    def _queue(self):
-        if not isRunning('_queue'):
-            with setRunning('_queue'):
-                try:
-                    priority, randomheap, package = self.queue.get(block=False)
-                    try:
-                        func, args, kwargs = package
-                        self.log("_queue, priority = %s, func = %s"%(priority,func.__name__))
-                        if not isRunning(func.__name__):
-                            with setRunning(func.__name__):
-                                executeit(func)(*args,**kwargs)
-                    except Exception as e:
-                        self.log("_queue, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
-                except Empty: self.log("_queue, empty!")
-
-
-    def _que(self, func, priority=-1, *args, **kwargs):
-        try:  # priority -1 autostack, 1 Highest, 5 Lowest
-            if priority == -1: priority = self.queue.qsize() + 1
-            self.queue.put((priority, random.random(), (func, args, kwargs)), block=False)
-            self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
-        except TypeError: pass
-        except Exception as e:
-            self.log("_que, failed! %s" % (e), xbmc.LOGERROR)
-
-
+                
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
@@ -93,11 +73,10 @@ class Tasks():
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=60):
             self._que(self._chkQueTimer)
-        self._queue()
         
         
     def _chkQueTimer(self, client = isClient()):
-        self.log('chkQueTimer')
+        self.log('chkQueTimer, client = %s'%(client))
         if self.chkUpdateTime('chkFiles',runEvery=600) and not client:
             self._que(self.chkFiles)
         if self.chkUpdateTime('chkRecommended',runEvery=900) and not client:
@@ -151,7 +130,7 @@ class Tasks():
         #schedule updates, first boot always forces run!
         if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
         epoch = int(time.time())
-        if (epoch >= nextUpdate) and not self.myService._suspend():
+        if (epoch >= nextUpdate) and not self.service._suspend():
             PROPERTIES.setPropertyInt(key,(epoch+runEvery))
             return True
         return False
@@ -170,18 +149,18 @@ class Tasks():
 
     def chkLibrary(self):
         try: 
-            library = Library(service=self.myService)
+            library = Library(service=self.service)
             library.importPrompt()
             complete = library.updateLibrary()
             del library
-            if not complete: self._que(self.chkLibrary,2)
+            if not complete: self._que(self.chkLibrary,3)
             elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
     
     def chkRecommended(self):
         try:
-            library = Library(service=self.myService)
+            library = Library(service=self.service)
             library.searchRecommended()
             del library
         except Exception as e: self.log('chkRecommended failed! %s'%(e), xbmc.LOGERROR)
@@ -189,24 +168,25 @@ class Tasks():
         
     def chkChannels(self):
         try:
-            builder  = Builder(self.myService)
+            builder  = Builder(self.service)
             complete = builder.build()
             channels = builder.verify()
             del builder
             if complete:
                 setFirstrun(state=True) #set init. boot status to true.
-                self.myService.currentChannels = list(channels)
-            else: self._que(self.chkChannels,3)
-        except Exception as e: self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
+                self.service.currentChannels = list(channels)
+            else: self._que(self.chkChannels,4)
+        except Exception as e:
+            self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
                
     def chkFiles(self):
         self.log('_chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun():
-            if not (FileAccess.exists(LIBRARYFLEPATH)): self._que(self.chkLibrary,2)
+            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,3)
             if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                self._que(self.chkChannels,1)
+                self._que(self.chkChannels,4)
 
 
     def chkJSONQUE(self):
@@ -215,14 +195,14 @@ class Tasks():
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-                    if self.myService._interrupt() or self.myService._suspend():
+                    if self.service._interrupt() or self.service._suspend():
                         self.log('chkJSONQUE, _interrupt or _suspend, cancelling.')
                         break
-                    elif self.myService._playing():
+                    elif self.service.__playing():
                         self.log('chkJSONQUE, playback detected, cancelling.')
                         break
                     elif len(params) > 0:
-                        self._que(self.jsonRPC.sendJSON,-1,params.pop(0))
+                        self._que(self.jsonRPC.sendJSON,5,params.pop(0))
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
@@ -230,7 +210,7 @@ class Tasks():
 
     def runAutoTune(self):
         try:
-            autotune = Autotune(service=self.myService)
+            autotune = Autotune(service=self.service)
             autotune._runTune()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
@@ -240,7 +220,7 @@ class Tasks():
         self.log('getChannels')
         try:
             if isClient(): return []
-            builder  = Builder(self.myService)
+            builder  = Builder(self.service)
             channels = builder.verify()
             del builder
             return list(channels)
@@ -255,7 +235,7 @@ class Tasks():
         nChannels = self.getChannels()
         if channels != nChannels:
             self.log('chkChannelChange, resetting chkChannels')
-            self._que(self.chkChannels,2)
+            self._que(self.chkChannels,4)
             return nChannels
         return channels
 
@@ -276,7 +256,7 @@ class Tasks():
             if nSettings.get(setting) != value and actions.get(setting):
                 # with sudo_dialog(LANGUAGE(32157)):
                 self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                self._que(actions[setting].get('func'),**actions[setting].get('kwargs',{}))
+                self._que(actions[setting].get('func'),2,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
         return nSettings
 
 

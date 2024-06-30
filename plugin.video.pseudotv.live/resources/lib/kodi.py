@@ -75,8 +75,7 @@ def closeBusyDialog():
 
 @contextmanager
 def busy_dialog():
-    if not isBusyDialog():
-        Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
+    if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
     try: yield
     finally: Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
                   
@@ -351,7 +350,7 @@ class Settings:
                 if addon is None: raise Exception('%s Not Found'%id)
                 
                 for s, v in list(values.items()):
-                    if MONITOR.waitForAbort(1): return False
+                    if MONITOR.waitForAbort(1.0): return False
                     value = addon.getSetting(s)
                     if str(value).lower() != str(v).lower(): changes[s] = (value, v)
             if changes: return self.setPluginSettings(id,changes,prompt)
@@ -371,7 +370,7 @@ class Settings:
                 if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon_name)): return False
                 
             for s, v in list(values.items()):
-                if MONITOR.waitForAbort(1): return False
+                if MONITOR.waitForAbort(1.0): return False
                 addon.setSetting(s, v[1])
             self.setPVRInstance(id)
             return self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
@@ -382,7 +381,7 @@ class Settings:
     def chkPVRInstance(self, path):
         found = False
         for file in [filename for filename in FileAccess.listdir(path)[1] if filename.endswith('.xml')]:
-            if MONITOR.waitForAbort(1): break
+            if MONITOR.waitForAbort(1.0): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(path,file), "r")
@@ -1087,12 +1086,12 @@ class Dialog:
         pDialog = self.progressBGDialog(message=message,header=header)
         for idx in range(int(wait)):
             pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
-            if pDialog is None or MONITOR.waitForAbort(1): break
+            if pDialog is None or MONITOR.waitForAbort(1.0): break
         if hasattr(pDialog, 'close'): pDialog.close()
         return True
 
 
-    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None, wait=None):
+    def progressBGDialog(self, percent=0, control=None, message='', header=ADDON_NAME, silent=None):
         # if silent is None and self.settings.getSettingBool('Silent_OnPlayback'): 
             # silent = (self.properties.getPropertyBool('OVERLAY') | self.builtin.getInfoBool('Playing','Player'))
         
@@ -1110,7 +1109,6 @@ class Dialog:
                     control.close()
                     return None
             elif hasattr(control, 'update'):  control.update(int(percent), header, message)
-            if wait: MONITOR.waitForAbort(wait/1000)
         return control
         
 

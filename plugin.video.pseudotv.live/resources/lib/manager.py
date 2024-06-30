@@ -104,7 +104,6 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.resources    = Resources(self.jsonRPC, self.cache)
                 
                 self.newChannel   = self.channels.getTemplate()
-                print('newChannel',self.newChannel)
                 self.channelList  = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
                 self.channelList.extend(self.channels.getAutotuned())
                 self.newChannels  = self.channelList.copy()
@@ -113,8 +112,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
                
             try:
-                if kwargs.get('start',True):
-                    self.doModal()
+                if kwargs.get('start',True): self.doModal()
             except Exception as e: 
                 self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
                 self.closeManager()
@@ -126,6 +124,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
+            self.focusItems    = {}
             self.spinner       = self.getControl(4)
             self.chanList      = self.getControl(5)
             self.itemList      = self.getControl(6)
@@ -135,7 +134,6 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.right_button3 = self.getControl(9003)
             self.right_button4 = self.getControl(9004)
             
-            self.focusItems    = {}
             self.fillChanList(self.newChannels,focus=self.focusIndex) #all changes made to self.newChannels before final save to self.channellist
         except Exception as e: 
             log("onInit, failed! %s"%(e), xbmc.LOGERROR)
@@ -512,7 +510,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 items = self.jsonRPC.walkFileDirectory(path, media, depth=3, retItem=True)
             
             for idx, dir in enumerate(items):
-                if MONITOR.waitForAbort(.001): break
+                if MONITOR.waitForAbort(0.0001): break
                 else:
                     item = random.choice(items.get(dir,[]))
                     dia  = DIALOG.progressDialog(int((idx*100)//len(items)),control=dia, message='%s %s...\n%s\n%s'%(LANGUAGE(32098),'Path',dir,item.get('file','')))
@@ -544,7 +542,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         PLAYER.play(file, liz, windowed=True)
         while not MONITOR.abortRequested():
             waitTime -= 1
-            if MONITOR.waitForAbort(1) or waitTime < 1:
+            if MONITOR.waitForAbort(1.0) or waitTime < 1:
                 self.log('validateSeek, waitForAbort')
                 break
             elif not PLAYER.isPlaying():

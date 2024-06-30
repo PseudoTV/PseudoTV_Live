@@ -27,10 +27,6 @@ def log(event, level=xbmc.LOGDEBUG):
     if not DEBUG_ENABLED and level != xbmc.LOGERROR: return #todo use debug level filter
     if level == xbmc.LOGERROR: event = '%s\n%s'%(event,traceback.format_exc())
     xbmc.log('%s-%s-%s'%(ADDON_ID,ADDON_VERSION,event),level)
-       
-def chunkLst(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
 
 def roundupDIV(p, q):
     try:
@@ -57,7 +53,6 @@ def timeit(method):
     return wrapper
     
 def killit(method):
-    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         class waiter(Thread):
@@ -79,18 +74,15 @@ def killit(method):
         return timer.result
     return wrapper
 
+@timeit
 def poolit(method):
-    @timeit
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
-        results  = []
-        cpucount = Cores().CPUcount()
-        pool     = Concurrent(cpucount)
+        pool = ThreadPool()
         try:
             name = '%s.%s'%('poolit',method.__qualname__.replace('.',': '))
             log('%s, starting %s'%(method.__qualname__.replace('.',': '),name))
-            if cpucount < 2 or not items: results = pool.generator(method, items, *args, **kwargs)
-            else:                         results = pool.executors(method, items, *args, **kwargs)
+            results = pool.executors(method, items, *args, **kwargs)
         except Exception as e:
             log('poolit, failed! %s'%(e), xbmc.LOGERROR)
             results = pool.generator(method, items, *args, **kwargs)
@@ -98,8 +90,8 @@ def poolit(method):
         return list([_f for _f in results if _f])
     return wrapper
 
+@timeit
 def threadit(method):
-    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread = Thread(None, method, None, args, kwargs)
@@ -110,8 +102,8 @@ def threadit(method):
         return thread
     return wrapper
 
+@timeit
 def timerit(method):
-    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
@@ -125,46 +117,19 @@ def timerit(method):
         timer = Timer(wait, method, *args, **kwargs)
         timer.name = thread_name
         timer.start()
+        timer.join()
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
         return timer
     return wrapper  
 
+@timeit
 def executeit(method):
-    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
-        pool = Concurrent(roundupDIV(Cores().CPUcount(),2))
+        pool = ThreadPool()
         log('%s executeit => %s'%(pool.__class__.__name__, method.__qualname__.replace('.',': ')))
-        return threadit(pool.executor(method, None, *args, **kwargs))
+        return pool.executor(method, None, *args, **kwargs)
     return wrapper
-
-class Concurrent:
-    def __init__(self, cpuCount=None):
-        # https://pythonhosted.org/futures/
-        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures
-        if cpuCount is None: cpuCount = Cores().CPUcount()
-        self.cpuCount = cpuCount
-        
-
-    def log(self, msg, level=xbmc.LOGDEBUG):
-        return log('%s: %s'%(self.__class__.__name__,msg),level)
-
-
-    def executor(self, func, timeout=None, *args, **kwargs):
-        self.log("executor, func = %s"%(func.__name__))
-        with ThreadPoolExecutor(roundupDIV(self.cpuCount,2)) as executor:
-            return executor.submit(func, *args, **kwargs).result(timeout)
-
-
-    def executors(self, func, items=[], timeout=None, *args, **kwargs):
-        self.log("executors, items = %s"%(len(items)))
-        return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
-
-
-    def generator(self, func, items=[], *args, **kwargs):
-        self.log("generator, items = %s"%(len(items)))
-        return [wrapped_partial(func, *args, **kwargs)(i) for i in items]
-
 
 class Cores:
     def __init__(self):
@@ -255,3 +220,32 @@ class Cores:
             if res > 0: return res
         except OSError: pass
         return 1
+        
+        
+class ThreadPool:
+    CPUCount    = Cores().CPUcount()
+    ThreadCount = roundupDIV(CPUCount,2)
+    
+    def __init__(self):
+        self.log("__init__, ThreadPool Threads = %s, CPU's = %s"%(self.ThreadCount, self.CPUCount))
+        
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def executor(self, func, timeout=None, *args, **kwargs):
+        self.log("executor, func = %s"%(func.__name__))
+        with ThreadPoolExecutor(self.ThreadCount) as executor:
+            return executor.submit(func, *args, **kwargs).result(timeout)
+
+
+    def executors(self, func, items=[], timeout=None, *args, **kwargs):
+        self.log("executors, items = %s"%(len(items)))
+        with ThreadPoolExecutor(self.ThreadCount) as executor:
+            return [self.executor((wrapped_partial(func, *args, **kwargs)), timeout, item) for item in items]
+
+
+    def generator(self, func, items=[], *args, **kwargs):
+        self.log("generator, items = %s"%(len(items)))
+        return [wrapped_partial(func, *args, **kwargs)(i) for i in items]

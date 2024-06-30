@@ -71,7 +71,7 @@ class Multiroom:
                     dia = DIALOG.progressDialog((inc*sec),dia, msg)
                     pay = Discovery()._start()
                     print('pairDiscovery',pay)
-                    if self.monitor.waitForAbort(1) or dia is None or pay: break
+                    if self.monitor.waitForAbort(1.0) or dia is None or pay: break
                 self.runningDiscovery = False
                 DIALOG.progressDialog(100,dia)
 

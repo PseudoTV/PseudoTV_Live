@@ -60,8 +60,7 @@ class Autotune:
                 PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             elif len(customChannels) == 0:
                 autoEnabled = []
-                for type in AUTOTUNE_TYPES:
-                    autoEnabled.extend(self.library.getEnabled(type))
+                [autoEnabled.extend(self.library.getEnabled(type)) for type in AUTOTUNE_TYPES]
                 if len(autoEnabled) > 0:
                     self.log('_runTune, library enabled items = %s; recovering enabled items'%(len(autoEnabled)))
                     rebuild = True #recover empty channels.json with enabled library.json items.

@@ -26,7 +26,6 @@ from jsonrpc    import JSONRPC
 class Player(xbmc.Player):
     sysInfo      = {}
     myService    = None
-    myMonitor    = None
     background   = None
     isPseudoTV   = False
     lastSubState = False
@@ -62,7 +61,9 @@ class Player(xbmc.Player):
 
     def onAVChange(self):
         self.log('onAVChange')
-        self.lastSubState = isSubtitle()
+        if self.isPseudoTV:
+            self.lastSubState = isSubtitle()
+            self.myService.monitor.chkIdle()
             
         
     def onAVStarted(self):
@@ -92,21 +93,21 @@ class Player(xbmc.Player):
         
         
     def isPseudoTVPlaying(self):
-        if loadJSON(self.getPlayerItem().getProperty('sysInfo')).get('citem',{}).get('id'): return True
+        if self.getPlayerSysInfo().get('citem',{}).get('id'): return True
         else: return False
         
         
     def getPlayerSysInfo(self):
         sysInfo = {}
         if self.isPlaying():
-            sysInfo = loadJSON(self.getPlayerItem().getProperty('sysInfo')) #Kodi v20.
+            sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
             sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
                             'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
                             'callback':self.getCallback(),
                             'runtime' :self.getPlayerTime()})
             if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
             if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),dumpJSON(sysInfo))
+            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
             self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
@@ -156,7 +157,7 @@ class Player(xbmc.Player):
     def _onPlay(self):
         self.log('_onPlay')
         if self.disableTrakt: disableTrakt()
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): timerit(self.jsonRPC.quePlaycount)(OVERLAY_DELAY,[self.sysInfo['fitem']]) #rollback previous sysInfo
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']]))#rollback previous sysInfo
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
@@ -168,7 +169,7 @@ class Player(xbmc.Player):
         self.log('_onChange')
         self.toggleBackground()
         clearTrakt()
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): timerit(self.jsonRPC.quePlaycount)(OVERLAY_DELAY,[self.sysInfo['fitem']]) #rollback previous sysInfo
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']])) #rollback previous sysInfo
         try:
             if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
                 broadcastnext = self.sysInfo['pvritem']['broadcastnext']
@@ -185,7 +186,7 @@ class Player(xbmc.Player):
         
     def _onStop(self):
         self.log('_onStop')
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): timerit(self.jsonRPC.quePlaycount)(OVERLAY_DELAY,[self.sysInfo['fitem']]) #rollback previous sysInfo
+        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']])) #rollback previous sysInfo
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
         clearTrakt()
@@ -225,9 +226,8 @@ class Monitor(xbmc.Monitor):
         self.jsonRPC          = jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
-        
-        self.sleepTime     = (SETTINGS.getSettingInt('Idle_Timer') or 0)
-        self.enableOverlay = (SETTINGS.getSettingBool('Enable_Overlay') or True)
+        self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer') or 0)
+        self.enableOverlay    = (SETTINGS.getSettingBool('Enable_Overlay') or True)
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -286,7 +286,7 @@ class Monitor(xbmc.Monitor):
             sec += 1
             msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%((OVERLAY_DELAY-sec)))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
-            if self.waitForAbort(1) or dia is None:
+            if self.waitForAbort(1.0) or dia is None:
                 cnx = True
                 break
         DIALOG.progressDialog(100,dia)
@@ -310,7 +310,7 @@ class Monitor(xbmc.Monitor):
         
     def onSettingsChangedTimer(self):
         self.log('onSettingsChangedTimer') 
-        self.myService.tasks._que(self._onSettingsChanged,1)
+        self.myService.tasks._que(self._onSettingsChanged,2)
                 
                 
     def _onSettingsChanged(self):
@@ -327,14 +327,14 @@ class Service():
     jsonRPC  = JSONRPC()
     player   = Player(jsonRPC)
     monitor  = Monitor(jsonRPC)
-    tasks    = Tasks(jsonRPC)
     
     def __init__(self):
         self.log('__init__')
+        self.runWhilePlaying   = SETTINGS.getSettingBool('Run_While_Playing')
         self.pendingRestart    = False
         self.player.myService  = self
         self.monitor.myService = self
-        self.player.myMonitor  = self.monitor
+        self.tasks             = Tasks(self)
         DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
@@ -342,70 +342,62 @@ class Service():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _interrupt(self, wait=.001) -> bool: #break
-        self.monitor.pendingInterrupt = (self.monitor.pendingInterrupt | self.monitor.waitForAbort(wait) | self._restart())
+    def _interrupt(self, wait=0.0001) -> bool: #break
+        self.monitor.pendingInterrupt = (self.monitor.pendingInterrupt | self.monitor.waitForAbort(wait) | self.__restart())
         self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
         return self.monitor.pendingInterrupt
 
 
     def _suspend(self) -> bool: #continue
-        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend() | self._playing())
+        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend() | self.__playing())
         self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
         return self.monitor.pendingSuspend
 
 
-    def _restart(self) -> bool:
+    def __restart(self) -> bool:
         self.pendingRestart = PROPERTIES.getEXTProperty('pendingRestart') == 'true'
         if self.pendingRestart: setPendingRestart(False)
         self.log('_interrupt, pendingRestart = %s'%(self.pendingRestart))
         return self.pendingRestart
          
          
-    def _playing(self) -> bool:
-        if self.player.isPlaying() and not SETTINGS.getSettingBool('Run_While_Playing'): return True
+    def __playing(self) -> bool:
+        if self.player.isPlaying() and not self.runWhilePlaying: return True
         return False
     
-         
-    def _run(self):
-        self.log('_run')
-        self.monitor.chkIdle()
-           
 
-    def _tasks(self):
-        self.log('_tasks')
+    def __tasks(self): # general tasks
+        self.log('__tasks')
+        self.tasks._que(self.monitor.chkIdle,1)
         self.tasks.chkQueTimer()
            
                 
-    def _initialize(self):
-        self.log('_initialize')
+    def __initialize(self):
+        self.log('__initialize')
         if self.player.isPlaying():
             self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
-        self.currentSettings   = dict(SETTINGS.getCurrentSettings()) #startup settings
-        self.tasks.myService   = self
-        self.player.myService  = self
-        self.monitor.myService = self
+        self.currentSettings = dict(SETTINGS.getCurrentSettings()) #startup settings
         self.tasks._startProcess()
         
 
-    def start(self):
-        self.log('start')
-        self._initialize()
+    def _start(self):
+        self.log('_start')
+        self.__initialize()
         while not self.monitor.abortRequested():
-            if self.player.isPseudoTV: self._run()
-            if    self._interrupt(wait=1): break
+            if    self._interrupt(1): break
             elif  self._suspend(): continue
-            else: self._tasks()
+            else: self.__tasks()
         self.stop()
 
 
     def stop(self):
         for thread in thread_enumerate():
-            if thread.name != "MainThread":
-                try: 
+            if thread.name != "MainThread" and thread.is_alive():
+                try:
                     thread.cancel()
                     thread.join(1.0)
-                except Exception as e: log("_stop, joining thread failed! %s"%(e), xbmc.LOGERROR)
+                except: pass
         self.log('_stop, finished, exiting %s...'%(ADDON_NAME))
-        if self.pendingRestart: Service().start()
+        if self.pendingRestart: Service()._start()
 
-if __name__ == '__main__': Service().start()
+if __name__ == '__main__': Service()._start()

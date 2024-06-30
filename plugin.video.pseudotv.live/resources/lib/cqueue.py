@@ -1,0 +1,176 @@
+#   Copyright (C) 2024 Lunatixz
+#
+#
+# This file is part of PseudoTV Live.
+#
+# PseudoTV Live is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PseudoTV Live is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
+#
+# -*- coding: utf-8 -*-
+from globals     import *
+from collections import defaultdict
+
+class LlNode:
+    def __init__(self, package: tuple, priority: int=0, delay: int=0):
+        self.prev      = None
+        self.next      = None
+        self.package   = package
+        self.priority  = priority
+        self.wait      = delay
+
+
+class CustomQueue:
+    isRunning = False
+    
+    def __init__(self, fifo: bool=False, lifo: bool=False, priority: bool=False, delay: bool=False, service=None):
+        self.log("__init__, fifo = %s, lifo = %s, priority = %s, delay = %s"%(fifo, lifo, priority, delay))
+        self.service   = service
+        self.lock      = Lock()
+        self.fifo      = fifo
+        self.lifo      = lifo
+        self.priority  = priority
+        self.delay     = delay
+        self.head      = None
+        self.tail      = None
+        self.qsize     = 0
+        self.min_heap  = []
+        self.itemCount = defaultdict(int)
+
+
+    def log(self, msg, level=xbmc.LOGDEBUG):
+        return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def __start(self):
+        self.log("__start")
+        self.popThread = Thread(target=self.__pop)
+        self.popThread.daemon = True
+        self.popThread.start()
+        
+
+    @timeit
+    def __run(self, func, args=(), kwargs=None):
+        self.log("__run, func = %s"%(func.__name__))
+        try: return func(*args, **kwargs)
+        except Exception as e: self.log("__run, func = %s failed! %s"%(func.__name__,e), xbmc.LOGERROR)
+
+                
+    def __exists(self, package):
+        for idx, item in enumerate(self.min_heap):
+            _,epriority,epackage = item
+            if epackage == package[2]:
+                if epriority <= package[0]: return True
+                else:
+                    self.min_heap.pop(idx)
+                    return False
+        return False
+             
+             
+    def _push(self, package: tuple, priority: int=0, delay: int=0):
+        self.log("_push, func = %s"%(package[0].__name__))
+        node  = LlNode(package, priority, delay)
+        exist = self.__exists((1,priority,package))
+        self.log("_push, exist = %s"%(exist))
+        if exist: return
+        elif self.priority:
+            self.qsize += 1
+            item = (priority, package)
+            self.itemCount[priority] += 1
+            heapq.heappush(self.min_heap, (item[0], self.itemCount[priority], item[1]))
+        elif self.head:
+            self.tail.next = node
+            node.prev = self.tail
+            self.tail = node
+        else:
+            self.head = node
+            self.tail = node
+            
+        if not self.isRunning:
+            self.__start()
+    
+    
+    def __pop(self):
+        self.isRunning = True
+        while not xbmc.Monitor().abortRequested():
+            if self.service._interrupt():
+                self.log("__pop, _interrupt == True")
+                break
+            elif self.service._suspend():
+                self.log("__pop, _suspend == True")
+                continue
+            else:
+                if not self.head and not self.priority:
+                    self.log("__pop, The queue is empty!")
+                    break
+                    
+                if self.priority:
+                    if not self.min_heap:
+                        self.log("__pop, The priority queue is empty!")
+                        break
+                        
+                    min_num, _, package = heapq.heappop(self.min_heap)
+                    self.qsize -= 1
+                    self.__run(*package)
+                        
+                elif self.fifo or self.lifo:
+                    curr_node = self.head if self.fifo else self.tail
+                    if curr_node is None: break
+                    package = curr_node.package
+                    self.log('__pop, fifo/lifo package = %s'%(package))
+                    next_node = curr_node.next if self.fifo else curr_node.prev
+                    if next_node:      next_node.prev = curr_node.prev if self.fifo else next_node.prev
+                    if curr_node.prev: curr_node.prev.next = curr_node.next if self.fifo else curr_node.prev
+    
+                    if self.fifo: self.head = next_node
+                    else:         self.tail = next_node
+                    
+                    if not self.delay:
+                        package, self.__run(*package)
+                    else:
+                        popTimer = Timer(curr_node.wait, *package)
+                        if popTimer.is_alive(): popTimer.join()
+                        else:
+                            popTimer.daemon = True
+                            popTimer.start()
+                else:
+                    self.log("__pop, queue undefined!")
+                    break
+        self.isRunning = False
+                
+                
+# def quePriority(package: tuple, priority: int=0):
+    # q_priority = CustomQueue(priority=True)
+    # q_priority.log("quePriority")
+    # q_priority._push(package, priority)
+    
+# def queFIFO(package: tuple, delay: int=0):
+    # q_fifo = CustomQueue(fifo=True, delay=bool(delay))
+    # q_fifo.log("queFIFO")
+    # q_fifo._push(package, delay)
+    
+# def queLIFO(package: tuple, delay: int=0):
+    # q_lifo = CustomQueue(lifo=True, delay=bool(delay))
+    # q_lifo.log("queLIFO")
+    # q_lifo._push(package, delay)
+    
+# def queThread(packages, delay=0):
+    # q_fifo = CustomQueue(fifo=True)
+    # q_fifo.log("queThread")
+
+    # def thread_function(*package):
+        # q_fifo._push(package)
+
+    # for package in packages:
+        # t = Thread(target=thread_function, args=(package))
+        # t.daemon = True
+        # t.start()

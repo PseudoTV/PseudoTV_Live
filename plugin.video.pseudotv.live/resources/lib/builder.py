@@ -98,7 +98,6 @@ class Builder:
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
             
             
-    @timeit
     def build(self) -> bool:
         with legacy():
             channels = sorted(self.verify(self.channels.getChannels()), key=lambda k: k['number'])
@@ -137,7 +136,7 @@ class Builder:
                         if self.completeBuild: self.pErrors.append(LANGUAGE(32026))
                         chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
                         self.log('build, In-Valid Channel (%s) %s - %s'%(chanErrors, citem['id'],self.pName))
-                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))),wait=PROMPT_DELAY)
+                        self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,chanErrors),header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32027),LANGUAGE(32023))))
                         self.delChannelStation(citem)
                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         
@@ -146,7 +145,6 @@ class Builder:
             return self.completeBuild
 
         
-    @timeit
     def getFileList(self, citem: dict, now: time, start: time) -> bool and list:
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:

@@ -33,22 +33,14 @@ class JSONRPC:
     
     @contextmanager
     def sendLocker(self): #kodi jsonrpc not thread safe avoid request collision during threading.
-        if PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true':
+        if PROPERTIES.getPropertyBool('sendLocker'):
             while not MONITOR.abortRequested():
-                if not PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID)) == 'true': break
-                elif MONITOR.waitForAbort(0.001): break
+                if not PROPERTIES.getPropertyBool('sendLocker'): break
+                elif MONITOR.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
                 self.log('sendLocker, waiting...')
-        PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'true')
-        try: yield self.log('sendLocker, Locked? (%s)'%(PROPERTIES.getEXTProperty('%s.sendLocker'%(ADDON_ID))))
-        finally: PROPERTIES.setEXTProperty('%s.sendLocker'%(ADDON_ID),'false')
-
-
-    def _sendJSON(self, command):
-        self.log('_sendJSON, command = %s'%(command))
-        results = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))
-        MONITOR.waitForAbort(SETTINGS.getSettingInt('RPC_Delay')/1000)
-        #overcome overflow issues within Kodi JSONRPC. Windows Platform unaffected. Kodi will segfault when flooded with json requests.
-        return results
+        PROPERTIES.setPropertyBool('sendLocker',True)
+        try: yield self.log('sendLocker, Locked!')
+        finally: PROPERTIES.setPropertyBool('sendLocker',False)
 
 
     def sendJSON(self, param, timeout=30):
@@ -56,11 +48,11 @@ class JSONRPC:
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
-            response = (killit(self._sendJSON)(timeout,command) or {'error':{'message':'JSONRPC timed out!'}})
+            response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))#(killit( or {'error':{'message':'JSONRPC timed out!'}})
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
                 response.setdefault('result',{})['error'] = response.pop('error')
-        return response
+            return response
 
 
     def queueJSON(self, param):

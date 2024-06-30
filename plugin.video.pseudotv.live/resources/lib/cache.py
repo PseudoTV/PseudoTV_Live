@@ -18,12 +18,16 @@
 #
 # -*- coding: utf-8 -*-
 
+import sqlite3
+
 from globals   import *
 from functools import wraps
 try:    from simplecache             import SimpleCache
 except: from simplecache.simplecache import SimpleCache #pycharm stub
 
-def cacheit(expiration: datetime.timedelta=datetime.timedelta(days=MIN_GUIDEDAYS), checksum: str=ADDON_VERSION, json_data: bool=False):
+ADDON_ID = 'plugin.video.pseudotv.live'
+
+def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VERSION, json_data=False):
     def internal(method):
         @wraps(method)
         def wrapper(*args, **kwargs):
@@ -37,20 +41,20 @@ def cacheit(expiration: datetime.timedelta=datetime.timedelta(days=MIN_GUIDEDAYS
     return internal
     
 class Cache:
+    lock  = Lock()
     cache = SimpleCache()
     
     @contextmanager
     def cacheLocker(self): #simplecache is not thread safe, threadlock not avoiding collisions? Hack/Lazy avoidance.
-        if xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true':
-            while not xbmc.Monitor().abortRequested():
-                if not xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true': break
-                elif xbmc.Monitor().waitForAbort(0.001): break
-                self.log('cacheLocker, waiting...')
         xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'true')
-        try: yield self.log('cacheLocker, Locked? (%s)'%(xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID))))
+        try: yield self.log('cacheLocker, Locked!')
         finally: xbmcgui.Window(10000).setProperty('%s.cacheLocker'%(ADDON_ID),'false')
 
 
+    def cacheLocked(self):
+        return xbmcgui.Window(10000).getProperty('%s.cacheLocker'%(ADDON_ID)) == 'true'
+    
+    
     def __init__(self, mem_cache=False, is_json=False):
         self.cache.enable_mem_cache = mem_cache
         self.cache.data_is_json     = is_json  
@@ -60,28 +64,29 @@ class Cache:
         log('%s: %s'%(self.__class__.__name__,msg),level)
         
 
-    def getname(self, name: str) -> str:
+    def getname(self, name):
         if not name.startswith(ADDON_ID): name = '%s.%s'%(ADDON_ID,name)
         return name.lower()
         
         
-    def set(self, name: str, value, checksum: str=ADDON_VERSION, expiration: datetime.timedelta=datetime.timedelta(minutes=15), json_data: bool=False):
-        if value and not DISABLE_CACHE:
+    def set(self, name, value, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15), json_data=False):
+        # with self.lock:
+        if value and not DISABLE_CACHE and not self.cacheLocked():
             with self.cacheLocker():
                 self.log('set, name = %s'%self.getname(name))
                 self.cache.set(self.getname(name),value,checksum,expiration,json_data)
         return value
         
     
-    def get(self, name: str, checksum: str=ADDON_VERSION, json_data: bool=False):
-        if not DISABLE_CACHE:
+    def get(self, name, checksum=ADDON_VERSION, json_data=False):
+        # with self.lock:
+        if not DISABLE_CACHE and not self.cacheLocked():
             with self.cacheLocker():
                 self.log('get, name = %s'%self.getname(name))
-                return (self.cache.get(self.getname(name),checksum,json_data))
+                return self.cache.get(self.getname(name),checksum,json_data)
         
             
-    def clear(self, name: str, wait: int=15):
-        import sqlite3
+    def clear(self, name, wait=15):
         self.log('clear, name = %s'%self.getname(name))
         sc = xbmcvfs.translatePath(xbmcaddon.Addon(id='script.module.simplecache').getAddonInfo('profile'))
         dbpath = os.path.join(sc, 'simplecache.db')

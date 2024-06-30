@@ -29,7 +29,7 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 class Service:
     from jsonrpc import JSONRPC
     jsonRPC  = JSONRPC()
-    def _interrupt(self, wait=.001) -> bool: #break
+    def _interrupt(self, wait: float=0.0001) -> bool: #break
         return MONITOR.waitForAbort(wait)
 
     def _suspend(self):
@@ -99,15 +99,15 @@ class Library:
 
     
     def fillItems(self):
-        def fillItem(type):
+        def __fill(type):
             try: return self.libraryFUNCS[type]()
             except Exception as e: 
-                self.log('fillItem failed! %s'%(e), xbmc.LOGERROR)
+                self.log('__fill failed! %s'%(e), xbmc.LOGERROR)
                 return []
                 
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if (self.service._interrupt() or self.service._suspend()):
+            if (self.service._interrupt() | self.service._suspend()):
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
@@ -115,26 +115,21 @@ class Library:
                 self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
                 self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
             self.log('fillItems, returning %s'%(type))
-            yield (type,fillItem(type))
+            yield (type,__fill(type))
 
 
-    @timeit
-    def updateLibrary(self, force=False):
-        def _updateClient():
-            for idx, type in enumerate(AUTOTUNE_TYPES):
-                if self.service._interrupt() or self.service._suspend(): break
-                yield (type,self.getLibrary(type))
-                
-        def _updateItem(type,item):
-            #check existing library for enabled items
-            for eitem in self.getEnabled(type):
-                if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name').lower(): 
-                    item['enabled'] = True
+    def updateLibrary(self, force: bool=False) -> bool:
+        def __clear():
+            for label, func in list(self.libraryFUNCS.items()):
+                cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
+                DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
+                self.cache.clear(cacheName,wait=5)
+                    
+        def __update(type, item):
+            #check existing library for enabled itemss
+            [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name').lower()]
             #check existing channels for enabled items
-            for channel in self.channels.getType(type):
-                if getChannelSuffix(item.get('name'), type).lower() == channel.get('name').lower():
-                    item['enabled'] = True
-
+            [item.update({'enabled':True}) for channel in self.channels.getType(type) if getChannelSuffix(item.get('name'), type).lower() == channel.get('name').lower()]
             entry = self.getTemplate()
             entry.update(item)
             return entry
@@ -143,29 +138,23 @@ class Library:
         if isClient():
             if SETTINGS.getSettingInt('Client_Mode') != 2: return True
             msg = LANGUAGE(32158)
-            libraryItems = dict(_updateClient())
+            libraryItems = dict()
+            [libraryItems.update({type,self.getLibrary(type)}) for type in AUTOTUNE_TYPES if not (self.service._interrupt() | self.service._suspend())]
         else:
             msg = LANGUAGE(32022)
             if force: #clear library cache.
-                with busy_dialog():
-                    for label, func in list(self.libraryFUNCS.items()):
-                        if self.service._interrupt(): break
-                        else:
-                            cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
-                            DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
-                            self.cache.clear(cacheName,wait=5)
+                with busy_dialog(): __clear()
             libraryItems = dict(self.fillItems())
-        
+            
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-            if self.service._interrupt() or self.service._suspend():
+            if (self.service._interrupt() | self.service._suspend()):
                 complete = False
                 break
-            else:
-                items = libraryItems.get(type,[])
-                self.setLibrary(type, [_updateItem(type,item) for item in items])
-        DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
+            else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
+            
+        self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
         self.log('updateLibrary, force = %s, complete = %s'%(force, complete))
         return complete
         
@@ -391,23 +380,24 @@ class Library:
         
 
     def searchRecommended(self):
-        def _search(addonid):
-            cacheName = 'searchRecommended.%s'%(getMD5(addonid))
-            addonMeta = self.jsonRPC.getAddonDetails(addonid)
-            payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
-            if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
-                payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
-            else:
-                payload = loadJSON(payload)
-                self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
+        return {} #todo
+        # def _search(addonid):
+            # cacheName = 'searchRecommended.%s'%(getMD5(addonid))
+            # addonMeta = self.jsonRPC.getAddonDetails(addonid)
+            # payload   = PROPERTIES.getEXTProperty(REG_KEY%(addonid))
+            # if not payload: #startup services may not be broadcasting beacon; use last cached beacon instead.
+                # payload = self.cache.get(cacheName, checksum=addonMeta.get('version',ADDON_VERSION), json_data=True)
+            # else:
+                # payload = loadJSON(payload)
+                # self.cache.set(cacheName, payload, checksum=addonMeta.get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS), json_data=True)
             
-            if payload:
-                self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))
-                return addonid,{"data":payload,"meta":addonMeta}
+            # if payload:
+                # self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))
+                # return addonid,{"data":payload,"meta":addonMeta}
                 
-        if isClient() or not SETTINGS.getSettingBool('Enable_Recommended'): return []
-        addonList = sorted(list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f])))
-        return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
+        # if isClient() or not SETTINGS.getSettingBool('Enable_Recommended'): return []
+        # addonList = sorted(list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f])))
+        # return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
 
     def getServices(self):

@@ -83,7 +83,7 @@ class Resources:
         cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
-                if MONITOR.waitForAbort(0.001): 
+                if MONITOR.waitForAbort(0.0001): 
                     self.log('getLogoResources, waitForAbort')
                     break
                 elif not hasAddon(id):
