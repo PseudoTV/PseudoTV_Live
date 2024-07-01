@@ -81,7 +81,7 @@ class Plugin:
             channelPlaylist = xbmc.PlayList(pltype)
             channelPlaylist.clear()
             xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
-            [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems)]
+            [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if FileAccess.exists(liz.getPath())]
             return channelPlaylist
             
 
@@ -143,8 +143,7 @@ class Plugin:
             self.log('playRadio, Playlist size = %s'%(channelPlaylist.size()))
             PLAYER.play(channelPlaylist,windowed=True)
             BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
-        else: 
-            self.resolveURL(False, xbmcgui.ListItem())
+        else: self.resolveURL(False, xbmcgui.ListItem())
     
         
     def playTV(self, name: str, chid: str):
@@ -154,22 +153,25 @@ class Plugin:
 
     def playPlaylist(self, name: str, chid: str):
         self.log('playPlaylist, id = %s'%(chid))
-        channelPlaylist = self.quePlaylist(self.getPVRItems(name, chid))
-        self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
-        if isPlaylistRandom(): channelPlaylist.unshuffle()
-        PLAYER.play(channelPlaylist,windowed=True)
-    
-        
+        listitems = self.getPVRItems(name, chid)
+        if listitems:
+            channelPlaylist = self.quePlaylist(listitems)
+            self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
+            if isPlaylistRandom(): channelPlaylist.unshuffle()
+            PLAYER.play(channelPlaylist,windowed=True)
+            BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+        else: self.resolveURL(False, xbmcgui.ListItem())
+
+
     def getPVRItems(self, name: str, chid: str) -> list:
         self.log('getPVRItems, id = %s'%(chid))
-        def buildfItem(item={}, media='video'):
-            liz = LISTITEMS.buildItemListItem(decodePlot(item.get('plot','')), media)
+        def buildfItem(item: dict={}):
+            liz = LISTITEMS.buildItemListItem(decodePlot(item.get('plot','')), 'video')
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             return liz
             
-        found     = False
-        listitems = [xbmcgui.ListItem()]
-        fitem     = self.sysInfo.get('fitem')
+        found = False
+        fitem = self.sysInfo.get('fitem')
         
         with busy_dialog():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
@@ -208,12 +210,12 @@ class Plugin:
                         infoTag = ListItemInfoTag(liz, 'video')
                         infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
                         
-                    del nextitems[PAGE_LIMIT:]# list of upcoming items, truncate for speed.
+                    del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed.
                     self.sysInfo['fitem']    = fitem
                     pvritem['broadcastnow']  = nowitem   # current item
                     pvritem['broadcastnext'] = nextitems # upcoming items
                     self.sysInfo['pvritem']  = pvritem
-                    liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                    
                     listitems = [liz]
                     listitems.extend(poolit(buildfItem)(nextitems))
                     return listitems

@@ -210,8 +210,8 @@ class Player(xbmc.Player):
                 self.background = self.background.close()
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
             if self.isPlaying(): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
-        
-
+            
+            
 class Monitor(xbmc.Monitor):
     idleTime   = 0
     isIdle     = False
