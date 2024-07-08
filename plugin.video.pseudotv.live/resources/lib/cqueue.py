@@ -45,6 +45,7 @@ class CustomQueue:
         self.qsize     = 0
         self.min_heap  = []
         self.itemCount = defaultdict(int)
+        self.popThread = Thread(target=self.__pop)
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -52,11 +53,12 @@ class CustomQueue:
 
 
     def __start(self):
-        self.log("__start")
-        self.popThread = Thread(target=self.__pop)
-        self.popThread.daemon = True
-        self.popThread.start()
-        
+        if not self.popThread.is_alive():
+            self.log("__starting popThread")
+            self.popThread = Thread(target=self.__pop)
+            self.popThread.daemon = True
+            self.popThread.start()
+
 
     @timeit
     def __run(self, func, args=(), kwargs=None):

@@ -79,7 +79,7 @@ class Seasonal:
         self.log('buildSeasonal')
         season = self.getHoliday()
         for query in season.get('query',[]):
-            for param in KEYWORDS.get(season.get('keyword',{})).get(query.get('key',{})):
+            for param in KEYWORDS.get(season.get('keyword',{}),{}).get(query.get('key',{}),{}):
                 item = query.copy()
                 holiday = season.copy()
                 holiday.pop("query")

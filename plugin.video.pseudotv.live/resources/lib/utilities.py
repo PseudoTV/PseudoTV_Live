@@ -19,6 +19,7 @@
 # -*- coding: utf-8 -*-
 from globals import *
 
+
 class Utilities:
     def __init__(self, sysARG=sys.argv):
         self.log('__init__, sysARG = %s'%(sysARG))
@@ -27,6 +28,70 @@ class Utilities:
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def showWelcome(self):
+        try: 
+            with busy_dialog():
+                fle   = FileAccess.open(WELCOME_FLE, "r")
+                ftext = fle.read()
+                fsize = fle.size()
+                fle.close()
+            if (SETTINGS.getCacheSetting('showWelcome', checksum=fsize) or 'true') == 'true':
+                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
+                DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
+                                               pvr_name   = PVR_CLIENT_NAME,
+                                               m3u        = M3UFLEPATH,
+                                               xmltv      = XMLTVFLEPATH,
+                                               genre      = GENREFLEPATH,
+                                               logo       = LOGO_LOC,
+                                               lang_30074 = LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
+        
+
+    def showChangelog(self):
+        try:  
+            def addColor(text):
+                text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
+                text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
+                text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
+                text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
+                text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
+                text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
+                text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
+                text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
+                text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
+                text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
+                text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
+                text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
+                return text  
+                
+            with busy_dialog():
+                fle = FileAccess.open(CHANGELOG_FLE, "r")
+                txt = addColor(fle.read())
+                fle.close()
+            DIALOG.textviewer(txt, heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+        except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
+   
+
+    def showReadme(self):
+        try: 
+            def convertMD2TXT(md):
+                markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
+                markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
+                markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
+                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
+                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
+                markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
+                return markdown
+                
+            with busy_dialog():
+                openAddonSettings((7,1))
+                fle = FileAccess.open(README_FLE, "r")
+                txt = convertMD2TXT(fle.read())
+                fle.close()
+            DIALOG.textviewer(txt, heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90)
+        except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
 
 
     def userGroups(self):
@@ -55,69 +120,10 @@ class Utilities:
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def showWelcome(self):
-        try: 
-            fle   = FileAccess.open(WELCOME_FLE, "r")
-            ftext = fle.read()
-            fsize = fle.size()
-            fle.close()
-            if (SETTINGS.getCacheSetting('showWelcome', checksum=fsize) or 'true') == 'true':
-                SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
-                DIALOG.textviewer(ftext.format(addon_name=ADDON_NAME,
-                                               pvr_name=PVR_CLIENT_NAME,
-                                               m3u=M3UFLEPATH,
-                                               xmltv=XMLTVFLEPATH,
-                                               genre=GENREFLEPATH,
-                                               logo=LOGO_LOC,
-                                               lang_30074=LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-        except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
-        
-
-    def showReadme(self):
-        with busy_dialog():
-            def convertMD2TXT(md):
-                markdown = (re.sub(r'(\[[^][]*]\([^()]*\))|^(#+)(.*)', lambda x:x.group(1) if x.group(1) else "[COLOR=cyan][B]{1} {0} {1}[/B][/COLOR]".format(x.group(3),('#'*len(x.group(2)))), md, flags=re.M))
-                markdown = (re.sub(r'`(.*?)`', lambda x:x.group(1) if not x.group(1) else '"[I]{0}[/I]"'.format(x.group(1)), markdown, flags=re.M))
-                markdown = re.sub(r'\[!\[(.*?)\]\((.*?)\)]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '[B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(3)), markdown, flags=re.M)
-                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(2) else '- [B]{0}[/B]\n[I]{1}[/I]'.format(x.group(1),x.group(2)), markdown, flags=re.M)
-                markdown = re.sub(r'\[(.*?)\]\((.*?)\)', lambda x:x.group(1) if not x.group(1) else '- [B]{0}[/B]'.format(x.group(1)), markdown, flags=re.M)
-                markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
-                return markdown
-        openAddonSettings((7,1))
-        fle = FileAccess.open(README_FLE, "r")
-        txt = fle.read()
-        fle.close()
-        try: DIALOG.textviewer(convertMD2TXT(txt), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True, autoclose=90)
-        except Exception as e: self.log('showReadme failed! %s'%(e), xbmc.LOGERROR)
-   
-   
-    def showChangelog(self):
-        with busy_dialog():
-            def addColor(text):
-                text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
-                text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
-                text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
-                text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')
-                text = text.replace('-Tweaked'    ,'[COLOR=yellow][B]-Tweaked:[/B][/COLOR]')
-                text = text.replace('-Updated'    ,'[COLOR=yellow][B]-Updated:[/B][/COLOR]')
-                text = text.replace('-Changed'    ,'[COLOR=yellow][B]-Changed:[/B][/COLOR]')
-                text = text.replace('-Notice'     ,'[COLOR=orange][B]-Notice:[/B][/COLOR]')
-                text = text.replace('-Fixed'      ,'[COLOR=orange][B]-Fixed:[/B][/COLOR]')
-                text = text.replace('-Removed'    ,'[COLOR=red][B]-Removed:[/B][/COLOR]')
-                text = text.replace('-Important'  ,'[COLOR=red][B]-Important:[/B][/COLOR]')
-                text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
-                return text   
-        fle = FileAccess.open(CHANGELOG_FLE, "r")
-        txt = fle.read()
-        fle.close()
-        try: DIALOG.textviewer(addColor(txt), heading=(LANGUAGE(32045)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
-        except Exception as e: self.log('showChangelog failed! %s'%(e), xbmc.LOGERROR)
-   
-   
     def openChannelManager(self, chnum: int=-1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not isRunning('MANAGER_RUNNING'):
-            with setRunning('MANAGER_RUNNING'), suspendActivity():
+            with setRunning('MANAGER_RUNNING'):
                 from manager import Manager
                 chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
                 del chmanager

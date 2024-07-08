@@ -42,6 +42,12 @@ class Tasks():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
+    def _que(self, func, priority=-1, *args, **kwargs):# priority -1 autostack, 1 Highest, 5 Lowest
+        if priority == -1: priority = self.quePriority.qsize + 1
+        self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
+        self.quePriority._push((func,args,kwargs),priority)
+        
+
     def _startProcess(self):
         setInstanceID()
         isClient(silent=False)
@@ -54,22 +60,55 @@ class Tasks():
         self.log('_startProcess, finished...')
         
 
-    def _que(self, func, priority=-1, *args, **kwargs):# priority -1 autostack, 1 Highest, 5 Lowest
-        if priority == -1: priority = self.quePriority.qsize + 1
-        self.log('_que, priority = %s, func = %s, args = %s, kwargs = %s' % (priority,func.__name__, args, kwargs))
-        self.quePriority._push((func,args,kwargs),priority)
-        
-                
+    def chkWelcome(self):
+        self.log('chkWelcome')
+        BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
+              
+              
+    def chkVersion(self):
+        self.log('chkVersion')
+        if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
+            #todo check kodi repo addon.xml version number, prompt user if outdated.
+            # https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/addon.xml
+            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+            BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
+
+
+    def chkDebugging(self):
+        self.log('chkDebugging')
+        if SETTINGS.getSettingBool('Enable_Debugging'):
+            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
+                self.log('_chkDebugging, disabling debugging.')
+                SETTINGS.setSettingBool('Enable_Debugging',False)
+                DIALOG.notificationDialog(LANGUAGE(321423))
+
+
     def chkBackup(self):
         self.log('chkBackup')
         Backup().hasBackup()
 
 
-    def chkHTTP(self):
-        self.log('chkHTTP')
-        self.httpServer._start()
-            
+    def chkPVRBackend(self): 
+        self.log('chkPVRBackend')
+        if hasAddon(PVR_CLIENT_ID,install=True,enable=True):
+            if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
+                with busy_dialog():
+                    if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
+                        DIALOG.notificationDialog(LANGUAGE(32152))
+                    else: 
+                        DIALOG.notificationDialog(LANGUAGE(32046))
         
+        
+    def chkUpdateTime(self, key: str, runEvery: int, nextUpdate=None) -> bool:
+        #schedule updates, first boot always forces run!
+        if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
+        epoch = int(time.time())
+        if (epoch >= nextUpdate) and not self.service._suspend():
+            PROPERTIES.setPropertyInt(key,(epoch+runEvery))
+            return True
+        return False
+
+                     
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=60):
             self._que(self._chkQueTimer)
@@ -91,73 +130,17 @@ class Tasks():
             self._que(self.chkHTTP)
         if self.chkUpdateTime('chkJSONQUE',runEvery=300):
             self._que(self.chkJSONQUE)
-              
-              
-    def chkWelcome(self):
-        self.log('chkWelcome')
-        BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
-              
-              
-    def chkVersion(self):
-        self.log('chkVersion')
-        if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
-            #todo check kodi repo addon.xml version number, prompt user if outdated.
-            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
-            BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
+                          
+
+    def chkFiles(self):
+        self.log('_chkFiles')
+        # check for missing files and run appropriate action to rebuild them only after init. startup.
+        if hasFirstrun():
+            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,3)
+            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
+                self._que(self.chkChannels,4)
 
 
-    def chkDebugging(self):
-        self.log('chkDebugging')
-        if SETTINGS.getSettingBool('Enable_Debugging'):
-            if DIALOG.yesnoDialog(LANGUAGE(32142),autoclose=4):
-                self.log('_chkDebugging, disabling debugging.')
-                SETTINGS.setSettingBool('Enable_Debugging',False)
-                DIALOG.notificationDialog(LANGUAGE(321423))
-
-
-    def chkPVRBackend(self): 
-        self.log('chkPVRBackend')
-        if hasAddon(PVR_CLIENT_ID,install=True,enable=True):
-            if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
-                with busy_dialog():
-                    if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
-                        DIALOG.notificationDialog(LANGUAGE(32152))
-                    else: 
-                        DIALOG.notificationDialog(LANGUAGE(32046))
-        
-     
-    def chkUpdateTime(self, key: str, runEvery: int, nextUpdate=None) -> bool:
-        #schedule updates, first boot always forces run!
-        if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
-        epoch = int(time.time())
-        if (epoch >= nextUpdate) and not self.service._suspend():
-            PROPERTIES.setPropertyInt(key,(epoch+runEvery))
-            return True
-        return False
-
-
-    def chkPVRSettings(self):
-        try:
-            # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
-            if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
-                SETTINGS.setSettingInt('Min_Days',min)
-                
-            if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
-                SETTINGS.setSettingInt('Max_Days',max)
-        except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
-         
-
-    def chkLibrary(self):
-        try: 
-            library = Library(service=self.service)
-            library.importPrompt()
-            complete = library.updateLibrary()
-            del library
-            if not complete: self._que(self.chkLibrary,3)
-            elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
-        except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
-
-    
     def chkRecommended(self):
         try:
             library = Library(service=self.service)
@@ -166,6 +149,17 @@ class Tasks():
         except Exception as e: self.log('chkRecommended failed! %s'%(e), xbmc.LOGERROR)
 
         
+    def chkLibrary(self):
+        try: 
+            library = Library(service=self.service)
+            library.importPrompt()
+            complete = library.updateLibrary()
+            del library
+            if   not complete: self._que(self.chkLibrary,3)
+            elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+        except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
+
+
     def chkChannels(self):
         try:
             builder  = Builder(self.service)
@@ -179,30 +173,31 @@ class Tasks():
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
-               
-    def chkFiles(self):
-        self.log('_chkFiles')
-        # check for missing files and run appropriate action to rebuild them only after init. startup.
-        if hasFirstrun():
-            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,3)
-            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                self._que(self.chkChannels,4)
 
-
+    def chkPVRSettings(self):
+        try:
+            # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
+            if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
+                SETTINGS.setSettingInt('Min_Days',min)
+                
+            if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
+                SETTINGS.setSettingInt('Max_Days',max)
+        except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
+         
+         
+    def chkHTTP(self):
+        self.log('chkHTTP')
+        self.httpServer._start()
+            
+            
     def chkJSONQUE(self):
         if not isRunning('chkJSONQUE'):
             with setRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-                    if self.service._interrupt() or self.service._suspend():
-                        self.log('chkJSONQUE, _interrupt or _suspend, cancelling.')
-                        break
-                    elif self.service.__playing():
-                        self.log('chkJSONQUE, playback detected, cancelling.')
-                        break
-                    elif len(params) > 0:
-                        self._que(self.jsonRPC.sendJSON,5,params.pop(0))
+                    if self.service._interrupt() or self.service._suspend(): break
+                    elif len(params) > 0: self._que(self.jsonRPC.sendJSON,10,params.pop(0))
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
                 SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
@@ -286,3 +281,39 @@ class Tasks():
                         continue
                 dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
         SETTINGS.setPVRPath(newFolder)
+        
+        
+    def setPVRPath(self, userFolder):
+        self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
+        SETTINGS.setSetting('User_Folder' ,userFolder)
+        SETTINGS.setSetting('Remote_M3U'  ,'%s'%(os.path.join(userFolder,  M3UFLE).replace('special://profile/addon_data','/addon_data')))
+        SETTINGS.setSetting('Remote_XMLTV','%s'%(os.path.join(userFolder,XMLTVFLE).replace('special://profile/addon_data','/addon_data')))
+        SETTINGS.setSetting('Remote_GENRE','%s'%(os.path.join(userFolder,GENREFLE).replace('special://profile/addon_data','/addon_data')))
+        
+        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
+                       'm3uPath'       :os.path.join(userFolder,M3UFLE),
+                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
+                       'epgPath'       :os.path.join(userFolder,XMLTVFLE),
+                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
+                       'genresPath'    :os.path.join(userFolder,GENREFLE)}
+        SETTINGS.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
+        setPendingRestart()
+        
+        
+    def setPVRRemote(self, userURL):
+        self.log('setPVRRemote, userURL = %s'%(userURL)) #set remote pvr url
+        SETTINGS.setSetting('Remote_URL'  ,userURL)
+        SETTINGS.setSetting('Remote_M3U'  ,'%s/%s'%(userURL,M3UFLE))
+        SETTINGS.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
+        SETTINGS.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
+        
+        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
+                       'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
+                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
+                       'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
+                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
+                       'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
+        SETTINGS.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
+        setPendingRestart()

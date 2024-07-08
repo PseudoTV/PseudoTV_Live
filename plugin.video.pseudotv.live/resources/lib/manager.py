@@ -89,27 +89,28 @@ class Manager(xbmcgui.WindowXMLDialog):
             DIALOG.notificationDialog(LANGUAGE(32058))
             return openAddonSettings((0,1))
         else:
-            with busy_dialog():
+            with busy_dialog(), suspendActivity():
                 self.cntrlStates  = {}
                 self.showingList  = True
-                self.startChannel = kwargs.get('channel',-1)
-                self.log('Manager, startChannel = %s'%(self.startChannel))
                 
                 self.cache        = Cache(mem_cache=True)
                 self.channels     = Channels()
                 self.jsonRPC      = JSONRPC()
-                self.rules        = RulesList(self.channels.getChannels())
+                self.eChannels    = self.channels.getChannels() #existing channels
+                self.rules        = RulesList(self.eChannels)
                 self.xsp          = XSP()
                 self.m3u          = M3U()
                 self.resources    = Resources(self.jsonRPC, self.cache)
                 
                 self.newChannel   = self.channels.getTemplate()
-                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.channels.getChannels()), key=lambda k: k['number'])
+                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=lambda k: k['number'])
                 self.channelList.extend(self.channels.getAutotuned())
                 self.newChannels  = self.channelList.copy()
                 
+                self.startChannel = kwargs.get('channel',-1)
                 if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
                 self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+                self.log('Manager, startChannel = %s, focusIndex = %s'%(self.startChannel, self.focusIndex))
                
             try:
                 if kwargs.get('start',True): self.doModal()
@@ -163,7 +164,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if item["number"] == channel["number"]:
                     item.update(channel)
             yield item
-
+            
 
     def fillChanList(self, channelList, reset=False, focus=None):
         self.log('fillChanList, focus = %s'%(focus))
@@ -507,7 +508,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             media = 'music' if isRadio({'path':[path]}) else 'video'
             dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
             with busy_dialog():
-                items = self.jsonRPC.walkFileDirectory(path, media, depth=3, retItem=True)
+                items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
             
             for idx, dir in enumerate(items):
                 if MONITOR.waitForAbort(0.0001): break
@@ -646,7 +647,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getRules(self, item, rules):
         self.log('getRules')
         print(item, rules)
-        if not self.validateChannels([item])[0]: return DIALOG.notificationDialog(LANGUAGE(32071))
+        if not self.validateChannels([item]): return DIALOG.notificationDialog(LANGUAGE(32071))
         listitems = self.buildRuleItems(item, rules)
         self.toggleruleList(True)
         self.ruleList.addItems(listitems)

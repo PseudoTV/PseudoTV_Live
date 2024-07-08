@@ -40,48 +40,46 @@ class Multiroom:
 
     def pairAnnouncement(self,wait=900):
         if not self.runningAnnouncment:
-            with suspendActivity():
-                self.log('pairAnnouncement')
-                sec = 0
-                inc = int(100/wait)
-                dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-                self.runningAnnouncment = True
-                while not self.monitor.abortRequested() and (sec < wait):
-                    sec += 1
-                    msg = LANGUAGE(32163)%(ADDON_NAME,LANGUAGE(30130),(wait-sec))
-                    dia = DIALOG.progressDialog((inc*sec),dia, msg)
-                    print('dia',dia)
-                    Announcement()
-                    if self.monitor.waitForAbort(1.5) or dia is None: break
-                self.runningAnnouncment = False
-                DIALOG.progressDialog(100,dia)
-        
+            self.log('pairAnnouncement')
+            sec = 0
+            inc = int(100/wait)
+            dia = DIALOG.progressDialog(message=LANGUAGE(30078))
+            self.runningAnnouncment = True
+            while not self.monitor.abortRequested() and (sec < wait):
+                sec += 1
+                msg = LANGUAGE(32163)%(ADDON_NAME,LANGUAGE(30130),(wait-sec))
+                dia = DIALOG.progressDialog((inc*sec),dia, msg)
+                print('dia',dia)
+                Announcement()
+                if self.monitor.waitForAbort(1.5) or dia is None: break
+            self.runningAnnouncment = False
+            DIALOG.progressDialog(100,dia)
+    
             
     def pairDiscovery(self,wait=60):
         if not self.runningDiscovery:
-            with suspendActivity():
-                self.log('pairDiscovery')
-                sec = 0
-                inc = int(100/wait)
-                dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-                self.runningDiscovery = True
-                while not self.monitor.abortRequested() and (sec < wait):
-                    sec += 1
-                    msg = LANGUAGE(32162)%(ADDON_NAME,(wait-sec))
-                    dia = DIALOG.progressDialog((inc*sec),dia, msg)
-                    pay = Discovery()._start()
-                    print('pairDiscovery',pay)
-                    if self.monitor.waitForAbort(1.0) or dia is None or pay: break
-                self.runningDiscovery = False
-                DIALOG.progressDialog(100,dia)
+            self.log('pairDiscovery')
+            sec = 0
+            inc = int(100/wait)
+            dia = DIALOG.progressDialog(message=LANGUAGE(30078))
+            self.runningDiscovery = True
+            while not self.monitor.abortRequested() and (sec < wait):
+                sec += 1
+                msg = LANGUAGE(32162)%(ADDON_NAME,(wait-sec))
+                dia = DIALOG.progressDialog((inc*sec),dia, msg)
+                pay = Discovery()._start()
+                print('pairDiscovery',pay)
+                if self.monitor.waitForAbort(1.0) or dia is None or pay: break
+            self.runningDiscovery = False
+            DIALOG.progressDialog(100,dia)
 
-                # setSetting('Select_server',)
-                # servers = getDiscovery()
-                # if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
-                    # DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
-                # servers[host] = payload
-                # setDiscovery(servers)
-                # SETTINGS.chkDiscovery(servers)
+            # setSetting('Select_server',)
+            # servers = getDiscovery()
+            # if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
+                # DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
+            # servers[host] = payload
+            # setDiscovery(servers)
+            # SETTINGS.chkDiscovery(servers)
 
 
     def chkDiscovery(self, servers, forced=False):

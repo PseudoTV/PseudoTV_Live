@@ -65,18 +65,18 @@ class Fillers:
         def _parseVFS(path):
             tmpDCT = {}
             if hasAddon(path, install=True):
-                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=3,chkDuration=True,retItem=True).items()):
+                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=5,chkDuration=True,retItem=True).items()):
                     for item in items:
                         for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
             return tmpDCT
             
         def _parseLocal(path):
             if not FileAccess.exists(path): return {}
-            return self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=CHANNEL_LIMIT, chkDuration=True)
+            return self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=5, chkDuration=True)
 
         def _parseResource(id):
             if not hasAddon(id, install=True): return {}
-            return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts=VIDEO_EXTS, depth=CHANNEL_LIMIT, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts=VIDEO_EXTS, depth=5, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
 
         def _sortbyfile(data):
             tmpDCT = {}

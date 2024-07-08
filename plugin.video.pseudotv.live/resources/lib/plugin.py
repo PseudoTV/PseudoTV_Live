@@ -81,7 +81,7 @@ class Plugin:
             channelPlaylist = xbmc.PlayList(pltype)
             channelPlaylist.clear()
             xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
-            [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if FileAccess.exists(liz.getPath())]
+            [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
             return channelPlaylist
             
 

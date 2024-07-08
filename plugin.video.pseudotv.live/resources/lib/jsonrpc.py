@@ -75,7 +75,7 @@ class JSONRPC:
         return cacheResponse
 
 
-    def walkFileDirectory(self, path, media='files', depth=3, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkFileDirectory(self, path, media='files', depth=5, chkDuration=False, retItem=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         walk = dict()
         self.log('walkFileDirectory, walking %s, depth = %s'%(path,depth))
         for idx, item in enumerate(self.getDirectory({"directory":path,"media":media},True,checksum,expiration).get('files',[])):
@@ -90,7 +90,7 @@ class JSONRPC:
         return walk
                 
 
-    def walkListDirectory(self, path, exts='', depth=3, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
+    def walkListDirectory(self, path, exts='', depth=5, chkDuration=False, appendPath=False, checksum=ADDON_VERSION, expiration=datetime.timedelta(minutes=15)):
         def _chkfile(path, f):
             if chkDuration:
                 if self.getDuration(os.path.join(path,f), accurate=True) == 0: return

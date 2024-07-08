@@ -75,9 +75,11 @@ def closeBusyDialog():
 
 @contextmanager
 def busy_dialog():
-    if not isBusyDialog(): Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
-    try: yield
-    finally: Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    if not isBusyDialog():
+        Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
+        try: yield
+        finally: Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
+    else: yield
                   
 @contextmanager
 def sudo_dialog(msg):
@@ -302,41 +304,6 @@ class Settings:
     def setEXTSetting(self, id, key, value):
         return xbmcaddon.Addon(id).setSetting(key,value)
         
-
-    def setPVRPath(self, userFolder):
-        self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
-        self.setSetting('User_Folder' ,userFolder)
-        self.setSetting('Remote_M3U'  ,'%s'%(os.path.join(userFolder,M3UFLE).replace('special://profile/addon_data','/addon_data')))
-        self.setSetting('Remote_XMLTV','%s'%(os.path.join(userFolder,XMLTVFLE).replace('special://profile/addon_data','/addon_data')))
-        self.setSetting('Remote_GENRE','%s'%(os.path.join(userFolder,GENREFLE).replace('special://profile/addon_data','/addon_data')))
-        
-        Client_Mode = self.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'm3uPath'       :os.path.join(userFolder,M3UFLE),
-                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'epgPath'       :os.path.join(userFolder,XMLTVFLE),
-                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
-                       'genresPath'    :os.path.join(userFolder,GENREFLE)}
-        self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        self.property.setEXTProperty('pendingRestart',True)
-        
-        
-    def setPVRRemote(self, userURL):
-        self.log('setPVRRemote, userURL = %s'%(userURL)) #set remote pvr url
-        self.setSetting('Remote_URL'  ,userURL)
-        self.setSetting('Remote_M3U'  ,'%s/%s'%(userURL,M3UFLE))
-        self.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
-        self.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
-        
-        Client_Mode = self.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'm3uUrl'        :self.getSetting('Remote_M3U'),
-                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'epgUrl'        :self.getSetting('Remote_XMLTV'),
-                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
-                       'genresUrl'     :self.getSetting('Remote_GENRE')}
-        self.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        self.property.setEXTProperty('pendingRestart',True)
 
 
     def chkPluginSettings(self, id, values, override=False, prompt=True):

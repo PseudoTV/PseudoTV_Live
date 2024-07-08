@@ -78,19 +78,19 @@ def isRunning(key):
 
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
-    while not MONITOR.abortRequested():
-        if not isPendingSuspend(): break
-        elif MONITOR.waitForAbort(0.0001): break
-    setPendingSuspend(True)
-    try: yield
-    finally: setPendingSuspend(False)
-
+    if not isPendingSuspend():
+        PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
+        try: yield
+        finally:
+            PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
+    
 def isPendingSuspend():
     return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
 
-def setPendingSuspend(state=True):
-    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),str(state).lower())
-
+def setPendingRestart(state=True):
+    if state: DIALOG.notificationWait(LANGUAGE(32124))
+    return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
+           
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()
@@ -475,11 +475,7 @@ def isPlaylistRepeat():
 
 def isPaused():
     return BUILTIN.getInfoBool('Player.Paused')
-
-def setPendingRestart(state=True):
-    if state: DIALOG.notificationWait(LANGUAGE(32124))
-    return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
-                           
+                
 def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
     

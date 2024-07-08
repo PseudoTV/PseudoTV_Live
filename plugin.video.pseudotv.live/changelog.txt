@@ -1,3 +1,6 @@
+v.0.5.1
+-Improved background services.
+
 v.0.5.0
 -Added Seasonal channel cleanup.
 -Added Youtube duration detection *Requires Youtube_DL.

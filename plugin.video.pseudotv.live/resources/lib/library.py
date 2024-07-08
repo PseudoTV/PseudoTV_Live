@@ -99,23 +99,36 @@ class Library:
 
     
     def fillItems(self):
-        def __fill(type):
-            try: return self.libraryFUNCS[type]()
-            except Exception as e: 
-                self.log('__fill failed! %s'%(e), xbmc.LOGERROR)
-                return []
-                
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if (self.service._interrupt() | self.service._suspend()):
+            if self.service._interrupt():
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
                 self.parserMSG    = AUTOTUNE_TYPES[idx]
                 self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
                 self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
-            self.log('fillItems, returning %s'%(type))
-            yield (type,__fill(type))
+                try:    items = self.libraryFUNCS[type]()
+                except: items = []
+                self.log('fillItems, returning %s (%s)'%(type,len(items)))
+                yield (type,items)
+
+
+    def fillClient(self):
+        self.log('fillClient')
+        self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32158),LANGUAGE(32041))))
+        for idx, type in enumerate(AUTOTUNE_TYPES):
+            if self.service._interrupt():
+                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
+                break
+            else:
+                self.parserMSG    = AUTOTUNE_TYPES[idx]
+                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
+                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32158),LANGUAGE(32041))))
+                try:    items = self.getLibrary(type)
+                except: items = []
+                self.log('fillClient, returning %s (%s)'%(type,len(items)))
+                yield (type,items)
 
 
     def updateLibrary(self, force: bool=False) -> bool:
@@ -133,27 +146,26 @@ class Library:
             entry = self.getTemplate()
             entry.update(item)
             return entry
-           
-        complete = True 
+
         if isClient():
             if SETTINGS.getSettingInt('Client_Mode') != 2: return True
             msg = LANGUAGE(32158)
-            libraryItems = dict()
-            [libraryItems.update({type,self.getLibrary(type)}) for type in AUTOTUNE_TYPES if not (self.service._interrupt() | self.service._suspend())]
+            libraryItems = dict(self.fillClient())
         else:
             msg = LANGUAGE(32022)
             if force: #clear library cache.
-                with busy_dialog(): __clear()
+                with busy_dialog():
+                    __clear()
             libraryItems = dict(self.fillItems())
             
+        complete = True 
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-            if (self.service._interrupt() | self.service._suspend()):
+            if self.service._interrupt():
                 complete = False
                 break
             else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])
-            
         self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog,LANGUAGE(32025)) 
         self.log('updateLibrary, force = %s, complete = %s'%(force, complete))
         return complete

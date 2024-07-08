@@ -387,10 +387,10 @@ class Service():
             if    self._interrupt(1): break
             elif  self._suspend(): continue
             else: self.__tasks()
-        self.stop()
+        self._stop()
 
 
-    def stop(self):
+    def _stop(self):
         for thread in thread_enumerate():
             if thread.name != "MainThread" and thread.is_alive():
                 try:

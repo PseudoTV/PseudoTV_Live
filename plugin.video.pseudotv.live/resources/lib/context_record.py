@@ -30,27 +30,25 @@ class Record:
         
         
     def add(self):
-        with suspendActivity():
-            self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-            m3u = M3U()
-            ritem = m3u.getRecordItem(self.fitem)
-            if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
-                with busy_dialog():
-                    if (m3u.addRecording(ritem) and XMLTVS().addRecording(ritem,self.fitem)):
-                        DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
-            del m3u
+        self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
+        m3u = M3U()
+        ritem = m3u.getRecordItem(self.fitem)
+        if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
+            with busy_dialog():
+                if (m3u.addRecording(ritem) and XMLTVS().addRecording(ritem,self.fitem)):
+                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
+        del m3u
     
             
     def remove(self):
-        with suspendActivity():
-            self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-            m3u = M3U()
-            ritem = m3u.getRecordItem(self.fitem)
-            if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
-                with busy_dialog():
-                    if (m3u.delRecording(ritem) and XMLTVS().delRecording(ritem)):
-                        DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)),wait=2)
-            del m3u
+        self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
+        m3u = M3U()
+        ritem = m3u.getRecordItem(self.fitem)
+        if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
+            with busy_dialog():
+                if (m3u.delRecording(ritem) and XMLTVS().delRecording(ritem)):
+                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)),wait=2)
+        del m3u
             
             
 if __name__ == '__main__': 
