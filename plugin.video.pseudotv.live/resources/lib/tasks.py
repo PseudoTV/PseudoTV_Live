@@ -48,7 +48,9 @@ class Tasks():
         self.quePriority._push((func,args,kwargs),priority)
         
 
-    def _startProcess(self):
+    def _initialize(self):
+        self.service.currentChannels = self.getChannels()
+        self.service.currentSettings = dict(SETTINGS.getCurrentSettings())
         setInstanceID()
         isClient(silent=False)
         tasks = [self.chkWelcome,
@@ -57,7 +59,7 @@ class Tasks():
                  self.chkBackup,
                  self.chkPVRBackend]
         [self._que(func) for func in tasks if not self.service._interrupt()]
-        self.log('_startProcess, finished...')
+        self.log('_initialize, finished...')
         
 
     def chkWelcome(self):
@@ -110,11 +112,11 @@ class Tasks():
 
                      
     def chkQueTimer(self):
-        if self.chkUpdateTime('chkQueTimer',runEvery=60):
+        if self.chkUpdateTime('chkQueTimer',runEvery=30):
             self._que(self._chkQueTimer)
         
         
-    def _chkQueTimer(self, client = isClient()):
+    def _chkQueTimer(self, client=isClient()):
         self.log('chkQueTimer, client = %s'%(client))
         if self.chkUpdateTime('chkFiles',runEvery=600) and not client:
             self._que(self.chkFiles)
@@ -167,7 +169,7 @@ class Tasks():
             channels = builder.verify()
             del builder
             if complete:
-                setFirstrun(state=True) #set init. boot status to true.
+                if not hasFirstrun(): setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
             else: self._que(self.chkChannels,4)
         except Exception as e:
@@ -196,7 +198,7 @@ class Tasks():
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
-                    if self.service._interrupt() or self.service._suspend(): break
+                    if   self.service._interrupt(): break
                     elif len(params) > 0: self._que(self.jsonRPC.sendJSON,10,params.pop(0))
                 queuePool['params'] = setDictLST(params)
                 self.log('chkJSONQUE, remaining = %s'%(len(queuePool['params'])))
@@ -206,7 +208,8 @@ class Tasks():
     def runAutoTune(self):
         try:
             autotune = Autotune(service=self.service)
-            autotune._runTune()
+            complete = autotune._runTune()
+            if complete: setAutotuned()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

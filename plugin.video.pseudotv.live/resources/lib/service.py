@@ -154,10 +154,15 @@ class Player(xbmc.Player):
         self.showSubtitles(state)
 
 
+    def setPlaycount(self, fitem: dict={}):
+        self.log('setPlaycount, path = %s, playcount = %s'%(fitem.get('path'),fitem.get('playcount')))
+        self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[fitem]))
+
+
     def _onPlay(self):
         self.log('_onPlay')
         if self.disableTrakt: disableTrakt()
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']]))#rollback previous sysInfo
+        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
@@ -169,7 +174,7 @@ class Player(xbmc.Player):
         self.log('_onChange')
         self.toggleBackground()
         clearTrakt()
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']])) #rollback previous sysInfo
+        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
         try:
             if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
                 broadcastnext = self.sysInfo['pvritem']['broadcastnext']
@@ -186,7 +191,7 @@ class Player(xbmc.Player):
         
     def _onStop(self):
         self.log('_onStop')
-        if self.rollbackPlaycount and self.sysInfo.get('fitem'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[self.sysInfo['fitem']])) #rollback previous sysInfo
+        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
         clearTrakt()
@@ -320,7 +325,6 @@ class Monitor(xbmc.Monitor):
 
 
 class Service():
-    isClient()
     currentChannels = []
     currentSettings = []
     
@@ -374,10 +378,8 @@ class Service():
                 
     def __initialize(self):
         self.log('__initialize')
-        if self.player.isPlaying():
-            self.player.onAVStarted() #if playback already in-progress run onAVStarted tasks.
-        self.currentSettings = dict(SETTINGS.getCurrentSettings()) #startup settings
-        self.tasks._startProcess()
+        if self.player.isPlaying(): self.player.onAVStarted()
+        self.tasks._initialize()
         
 
     def _start(self):

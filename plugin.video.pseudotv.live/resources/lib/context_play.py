@@ -20,14 +20,11 @@
 from globals import *
 from plugin  import Plugin
      
-if __name__ == '__main__': 
-    try:    mode = sys.argv[1]
-    except: mode = None
+def run(sysARG):
+    log('Context_Play: __main__, mode = %s, param = %s'%(sysARG[1], sysARG))
     citem = decodePlot(BUILTIN.getInfoLabel('Plot')).get('citem',{})
-    sys.argv.append('?mode=%s&name=%s&chid=%s'%(mode,quoteString(citem.get('name')),quoteString(citem.get('id'))))
-    log('Context_Play: __main__, mode = %s, param = %s'%(mode, sys.argv))
-    if   mode == 'play':     Plugin(sys.argv).playTV(citem.get('name'),citem.get('id'))
-    elif mode == 'playlist': Plugin(sys.argv).playPlaylist(citem.get('name'),citem.get('id'))
+    if   sysARG[1] == 'play':     threadit(Plugin(sysARG).playTV)(citem.get('name'),citem.get('id'))
+    elif sysARG[1] == 'playlist': threadit(Plugin(sysARG).playPlaylist)(citem.get('name'),citem.get('id'))
         
-        
-        
+if __name__ == '__main__': run(sys.argv)
+

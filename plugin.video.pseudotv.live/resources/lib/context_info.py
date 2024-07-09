@@ -31,11 +31,12 @@ class Browse:
         log('Browse: __init__, sysARG = %s'%(sysARG))
         with busy_dialog():
             media = '%ss'%(fitem.get('media','video'))
-            path  = fitem.get('originalpath',fitem.get('citem',{}).get('path'))
+            path  = fitem.get('citem',{}).get('path')
             if isinstance(path,list): path = path[0]
             if '?xsp=' in path:
                 path, params = path.split('?xsp=')
                 path = '%s?xsp=%s'%(path,quoteString(unquoteString(params)))
+        #todo create custom container window with channel listitems.
         log('Browse: target = %s, path = %s'%(media,path))
         BUILTIN.executebuiltin('ReplaceWindow(%s,%s,return)'%(media,path))
 

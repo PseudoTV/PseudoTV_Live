@@ -553,17 +553,17 @@ class ProvisionalRule(BaseRule):
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
             PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "TV Networks"  : [{"path":"videodb://tvshows/studios/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                 "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Studios": [{"path":"videodb://movies/studios/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                 "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                                 "TV Genres"    : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                 "TV Genres"    : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Genres" : [{"path":"videodb://movies/genres/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                 "Movie Genres" : [{"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
-                                 "Mixed Genres" : [{"path":"videodb://tvshows/genres/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                 "Mixed Genres" : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"},
-                                                   {"path":"videodb://movies/genres/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
+                                                   {"path":"videodb://movies/titles/"  ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}]}
 
             if self.optionValues[0]:
@@ -580,7 +580,7 @@ class ProvisionalRule(BaseRule):
                         if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                             provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                                {"field":"episode","operator":"greaterthan","value":"0"}])
-                        fileList, dirList = builder.buildList(citem, self.optionValues[0], media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
+                        fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
                         if len(fileList) > 0: self.storedValues[0].append(fileList)
                 return [_f for _f in self.storedValues.pop(0) if _f]
         return parameter

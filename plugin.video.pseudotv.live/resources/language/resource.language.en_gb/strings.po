@@ -1321,7 +1321,7 @@ msgid "Pagination Limit, How many entries are requested and parsed per call. [25
 msgstr ""
 
 msgctxt "#33016"
-msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nChanges will propagate slowly over time and are not instantaneous."
+msgid "Global Filler rules apply to all channels, Advanced channel manager rules apply per channel. *see readme for details.\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33023"
@@ -1493,7 +1493,7 @@ msgid "Create dynamic path"
 msgstr ""
 
 msgctxt "#33121"
-msgid "Group TV shows in blocks of x. [0 Disabled, 2 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and are not instantaneous."
+msgid "Group TV shows in blocks. [0 Disabled, 2 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
 msgctxt "#33129"

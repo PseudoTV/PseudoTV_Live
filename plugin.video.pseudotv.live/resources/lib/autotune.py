@@ -50,12 +50,11 @@ class Autotune:
 
 
     def _runTune(self, samples: bool=False, rebuild: bool=False, dia=None):
-        if not hasAutotuned() and not isClient():
-            setAutotuned()
+        if not isClient():
             customChannels = self.getCustom()
             autoChannels   = self.getAutotuned()
             self.log('_runTune, custom channels = %s,  autotune channels = %s'%(len(customChannels),len(autoChannels)))
-            if len(autoChannels) > 0:
+            if len(autoChannels) > 0: #rebuild existing autotune. 
                 rebuild = True
                 PROPERTIES.setEXTProperty('%s.has.Predefined'%(ADDON_ID),True)
             elif len(customChannels) == 0:
@@ -75,13 +74,14 @@ class Autotune:
                     retval = DIALOG.yesnoDialog(message=msg,customlabel=opt)
                     if   retval == 1: dia = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                     elif retval == 2: return Backup().recoverChannels()
-                    else: return
-            else: return
+                    else: return True
+            else: return True
             
             for idx, ATtype in enumerate(AUTOTUNE_TYPES): 
                 if dia: dia = DIALOG.progressBGDialog(int((idx+1)*100//len(AUTOTUNE_TYPES)),dia,ATtype,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32021),LANGUAGE(30038))))
                 self.selectAUTOTUNE(ATtype, autoSelect=samples, rebuildChannels=rebuild)
-
+        return True
+        
 
     def selectAUTOTUNE(self, ATtype: str, autoSelect: bool=False, rebuildChannels: bool=False):
         self.log('selectAUTOTUNE, ATtype = %s, autoSelect = %s, rebuildChannels = %s'%(ATtype,autoSelect,rebuildChannels))

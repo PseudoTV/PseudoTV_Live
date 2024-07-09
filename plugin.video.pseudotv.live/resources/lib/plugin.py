@@ -96,19 +96,8 @@ class Plugin:
     def playLive(self, name: str, chid: str, vid: str):
         with self.preparingPlayback():
             self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
-            if round(self.sysInfo['seek']) <= self.seekTOL or round(self.sysInfo['progresspercentage']) > self.seekTHD:
-                self.sysInfo['seek'] = 0
-                
-            if round(self.sysInfo['progresspercentage']) > self.seekTHD:
-                listitems = self.getPVRItems(name, chid)
-                if len(listitems) > 0:
-                    liz = listitems[0]
-                    self.sysInfo['duration'] = liz.getProperty('duration')
-                else: return self.playError()
-            else: 
-                liz = xbmcgui.ListItem(name,path=vid)
-                liz.setProperty("IsPlayable","true")
-                
+            liz = xbmcgui.ListItem(name,path=vid)
+            liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz, 'video')
@@ -175,17 +164,17 @@ class Plugin:
         
         with busy_dialog():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
-    
             if pvritem:
                 if pvritem.get('citem'):
-                    self.sysInfo['citem'].update(pvritem.pop('citem'))
+                    self.sysInfo['citem'].update(pvritem.get('citem',{}))
                     
                 pastItems = pvritem.get('broadcastpast',[])
                 nowitem   = pvritem.get('broadcastnow',{})
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                 nextitems.insert(0,nowitem)
+                nextitems = pastItems + nextitems
                 
-                for pos, nextitem in enumerate(pastItems + nextitems):
+                for pos, nextitem in enumerate(nextitems):
                     fitem = decodePlot(nextitem.get('plot',{}))
                     if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')):
                         found = True
@@ -194,7 +183,6 @@ class Plugin:
                         
                 if found:
                     nowitem = nextitems.pop(0)
-                    liz = buildfItem(fitem)
                     if round(nowitem['progresspercentage']) > self.seekTHD:
                         self.log('getPVRItems, progress past threshold advance to nextitem')
                         nowitem = nextitems.pop(0)
@@ -204,6 +192,7 @@ class Plugin:
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
                         
+                    liz = buildfItem(nowitem)
                     if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
                         self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
                         liz.setProperty('startoffset', str(nowitem['progress'])) #secs
@@ -211,13 +200,13 @@ class Plugin:
                         infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
                         
                     del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed.
-                    self.sysInfo['fitem']    = fitem
+                    self.sysInfo['fitem']    = decodePlot(nowitem.get('plot',{}))
                     pvritem['broadcastnow']  = nowitem   # current item
                     pvritem['broadcastnext'] = nextitems # upcoming items
                     self.sysInfo['pvritem']  = pvritem
                     
-                    listitems = [liz]
-                    listitems.extend(poolit(buildfItem)(nextitems))
+                    listitems = poolit(buildfItem)(nextitems)
+                    listitems.insert(0,liz)
                     return listitems
                 else: DIALOG.notificationDialog(LANGUAGE(32164))
             else: DIALOG.notificationDialog(LANGUAGE(32000))
@@ -294,7 +283,7 @@ class Plugin:
         #check that resource or plugin installed?
         self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
         def _chkPath():
-            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''),install=True,enable=True)
+            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
             elif FileAccess.exists(self.sysInfo.get('vid','')): return True
             else:
                 self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))

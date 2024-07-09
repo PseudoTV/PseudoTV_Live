@@ -480,14 +480,12 @@ def hasAutotuned():
     return PROPERTIES.getPropertyBool('hasAutotuned')
     
 def setAutotuned(state=True):
-    if state == hasAutotuned(): return
     return PROPERTIES.setPropertyBool('hasAutotuned',state)
          
 def hasFirstrun():
     return PROPERTIES.getPropertyBool('hasFirstrun')
     
 def setFirstrun(state=True):
-    if state == hasFirstrun(): return
     return PROPERTIES.setPropertyBool('hasFirstrun',state)
 
 def isClient(silent=True):
