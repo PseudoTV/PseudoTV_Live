@@ -967,12 +967,12 @@ class Dialog:
             if not enumSEL is None: return enumLST[enumSEL]
                   
         def order(params={}):
-            enumLST = sorted(filter(None,jsonRPC.getEnums("List.Sort",type="order")))
+            enumLST = sorted([_f for _f in jsonRPC.getEnums("List.Sort",type="order") if _f])
             enumSEL = self.selectDialog(enumLST,header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
         def method(params={}):
-            enumLST = sorted(filter(None,jsonRPC.getEnums("List.Sort",type="method")))
+            enumLST = sorted([_f for _f in jsonRPC.getEnums("List.Sort",type="method") if _f])
             enumSEL = self.selectDialog(enumLST,header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
@@ -1009,7 +1009,7 @@ class Dialog:
         def getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
             while not MONITOR.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in rule.items()]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in list(rule.items())]
                 enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
                 if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
             return rule
@@ -1042,7 +1042,7 @@ class Dialog:
             params['order'] = order
             enumSEL = -1
             while not MONITOR.abortRequested() and not enumSEL is None:
-                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in params.get('order',{}).items()]
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:
                     if   enumLST[enumSEL].getLabel() == 'Direction': params['order'].update({'direction':order(params)})

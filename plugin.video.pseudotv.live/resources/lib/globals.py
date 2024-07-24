@@ -78,11 +78,10 @@ def isRunning(key):
 
 @contextmanager
 def suspendActivity(): #suspend/quit running background task.
-    if not isPendingSuspend():
-        PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
-        try: yield
-        finally:
-            PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
+    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
+    try: yield
+    finally:
+        PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
     
 def isPendingSuspend():
     return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'

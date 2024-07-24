@@ -53,8 +53,8 @@ class RulesList:
                   
     def dumpRules(self, rules={}): #convert rule instances to channel format
         nrules = dict()
-        if not rules.items(): return None
-        for key, rule in rules.items():
+        if not list(rules.items()): return None
+        for key, rule in list(rules.items()):
             ritem = dict()
             ritem[key] = {"values":dict()}
             for idx, value in enumerate(rule.optionValues):
@@ -79,7 +79,7 @@ class RulesList:
                 chrule = chrules.get(str(rule.myId))
                 if chrule:
                     ruleInstance = rule.copy()
-                    for key, value in chrule.get('values',{}).items():
+                    for key, value in list(chrule.get('values',{}).items()):
                         ruleInstance.optionValues[int(key)] = value
                     ruleList.update({str(rule.myId):ruleInstance})
                 elif append: ruleList.update({str(rule.myId):rule.copy()})
@@ -104,7 +104,7 @@ class RulesList:
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        for myId, rule in self.ruleItems.get(citem.get('id'),{}).items():
+        for myId, rule in list(self.ruleItems.get(citem.get('id'),{}).items()):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
                 parameter = rule.runAction(action, citem, parameter, inherited)

@@ -68,7 +68,7 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     return matches
 
 class Manager(xbmcgui.WindowXMLDialog):
-    lockAutotune   = False
+    lockAutotune   = True
     madeChanges    = False
     lastActionTime = time.time()
     
@@ -320,7 +320,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                     elif isinstance(value,(list,dict)): 
                         if   key == "group" : value = '|'.join(sorted(set(value)))
                         elif key == "path"  : value = '|'.join(value)
-                        elif key == "rules" : value = '|'.join([rule.name for key, rule in self.rules.loadRules([citem]).get(citem['id'],{}).items()])#todo load rule names
+                        elif key == "rules" : value = '|'.join([rule.name for key, rule in list(self.rules.loadRules([citem]).get(citem['id'],{}).items())])#todo load rule names
                     elif not isinstance(value,str): value = str(value)
                     elif not value: value = ' '
                     listItems.append(self.buildListItem(LABEL.get(key,' '),value,items={'key':key,'value':value,'citem':citem,'description':DESC.get(key,''),'colorDiffuse':self.getLogoColor(citem)}))
@@ -375,7 +375,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         select = -1
         while not MONITOR.abortRequested() and not select is None:
             with self.toggleSpinner(self.itemList):
-                paths  = list(filter(None,paths))
+                paths  = list([_f for _f in paths if _f])
                 npath  = None
                 lizLST = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem}) for idx, path in enumerate(paths) if path]
                 lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add' ,'citem':citem}))
@@ -401,8 +401,8 @@ class Manager(xbmcgui.WindowXMLDialog):
            
            
     def getGroups(self, citem: dict={}, groups: list=[]):
-        groups  = list(filter(None,groups))
-        ngroups = sorted(filter(None,set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups)))
+        groups  = list([_f for _f in groups if _f])
+        ngroups = sorted([_f for _f in set(SETTINGS.getSetting('User_Groups').split('|') + GROUP_TYPES + groups) if _f])
         if len(ngroups) > 0: 
             groups = [ngroups[idx] for idx in DIALOG.selectDialog(ngroups,header=LANGUAGE(32081),preselect=findItemsInLST(ngroups,groups),useDetails=False)]
         self.log('getGroups, groups = %s'%(groups))
@@ -423,9 +423,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                 with self.toggleSpinner(self.itemList):
                     nrule  = None
                     crules = self.rules.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
-                    arules = [rule for key, rule in crules.items() if not rules.get(key)] #all unused rule instances
+                    arules = [rule for key, rule in list(crules.items()) if not rules.get(key)] #all unused rule instances
                     
-                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem}) for key, rule in rules.items() if rule.myId]
+                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem}) for key, rule in list(rules.items()) if rule.myId]
                     lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,items={'key':'add' ,'citem':citem}))
                     if len(rules) > 0:
                         lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,items={'key':'save','citem':citem}))
@@ -489,7 +489,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             logo = citem.get('logo')
             if force: logo = ''
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
-                with self.toggleSpinner(self.itemList):
+                with busy_dialog():
                     citem['logo'] = self.resources.getLogo(name, citem.get('type',"Custom"))
                 self.log('setLogo, id = %s, logo = %s'%(citem.get('id'),citem.get('logo')))
         return citem
@@ -616,7 +616,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if citem['number'] <= CHANNEL_LIMIT: citem['type'] = "Custom"
                 return self.setID(self.setLogo(citem.get('name'),citem))
             
-        channelList = sorted(filter(None,[_validate(channel) for channel in channelList]), key=lambda k: k['number'])
+        channelList = sorted([_f for _f in [_validate(channel) for channel in channelList] if _f], key=lambda k: k['number'])
         self.log('validateChannels, channelList = %s'%(len(channelList)))
         return channelList
               
@@ -639,7 +639,7 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getMontiorList(self):
         self.log('getMontiorList')
         try:
-            itemLST = [self.buildListItem(cleanLabel(value).title(),icon=ICON) for info in DIALOG.getInfoMonitor() for key, value in info.items() if value not in ['','..'] and key not in ['path','logo']]
+            itemLST = [self.buildListItem(cleanLabel(value).title(),icon=ICON) for info in DIALOG.getInfoMonitor() for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]
             itemSEL = DIALOG.selectDialog(itemLST,LANGUAGE(32078)%('Name'),useDetails=True,multi=False)
             if itemSEL is not None: return itemLST[itemSEL]
             else: raise Exception()

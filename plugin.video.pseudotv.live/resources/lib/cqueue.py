@@ -129,9 +129,9 @@ class CustomQueue:
                     if curr_node is None: break
                     package = curr_node.package
                     self.log('__pop, fifo/lifo package = %s'%(package))
-                    next_node = curr_node.next if self.fifo else curr_node.prev
+                    next_node = curr_node.__next__ if self.fifo else curr_node.prev
                     if next_node:      next_node.prev = curr_node.prev if self.fifo else next_node.prev
-                    if curr_node.prev: curr_node.prev.next = curr_node.next if self.fifo else curr_node.prev
+                    if curr_node.prev: curr_node.prev.next = curr_node.__next__ if self.fifo else curr_node.prev
     
                     if self.fifo: self.head = next_node
                     else:         self.tail = next_node
