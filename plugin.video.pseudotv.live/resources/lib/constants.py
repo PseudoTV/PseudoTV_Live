@@ -31,6 +31,7 @@ ICON                = REAL_SETTINGS.getAddonInfo('icon')
 FANART              = REAL_SETTINGS.getAddonInfo('fanart')
 SETTINGS_LOC        = REAL_SETTINGS.getAddonInfo('profile')
 ADDON_PATH          = REAL_SETTINGS.getAddonInfo('path')
+ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/master/plugin.video.pseudotv.live/addon.xml'
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
 #constants
@@ -155,10 +156,28 @@ CHANNELFLE_DEFAULT  = os.path.join(ADDON_PATH,'remotes',CHANNELFLE)
 GENREFLE_DEFAULT    = os.path.join(ADDON_PATH,'remotes',GENREFLE)
 PROVIDERFLE_DEFAULT = os.path.join(ADDON_PATH,'remotes',PROVIDERFLE)
 
+#colors
+COLOR_BACKGROUND          = '01416b'
+COLOR_TEXT                = 'ffffff'
+COLOR_UNAVAILABLE_CHANNEL = 'dimgray'
+COLOR_AVAILABLE_CHANNEL   = 'white'
+COLOR_LOCKED_CHANNEL      = 'orange'
+COLOR_WARNING_CHANNEL     = 'red'
+COLOR_NEW_CHANNEL         = 'green'
+COLOR_RADIO_CHANNEL       = 'cyan'
+COLOR_FAVORITE_CHANNEL    = 'yellow'
+
+# https://github.com/xbmc/xbmc/blob/master/system/colors.xml
+
 #images
 LOGO                = os.path.join(MEDIA_LOC,'wlogo.png')
 COLOR_LOGO          = os.path.join(MEDIA_LOC,'logo.png')
 HOST_LOGO           = 'http://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/resources/skins/default/media/logo.png?raw=true'
+DUMMY_ICON          = 'https://dummyimage.com/512x512/%s/%s.png&text={text}'%(COLOR_BACKGROUND,COLOR_TEXT)
+MST3K_1             = os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif')
+MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
+
+# https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
 
 #rules
 ##builder
@@ -186,3 +205,81 @@ IMDB_PATHS  = ['plugin://plugin.video.imdb.trailers/?action=list1&key=showing',
                'plugin://plugin.video.imdb.trailers/?action=list1&key=coming']
                
 HEADER      = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246"}
+
+MUSIC_LISTITEM_TYPES =   {'tracknumber'             : (int,),  #integer (8)
+                          'discnumber'              : (int,),  #integer (2)
+                          'duration'                : (int,),  #integer (245) - duration in seconds
+                          'year'                    : (int,),  #integer (1998)
+                          'genre'                   : (tuple,list),  
+                          'album'                   : (str,),  
+                          'artist'                  : (str,),  
+                          'title'                   : (str,),  
+                          'rating'                  : (float,),#float - range is between 0 and 10
+                          'userrating'              : (int,),  #integer - range is 1..10
+                          'lyrics'                  : (str,),
+                          'playcount'               : (int,),  #integer (2) - number of times this item has been played
+                          'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+                          'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
+                          'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
+                          'listeners'               : (int,),  #integer (25614)
+                          'musicbrainztrackid'      : (tuple,list),
+                          'musicbrainzartistid'     : (tuple,list),
+                          'musicbrainzalbumid'      : (tuple,list),
+                          'musicbrainzalbumartistid': (tuple,list),
+                          'comment'                 : (str,),  
+                          'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
+                          # 'size'                    : (int,), #long (1024) - size in bytes
+                          'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
+
+VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
+                          'country'                 : (str,list),
+                          'year'                    : (int,),  #integer (2009)
+                          'episode'                 : (int,),  #integer (4)
+                          'season'                  : (int,),  #integer (1)
+                          'sortepisode'             : (int,),  #integer (4)
+                          'sortseason'              : (int,),  #integer (1)
+                          'episodeguide'            : (str,),
+                          'showlink'                : (str,list),
+                          'top250'                  : (int,),  #integer (192)
+                          'setid'                   : (int,),  #integer (14)
+                          'tracknumber'             : (int,),  #integer (3)
+                          'rating'                  : (float,),#float (6.4) - range is 0..10
+                          'userrating'              : (int,),  #integer (9) - range is 1..10 (0 to reset)
+                          'playcount'               : (int,),  #integer (2) - number of times this item has been played
+                          'overlay'                 : (int,),  #integer (2) - range is 0..7. See Overlay icon types for values
+                          'cast'                    : (list,),
+                          'castandrole'             : (list,tuple),
+                          'director'                : (str,list),
+                          'mpaa'                    : (str,),
+                          'plot'                    : (str,),
+                          'plotoutline'             : (str,),
+                          'title'                   : (str,),
+                          'originaltitle'           : (str,),
+                          'sorttitle'               : (str,),
+                          'duration'                : (int,),  #integer (245) - duration in seconds
+                          'studio'                  : (str,list),
+                          'tagline'                 : (str,),
+                          'writer'                  : (str,list),
+                          'tvshowtitle'             : (str,list),
+                          'premiered'               : (str,),  #string (2005-03-04)
+                          'status'                  : (str,),
+                          'set'                     : (str,),
+                          'setoverview'             : (str,),
+                          'tag'                     : (str,list),
+                          'imdbnumber'              : (str,),  #string (tt0110293) - IMDb code
+                          'code'                    : (str,),  #string (101) - Production code
+                          'aired'                   : (str,),  #string (2008-12-07) 
+                          'credits'                 : (str,list),
+                          'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+                          'album'                   : (str,),
+                          'artist'                  : (list,),
+                          'votes'                   : (str,),
+                          'path'                    : (str,),
+                          'trailer'                 : (str,),
+                          'dateadded'               : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+                          'mediatype'               : (str,),  #mediatype	string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
+                          'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
+                          'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
+                          # 'size'                    : (int,),  #long (1024) - size in bytes
+                          'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
+                          

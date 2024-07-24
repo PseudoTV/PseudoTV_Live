@@ -20,6 +20,7 @@
 import json, uuid, zlib, base64
 
 from globals     import *
+from six.moves   import urllib 
 from fileaccess  import FileAccess
 from collections import Counter, OrderedDict
 from ast         import literal_eval
@@ -49,7 +50,12 @@ def decodeString(base64_bytes):
         return message_bytes.decode(DEFAULT_ENCODING)
     except:
         return ''
-         
+
+def getAbbr(text):
+    words = text.split(' ')
+    if len(words) > 1: return '%s.%s.'%(words[0][0].upper(),words[1][0].upper())
+    else: return words[0][0].upper()
+   
 def getThumb(item={},opt=0): #unify thumbnail artwork
     keys = {0:['landscape','fanart','thumb','thumbnail','poster','clearlogo','logo','logos','clearart','keyart,icon'],
             1:['poster','clearlogo','logo','logos','clearart','keyart','landscape','fanart','thumb','thumbnail','icon']}[opt]
@@ -111,7 +117,13 @@ def loadJSON(item):
             return item
     except Exception as e: log("loadJSON, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return {}
-  
+        
+def unquoteString(text):
+    return urllib.parse.unquote(text)
+    
+def quoteString(text):
+    return urllib.parse.quote(text)
+
 def getMD5(text,hash=0,hexit=True):
     if isinstance(text,dict):     text = dumpJSON(text)
     elif not isinstance(text,str):text = str(text)
@@ -216,7 +228,7 @@ class Settings:
         
 
     def getSettingDict(self, key):
-        return loadJSON(self.getSetting(key))
+        return loadJSON(decodeString(self.getSetting(key)))
     
     
     def getCacheSetting(self, key, checksum=ADDON_VERSION, json_data=False):
@@ -280,7 +292,7 @@ class Settings:
         
         
     def setSettingDict(self, key, values):
-        self.setSetting(key,dumpJSON(values))
+        self.setSetting(key,encodeString(dumpJSON(values)))
             
             
     def setCacheSetting(self, key, value, checksum=ADDON_VERSION, life=datetime.timedelta(days=84), json_data=False):
@@ -437,6 +449,7 @@ class Properties:
       
 
     def getKey(self, key, instanceID=True):
+        if not isinstance(key,str): key = str(key)
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
             if instanceID: return self.setTrash('%s.%s.%s'%(ADDON_ID,key,self.InstanceID))
             else:          return '%s.%s'%(ADDON_ID,key)
@@ -483,7 +496,7 @@ class Properties:
         
         
     def getPropertyDict(self, key=''):
-        return loadJSON(self.getProperty(key))
+        return loadJSON(decodeString(self.getProperty(key)))
         
         
     def getPropertyInt(self, key):
@@ -505,7 +518,7 @@ class Properties:
         key = self.getKey(key)
         self.log('setProperty, id = %s, key = %s, value = %s'%(self.winID,key,'%s...'%((convertString(value)[:128]))))
         self.window.setProperty(key, str(value))
-        return True
+        return value
         
         
     def setPropertyList(self, key, values):
@@ -519,7 +532,7 @@ class Properties:
         
         
     def setPropertyDict(self, key, value={}):
-        if self.setProperty(key, dumpJSON(value)):
+        if self.setProperty(key, encodeString(dumpJSON(value))):
             return value
         
                 
@@ -547,9 +560,7 @@ class Properties:
         
         
 class ListItems:
-    def __init__(self):
-        ...
-
+    
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
     
@@ -567,84 +578,6 @@ class ListItems:
         
 
     def buildItemListItem(self, item, media='video', oscreen=False, playable=True):
-        if media == 'music':
-            LISTITEM_TYPES = {'tracknumber'             : (int,),  #integer (8)
-                              'discnumber'              : (int,),  #integer (2)
-                              'duration'                : (int,),  #integer (245) - duration in seconds
-                              'year'                    : (int,),  #integer (1998)
-                              'genre'                   : (tuple,list),  
-                              'album'                   : (str,),  
-                              'artist'                  : (str,),  
-                              'title'                   : (str,),  
-                              'rating'                  : (float,),#float - range is between 0 and 10
-                              'userrating'              : (int,),  #integer - range is 1..10
-                              'lyrics'                  : (str,),
-                              'playcount'               : (int,),  #integer (2) - number of times this item has been played
-                              'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                              'mediatype'               : (str,),  #string - "music", "song", "album", "artist"
-                              'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
-                              'listeners'               : (int,),  #integer (25614)
-                              'musicbrainztrackid'      : (tuple,list),
-                              'musicbrainzartistid'     : (tuple,list),
-                              'musicbrainzalbumid'      : (tuple,list),
-                              'musicbrainzalbumartistid': (tuple,list),
-                              'comment'                 : (str,),  
-                              'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
-                              # 'size'                    : (int,), #long (1024) - size in bytes
-                              'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
-        else:      
-            LISTITEM_TYPES = {'genre'                   : (tuple,list),
-                              'country'                 : (str,list),
-                              'year'                    : (int,),  #integer (2009)
-                              'episode'                 : (int,),  #integer (4)
-                              'season'                  : (int,),  #integer (1)
-                              'sortepisode'             : (int,),  #integer (4)
-                              'sortseason'              : (int,),  #integer (1)
-                              'episodeguide'            : (str,),
-                              'showlink'                : (str,list),
-                              'top250'                  : (int,),  #integer (192)
-                              'setid'                   : (int,),  #integer (14)
-                              'tracknumber'             : (int,),  #integer (3)
-                              'rating'                  : (float,),#float (6.4) - range is 0..10
-                              'userrating'              : (int,),  #integer (9) - range is 1..10 (0 to reset)
-                              'playcount'               : (int,),  #integer (2) - number of times this item has been played
-                              'overlay'                 : (int,),  #integer (2) - range is 0..7. See Overlay icon types for values
-                              'cast'                    : (list,),
-                              'castandrole'             : (list,tuple),
-                              'director'                : (str,list),
-                              'mpaa'                    : (str,),
-                              'plot'                    : (str,),
-                              'plotoutline'             : (str,),
-                              'title'                   : (str,),
-                              'originaltitle'           : (str,),
-                              'sorttitle'               : (str,),
-                              'duration'                : (int,),  #integer (245) - duration in seconds
-                              'studio'                  : (str,list),
-                              'tagline'                 : (str,),
-                              'writer'                  : (str,list),
-                              'tvshowtitle'             : (str,list),
-                              'premiered'               : (str,),  #string (2005-03-04)
-                              'status'                  : (str,),
-                              'set'                     : (str,),
-                              'setoverview'             : (str,),
-                              'tag'                     : (str,list),
-                              'imdbnumber'              : (str,),  #string (tt0110293) - IMDb code
-                              'code'                    : (str,),  #string (101) - Production code
-                              'aired'                   : (str,),  #string (2008-12-07) 
-                              'credits'                 : (str,list),
-                              'lastplayed'              : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                              'album'                   : (str,),
-                              'artist'                  : (list,),
-                              'votes'                   : (str,),
-                              'path'                    : (str,),
-                              'trailer'                 : (str,),
-                              'dateadded'               : (str,),  #string (Y-m-d h:m:s = 2009-04-05 23:16:04)
-                              'mediatype'               : (str,),  #mediatype	string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
-                              'dbid'                    : (int,),  #integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
-                              'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
-                              # 'size'                    : (int,),  #long (1024) - size in bytes
-                              'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
-                              
         info       = item.copy()
         art        = (info.pop('art'              ,{}) or {})
         cast       = (info.pop('cast'             ,[]) or [])
@@ -659,45 +592,11 @@ class ListItems:
             art['poster'] = getThumb(info,opt=1)
             art['fanart'] = getThumb(info)
             
-        def cleanInfo(ninfo):
-            tmpInfo = ninfo.copy()
-            for key, value in list(tmpInfo.items()):
-                types = LISTITEM_TYPES.get(key,None)
-                if not types:# key not in json enum schema, add to customproperties
-                    ninfo.pop(key)
-                    properties[key] = value
-                    continue
-                    
-                elif not isinstance(value,types):# convert to schema type
-                    for type in types:
-                        try:   ninfo[key] = type(value)
-                        except Exception as e:
-                            self.log("buildItemListItem, cleanInfo error! %s\nkey = %s, value = %s, type = %s\n%s"%(e,key,value,type,ninfo), xbmc.LOGWARNING)
-                         
-                if isinstance(ninfo[key],list):
-                    for n in ninfo[key]:
-                        if isinstance(n,dict):
-                            n = cleanInfo(n)
-                            
-                if isinstance(ninfo[key],dict):
-                    ninfo[key] = cleanInfo(ninfo[key])
-            return ninfo
-                
-        def cleanProp(pvalue):
-            if isinstance(pvalue,dict):
-                return dumpJSON(pvalue)
-            elif isinstance(pvalue,list):
-                return '|'.join(map(str, pvalue))
-            elif not isinstance(pvalue,str):
-                return str(pvalue)
-            else:
-                return pvalue
-                
         listitem = self.getListItem(info.pop('label',''), info.pop('label2',''), info.pop('file',''), offscreen=oscreen)
         listitem.setArt(art)
         
         infoTag = ListItemInfoTag(listitem, media)
-        infoTag.set_info(cleanInfo(info))
+        infoTag.set_info(self.cleanInfo(info,media))
         if not media.lower() == 'music': 
             infoTag.set_cast(cast)
             infoTag.set_unique_ids(uniqueid)
@@ -706,23 +605,53 @@ class ListItems:
         for vinfo in streamInfo.get('video',[]):    infoTag.add_stream_info('video'   , vinfo)
         for sinfo in streamInfo.get('subtitle',[]): infoTag.add_stream_info('subtitle', sinfo)
         
-        for key, pvalue in list(properties.items()): listitem.setProperty(key, cleanProp(pvalue))
+        for key, pvalue in list(properties.items()): listitem.setProperty(key, self.cleanProp(pvalue))
         if playable: listitem.setProperty("IsPlayable","true")
         else:        listitem.setIsFolder(True)
         return listitem
              
                      
-    def buildMenuListItem(self, label1="", label2="", iconImage=None, url="", infoItem={}, artItem={}, propItem={}, oscreen=False, media='video'):
-        if label1: infoItem['label']  = label1
-        if label2: infoItem['label2'] = label2
-        if url:    infoItem['file']   = url
-        if iconImage: artItem = {'thumb': iconImage,'logo' : iconImage,'icon' : iconImage}
-        item = infoItem.copy()
-        item['art'] = artItem
-        item['customproperties'] = propItem
-        return self.buildItemListItem(item, media, oscreen, playable=False)
-        
-        
+    def buildMenuListItem(self, label="", label2="", icon=COLOR_LOGO, url="", info={}, art={}, props={}, oscreen=False, media='video'):
+        if not art: art = {'thumb':icon,'logo':icon,'icon':icon}
+        listitem = self.getListItem(label, label2, url, offscreen=oscreen)
+        listitem.setIsFolder(True)
+        listitem.setArt(art)
+        if info:
+            infoTag = ListItemInfoTag(listitem, media)
+            infoTag.set_info(self.cleanInfo(info,media))
+        [listitem.setProperty(key, self.cleanProp(pvalue)) for key, pvalue in list(props.items())]
+        return listitem
+           
+           
+    def cleanInfo(self, ninfo, media='video'):
+        LISTITEM_TYPES = MUSIC_LISTITEM_TYPES if media == 'music' else VIDEO_LISTITEM_TYPES  
+        tmpInfo = ninfo.copy()
+        for key, value in list(tmpInfo.items()):
+            types = LISTITEM_TYPES.get(key,None)
+            if not types:# key not in json enum schema, add to customproperties
+                ninfo.pop(key)
+                properties[key] = value
+                continue
+                
+            elif not isinstance(value,types):# convert to schema type
+                for type in types:
+                    try:   ninfo[key] = type(value)
+                    except Exception as e: self.log("buildItemListItem, cleanInfo error! %s\nkey = %s, value = %s, type = %s\n%s"%(e,key,value,type,ninfo), xbmc.LOGWARNING)
+                     
+            if isinstance(ninfo[key],list):
+                for n in ninfo[key]:
+                    if isinstance(n,dict): n = self.cleanInfo(n,media)
+            if isinstance(ninfo[key],dict): ninfo[key] = self.cleanInfo(ninfo[key],media)
+        return ninfo
+
+
+    def cleanProp(self, pvalue):
+        if isinstance(pvalue,dict):      return dumpJSON(pvalue)
+        elif isinstance(pvalue,list):    return '|'.join(map(str, pvalue))
+        elif not isinstance(pvalue,str): return str(pvalue)
+        else:                            return pvalue
+            
+    
 class Builtin:
     def __init__(self):
         ...
@@ -761,25 +690,13 @@ class Dialog:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
-    
-    
-    def chkInfoMonitor(self):
-        return self.properties.getPropertyBool('chkInfoMonitor')
-        
-    
-    def getInfoMonitor(self):
-        return self.properties.getPropertyDict('monitor.montiorList').get('info',[])
-    
-    
-    def setInfoMonitor(self, items):
-        return self.properties.setPropertyDict('monitor.montiorList',{'info':list(setDictLST(items))})
 
 
     def toggleInfoMonitor(self, state, wait=0.1):
         self.log('toggleInfoMonitor, state = %s'%(state))
         if self.properties.setPropertyBool('chkInfoMonitor',state): 
             self.properties.clearProperty('monitor.montiorList')
-            timerit(self.doInfoMonitor)(wait)
+            timerit(self.doInfoMonitor)(0.1)
 
 
     def doInfoMonitor(self):
@@ -789,29 +706,42 @@ class Dialog:
 
     def fillInfoMonitor(self, type='ListItem'):
         #todo catch full listitem not singular properties.
-        if not self.chkInfoMonitor(): return False
-        item = {'label' :self.builtin.getInfoLabel('Label' ,type),
-                'label2':self.builtin.getInfoLabel('Label2',type),
-                'path'  :self.builtin.getInfoLabel('Path'  ,type),
-                'plot'  :self.builtin.getInfoLabel('Plot'  ,type),
-                'logo'  :self.builtin.getInfoLabel('Icon'  ,type),
-                'thumb' :self.builtin.getInfoLabel('Thumb' ,type)}
+        if not self.properties.getPropertyBool('chkInfoMonitor'): return FalseMood
+        item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
+                'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
+                'set'         :self.builtin.getInfoLabel('Set'         ,type),
+                'path'        :self.builtin.getInfoLabel('Path'        ,type),
+                'genre'       :self.builtin.getInfoLabel('Genre'       ,type),
+                'studio'      :self.builtin.getInfoLabel('Studio'      ,type),
+                'title'       :self.builtin.getInfoLabel('Title'       ,type),
+                'tvshowtitle' :self.builtin.getInfoLabel('TVShowTitle' ,type),
+                'plot'        :self.builtin.getInfoLabel('Plot'        ,type),
+                'addonname'   :self.builtin.getInfoLabel('AddonName'   ,type),
+                'artist'      :self.builtin.getInfoLabel('Artist'      ,type),
+                'album'       :self.builtin.getInfoLabel('Album'       ,type),
+                'albumartist' :self.builtin.getInfoLabel('AlbumArtist' ,type),
+                'foldername'  :self.builtin.getInfoLabel('FolderName'  ,type),
+                'logo'        :(self.builtin.getInfoLabel('Art(tvshow.clearlogo)',type) or 
+                                self.builtin.getInfoLabel('Art(clearlogo)'       ,type) or
+                                self.builtin.getInfoLabel('Icon'                 ,type) or
+                                self.builtin.getInfoLabel('Thumb'                ,type))}
         if item.get('label'):
             montiorList = self.getInfoMonitor()
             montiorList.insert(0,item)
             self.setInfoMonitor(montiorList)
         return True
-        
 
-    def colorDialog(self, xml='', items=[], preselect=[], heading=ADDON_NAME):
-        # https://xbmc.github.io/docs.kodi.tv/master/kodi-base/d6/de8/group__python___dialog.html#ga571ffd3c58c38b1f81d4f98eedb78bef
-        # <colors>
-          # <color name="white">ffffffff</color>
-          # <color name="grey">7fffffff</color>
-          # <color name="green">ff00ff7f</color>
-        # </colors>
-        # dialog.colorpicker('Select color', 'ff00ff00', 'os.path.join(xbmcaddon.Addon().getAddonInfo("path"),"colors.xml")')
-        return xbmcgui.Dialog().colorpicker(heading, colorfile=xml, colorlist=items, selectedcolor=preselect)
+
+    def getInfoMonitor(self):
+        return self.properties.getPropertyDict('monitor.montiorList').get('info',[])
+    
+    
+    def setInfoMonitor(self, items):
+        return self.properties.setPropertyDict('monitor.montiorList',{'info':list(setDictLST(items))})
+
+
+    def colorDialog(self, colorlist=[], preselect="", colorfile="", heading=ADDON_NAME):
+        return xbmcgui.Dialog().colorpicker(heading, preselect, colorfile, colorlist)
     
     
     def _closeOkDialog(self):
@@ -853,200 +783,6 @@ class Dialog:
         else: 
             # Returns True if 'Yes' was pressed, else False.
             return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
-
-
-    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
-        self.log('notificationDialog: %s'%(message))
-        ## - Builtin Icons:
-        ## - xbmcgui.NOTIFICATION_INFO
-        ## - xbmcgui.NOTIFICATION_WARNING
-        ## - xbmcgui.NOTIFICATION_ERROR
-        try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
-        except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
-        return True
-             
-             
-    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
-        if multi == True:
-            if preselect is None: preselect = [-1]
-            if custom: ... #todo domodel custom selectDialog for library select.
-            else:
-                select = xbmcgui.Dialog().multiselect(header, list, (autoclose*1000), preselect, useDetails)
-        else:
-            if preselect is None: preselect = -1
-            if custom: ... #todo domodel custom selectDialog for library select.
-            else:
-                select = xbmcgui.Dialog().select(header, list, (autoclose*1000), preselect, useDetails)
-                if select == -1:  select = None
-        return select
-      
-      
-    def inputDialog(self, message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
-        ## - xbmcgui.INPUT_ALPHANUM (standard keyboard)
-        ## - xbmcgui.INPUT_NUMERIC (format: #)
-        ## - xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
-        ## - xbmcgui.INPUT_TIME (format: HH:MM)
-        ## - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
-        ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
-        return xbmcgui.Dialog().input(message, default, key, opt, close)
-        
-
-    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
-        def buildMenuItem(option):
-            return self.listitems.buildMenuListItem(option['label'],option['label2'],iconImage=COLOR_LOGO)
-            
-        if prompt: 
-            if options is None:
-                options = [{"label":"Video Playlists" , "label2":"Video Playlists"               , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1, "multi":False},
-                           {"label":"Music Playlists" , "label2":"Music Playlists"               , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1, "multi":False},
-                           {"label":"Mixed Playlists" , "label2":"Mixed Playlists"               , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1, "multi":False},
-                           # {"label":"Dynamic Playlist", "label2":"Dynamic Playlist"              , "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                           {"label":"Video"           , "label2":"Video Sources"                 , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0, "multi":False},
-                           {"label":"Music"           , "label2":"Music Sources"                 , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0, "multi":False},
-                           {"label":"Files"           , "label2":"File Sources"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                           {"label":"Local"           , "label2":"Local Drives"                  , "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                           {"label":"Network"         , "label2":"Local Drives and Network Share", "default":""                                   , "mask":""                                , "type":0, "multi":False},
-                           {"label":"Pictures"        , "label2":"Picture Sources"               , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":0, "multi":False},
-                           {"label":"Resources"       , "label2":"Resource Plugins"              , "default":"resource://"                        , "mask":""                                , "type":0, "multi":False}]
-
-                if default:
-                    default, file = os.path.split(default)
-                    if file: type = 1
-                    else:    type = 0
-                    options.insert(0,{"label":"Existing Path", "label2":default, "default":default , "mask":"", "type":type, "multi":False})
-                   
-            with busy_dialog():
-                lizLST = poolit(buildMenuItem)(options)
-            select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if select is not None:
-                # if options[select]['default'] == "resource://": #TODO PARSE RESOURCE JSON, LIST PATHS
-                    # listitems = self.pool.poolList(buildMenuItem,options)
-                    # select    = self.selectDialog(listitems, LANGUAGE(32089), multi=False)
-                    # if select is not None:
-                # else:    
-                shares    = options[select]['label'].lower().replace("network","")
-                mask      = options[select]['mask']
-                type      = options[select]['type']
-                multi     = options[select]['multi']
-                default   = options[select]['default']
-            else: return
-                
-        self.log('browseDialog, type = %s, heading= %s, shares= %s, mask= %s, useThumbs= %s, treatAsFolder= %s, default= %s'%(type, heading, shares, mask, useThumbs, treatAsFolder, default))
-        if monitor: self.toggleInfoMonitor(True)
-        # if options[select]['label'] == "Dynamic Playlist":
-            # retval = self.buildDXSP()
-        if multi == True:
-            ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
-            ## type integer - the type of browse dialog.
-            ## 1	ShowAndGetFile
-            ## 2	ShowAndGetImage
-            retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        else:
-            ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
-            ## type integer - the type of browse dialog.
-            ## 0	ShowAndGetDirectory
-            ## 1	ShowAndGetFile
-            ## 2	ShowAndGetImage
-            ## 3	ShowAndGetWriteableDirectory
-            retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
-        if monitor: self.toggleInfoMonitor(False)
-        if options is not None and default == retval: return
-        return retval
-        
-
-    def buildDXSP(self, params={}):
-        # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
-        from jsonrpc import JSONRPC
-        
-        def type():
-            enumLST = ['songs', 'albums', 'artists', 'movies', 'tvshows', 'episodes', 'musicvideos', 'mixed']
-            enumSEL = enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1
-            select  = self.selectDialog(enumLST,header="Select Type",preselect=enumSEL,useDetails=False, multi=False)
-            if select > -1: return enumLST[select]
-            
-        def andor():
-            enumLST = ['and', 'or']
-            enumSEL = enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1
-            select  = self.selectDialog(enumLST,header="Select Conjunction",preselect=enumSEL,useDetails=False, multi=False)
-            if select > -1:
-                params.setdefault('rules',{})[enumLST[select]] = []
-                
-        def field(rules=[]): #rules = {"and":[]}
-            print('field',rules,params)
-            params['type'] = type()
-            if params['type'] == 'songs':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.Songs", type='items')
-            elif params['type'] ==  'albums':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.Albums", type='items')
-            elif params['type'] ==  'artists':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.Artists", type='items')
-            elif params['type'] ==  'tvshows':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.TVShows", type='items')
-            elif params['type'] ==  'episodes':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.Episodes", type='items')
-            elif params['type'] ==  'movies':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.Movies", type='items')
-            elif params['type'] == 'musicvideos':
-                enumLST = JSONRPC().getEnums("List.Filter.Fields.MusicVideos")
-            elif params['type'] == 'mixed':
-                enumLST = ['playlist', 'virtualfolder']
-            else: return
-            
-            if enumLST:
-                enumSEL = -1
-                select = self.selectDialog(enumLST,header="Select Filter",preselect=enumSEL,useDetails=False, multi=False)
-                if select > -1: rules.append(operator({"field":enumLST[select]}))
-                params['rules'].update(rules)
-            
-        def operator(rule): #rule = {"field":""}
-            print('operator',rule,params)
-            enumLST = JSONRPC().getEnums("List.Filter.Operators")
-            enumSEL = -1
-            if rule["field"] != 'date':
-                if 'inthelast'    in enumLST: enumLST.remove('inthelast')
-                if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
-            select = self.selectDialog(enumLST,header="Select Operator",preselect=enumSEL,useDetails=False, multi=False)
-            if select > -1: rule.update({"operator":enumLST[select]})
-            return value(rule)
-            
-        def value(rule): #rule = {"field":"","operator":""}
-            print('value',rule,params)
-            enumLST = ['Enter', 'browse', 'select']
-            KEY_INPUT = {'Enter'  :{'func':self.inputDialog,'args':None,'kwargs':None},
-                         'Browse' :{'func':self.browseDialog,'args':None,'kwargs':None},
-                         'Select' :{'func':self.selectDialog,'args':None,'kwargs':None}}
-            select = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
-            # try:
-            if select > -1:
-                option  = KEY_INPUT[enumLST[select]]
-                default = ''
-                input   = option['func'](*option['args'],**option['kwargs'])
-            # except:             input = None
-            # try:    input = KEY_INPUT.get(rule.get('field'))()
-            # if input: rule.update({"value":input})
-            return rule
-            
-        def order():
-            ...
-            # {"order":{"direction":"ascending","method":"random","ignorearticle":true,"useartistsortname":true}
-            jsonRPC.getEnums("List.Sort",type="method")
-            jsonRPC.getEnums("List.Sort",type="order")
-            
-        rules = andor()
-        if params['type'] in MUSIC_TYPES:
-            db = 'musicdb'
-        else:
-            db = 'videodb'
-            
-        if params['type'] in ['movies','tvshows','musicvideos']:
-            url = "%s://%s/titles/?xsp="%(db,params['type'])
-        elif params['type'] == 'episodes':
-            url = "%s://tvshows//titles/-1/-1/-1/?xsp="%(db)
-            
-        # # example* source = 
-        # #    *  '{"rules":{"and":[{"field":"%s","operator":"%s","value":["%s"]}]},"type":"%s"}' % (field,operator,field_value,xsp_type)
-        # #    *  '{"rules":{"and":[{"field":"actor","operator":"contains","value":["$VAR[videoinfo_cast_container_id]"]},{"field":"title","operator":"isnot","value":["$INFO[Window(home).Property(EncodedTitle)]"]}]},"type":"movies"}'
-        # source = '{"rules":{"%s":[%s]},"type":"%s"}' % (match,xsp_rules,xsp_type)
 
 
     def notificationWait(self, message, header=ADDON_NAME, wait=4):
@@ -1095,3 +831,245 @@ class Dialog:
     def infoDialog(self, listitem):
         xbmcgui.Dialog().info(listitem)
         
+        
+    def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
+        self.log('notificationDialog: %s'%(message))
+        ## - Builtin Icons:
+        ## - xbmcgui.NOTIFICATION_INFO
+        ## - xbmcgui.NOTIFICATION_WARNING
+        ## - xbmcgui.NOTIFICATION_ERROR
+        try:    xbmcgui.Dialog().notification(header, message, icon, time, sound=False)
+        except: self.builtin.executebuiltin("Notification(%s, %s, %d, %s)" % (header, message, time, icon))
+        return True
+             
+             
+    def selectDialog(self, list, header=ADDON_NAME, preselect=None, useDetails=True, autoclose=SELECT_DELAY, multi=True, custom=False):
+        if multi == True:
+            if preselect is None: preselect = [-1]
+            if custom: ... #todo domodel custom selectDialog for library select.
+            else:
+                select = xbmcgui.Dialog().multiselect(header, list, (autoclose*1000), preselect, useDetails)
+        else:
+            if preselect is None: preselect = -1
+            if custom: ... #todo domodel custom selectDialog for library select.
+            else:
+                select = xbmcgui.Dialog().select(header, list, (autoclose*1000), preselect, useDetails)
+                if select == -1:  select = None
+        return select
+      
+      
+    def inputDialog(self, message, default='', key=xbmcgui.INPUT_ALPHANUM, opt=0, close=0):
+        ## - xbmcgui.INPUT_ALPHANUM (standard keyboard)
+        ## - xbmcgui.INPUT_NUMERIC (format: #)
+        ## - xbmcgui.INPUT_DATE (format: DD/MM/YYYY)
+        ## - xbmcgui.INPUT_TIME (format: HH:MM)
+        ## - xbmcgui.INPUT_IPADDRESS (format: #.#.#.#)
+        ## - xbmcgui.INPUT_PASSWORD (return md5 hash of input, input is masked)
+        return xbmcgui.Dialog().input(message, default, key, opt, close)
+        
+
+    def browseDialog(self, type=0, heading=ADDON_NAME, default='', shares='', mask='', options=None, useThumbs=True, treatAsFolder=False, prompt=True, multi=False, monitor=False):
+        def buildMenuItem(option):
+            return self.listitems.buildMenuListItem(option['label'],option['label2'],DUMMY_ICON.format(text=getAbbr(option['label'])))
+            
+        if prompt: 
+            optTMP = []
+            proOpt = [{"label":"Video Playlists" , "label2":"special://profile/playlists/video/" , "default":"special://profile/playlists/video/" , "mask":".xsp"                            , "type":1    , "multi":False},
+                      {"label":"Music Playlists" , "label2":"special://profile/playlists/music/" , "default":"special://profile/playlists/music/" , "mask":".xsp"                            , "type":1    , "multi":False},
+                      {"label":"Mixed Playlists" , "label2":"special://profile/playlists/mixed/" , "default":"special://profile/playlists/mixed/" , "mask":".xsp"                            , "type":1    , "multi":False},
+                      {"label":"Dynamic Playlist", "label2":"Create Dynamic Smartplaylist"       , "default":""                                   , "mask":""                                , "type":1    , "multi":False},
+                      {"label":"Video"           , "label2":"library://video/"                   , "default":"library://video/"                   , "mask":xbmc.getSupportedMedia('video')   , "type":0    , "multi":False},
+                      {"label":"Music"           , "label2":"library://music/"                   , "default":"library://music/"                   , "mask":xbmc.getSupportedMedia('music')   , "type":0    , "multi":False},
+                      {"label":"Files"           , "label2":"All Folders & Files"                , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
+                      {"label":"Local"           , "label2":"Local Folders & Files"              , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
+                      {"label":"Network"         , "label2":"Local Drives and Network Share"     , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
+                      {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False}
+                      #{"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":False}
+                      ]
+
+            if isinstance(options,list):
+                for idx in options: optTMP.append(proOpt[idx])
+            else: optTMP = proOpt
+                
+            if default:
+                default, file = os.path.split(default)
+                if file: type = 1
+                else:    type = 0
+                optTMP.insert(0,{"label":"Current Path", "label2":default, "default":default , "mask":mask, "type":type, "multi":multi})
+                   
+            with busy_dialog():
+                lizLST = poolit(buildMenuItem)(optTMP)
+            select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
+            if select is not None:
+                shares    = optTMP[select]['label'].lower().replace("network","")
+                mask      = optTMP[select]['mask']
+                type      = optTMP[select]['type']
+                multi     = optTMP[select]['multi']
+                default   = optTMP[select]['default']
+            else: return
+                
+        self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s'%(type, heading, shares, useThumbs, treatAsFolder, default, mask))
+        if monitor: self.toggleInfoMonitor(True)
+        if   optTMP[select]['label'] == "Dynamic Playlist": retval = self.buildDXSP(default)
+        elif optTMP[select]['label'] == "Resource Plugins": retval = self.buildResource(default, mask)
+        elif multi == True:
+            ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
+            ## type integer - the type of browse dialog.
+            ## 1	ShowAndGetFile
+            ## 2	ShowAndGetImage
+            retval = xbmcgui.Dialog().browseMultiple(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+        else:
+            ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#gafa1e339e5a98ae4ea4e3d3bb3e1d028c
+            ## type integer - the type of browse dialog.
+            ## 0	ShowAndGetDirectory
+            ## 1	ShowAndGetFile
+            ## 2	ShowAndGetImage
+            ## 3	ShowAndGetWriteableDirectory
+            retval = xbmcgui.Dialog().browseSingle(type, heading, shares, mask, useThumbs, treatAsFolder, default)
+        if monitor: self.toggleInfoMonitor(False)
+        if options is not None and default == retval: return
+        return retval
+        
+        
+    def buildResource(self, path, exts=xbmc.getSupportedMedia('picture')):
+        #Todo parse for image/video list user select.
+        # resourcePlugins = {"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"kodi.resource.images","content":"video","properties":["path"]} .get('addons',[])
+        # "addons": [
+        # {
+            # "addonid": "resource.images.overlays.crttv",
+            # "path": "C:\\Program Files\\Kodi\\portable_data\\addons\\resource.images.overlays.crttv\\",
+            # "type": "kodi.resource.images"
+        # },
+        # # special://home/addons/resource.images.overlays.crttv/resources/
+        return default
+        
+
+    def buildDXSP(self, path=''):
+        # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
+        
+        def mtype(params={"type":"","order":{},"rules":{}}):
+            enumLST = sorted(['albums', 'artists', 'episodes', 'mixed', 'movies', 'musicvideos', 'songs', 'tvshows'])
+            enumSEL = self.selectDialog(enumLST,header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
+            if not enumSEL is None:
+                params['type'] = enumLST[enumSEL]
+                if params['type'] in MUSIC_TYPES: db = 'musicdb'
+                else:                             db = 'videodb'
+                
+                if   params['type'] == 'episodes':                         path = "%s://tvshows//titles/-1/-1/-1/"%(db)
+                elif params['type'] in ['movies','tvshows','musicvideos']: path = "%s://%s/titles/"%(db,params['type'])
+                elif params['type'] in ['albums','artists','songs']:       path = "%s://songs/"%(db)
+                else:                                                      path = ''
+            return path, params
+            
+        def andor(params={}):
+            enumLST = sorted(['and', 'or'])
+            enumSEL = self.selectDialog(enumLST,header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
+            if not enumSEL is None: return enumLST[enumSEL]
+                  
+        def order(params={}):
+            enumLST = sorted(filter(None,jsonRPC.getEnums("List.Sort",type="order")))
+            enumSEL = self.selectDialog(enumLST,header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
+            if not enumSEL is None: return enumLST[enumSEL]
+            
+        def method(params={}):
+            enumLST = sorted(filter(None,jsonRPC.getEnums("List.Sort",type="method")))
+            enumSEL = self.selectDialog(enumLST,header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
+            if not enumSEL is None: return enumLST[enumSEL]
+            
+        def field(params={}, rule={}): #rules = {"and":[]}
+            if   params.get('type') == 'songs':       enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Songs"   , type='items'))
+            elif params.get('type') == 'albums':      enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Albums"  , type='items'))
+            elif params.get('type') == 'artists':     enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Artists" , type='items'))
+            elif params.get('type') == 'tvshows':     enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.TVShows" , type='items'))
+            elif params.get('type') == 'episodes':    enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items'))
+            elif params.get('type') == 'movies':      enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items'))
+            elif params.get('type') == 'musicvideos': enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.MusicVideos"))
+            elif params.get('type') == 'mixed':       enumLST = sorted(['playlist', 'virtualfolder'])
+            else: return
+            enumSEL = self.selectDialog(enumLST,header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
+            if not enumSEL is None: return enumLST[enumSEL]
+
+        def operator(params={}, rule={}):
+            enumLST = sorted(jsonRPC.getEnums("List.Filter.Operators"))
+            if rule.get("field") != 'date':
+                if 'inthelast'    in enumLST: enumLST.remove('inthelast')
+                if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
+            enumSEL = self.selectDialog(enumLST,header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
+            if not enumSEL is None: return enumLST[enumSEL]
+
+        def value(params={}, rule={}):
+            def getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
+            def getBrowse(): return self.browseDialog(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
+            def getSelect(): return self.notificationDialog(LANGUAGE(32020))
+            enumLST = sorted(['Enter', 'Browse', 'Select'])
+            enumKEY = {'Enter':{'func':getInput},'Browse':{'func':getBrowse},'Select':{'func':getSelect}}
+            enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
+            if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
+
+        def getRule(params={}, rule={"field":"","operator":"","value":[]}):
+            enumSEL = -1
+            while not MONITOR.abortRequested() and not enumSEL is None:
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key,'value':value}) for key, value in rule.items()]
+                enumSEL = self.selectDialog(enumLST,header="Select method",preselect=-1, multi=False)
+                if not enumSEL is None: rule.update({enumLST[enumSEL].getProperty('key'):({"field":field,"operator":operator,"value":value}[enumLST[enumSEL].getProperty('key')])(params,rule)})
+            return rule
+            
+        def getRules(params={}):
+            enumSEL = -1
+            while not MONITOR.abortRequested() and not enumSEL is None:
+                enumLST = [self.listitems.buildMenuListItem(key.title(),dumpJSON(params.get('rules',{}).get(key,[])),icon=DUMMY_ICON.format(text=getAbbr(key.title())),props={'key':key}) for key in ["and","or"]]
+                enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
+                if not enumSEL is None:
+                    if enumLST[enumSEL].getLabel() in ['And','Or']:
+                        CONSEL = -1
+                        CONLST = enumLST[enumSEL].getProperty('key')
+                        while not MONITOR.abortRequested() and not CONSEL is None:
+                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(params.get('rules',{}).get(CONLST,[]))]
+                            andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,props={'key':'add'}))
+                            CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
+                            if not CONSEL is None:
+                                if andLST[CONSEL].getProperty('key') == 'add': params.setdefault('rules',{}).setdefault(CONLST,[]).append(getRule(params,{"field":"","operator":"","value":[]}))
+                                elif sorted(loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in params.get('rules',{}).get(CONLST,[])]:
+                                    retval = self.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
+                                    if retval in [1,2]: params.get('rules',{}).get(CONLST,[]).pop(int(andLST[CONSEL].getProperty('idx')))
+                                    if retval == 2:     params.get('rules',{}).get(CONLST,[]).append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
+                                else:                   params.get('rules',{}).get(CONLST,[]).append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
+            return params
+
+        def getOrder(params={}):
+            order = {'direction':'ascending','method':'random','ignorearticle':True,'useartistsortname':True}
+            order.update(params.get('order',{}))
+            params['order'] = order
+            enumSEL = -1
+            while not MONITOR.abortRequested() and not enumSEL is None:
+                enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in params.get('order',{}).items()]
+                enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
+                if not enumSEL is None:
+                    if   enumLST[enumSEL].getLabel() == 'Direction': params['order'].update({'direction':order(params)})
+                    elif enumLST[enumSEL].getLabel() == 'Method':    params['order'].update({'method':method(params)})
+                    else:                                            params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
+            return params
+            
+        from jsonrpc import JSONRPC
+        jsonRPC = JSONRPC()
+        try:
+            path, params = path.split('?xsp=')
+            params = loadJSON(params)
+        except:
+            path, params = mtype()
+        self.log('buildDXSP, path = %s, params = %s'%(path,params))
+        
+        enumSEL = -1
+        while not MONITOR.abortRequested() and not enumSEL is None:
+            enumLST = [self.listitems.buildMenuListItem('Path',path,icon=ICON),self.listitems.buildMenuListItem('Order',dumpJSON(params.get('order',{})),icon=ICON),self.listitems.buildMenuListItem('Rules',dumpJSON(params.get('rules',{})),icon=ICON)]
+            enumSEL = self.selectDialog(enumLST,header="Edit Dynamic Path", multi=False)
+            if not enumSEL is None:
+                if   enumLST[enumSEL].getLabel() == 'Path':  path, params = mtype(params)
+                elif enumLST[enumSEL].getLabel() == 'Order': params = getOrder(params)
+                elif enumLST[enumSEL].getLabel() == 'Rules': params = getRules(params)
+        
+        if len(params.get('rules',{}).get('and',[]) or params.get('rules',{}).get('and',[])) > 0:
+            url = '%s?xsp=%s'%(path,dumpJSON(params))
+            self.log('buildDXSP, returning %s'%(url))
+            del jsonRPC
+            return url

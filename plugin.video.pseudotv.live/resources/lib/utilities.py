@@ -120,7 +120,7 @@ class Utilities:
         except Exception as e: self.log('showFile failed! %s'%(e), xbmc.LOGERROR)
 
 
-    def openChannelManager(self, chnum: int=-1):
+    def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
         if not isRunning('MANAGER_RUNNING'):
             with setRunning('MANAGER_RUNNING'):
@@ -134,6 +134,8 @@ class Utilities:
         if not PROPERTIES.getEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID)) == 'true':
             from channelbug import ChannelBug
             channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
+            value = PROPERTIES.getProperty("Channel_Bug_Position_XY")
+            if value: SETTINGS.setSetting("Channel_Bug_Position_XY",value)
             del channelbug
 
 

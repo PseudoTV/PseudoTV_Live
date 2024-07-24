@@ -36,11 +36,13 @@ class JSONRPC:
         if PROPERTIES.getPropertyBool('sendLocker'):
             while not MONITOR.abortRequested():
                 if not PROPERTIES.getPropertyBool('sendLocker'): break
-                elif MONITOR.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000)): break
+                elif MONITOR.waitForAbort(.001): break
                 self.log('sendLocker, waiting...')
         PROPERTIES.setPropertyBool('sendLocker',True)
         try: yield self.log('sendLocker, Locked!')
-        finally: PROPERTIES.setPropertyBool('sendLocker',False)
+        finally:
+            MONITOR.waitForAbort(float(SETTINGS.getSettingInt('RPC_Delay')/1000))
+            PROPERTIES.setPropertyBool('sendLocker',False)
 
 
     def sendJSON(self, param, timeout=30):
@@ -48,6 +50,7 @@ class JSONRPC:
             command = param
             command["jsonrpc"] = "2.0"
             command["id"] = ADDON_ID
+            self.log('sendJSON, command = %s'%(dumpJSON(command)))
             response = loadJSON(xbmc.executeJSONRPC(dumpJSON(command)))#(killit( or {'error':{'message':'JSONRPC timed out!'}})
             if response.get('error'):
                 self.log('sendJSON, failed! error = %s\n%s'%(dumpJSON(response.get('error')),command), xbmc.LOGWARNING)
@@ -136,11 +139,11 @@ class JSONRPC:
 
 
     @cacheit(checksum=BUILTIN.getInfoLabel('BuildVersion','System'),expiration=datetime.timedelta(days=28),json_data=True)
-    def getEnums(self, id, type=''):
-        self.log('getEnums id = %s, type = %s' % (id, type))
+    def getEnums(self, id, type='', key='enums'):
+        self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
         json_response = self.sendJSON(param).get('result',{}).get('types',{}).get(id,{})
-        return (json_response.get(type,{}).get('enums',[]) or json_response.get('enums',[]))
+        return (loadJSON(json_response).get('properties',{}).get(type,{}).get(key) or loadJSON(json_response).get(type,{}).get(key) or loadJSON(json_response).get(key,[]))
 
 
     def notifyAll(self, message, data, sender=ADDON_ID):
@@ -273,14 +276,14 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type'))):
-        self.log("getDuration, accurate = %s, path = %s" % (accurate, path))
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
+        self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
         runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if (runtime == 0 or accurate):
             duration = 0
             if isStack(path):# handle "stacked" videos
                 for file in splitStacks(path): duration += self.parseDuration(file)
-            else: duration = self.parseDuration(path, item)
+            else: duration = self.parseDuration(path, item, save)
             if duration > 0: runtime = duration
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
         return runtime
@@ -384,16 +387,16 @@ class JSONRPC:
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
-        if not limits: 
+        if limits.get('end') == -1: #global default, replace with autopage.
             limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
             if limits.get('total',0) > page and sort.get("method","") == "random":
-                limits = self.randomPagination(page,limits.get('total',0))
+                limits = self.randomPagination(page,limits)
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
         param["limits"]          = {}
         param["limits"]["start"] = limits.get('end', 0)
         param["limits"]["end"]   = limits.get('end', 0) + page
-        if sort: param["sort"]   = sort
+        param["sort"] = sort
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))
         
         if getDirectory:
@@ -435,7 +438,8 @@ class JSONRPC:
         return limits
             
              
-    def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), total=0):
+    def randomPagination(self, page=SETTINGS.getSettingInt('Page_Limit'), limits={}):
+        total = limits.get('total',0)
         if total > page: start = random.randrange(0, (total-page), page)
         else:            start = 0
         return {"end": start, "start": start, "total":total}

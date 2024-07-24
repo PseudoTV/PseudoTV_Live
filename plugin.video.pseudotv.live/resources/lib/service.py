@@ -107,6 +107,11 @@ class Player(xbmc.Player):
                             'runtime' :self.getPlayerTime()})
             if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
             if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
+            if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
+            
+            for channel in self.myService.currentChannels:
+                if channel.get('id',random.random()) == sysInfo.get('citem',{}).get('id'): sysInfo.update({'citem':channel})
+            
             PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
             self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
@@ -156,7 +161,7 @@ class Player(xbmc.Player):
 
     def setPlaycount(self, fitem: dict={}):
         self.log('setPlaycount, path = %s, playcount = %s'%(fitem.get('path'),fitem.get('playcount')))
-        self.myService.tasks._que(self.jsonRPC.quePlaycount,2,(OVERLAY_DELAY,[fitem]))
+        self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
 
 
     def _onPlay(self):
@@ -262,7 +267,7 @@ class Monitor(xbmc.Monitor):
             conditions = self.enableOverlay & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
             if not self.overlay and conditions:
                 self.log("toggleOverlay, state = %s"%(state))
-                self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.myService.player, runActions=self.myService.player.runActions)
+                self.overlay = Overlay(jsonRPC=self.jsonRPC,player=self.myService.player)
                 self.overlay.open()
         else:
             if hasattr(self.overlay, 'close'): 
@@ -339,6 +344,8 @@ class Service():
         self.player.myService  = self
         self.monitor.myService = self
         self.tasks             = Tasks(self)
+        self.currentChannels   = self.tasks.getChannels()
+        self.currentSettings    = dict(SETTINGS.getCurrentSettings())
         DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
@@ -346,7 +353,7 @@ class Service():
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _interrupt(self, wait=0.0001) -> bool: #break
+    def _interrupt(self, wait=.001) -> bool: #break
         self.monitor.pendingInterrupt = (self.monitor.pendingInterrupt | self.monitor.waitForAbort(wait) | self.__restart())
         self.log('_interrupt, pendingInterrupt = %s'%(self.monitor.pendingInterrupt))
         return self.monitor.pendingInterrupt

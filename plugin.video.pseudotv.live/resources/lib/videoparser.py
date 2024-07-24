@@ -107,7 +107,7 @@ class VideoParser:
                 if duration == 0:
                     for parser in EXTERNAL_PARSER:
                         duration = parser().determineLength(filename)
-                        if MONITOR.waitForAbort(0.0001) or duration > 0: break
+                        if MONITOR.waitForAbort(.001) or duration > 0: break
                         
                 if duration > 0: jsonRPC.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
         

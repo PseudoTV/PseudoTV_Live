@@ -29,7 +29,7 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 class Service:
     from jsonrpc import JSONRPC
     jsonRPC  = JSONRPC()
-    def _interrupt(self, wait: float=0.0001) -> bool: #break
+    def _interrupt(self, wait: float=.001) -> bool: #break
         return MONITOR.waitForAbort(wait)
 
     def _suspend(self):
@@ -213,8 +213,8 @@ class Library:
     def getMixedGenres(self):
         MixedGenreList = []
         for tv in [tv for tv in self.getTVGenres() for movie in self.getMovieGenres() if tv.get('name','').lower() == movie.get('name','').lower()]:
-            rules = [{"id":53,"values":{"0":tv.get('name')}}]
-            if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+            rules = {"800":{"values":{"0":tv.get('name')}}}
+            if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
         return sorted(MixedGenreList,key=lambda x:x['name'])
@@ -228,8 +228,8 @@ class Library:
         MixedList = []
         if hasTV() or hasMovie():
             MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
-            rules = [{"id":53,"values":{"0":LANGUAGE(32002)}}]
-            if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+            rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
+            if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedList.append({'name':LANGUAGE(32002), 'type':"Mixed",'path':self.predefined.createSeasonal()     ,'logo':self.resources.getLogo(LANGUAGE(32002),"Mixed"),'rules':rules}) #"Seasonal"
 
         if hasRecordings():
@@ -272,7 +272,7 @@ class Library:
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s: %s'%(self.parserMSG,int((idx+1)*100//len(json_response)))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
                 if not info.get('label'): continue
-                TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', ''),'rules':[{"id":53,"values":{"0":info.get('label')}}]}): info.get('episode', 0)})
+                TVShows.update({json.dumps({'name': info.get('label'), 'type':"TV Shows", 'path': self.predefined.createShowPlaylist(info.get('label')), 'logo': info.get('art', {}).get('clearlogo', ''),'rules':{"800":{"values":{"0":info.get('label')}}}}): info.get('episode', 0)})
                 NetworkList.update([studio for studio in info.get('studio', [])])
                 ShowGenreList.update([genre for genre in info.get('genre', [])])
 
@@ -290,15 +290,15 @@ class Library:
             #search resources for studio/genre logos
             nNetworkList = []
             for network in NetworkList:
-                rules = [{"id":53,"values":{"0":network}}]
-                if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+                rules = {"800":{"values":{"0":network}}}
+                if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
                 nNetworkList.append({'name':network, 'type':"TV Networks", 'path': self.predefined.createNetworkPlaylist(network),'logo':self.resources.getLogo(network,"TV Networks"),'rules':rules})
             NetworkList = nNetworkList
             
             nShowGenreList = []
             for tvgenre in ShowGenreList:
-                rules = [{"id":53,"values":{"0":tvgenre}}]
-                if self.enableEvenTV: rules.append({"id":54,"values":{"0":SETTINGS.getSettingInt('Enable_Even')}})
+                rules = {"800":{"values":{"0":tvgenre}}}
+                if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
                 nShowGenreList.append({'name':tvgenre, 'type':"TV Genres"  , 'path': self.predefined.createTVGenrePlaylist(tvgenre),'logo':self.resources.getLogo(tvgenre,"TV Genres"),'rules':rules})
             ShowGenreList = nShowGenreList
             
@@ -331,8 +331,8 @@ class Library:
                 MovieGenreList = (sorted(set(list(MovieGenreList.keys()))))
                 
             #search resources for studio/genre logos
-            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':[{"id":53,"values":{"0":studio}}]} for studio in StudioList]
-            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo(genre ,"Movie Genres") ,'rules':[{"id":53,"values":{"0":genre}}]}  for genre  in MovieGenreList]
+            StudioList     = [{'name':studio, 'type':"Movie Studios", 'path': self.predefined.createStudioPlaylist(studio)    ,'logo':self.resources.getLogo(studio,"Movie Studios"),'rules':{"800":{"values":{"0":studio}}}} for studio in StudioList]
+            MovieGenreList = [{'name':genre,  'type':"Movie Genres" , 'path': self.predefined.createMovieGenrePlaylist(genre) ,'logo':self.resources.getLogo(genre ,"Movie Genres") ,'rules':{"800":{"values":{"0":genre}}}}  for genre  in MovieGenreList]
             
         else: StudioList = MovieGenreList = []
         self.log('getMovieInfo, studios = %s, genres = %s' % (len(StudioList), len(MovieGenreList)))

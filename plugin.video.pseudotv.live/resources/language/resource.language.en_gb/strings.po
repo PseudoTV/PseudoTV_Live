@@ -67,7 +67,7 @@ msgstr ""
 
 msgctxt "#30012"
 msgid "Centralized file location"
-msgstr "
+msgstr ""
 
 msgctxt "#30013"
 msgid "Tweaks"
@@ -581,6 +581,38 @@ msgctxt "#30140"
 msgid "Build Subfolders for Post-Roll Content"
 msgstr ""
 
+msgctxt "#30141"
+msgid "Overlay Resource"
+msgstr ""
+
+msgctxt "#30142"
+msgid "Disable Overlay"
+msgstr ""
+
+msgctxt "#30143"
+msgid "Channel Bug Options"
+msgstr ""
+
+msgctxt "#30144"
+msgid "Change channel Bug attributes."
+msgstr ""
+
+msgctxt "#30145"
+msgid "Show Channel Bug (%s) w/%s offset, %s %s"
+msgstr ""
+
+msgctxt "#30146"
+msgid "Every %s Minutes"
+msgstr ""
+
+msgctxt "#30147"
+msgid "Hide Channel Bug"
+msgstr ""
+
+msgctxt "#30148"
+msgid "Select Interval in minutes. [-1 = Indefinitely, 0 = Randomly]"
+msgstr ""
+
 
 
 
@@ -774,7 +806,7 @@ msgid "%s - Changelog v.%s"
 msgstr ""
 
 msgctxt "#32046"
-msgid "No Changes Applied!
+msgid "No Changes Applied!"
 msgstr ""
 
 msgctxt "#32047"
@@ -854,7 +886,7 @@ msgid "Channel Name Missing..."
 msgstr ""
 
 msgctxt "#32066"
-msgid "Select Channel Logo"
+msgid "[B]Browse[/B] - Manually browse for logo[CR][B]Select[/B] - Choose a matching logo[CR][B]Auto[/B] - Automatically select best logo"
 msgstr ""
 
 msgctxt "#32067"
@@ -922,7 +954,7 @@ msgid "Clear this Channels Configurations"
 msgstr ""
 
 msgctxt "#32083"
-msgid "Select Channel as a preferred favorite!"
+msgid "Is this a Favorite Channel?"
 msgstr ""
 
 msgctxt "#32084"
@@ -990,15 +1022,15 @@ msgid "This may take a moment."
 msgstr ""
 
 msgctxt "#32100"
-msgid "[COLOR=yellow][B]- Add Paths[/B][/COLOR]"
+msgid "- Add Path"
 msgstr ""
 
 msgctxt "#32101"
-msgid "[COLOR=yellow][B]- Save Paths[/B][/COLOR]"
+msgid "- Save Paths"
 msgstr ""
 
 msgctxt "#32102"
-msgid "Remove Path"
+msgid "Delete Path?"
 msgstr ""
 
 msgctxt "#32103"
@@ -1158,7 +1190,7 @@ msgid "Shutting Down..."
 msgstr ""
 
 msgctxt "#32142"
-msgid "Debugging is [B]enabled[/B]\nIt's recommend you disable debugging when applicable.\nWould you like to disable debugging now?"
+msgid "Debugging is [B]enabled[/B]\nIt is recommend you disable debugging when applicable.\nWould you like to disable debugging now?"
 msgstr ""
 
 msgctxt "#32143"
@@ -1261,6 +1293,45 @@ msgctxt "#32167"
 msgid "Playback Failed! No Media found."
 msgstr ""
 
+msgctxt "#32168"
+msgid "Update Available!"
+msgstr ""
+
+msgctxt "#32169"
+msgid "Edit Channel (%s)"
+msgstr ""
+
+msgctxt "#32170"
+msgid "- Delete Path"
+msgstr ""
+
+msgctxt "#32171"
+msgid "%s in-use, Try Again..."
+msgstr ""
+
+msgctxt "#32172"
+msgid "Select Channel Logo"
+msgstr ""
+
+msgctxt "#32173"
+msgid "- Add Rule"
+msgstr ""
+
+msgctxt "#32174"
+msgid "- Save Rules"
+msgstr ""
+
+msgctxt "#32175"
+msgid "Delete Rule?"
+msgstr ""
+
+msgctxt "#32176"
+msgid "Edit Rule"
+msgstr ""
+
+msgctxt "#32177"
+msgid "Finish Configuring channel first"
+msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
@@ -1329,7 +1400,7 @@ msgid "Artwork changes will propagate slowly over time and are not instantaneous
 msgstr ""
 
 msgctxt "#33036"
-msgid "Set in Kodi's PVR & LiveTV Settings"
+msgid "Set in Kodi PVR & LiveTV Settings"
 msgstr ""
 
 msgctxt "#33038"
@@ -1373,7 +1444,7 @@ msgid "Select from a list of discovered servers."
 msgstr ""
 
 msgctxt "#33049"
-msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file's for accurate runtimes.\nCan impact system performance! *see readme for details."
+msgid "Prefer Kodi Metadata - Use less accurate runtimes from meta-providers.\nPrefer File Metadata - Parse file for accurate runtimes.\nCan impact system performance! *see readme for details."
 msgstr ""
 
 msgctxt "#33052"
@@ -1481,7 +1552,7 @@ msgid "Change the onscreen Channel Bug position. [(1556,920) Default]"
 msgstr ""
 
 msgctxt "#33113"
-msgid "Add paths to channel"
+msgid "Add path to channel"
 msgstr ""
 
 msgctxt "#33114"
@@ -1534,4 +1605,8 @@ msgstr ""
 
 msgctxt "#33160"
 msgid "Select one or more logo resource packs."
+msgstr ""
+
+msgctxt "#33170"
+msgid "Delete channel Path"
 msgstr ""

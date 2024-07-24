@@ -73,56 +73,70 @@ class XSP:
         return ""
         
 
-    def parseXSP(self, file: str):
-        self.log("parseXSP, file = %s"%(file))
-        type   = ''
-        media  = 'video'
-        paths  = []
-        sort   = {}
-        filter = {}
-        limit  = None
-        
+    def parseXSP(self, path: str, media: str='video', sort: dict={}, filter: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
         try: 
-            xml = FileAccess.open(file, "r")
+            paths = []
+            ort = {}
+            xml = FileAccess.open(path, "r")
             dom = parse(xml)
             xml.close()
-            media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
-            type  = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
-            if type.lower() == "mixed":
-                try:#todo use operators to build filter list for mixed content.
+            
+            try:    media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
+            except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
+            
+            try:
+                ort = {"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()} #todo pop rules to filter var.
+            except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
+            
+            try: ort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()#todo pop rules to filter var.
+            except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
+
+            try:
+                type = dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value
+                if type.lower() == "mixed":#todo use operators to build filter list for mixed content
                     for rule in dom.getElementsByTagName('rule'):
                         if rule.getAttribute('field').lower() == 'path' and rule.getAttribute('operator').lower() in ['is','contains']:
                             paths.append(rule.getElementsByTagName("value")[0].childNodes[0].data)
                         elif rule.getAttribute('field').lower() in ['playlist','virtualfolder'] and rule.getAttribute('operator').lower() in ['is','contains']:
                             paths.extend(self.findXSP(rule.getElementsByTagName("value")[0].childNodes[0].data))
-                except Exception as e: self.log("parseXSP, mixed parsing failed! %s"%(e), xbmc.LOGERROR)
-            try: sort["method"] = dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()#todo pop rules to filter var.
-            except: pass
-            try: sort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()#todo pop rules to filter var.
-            except: pass
-            self.log("parseXSP, type = %s, media = %s, paths = %s, sort = %s"%(type, media, paths, sort))
+            except Exception as e:
+                self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
+                type  = ''
+                 
+            #todo parse smartplaylist limit 
+            ort.update(sort)
+            sort = ort
+            self.log("parseXSP, type = %s, paths = %s, media = %s, sort = %s, filter = %s, limit = %s"%(type, paths, media, sort, filter, limit))
         except Exception as e: self.log("parseXSP, failed! %s"%(e), xbmc.LOGERROR)
-        #todo parse limits
         return paths, media, sort, filter, limit
+            
 
-
-    def parseDXSP(self, path: str):
-        media  = 'video'
-        sort   = {}
-        filter = {}
-        limit  = None
+    def parseDXSP(self, opath: str, sort: dict={}, filter: dict={}, incExtras: bool=SETTINGS.getSettingBool('Enable_Extras')):
         try:
+            path, params = opath.split('?xsp=')
             media = 'music' if path.lower().startswith('musicdb://') else 'video'
-            url, params = path.split('?xsp=')
-            payload = loadJSON(params)
-            if payload: 
-                path = url
-                if payload.get('order'): sort   = payload.pop('order')
-                if payload.get('rules'): filter = payload.pop('rules')
-                # if payload.get('limit'): limits  = payload.pop('limit')
-            self.log("parseDXSP, path = %s, media = %s, sort = %s, filter = %s"%(path, media, sort, filter))
+            param = loadJSON(unquoteString(params))
+            
+            if   path.startswith('videodb://tvshows/'): param["type"], nsort = ('episodes',{"method":"episode"})  #tvshows
+            elif path.startswith('videodb://movies/'):  param["type"], nsort = ('movies'  ,{"method": "random"})  #movies
+            elif path.startswith('musicdb://songs/'):   param["type"], nsort = ('music'   ,{"method": "random"})  #music
+            else:                                       param["type"], nsort = ('files'   ,{"method": "random"})  #other
+            nsort.update(param.get('order',{}))
+            nsort.update(sort)
+            
+            if not incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
+                param.setdefault("rules",{}).setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"}, 
+                                                                          {"field":"episode","operator":"greaterthan","value":"0"}])
+
+            param.setdefault("rules",{}).update(filter)   
+            if param["type"] == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
+            else: flatten = ''
+            
+            path = '%s%s?xsp=%s'%(path,flatten,quoteString(dumpJSON(param)))
+            self.log("parseDXSP, dynamic library path detected! augmenting path\n%s\n=>\n%s"%(opath,path))
+            return path, media, {}, {}
         except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
-        return path, media, filter, sort, limit
+        return opath, media, sort, filter
         
 if __name__ == '__main__':
     main()

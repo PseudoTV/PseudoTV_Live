@@ -46,17 +46,20 @@ class Builder:
         self.incExtras        = SETTINGS.getSettingBool('Enable_Extras') 
         self.fillBCTs         = SETTINGS.getSettingBool('Enable_Fillers')
         self.accurateDuration = bool(SETTINGS.getSettingInt('Duration_Type'))
+        self.saveDuration     = SETTINGS.getSettingBool('Store_Duration')
         self.epgArt           = SETTINGS.getSettingInt('EPG_Artwork')
         self.enableGrouping   = SETTINGS.getSettingBool('Enable_Grouping')
         self.limit            = SETTINGS.getSettingInt('Page_Limit')
         self.filters          = {} #{"and": [{"operator": "contains", "field": "title", "value": "Star Wars"},{"operator": "contains", "field": "tag", "value": "Good"}],"or":[]}
-        self.sort             = {} #{"ignorearticle":true,"method":"random","order":"ascending","useartistsortname":true}
-        self.limits           = {} #{"end":0,"start":0,"total":0}
+        self.sort             = {"ignorearticle":True,"method":"random","order":"ascending","useartistsortname":True}
+        self.limits           = {"end":-1,"start":0,"total":0}
+        
+        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
 
         self.service          = service
         self.cache            = Cache()
         self.channels         = Channels()
-        self.rules            = RulesList(self.channels.getChannels())
+        self.rules            = RulesList()
         self.runActions       = self.rules.runActions
         self.xmltv            = XMLTVS()
         self.jsonRPC          = service.jsonRPC
@@ -75,7 +78,6 @@ class Builder:
         self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Adverts').split('|') , "paths":self.getAdvertPath() if self.incIspot else []}
         self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'), "paths":IMDB_PATHS if self.incIMDB else []}
         
-        self.minDuration      = SETTINGS.getSettingInt('Seek_Tolerance')
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = 10800 #Secs., Min. EPG guidedata
         
@@ -222,52 +224,33 @@ class Builder:
                 
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE, citem, list(), inherited=self)
         if not _validFileList(fileArray):
-            for file in citem['path']:
+            for idx, file in enumerate(citem.get('path',[])):
                 if self.service._interrupt() or self.service._suspend(): break
-                else: fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+                else: 
+                    if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
+                    fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
         
-        if not _validFileList(fileArray):#check that at least one fileList in array contains meta.
+        if not _validFileList(fileArray):#check that at least one fileList in array contains meta
             self.log("buildChannel, id: %s skipping channel fileArray empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
         self.log("buildChannel, id: %s fileArray arrays = %s"%(citem['id'],len(fileArray)))
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, interleave(fileArray), inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        fileList = interleave(fileArray) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
         self.log('buildChannel, id: %s, fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         return fileList
 
           
     def buildFileList(self, citem: dict, path: str, media: str='video', limit: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}) -> list: #build channel via vfs path.
         self.log("buildFileList, id: %s, media = %s, path = %s\nlimit = %s, sort = %s limits = %s"%(citem['id'],media,path,limit,sort,limits))
-        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info.
-            paths, media, osort, ofilter, olimit = self.xsp.parseXSP(path)
-            sort   = (sort   or osort)
-            limit  = (olimit or limit)
-            if len(paths) > 0: #treat 'mixed' smartplaylists as mixed-path mixed content.
-                self.log("buildFileList, id: %s, mixed-path smartplaylist detected! changing limits to %s over %s paths\npaths = %s"%(citem['id'], roundupDIV(limit,len(paths)),len(paths),paths),xbmc.LOGINFO)
-                return interleave([self.buildFileList(citem, file, media, roundupDIV(limit,len(paths)), sort, limits) for file in paths if not self.service._interrupt()])
-
-        elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info.
-            param = {}
-            path, media, osort, param["rules"], olimit = self.xsp.parseDXSP(path)
+        if path.endswith('.xsp'): #smartplaylist - parse xsp for path, filter and sort info
+            paths, media, sort, filter, limit = self.xsp.parseXSP(path, media, sort, {}, limit)
+            if len(paths) > 0: return interleave([self.buildFileList(citem, file, media, limit, sort, limits) for file in paths if not self.service._interrupt()])
             
-            # default values
-            if   path.startswith('videodb://tvshows/'): param["type"], media, dsort = ('episodes','video',{"method": "episode"}) #tvshows
-            elif path.startswith('videodb://movies/'):  param["type"], media, dsort = ('movies'  ,'video',{"method": "random"})  #movies
-            elif path.startswith('musicdb://songs/'):   param["type"], media, dsort = ('music'   ,'music',{"method": "random"})  #music
-            else:                                       param["type"], media, dsort = ('files'   ,'video',{"method": "random"})  #other
-
-            param["order"] = (sort or osort or dsort)
-            sort   = {} #clear sort; no longer needed! injected into param
-            if not self.incExtras and param["type"].startswith(tuple(TV_TYPES)): #filter out extras/specials
-                param["rules"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
-                                                            {"field":"episode","operator":"greaterthan","value":"0"}])
-
-            if param["type"] == 'episodes' and '-1/-1/-1/' not in path: flatten = '-1/-1/-1/'
-            else: flatten = ''
-            path ='%s%s?xsp=%s'%(path,flatten,dumpJSON(param))
-            self.log("buildFileList, id: %s, dynamic library path detected! augmenting path to %s"%(citem['id'],path))
-
+        elif 'db://' in path and '?xsp=' in path: #dynamicplaylist - parse xsp for path, filter and sort info
+            path, media, sort, filter = self.xsp.parseDXSP(path, sort, {}, self.incExtras) #todo filter adv. rules.
+            
         fileList = []
         dirList  = [{'file':path}]
         self.loopback = {}
@@ -343,13 +326,15 @@ class Builder:
                             self.log("buildList, id: %s, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                             continue
 
-                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration)
+                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
                         if dur > self.minDuration: #include media that's duration is above the players seek tolerance.
                             item['duration']     = dur
                             item['media']        = media
                             item['originalpath'] = path #use for path sorting/playback verification 
-                            if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554.
-                                
+                            if item.get("year",0) == 1601: item['year'] = 0 #detect kodi bug that sets a fallback year to 1601 https://github.com/xbmc/xbmc/issues/15554
+                            if self.pDialog:
+                                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int(idx*100)//page)+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
+
                             title   = (item.get("title",'')     or item.get("label",'') or dirItem.get('label',''))
                             tvtitle = (item.get("showtitle",'') or item.get("label",'') or dirItem.get('label',''))
 
@@ -389,7 +374,7 @@ class Builder:
                             
                             if item.get('trailer') and bool(self.incPostroll) and self.incKODI:
                                 titem = item.copy()
-                                tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True)
+                                tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True, save=False)
                                 if tdur > 0:
                                     titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
                                     for genre in (titem.get('genre',[]) or ['resources']):
@@ -399,9 +384,6 @@ class Builder:
                                 seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
                             else: 
                                 fileList.append(item)
-                                
-                            if self.pDialog: 
-                                self.pDialog = DIALOG.progressBGDialog(self.pCount, self.pDialog, message='%s: %s'%(self.pName,int((len(seasoneplist+fileList)*100)//len(items)))+'%',header='%s, %s'%(ADDON_NAME,self.pMSG))
                         else: 
                             self.pErrors.append(LANGUAGE(32032))
                             self.log("buildList, id: %s, IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
@@ -412,6 +394,7 @@ class Builder:
                 seasoneplist.sort(key=lambda seep: seep[0])
                 for seepitem in seasoneplist: 
                     fileList.append(seepitem[2])
+                    
             elif sort.get("method","") == 'random':
                 self.log("buildList, id: %s, random shuffling"%(citem['id']))
                 if len(dirList)  > 0: dirList  = randomShuffle(dirList)

@@ -116,7 +116,7 @@
                     <align>center</align>
                     <aligny>center</aligny>
                     <font>font25_title</font>
-                    <visible>!Control.IsVisible(7)</visible>
+                    <visible>!Control.IsVisible(5) + !Control.IsVisible(7)</visible>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
                 </control>
                 <control type="image" id="11">
@@ -130,7 +130,6 @@
                     <aspectratio>keep</aspectratio>
                     <visible>Control.IsVisible(5)|Control.IsVisible(7)</visible>
                     <texture fallback="logo.png">$INFO[Container(5).ListItem.Art(icon)]</texture>
-                    <!-- <colordiffuse>$INFO[Container(5).ListItem.Property(colorDiffuse)]</colordiffuse> -->
                 </control>
                 <control type="image" id="12">
                     <description>Logo Image</description>
@@ -143,7 +142,7 @@
                     <aspectratio>keep</aspectratio>
                     <visible>Control.IsVisible(6)</visible>
                     <texture fallback="logo.png">$INFO[Container(6).ListItem.Art(icon)]</texture>
-                    <!-- <colordiffuse>$INFO[Container(6).ListItem.Property(colorDiffuse)]</colordiffuse> -->
+                    <colordiffuse>$INFO[Container(6).ListItem.Property(colorDiffuse)]</colordiffuse>
                 </control>
                 <control type="label" id="">
                     <left>29</left>
@@ -200,9 +199,9 @@
                             <left>80</left>
                             <top>0</top>
                             <width>1060</width>
-                            <height>1</height>
+                            <height>63</height>
                             <texture border="1">overlays/separator.png</texture>
-                            <bordersize>1</bordersize>
+                            <bordersize>63</bordersize>
                         </control>
                         <control type="label">
                             <left>0</left>
@@ -212,7 +211,6 @@
                             <aligny>center</aligny>
                             <align>left</align>
                             <font>font12</font>
-                            <textcolor>FFFFFFFF</textcolor>
                             <textoffsetx>40</textoffsetx>
                             <info>ListItem.Label</info>
                         </control>
@@ -224,7 +222,6 @@
                             <aligny>center</aligny>
                             <align>right</align>
                             <font>font12</font>
-                            <textcolor>FFFFFFFF</textcolor>
                             <textoffsetx>40</textoffsetx>
                             <info>ListItem.Label2</info>
                         </control>
@@ -245,9 +242,10 @@
                             <aligny>center</aligny>
                             <align>left</align>
                             <font>font12</font>
-                            <textcolor>FFFFFFFF</textcolor>
                             <textoffsetx>40</textoffsetx>
                             <info>ListItem.Label</info>
+                            <scroll>true</scroll>
+                            <scrollspeed>50</scrollspeed>
                         </control>
                         <control type="label">
                             <left>0</left>
@@ -257,9 +255,10 @@
                             <aligny>center</aligny>
                             <align>right</align>
                             <font>fontt12</font>
-                            <textcolor>FFFFFFFF</textcolor>
                             <textoffsetx>40</textoffsetx>
                             <info>ListItem.Label2</info>
+                            <scroll>true</scroll>
+                            <scrollspeed>50</scrollspeed>
                         </control>
                     </focusedlayout>
                 </control>
@@ -273,13 +272,14 @@
                 <height>700</height>
                 <onleft>Control.SetFocus(10)</onleft>
                 <onright>Control.SetFocus(9001)</onright>
+                <orientation>vertical</orientation>
                 <itemlayout width="1060" height="63">
                     <control type="image">
                         <left>80</left>
                         <top>0</top>
                         <width>1060</width>
                         <height>63</height>
-                        <texture border="63"></texture>
+                        <texture border="1">overlays/separator.png</texture>
                         <bordersize>63</bordersize>
                     </control>
                     <control type="label">
@@ -290,7 +290,7 @@
                         <aligny>center</aligny>
                         <align>left</align>
                         <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
+                        <textcolor>grey</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label</info>
                     </control>
@@ -301,8 +301,8 @@
                         <height>63</height>
                         <aligny>center</aligny>
                         <align>right</align>
-                        <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
+                        <font>fontt12</font>
+                        <textcolor>grey</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label2</info>
                     </control>
@@ -323,9 +323,11 @@
                         <aligny>center</aligny>
                         <align>left</align>
                         <font>font12</font>
-                        <textcolor>FFFFFFFF</textcolor>
+                        <textcolor>white</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label</info>
+                        <scroll>true</scroll>
+                        <scrollspeed>50</scrollspeed>
                     </control>
                     <control type="label">
                         <left>0</left>
@@ -335,9 +337,11 @@
                         <aligny>center</aligny>
                         <align>right</align>
                         <font>fontt12</font>
-                        <textcolor>FFFFFFFF</textcolor>
+                        <textcolor>white</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label2</info>
+                        <scroll>true</scroll>
+                        <scrollspeed>50</scrollspeed>
                     </control>
                 </focusedlayout>
             </control>  
@@ -403,6 +407,8 @@
                         <textcolor>FFFFFFFF</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label</info>
+                        <scroll>true</scroll>
+                        <scrollspeed>50</scrollspeed>
                     </control>
                     <control type="label">
                         <left>0</left>
@@ -415,6 +421,8 @@
                         <textcolor>FFFFFFFF</textcolor>
                         <textoffsetx>40</textoffsetx>
                         <info>ListItem.Label2</info>
+                        <scroll>true</scroll>
+                        <scrollspeed>50</scrollspeed>
                     </control>
                 </focusedlayout>
             </control>  
@@ -495,7 +503,6 @@
                     <font>font25_title</font>
                     <textoffsetx>20</textoffsetx>
                     <onclick></onclick>
-                    <wrapmultiline>false</wrapmultiline>
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
@@ -508,7 +515,6 @@
                     <font>font25_title</font>
                     <textoffsetx>20</textoffsetx>
                     <onclick></onclick>
-                    <wrapmultiline>false</wrapmultiline>
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
@@ -521,7 +527,6 @@
                     <font>font25_title</font>
                     <textoffsetx>20</textoffsetx>
                     <onclick></onclick>
-                    <wrapmultiline>false</wrapmultiline>
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>
@@ -535,7 +540,6 @@
                     <font>font25_title</font>
                     <textoffsetx>20</textoffsetx>
                     <onclick></onclick>
-                    <wrapmultiline>false</wrapmultiline>
                     <align>center</align>
                     <texturefocus border="40" colordiffuse="FF12A0C7">buttons/dialogbutton-fo.png</texturefocus>
                     <texturenofocus border="40">buttons/dialogbutton-nofo.png</texturenofocus>

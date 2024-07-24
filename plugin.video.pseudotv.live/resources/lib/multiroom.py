@@ -49,7 +49,6 @@ class Multiroom:
                 sec += 1
                 msg = LANGUAGE(32163)%(ADDON_NAME,LANGUAGE(30130),(wait-sec))
                 dia = DIALOG.progressDialog((inc*sec),dia, msg)
-                print('dia',dia)
                 Announcement()
                 if self.monitor.waitForAbort(1.5) or dia is None: break
             self.runningAnnouncment = False
@@ -87,7 +86,7 @@ class Multiroom:
         if (not current_server or forced) and len(list(servers.keys())) == 1:
             #If one server found autoselect, set server host paths.
             self.log('chkDiscovery,setting server = %s, forced = %s'%(list(servers.keys())[0], forced))
-            SETTINGS.setPVRRemote('http://%s'%(list(servers.keys())[0]))
+            self.tasks.setPVRRemote('http://%s'%(list(servers.keys())[0]))
             #sync client resources with server.
             for key, value in list((servers[list(servers.keys())[0]].get('settings',{})).items()):
                 try:    self.setSetting(key, value)

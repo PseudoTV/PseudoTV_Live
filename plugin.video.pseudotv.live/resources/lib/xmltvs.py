@@ -201,19 +201,19 @@ class XMLTVS:
         def filterProgrames(program):
             if (strpTime(program.get('stop',now).rstrip(),DTFORMAT) > now): return program
             
-        tmpProgrammes = poolit(filterProgrames)(programmes) # remove expired content, ignore "recordings" ie. media=True
+        tmpProgrammes = [filterProgrames(program) for program in programmes] # remove expired content, ignore "recordings" ie. media=True
         self.log('cleanProgrammes, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return self.cleanHolidays(tmpProgrammes)
 
 
-    def cleanHolidays(self, programmes: list) -> list:
+    def cleanHolidays(self, programmes: list=[]) -> list:
         holiday = Seasonal().getHoliday()
         def filterHoliday(program):
-            citem = decodePlot(program.get('desc')[0][0]).get('citem',{})
+            citem = decodePlot(program.get('desc',([{}],''))[0][0]).get('citem',{})
             if citem.get('holiday') and citem.get('holiday',{}).get('name',str(random.random())) != holiday.get('name',str(random.random())): return None
             return program
             
-        tmpProgrammes = poolit(filterHoliday)(programmes) # remove expired seasons.
+        tmpProgrammes = [filterHoliday(program) for program in programmes if program] # remove expired seasons.
         self.log('cleanHolidays, before = %s, after = %s'%(len(programmes),len(tmpProgrammes)))
         return tmpProgrammes
 

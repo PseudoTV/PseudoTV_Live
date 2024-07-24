@@ -21,7 +21,7 @@
 # -*- coding: utf-8 -*-
 from globals   import *
 from resources import Resources
-
+from rules     import RulesList
 # class Video(xbmcgui.WindowXML):
 # todo adv. rule apply overlay ie. scanline, etc to videowindow.
 # xbmcgui.lock()
@@ -37,7 +37,7 @@ from resources import Resources
 class Background(xbmcgui.WindowXML):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXML.__init__(self, *args, **kwargs)
-        self.citem = kwargs.get('citem')
+        self.citem = kwargs.get('citem',{})
 
 
     def onInit(self):
@@ -45,33 +45,40 @@ class Background(xbmcgui.WindowXML):
             logo = (self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(self.citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
-        except:
+        except Exception as e:
+            log("Background: onInit, failed! %s"%(e), xbmc.LOGERROR)
             self.close()
             
             
 class Overlay():
-    showingOverlay = False
     controlManager = dict()
     
-    def __init__(self, jsonRPC, player=None, runActions=None):
+    def __init__(self, jsonRPC, player=None):
         self.jsonRPC      = jsonRPC
         self.player       = player
-        self.runActions   = runActions
+        self.resources    = Resources(self.jsonRPC,self.jsonRPC.cache)
+        self.runActions   = RulesList().runActions
         
         #win control - Inheriting from 12005 (fullscreenvideo) puts the overlay in front of the video, but behind the video interface
         self.window   = xbmcgui.Window(12005) 
         self.window_w = self.window.getWidth()
         self.window_h = self.window.getHeight()
         
-        #init controls
-        self._channelBugX, self._channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
-        self._channelBug = xbmcgui.ControlImage(self._channelBugX, self._channelBugY, 128, 128, 'None', aspectRatio=2)        
-        self._onNext     = xbmcgui.ControlTextBox(128, 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
-        self._background = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, os.path.join(MEDIA_LOC,'colors','white.png'), aspectRatio=2, colorDiffuse='black')
+        self._vinImage          = 'None'
+        self._vinOffsetX, self._vinOffsetY   = (0,0) 
         
-        self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
-        self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
-        self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
+        self.channelBugColor    = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
+        self.enableOnNext       = SETTINGS.getSettingBool('Enable_OnNext')
+        self.enableChannelBug   = SETTINGS.getSettingBool('Enable_ChannelBug')
+        self.channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
+        self.channelBugDiffuse  = SETTINGS.getSettingBool('Force_Diffuse')
+        self.channelBugX, self.channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
+         
+        #init controls
+        self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
+        self._onNext     = xbmcgui.ControlTextBox(abs(self.window_w - self.channelBugX), 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
+        self._background = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, 'None', aspectRatio=2, colorDiffuse='black')
+        self._vignette   = xbmcgui.ControlImage(self._vinOffsetX, self._vinOffsetY, self.window_w, self.window_h, 'None', aspectRatio=0)
         
         self._channelBugThread = Timer(0.1, self.toggleBug, [False])
         self._onNextThread     = Timer(0.1, self.toggleOnNext, [False])
@@ -159,22 +166,14 @@ class Overlay():
         if not self.player.isPseudoTV: 
             return self.close()
             
-        self.showingOverlay   = True
-        self.channelBugColor  = '0x%s'%((SETTINGS.getSetting('DIFFUSE_LOGO') or 'FFFFFFFF')) #todo adv. channel rule for color selection.
-        self.enableOnNext     = SETTINGS.getSettingBool('Enable_OnNext')
-        self.enableChannelBug = SETTINGS.getSettingBool('Enable_ChannelBug')
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
-        
-        self.toggleBug()
-        self.toggleOnNext()
-        self.toggleBackground()
+        self.toggleBug(),self.toggleOnNext(),self.toggleBackground(),self.toggleVignette()
             
             
     def close(self):
         self.log('close')
         self.cancelOnNext()
         self.cancelChannelBug()
-        self.showingOverlay = False
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
         
         for control, visible in list(self.controlManager.items()):
@@ -199,42 +198,63 @@ class Overlay():
         
     def toggleBackground(self, state: bool=True):
         self.log('toggleBackground, state = %s'%(state))
-        if state and not self._hasControl(self._background):
-            self._addControl(self._background)
+        if state:
+            if not self._hasControl(self._background):
+                self._addControl(self._background)
+            self.setImage(self._background,os.path.join(MEDIA_LOC,'colors','white.png'))
             self._background.setVisibleCondition('[!Player.Playing]', True)
             self.setVisible(self._background,True)
         else:
+            self.setImage(self._background,'None')
             self.setVisible(self._background,False)
         
+
+    def toggleVignette(self, state: bool=True):
+        self.log('toggleVignette, state = %s'%(state))
+        if state:
+            if not self._hasControl(self._vignette):
+                self._addControl(self._vignette)
+            
+            if self._vinImage:
+                self.setImage(self._vignette,self._vinImage)
+                self._vignette.setPosition(self._vinOffsetX, self._vinOffsetY)
+                self._vignette.setVisibleCondition('[Player.Playing]', True)
+                self._vignette.setAnimations([('Conditional', 'effect=fade start=0 end=100 time=500 delay=0 condition=True reversible=False')])
+                self.setVisible(self._vignette,True)
+                self.log('toggleVignette, set = %s @ (%s,%s)'%(self._vinImage,self._vinOffsetX, self._vinOffsetY))
+        else:
+            self.setImage(self._vignette,'None')
+            self.setVisible(self._vignette,False)
+
         
     def toggleBug(self, state: bool=True):
-        def getWait(state):
-            _channelBugInterval = SETTINGS.getSettingInt("Channel_Bug_Interval")
-            if _channelBugInterval == -1: 
+        def _getWait(state):
+            if self.channelBugInterval == -1: 
                 onVAL  = self.player.getTimeLabel('TimeRemaining')
                 offVAL = 0.1
-            elif _channelBugInterval == 0:
+            elif self.channelBugInterval == 0:
                 onVAL  = random.randint(300,900)
                 offVAL = random.randint(300,900)
             else:
-                onVAL  = _channelBugInterval * 60
+                onVAL  = self.channelBugInterval * 60
                 offVAL = round(onVAL // 2)
+            self.log('toggleBug, _getWait onVAL, offVAL (%s,%s)'%(onVAL, offVAL))
             return {True:float(onVAL),False:float(offVAL)}[state]
 
         try:
-            wait   = getWait(state)
+            wait   = _getWait(state)
             nstate = not bool(state)
             
-            try: 
-                if self._channelBugThread.is_alive():
+            if self._channelBugThread.is_alive():
+                try: 
                     self._channelBugThread.cancel()
                     self._channelBugThread.join()
-            except: pass
+                except: pass
                   
             try: 
-                self._channelBugX, self._channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
-                self.log('toggleBug, channelbug POSXX (%s,%s)'%(self._channelBugX, self._channelBugY))
-                self._channelBug.setPosition(self._channelBugX, self._channelBugY)
+                self.channelBugX, self.channelBugY = (literal_eval(SETTINGS.getSetting("Channel_Bug_Position_XY")) or (1556, 920))
+                self.log('toggleBug, channelbug POSXX (%s,%s)'%(self.channelBugX, self.channelBugY))
+                self._channelBug.setPosition(self.channelBugX, self.channelBugY)
             except: pass
             
             if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPES:
@@ -245,11 +265,9 @@ class Overlay():
                 logo = self.player.sysInfo.get('citem',{}).get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  LOGO))
                 self.log('toggleBug, channelbug logo = %s)'%(logo))
                 
-                if   SETTINGS.getSettingBool('Force_Diffuse'): self._channelBug.setColorDiffuse(self.channelBugColor)
+                if self.channelBugDiffuse: self._channelBug.setColorDiffuse(self.channelBugColor)
                 elif hasAddon('script.module.pil'):
-                    resources = Resources(self.jsonRPC,self.jsonRPC.cache)
-                    if resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
-                    del resources
+                    if self.resources.isMono(logo): self._channelBug.setColorDiffuse(self.channelBugColor)
                 
                 self.setImage(self._channelBug,logo)
                 self.setVisible(self._channelBug,True)

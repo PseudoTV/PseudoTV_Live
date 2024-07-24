@@ -17,7 +17,7 @@
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Channel_Manager)</data>
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Channel_Manager)</data> -->
                         <close>true</close>
 					</control>
 				</setting>
@@ -383,7 +383,7 @@
 						</dependency>
 					</dependencies>
 					<control type="button" format="addon">
-						<heading>30067</heading>
+						<heading>30027</heading>
 						<show more="true" details="true">installed</show>
 						<multiselect>true</multiselect>
 					</control>
@@ -500,9 +500,9 @@
 					<level>2</level>
 					<default>60</default>
 					<constraints>
-						<minimum>5</minimum>
+						<minimum>0</minimum>
 						<step>5</step>
-						<maximum>900</maximum>
+						<maximum>600</maximum>
 					</constraints>
 					<control type="slider" format="integer">
 						<popup>false</popup>
@@ -588,6 +588,23 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="Resource_Overlay" type="list[addon]" label="30141" help="33160">
+					<level>2</level>
+					<default>resource.images.overlays.crttv</default>
+					<constraints>
+						<addontype>kodi.resource.images</addontype>
+					</constraints>
+					<dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Enable_Overlay">true</condition>
+						</dependency>
+					</dependencies>
+					<control type="button" format="addon">
+						<heading>30141</heading>
+						<show more="true" details="true">installed</show>
+						<multiselect>true</multiselect>
+					</control>
+				</setting>
 				<setting id="Enable_ChannelBug" type="boolean" label="30043" help="33043" parent="Enable_Overlay">
 					<level>1</level>
 					<default>true</default>
@@ -655,7 +672,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>               
-                <setting id="Channel_Bug_Position" type="action" label="30112" help="30112" parent="Enable_ChannelBug">
+                <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="30112" parent="Enable_ChannelBug">
 					<level>3</level>
 					<default>(1556,920)</default>
 					<constraints>
@@ -676,33 +693,9 @@
 						<close>true</close>
 					</control>
 				</setting>               
-                <setting id="Channel_Bug_Position_XY" type="string" label="30112" help="30112" parent="Enable_ChannelBug">
-					<level>3</level>
-					<default>(1556,920)</default>
-					<constraints>
-						<allowempty>false</allowempty>
-					</constraints>
-                    <enable>true</enable>
-                    <visible>false</visible>
-                    <control type="edit" format="string">
-						<heading></heading>
-					</control>
-				</setting>
 				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
 					<level>1</level>
 					<default>true</default>
-                    <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition operator="is" setting="Enable_Overlay">true</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
-				</setting>
-				<setting id="Static_Overlay" type="boolean" label="30046" help="33046" parent="Enable_Overlay">
-					<level>1</level>
-					<default>false</default>
                     <dependencies>
 						<dependency type="visible">
 							<and>
@@ -790,7 +783,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-				<setting id="Enable_3D" type="boolean" label="30055" help="30055">
+				<setting id="Enable_3D" type="boolean" label="30055" help="33055">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -1386,7 +1379,7 @@
 			<group id="5" label="30111">
                 <setting id="RPC_Delay" type="integer" label="30110" help="33109">
 					<level>3</level>
-					<default>1</default>
+					<default>1000</default>
 					<constraints>
 						<minimum>1</minimum>
 						<step>10</step>

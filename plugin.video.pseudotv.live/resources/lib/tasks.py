@@ -34,6 +34,7 @@ class Tasks():
         self.log('__init__')
         self.service     = service
         self.jsonRPC     = service.jsonRPC
+        self.cache       = service.jsonRPC.cache
         self.httpServer  = HTTP(service.monitor)
         self.quePriority = CustomQueue(priority=True,service=self.service)
 
@@ -49,8 +50,6 @@ class Tasks():
         
 
     def _initialize(self):
-        self.service.currentChannels = self.getChannels()
-        self.service.currentSettings = dict(SETTINGS.getCurrentSettings())
         setInstanceID()
         isClient(silent=False)
         tasks = [self.chkWelcome,
@@ -66,12 +65,20 @@ class Tasks():
         self.log('chkWelcome')
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
               
-              
+                  
+    @cacheit(checksum=getInstanceID())
+    def getOnlineVersion(self):
+        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(urllib.request.urlopen(ADDON_URL).read()))[0]
+        except: ONLINE_VERSON = ADDON_VERSION
+        self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
+        return ONLINE_VERSON
+        
+        
     def chkVersion(self):
         self.log('chkVersion')
+        ONLINE_VERSION = self.getOnlineVersion()
+        if ADDON_VERSION < ONLINE_VERSION: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32168),'Version (%s)'%(ONLINE_VERSION)))
         if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
-            #todo check kodi repo addon.xml version number, prompt user if outdated.
-            # https://github.com/PseudoTV/PseudoTV_Live/blob/master/plugin.video.pseudotv.live/addon.xml
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
 
@@ -244,8 +251,8 @@ class Tasks():
         nSettings = dict(SETTINGS.getCurrentSettings())
         for setting, value in list(settings.items()):
             actions = {'User_Folder'    :{'func':self.setUserPath      ,'kwargs':{'userFolders':nSettings.get(setting)}},
-                       'Network_Folder' :{'func':SETTINGS.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
-                       'Remote_URL'     :{'func':SETTINGS.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
+                       'Network_Folder' :{'func':self.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
+                       'Remote_URL'     :{'func':self.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
                        'UDP_PORT'       :{'func':setPendingRestart},
                        'TCP_PORT'       :{'func':setPendingRestart},
                        'Client_Mode'    :{'func':setPendingRestart},
@@ -283,7 +290,7 @@ class Tasks():
                         dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32051),file,LANGUAGE(32025)))
                         continue
                 dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
-        SETTINGS.setPVRPath(newFolder)
+        self.setPVRPath(newFolder)
         
         
     def setPVRPath(self, userFolder):

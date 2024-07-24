@@ -341,7 +341,7 @@ def getGMTstamp():
 
 def randomShuffle(items=[]):
     if len(items) > 0:
-        random.seed(random.randint(0,999999999999)) #reseed random for a "greater random effect".
+        random.seed(random.randint(0,999999999999)) #reseed random for a "greater sudo random".
         random.shuffle(items)
     return items
     
@@ -600,4 +600,9 @@ def getIDbyPath(path):
 def mergeDictLST(dict1,dict2):
     for k, v in list(dict2.items()):
         dict1.setdefault(k,[]).extend(v)
-    return dict1
+    return dict1    
+    
+def compareDict(dict1,dict2,sortKey):
+    a = sorted(dict1, key=lambda k: k[sortKey])
+    b = sorted(dict2, key=lambda k: k[sortKey])
+    return a == b

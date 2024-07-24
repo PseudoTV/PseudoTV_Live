@@ -20,6 +20,8 @@
 
 from globals    import *
 from functools  import reduce
+from difflib    import SequenceMatcher
+
 
 LOCAL_RESOURCES = [LOGO_LOC, IMAGE_LOC]
 MUSIC_RESOURCE  = ["resource.images.musicgenreicons.text"]
@@ -80,10 +82,10 @@ class Resources:
         
         logos = []
         cacheName = 'getLogoResources.%s.%s'%(getMD5(chname),select)
-        cacheResponse = self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
+        cacheResponse = None# self.cache.get(cacheName, checksum=getMD5('|'.join(resources)))
         if not cacheResponse:
             for id in list(dict.fromkeys(resources)):
-                if MONITOR.waitForAbort(0.0001): 
+                if MONITOR.waitForAbort(.001): 
                     self.log('getLogoResources, waitForAbort')
                     break
                 elif not hasAddon(id):
@@ -95,13 +97,13 @@ class Resources:
                     for path, images in list(results.items()):
                         for image in images:
                             name, ext = os.path.splitext(image)
-                            if self.matchName(chname, name, type):
+                            if self.matchName(chname, name, type, select):
                                 self.log('getLogoResources, found %s'%('%s/%s'%(path,image)))
                                 if select: logos.append('%s/%s'%(path,image))
                                 else: return self.cache.set(cacheName, '%s/%s'%(path,image), checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
             if select:
                 if len(logos) > 0: cacheResponse = self.cache.set(cacheName, logos, checksum=getMD5('|'.join(resources)), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
-                else: return logos
+                else:              cacheResponse = []
         return cacheResponse
         
         
@@ -122,12 +124,14 @@ class Resources:
         return cacheResponse
         
         
-    def matchName(self, chname: str, name: str, type: str='Custom') -> bool and None:
-        patterns = list(set([chname, getChannelSuffix(chname,type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(chname)[0], slugify(chname), slugify(stripRegion(chname))]))
-        for pattern in patterns:
-            if name.lower() == pattern.lower():
-                return True
-        
+    def matchName(self, chname: str, name: str, type: str='Custom', auto: bool=False) -> bool and None:
+        if auto: return ((SequenceMatcher(None, chname, name).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name.split(' ')[0]).ratio() > .8) | (SequenceMatcher(None, chname.split(' ')[0], name).ratio() > .8) | (SequenceMatcher(None, chname, name.split(' ')[0]).ratio() > .8))
+        else:
+            patterns = list(set([chname, getChannelSuffix(chname,type), cleanChannelSuffix(chname, type), stripRegion(chname), splitYear(chname)[0], slugify(chname), slugify(stripRegion(chname))]))
+            for pattern in patterns:
+                if name.lower() == pattern.lower():
+                    return True
+                
 
     def buildWebImage(self, image: str) -> str:
         if image.startswith(('resource://','special://','image://','http://')): return image
@@ -135,6 +139,7 @@ class Resources:
         return image
             
             
+    @cacheit()
     def isMono(self, file: str) -> bool:
         if file.startswith('resource://') and (bool(set([match in file.lower() for match in ['transparent','white','mono']]))):
             return True

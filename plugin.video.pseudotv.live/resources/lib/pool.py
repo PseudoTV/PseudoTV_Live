@@ -117,7 +117,8 @@ def timerit(method):
         timer = Timer(wait, method, *args, **kwargs)
         timer.name = thread_name
         timer.start()
-        timer
+        # try: timer.join()
+        # except: pass
         log('%s, starting %s wait = %s'%(method.__qualname__.replace('.',': '),thread_name,wait))
         return timer
     return wrapper  

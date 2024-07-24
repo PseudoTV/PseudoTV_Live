@@ -146,7 +146,7 @@ class Autotune:
                           "logo"    : item.get('logo',LOGO),
                           "path"    : item.get('path',''),
                           "group"   : [item.get('type','')],
-                          "rules"   : item.get('rules',[]),
+                          "rules"   : item.get('rules',{}),
                           "catchup" : ('vod' if not music else ''),
                           "radio"   : music,
                           "favorite": True})

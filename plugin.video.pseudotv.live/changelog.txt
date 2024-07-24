@@ -1,3 +1,17 @@
+v.0.5.2
+-Notice The following steps are required!.
+ - Previous Channels and Backups may encouter issues, it is recommend, but not required users start clean.
+ - Open PseudoTV Live settings, under Miscellaneous; Click "Utility Menu" and select "Delete M3U/XMLTV".
+ - Open Kodi settings, under PVR & Live TV; Click "clear data" and select "All".
+
+-Improved Channel Manager logo utility.
+-Imporved Channel Manager path utility.
+-Improved Channel Content parsing.
+-Added Advanced Channel Rules UI to Channel Manager.
+-Added Dynamic Smartplaylist builder to path selections.
+-Added First round of Advanced Channel Rules, more to come...
+-Added Update Available notification.
+
 v.0.5.1
 -Improved background services.
 
