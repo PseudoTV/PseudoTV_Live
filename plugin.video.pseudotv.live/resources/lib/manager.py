@@ -48,7 +48,7 @@ def forceUpdateTime(key):
 def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     if not values: return [-1]
     matches = []
-    def match(fkey,fvalue):
+    def _match(fkey,fvalue):
         if fkey.lower() == fvalue.lower():
             matches.append(idx if index else item)
                     
@@ -59,12 +59,12 @@ def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
         for idx, item in enumerate(items): 
             if isinstance(item,xbmcgui.ListItem): 
                 if item_key == 'getLabel':  
-                    match(item.getLabel() ,value)
+                    _match(item.getLabel() ,value)
                 elif item_key == 'getLabel2': 
-                    match(item.getLabel2(),value)
+                    _match(item.getLabel2(),value)
             elif isinstance(item,dict):       
-                match(item.get(item_key,''),value)
-            else: match(item,value)
+                _match(item.get(item_key,''),value)
+            else: _match(item,value)
     return matches
 
 class Manager(xbmcgui.WindowXMLDialog):
@@ -141,7 +141,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             newChannel = self.newChannel.copy()
             newChannel['number'] = idx + 1
             return newChannel
-        return [_create(channel) for channel in range(CHANNEL_LIMIT)]
+        return poolit(_create)(range(CHANNEL_LIMIT))
   
         
     def createChannelList(self, channelArray, channelList):
@@ -150,9 +150,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             for channel in channelList:
                 if item["number"] == channel["number"]:
                     item.update(channel)
-                    break
+                    return item
             return item
-        return [_update(channel) for channel in channelArray]
+        return poolit(_update)(channelArray)
             
         
     @cacheit(expiration=datetime.timedelta(minutes=15))
@@ -207,6 +207,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.chanList.addItems(listitems)
             if focus is None: self.chanList.selectItem(self.setFocusPOS(listitems))
             else:             self.chanList.selectItem(focus)
+            self.setFocus(self.chanList)
 
 
     @contextmanager
@@ -614,7 +615,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         def _validate(citem):
             if citem.get('name') and citem.get('path'):
                 if citem['number'] <= CHANNEL_LIMIT: citem['type'] = "Custom"
-                return self.setID(self.setLogo(citem.get('name'),citem))
+                return self.setID(citem)
             
         channelList = sorted([_f for _f in [_validate(channel) for channel in channelList] if _f], key=lambda k: k['number'])
         self.log('validateChannels, channelList = %s'%(len(channelList)))

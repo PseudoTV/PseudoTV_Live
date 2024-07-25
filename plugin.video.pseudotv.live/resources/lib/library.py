@@ -32,9 +32,6 @@ class Service:
     def _interrupt(self, wait: float=.001) -> bool: #break
         return MONITOR.waitForAbort(wait)
 
-    def _suspend(self):
-        pass
-
 class Library:
     def __init__(self, service=None):
         if service is None:

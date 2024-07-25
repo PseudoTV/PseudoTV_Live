@@ -394,7 +394,6 @@ class Service():
         self.__initialize()
         while not self.monitor.abortRequested():
             if    self._interrupt(1): break
-            elif  self._suspend(): continue
             else: self.__tasks()
         self._stop()
 
