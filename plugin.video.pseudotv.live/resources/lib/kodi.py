@@ -883,12 +883,11 @@ class Dialog:
                       {"label":"Files"           , "label2":"All Folders & Files"                , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
                       {"label":"Local"           , "label2":"Local Folders & Files"              , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
                       {"label":"Network"         , "label2":"Local Drives and Network Share"     , "default":""                                   , "mask":mask                              , "type":type , "multi":False},
-                      {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False}
-                      #{"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":False}
+                      {"label":"Pictures"        , "label2":"Picture Sources"                    , "default":""                                   , "mask":xbmc.getSupportedMedia('picture') , "type":1    , "multi":False},
+                      {"label":"Resources"       , "label2":"Resource Plugins"                   , "default":"resource://"                        , "mask":mask                              , "type":type , "multi":False}
                       ]
 
-            if isinstance(options,list):
-                for idx in options: optTMP.append(proOpt[idx])
+            if isinstance(options,list): [optTMP.append(proOpt[idx]) for idx in options]
             else: optTMP = proOpt
                 
             if default:
@@ -899,8 +898,11 @@ class Dialog:
                    
             with busy_dialog():
                 lizLST = poolit(buildMenuItem)(optTMP)
+                
             select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if select is not None:
+            if   optTMP[select].get('label') == "Dynamic Playlist": retval = self.buildDXSP(default)
+            elif optTMP[select].get('label') == "Resource Plugins": retval = self.buildResource(default, mask)
+            elif select is not None:
                 shares    = optTMP[select]['label'].lower().replace("network","")
                 mask      = optTMP[select]['mask']
                 type      = optTMP[select]['type']
@@ -910,9 +912,7 @@ class Dialog:
                 
         self.log('browseDialog, type = %s, heading= %s, shares= %s, useThumbs= %s, treatAsFolder= %s, default= %s\nmask= %s'%(type, heading, shares, useThumbs, treatAsFolder, default, mask))
         if monitor: self.toggleInfoMonitor(True)
-        if   optTMP[select]['label'] == "Dynamic Playlist": retval = self.buildDXSP(default)
-        elif optTMP[select]['label'] == "Resource Plugins": retval = self.buildResource(default, mask)
-        elif multi == True:
+        if multi == True:
             ## https://codedocs.xyz/xbmc/xbmc/group__python___dialog.html#ga856f475ecd92b1afa37357deabe4b9e4
             ## type integer - the type of browse dialog.
             ## 1	ShowAndGetFile
