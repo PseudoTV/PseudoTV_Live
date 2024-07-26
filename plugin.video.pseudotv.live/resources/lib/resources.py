@@ -56,7 +56,6 @@ class Resources:
         return list([_f for _f in logos if _f])
 
 
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def getLocalLogo(self, chname: str, select: bool=False) -> list:
         logos = []
         for path in LOCAL_RESOURCES:
@@ -67,7 +66,6 @@ class Resources:
         if select: return logos
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def getLogoResources(self, chname: str, type: str, select: bool=False) -> dict and None:
         self.log('getLogoResources, chname = %s, type = %s'%(chname, type))
         resources = SETTINGS.getSetting('Resource_Logos').split('|').copy()
@@ -109,7 +107,6 @@ class Resources:
         return cacheResponse
         
         
-    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def getTVShowLogo(self, chname: str) -> dict and None:
         self.log('getTVShowLogo, chname = %s'%(chname))
         cacheName = 'getTVShowLogo.%s'%(getMD5(chname))

@@ -37,6 +37,7 @@ class Utilities:
                 ftext = fle.read()
                 fsize = fle.size()
                 fle.close()
+                
             if (SETTINGS.getCacheSetting('showWelcome', checksum=fsize) or 'true') == 'true':
                 SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
                 DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
@@ -131,11 +132,10 @@ class Utilities:
         
     def openChannelBug(self):
         self.log('openChannelBug')
-        if not PROPERTIES.getEXTProperty('%s.OVERLAY_CHANNELBUG'%(ADDON_ID)) == 'true':
+        if not isRunning('OVERLAY_CHANNELBUG_RUNNING'):
             from channelbug import ChannelBug
             channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
-            value = PROPERTIES.getProperty("Channel_Bug_Position_XY")
-            if value: SETTINGS.setSetting("Channel_Bug_Position_XY",value)
+            SETTINGS.setSetting("Channel_Bug_Position_XY",PROPERTIES.getProperty("Channel_Bug_Position_XY"))
             del channelbug
 
 
@@ -176,7 +176,6 @@ class Utilities:
         else: openAddonSettings((7,1))
                 
 
-
     def deleteFiles(self, msg, full: bool=False):
         self.log('deleteFiles, full = %s'%(full))
         files = {LANGUAGE(30094):M3UFLEPATH,    #"M3U"
@@ -188,22 +187,11 @@ class Utilities:
         keys = list(files.keys())
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
-            with busy_dialog():
+            with busy_dialog(), suspendActivity():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: setPendingRestart()
 
-
-    # def clearImport(self):
-        # self.log('clearImport') 
-        # keys = ['Import_M3U','Import_M3U_FILE','Import_M3U_URL',
-                # 'Import_XMLTV','Import_XMLTV_FILE','Import_XMLTV_URL','Import_XMLTV_M3U'
-                # 'Import_Provider']
-                
-        # with busy_dialog():
-            # for key in keys: SETTINGS.setSetting(key,'')
-            # SETTINGS.setSetting('User_Import','false')
-            # DIALOG.notificationDialog('%s %s'%(LANGUAGE(30037),LANGUAGE(30053)))
 
     def run(self):  
         ctl = (7,1) #settings return focus
@@ -234,18 +222,8 @@ class Utilities:
             return self.userGroups()
         elif param == 'Utilities':
             return self.buildMenu()
-        # elif param == 'Clear_Import':
-            # ctl = (2,7)
-            # self.clearImport()
-        # elif param == 'Install_Resources': chkResources()
-        # else: 
-            # with busy_dialog():
-                # PROPERTIES.setProperty('utilities',param)
-                # xbmc.Monitor().waitForAbort(2.0)
-                # return
         return openAddonSettings(ctl)
 
-        # # ('ReplaceWindow(pvrsettings)') #todo open pvr settings.
 if __name__ == '__main__': Utilities(sys.argv).run()
     
     

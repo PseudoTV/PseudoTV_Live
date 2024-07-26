@@ -596,7 +596,8 @@ class ListItems:
         listitem.setArt(art)
         
         infoTag = ListItemInfoTag(listitem, media)
-        infoTag.set_info(self.cleanInfo(info,media))
+        info, properties = self.cleanInfo(info,media,properties)
+        infoTag.set_info(info)
         if not media.lower() == 'music': 
             infoTag.set_cast(cast)
             infoTag.set_unique_ids(uniqueid)
@@ -623,7 +624,7 @@ class ListItems:
         return listitem
            
            
-    def cleanInfo(self, ninfo, media='video'):
+    def cleanInfo(self, ninfo, media='video', properties={}):
         LISTITEM_TYPES = MUSIC_LISTITEM_TYPES if media == 'music' else VIDEO_LISTITEM_TYPES  
         tmpInfo = ninfo.copy()
         for key, value in list(tmpInfo.items()):
@@ -640,9 +641,9 @@ class ListItems:
                      
             if isinstance(ninfo[key],list):
                 for n in ninfo[key]:
-                    if isinstance(n,dict): n = self.cleanInfo(n,media)
-            if isinstance(ninfo[key],dict): ninfo[key] = self.cleanInfo(ninfo[key],media)
-        return ninfo
+                    if isinstance(n,dict): n, properties = self.cleanInfo(n,media,properties)
+            if isinstance(ninfo[key],dict): ninfo[key], properties = self.cleanInfo(ninfo[key],media,properties)
+        return ninfo, properties
 
 
     def cleanProp(self, pvalue):

@@ -70,6 +70,9 @@ AUTOTUNE_TYPES      = ["Playlists",
 
 GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', 'PVR', 'Plugin', 'Radio', 'Smartplaylist', 'UPNP', 'IPTV'] + AUTOTUNE_TYPES
 
+WEB_TYPES           = ["http",
+                       "ftp"]
+
 VFS_TYPES           = ["plugin://",
                        "pvr://",
                        "upnp://",

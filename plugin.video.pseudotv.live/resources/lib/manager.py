@@ -141,7 +141,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             newChannel = self.newChannel.copy()
             newChannel['number'] = idx + 1
             return newChannel
-        return poolit(_create)(range(CHANNEL_LIMIT))
+        return poolit(_create)(list(range(CHANNEL_LIMIT)))
   
         
     def createChannelList(self, channelArray, channelList):

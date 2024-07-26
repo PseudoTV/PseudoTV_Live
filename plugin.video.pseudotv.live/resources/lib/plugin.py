@@ -280,21 +280,21 @@ class Plugin:
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:
-        #check that resource or plugin installed?
-        self.log('playCheck, id = %s\noldInfo = %s'%(oldInfo.get('chid','-1'),oldInfo))
+        self.log('playCheck, sysInfo=%s\noldInfo = %s'%(self.sysInfo,oldInfo))
         def _chkPath():
-            if self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
+            if   self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): return True
+            elif self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)):
+                if hasAddon(self.sysInfo.get('vid','')): return True
             elif FileAccess.exists(self.sysInfo.get('vid','')): return True
-            else:
-                self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
-                DIALOG.notificationDialog(LANGUAGE(32167))
-                return False
+            self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
+            if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32167))
+            return False
             
         def _chkGuide():
             if self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()):
                 if self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')):
                     self.log('playCheck _chkGuide, failed! Current EPG cell (%s) does not match PVR backend (%s).'%(self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')),self.sysInfo.get('title')))
-                    # DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
+                    if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
                     return False
             return True
             
@@ -306,22 +306,26 @@ class Plugin:
                     
                     if self.sysInfo['now'] >= self.sysInfo['stop']:
                         self.log('playCheck _chkLoop, failed! Current time (%s) is past the contents stop time (%s).'%(self.sysInfo['now'],self.sysInfo['stop']))
+                        if DEBUG_ENABLED: DIALOG.notificationDialog("Current time (%s) is past the contents stop time (%s)."%(self.sysInfo['now'],self.sysInfo['stop']))
                         return False
-                    elif self.sysInfo['duration'] > self.sysInfo['runtime']:
+                    elif self.sysInfo['duration'] > self.sysInfo['runtime'] and self.sysInfo['runtime'] > 0:
                         self.log('playCheck _chkLoop, failed! Duration error between player (%s) and pvr (%s).'%(self.sysInfo['duration'],self.sysInfo['runtime']))
+                        if DEBUG_ENABLED: DIALOG.notificationDialog("Duration error between player (%s) and pvr (%s)."%(self.sysInfo['duration'],self.sysInfo['runtime']))
                         return False
                     elif self.sysInfo['seek'] >= oldInfo.get('runtime',self.sysInfo['duration']):
-                        self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past contents runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        self.log('playCheck _chkLoop, failed! Seeking to a position (%s) past media runtime (%s).'%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
+                        if DEBUG_ENABLED: DIALOG.notificationDialog("Seeking to a position (%s) past media runtime (%s)."%(self.sysInfo['seek'],oldInfo.get('runtime',self.sysInfo['duration'])))
                         return False
                     elif self.sysInfo['seek'] == oldInfo.get('seek',self.sysInfo['seek']):
                         self.log('playCheck _chkLoop, failed! Seeking to same position.')
+                        if DEBUG_ENABLED: DIALOG.notificationDialog("Playback Failed: Seeking to same position")
                         return False
             return True
 
         _chkPath()
         _chkGuide()
         _chkLoop()
-        #todo take action on fail. for now log events to strategize actions. 
+        #todo take action on fail. for now log events and strategize actions. 
         return True
         
         

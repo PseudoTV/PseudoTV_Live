@@ -247,7 +247,8 @@ class Library:
                     self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,'%s (%s): %s'%(self.parserMSG,type.title(),int((idx+1)*100//len(results.get('files',[]))))+'%','%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
                 
                 if not result.get('label'): continue
-                logo = (result.get('thumbnail') or self.resources.getLogo(result.get('label'),"Playlists"))
+                logo = result.get('thumbnail')
+                if not logo: logo = self.resources.getLogo(result.get('label'),"Custom")
                 PlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
         self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
         PlayList = sorted(PlayList,key=lambda x:x['name'])

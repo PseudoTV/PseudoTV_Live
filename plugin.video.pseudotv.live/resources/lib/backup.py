@@ -26,7 +26,7 @@ BACKUP_TIME_FORMAT = '%Y-%m-%d %I:%M %p'
 
 class Backup:
     def __init__(self, sysARG=sys.argv):
-        self.sysARG   = sysARG
+        self.sysARG = sysARG
         
     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -34,14 +34,8 @@ class Backup:
         
 
     def getFileDate(self, file: str) -> str:
-        try:
-            fname = pathlib.Path(xbmcvfs.translatePath(file))
-            mtime = datetime.datetime.fromtimestamp(fname.stat().st_mtime)
-            stime = mtime.strftime(BACKUP_TIME_FORMAT)
-            self.log('getFileDate, modified %s on %s'%(file,stime))
-            return stime
-        except:
-            return LANGUAGE(32105) #Unknown
+        try:    return datetime.datetime.fromtimestamp(pathlib.Path(xbmcvfs.translatePath(file)).stat().st_mtime).strftime(BACKUP_TIME_FORMAT)
+        except: return LANGUAGE(32105) #Unknown
         
         
     def hasBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
@@ -50,21 +44,23 @@ class Backup:
             if FileAccess.exists(file):
                 if file == CHANNELFLE_BACKUP:#main backup file, set meta.
                     PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
-                    backup_channel = (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown')
-                    if backup_channel == 'Last Backup: Unknown':
+                    if (SETTINGS.getSetting('Backup_Channels') or 'Last Backup: Unknown') == 'Last Backup: Unknown':
                         SETTINGS.setSetting('Backup_Channels' ,'%s: %s'%(LANGUAGE(32106),self.getFileDate(file)))
                     if not SETTINGS.getSetting('Recover_Channels'):
                         SETTINGS.setSetting('Recover_Channels','%s [B]%s[/B] Channels?'%(LANGUAGE(32107),len(self.getChannels())))
                 return True
             PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"false")
-            SETTINGS.setSetting('Backup_Channels'  ,'')
-            SETTINGS.setSetting('Recover_Channels' ,'')
+            SETTINGS.setSetting('Backup_Channels' ,'')
+            SETTINGS.setSetting('Recover_Channels','')
             return False
             
             
     def getChannels(self, file: str=CHANNELFLE_BACKUP) -> list:
         self.log('getChannels')
-        return Channels()._load(file).get('channels',[])
+        channels = Channels()
+        citems   = channels._load(file).get('channels',[])
+        del channels
+        return citems
         
         
     def backupChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
@@ -83,40 +79,22 @@ class Backup:
                 return DIALOG.notificationDialog('%s %s'%(LANGUAGE(32110),LANGUAGE(32025)))
         return self.hasBackup()
         
-        
+
     def recoverChannels(self, file: str=CHANNELFLE_BACKUP) -> bool:
         self.log('recoverChannels, file = %s'%(file))
         if   isClient(): return DIALOG.notificationDialog(LANGUAGE(32058))
         elif not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
-        with busy_dialog():
-            self.recoverChannelsFromBackup(file)
-        return True
+            
+        with busy_dialog(), suspendActivity():
+            if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_RESTORE):
+                if FileAccess.copy(file,CHANNELFLEPATH):
+                    library = Library()
+                    library.resetLibrary()
+                    del library
+                    return setPendingRestart()
         
         
-    def recoverChannelsFromBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
-        FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_RESTORE) #flex/temp backup existing channels prior to recover channels.
-        channels    = Channels()
-        newChannels = self.getChannels()
-        difference  = sorted(diffLSTDICT(self.getChannels(CHANNELFLE_DEFAULT),newChannels), key=lambda k: k['number'])
-        self.log('recoverChannelsFromBackup, file = %s, difference = %s'%(file,len(difference)))
-        
-        if len(difference) > 0:
-            pDialog = DIALOG.progressDialog(message=LANGUAGE(32113))
-
-            for idx, citem in enumerate(difference):
-                pCount = int(((idx + 1)*100)//len(difference))
-                if citem in newChannels: 
-                    pDialog = DIALOG.progressDialog(pCount,pDialog,message="%s: %s"%(LANGUAGE(32113),citem.get('name')),header='%s, %s'%(ADDON_NAME,LANGUAGE(30338)))
-                    channels.addChannel(citem)
-                else: 
-                    channels.delChannel(citem)
-            Library().resetLibrary()
-            return channels.setChannels()
-        del channels
-        return False
-        
-  
     def run(self):  
         ctl = (0,2) #settings return focus
         try:    param = self.sysARG[1]

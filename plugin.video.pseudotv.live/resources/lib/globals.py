@@ -592,8 +592,10 @@ def timeString2Seconds(string): #hh:mm:ss
     except: return -1
 
 def getIDbyPath(path):
-    if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path)
-    elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path)
+    try:
+        if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path).group(1)
+        elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path).group(1)
+    except: pass
     return path
     
 def mergeDictLST(dict1,dict2):

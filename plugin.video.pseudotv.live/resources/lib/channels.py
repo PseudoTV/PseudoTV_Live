@@ -27,7 +27,7 @@ class Channels:
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
-        # self.setChannels()
+        self.setChannels(self.channelDATA['channels'])
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -99,6 +99,10 @@ class Channels:
     def setUUID(self, uuid: str='') -> bool:
         self.channelDATA['uuid'] = uuid
         return self._save()
+         
+         
+    def clearChannels(self):
+        self.channelDATA['channels'] = []
          
 
     def delChannel(self, citem: dict={}) -> bool:
