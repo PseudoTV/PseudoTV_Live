@@ -76,19 +76,17 @@ class XSP:
     def parseXSP(self, path: str, media: str='video', sort: dict={}, filter: dict={}, limit: int=SETTINGS.getSettingInt('Page_Limit')):
         try: 
             paths = []
-            ort = {}
-            xml = FileAccess.open(path, "r")
-            dom = parse(xml)
+            xml   = FileAccess.open(path, "r")
+            dom   = parse(xml)
             xml.close()
             
-            try:    media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
+            try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
             except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
             
-            try:
-                ort = {"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()} #todo pop rules to filter var.
+            try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
             except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
             
-            try: ort["order"] = dom.getElementsByTagName('order')[0].getAttribute('direction').lower()#todo pop rules to filter var.
+            try: sort.update({"order":dom.getElementsByTagName('order')[0].getAttribute('direction').lower()})#todo pop rules to filter var.
             except Exception as e: self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
 
             try:
@@ -102,10 +100,7 @@ class XSP:
             except Exception as e:
                 self.log("parseXSP, parsing failed! %s"%(e), xbmc.LOGERROR)
                 type  = ''
-                 
-            #todo parse smartplaylist limit 
-            ort.update(sort)
-            sort = ort
+
             self.log("parseXSP, type = %s, paths = %s, media = %s, sort = %s, filter = %s, limit = %s"%(type, paths, media, sort, filter, limit))
         except Exception as e: self.log("parseXSP, failed! %s"%(e), xbmc.LOGERROR)
         return paths, media, sort, filter, limit
@@ -136,7 +131,7 @@ class XSP:
             self.log("parseDXSP, dynamic library path detected! augmenting path\n%s\n=>\n%s"%(opath,path))
             return path, media, {}, {}
         except Exception as e: self.log("parseDXSP, failed! %s"%(e), xbmc.LOGERROR)
-        return opath, media, sort, filter
+        return opath, media, nsort, filter
         
 if __name__ == '__main__':
     main()

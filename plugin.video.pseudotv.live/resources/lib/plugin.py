@@ -21,17 +21,14 @@ from globals     import *
 from jsonrpc     import JSONRPC
 from infotagger.listitem import ListItemInfoTag
 
-#todo move sysinfo to dataclass and zlib meta.
 
 class Plugin:
     @contextmanager
     def preparingPlayback(self):
         if self.playCheck(loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))):
-            self.preparingPlayback = True
             try: yield
             finally:
                 PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-                self.preparingPlayback = False
         else:
             yield self.playError()
 
@@ -100,7 +97,7 @@ class Plugin:
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-            infoTag = ListItemInfoTag(liz, 'video')
+            infoTag = ListItemInfoTag(liz,'video')
             infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
             self.resolveURL(True, liz)
 
