@@ -67,7 +67,7 @@ class Player(xbmc.Player):
             
         
     def onAVStarted(self):
-        self.isPseudoTV  = self.isPseudoTVPlaying()
+        self.isPseudoTV = self.isPseudoTVPlaying()
         self.log('onAVStarted, isPseudoTV = %s'%(self.isPseudoTV))
         if self.isPseudoTV: self._onPlay()
         
@@ -84,7 +84,7 @@ class Player(xbmc.Player):
     def onPlayBackEnded(self):
         self.log('onPlayBackEnded')
         if self.isPseudoTV: self._onChange()
-
+        
         
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
@@ -101,14 +101,15 @@ class Player(xbmc.Player):
         sysInfo = {}
         if self.isPlaying():
             sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-            sysInfo.update({'fitem'   :decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer')),
-                            'nitem'   :decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer')),
-                            'callback':self.getCallback(),
-                            'runtime' :self.getPlayerTime()})
+            sysInfo.update({'callback':self.getCallback(),'runtime' :self.getPlayerTime()})
+            fitem = decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))
+            nitem = decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))
+            if fitem: sysInfo.update({"fitem":fitem})
+            if nitem: sysInfo.update({"nitem":nitem})
             if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
             if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
             if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
-            
+
             for channel in self.myService.currentChannels:
                 if channel.get('id',random.random()) == sysInfo.get('citem',{}).get('id'): sysInfo.update({'citem':channel})
             
@@ -180,17 +181,9 @@ class Player(xbmc.Player):
         self.toggleBackground()
         clearTrakt()
         if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
-        try:
-            if self.sysInfo.get('isPlaylist',False) and self.sysInfo.get('pvritem'):
-                broadcastnext = self.sysInfo['pvritem']['broadcastnext']
-                self.sysInfo['pvritem']['broadcastnow']  = broadcastnext.pop(0)
-                self.sysInfo['pvritem']['broadcastnext'] = broadcastnext
-                self.log('_onChange, isPlaylist = %s, broadcastnext = %s'%(self.sysInfo['isPlaylist'], len(self.sysInfo['pvritem']['broadcastnext'])))
-                if len(broadcastnext) == 0: raise Exception('Empty broadcastnext')
-            else: raise Exception('Using callback')
-        except Exception as e:
+        if not self.sysInfo.get('isPlaylist',False):
             self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
-            self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback'],e))
+            self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback']))
             threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(self.sysInfo['callback']))
         
         

@@ -152,8 +152,21 @@ class Plugin:
     def getPVRItems(self, name: str, chid: str) -> list:
         self.log('getPVRItems, id = %s'%(chid))
         def buildfItem(item: dict={}):
-            liz = LISTITEMS.buildItemListItem(decodePlot(item.get('plot','')), 'video')
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            sysInfo = self.sysInfo.copy()
+            fitem   = decodePlot(item.get('plot',''))
+            
+            sysInfo.update({"fitem":fitem})
+            try: sysInfo.update({"nitem":decodePlot(nextitems[nextitems.index(item) + 1].get('plot',''))})
+            except:pass
+            
+            liz = LISTITEMS.buildItemListItem(fitem,'video')
+            if (item['progress'] > 0 and item['runtime'] > 0):
+                self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((item['runtime'] * 60),item['progress']))
+                liz.setProperty('startoffset', str(item['progress'])) #secs
+                infoTag = ListItemInfoTag(liz, 'video')
+                infoTag.set_resume_point({'ResumeTime':item['progress'],'TotalTime':(item['runtime'] * 60)})
+                
+            liz.setProperty('sysInfo',encodeString(dumpJSON(sysInfo)))
             return liz
             
         found = False
@@ -188,23 +201,10 @@ class Plugin:
                         self.log('getPVRItems, progress start at the beginning')
                         nowitem['progress']           = 0
                         nowitem['progresspercentage'] = 0
-                        
-                    liz = buildfItem(nowitem)
-                    if (nowitem['progress'] > 0 and nowitem['runtime'] > 0):
-                        self.log('getPVRItems, within seek tolerance setting seek totaltime = %s, resumetime = %s'%((nowitem['runtime'] * 60),nowitem['progress']))
-                        liz.setProperty('startoffset', str(nowitem['progress'])) #secs
-                        infoTag = ListItemInfoTag(liz, 'video')
-                        infoTag.set_resume_point({'ResumeTime':nowitem['progress'],'TotalTime':(nowitem['runtime'] * 60)})
-                        
-                    del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed.
-                    self.sysInfo['fitem']    = decodePlot(nowitem.get('plot',{}))
-                    pvritem['broadcastnow']  = nowitem   # current item
-                    pvritem['broadcastnext'] = nextitems # upcoming items
-                    self.sysInfo['pvritem']  = pvritem
-                    
-                    listitems = poolit(buildfItem)(nextitems)
-                    listitems.insert(0,liz)
-                    return listitems
+
+                    del nextitems[PAGE_LIMIT-1:]# list of upcoming items, truncate for speed
+                    nextitems.insert(0,nowitem)
+                    return poolit(buildfItem)(nextitems)
                 else: DIALOG.notificationDialog(LANGUAGE(32164))
             else: DIALOG.notificationDialog(LANGUAGE(32000))
             return []

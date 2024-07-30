@@ -87,7 +87,7 @@ class Backup:
             return False
             
         with busy_dialog(), suspendActivity():
-            if FileAccess.copy(CHANNELFLEPATH,CHANNELFLE_RESTORE):
+            if FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE):
                 if FileAccess.copy(file,CHANNELFLEPATH):
                     library = Library()
                     library.resetLibrary()
