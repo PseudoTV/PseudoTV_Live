@@ -60,7 +60,6 @@ class CustomQueue:
             self.popThread.start()
 
 
-    @timeit
     def __run(self, func, args=(), kwargs=None):
         self.log("__run, func = %s"%(func.__name__))
         try: return func(*args, **kwargs)

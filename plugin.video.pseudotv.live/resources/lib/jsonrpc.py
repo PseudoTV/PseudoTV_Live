@@ -291,10 +291,9 @@ class JSONRPC:
 
     def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("parseDuration, path = %s, save = %s" % (path, save))
-        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        try:    duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-        except: duration = 0
-                
+        runtime  = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
+
         if not path.startswith(tuple(VFS_TYPES)):
             ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
             rundiff = int(percentDiff(runtime, duration))

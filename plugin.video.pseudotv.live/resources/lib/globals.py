@@ -501,12 +501,6 @@ def getDiscovery():
 def setDiscovery(servers={}):
     return PROPERTIES.setEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID),dumpJSON(servers))
 
-def disableTrakt():
-    PROPERTIES.setEXTProperty('script.trakt.paused','true')
-
-def clearTrakt():
-    PROPERTIES.clearEXTProperty('script.trakt.paused')
-
 def chunkLst(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]

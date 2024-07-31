@@ -175,9 +175,7 @@ class Plugin:
         with busy_dialog():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
             if pvritem:
-                if pvritem.get('citem'):
-                    self.sysInfo['citem'].update(pvritem.get('citem',{}))
-                    
+                if pvritem.get('citem'): self.sysInfo['citem'].update(pvritem.get('citem',{}))
                 pastItems = pvritem.get('broadcastpast',[])
                 nowitem   = pvritem.get('broadcastnow',{})
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
@@ -186,7 +184,7 @@ class Plugin:
                 
                 for pos, nextitem in enumerate(nextitems):
                     fitem = decodePlot(nextitem.get('plot',{}))
-                    if (fitem.get('file') == self.sysInfo.get('fitem',{}).get('file') and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx')):
+                    if (fitem.get('file') == (self.sysInfo.get('fitem',{}).get('file') or self.sysInfo.get('vid')) and fitem.get('idx') == self.sysInfo.get('fitem',{}).get('idx',fitem.get('idx'))):
                         found = True
                         del nextitems[0:pos] # start array at correct position
                         break
@@ -210,7 +208,6 @@ class Plugin:
             return []
     
     
-    @cacheit(expiration=datetime.timedelta(seconds=15),json_data=True)
     def matchChannel(self, chname: str, id: str, radio: bool=False, isPlaylist: bool=False) -> str:
         self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
         def getCallback(chname, id, radio=False, isPlaylist=False):
@@ -261,18 +258,21 @@ class Plugin:
             self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        jsonRPC = JSONRPC(self.cache)
         cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
         cacheResponse = (self.cache.get(cacheName, checksum=getInstanceID(), json_data=True) or {})
         if not cacheResponse:
+            jsonRPC = JSONRPC(self.cache)
             pvritem = _match()
-            if not pvritem: return self.playError()
-            self.sysInfo['isPlaylist'] = isPlaylist
-            self.sysInfo['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
-            pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
-            if isPlaylist and not radio: pvritem = _extend(pvritem)
-            cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
-        del jsonRPC
+            if not pvritem:
+                del jsonRPC
+                return self.playError()
+            else:
+                self.sysInfo['isPlaylist'] = isPlaylist
+                self.sysInfo['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
+                pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
+                if isPlaylist and not radio: pvritem = _extend(pvritem)
+                del jsonRPC
+                cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
 

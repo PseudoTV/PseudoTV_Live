@@ -88,13 +88,20 @@ class Player(xbmc.Player):
         
     def onPlayBackStopped(self):
         self.log('onPlayBackStopped')
-        self.sysInfo    = {}
-        self.isPseudoTV = False
+        if self.isPseudoTV: self._onStop()
         
         
     def isPseudoTVPlaying(self):
-        if self.getPlayerSysInfo().get('citem',{}).get('id'): return True
-        else: return False
+        state = self.getPlayerSysInfo().get('citem',{}).get('id') != None
+        self.log('isPseudoTVPlaying = %s'%(state))
+        return state
+        
+        
+    def getChannelItem(self, id):
+        self.log('getChannelItem, id = %s'%(id))
+        for citem in self.myService.currentChannels:
+            if citem.get('id',random.random()) == id: return citem
+        return {}
         
         
     def getPlayerSysInfo(self):
@@ -102,19 +109,17 @@ class Player(xbmc.Player):
         if self.isPlaying():
             sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
             sysInfo.update({'callback':self.getCallback(),'runtime' :self.getPlayerTime()})
+            citem = self.getChannelItem(sysInfo.get('citem',{}).get('id'))
             fitem = decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))
             nitem = decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))
+            
+            if fitem.get('citem'): sysInfo.update({'citem':fitem.pop('citem')})
+            if nitem.get('citem'): sysInfo.update({'citem':nitem.pop('citem')})
+            if citem: sysInfo.update({'citem':citem})
             if fitem: sysInfo.update({"fitem":fitem})
             if nitem: sysInfo.update({"nitem":nitem})
-            if sysInfo["fitem"].get('citem'): sysInfo.update({'citem':sysInfo["fitem"].pop('citem')})
-            if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
-            if sysInfo["nitem"].get('citem'): sysInfo.update({'citem':sysInfo["nitem"].pop('citem')})
-
-            for channel in self.myService.currentChannels:
-                if channel.get('id',random.random()) == sysInfo.get('citem',{}).get('id'): sysInfo.update({'citem':channel})
-            
             PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
-            self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
+        self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
 
@@ -153,6 +158,11 @@ class Player(xbmc.Player):
         return timeString2Seconds(BUILTIN.getInfoLabel('%s(hh:mm:ss)'%(prop),'Player'))
 
 
+    def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
+        if state: PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
+        else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
+
+
     def setSubtitles(self, state: bool=True):
         hasSubtitle = hasSubtitle()
         self.log('setSubtitles, state = %s, hasSubtitle = %s'%(state,hasSubtitle))
@@ -160,18 +170,19 @@ class Player(xbmc.Player):
         self.showSubtitles(state)
 
 
-    def setPlaycount(self, fitem: dict={}):
-        self.log('setPlaycount, path = %s, playcount = %s'%(fitem.get('path'),fitem.get('playcount')))
-        self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
+    def setPlaycount(self, state: bool=SETTINGS.getSettingBool('Rollback_Watched'), fitem: dict={}):
+        if state and fitem.get('file'): 
+            self.log('setPlaycount, file = %s, playcount = %s'%(fitem.get('file'),fitem.get('playcount',0)))
+            self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
 
 
     def _onPlay(self):
         self.log('_onPlay')
-        if self.disableTrakt: disableTrakt()
-        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
+        self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
+            self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
         self.toggleBackground(False)
         
@@ -179,21 +190,22 @@ class Player(xbmc.Player):
     def _onChange(self):
         self.log('_onChange')
         self.toggleBackground()
-        clearTrakt()
-        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
+        self.setTrakt(False)
+        self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
+        self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
         if not self.sysInfo.get('isPlaylist',False):
-            self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
-            self.log('_onChange, callback = %s: %s'%(self.sysInfo['callback']))
+            self.log('_onChange, callback = %s'%(self.sysInfo['callback']))
             threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(self.sysInfo['callback']))
         
         
     def _onStop(self):
         self.log('_onStop')
-        if self.rollbackPlaycount: self.setPlaycount(self.sysInfo.get('fitem',{}))
+        self.setTrakt(False)
+        self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
         if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
-        clearTrakt()
         self.sysInfo = {}
+        self.isPseudoTV = False
         self.toggleBackground(False)
 
 
@@ -372,7 +384,6 @@ class Service():
 
     def __tasks(self): # general tasks
         self.log('__tasks')
-        self.tasks._que(self.monitor.chkIdle,1)
         self.tasks.chkQueTimer()
            
                 
@@ -386,6 +397,7 @@ class Service():
         self.log('_start')
         self.__initialize()
         while not self.monitor.abortRequested():
+            self.tasks._que(self.monitor.chkIdle,1)
             if    self._interrupt(1): break
             else: self.__tasks()
         self._stop()

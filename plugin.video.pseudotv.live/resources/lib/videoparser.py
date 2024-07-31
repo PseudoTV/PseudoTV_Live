@@ -71,15 +71,12 @@ class VideoParser:
 
 
     def getVideoLength(self, filename: str, fileitem: dict={}, jsonRPC=None) -> int and float:
-        log("VideoParser: getVideoLength %s"%filename)
-        cacheCHK  = getMD5(path)
-        cacheName = 'parseDuration.%s'%(cacheCHK)
-        duration  = jsonRPC.cache.get(cacheName, checksum=cacheCHK, json_data=False)
+        cacheCHK  = getMD5(filename)
+        cacheName = 'getVideoLength.%s'%(cacheCHK)
+        duration  = (jsonRPC.cache.get(cacheName, checksum=cacheCHK, json_data=False) or 0)
         
-        if not duration:
-            if not filename:
-                log("VideoParser: getVideoLength, no filename.")
-                duration = 0
+        if duration == 0:
+            if not filename: log("VideoParser: getVideoLength, no filename.")
             elif filename.lower().startswith(tuple(self.VFSPaths)):
                 duration = VFSParser.VFSParser().determineLength(filename, fileitem, jsonRPC)
                 if duration == 0 and filename.lower().startswith(tuple(self.YTPaths)):
@@ -111,5 +108,5 @@ class VideoParser:
                         
                 if duration > 0: jsonRPC.cache.set(cacheName, duration, checksum=cacheCHK, expiration=datetime.timedelta(days=28),json_data=False)
         
-        log('VideoParser: getVideoLength, duration = %s'%(duration))
+        log("VideoParser: getVideoLength duration = %s, filename = %s"%(duration,filename))
         return duration

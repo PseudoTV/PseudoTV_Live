@@ -182,20 +182,21 @@ class Fillers:
                 postFillCount   = len(postFileList)
 
                 # post roll - adverts/trailers
-                self.log('injectBCTs, post roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
-                while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and postFillCount > 0:
-                    if self.builder.service._interrupt(): break
-                    item = postFileList.pop(0)
-                    if not item.get('duration'): continue
-                    elif postFillRuntime <= 0: break
-                    elif postFillRuntime >= item.get('duration'):
-                        postFillRuntime -= item.get('duration')
-                        self.log('injectBCTs, post advert/trailer %s - %s'%(item.get('file'),item.get('duration')))
-                        if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
-                        item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
-                        nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
-                    elif postFillRuntime < item.get('duration'):
-                        postFillCount -= 1
-                        postFileList.append(item)
-                    self.log('injectBCTs, unused post roll runtime %s'%(postFillRuntime))
+                if len(postFileList) > 0:
+                    self.log('injectBCTs, post roll current runtime %s, available runtime %s, available content %s'%(runtime, postFillRuntime,len(postFileList)))
+                    while not self.builder.service.monitor.abortRequested() and postFillRuntime > 0 and len(postFileList) > 0 and postFillCount > 0:
+                        if self.builder.service._interrupt(): break
+                        item = postFileList.pop(0)
+                        if not item.get('duration'): continue
+                        elif postFillRuntime <= 0: break
+                        elif postFillRuntime >= item.get('duration'):
+                            postFillRuntime -= item.get('duration')
+                            self.log('injectBCTs, post advert/trailer %s - %s'%(item.get('file'),item.get('duration')))
+                            if self.builder.pDialog: self.builder.pDialog = DIALOG.progressBGDialog(self.builder.pCount, self.builder.pDialog, message='Filling Post-Rolls',header='%s, %s'%(ADDON_NAME,self.builder.pMSG))
+                            item.update({'title':'Post-Roll','episodetitle':item.get('label'),'genre':['Post-Roll'],'plot':item.get('plot',item.get('file')),'path':item.get('file')})
+                            nfileList.append(self.builder.buildCells(citem,item.get('duration'),entries=1,info=item)[0])
+                        elif postFillRuntime < item.get('duration'):
+                            postFillCount -= 1
+                            postFileList.append(item)
+                        self.log('injectBCTs, unused post roll runtime %s'%(postFillRuntime))
         return nfileList
