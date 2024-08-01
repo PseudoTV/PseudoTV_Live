@@ -21,8 +21,6 @@ from globals    import *
 from seasonal   import Seasonal
 
 class RulesList:
-    reservedIDs = [800] #exclude from manager configurations. 
-    
     def __init__(self):
         self.log('__init__')
         self.ruleList  = [BaseRule(),
@@ -75,7 +73,7 @@ class RulesList:
             chrules  = citem.get('rules',{})
             if not append and len(chrules) == 0: return None
             for rule in tmpruleList:
-                if not incRez and rule.myId in self.reservedIDs: continue
+                if not incRez and rule.ignore: continue
                 try:    chrule = chrules.get(str(rule.myId)) #temp fix.issue after converting list to dict in channels.json
                 except: chrule = {}
                 if chrule:
@@ -117,6 +115,7 @@ class BaseRule:
     
     def __init__(self):
         self.myId               = 0
+        self.ignore             = False
         self.name               = ""
         self.description        = ""
         self.optionLabels       = []
@@ -283,6 +282,7 @@ class BaseRule:
 class ShowChannelBug(BaseRule):
     def __init__(self):
         self.myId               = 1
+        self.ignore             = False
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30086),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30113)]
@@ -348,6 +348,7 @@ class ShowChannelBug(BaseRule):
 class ShowOnNext(BaseRule):
     def __init__(self):
         self.myId               = 2
+        self.ignore             = False
         self.name               = LANGUAGE(30045)
         self.description        = LANGUAGE(33045)
         self.optionLabels       = [LANGUAGE(30045)]
@@ -385,6 +386,7 @@ class ShowOnNext(BaseRule):
 class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize videowindow control
     def __init__(self):
         self.myId               = 3
+        self.ignore             = False
         self.name               = "Screen Vingette"
         self.description        = "Add Channel Overlay to create a immersive viewing experince."
         self.optionLabels       = ['Enable Screen Vingette','Vingette Image','Vingette Image offset']
@@ -468,6 +470,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow control
     def __init__(self):
         self.myId               = 4
+        self.ignore             = False
         self.name               = "Mystery Science Theater 3K Silhouette"
         self.description        = "Animated Silhouette of MST3K"
         self.optionLabels       = ['Enable MST3K Silhouette']
@@ -528,6 +531,7 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
 class DisableOverlay(BaseRule):
     def __init__(self):
         self.myId               = 50
+        self.ignore             = False
         self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
         self.optionLabels       = [LANGUAGE(30042)]
@@ -566,6 +570,7 @@ class DisableOverlay(BaseRule):
 class ForceSubtitles(BaseRule):
     def __init__(self):
         self.myId               = 51
+        self.ignore             = False
         self.name               = "Force Subtitles"
         self.description        = "Show Subtitles"
         self.optionLabels       = ['Force Subtitles?']
@@ -604,6 +609,7 @@ class ForceSubtitles(BaseRule):
 class DisableTrakt(BaseRule):
     def __init__(self):
         self.myId               = 52
+        self.ignore             = False
         self.name               = "Trakt scrobbling"
         self.description        = "Disable Trakt scrobbling."
         self.optionLabels       = [LANGUAGE(30131)]
@@ -642,6 +648,7 @@ class DisableTrakt(BaseRule):
 class RollbackPlaycount(BaseRule):
     def __init__(self):
         self.myId               = 53
+        self.ignore             = False
         self.name               = "Rollback Playcount"
         self.description        = "Passive Playback w/o playcount & progress tracking."
         self.optionLabels       = [LANGUAGE(30132)]
@@ -680,6 +687,7 @@ class RollbackPlaycount(BaseRule):
 class DurationOptions(BaseRule):
     def __init__(self):
         self.myId               = 500
+        self.ignore             = False
         self.name               = "Duration Options"
         self.description        = "Parser Options"
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),"Minimum Duration"]
@@ -729,6 +737,7 @@ class DurationOptions(BaseRule):
 class FilterOptions(BaseRule):
     def __init__(self):
         self.myId               = 500
+        self.ignore             = False
         self.name               = "Filter Options"
         self.description        = "Filter various content."
         self.optionLabels       = [LANGUAGE(30053),LANGUAGE(30054),LANGUAGE(30055)]
@@ -778,6 +787,7 @@ class FilterOptions(BaseRule):
 class ProvisionalRule(BaseRule):
     def __init__(self):
         self.myId               = 800
+        self.ignore             = True
         self.name               = "Provisional Placeholder"
         self.description        = "Fill Provisional Placeholder"
         self.optionLabels       = ["Provisional Value"]
@@ -837,13 +847,14 @@ class ProvisionalRule(BaseRule):
 class HandleMethodOrder(BaseRule):
     def __init__(self):
         self.myId               = 998
+        self.ignore             = False
         self.name               = "Page, Limits & Sort Methods"
         self.description        = "Change content limits and sorting methods."
-        self.optionLabels       = ['Page Limit','Method','Order','Ignore Folders']
-        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),'random','ascending',True]
-        self.optionDescriptions = ["","","",""]
+        self.optionLabels       = ['Page Limit','Method','Order','Ignore Folders','Ignore Artist Sort Name']
+        self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),'random','ascending',True,True]
+        self.optionDescriptions = ["","","","",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
-        self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),""]
+        self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),"",""]
         self.storedValues       = [[],[],[],[]]
         
         
@@ -882,7 +893,7 @@ class HandleMethodOrder(BaseRule):
             self.storedValues[0] = builder.limit
             self.storedValues[1] = builder.sort
             builder.limit = self.optionValues[0]
-            builder.sort.update({"method": self.optionValues[0], "order": self.optionValues[1]})
+            builder.sort.update({"ignorearticle":self.optionValues[2],"method":self.optionValues[0],"order":self.optionValues[1],"useartistsortname":self.optionValues[3]})
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
             builder.limit = self.storedValues[0]
@@ -896,6 +907,7 @@ class HandleMethodOrder(BaseRule):
 class ForceRandom(BaseRule):
     def __init__(self):
         self.myId               = 999
+        self.ignore             = False
         self.name               = "Force Random"
         self.description        = "Random shuffle all channel content."
         self.optionLabels       = ['Force Random']
@@ -934,6 +946,7 @@ class ForceRandom(BaseRule):
 class EvenShowsRule(BaseRule):
     def __init__(self):
         self.myId               = 1000
+        self.ignore             = False
         self.name               = LANGUAGE(30121)
         self.description        = "Group TV shows in blocks, query size impacts distribution." 
         self.optionLabels       = ['Group TV shows in blocks','Page Size','Group by Episode']

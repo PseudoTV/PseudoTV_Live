@@ -151,7 +151,7 @@ class Builder:
         self.log('getFileList, id: %s, start = %s'%(citem['id'],start))
         try:
             if start > (now + ((self.maxDays * 86400) - 43200)): #max guidedata days to seconds.
-                self.log('getFileList, id: %s programmes exceeds MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
+                self.log('getFileList, id: %s programmes over MAX_DAYS: start = %s'%(citem['id'],datetime.datetime.fromtimestamp(start)),xbmc.LOGINFO)
                 return True# prevent over-building
             
             multi = len(citem.get('path',[])) > 1 #multi-path source

@@ -74,8 +74,8 @@ def killit(method):
         return timer.result
     return wrapper
 
-@timeit
 def poolit(method):
+    @timeit
     @wraps(method)
     def wrapper(items=[], *args, **kwargs):
         pool = ThreadPool()
@@ -90,8 +90,8 @@ def poolit(method):
         return list([_f for _f in results if _f])
     return wrapper
 
-@timeit
 def threadit(method):
+    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         thread = Thread(None, method, None, args, kwargs)
@@ -102,8 +102,8 @@ def threadit(method):
         return thread
     return wrapper
 
-@timeit
 def timerit(method):
+    @timeit
     @wraps(method)
     def wrapper(wait, *args, **kwargs):
         thread_name = '%s.%s'%('timerit',method.__qualname__.replace('.',': '))
@@ -123,8 +123,8 @@ def timerit(method):
         return timer
     return wrapper  
 
-@timeit
 def executeit(method):
+    @timeit
     @wraps(method)
     def wrapper(*args, **kwargs):
         pool = ThreadPool()

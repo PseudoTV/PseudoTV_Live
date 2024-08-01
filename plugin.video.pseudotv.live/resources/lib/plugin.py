@@ -154,7 +154,6 @@ class Plugin:
         def buildfItem(item: dict={}):
             sysInfo = self.sysInfo.copy()
             fitem   = decodePlot(item.get('plot',''))
-            
             sysInfo.update({"fitem":fitem})
             try: sysInfo.update({"nitem":decodePlot(nextitems[nextitems.index(item) + 1].get('plot',''))})
             except:pass

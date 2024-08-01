@@ -145,9 +145,9 @@ class Tasks():
         self.log('_chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
         if hasFirstrun():
-            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary,3)
+            if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary)
             if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                self._que(self.chkChannels,4)
+                self._que(self.chkChannels)
 
 
     def chkRecommended(self):
@@ -164,7 +164,7 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary()
             del library
-            if   not complete: self._que(self.chkLibrary,3)
+            if   not complete: self._que(self.chkLibrary)
             elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
@@ -178,7 +178,7 @@ class Tasks():
             if complete:
                 if not hasFirstrun(): setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
-            else: self._que(self.chkChannels,4)
+            else: self._que(self.chkChannels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
@@ -240,7 +240,7 @@ class Tasks():
         nChannels = self.getChannels()
         if channels != nChannels:
             self.log('chkChannelChange, resetting chkChannels')
-            self._que(self.chkChannels,4)
+            self._que(self.chkChannels)
             return nChannels
         return channels
 

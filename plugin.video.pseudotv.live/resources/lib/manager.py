@@ -78,7 +78,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             DIALOG.notificationDialog(LANGUAGE(32058))
             return openAddonSettings((0,1))
         else:
-            with busy_dialog(), suspendActivity():
+            with busy_dialog():
                 self.cntrlStates  = {}
                 self.showingList  = True
                 
@@ -373,14 +373,14 @@ class Manager(xbmcgui.WindowXMLDialog):
    
 
     def getPaths(self, citem: dict={}, paths: list=[]):
-        select = -1
+        select  = -1
+        pathLST = list([_f for _f in paths if _f])
         while not MONITOR.abortRequested() and not select is None:
             with self.toggleSpinner(self.itemList):
-                paths  = list([_f for _f in paths if _f])
-                npath  = None
-                lizLST = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem}) for idx, path in enumerate(paths) if path]
+                npath   = None
+                lizLST  = [self.buildListItem('%s|'%(idx+1),path,paths=[path],icon=DUMMY_ICON.format(text=str(idx+1)),items={'citem':citem}) for idx, path in enumerate(pathLST) if path]
                 lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32100)),LANGUAGE(33113),icon=ICON,items={'key':'add' ,'citem':citem}))
-                if len(paths) > 0:
+                if len(pathLST) > 0:
                     lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32101)),LANGUAGE(33114),icon=ICON,items={'key':'save','citem':citem}))
                 
             select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32086), multi=False)
@@ -389,14 +389,17 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if key == 'add': 
                     with self.toggleSpinner(self.itemList):
                         npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),monitor=True), citem)
-                elif key == 'save': break
-                elif path in paths:
+                        pathLST.append(npath)
+                elif key == 'save': 
+                    paths = pathLST
+                    break
+                elif path in pathLST:
                     retval = DIALOG.yesnoDialog(LANGUAGE(32102), customlabel=LANGUAGE(32103))
-                    if retval in [1,2]: paths.pop(paths.index(path))
+                    if retval in [1,2]: pathLST.pop(pathLST.index(path))
                     if retval == 2:
                         with self.toggleSpinner(self.itemList):
                             npath, citem = self.validatePath(DIALOG.browseDialog(heading=LANGUAGE(32080),default=path,monitor=True), citem)
-                if not npath is None: paths.append(npath)
+                            pathLST.append(npath)
         self.log('getPaths, paths = %s'%(paths))
         return paths, citem
            
@@ -419,16 +422,17 @@ class Manager(xbmcgui.WindowXMLDialog):
     def getRules(self, citem: dict={}, rules: dict={}):
         if citem.get('id') is None: DIALOG.notificationDialog(LANGUAGE(32071))
         else:            
-            select = -1
+            select  = -1
+            ruleLST = rules.copy()
             while not MONITOR.abortRequested() and not select is None:
                 with self.toggleSpinner(self.itemList):
                     nrule  = None
                     crules = self.rules.loadRules([citem],append=True,incRez=False).get(citem['id'],{}) #all rule instances w/ channel rules
-                    arules = [rule for key, rule in list(crules.items()) if not rules.get(key)] #all unused rule instances
+                    arules = [rule for key, rule in list(crules.items()) if not ruleLST.get(key)] #all unused rule instances
                     
-                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem}) for key, rule in list(rules.items()) if rule.myId]
+                    lizLST = [self.buildListItem(rule.name,rule.getTitle(),icon=DUMMY_ICON.format(text=str(rule.myId)),items={'myId':rule.myId,'citem':citem}) for key, rule in list(ruleLST.items()) if rule.myId]
                     lizLST.insert(0,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,items={'key':'add' ,'citem':citem}))
-                    if len(rules) > 0:
+                    if len(ruleLST) > 0:
                         lizLST.insert(1,self.buildListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,items={'key':'save','citem':citem}))
                             
                 select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32095), multi=False)
@@ -440,13 +444,20 @@ class Manager(xbmcgui.WindowXMLDialog):
                             lizLST = [self.buildListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),items={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), multi=False)
                         nrule, citem = self.getRule(citem, arules[int(lizLST[select].getProperty('idx') or "-1")])
-                    elif key == 'save': break
-                    elif rules.get(str(myId)):
+                        ruleLST.update({str(nrule.myId):nrule})
+                    elif key == 'save':
+                        rules = ruleLST
+                        break
+                    elif ruleLST.get(str(myId)):
                         retval = DIALOG.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
-                        if retval in [1,2]: rules.pop(str(myId))
-                        if retval == 2: nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                    elif not rules.get(str(myId)): nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                    if not nrule is None: rules.update({str(nrule.myId):nrule})
+                        if retval in [1,2]: ruleLST.pop(str(myId))
+                        if retval == 2: 
+                            nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
+                            ruleLST.update({str(nrule.myId):nrule})
+                    # elif not ruleLST.get(str(myId)):
+                        # nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
+                        # ruleLST.update({str(nrule.myId):nrule})
+                        
             self.log('getRules, rules = %s'%(len(rules)))
             return self.rules.dumpRules(rules), citem
         
@@ -641,6 +652,7 @@ class Manager(xbmcgui.WindowXMLDialog):
         self.log('getMontiorList')
         try:
             itemLST = [self.buildListItem(cleanLabel(value).title(),icon=ICON) for info in DIALOG.getInfoMonitor() for key, value in list(info.items()) if value not in ['','..'] and key not in ['path','logo']]
+            if len(itemLST) == 0: raise Exception()
             itemSEL = DIALOG.selectDialog(itemLST,LANGUAGE(32078)%('Name'),useDetails=True,multi=False)
             if itemSEL is not None: return itemLST[itemSEL]
             else: raise Exception()

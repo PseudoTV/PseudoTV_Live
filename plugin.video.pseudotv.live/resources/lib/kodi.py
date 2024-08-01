@@ -707,30 +707,34 @@ class Dialog:
 
     def fillInfoMonitor(self, type='ListItem'):
         #todo catch full listitem not singular properties.
-        if not self.properties.getPropertyBool('chkInfoMonitor'): return FalseMood
-        item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
-                'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
-                'set'         :self.builtin.getInfoLabel('Set'         ,type),
-                'path'        :self.builtin.getInfoLabel('Path'        ,type),
-                'genre'       :self.builtin.getInfoLabel('Genre'       ,type),
-                'studio'      :self.builtin.getInfoLabel('Studio'      ,type),
-                'title'       :self.builtin.getInfoLabel('Title'       ,type),
-                'tvshowtitle' :self.builtin.getInfoLabel('TVShowTitle' ,type),
-                'plot'        :self.builtin.getInfoLabel('Plot'        ,type),
-                'addonname'   :self.builtin.getInfoLabel('AddonName'   ,type),
-                'artist'      :self.builtin.getInfoLabel('Artist'      ,type),
-                'album'       :self.builtin.getInfoLabel('Album'       ,type),
-                'albumartist' :self.builtin.getInfoLabel('AlbumArtist' ,type),
-                'foldername'  :self.builtin.getInfoLabel('FolderName'  ,type),
-                'logo'        :(self.builtin.getInfoLabel('Art(tvshow.clearlogo)',type) or 
-                                self.builtin.getInfoLabel('Art(clearlogo)'       ,type) or
-                                self.builtin.getInfoLabel('Icon'                 ,type) or
-                                self.builtin.getInfoLabel('Thumb'                ,type))}
-        if item.get('label'):
-            montiorList = self.getInfoMonitor()
-            montiorList.insert(0,item)
-            self.setInfoMonitor(montiorList)
-        return True
+        try:
+            if not self.properties.getPropertyBool('chkInfoMonitor'): return FalseMood
+            item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
+                    'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
+                    'set'         :self.builtin.getInfoLabel('Set'         ,type),
+                    'path'        :self.builtin.getInfoLabel('Path'        ,type),
+                    'genre'       :self.builtin.getInfoLabel('Genre'       ,type),
+                    'studio'      :self.builtin.getInfoLabel('Studio'      ,type),
+                    'title'       :self.builtin.getInfoLabel('Title'       ,type),
+                    'tvshowtitle' :self.builtin.getInfoLabel('TVShowTitle' ,type),
+                    'plot'        :self.builtin.getInfoLabel('Plot'        ,type),
+                    'addonname'   :self.builtin.getInfoLabel('AddonName'   ,type),
+                    'artist'      :self.builtin.getInfoLabel('Artist'      ,type),
+                    'album'       :self.builtin.getInfoLabel('Album'       ,type),
+                    'albumartist' :self.builtin.getInfoLabel('AlbumArtist' ,type),
+                    'foldername'  :self.builtin.getInfoLabel('FolderName'  ,type),
+                    'logo'        :(self.builtin.getInfoLabel('Art(tvshow.clearlogo)',type) or 
+                                    self.builtin.getInfoLabel('Art(clearlogo)'       ,type) or
+                                    self.builtin.getInfoLabel('Icon'                 ,type) or
+                                    self.builtin.getInfoLabel('Thumb'                ,type))}
+            if item.get('label'):
+                montiorList = self.getInfoMonitor()
+                montiorList.insert(0,item)
+                self.setInfoMonitor(montiorList)
+            return True
+        except Exception as e:
+            self.log("fillInfoMonitor, failed! %s"%(e), xbmc.LOGERROR)
+            return False
 
 
     def getInfoMonitor(self):
@@ -901,8 +905,8 @@ class Dialog:
                 lizLST = poolit(buildMenuItem)(optTMP)
                 
             select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
-            if   optTMP[select].get('label') == "Dynamic Playlist": retval = self.buildDXSP(default)
-            elif optTMP[select].get('label') == "Resource Plugins": retval = self.buildResource(default, mask)
+            if   optTMP[select].get('label') == "Dynamic Playlist": return self.buildDXSP(default)
+            elif optTMP[select].get('label') == "Resource Plugins": return self.buildResource(default, mask)
             elif select is not None:
                 shares    = optTMP[select]['label'].lower().replace("network","")
                 mask      = optTMP[select]['mask']
@@ -948,9 +952,10 @@ class Dialog:
     def buildDXSP(self, path=''):
         # https://github.com/xbmc/xbmc/blob/master/xbmc/playlists/SmartPlayList.cpp
         
-        def mtype(params={"type":"","order":{},"rules":{}}):
-            enumLST = sorted(['albums', 'artists', 'episodes', 'mixed', 'movies', 'musicvideos', 'songs', 'tvshows'])
-            enumSEL = self.selectDialog(enumLST,header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
+        def mtype(params={"type":"","order":{'direction':'ascending','method':'random','ignorearticle':True,'useartistsortname':True},"rules":{}}):
+            path    = ''
+            enumLST = list(sorted(['albums', 'artists', 'episodes', 'mixed', 'movies', 'musicvideos', 'songs', 'tvshows']))
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
             if not enumSEL is None:
                 params['type'] = enumLST[enumSEL]
                 if params['type'] in MUSIC_TYPES: db = 'musicdb'
@@ -963,31 +968,34 @@ class Dialog:
             return path, params
             
         def andor(params={}):
-            enumLST = sorted(['and', 'or'])
-            enumSEL = self.selectDialog(enumLST,header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
+            enumLST = list(sorted(['and', 'or']))
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
                   
         def order(params={}):
-            enumLST = sorted([_f for _f in jsonRPC.getEnums("List.Sort",type="order") if _f])
-            enumSEL = self.selectDialog(enumLST,header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
+            enums   = jsonRPC.getEnums("List.Sort",type="order") 
+            enumLST = list(sorted([_f for _f in enums if _f]))
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
         def method(params={}):
-            enumLST = sorted([_f for _f in jsonRPC.getEnums("List.Sort",type="method") if _f])
-            enumSEL = self.selectDialog(enumLST,header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
+            enums   = jsonRPC.getEnums("List.Sort",type="method") 
+            enumLST = list(sorted([_f for _f in enums if _f]))
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
         def field(params={}, rule={}): #rules = {"and":[]}
-            if   params.get('type') == 'songs':       enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Songs"   , type='items'))
-            elif params.get('type') == 'albums':      enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Albums"  , type='items'))
-            elif params.get('type') == 'artists':     enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Artists" , type='items'))
-            elif params.get('type') == 'tvshows':     enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.TVShows" , type='items'))
-            elif params.get('type') == 'episodes':    enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items'))
-            elif params.get('type') == 'movies':      enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items'))
-            elif params.get('type') == 'musicvideos': enumLST = sorted(jsonRPC.getEnums("List.Filter.Fields.MusicVideos"))
-            elif params.get('type') == 'mixed':       enumLST = sorted(['playlist', 'virtualfolder'])
+            if   params.get('type') == 'songs':       enums = jsonRPC.getEnums("List.Filter.Fields.Songs"   , type='items')
+            elif params.get('type') == 'albums':      enums = jsonRPC.getEnums("List.Filter.Fields.Albums"  , type='items')
+            elif params.get('type') == 'artists':     enums = jsonRPC.getEnums("List.Filter.Fields.Artists" , type='items')
+            elif params.get('type') == 'tvshows':     enums = jsonRPC.getEnums("List.Filter.Fields.TVShows" , type='items')
+            elif params.get('type') == 'episodes':    enums = jsonRPC.getEnums("List.Filter.Fields.Episodes", type='items')
+            elif params.get('type') == 'movies':      enums = jsonRPC.getEnums("List.Filter.Fields.Movies"  , type='items')
+            elif params.get('type') == 'musicvideos': enums = jsonRPC.getEnums("List.Filter.Fields.MusicVideos")
+            elif params.get('type') == 'mixed':       enums = ['playlist', 'virtualfolder']
             else: return
-            enumSEL = self.selectDialog(enumLST,header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
+            enumLST = list(sorted([_f for _f in enums if _f]))
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
         def operator(params={}, rule={}):
@@ -995,7 +1003,7 @@ class Dialog:
             if rule.get("field") != 'date':
                 if 'inthelast'    in enumLST: enumLST.remove('inthelast')
                 if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
-            enumSEL = self.selectDialog(enumLST,header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
         def value(params={}, rule={}):
@@ -1022,33 +1030,38 @@ class Dialog:
                 enumSEL = self.selectDialog(enumLST,header="Edit Rules",multi=False)
                 if not enumSEL is None:
                     if enumLST[enumSEL].getLabel() in ['And','Or']:
-                        CONSEL = -1
-                        CONLST = enumLST[enumSEL].getProperty('key')
+                        CONSEL  = -1
+                        CONLKEY = enumLST[enumSEL].getProperty('key')
+                        ruleLST = params.get('rules',{}).get(CONLKEY,[])
                         while not MONITOR.abortRequested() and not CONSEL is None:
-                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(params.get('rules',{}).get(CONLST,[]))]
+                            andLST = [self.listitems.buildMenuListItem('%s|'%(idx+1),dumpJSON(value),icon=DUMMY_ICON.format(text=str(idx+1)),props={'idx':str(idx)}) for idx, value in enumerate(ruleLST)]
                             andLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32173)),LANGUAGE(33173),icon=ICON,props={'key':'add'}))
+                            if len(ruleLST) > 0:
+                                andLST.insert(1,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
                             CONSEL = self.selectDialog(andLST,header="Edit Rules",multi=False)
                             if not CONSEL is None:
-                                if andLST[CONSEL].getProperty('key') == 'add': params.setdefault('rules',{}).setdefault(CONLST,[]).append(getRule(params,{"field":"","operator":"","value":[]}))
-                                elif sorted(loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in params.get('rules',{}).get(CONLST,[])]:
+                                if   andLST[CONSEL].getProperty('key') == 'add': ruleLST.append(getRule(params,{"field":"","operator":"","value":[]}))
+                                elif andLST[CONSEL].getProperty('key') == 'save': 
+                                    params.setdefault('rules',{})[CONLKEY] = ruleLST
+                                    break
+                                elif sorted(loadJSON(andLST[CONSEL].getLabel2())) in [sorted(andd) for andd in ruleLST]:
                                     retval = self.yesnoDialog(LANGUAGE(32175), customlabel=LANGUAGE(32176))
-                                    if retval in [1,2]: params.get('rules',{}).get(CONLST,[]).pop(int(andLST[CONSEL].getProperty('idx')))
-                                    if retval == 2:     params.get('rules',{}).get(CONLST,[]).append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
-                                else:                   params.get('rules',{}).get(CONLST,[]).append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
+                                    if retval in [1,2]: ruleLST.pop(int(andLST[CONSEL].getProperty('idx')))
+                                    if retval == 2:     ruleLST.append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
+                                else:                   ruleLST.append(getRule(params,loadJSON(andLST[CONSEL].getLabel2())))
             return params
 
         def getOrder(params={}):
-            order = {'direction':'ascending','method':'random','ignorearticle':True,'useartistsortname':True}
-            order.update(params.get('order',{}))
-            params['order'] = order
             enumSEL = -1
             while not MONITOR.abortRequested() and not enumSEL is None:
                 enumLST = [self.listitems.buildMenuListItem(key.title(),str(value).title(),icon=DUMMY_ICON.format(text=getAbbr(key.title()))) for key, value in list(params.get('order',{}).items())]
+                enumLST.insert(0,self.listitems.buildMenuListItem('[COLOR=white][B]%s[/B][/COLOR]'%(LANGUAGE(32174)),LANGUAGE(33174),icon=ICON,props={'key':'save'}))
                 enumSEL = self.selectDialog(enumLST,header="Edit Selection",preselect=-1,multi=False)
                 if not enumSEL is None:
                     if   enumLST[enumSEL].getLabel() == 'Direction': params['order'].update({'direction':order(params)})
                     elif enumLST[enumSEL].getLabel() == 'Method':    params['order'].update({'method':method(params)})
-                    else:                                            params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
+                    elif enumLST[enumSEL].getProperty('key') == 'save': break
+                    else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
             
         from jsonrpc import JSONRPC
