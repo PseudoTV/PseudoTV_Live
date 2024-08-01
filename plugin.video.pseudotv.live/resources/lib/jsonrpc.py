@@ -198,6 +198,18 @@ class JSONRPC:
         else:     return self.sendJSON(param).get('result', {}).get('songs', [])
 
 
+    def getArtists(self, cache=True):
+        param = {"method":"AudioLibrary.GetArtists","params":{"properties":self.getEnums("Audio.Fields.Artist", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('artists', [])
+        else:     return self.sendJSON(param).get('result', {}).get('artists', [])
+
+
+    def getAlbums(self, cache=True):
+        param = {"method":"AudioLibrary.GetAlbums","params":{"properties":self.getEnums("Audio.Fields.Album", type='items')}}
+        if cache: return self.cacheJSON(param).get('result', {}).get('albums', [])
+        else:     return self.sendJSON(param).get('result', {}).get('albums', [])
+
+
     def getEpisodes(self, cache=True):
         param = {"method":"VideoLibrary.GetEpisodes","params":{"properties":self.getEnums("Video.Fields.Episode", type='items')}}
         if cache: return self.cacheJSON(param).get('result', {}).get('tvshows', [])

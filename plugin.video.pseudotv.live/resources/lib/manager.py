@@ -444,7 +444,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                             lizLST = [self.buildListItem(rule.name,rule.description,icon=DUMMY_ICON.format(text=str(rule.myId)),items={'idx':idx,'myId':rule.myId,'citem':citem}) for idx, rule in enumerate(arules) if rule.myId]
                         select = DIALOG.selectDialog(lizLST, header=LANGUAGE(32072), multi=False)
                         nrule, citem = self.getRule(citem, arules[int(lizLST[select].getProperty('idx') or "-1")])
-                        ruleLST.update({str(nrule.myId):nrule})
+                        if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
                     elif key == 'save':
                         rules = ruleLST
                         break
@@ -453,10 +453,10 @@ class Manager(xbmcgui.WindowXMLDialog):
                         if retval in [1,2]: ruleLST.pop(str(myId))
                         if retval == 2: 
                             nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                            ruleLST.update({str(nrule.myId):nrule})
+                            if not nrule is None: ruleLST.update({str(nrule.myId):nrule})
                     # elif not ruleLST.get(str(myId)):
                         # nrule, citem = self.getRule(citem, crules.get(str(myId),{}))
-                        # ruleLST.update({str(nrule.myId):nrule})
+                        # if not nrule is None:  ruleLST.update({str(nrule.myId):nrule})
                         
             self.log('getRules, rules = %s'%(len(rules)))
             return self.rules.dumpRules(rules), citem
@@ -464,16 +464,20 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def getRule(self, citem={}, rule={}):
         select = -1
-        while not MONITOR.abortRequested() and not select is None:
-            with self.toggleSpinner(self.itemList):
-                lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
-            select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
-            try:
-                rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
-                self.madeChanges = True
-            except Exception as e:
-                self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
-        return rule, citem
+        if not True in list(set([True for p in citem.get('path',[]) if 'db://' in p])):
+            DIALOG.notificationDialog(LANGUAGE(32178))
+            return None, citem
+        else:
+            while not MONITOR.abortRequested() and not select is None:
+                with self.toggleSpinner(self.itemList):
+                    lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
+                select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
+                try:
+                    rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
+                    self.madeChanges = True
+                except Exception as e:
+                    self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
+            return rule, citem
         
         
     def setID(self, citem: dict={}) -> dict:

@@ -267,8 +267,9 @@ class BaseRule:
 
     def onActionSelect(self, optionindex, header=ADDON_NAME, preselect=-1, useDetails=False, autoclose=SELECT_DELAY, multi=False, custom=False):
         log("onActionSelect")
+        self.selectBoxOptions[optionindex] = list(sorted(self.selectBoxOptions[optionindex]))
         if preselect < 0 and multi: preselect = [idx for idx, item in enumerate(self.selectBoxOptions[optionindex]) if item == self.optionValues[optionindex]]
-        select = self.dialog.selectDialog(list(map(str,self.selectBoxOptions[optionindex])), header, preselect, useDetails, autoclose, multi, custom)
+        select = self.dialog.selectDialog(list(sorted([str(v).title() for v in self.selectBoxOptions[optionindex]])), header, preselect, useDetails, autoclose, multi, custom)
         if select is not None: 
             self.optionValues[optionindex] = self.selectBoxOptions[optionindex][select]
                 
@@ -788,8 +789,8 @@ class ProvisionalRule(BaseRule):
     def __init__(self):
         self.myId               = 800
         self.ignore             = True
-        self.name               = "Provisional Placeholder"
-        self.description        = "Fill Provisional Placeholder"
+        self.name               = "Provisional Path"
+        self.description        = "Fill Provisional Path"
         self.optionLabels       = ["Provisional Value"]
         self.optionValues       = [""]
         self.optionDescriptions = [""]

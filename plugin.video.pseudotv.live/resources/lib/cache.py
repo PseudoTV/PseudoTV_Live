@@ -34,7 +34,7 @@ def cacheit(expiration=datetime.timedelta(days=MIN_GUIDEDAYS), checksum=ADDON_VE
             method_class = args[0]
             cacheName = "%s.%s"%(method_class.__class__.__name__, method.__name__)
             for item in args[1:]: cacheName += u".%s"%item
-            for k,v in kwargs.items(): cacheName += u".%s"%(v)
+            for k, v in list(kwargs.items()): cacheName += u".%s"%(v)
             results = method_class.cache.get(cacheName.lower(), checksum, json_data)
             if results: return results
             return method_class.cache.set(cacheName.lower(), method(*args, **kwargs), checksum, expiration, json_data)

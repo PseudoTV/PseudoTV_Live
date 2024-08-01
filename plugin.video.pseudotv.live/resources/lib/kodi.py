@@ -955,7 +955,7 @@ class Dialog:
         def mtype(params={"type":"","order":{'direction':'ascending','method':'random','ignorearticle':True,'useartistsortname':True},"rules":{}}):
             path    = ''
             enumLST = list(sorted(['albums', 'artists', 'episodes', 'mixed', 'movies', 'musicvideos', 'songs', 'tvshows']))
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Media Type",preselect=(enumLST.index(params.get('type','')) if params.get('type') else -1),useDetails=False, multi=False)
             if not enumSEL is None:
                 params['type'] = enumLST[enumSEL]
                 if params['type'] in MUSIC_TYPES: db = 'musicdb'
@@ -969,19 +969,19 @@ class Dialog:
             
         def andor(params={}):
             enumLST = list(sorted(['and', 'or']))
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Conjunction",preselect=(enumLST.index(list(params.get('rules',{}).keys())) if params.get('rules',{}) else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
                   
         def order(params={}):
             enums   = jsonRPC.getEnums("List.Sort",type="order") 
             enumLST = list(sorted([_f for _f in enums if _f]))
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select order",preselect=enumLST.index(params.get('order',{}).get('direction','ascending')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
         def method(params={}):
             enums   = jsonRPC.getEnums("List.Sort",type="method") 
             enumLST = list(sorted([_f for _f in enums if _f]))
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
         def field(params={}, rule={}): #rules = {"and":[]}
@@ -995,7 +995,7 @@ class Dialog:
             elif params.get('type') == 'mixed':       enums = ['playlist', 'virtualfolder']
             else: return
             enumLST = list(sorted([_f for _f in enums if _f]))
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Filter",preselect=(enumLST.index(rule.get('field')) if rule.get('field') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
         def operator(params={}, rule={}):
@@ -1003,7 +1003,7 @@ class Dialog:
             if rule.get("field") != 'date':
                 if 'inthelast'    in enumLST: enumLST.remove('inthelast')
                 if 'notinthelast' in enumLST: enumLST.remove('notinthelast')
-            enumSEL = self.selectDialog(list(sorted(map(lambda l: l.title(),enumLST))),header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
+            enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select Operator",preselect=(enumLST.index(rule.get('operator')) if rule.get('operator') else -1),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
 
         def value(params={}, rule={}):
@@ -1064,6 +1064,50 @@ class Dialog:
                     else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
             
+        def getValue(params={}):
+            LIST_SORT_ACTIONS = {"none"           : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "label"          : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "albumtype"      : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "country"        : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "originaltitle"  : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "productioncode" : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "mpaa"           : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "votes"          : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "sorttitle"      : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
+                                 "date"           : (self.inputDialog,xbmcgui.INPUT_DATE),
+                                 "time"           : (self.inputDialog,xbmcgui.INPUT_TIME),
+                                 "originaldate"   : (self.inputDialog,xbmcgui.INPUT_DATE),
+                                 "dateadded"      : (self.inputDialog,xbmcgui.INPUT_DATE),
+                                 "lastplayed"     : (self.inputDialog,xbmcgui.INPUT_DATE),
+                                 "listeners"      : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "size"           : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "track"          : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "programcount"   : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "totalepisodes"  : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "watchedepisodes": (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "episode"        : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "season"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "playcount"      : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "year"           : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "rating"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "userrating"     : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "bpm"            : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "totaldiscs"     : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "bitrate"        : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "top250"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
+                                 "file"           : (self.browseDialog,),
+                                 "path"           : (self.browseDialog,),
+                                 "drivetype"      : (self.browseDialog,),
+                                 "random"         : (),
+                                 "tvshowstatus"   : (),
+                                 "playlist"       : (),
+                                 "genre"          : (self.selectDialog,(jsonRPC.getVideoGenres,jsonRPC.getMusicGenres)),
+                                 "tvshowtitle"    : (self.selectDialog,(jsonRPC.getTVshows,)),
+                                 "title"          : (self.selectDialog,(jsonRPC.getMovies)),
+                                 "artist"         : (self.selectDialog,jsonRPC.getArtists),
+                                 "album"          : (self.selectDialog,jsonRPC.getAlbums),
+                                 "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
+
         from jsonrpc import JSONRPC
         jsonRPC = JSONRPC()
         try:
@@ -1087,3 +1131,4 @@ class Dialog:
             self.log('buildDXSP, returning %s'%(url))
             del jsonRPC
             return url
+

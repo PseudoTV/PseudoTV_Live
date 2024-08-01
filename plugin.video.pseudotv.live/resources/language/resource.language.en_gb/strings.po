@@ -1333,6 +1333,10 @@ msgctxt "#32177"
 msgid "Finish Configuring channel first"
 msgstr ""
 
+msgctxt "#32178"
+msgid "Sort & Filter rules only apply to DB Paths.\nEx. videodb://, musicdb://"
+msgstr ""
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"

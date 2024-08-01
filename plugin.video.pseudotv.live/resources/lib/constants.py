@@ -285,4 +285,3 @@ VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
                           'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                           # 'size'                    : (int,),  #long (1024) - size in bytes
                           'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
-                          
