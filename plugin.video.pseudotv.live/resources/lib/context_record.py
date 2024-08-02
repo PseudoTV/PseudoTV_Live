@@ -31,24 +31,28 @@ class Record:
         
     def add(self):
         self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-        m3u = M3U()
+        m3u   = M3U()
+        xmltv = XMLTVS()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
             with busy_dialog(), suspendActivity():
-                if (m3u.addRecording(ritem) & XMLTVS().addRecording(ritem,self.fitem)):
-                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
+                if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
+                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
         del m3u
+        del xmltv
     
             
     def remove(self):
         self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-        m3u = M3U()
+        m3u   = M3U()
+        xmltv = XMLTVS()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
             with busy_dialog(), suspendActivity():
-                if (m3u.delRecording(ritem) & XMLTVS().delRecording(ritem)):
-                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)),wait=2)
+                if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
+                    DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
         del m3u
+        del xmltv
             
             
 if __name__ == '__main__': 

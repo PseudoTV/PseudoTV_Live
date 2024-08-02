@@ -77,8 +77,8 @@ class FileAccess:
     @staticmethod
     def exists(filename):
         if filename.startswith('stack://'):
-            try:    filename = (filename.split('stack://')[1].split(' , '))[0]
-            except: pass
+            try: filename = (filename.split('stack://')[1].split(' , '))[0]
+            except Exception as e: log('FileAccess: exists failed! %s'%(e), xbmc.LOGERROR)
         try:
             return xbmcvfs.exists(filename)
         except UnicodeDecodeError:
@@ -91,10 +91,8 @@ class FileAccess:
         fle = 0
         if os.name.lower() == 'nt':
             newname = '\\\\' + filename[6:]
-            try:
-                fle = codecs.open(newname, mode, encoding)
-            except:
-                fle = 0
+            try:    fle = codecs.open(newname, mode, encoding)
+            except: fle = 0
         return fle
 
 

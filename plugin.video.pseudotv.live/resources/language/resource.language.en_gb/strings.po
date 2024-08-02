@@ -613,8 +613,9 @@ msgctxt "#30148"
 msgid "Select Interval in minutes. [-1 = Indefinitely, 0 = Randomly]"
 msgstr ""
 
-
-
+msgctxt "#30149"
+msgid "Enable Automatic PVR Cleaning"
+msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
 
@@ -1593,6 +1594,10 @@ msgstr ""
 
 msgctxt "#33140"
 msgid "Create Channel & Genre subfolders in template resource pack."
+msgstr ""
+
+msgctxt "#33148"
+msgid "Remove PseudoTV Live recordings when media path no longer exists."
 msgstr ""
 
 msgctxt "#33149"

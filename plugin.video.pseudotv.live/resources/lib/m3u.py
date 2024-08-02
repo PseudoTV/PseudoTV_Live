@@ -69,19 +69,6 @@ class M3U:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _verify(self, stations=[], recordings=[], chkPath=True):
-        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list
-            stations = [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
-            self.log('_verify, stations = %s'%(len(stations)))
-            return stations
-        elif recordings:#remove recordings that no longer exists on disk
-            if chkPath: recordings = [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url','').replace('.pvr',''))).get("id",'')))]
-            else:       recordings = [recording for recording in recordings if recording.get('media',False)]
-            self.log('_verify, recordings = %s'%(len(recordings)))
-            return recordings
-        return []
-        
-
     def _load(self, file=M3UFLEPATH):
         self.log('_load, file = %s'%file)
         if file.startswith('http'):
@@ -216,10 +203,10 @@ class M3U:
             mins = [opts.pop(opts.index(key)) for key in list(M3U_MIN.keys()) if key in opts] #min required m3u entries.
             line = '#EXTINF:-1 tvg-chno="%s" tvg-id="%s" tvg-name="%s" tvg-logo="%s" group-title="%s" radio="%s" catchup="%s" %s,%s\n'
             self.M3UDATA['stations']   = self.sortStations(self.M3UDATA.get('stations',[]))
-            self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]))
+            self.M3UDATA['recordings'] = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
             self.log('_save, saving %s stations and %s recordings to %s'%(len(self.M3UDATA['stations']),len(self.M3UDATA['recordings']),file))
             
-            for station in self.M3UDATA['recordings'] + self.M3UDATA['stations']:
+            for station in (self.M3UDATA['recordings'] + self.M3UDATA['stations']):
                 optional  = ''
                 xplaylist = ''
                 kodiprops = {}
@@ -257,16 +244,29 @@ class M3U:
         return True
         
         
+    def _verify(self, stations=[], recordings=[], chkPath=SETTINGS.getSettingBool('Clean_Recordings')):
+        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list
+            stations = [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
+            self.log('_verify, stations = %s'%(len(stations)))
+            return stations
+        elif recordings:#remove recordings that no longer exists on disk
+            if chkPath: recordings = [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url',''))).get('vid').replace('.pvr','')))]
+            else:       recordings = [recording for recording in recordings if recording.get('media',False)]
+            self.log('_verify, recordings = %s'%(len(recordings)))
+            return recordings
+        return []
+        
+
     def cleanSelf(self, items, key='id', slug='@%s'%(slugify(ADDON_NAME))): # remove imports (Non PseudoTV Live)
         if not slug: return items
-        stations   = self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)])
-        recordings = self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)])
+        stations   = self.sortStations(self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)]))
+        recordings = self.sortStations(self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)]), key='name')
         self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s'%(slug,key,len(stations),len(recordings)))
-        return self.sortStations(stations), recordings
+        return stations, recordings
 
 
-    def sortStations(self, stations):
-        return sorted(stations, key=lambda k: k['number'])
+    def sortStations(self, stations, key='number'):
+        return sorted(stations, key=lambda k: k.get(key))
         
         
     def getMitem(self):
@@ -285,7 +285,7 @@ class M3U:
               
               
     def getRecordings(self):
-        recordings = self.sortStations(self.M3UDATA.get('recordings',[]))
+        recordings = self.sortStations(self.M3UDATA.get('recordings',[]), key='name')
         self.log('getRecordings, recordings = %s'%(len(recordings)))
         return recordings
                

@@ -56,10 +56,13 @@ class XMLTVS:
                                   generator_info_url  = self.cleanString(data['generator-info-url']), 
                                   generator_info_name = self.cleanString(data['generator-info-name']))
 
-            programmes = self.sortProgrammes(self.XMLTVDATA['programmes'])
-            for channel in self.sortChannels(self.cleanChannels(self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels'], programmes)):
+            self.XMLTVDATA['programmes'] = self.sortProgrammes(self.XMLTVDATA['programmes'])
+            self.XMLTVDATA['channels']   = self.cleanChannels(self.sortChannels(self.XMLTVDATA['channels'])  , self.XMLTVDATA['programmes'])
+            self.XMLTVDATA['recordings'] = self.cleanChannels(self.sortChannels(self.XMLTVDATA['recordings']), self.XMLTVDATA['programmes'])
+            
+            for channel in (self.XMLTVDATA['recordings'] + self.XMLTVDATA['channels']):
                 writer.addChannel(channel)
-            for program in programmes:
+            for program in self.XMLTVDATA['programmes']:
                 writer.addProgramme(program)
             
             try:
@@ -149,7 +152,7 @@ class XMLTVS:
              
     def getRecordings(self) -> list:
         self.log('getRecordings')
-        return self.sortChannels(self.XMLTVDATA.get('recordings',[]))   
+        return self.sortChannels(self.XMLTVDATA.get('recordings',[]))
                 
                 
     def getChannels(self) -> list:
@@ -219,14 +222,12 @@ class XMLTVS:
 
 
     def sortChannels(self, channels: list) -> list:
-        try: channels.sort(key=lambda x:x.get('display-name'))
-        except: pass
-        return channels
+        return sorted(channels, key=lambda k:k.get('display-name'))
 
 
     def sortProgrammes(self, programmes: list) -> list:
-        programmes.sort(key=lambda x:x['start'])
-        programmes.sort(key=lambda x:x['channel'])
+        programmes.sort(key=lambda k:k.get('start'))
+        programmes.sort(key=lambda k:k.get('channel'))
         self.log('sortProgrammes, programmes = %s'%(len(programmes)))
         return programmes
 
@@ -264,7 +265,7 @@ class XMLTVS:
 
         fitem['start'] = getUTCstamp()
         fitem['stop']  = fitem['start'] + fitem['duration']
-        if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem)):
+        if self.addProgram(ritem['id'],self.getProgramItem(ritem,fitem),encodeDESC=False):
             return self._save()
         
     
@@ -282,11 +283,11 @@ class XMLTVS:
         return True
 
 
-    def addProgram(self, id: str, item: dict) -> bool:
+    def addProgram(self, id: str, item: dict, encodeDESC: bool=True) -> bool:
         pitem = {'channel'     : id,
                  'category'    : [(self.cleanString(genre.replace('Unknown','Undefined')),LANG) for genre in item['categories']],
                  'title'       : [(self.cleanString(item['title']), LANG)],
-                 'desc'        : [(encodePlot(self.cleanString(item['desc']),item['fitem']), LANG)],
+                 'desc'        : [(encodePlot(self.cleanString(item['desc']),item['fitem']), LANG) if encodeDESC else (self.cleanString(item['desc']), LANG)],
                  'stop'        : (datetime.datetime.fromtimestamp(float(item['stop'])).strftime(DTFORMAT)),
                  'start'       : (datetime.datetime.fromtimestamp(float(item['start'])).strftime(DTFORMAT)),
                  'icon'        : [{'src': item['thumb']}],

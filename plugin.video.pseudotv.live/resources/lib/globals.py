@@ -105,8 +105,7 @@ def stripRegion(s):
     try:
         match = re.compile('(.*) \((.*)\)', re.IGNORECASE).search(s)
         if match.group(1): return match.group(1)
-    except: pass
-    return s
+    except: return s
     
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
@@ -125,7 +124,8 @@ def decodeString(base64_bytes):
     try:
         message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
         return message_bytes.decode(DEFAULT_ENCODING)
-    except:
+    except Exception as e:
+        log('Globals: decodeString failed! %s'%(e), xbmc.LOGERROR)
         return ''
         
 def decodePlot(text: str = '') -> dict:
@@ -144,8 +144,11 @@ def unescapeString(text, table=HTML_ESCAPE):
 
 def getJSON(file):
     fle  = (FileAccess.open(file, 'r') or '')
-    try:    data = loadJSON(fle.read())
-    except: data = {}
+    try:
+        data = loadJSON(fle.read())
+    except Exception as e:
+        log('Globals: getJSON failed! %s'%(e), xbmc.LOGERROR)
+        data = {}
     fle.close()
     return data
     
@@ -589,7 +592,7 @@ def getIDbyPath(path):
     try:
         if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path).group(1)
         elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path).group(1)
-    except: pass
+    except Exception as e: log('Globals: getIDbyPath failed! %s'%(e), xbmc.LOGERROR)
     return path
     
 def mergeDictLST(dict1,dict2):

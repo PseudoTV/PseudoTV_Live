@@ -402,6 +402,16 @@
 					</constraints>
 					<control type="spinner" format="string"/>
 				</setting>
+				<setting id="Clean_Recordings" type="boolean" label="30149" help="33148">
+					<level>2</level>
+					<default>true</default>
+					<control type="toggle"/>
+                    <dependencies>
+                        <dependency type="visible">
+                            <condition operator="is" setting="Client_Mode">0</condition>
+						</dependency>
+					</dependencies>
+				</setting>
 				<setting id="Enable_Grouping" type="boolean" label="30063" help="33063">
 					<level>1</level>
 					<default>true</default>
