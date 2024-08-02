@@ -984,7 +984,7 @@ class Dialog:
             enumSEL = self.selectDialog(list(sorted([l.title() for l in enumLST])),header="Select method",preselect=enumLST.index(params.get('order',{}).get('method','random')),useDetails=False, multi=False)
             if not enumSEL is None: return enumLST[enumSEL]
             
-        def field(params={}, rule={}): #rules = {"and":[]}
+        def field(params={}, rule={}):
             if   params.get('type') == 'songs':       enums = jsonRPC.getEnums("List.Filter.Fields.Songs"   , type='items')
             elif params.get('type') == 'albums':      enums = jsonRPC.getEnums("List.Filter.Fields.Albums"  , type='items')
             elif params.get('type') == 'artists':     enums = jsonRPC.getEnums("List.Filter.Fields.Artists" , type='items')
@@ -1007,14 +1007,8 @@ class Dialog:
             if not enumSEL is None: return enumLST[enumSEL]
 
         def value(params={}, rule={}):
-            def getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
-            def getBrowse(): return self.browseDialog(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
-            def getSelect(): return self.notificationDialog(LANGUAGE(32020))
-            enumLST = sorted(['Enter', 'Browse', 'Select'])
-            enumKEY = {'Enter':{'func':getInput},'Browse':{'func':getBrowse},'Select':{'func':getSelect}}
-            enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
-            if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
-
+            return self.getValue(params, rule)
+            
         def getRule(params={}, rule={"field":"","operator":"","value":[]}):
             enumSEL = -1
             while not MONITOR.abortRequested() and not enumSEL is None:
@@ -1063,50 +1057,7 @@ class Dialog:
                     elif enumLST[enumSEL].getProperty('key') == 'save': break
                     else: params['order'].update({enumLST[enumSEL].getLabel().lower(): not enumLST[enumSEL].getLabel2() == 'True'})
             return params
-            
-        def getValue(params={}):
-            LIST_SORT_ACTIONS = {"none"           : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "label"          : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "albumtype"      : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "country"        : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "originaltitle"  : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "productioncode" : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "mpaa"           : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "votes"          : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "sorttitle"      : (self.inputDialog,xbmcgui.INPUT_ALPHANUM),
-                                 "date"           : (self.inputDialog,xbmcgui.INPUT_DATE),
-                                 "time"           : (self.inputDialog,xbmcgui.INPUT_TIME),
-                                 "originaldate"   : (self.inputDialog,xbmcgui.INPUT_DATE),
-                                 "dateadded"      : (self.inputDialog,xbmcgui.INPUT_DATE),
-                                 "lastplayed"     : (self.inputDialog,xbmcgui.INPUT_DATE),
-                                 "listeners"      : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "size"           : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "track"          : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "programcount"   : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "totalepisodes"  : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "watchedepisodes": (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "episode"        : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "season"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "playcount"      : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "year"           : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "rating"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "userrating"     : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "bpm"            : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "totaldiscs"     : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "bitrate"        : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "top250"         : (self.inputDialog,xbmcgui.INPUT_NUMERIC),
-                                 "file"           : (self.browseDialog,),
-                                 "path"           : (self.browseDialog,),
-                                 "drivetype"      : (self.browseDialog,),
-                                 "random"         : (),
-                                 "tvshowstatus"   : (),
-                                 "playlist"       : (),
-                                 "genre"          : (self.selectDialog,(jsonRPC.getVideoGenres,jsonRPC.getMusicGenres)),
-                                 "tvshowtitle"    : (self.selectDialog,(jsonRPC.getTVshows,)),
-                                 "title"          : (self.selectDialog,(jsonRPC.getMovies)),
-                                 "artist"         : (self.selectDialog,jsonRPC.getArtists),
-                                 "album"          : (self.selectDialog,jsonRPC.getAlbums),
-                                 "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
+
 
         from jsonrpc import JSONRPC
         jsonRPC = JSONRPC()
@@ -1131,4 +1082,62 @@ class Dialog:
             self.log('buildDXSP, returning %s'%(url))
             del jsonRPC
             return url
+
+
+    def getValue(self, params={}, rule={}):
+        # etype  = params.get("type")
+        # efield = str(rule.get("field")).lower()
+        # evalue = ','.join([unquoteString(value) for value in rule.get('value',[])])
+        # LIST_SORT_ACTIONS = {"none"           : (),
+                             # "label"          : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "albumtype"      : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "country"        : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "originaltitle"  : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "productioncode" : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "mpaa"           : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "votes"          : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "sorttitle"      : (self.inputDialog,{message='Enter %s Value (Separate multiple values by ',' ex. Action,Comedy)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_ALPHANUM}),
+                             # "time"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_TIME}),
+                             # "date"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE})
+                             # "originaldate"   : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE}),
+                             # "dateadded"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_DATE}),
+                             # "lastplayed"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "listeners"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "size"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "track"          : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "programcount"   : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "totalepisodes"  : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "watchedepisodes": (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "episode"        : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "season"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "playcount"      : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "year"           : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "rating"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "userrating"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "bpm"            : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "totaldiscs"     : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "bitrate"        : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "top250"         : (self.inputDialog,{message='Enter %s Value (Format ex. ####)'%(efield.title()),default=evalue,key=xbmcgui.INPUT_NUMERIC}),
+                             # "file"           : (self.browseDialog,{type=1,heading="",default=rule.get('value',[]),multi=True}),
+                             # "path"           : (self.browseDialog,{type=0,heading="",default=rule.get('value',[]),multi=True}),
+                             # "drivetype"      : (self.browseDialog,{type=0,heading="",default=rule.get('value',[]),multi=True}),
+                             # "random"         : (),
+                             # "tvshowstatus"   : (),
+                             # "playlist"       : (),
+                             # "genre"          : (self.selectDialog,({list=jsonRPC.getVideoGenres,jsonRPC.getMusicGenres)),
+                             # "tvshowtitle"    : (self.selectDialog,(jsonRPC.getTVshows,)),
+                             # "title"          : (self.selectDialog,(jsonRPC.getMovies)),
+                             # "artist"         : (self.selectDialog,jsonRPC.getArtists),
+                             # "album"          : (self.selectDialog,jsonRPC.getAlbums),
+                             # "studio"         : (self.selectDialog,(jsonRPC.getMovieStudios,jsonRPC.getNetworks))}
+
+        def getInput():  return self.inputDialog("Enter Value\nSeparate by ',' ex. Action,Comedy",','.join([unquoteString(value) for value in rule.get('value',[])]))
+        def getBrowse(): return self.browseDialog(default='|'.join([unquoteString(value) for value in rule.get('value',[])]))
+        def getSelect(): return self.notificationDialog(LANGUAGE(32020))
+        enumLST = sorted(['Enter', 'Browse', 'Select'])
+        enumKEY = {'Enter':{'func':getInput},'Browse':{'func':getBrowse},'Select':{'func':getSelect}}
+        enumSEL = self.selectDialog(enumLST,header="Select Input",useDetails=False, multi=False)
+        if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
+
+
 

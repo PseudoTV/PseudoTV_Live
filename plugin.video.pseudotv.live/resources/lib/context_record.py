@@ -25,7 +25,7 @@ class Record:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
         self.sysARG   = sysARG
-        self.fitem     = fitem
+        self.fitem    = fitem
         self.listitem = listitem
         
         
@@ -34,8 +34,8 @@ class Record:
         m3u = M3U()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
-            with busy_dialog():
-                if (m3u.addRecording(ritem) and XMLTVS().addRecording(ritem,self.fitem)):
+            with busy_dialog(), suspendActivity():
+                if (m3u.addRecording(ritem) & XMLTVS().addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)),wait=2)
         del m3u
     
@@ -45,8 +45,8 @@ class Record:
         m3u = M3U()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
-            with busy_dialog():
-                if (m3u.delRecording(ritem) and XMLTVS().delRecording(ritem)):
+            with busy_dialog(), suspendActivity():
+                if (m3u.delRecording(ritem) & XMLTVS().delRecording(ritem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)),wait=2)
         del m3u
             

@@ -69,13 +69,16 @@ class M3U:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _verify(self, stations=[], recordings=[]):
-        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list.
+    def _verify(self, stations=[], recordings=[], chkPath=True):
+        if stations: #remove abandoned m3u entries; Stations that are not found in the channel list
+            stations = [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
             self.log('_verify, stations = %s'%(len(stations)))
-            return [station for station in stations for channel in Channels().getChannels() if channel.get('id') == station.get('id',str(random.random()))] 
+            return stations
         elif recordings:#remove recordings that no longer exists on disk
+            if chkPath: recordings = [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url','').replace('.pvr',''))).get("id",'')))]
+            else:       recordings = [recording for recording in recordings if recording.get('media',False)]
             self.log('_verify, recordings = %s'%(len(recordings)))
-            return [recording for recording in recordings if hasFile(decodeString(dict(urllib.parse.parse_qsl(recording.get('url','').replace('.pvr',''))).get("id",'')))]
+            return recordings
         return []
         
 
@@ -259,7 +262,7 @@ class M3U:
         stations   = self._verify(stations=[station for station in items if station.get(key,'').endswith(slug) and not station.get('media',False)])
         recordings = self._verify(recordings=[recording for recording in items if recording.get(key,'').endswith(slug) and recording.get('media',False)])
         self.log('cleanSelf, slug = %s, key = %s: returning: stations = %s, recordings = %s'%(slug,key,len(stations),len(recordings)))
-        return self.sortStations(stations), self.sortStations(recordings)
+        return self.sortStations(stations), recordings
 
 
     def sortStations(self, stations):
