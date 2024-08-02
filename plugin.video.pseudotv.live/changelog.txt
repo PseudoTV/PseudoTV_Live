@@ -1,4 +1,5 @@
 v.0.5.2
+-Completed Holiday channels
 -Fixed Playlist Playback not progressing.
 -Fixed Recordings Persistence issues. 
 -Added Automatic Recordings Cleanup to settings.
