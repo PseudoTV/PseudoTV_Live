@@ -41,7 +41,7 @@ class Channels:
     
     
     def _save(self, file=CHANNELFLEPATH) -> bool:
-        self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=lambda k: k['number'])
+        self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=itemgetter('number'))
         self.log('_save, channels = %s'%(len(self.channelDATA['channels'])))
         return setJSON(file,self.channelDATA)
 

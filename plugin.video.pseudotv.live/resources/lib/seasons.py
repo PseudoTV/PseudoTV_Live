@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with PseudoTV Live.  If not, see <http://www.gnu.org/licenses/>.
 
-TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limit":"","sort":{},"filter":{},
+TV_QUERY    = {"path":"videodb://tvshows/titles/" ,"limits":{},"sort":{},"filter":{},
                "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}
                
-MOVIE_QUERY = {"path":"videodb://movies/titles/"  ,"limit":"","sort":{},"filter":{},
+MOVIE_QUERY = {"path":"videodb://movies/titles/"  ,"limits":{},"sort":{},"filter":{},
                "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie"  ,"key":"movies"}
                
 SEASONS = {"January"   : {'1':{'name':"New Years Anthologies"   , 'tagline':"“You're traveling through another dimension...“"                 , 'keyword':'newyear'  , 'query':[TV_QUERY,MOVIE_QUERY], 'logo':'https://assets.stickpng.com/images/580b57fcd9996e24bc43c410.png'},

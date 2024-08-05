@@ -36,6 +36,8 @@ from socket      import gethostbyname, gethostname
 from itertools   import cycle, chain, zip_longest, islice
 from xml.sax.saxutils import escape, unescape
 from ast         import literal_eval
+from operator    import itemgetter
+
 
 from logger      import *
 from cache       import Cache, cacheit
@@ -359,7 +361,7 @@ def intersperse(*seqs):
             yield i/(len(seq) + 1), x
     distributions = list(map(distribute, seqs))
     #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
-    for _, x in sorted(chain(*distributions), key=operator.itemgetter(0)):
+    for _, x in sorted(chain(*distributions), key=itemgetter(0)):
         yield x
         
 def distribute(*seq):
@@ -601,6 +603,6 @@ def mergeDictLST(dict1,dict2):
     return dict1    
     
 def compareDict(dict1,dict2,sortKey):
-    a = sorted(dict1, key=lambda k: k[sortKey])
-    b = sorted(dict2, key=lambda k: k[sortKey])
+    a = sorted(dict1, key=itemgetter(sortKey))
+    b = sorted(dict2, key=itemgetter(sortKey))
     return a == b

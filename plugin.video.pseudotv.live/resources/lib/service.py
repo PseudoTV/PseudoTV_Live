@@ -171,20 +171,19 @@ class Player(xbmc.Player):
 
 
     def setPlaycount(self, state: bool=SETTINGS.getSettingBool('Rollback_Watched'), fitem: dict={}):
-        if state and fitem.get('file'): 
-            self.log('setPlaycount, file = %s, playcount = %s'%(fitem.get('file'),fitem.get('playcount',0)))
-            self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
+        self.log('setPlaycount, state = %s, file = %s, playcount = %s'%(state,fitem.get('file'),fitem.get('playcount',0)))
+        if state and fitem.get('file'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
 
 
     def _onPlay(self):
         self.log('_onPlay')
         self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
         self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
+        self.toggleBackground(False)
         if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
             self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-        self.toggleBackground(False)
         
         
     def _onChange(self):

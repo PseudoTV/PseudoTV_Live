@@ -250,13 +250,15 @@ class Tasks():
         # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
         nSettings = dict(SETTINGS.getCurrentSettings())
         for setting, value in list(settings.items()):
-            actions = {'User_Folder'    :{'func':self.setUserPath      ,'kwargs':{'userFolders':nSettings.get(setting)}},
-                       'Network_Folder' :{'func':self.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
-                       'Remote_URL'     :{'func':self.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
-                       'UDP_PORT'       :{'func':setPendingRestart},
-                       'TCP_PORT'       :{'func':setPendingRestart},
-                       'Client_Mode'    :{'func':setPendingRestart},
-                       'Disable_Cache'  :{'func':setPendingRestart}}
+            actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'userFolders':nSettings.get(setting)}},
+                       'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
+                       'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
+                       'UDP_PORT'        :{'func':setPendingRestart},
+                       'TCP_PORT'        :{'func':setPendingRestart},
+                       'Client_Mode'     :{'func':setPendingRestart},
+                       'Disable_Cache'   :{'func':setPendingRestart},
+                       'Disable_Trakt'   :{'func':setPendingRestart},
+                       'Rollback_Watched':{'func':setPendingRestart}}
                        
             if nSettings.get(setting) != value and actions.get(setting):
                 # with sudo_dialog(LANGUAGE(32157)):

@@ -83,7 +83,7 @@ class XSP:
             try: media = 'music' if dom.getElementsByTagName('smartplaylist')[0].attributes['type'].value.lower() in MUSIC_TYPES else 'video'
             except Exception as e: self.log("parseXSP, parsing media failed! %s"%(e), xbmc.LOGDEBUG)
             
-            try: limit = dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue
+            try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
             except Exception as e: self.log("parseXSP, parsing limit failed! %s"%(e), xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.

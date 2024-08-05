@@ -214,7 +214,7 @@ class Library:
             if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
             MixedGenreList.append({'name':tv.get('name'),'type':"Mixed Genres",'path':self.predefined.createGenreMixedPlaylist(tv.get('name')),'logo':tv.get('logo'),'rules':rules})
         self.log('getMixedGenres, genres = %s' % (len(MixedGenreList)))
-        return sorted(MixedGenreList,key=lambda x:x['name'])
+        return sorted(MixedGenreList,key=itemgetter('name'))
 
 
     @cacheit(json_data=True)
@@ -233,7 +233,7 @@ class Library:
             MixedList.append({'name':LANGUAGE(32003), 'type':"Mixed",'path':self.predefined.createPVRRecordings(),'logo':self.resources.getLogo(LANGUAGE(32003),"Mixed")}) #"PVR Recordings"
         
         self.log('getMixed, mixed = %s' % (len(MixedList)))
-        return sorted(MixedList,key=lambda x:x['name'])
+        return sorted(MixedList,key=itemgetter('name'))
     
     
     @cacheit(expiration=datetime.timedelta(minutes=MAX_GUIDEDAYS),json_data=True)
@@ -251,8 +251,8 @@ class Library:
                 if not logo: logo = self.resources.getLogo(result.get('label'),"Custom")
                 PlayList.append({'name':result.get('label'),'type':"%s Playlist"%(type.title()),'path':[result.get('file')],'logo':logo})
         self.log('getPlaylists, PlayList = %s' % (len(PlayList)))
-        PlayList = sorted(PlayList,key=lambda x:x['name'])
-        PlayList = sorted(PlayList,key=lambda x:x['type'])
+        PlayList = sorted(PlayList,key=itemgetter('name'))
+        PlayList = sorted(PlayList,key=itemgetter('type'))
         return PlayList
 
 
@@ -279,7 +279,7 @@ class Library:
                 NetworkList = [x[0] for x in sorted(NetworkList.most_common(50))]
                 ShowGenreList = [x[0] for x in sorted(ShowGenreList.most_common(25))]
             else:
-                TVShows = (sorted(map(json.loads, list(TVShows.keys())), key=lambda k: k['name']))
+                TVShows = (sorted(map(json.loads, list(TVShows.keys())), key=itemgetter('name')))
                 del TVShows[250:]
                 NetworkList = (sorted(set(list(NetworkList.keys()))))
                 del NetworkList[250:]
@@ -379,8 +379,8 @@ class Library:
                 if not isinstance(path,list): path = [path]
                 PluginList.append({'id':item['meta'].get('name'), 'name':vod.get('name'), 'type':"Recommended", 'path': path, 'logo':vod.get('icon',item['meta'].get('thumbnail'))})
         self.log('getRecommend, found (%s) vod items.' % (len(PluginList)))
-        PluginList = sorted(PluginList,key=lambda x:x['name'])
-        PluginList = sorted(PluginList,key=lambda x:x['id'])
+        PluginList = sorted(PluginList,key=itemgetter('name'))
+        PluginList = sorted(PluginList,key=itemgetter('id'))
         return PluginList
             
 

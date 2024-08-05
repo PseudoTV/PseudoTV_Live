@@ -102,7 +102,7 @@ class Builder:
             
     def build(self) -> bool:
         with legacy():
-            channels = sorted(self.verify(self.channels.getChannels()), key=lambda k: k['number'])
+            channels = sorted(self.verify(self.channels.getChannels()), key=itemgetter('number'))
             if not channels:
                 self.log('build, no verified channels found!')
                 return False
@@ -166,7 +166,7 @@ class Builder:
                 if self.fillBCTs and not radio:
                     cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
                 cacheResponse = self.addScheduling(citem, cacheResponse, start)
-                return sorted(cacheResponse, key=lambda k: k['start'])
+                return sorted(cacheResponse, key=itemgetter('start'))
             return cacheResponse
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False

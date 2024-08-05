@@ -92,7 +92,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 self.xmltv        = XMLTVS()
                 
                 self.newChannel   = self.channels.getTemplate()
-                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=lambda k: k['number'])
+                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=itemgetter('number'))
                 self.channelList.extend(self.channels.getAutotuned())
                 self.newChannels  = self.channelList.copy()
                 
@@ -632,7 +632,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if citem['number'] <= CHANNEL_LIMIT: citem['type'] = "Custom"
                 return self.setID(citem)
             
-        channelList = sorted([_f for _f in [_validate(channel) for channel in channelList] if _f], key=lambda k: k['number'])
+        channelList = sorted([_f for _f in [_validate(channel) for channel in channelList] if _f], key=itemgetter('number'))
         self.log('validateChannels, channelList = %s'%(len(channelList)))
         return channelList
               

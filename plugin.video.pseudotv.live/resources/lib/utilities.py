@@ -158,7 +158,7 @@ class Utilities:
 
         with busy_dialog():
             client    = isClient()
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=lambda x:x['label']) if not (item.get('hide') & client)]
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide') & client)]
             if select is None: 
                 select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             

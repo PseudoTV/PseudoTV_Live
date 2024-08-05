@@ -222,12 +222,12 @@ class XMLTVS:
 
 
     def sortChannels(self, channels: list) -> list:
-        return sorted(channels, key=lambda k:k.get('display-name'))
+        return sorted(channels, key=itemgetter('display-name'))
 
 
     def sortProgrammes(self, programmes: list) -> list:
-        programmes.sort(key=lambda k:k.get('start'))
-        programmes.sort(key=lambda k:k.get('channel'))
+        programmes.sort(key=itemgetter('start'))
+        programmes.sort(key=itemgetter('channel'))
         self.log('sortProgrammes, programmes = %s'%(len(programmes)))
         return programmes
 

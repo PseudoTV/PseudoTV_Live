@@ -266,7 +266,7 @@ class M3U:
 
 
     def sortStations(self, stations, key='number'):
-        return sorted(stations, key=lambda k: k.get(key))
+        return sorted(stations, key=itemgetter(key))
         
         
     def getMitem(self):
