@@ -57,6 +57,7 @@ PROPERTIES          = DIALOG.properties
 SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
+
 @contextmanager
 def legacy():
     setLegacy(True)
@@ -442,28 +443,15 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             'numberByOrder'               :'false',
             'startNum'                    :'1'}
 
-def togglePVR(state=True, reverse=False, waitTime=15):
-    log('globals: togglePVR, state = %s, reverse = %s, waitTime = %s'%(state,reverse,waitTime))
-    BUILTIN.executebuiltin('ActivateWindow(home)')
-    isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
-    if (state and isEnabled) or (not state and not isEnabled): return
-    xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
-    xbmc.sleep(250)
-    if reverse: timerit(togglePVR)(waitTime,[not bool(state)])
-    else: waitTime = int(PROMPT_DELAY/1000)
-    DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=waitTime)
-              
-def bruteForcePVR(msg=''):
-    if (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')): msg = LANGUAGE(32128)
-    if DIALOG.yesnoDialog('%s\n%s?\n%s'%(LANGUAGE(32129)%(PVR_CLIENT_NAME),(LANGUAGE(32121)%(PVR_CLIENT_NAME)),msg)):
-        brutePVR(True)
-              
-def brutePVR(override=False, waitTime: float=15.0):
-    if not override:
-        if not DIALOG.yesnoDialog('%s?'%(LANGUAGE(32121)%(xbmcaddon.Addon(PVR_CLIENT_ID).getAddonInfo('name')))): return
-    togglePVR(False,True,waitTime)
-    if MONITOR.waitForAbort(waitTime): return False
-    return True
+def togglePVR(state=True, reverse=False, wait=4):
+    log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
+    if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')):
+        isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
+        if (state and isEnabled) or (not state and not isEnabled): return
+        xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
+        if reverse:
+            timerit(togglePVR)(wait,[not bool(state)])
+            DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
      
 def hasSubtitle():
     return BUILTIN.getInfoBool('HasSubtitles','VideoPlayer')

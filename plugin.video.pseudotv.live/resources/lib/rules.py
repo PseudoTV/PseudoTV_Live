@@ -839,7 +839,7 @@ class ProvisionalRule(BaseRule):
                         if not builder.incExtras and provisional["key"].startswith(tuple(TV_TYPES)): #filter out extras/specials
                             provisional["filter"].setdefault("and",[]).extend([{"field":"season" ,"operator":"greaterthan","value":"0"},
                                                                                {"field":"episode","operator":"greaterthan","value":"0"}])
-                        fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits={}, dirItem={}, query=provisional)
+                        fileList, dirList = builder.buildList(citem, provisional.get('path'), media='video', page=(provisional.get('limit') or builder.limit), sort=provisional.get('sort'), limits=builder.limits, dirItem={}, query=provisional)
                         if len(fileList) > 0: self.storedValues[0].append(fileList)
                 return [_f for _f in self.storedValues.pop(0) if _f]
         return parameter
@@ -849,7 +849,7 @@ class HandleMethodOrder(BaseRule):
     def __init__(self):
         self.myId               = 998
         self.ignore             = False
-        self.name               = "Page, Limits & Sort Methods"
+        self.name               = "Limits & Sort Methods"
         self.description        = "Change content limits and sorting methods."
         self.optionLabels       = ['Page Limit','Method','Order','Ignore Folders','Ignore Artist Sort Name']
         self.optionValues       = [REAL_SETTINGS.getSettingInt('Page_Limit'),'random','ascending',True,True]

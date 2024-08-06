@@ -70,7 +70,7 @@ class CustomQueue:
         for idx, item in enumerate(self.min_heap):
             _,epriority,epackage = item
             if epackage == package[2]:
-                if epriority <= package[0]: return True
+                if epriority <= package[1]: return True
                 else:
                     self.min_heap.pop(idx)
                     return False
@@ -79,10 +79,10 @@ class CustomQueue:
              
     def _push(self, package: tuple, priority: int=0, delay: int=0):
         self.log("_push, func = %s"%(package[0].__name__))
-        node  = LlNode(package, priority, delay)
-        exist = self.__exists((1,priority,package))
-        self.log("_push, exist = %s"%(exist))
-        if exist: return
+        node = LlNode(package, priority, delay)
+        if self.__exists((1,priority,package)):
+            self.log("_push, exists... ignoring package")
+            return
         elif self.priority:
             self.qsize += 1
             item = (priority, package)

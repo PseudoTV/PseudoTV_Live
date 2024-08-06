@@ -99,7 +99,7 @@ class Tasks():
 
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
-        if hasAddon(PVR_CLIENT_ID,install=True,enable=True):
+        if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
                 with busy_dialog():
                     if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
@@ -178,6 +178,7 @@ class Tasks():
             if complete:
                 if not hasFirstrun(): setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
+                self._que(togglePVR,1,*(False,True),1)
             else: self._que(self.chkChannels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -263,7 +264,7 @@ class Tasks():
             if nSettings.get(setting) != value and actions.get(setting):
                 # with sudo_dialog(LANGUAGE(32157)):
                 self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                self._que(actions[setting].get('func'),2,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
+                self._que(actions[setting].get('func'),1,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
         return nSettings
 
 

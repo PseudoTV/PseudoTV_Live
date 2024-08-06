@@ -172,7 +172,7 @@ class Player(xbmc.Player):
 
     def setPlaycount(self, state: bool=SETTINGS.getSettingBool('Rollback_Watched'), fitem: dict={}):
         self.log('setPlaycount, state = %s, file = %s, playcount = %s'%(state,fitem.get('file'),fitem.get('playcount',0)))
-        if state and fitem.get('file'): self.myService.tasks._que(self.jsonRPC.quePlaycount,2,fitem)
+        if state and fitem.get('file'): self.myService.tasks._que(self.jsonRPC.quePlaycount,1,fitem)
 
 
     def _onPlay(self):
@@ -324,7 +324,7 @@ class Monitor(xbmc.Monitor):
         
     def onSettingsChangedTimer(self):
         self.log('onSettingsChangedTimer') 
-        self.myService.tasks._que(self._onSettingsChanged,2)
+        self.myService.tasks._que(self._onSettingsChanged,1)
                 
                 
     def _onSettingsChanged(self):

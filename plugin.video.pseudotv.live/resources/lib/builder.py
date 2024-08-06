@@ -290,7 +290,7 @@ class Builder:
             self.log("buildList, id: %s, no request items found using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
             self.pErrors.append(LANGUAGE(32026))
             return fileList, dirList
-        else:
+        elif items:
             self.loopback = items
             for idx, item in enumerate(items):
                 if self.service._interrupt() or self.service._suspend():

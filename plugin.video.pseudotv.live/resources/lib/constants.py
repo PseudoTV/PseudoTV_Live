@@ -106,7 +106,7 @@ BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&
               
 PTVL_REPO           = 'repository.pseudotv'
 PVR_CLIENT_ID       = 'pvr.iptvsimple'
-PVR_CLIENT_NAME     = xbmcaddon.Addon(id=PVR_CLIENT_ID).getAddonInfo('name')
+PVR_CLIENT_NAME     = 'IPTV Simple Client'
 
 #docs
 README_FLE          = os.path.join(ADDON_PATH,'README.md')

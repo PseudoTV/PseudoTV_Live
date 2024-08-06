@@ -1,7 +1,12 @@
 v.0.5.2
--Completed Holiday channels
+-Improved queue priorities. 
+-Added PVR backend refresh at the end of channel building; This will force Kodi to recognize recent PseudoTV additions.
+-Fixed a few user reported issues that were introduced in recent iterations.
+ - Channels not building due to limit Smartplaylist parsing error.
+ - Channels ignoring auto pagination; leading to repeated content.
+-Completed Holiday channels.
 -Fixed Playlist Playback not progressing.
--Fixed Recordings Persistence issues. 
+-Fixed Recordings Persistence issues.
 -Added Automatic Recordings Cleanup to settings.
 -Improved Channel Manager logo utility.
 -Improved Channel Manager path utility.

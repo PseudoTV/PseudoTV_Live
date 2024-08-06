@@ -398,8 +398,9 @@ class JSONRPC:
             param["properties"] = self.getEnums("List.Fields.Files", type='items')
         self.log("requestList, id: %s, getDirectory = %s, media = %s, limit = %s, sort = %s, query = %s, limits = %s\npath = %s"%(citem['id'],getDirectory,media,page,sort,query,limits,path))
         
-        if limits.get('end') == -1: #global default, replace with autopage.
+        if limits.get('end',-1) == -1: #global default, replace with autoPagination.
             limits = self.autoPagination(citem['id'], '|'.join([path,dumpJSON(query)])) #get
+            self.log('requestList, id = %s autoPagination limits = %s'%(citem['id'],limits))
             if limits.get('total',0) > page and sort.get("method","") == "random":
                 limits = self.randomPagination(page,limits)
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
