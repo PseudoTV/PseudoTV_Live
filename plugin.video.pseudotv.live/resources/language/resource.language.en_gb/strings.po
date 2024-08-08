@@ -1335,7 +1335,7 @@ msgid "Finish Configuring channel first"
 msgstr ""
 
 msgctxt "#32178"
-msgid "Sort & Filter rules only apply to DB Paths.\nEx. videodb://, musicdb://"
+msgid "Sort & Filter rules do not apply to Smartplaylist"
 msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons

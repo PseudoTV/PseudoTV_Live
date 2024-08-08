@@ -420,7 +420,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
 
     def getRules(self, citem: dict={}, rules: dict={}):
-        if citem.get('id') is None: DIALOG.notificationDialog(LANGUAGE(32071))
+        if citem.get('id') is None or len(citem.get('path',[])) == 0: DIALOG.notificationDialog(LANGUAGE(32071))
         else:            
             select  = -1
             ruleLST = rules.copy()
@@ -463,20 +463,22 @@ class Manager(xbmcgui.WindowXMLDialog):
         
 
     def getRule(self, citem={}, rule={}):
-        select = -1
-        if not True in list(set([True for p in citem.get('path',[]) if 'db://' in p])):
-            DIALOG.notificationDialog(LANGUAGE(32178))
-            return None, citem
+        self.log('getRule, name = %s'%(rule.name))
+        if rule.exclude and True in list(set([True for p in citem.get('path',[]) if p.endswith('.xsp')])):
+           return DIALOG.notificationDialog(LANGUAGE(32178))
         else:
+            select = -1
             while not MONITOR.abortRequested() and not select is None:
                 with self.toggleSpinner(self.itemList):
                     lizLST = [self.buildListItem('%s = %s'%(rule.optionLabels[idx],rule.optionValues[idx]),rule.optionDescriptions[idx],icon=DUMMY_ICON.format(text=str(idx+1)),items={'value':optionValue,'idx':idx,'myId':rule.myId,'citem':citem}) for idx, optionValue in enumerate(rule.optionValues)]
                 select = DIALOG.selectDialog(lizLST, header='%s %s - %s'%(LANGUAGE(32176),rule.myId,rule.name), multi=False)
-                try:
-                    rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
-                    self.madeChanges = True
-                except Exception as e:
-                    self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
+                if not select is None:
+                    try:
+                        rule.onAction(int(lizLST[select].getProperty('idx') or "0"))
+                        self.madeChanges = True
+                    except Exception as e:
+                        self.log("getRule, onAction failed! %s"%(e), xbmc.LOGERROR)
+                        DIALOG.okDialog(LANGUAGE(32000))
             return rule, citem
         
         

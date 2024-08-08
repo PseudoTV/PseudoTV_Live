@@ -708,7 +708,7 @@ class Dialog:
     def fillInfoMonitor(self, type='ListItem'):
         #todo catch full listitem not singular properties.
         try:
-            if not self.properties.getPropertyBool('chkInfoMonitor'): return FalseMood
+            if not self.properties.getPropertyBool('chkInfoMonitor'): return False
             item = {'label'       :self.builtin.getInfoLabel('Label'       ,type),
                     'label2'      :self.builtin.getInfoLabel('Label2'      ,type),
                     'set'         :self.builtin.getInfoLabel('Set'         ,type),
@@ -790,12 +790,18 @@ class Dialog:
             return xbmcgui.Dialog().yesno(heading, message, nolabel, yeslabel, (autoclose*1000))
 
 
-    def notificationWait(self, message, header=ADDON_NAME, wait=4):
-        pDialog = self.progressBGDialog(message=message,header=header)
-        for idx in range(int(wait)):
-            pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
-            if pDialog is None or MONITOR.waitForAbort(1.0): break
-        if hasattr(pDialog, 'close'): pDialog.close()
+    def _notificationWait(self, message, header, wait):
+        timerit(self.notificationWait)(0.5,[message, header, wait])
+
+
+    def notificationWait(self, message, header=ADDON_NAME, wait=4, usethread=False):
+        if usethread: return self._notificationWait(message, header, wait)
+        else:
+            pDialog = self.progressBGDialog(message=message,header=header)
+            for idx in range(int(wait)):
+                pDialog = self.progressBGDialog((((idx+1) * 100)//int(wait)),control=pDialog,header=header)
+                if pDialog is None or MONITOR.waitForAbort(1.0): break
+            if hasattr(pDialog, 'close'): pDialog.close()
         return True
 
 

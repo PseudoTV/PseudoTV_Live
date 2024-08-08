@@ -29,8 +29,11 @@ REG_KEY = 'PseudoTV_Recommended.%s'
 class Service:
     from jsonrpc import JSONRPC
     jsonRPC  = JSONRPC()
-    def _interrupt(self, wait: float=.001) -> bool: #break
+    def _interrupt(self, wait: float=.001) -> bool:
         return MONITOR.waitForAbort(wait)
+        
+    def _suspend(self) -> bool:
+        return isPendingSuspend()
 
 class Library:
     def __init__(self, service=None):
@@ -98,7 +101,7 @@ class Library:
     def fillItems(self):
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt():
+            if self.service._interrupt() or self.service._suspend():
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
@@ -115,7 +118,7 @@ class Library:
         self.log('fillClient')
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32158),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt():
+            if self.service._interrupt() or self.service._suspend():
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
@@ -159,7 +162,7 @@ class Library:
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-            if self.service._interrupt():
+            if self.service._interrupt() or self.service._suspend():
                 complete = False
                 break
             else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])

@@ -36,6 +36,7 @@ class RulesList:
                           FilterOptions(),
                           ProvisionalRule(),
                           HandleMethodOrder(),
+                          ForceEpisode(),
                           ForceRandom(),
                           EvenShowsRule()]
         self.ruleItems = self.loadRules()
@@ -115,7 +116,8 @@ class BaseRule:
     
     def __init__(self):
         self.myId               = 0
-        self.ignore             = False
+        self.ignore             = False #ignore from manager options, reserved for autotuning.
+        self.exclude            = False #applies only to db queries not smartplaylists
         self.name               = ""
         self.description        = ""
         self.optionLabels       = []
@@ -284,6 +286,7 @@ class ShowChannelBug(BaseRule):
     def __init__(self):
         self.myId               = 1
         self.ignore             = False
+        self.exclude            = False
         self.name               = LANGUAGE(30143)
         self.description        = LANGUAGE(30144)
         self.optionLabels       = [LANGUAGE(30043),LANGUAGE(30086),LANGUAGE(30112),LANGUAGE(30044),LANGUAGE(30113)]
@@ -350,6 +353,7 @@ class ShowOnNext(BaseRule):
     def __init__(self):
         self.myId               = 2
         self.ignore             = False
+        self.exclude            = False
         self.name               = LANGUAGE(30045)
         self.description        = LANGUAGE(33045)
         self.optionLabels       = [LANGUAGE(30045)]
@@ -388,6 +392,7 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
     def __init__(self):
         self.myId               = 3
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Screen Vingette"
         self.description        = "Add Channel Overlay to create a immersive viewing experince."
         self.optionLabels       = ['Enable Screen Vingette','Vingette Image','Vingette Image offset']
@@ -472,6 +477,7 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
     def __init__(self):
         self.myId               = 4
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Mystery Science Theater 3K Silhouette"
         self.description        = "Animated Silhouette of MST3K"
         self.optionLabels       = ['Enable MST3K Silhouette']
@@ -533,6 +539,7 @@ class DisableOverlay(BaseRule):
     def __init__(self):
         self.myId               = 50
         self.ignore             = False
+        self.exclude            = False
         self.name               = LANGUAGE(30042)
         self.description        = LANGUAGE(33042)
         self.optionLabels       = [LANGUAGE(30042)]
@@ -572,6 +579,7 @@ class ForceSubtitles(BaseRule):
     def __init__(self):
         self.myId               = 51
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Force Subtitles"
         self.description        = "Show Subtitles"
         self.optionLabels       = ['Force Subtitles?']
@@ -611,6 +619,7 @@ class DisableTrakt(BaseRule):
     def __init__(self):
         self.myId               = 52
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Trakt scrobbling"
         self.description        = "Disable Trakt scrobbling."
         self.optionLabels       = [LANGUAGE(30131)]
@@ -650,6 +659,7 @@ class RollbackPlaycount(BaseRule):
     def __init__(self):
         self.myId               = 53
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Rollback Playcount"
         self.description        = "Passive Playback w/o playcount & progress tracking."
         self.optionLabels       = [LANGUAGE(30132)]
@@ -689,6 +699,7 @@ class DurationOptions(BaseRule):
     def __init__(self):
         self.myId               = 500
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Duration Options"
         self.description        = "Parser Options"
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),"Minimum Duration"]
@@ -739,6 +750,7 @@ class FilterOptions(BaseRule):
     def __init__(self):
         self.myId               = 500
         self.ignore             = False
+        self.exclude            = False
         self.name               = "Filter Options"
         self.description        = "Filter various content."
         self.optionLabels       = [LANGUAGE(30053),LANGUAGE(30054),LANGUAGE(30055)]
@@ -789,6 +801,7 @@ class ProvisionalRule(BaseRule):
     def __init__(self):
         self.myId               = 800
         self.ignore             = True
+        self.exclude            = True
         self.name               = "Provisional Path"
         self.description        = "Fill Provisional Path"
         self.optionLabels       = ["Provisional Value"]
@@ -812,9 +825,9 @@ class ProvisionalRule(BaseRule):
         if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE: 
             PROVISIONAL_TYPES = {"TV Shows"     : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"tvshow","operator":"is","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                 "TV Networks"  : [{"path":"videodb://tvshows/titles/","limit":"","sort":{"method":"episode","order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
-                                 "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"},"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
+                                 "Movie Studios": [{"path":"videodb://movies/titles/" ,"limit":"","sort":{"method":"random" ,"order":"ascending"} ,"filter":{"and":[{"field":"studio","operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetMovies"  ,"enum":"Video.Fields.Movie","key":"movies"}],
                                  "TV Genres"    : [{"path":"videodb://tvshows/titles/" ,"limit":"","sort":{"method":"random","order":"ascending"} ,"filter":{"and":[{"field":"genre" ,"operator":"contains","value":""}]},
                                                     "method":"VideoLibrary.GetEpisodes","enum":"Video.Fields.Episode","key":"episodes"}],
@@ -847,8 +860,9 @@ class ProvisionalRule(BaseRule):
        
 class HandleMethodOrder(BaseRule):
     def __init__(self):
-        self.myId               = 998
+        self.myId               = 950
         self.ignore             = False
+        self.exclude            = True
         self.name               = "Limits & Sort Methods"
         self.description        = "Change content limits and sorting methods."
         self.optionLabels       = ['Page Limit','Method','Order','Ignore Folders','Ignore Artist Sort Name']
@@ -856,7 +870,7 @@ class HandleMethodOrder(BaseRule):
         self.optionDescriptions = ["","","","",""]
         self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
         self.selectBoxOptions   = [list(range(25,525,25)), self.getSort(), self.getOrder(),"",""]
-        self.storedValues       = [[],[],[],[]]
+        self.storedValues       = [[],[],[],[],[]]
         
         
     def copy(self):
@@ -884,8 +898,8 @@ class HandleMethodOrder(BaseRule):
 
 
     def onAction(self, optionindex):
-        if optionindex == 3: self.onActionToggleBool(optionindex)
-        else:                self.onActionSelect(optionindex, self.optionLabels[optionindex])
+        if optionindex in [3,4]: self.onActionToggleBool(optionindex)
+        else:                    self.onActionSelect(optionindex, self.optionLabels[optionindex])
         return self.optionValues[optionindex]
 
 
@@ -905,18 +919,88 @@ class HandleMethodOrder(BaseRule):
         return citem
 
 
+class ForceEpisode(BaseRule):
+    def __init__(self):
+        self.myId               = 998
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = "Force Episode Sort"
+        self.description        = "Force TV in episodes order, Movies to year."
+        self.optionLabels       = ['Force Random','Interleave TV & Movies']
+        self.optionValues       = [True,True]
+        self.optionDescriptions = ["",""]
+        self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST]
+        self.selectBoxOptions   = ["",""]
+        self.storedValues       = [dict(),dict(),list(),list(),list()]
+
+
+    def copy(self):
+        return ForceEpisode()
+
+
+    def getTitle(self):
+        return 'Force Episode Sort (%s)'%(self.optionValues[0])
+
+
+    def onAction(self, optionindex):
+        self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, builder):
+        def _episodeSort(showArray: dict={}):
+            for show, fileItems in showArray.items():
+                self.storedValues[3] = []
+                for item in fileItems:
+                    if (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
+                        self.storedValues[3].append([int(item.get("season","0")), int(item.get("episode","0")), item])
+                    else:
+                        self.storedValues[2].append(item)
+                    
+                self.storedValues[3].sort(key=lambda seep: seep[1])
+                self.storedValues[3].sort(key=lambda seep: seep[0])
+                for seepitem in self.storedValues[3]: self.storedValues[4].append(seepitem[2])
+            return self.storedValues[4]
+
+        def _sortShows(fileList: list=[]): #group by type & show; no duplicates. 
+            for fileItem in fileList:
+                if fileItem.get('type').startswith(tuple(TV_TYPES)):
+                    if fileItem not in self.storedValues[1].setdefault(fileItem['showtitle'],[]):
+                        self.storedValues[1].setdefault(fileItem['showtitle'],[]).append(fileItem)
+                else:
+                    if fileItem not in self.storedValues[2]: self.storedValues[2].append(fileItem)
+            return _episodeSort(self.storedValues[1]), sorted(self.storedValues[2], key=lambda k: k.get('year',0))
+
+        if actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE:
+            self.storedValues[0] = builder.sort
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_PATH:
+            if parameter.startswith(tuple(['videodb://%s'%tv for tv in TV_TYPES])):
+                builder.sort.update({"method":"episode"})
+            elif parameter:
+                builder.sort.update({"method":"year"})
+            self.log("runAction, setting sort to %s"%(builder.sort))
+        elif actionid == RULES_ACTION_CHANNEL_BUILD_FILELIST:
+            builder.sort = self.storedValues[0]
+            self.log("runAction, restoring sort and forcing episode/year ordering (%s)"%(len(parameter)))
+            fileList = list(sorted(parameter, key=lambda k: k.get('year',0)))
+            if self.optionValues[1]: return interleave(list(_sortShows(fileList)))
+            else:                    return [j for i in _sortShows(fileList) for j in i]
+        return parameter
+        
+        
 class ForceRandom(BaseRule):
     def __init__(self):
         self.myId               = 999
         self.ignore             = False
-        self.name               = "Force Random"
-        self.description        = "Random shuffle all channel content."
+        self.exclude            = False
+        self.name               = "Force Random Sort"
+        self.description        = "Random sort & shuffle channel content."
         self.optionLabels       = ['Force Random']
-        self.optionValues       = [False]
+        self.optionValues       = [True]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_FILELIST]
         self.selectBoxOptions   = [""]
-        self.storedValues       = [[]]
+        self.storedValues       = [dict()]
 
 
     def copy(self):
@@ -924,7 +1008,7 @@ class ForceRandom(BaseRule):
 
 
     def getTitle(self):
-        return 'Force Random (%s)'%(self.optionValues[0])
+        return 'Force Random Sort (%s)'%(self.optionValues[0])
 
 
     def onAction(self, optionindex):
@@ -948,13 +1032,14 @@ class EvenShowsRule(BaseRule):
     def __init__(self):
         self.myId               = 1000
         self.ignore             = False
+        self.exclude            = False
         self.name               = LANGUAGE(30121)
         self.description        = "Group TV shows in blocks, query size impacts distribution." 
         self.optionLabels       = ['Group TV shows in blocks','Page Size','Group by Episode']
         self.optionValues       = [SETTINGS.getSettingInt('Enable_Even'),SETTINGS.getSettingInt('Page_Limit'),True]
         self.optionDescriptions = [LANGUAGE(33121),"",""]
         self.actions            = [RULES_ACTION_CHANNEL_BUILD_FILEARRAY_PRE,RULES_ACTION_CHANNEL_BUILD_PATH,RULES_ACTION_CHANNEL_BUILD_FILELIST,RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST]
-        self.selectBoxOptions   = [list(range(1,6)),list(range(25,501,25)),[]]
+        self.selectBoxOptions   = [list(range(1,6)),list(range(25,501,25)),list()]
         self.storedValues       = [dict(),list(),-1]
         
 
@@ -981,17 +1066,18 @@ class EvenShowsRule(BaseRule):
 
 
     def runAction(self, actionid, citem, parameter, builder):
-        def _sortShows(fileItem): #group by type & show; no duplicates. 
-            if fileItem.get('type').startswith(tuple(TV_TYPES)):
-                if fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
-                    self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
-            elif fileItem.get('type').startswith(tuple(MOVIE_TYPES)):
-                if fileItem not in self.storedValues[1]:
-                    self.storedValues[1].append(fileItem)
-
-        def _chunkShows():
-            for show, episodes in list(self.storedValues[0].items()):
+        def _chunkShows(showArray: dict={}):
+            for show, episodes in list(showArray.items()):
                 yield show,[episodes[i:i+self.optionValues[0]] for i in range(0,len(episodes),self.optionValues[0])]
+
+        def _sortShows(fileItems): #group by type & show; no duplicates. 
+            for fileItem in fileItems:
+                if fileItem.get('type').startswith(tuple(TV_TYPES)):
+                    if fileItem not in self.storedValues[0].setdefault(fileItem['showtitle'],[]):
+                        self.storedValues[0].setdefault(fileItem['showtitle'],[]).append(fileItem)
+                else:
+                    if fileItem not in self.storedValues[1]: self.storedValues[1].append(fileItem)
+            return dict(_chunkShows(self.storedValues[0])), self.storedValues[1]
 
         def _mergeShows(shows, movies):
             nfileList = []
@@ -1025,10 +1111,8 @@ class EvenShowsRule(BaseRule):
                     if builder.pDialog: builder.pDialog = self.dialog.progressBGDialog(builder.pCount, builder.pDialog, message='Applying Rule: %s'%(self.name),header='%s, %s'%(ADDON_NAME,builder.pMSG))
                     if self.optionValues[2]: fileItems = list(sorted(parameter, key=lambda k: k.get('episode',0)))
                     else:                    fileItems = parameter
-                    [_sortShows(fileItem) for fileItem in fileItems]
-                    self.storedValues[0] = dict(_chunkShows())
-                    return _mergeShows(self.storedValues[0],self.storedValues[1])
                     self.log('runAction, even distribution %s'%(self.optionValues[0]))
+                    return _mergeShows(*(_sortShows(fileItems)))
             except Exception as e: log("runAction, failed! %s"%(e), xbmc.LOGERROR)
             
         elif actionid == RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST:

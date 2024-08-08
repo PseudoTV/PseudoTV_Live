@@ -443,7 +443,7 @@ def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
             'numberByOrder'               :'false',
             'startNum'                    :'1'}
 
-def togglePVR(state=True, reverse=False, wait=4):
+def togglePVR(state=True, reverse=False, wait=15):
     log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
     if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')):
         isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')

@@ -178,7 +178,7 @@ class Tasks():
             if complete:
                 if not hasFirstrun(): setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
-                self._que(togglePVR,1,*(False,True),1)
+                self._que(togglePVR,1,*(False,True))
             else: self._que(self.chkChannels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
@@ -252,8 +252,8 @@ class Tasks():
         nSettings = dict(SETTINGS.getCurrentSettings())
         for setting, value in list(settings.items()):
             actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'userFolders':nSettings.get(setting)}},
-                       'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder':nSettings.get(setting)}},
-                       'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL':nSettings.get(setting)}},
+                       'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder' :nSettings.get(setting)}},
+                       'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL'    :nSettings.get(setting)}},
                        'UDP_PORT'        :{'func':setPendingRestart},
                        'TCP_PORT'        :{'func':setPendingRestart},
                        'Client_Mode'     :{'func':setPendingRestart},
@@ -262,7 +262,6 @@ class Tasks():
                        'Rollback_Watched':{'func':setPendingRestart}}
                        
             if nSettings.get(setting) != value and actions.get(setting):
-                # with sudo_dialog(LANGUAGE(32157)):
                 self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
                 self._que(actions[setting].get('func'),1,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
         return nSettings

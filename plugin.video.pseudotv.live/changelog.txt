@@ -1,4 +1,5 @@
 v.0.5.2
+-Added Force Episode Sort Channel Rule. 
 -Improved queue priorities. 
 -Added PVR backend refresh at the end of channel building; This will force Kodi to recognize recent PseudoTV additions.
 -Fixed a few user reported issues that were introduced in recent iterations.
