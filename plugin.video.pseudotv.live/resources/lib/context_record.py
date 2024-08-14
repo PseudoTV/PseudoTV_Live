@@ -35,7 +35,7 @@ class Record:
         xmltv = XMLTVS()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
-            with busy_dialog(), suspendActivity():
+            with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                 if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
         del m3u
@@ -48,7 +48,7 @@ class Record:
         xmltv = XMLTVS()
         ritem = m3u.getRecordItem(self.fitem)
         if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
-            with busy_dialog(), suspendActivity():
+            with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                 if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
         del m3u

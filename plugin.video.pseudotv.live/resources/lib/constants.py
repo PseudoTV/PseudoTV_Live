@@ -49,13 +49,18 @@ CHANNEL_LIMIT       = 999
 AUTOTUNE_LIMIT      = 3
 FILLER_LIMIT        = 250
 
-FILLER_TYPES        = ['Rating',
+FILLER_TYPE         = ['Rating',
                        'Bumper',
                        'Advert',
                        'Trailer',
                        'Pre-Roll',
                        'Post-Roll']
 
+FILLER_TYPES        = ['Ratings',
+                       'Bumpers',
+                       'Adverts',
+                       'Trailers']
+                       
 AUTOTUNE_TYPES      = ["Playlists",
                        "TV Networks",
                        "TV Shows",
@@ -120,6 +125,7 @@ MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','med
 SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
 BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
 CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
+TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
@@ -285,3 +291,7 @@ VIDEO_LISTITEM_TYPES =   {'genre'                   : (tuple,list),
                           'count'                   : (int,),  #integer (12) - can be used to store an id for later, or for sorting purposes
                           # 'size'                    : (int,),  #long (1024) - size in bytes
                           'date'                    : (str,),} #string (d.m.Y / 01.01.2009) - file date
+
+IGNORE_CHTYPE = ['TV Shows','Mixed','Recommended','Services',"Music Genres"]
+MOVIE_CHTYPE  = ["Movie Genres","Movie Studios"]
+TV_CHTYPE     = ["TV Networks","TV Genres","Mixed Genre"]

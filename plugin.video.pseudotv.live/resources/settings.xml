@@ -736,7 +736,7 @@
 				</setting>
 				<setting id="Duration_Type" type="integer" label="30049" help="33049">
 					<level>2</level>
-					<default>1</default>
+					<default>0</default>
 					<constraints>
 						<options>
 							<option label="30050">0</option>
@@ -765,7 +765,7 @@
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
-					<default>true</default>
+					<default>false</default>
 					<dependencies>
                         <dependency type="visible">
                             <condition operator="is" setting="Client_Mode">0</condition>
@@ -1389,7 +1389,7 @@
 			<group id="5" label="30111">
                 <setting id="RPC_Delay" type="integer" label="30110" help="33109">
 					<level>3</level>
-					<default>1000</default>
+					<default>1</default>
 					<constraints>
 						<minimum>1</minimum>
 						<step>10</step>

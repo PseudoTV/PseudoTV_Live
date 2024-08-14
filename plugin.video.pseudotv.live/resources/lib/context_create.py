@@ -25,8 +25,8 @@ class Create:
         log('Create: __init__, sysARG = %s'%(sysARG))
         if not listitem.getPath(): return DIALOG.notificationDialog(LANGUAGE(32030))
         if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto the first available %s channel?'%(listitem.getLabel(),ADDON_NAME)):
-            if not isRunning('MANAGER_RUNNING'):
-                with setRunning('MANAGER_RUNNING'), busy_dialog(), suspendActivity():
+            if not PROPERTIES.isRunning('MANAGER_RUNNING'):
+                with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                     manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", start=False)
                     channelData = manager.newChannel
                     channelData['type']     = 'Custom'
@@ -40,7 +40,7 @@ class Create:
                     channelData['id'] = getChannelID(channelData['name'], channelData['path'], channelData['number'])
                     manager.channels.addChannel(channelData)
                     manager.channels.setChannels()
-                    forceUpdateTime('chkChannels')
+                    PROPERTIES.forceUpdateTime('chkChannels')
                     manager.closeManager()
                     del manager
                 manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=channelData['number'])

@@ -22,14 +22,14 @@ from seasonal   import Seasonal
 
 class Info:
     def __init__(self, sysARG: dict={}, fitem: dict={}):
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
         DIALOG.infoDialog(LISTITEMS.buildItemListItem(fitem))
             
 class Browse:
     def __init__(self, sysARG: dict={}, fitem: dict={}):
         log('Browse: __init__, sysARG = %s'%(sysARG))
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             media = '%ss'%(fitem.get('media','video'))
             path  = fitem.get('citem',{}).get('path')
             if isinstance(path,list): path = path[0]
@@ -46,7 +46,7 @@ class Match:
     SIMILAR_SCRIPT = 'script.embuary.helper'
 
     def __init__(self, sysARG: dict={}, fitem: dict={}):
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             title  = BUILTIN.getInfoLabel('Title')
             name   = BUILTIN.getInfoLabel('EpisodeName')
             dbtype = fitem.get('type').replace('episodes','tvshow').replace('tvshows','tvshow').replace('movies','movie')

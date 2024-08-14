@@ -62,7 +62,7 @@ class Player(xbmc.Player):
     def onAVChange(self):
         self.log('onAVChange')
         if self.isPseudoTV:
-            self.lastSubState = isSubtitle()
+            self.lastSubState = BUILTIN.isSubtitle()
             self.myService.monitor.chkIdle()
             
         
@@ -164,7 +164,7 @@ class Player(xbmc.Player):
 
 
     def setSubtitles(self, state: bool=True):
-        hasSubtitle = hasSubtitle()
+        hasSubtitle = BUILTIN.hasSubtitle()
         self.log('setSubtitles, state = %s, hasSubtitle = %s'%(state,hasSubtitle))
         if not hasSubtitle: state = False
         self.showSubtitles(state)
@@ -222,8 +222,8 @@ class Player(xbmc.Player):
             if hasattr(self.background, 'close'): 
                 self.log('toggleBackground, state = %s'%(state))
                 self.background = self.background.close()
+                if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
-            if self.isPlaying(): BUILTIN.executebuiltin('ActivateWindow(fullscreenvideo)')
             
             
 class Monitor(xbmc.Monitor):
@@ -281,7 +281,7 @@ class Monitor(xbmc.Monitor):
 
 
     def triggerSleep(self):
-        conditions = not isPaused() & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
+        conditions = not BUILTIN.isPaused() & self.myService.player.isPlaying() & self.myService.player.isPseudoTV
         self.log("triggerSleep, conditions = %s"%(conditions))
         if not conditions: return
         if self.sleepTimer():
@@ -364,7 +364,7 @@ class Service():
 
 
     def _suspend(self) -> bool: #continue
-        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | isPendingSuspend() | self.__playing())
+        self.monitor.pendingSuspend = (self.monitor.isSettingsOpened() | PROPERTIES.isPendingSuspend() | self.__playing())
         self.log('_suspend, pendingSuspend = %s'%(self.monitor.pendingSuspend))
         return self.monitor.pendingSuspend
 

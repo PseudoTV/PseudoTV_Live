@@ -24,9 +24,6 @@ from resources  import Resources
 #Bumpers  - plugin, path only, tv type, tv network, custom channel type
 #Adverts  - plugin, path only, tv type, any tv channel type
 #Trailers - plug, path only, movie type, any movie channel.
-IGNORE_CHTYPE = ['TV Shows','Mixed','Recommended','Services',"Music Genres"]
-MOVIE_CHTYPE  = ["Movie Genres","Movie Studios"]
-TV_CHTYPE     = ["TV Networks","TV Genres","Mixed Genre"]
 
 class Fillers:
     def __init__(self, builder):
@@ -35,11 +32,6 @@ class Fillers:
         self.jsonRPC    = builder.jsonRPC
         self.runActions = builder.runActions
         self.resources  = Resources(self.jsonRPC,self.cache)
-
-        self.bctTypes   = {"ratings"  :{"max":builder.incPreroll ,"auto":builder.incPreroll  == -1,"enabled":bool(builder.incPreroll) ,"sources":builder.srcRatings,"items":{}},
-                           "bumpers"  :{"max":builder.incPreroll ,"auto":builder.incPreroll  == -1,"enabled":bool(builder.incPreroll) ,"sources":builder.srcBumpers,"items":{}},
-                           "adverts"  :{"max":builder.incPostroll,"auto":builder.incPostroll == -1,"enabled":bool(builder.incPostroll),"sources":builder.srcAdverts,"items":{}},
-                           "trailers" :{"max":builder.incPostroll,"auto":builder.incPostroll == -1,"enabled":bool(builder.incPostroll),"sources":builder.srcTrailer,"items":{}}}
         self.fillSources()
         #todo create subfolders for template resources. channels & genres: Build_Post_Folders
         
@@ -47,61 +39,60 @@ class Fillers:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+        
+    def getAdvertPath(self, id: str='plugin.video.ispot.tv') -> list:
+        if hasAddon(id):
+            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
+            except: folder = 'special://profile/addon_data/%s/resources/'%(id)
+            self.log('getAdvertPath, folder = %s'%(folder))
+            return [folder]
+        return []
+       
 
     def fillSources(self):
-        if self.bctTypes['trailers'].get('enabled',False) and self.builder.incKODI:
-            self.bctTypes['trailers']['items'] = mergeDictLST(self.bctTypes['trailers']['items'],self.builder.kodiTrailers())
-                
-        for ftype, values in list(self.bctTypes.items()):
-            for id in values.get("sources",{}).get("resource",[]):
-                if self.bctTypes[ftype].get('enabled',False): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
-            for path in values.get("sources",{}).get("paths",[]):
-                if self.bctTypes[ftype].get('enabled',False): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
-                
+        for ftype, values in list(self.builder.bctTypes.items()):
+            if not values.get('enabled',False) or self.builder.service._interrupt(): continue
+            if self.builder.bctTypes['adverts'].get('incIspot',False) and ftype == 'adverts':  self.builder.bctTypes["adverts"]["sources"]["paths"].append(self.getAdvertPath())
+            if self.builder.bctTypes['trailers'].get('incIMDB',False) and ftype == 'trailers': self.builder.bctTypes["trailers"]["sources"]["paths"].append(IMDB_PATHS) 
+            if self.builder.bctTypes['trailers'].get('incKODI',False) and ftype == 'trailers': self.builder.bctTypes['trailers']['items'] = mergeDictLST(self.builder.bctTypes['trailers']['items'],self.builder.kodiTrailers())
 
+            for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
+            for path in values["sources"].get("paths",[]): values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,path)) #parse vfs paths
+            values['items'] = lstSetDictLst(values['items'])
+    
+    
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
     def buildSource(self, ftype, path):
         self.log('buildSource, type = %s, path = %s'%(ftype, path))
-        def _parseVFS(path):
-            tmpDCT = {}
-            if hasAddon(path, install=True):
-                for url, items in list(self.jsonRPC.walkFileDirectory(path,depth=5,chkDuration=True,retItem=True).items()):
-                    for item in items:
-                        for key in (item.get('genre',[]) or ['resources']): tmpDCT.setdefault(key.lower(),[]).append(item)
-            return tmpDCT
-            
         def _parseLocal(path):
-            if not FileAccess.exists(path): return {}
-            return self.jsonRPC.walkListDirectory(path, exts=VIDEO_EXTS, depth=5, chkDuration=True)
+            if FileAccess.exists(path): return self.jsonRPC.walkListDirectory(path,exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,chkDuration=True)
+
+        def _parseVFS(path):
+            if hasAddon(id, install=True): return self.jsonRPC.walkFileDirectory(path,depth=CHANNEL_LIMIT,chkDuration=True,retItem=True)
 
         def _parseResource(id):
-            if not hasAddon(id, install=True): return {}
-            return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'), exts=VIDEO_EXTS, depth=5, checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION), expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
+            if hasAddon(id, install=True): return self.jsonRPC.walkListDirectory(os.path.join('special://home/addons/%s'%id,'resources'),exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,checksum=self.jsonRPC.getAddonDetails(id).get('version',ADDON_VERSION),expiration=datetime.timedelta(days=MAX_GUIDEDAYS))
 
-        def _sortbyfile(data):
+        def __sortItems(data, stype='folder'):
             tmpDCT = {}
+            if not data: return {}
             for path, files in list(data.items()):
+                key = (os.path.basename(os.path.normpath(path)).replace('\\','/').strip('/').split('/')[-1:][0]).lower()
                 for file in files:
-                    dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(file.split('.')[0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
+                    if stype == 'plugin': [tmpDCT.setdefault(key,[]).append(file) for key in (file.get('genre',[]) or ['resources'])]
+                    else:
+                        if stype == 'file': key = file.split('.')[0].lower()
+                        dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
+                        if dur > 0: tmpDCT.setdefault(key,[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
             return tmpDCT
- 
-        def _sortbyfolder(data):
-            tmpDCT = {}
-            for path, files in list(data.items()):
-                for file in files:
-                    dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
-                    if dur > 0: tmpDCT.setdefault(path.strip('/').split('/')[-1:][0].lower(),[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
-            return tmpDCT
-            
-        if not path: return {}
-        elif path.startswith('resource.'):
-            if   ftype == 'ratings':                return _sortbyfile(_parseResource(path))
-            elif ftype == 'bumpers':                return _sortbyfolder(_parseResource(path))
-            elif ftype == 'adverts':                return _sortbyfolder(_parseResource(path))
-            elif ftype == 'trailers':               return _sortbyfolder(_parseResource(path))
-        elif     path.startswith('plugin://'):      return _parseVFS(path)
-        elif not path.startswith(tuple(VFS_TYPES)): return _sortbyfolder(_parseLocal(path))
+
+        if path.startswith('resource.'):
+            if   ftype == 'ratings':                return __sortItems(_parseResource(path),'file')
+            elif ftype == 'bumpers':                return __sortItems(_parseResource(path))
+            elif ftype == 'adverts':                return __sortItems(_parseResource(path))
+            elif ftype == 'trailers':               return __sortItems(_parseResource(path))
+        elif     path.startswith('plugin://'):      return __sortItems(_parseVFS(path),'plugin')
+        elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
         else:                                       return {}
         
         
@@ -118,7 +109,7 @@ class Fillers:
 
     def getSingle(self, type, keys=['resources'], chance=False):
         tmpLST = []
-        for key in keys: tmpLST.extend(self.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
+        for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
         if len(tmpLST) > 0: return random.choice(tmpLST)
         elif chance:        return self.getSingle(type)
         else:               return {}
@@ -127,7 +118,7 @@ class Fillers:
     def getMulti(self, type, keys=['resources'], count=1, chance=False):
         items  = []
         tmpLST = []
-        for key in keys: tmpLST.extend(self.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
+        for key in keys: tmpLST.extend(self.builder.bctTypes.get(type,{}).get('items',{}).get(key.lower(),[]))
         if len(tmpLST) > 0: items = setDictLST(random.choices(tmpLST,k=count))
         if len(items) < count and chance: items.extend(self.getMulti(type,count=(count-len(items))))
         return items
@@ -152,9 +143,9 @@ class Fillers:
                 # pre roll
                 preFileList = []
                 preKeys     = [chname, fgenre]
-                if self.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(TV_TYPES))    and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',preKeys,chanceBool(SETTINGS.getSettingInt('Random_Pre_Chance'))))
-                if self.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',[(fitem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]))
-                if self.bctTypes['ratings'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('ratings',self.convertMPAA(fileItem.get('mpaa','NR'))[1]))
+                if self.builder.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(TV_TYPES))    and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',preKeys,chanceBool(SETTINGS.getSettingInt('Random_Pre_Chance'))))
+                if self.builder.bctTypes['bumpers'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('bumpers',[(fitem.get('streamdetails',{}).get('audio') or [{}])[0].get('codec','')]))
+                if self.builder.bctTypes['ratings'].get('enabled',False) and ftype.startswith(tuple(MOVIE_TYPES)) and chtype not in IGNORE_CHTYPE: preFileList.append(self.getSingle('ratings',self.convertMPAA(fileItem.get('mpaa','NR'))[1]))
 
                 #pre roll - bumpers/ratings
                 for item in preFileList:
@@ -173,11 +164,11 @@ class Fillers:
                 # post roll
                 postKeys        = [chname, fgenre]
                 postChance      = chanceBool(SETTINGS.getSettingInt('Random_Post_Chance'))
-                postFillRuntime = diffRuntime(runtime) if (self.bctTypes['adverts']['auto'] and self.bctTypes['trailers']['auto']) else (MIN_GUIDEDAYS*3600)
+                postFillRuntime = diffRuntime(runtime) if (self.builder.bctTypes['adverts']['auto'] and self.builder.bctTypes['trailers']['auto']) else (MIN_GUIDEDAYS*3600)
                 
                 postFileList    = []
-                if self.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, PAGE_LIMIT if self.bctTypes['adverts']['auto'] else self.bctTypes['adverts']['max'],postChance))
-                if self.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, PAGE_LIMIT if self.bctTypes['trailers']['auto'] else self.bctTypes['trailers']['max'],postChance))
+                if self.builder.bctTypes['adverts'].get('enabled',False)  and chtype not in IGNORE_CHTYPE + MOVIE_CHTYPE: postFileList.extend(self.getMulti('adverts' ,postKeys, PAGE_LIMIT if self.builder.bctTypes['adverts']['auto'] else self.builder.bctTypes['adverts']['max'],postChance))
+                if self.builder.bctTypes['trailers'].get('enabled',False) and chtype not in IGNORE_CHTYPE: postFileList.extend(self.getMulti('trailers',postKeys, PAGE_LIMIT if self.builder.bctTypes['trailers']['auto'] else self.builder.bctTypes['trailers']['max'],postChance))
                 postFileList    = randomShuffle(postFileList)
                 postFillCount   = len(postFileList)
 

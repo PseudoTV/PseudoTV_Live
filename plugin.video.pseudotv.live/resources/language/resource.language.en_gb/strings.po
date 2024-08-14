@@ -617,6 +617,14 @@ msgctxt "#30149"
 msgid "Enable Automatic PVR Cleaning"
 msgstr ""
 
+msgctxt "#30150"
+msgid "Copy Logo Folder?"
+msgstr ""
+
+msgctxt "#30151"
+msgid "Copy Fillers Folder?"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -823,15 +831,15 @@ msgid "Restarting..."
 msgstr ""
 
 msgctxt "#32050"
-msgid "Preparing to move files"
+msgid "Preparing to copy files"
 msgstr ""
 
 msgctxt "#32051"
-msgid "Moving"
+msgid "Copying"
 msgstr ""
 
 msgctxt "#32052"
-msgid "Moving %s Failed!"
+msgid "Copying %s Failed!"
 msgstr ""
 
 msgctxt "#32053"
@@ -1235,7 +1243,7 @@ msgid "Changes Applied!"
 msgstr ""
 
 msgctxt "#32153"
-msgid "[COLOR=red][B]File migration required!![/B][/COLOR]\n[B]Moving File:[/B] %s\n[B]From:[/B] %s\n[B]To:[/B] %s"
+msgid "[COLOR=red][B]File migration required!![/B][/COLOR]\n[B]Copying File:[/B] %s\n[B]From:[/B] %s\n[B]To:[/B] %s"
 msgstr ""
 
 msgctxt "#32154"
@@ -1336,6 +1344,14 @@ msgstr ""
 
 msgctxt "#32178"
 msgid "Sort & Filter rules do not apply to Smartplaylist"
+msgstr ""
+
+msgctxt "#32179"
+msgid "Building Filler Folders"
+msgstr ""
+
+msgctxt "#32180"
+msgid "Build Filler Folders"
 msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -1465,7 +1481,7 @@ msgid "Include .strm files *see readme for details."
 msgstr ""
 
 msgctxt "#33056"
-msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers). *see readme for details."
+msgid "Include content fillers (Ratings/Bumpers/Adverts/Trailers) in-between channel content\nDownload Filler Resources for content\nLocal directories will be automatically created.. *see readme for details."
 msgstr ""
 
 msgctxt "#33058"
@@ -1618,4 +1634,8 @@ msgstr ""
 
 msgctxt "#33170"
 msgid "Delete channel Path"
+msgstr ""
+
+msgctxt "#33180"
+msgid "Build Filler Template folders based on your channels."
 msgstr ""

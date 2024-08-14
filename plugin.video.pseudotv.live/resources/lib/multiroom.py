@@ -73,11 +73,11 @@ class Multiroom:
             DIALOG.progressDialog(100,dia)
 
             # setSetting('Select_server',)
-            # servers = getDiscovery()
+            # servers = PROPERTIES.getDiscovery()
             # if host not in servers and SETTINGS.getSettingInt('Client_Mode') == 1:
                 # DIALOG.notificationWait('%s - %s'%(LANGUAGE(32047),payload.get('name',host)))
             # servers[host] = payload
-            # setDiscovery(servers)
+            # PROPERTIES.setDiscovery(servers)
             # SETTINGS.chkDiscovery(servers)
 
 
@@ -96,7 +96,7 @@ class Multiroom:
     def selectServer(self):
         self.log('selectServer')
         labels  = []
-        servers = getDiscovery()
+        servers = PROPERTIES.getDiscovery()
         epoch   = time.time()
         current = SETTINGS.getSetting('Remote_URL').strip('http://')
         

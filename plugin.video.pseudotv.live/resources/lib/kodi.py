@@ -48,9 +48,10 @@ def decodeString(base64_bytes):
     try:
         message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
         return message_bytes.decode(DEFAULT_ENCODING)
-    except:
+    except Exception as e:
+        log('Globals: decodeString failed! %s'%(e), xbmc.LOGERROR)
         return ''
-
+        
 def getAbbr(text):
     words = text.split(' ')
     if len(words) > 1: return '%s.%s.'%(words[0][0].upper(),words[1][0].upper())
@@ -69,31 +70,6 @@ def getThumb(item={},opt=0): #unify thumbnail artwork
                item.get(key,''))
         if art: return art
     return {0:FANART,1:COLOR_LOGO}[opt]
-               
-def isBusyDialog():
-    return (Builtin().getInfoBool('IsActive(busydialognocancel)','Window') | Builtin().getInfoBool('IsActive(busydialog)','Window'))
-
-def closeBusyDialog():
-    if Builtin().getInfoBool('IsActive(busydialognocancel)','Window'):
-        Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
-    elif Builtin().getInfoBool('IsActive(busydialog)','Window'):
-        Builtin().executebuiltin('Dialog.Close(busydialog)')
-
-@contextmanager
-def busy_dialog():
-    if not isBusyDialog():
-        Builtin().executebuiltin('ActivateWindow(busydialognocancel)')
-        try: yield
-        finally: Builtin().executebuiltin('Dialog.Close(busydialognocancel)')
-    else: yield
-                  
-@contextmanager
-def sudo_dialog(msg):
-    dia = Dialog().progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
-    try: 
-        yield
-    finally: 
-        dia = Dialog().progressBGDialog(100,dia)
 
 def setDictLST(lst=[]):
     return [loadJSON(s) for s in list(OrderedDict.fromkeys([dumpJSON(d) for d in lst]))]
@@ -117,7 +93,7 @@ def loadJSON(item):
             return item
     except Exception as e: log("loadJSON, failed! %s\n%s"%(e,item), xbmc.LOGERROR)
     return {}
-        
+    
 def unquoteString(text):
     return urllib.parse.unquote(text)
     
@@ -317,7 +293,14 @@ class Settings:
         return xbmcaddon.Addon(id).setSetting(key,value)
         
 
-
+    def getMYUUID(self):
+        uuid = self.getCacheSetting('MY_UUID')
+        if not uuid: 
+            uuid = genUUID(seed=getIP())
+            self.setCacheSetting('MY_UUID',uuid)
+        return uuid
+        
+        
     def chkPluginSettings(self, id, values, override=False, prompt=True):
         self.log('chkPluginSettings, id = %s, override=%s'%(id,override))
         try: 
@@ -329,7 +312,7 @@ class Settings:
                 if addon is None: raise Exception('%s Not Found'%id)
                 
                 for s, v in list(values.items()):
-                    if MONITOR.waitForAbort(1.0): return False
+                    if MONITOR.waitForAbort(0.5): return False
                     value = addon.getSetting(s)
                     if str(value).lower() != str(v).lower(): changes[s] = (value, v)
             if changes: return self.setPluginSettings(id,changes,prompt)
@@ -349,7 +332,7 @@ class Settings:
                 if not self.dialog.yesnoDialog((LANGUAGE(32036)%addon_name)): return False
                 
             for s, v in list(values.items()):
-                if MONITOR.waitForAbort(1.0): return False
+                if MONITOR.waitForAbort(0.5): return False
                 addon.setSetting(s, v[1])
             self.setPVRInstance(id)
             return self.dialog.notificationDialog((LANGUAGE(32037)%(addon_name)))
@@ -360,7 +343,7 @@ class Settings:
     def chkPVRInstance(self, path):
         found = False
         for file in [filename for filename in FileAccess.listdir(path)[1] if filename.endswith('.xml')]:
-            if MONITOR.waitForAbort(1.0): break
+            if MONITOR.waitForAbort(0.5): break
             elif file.startswith('instance-settings-'):
                 try:
                     xml = FileAccess.open(os.path.join(path,file), "r")
@@ -446,8 +429,70 @@ class Properties:
         instanceID = self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
         if not instanceID: self.setInstanceID()
         return self.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-      
 
+
+    def getDiscovery(self):
+        return loadJSON(self.getEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID)))
+
+
+    def setDiscovery(self, servers={}):
+        return self.setEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID),dumpJSON(servers))
+         
+         
+    def hasFirstrun(self):
+        return self.getPropertyBool('hasFirstrun')
+        
+        
+    def setFirstrun(self, state=True):
+        return self.setPropertyBool('hasFirstrun',state)
+               
+               
+    def hasAutotuned(self):
+        return self.getPropertyBool('hasAutotuned')
+        
+        
+    def setAutotuned(self, state=True):
+        return self.setPropertyBool('hasAutotuned',state)
+
+
+    def isRunning(self, key):
+        return self.getEXTProperty('%s.Running.%s'%(ADDON_ID,key)) == 'true'
+
+
+    def getLegacy(self):
+        return self.getEXTProperty('PseudoTVRunning') == 'True'
+
+
+    def isPendingSuspend(self):
+        return self.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
+
+    
+    def forceUpdateTime(self, key):
+        return self.setPropertyInt(key,0)
+
+
+    @contextmanager
+    def legacy(self):
+        self.setEXTProperty('PseudoTVRunning','true')
+        try: yield
+        finally: self.setEXTProperty('PseudoTVRunning','false')
+
+
+    @contextmanager
+    def setRunning(self, key):
+        self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
+        try: yield
+        finally: self.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
+
+
+    @contextmanager
+    def suspendActivity(self): #suspend/quit running background task.
+        self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
+        try: yield
+        finally:
+            self.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
+        
+        
     def getKey(self, key, instanceID=True):
         if not isinstance(key,str): key = str(key)
         if self.winID == 10000 and not key.startswith(ADDON_ID): #create unique id 
@@ -555,6 +600,7 @@ class Properties:
 
         
     def clearTrash(self, instanceID=None): #clear abandoned properties after instanceID change
+        self.log('clearTrash, instanceID = %s'%(instanceID))
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
         
@@ -659,8 +705,68 @@ class Builtin:
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         log('%s: %s'%(self.__class__.__name__,msg),level)
-    
-    
+         
+     
+    def hasPVR(self):
+        return self.getInfoBool('HasTVChannels','Pvr')
+        
+        
+    def hasRadio(self):
+        return self.getInfoBool('HasRadioChannels','Pvr')
+
+
+    def hasMusic(self):
+        return self.getInfoBool('HasContent(Music)','Library')
+        
+        
+    def hasTV(self):
+        return self.getInfoBool('HasContent(TVShows)','Library')
+        
+        
+    def hasMovie(self):
+        return self.getInfoBool('HasContent(Movies)','Library')
+                
+                
+    def hasSubtitle(self):
+        return self.getInfoBool('HasSubtitles','VideoPlayer')
+
+
+    def isSubtitle(self):
+        return self.getInfoBool('SubtitlesEnabled','VideoPlayer')
+
+
+    def isPlaylistRandom(self):
+        return self.getInfoLabel('Random','Playlist').lower() == 'on' # Disable auto playlist shuffling if it's on
+        
+        
+    def isPlaylistRepeat(self):
+        return self.getInfoLabel('IsRepeat','Playlist').lower() == 'true' # Disable auto playlist repeat if it's on #todo
+
+
+    def isPaused(self):
+        return self.getInfoBool('Player.Paused')
+                
+                
+    def isBusyDialog(self):
+        return (self.getInfoBool('IsActive(busydialognocancel)','Window') | Builtin().getInfoBool('IsActive(busydialog)','Window'))
+
+
+    def closeBusyDialog(self):
+        if self.getInfoBool('IsActive(busydialognocancel)','Window'):
+            self.executebuiltin('Dialog.Close(busydialognocancel)')
+        elif self.getInfoBool('IsActive(busydialog)','Window'):
+            self.executebuiltin('Dialog.Close(busydialog)')
+
+
+    @contextmanager
+    def busy_dialog(self):
+        if not self.isBusyDialog():
+            self.executebuiltin('ActivateWindow(busydialognocancel)')
+            try: yield
+            finally: self.executebuiltin('Dialog.Close(busydialognocancel)')
+        else: yield
+                   
+
     def getInfoLabel(self, key, param='ListItem', default=''):
         value = (xbmc.getInfoLabel('%s.%s'%(param,key)) or default)
         self.log('getInfoLabel, key = %s.%s, value = %s'%(param,key,value))
@@ -907,7 +1013,7 @@ class Dialog:
                 else:    type = 0
                 optTMP.insert(0,{"label":"Current Path", "label2":default, "default":default , "mask":mask, "type":type, "multi":multi})
                    
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 lizLST = poolit(buildMenuItem)(optTMP)
                 
             select = self.selectDialog(lizLST, LANGUAGE(32089), multi=False)
@@ -1146,4 +1252,10 @@ class Dialog:
         if not enumSEL is None: return [quoteString(value) for value in (enumKEY[enumLST[enumSEL]].get('func')()).split(',')]
 
 
-
+    @contextmanager
+    def sudo_dialog(self, msg):
+        dia = self.progressBGDialog((int(time.time()) % 60),Dialog().progressBGDialog(message=msg))
+        try:
+            yield
+        finally: 
+            dia = self.progressBGDialog(100,dia)

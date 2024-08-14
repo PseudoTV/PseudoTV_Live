@@ -33,7 +33,7 @@ class Service:
         return MONITOR.waitForAbort(wait)
         
     def _suspend(self) -> bool:
-        return isPendingSuspend()
+        return PROPERTIES.isPendingSuspend()
 
 class Library:
     def __init__(self, service=None):
@@ -86,11 +86,11 @@ class Library:
         return self.libraryDATA.get('library',{}).get(type,[])
         
         
-    def setLibrary(self, type, data=[]):
+    def setLibrary(self, type, items=[]):
         self.log('setLibrary')
-        self.libraryDATA['library'][type] = data
-        PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(data)>0).lower())
-        SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(data)))
+        self.libraryDATA['library'][type] = items
+        PROPERTIES.setEXTProperty('%s.has.%s'%(ADDON_ID,slugify(type)),str(len(items)>0).lower())
+        SETTINGS.setSetting('Select_%s'%(slugify(type)),'[COLOR=orange][B]%s[/COLOR][/B]/[COLOR=dimgray]%s[/COLOR]'%(len(self.getEnabled(type)),len(items)))
         return self._save()
 
 
@@ -137,7 +137,7 @@ class Library:
                 cacheName = "%s.%s"%(self.__class__.__name__,func.__name__)
                 DIALOG.notificationDialog('Clearing %s Cache'%(label),time=5)
                 self.cache.clear(cacheName,wait=5)
-                    
+                
         def __update(type, item):
             #check existing library for enabled itemss
             [item.update({'enabled':True}) for eitem in self.getEnabled(type) if getChannelSuffix(item.get('name'), type).lower() == eitem.get('name').lower()]
@@ -154,7 +154,7 @@ class Library:
         else:
             msg = LANGUAGE(32022)
             if force: #clear library cache.
-                with busy_dialog():
+                with BUILTIN.busy_dialog():
                     __clear()
             libraryItems = dict(self.fillItems())
             
@@ -226,7 +226,7 @@ class Library:
             return self.jsonRPC.walkListDirectory('pvr://recordings/tv/active/',appendPath=True) #todo add infobool to Kodi core.
                
         MixedList = []
-        if hasTV() or hasMovie():
+        if BUILTIN.hasTV() or BUILTIN.hasMovie():
             MixedList.append({'name':LANGUAGE(32001), 'type':"Mixed",'path':self.predefined.createMixedRecent()  ,'logo':self.resources.getLogo(LANGUAGE(32001),"Mixed")}) #"Recently Added"
             rules = {"800":{"values":{"0":LANGUAGE(32002)}}}
             if self.enableEvenTV: rules.update({"1000":{"values":{"0":SETTINGS.getSettingInt('Enable_Even'),"1":SETTINGS.getSettingInt('Page_Limit'),"2":True}}})
@@ -262,7 +262,7 @@ class Library:
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getTVInfo(self, sortbycount=True):
         self.log('getTVInfo')
-        if hasTV():
+        if BUILTIN.hasTV():
             NetworkList   = Counter()
             ShowGenreList = Counter()
             TVShows       = Counter()
@@ -311,7 +311,7 @@ class Library:
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMovieInfo(self, sortbycount=True):
         self.log('getMovieInfo')
-        if hasMovie():        
+        if BUILTIN.hasMovie():        
             StudioList     = Counter()
             MovieGenreList = Counter()
             json_response  = self.jsonRPC.getMovies() #we can't parse for genres directly from Kodi json ie.getGenres; because we need the weight of each genre to prioritize list.
@@ -343,7 +343,7 @@ class Library:
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=True)
     def getMusicInfo(self, sortbycount=True):
         self.log('getMusicInfo')
-        if hasMusic():
+        if BUILTIN.hasMusic():
             MusicGenreList = Counter()
             json_response  = self.jsonRPC.getMusicGenres()
             

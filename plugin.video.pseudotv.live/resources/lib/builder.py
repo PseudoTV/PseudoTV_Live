@@ -61,47 +61,55 @@ class Builder:
         self.channels         = Channels()
         self.rules            = RulesList()
         self.runActions       = self.rules.runActions
+        
         self.xmltv            = XMLTVS()
         self.jsonRPC          = service.jsonRPC
         self.xsp              = XSP()
         self.m3u              = M3U()
         self.resources        = Resources(self.jsonRPC,self.cache)
            
-        self.incPreroll       = SETTINGS.getSettingInt('Enable_Preroll')
-        self.incPostroll      = SETTINGS.getSettingInt('Enable_Postroll')
-        self.incIspot         = SETTINGS.getSettingBool('Include_Adverts_iSpot')
-        self.incKODI          = SETTINGS.getSettingBool('Include_Trailers_KODI')
-        self.incIMDB          = SETTINGS.getSettingBool('Include_Trailers_IMDB')
-                  
-        self.srcRatings       = {"resource":SETTINGS.getSetting('Resource_Ratings').split('|') , "paths":[]}
-        self.srcBumpers       = {"resource":SETTINGS.getSetting('Resource_Bumpers').split('|') , "paths":[]}
-        self.srcAdverts       = {"resource":SETTINGS.getSetting('Resource_Adverts').split('|') , "paths":self.getAdvertPath() if self.incIspot else []}
-        self.srcTrailer       = {"resource":SETTINGS.getSetting('Resource_Trailers').split('|'), "paths":IMDB_PATHS if self.incIMDB else []}
-        
         self.maxDays          = MAX_GUIDEDAYS
         self.minEPG           = 10800 #Secs., Min. EPG guidedata
         
-        
+        self.bctTypes = {"ratings" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Ratings').split('|'),"paths":[os.path.join(FILLER_LOC,'Ratings' ,'')]},"items":{}},
+                         "bumpers" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Preroll') ,"auto":SETTINGS.getSettingInt('Enable_Preroll')  == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Preroll')) ,
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Bumpers').split('|'),"paths":[os.path.join(FILLER_LOC,'Bumpers' ,'')]},"items":{}},
+                         "adverts" :{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Adverts').split('|'),"paths":[os.path.join(FILLER_LOC,'Adverts' ,'')]},"items":{},
+                         "incIspot":SETTINGS.getSettingBool('Include_Adverts_iSpot')},
+                         "trailers":{"min":-1,"max":SETTINGS.getSettingInt('Enable_Postroll'),"auto":SETTINGS.getSettingInt('Enable_Postroll') == -1,"enabled":bool(SETTINGS.getSettingInt('Enable_Postroll')),
+                         "sources" :{"ids":SETTINGS.getSetting('Resource_Trailers').split('|'),"paths":[os.path.join(FILLER_LOC,'Trailers','')]},"items":{},
+                         "incKODI":SETTINGS.getSettingBool('Include_Trailers_KODI'),
+                         "incIMDB":SETTINGS.getSettingBool('Include_Trailers_IMDB')}}
+
+
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+
+
+    def migrate(self, citem):#update channel logo and verify labels, migrate changes to citem.
+        self.log('migrate, id: %s'%(citem['id']))
+        citem['name'] = validString(citem['name']) #todo correct existing file names, remove v.0.5.3.
+        citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+        return citem
 
 
     def verify(self, channels: list=[]):
         if not channels: channels = self.channels.getChannels()
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
-            elif not citem.get('name') or not citem.get('id') or not citem.get('path'):
+            elif not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
                 self.log('verify, skipping - missing necessary channel meta\n%s'%(citem))
                 continue
             else:
-                #update channel logo and verify.
-                citem['logo'] = self.resources.getLogo(citem['name'],citem['type'],logo=Seasonal().getHoliday().get('logo') if citem['name'] == LANGUAGE(32002) else None)
+                citem = self.migrate(citem)
                 self.log('verify, channel %s: %s - %s'%(citem['number'],citem['name'],citem['id']))
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
-            
+
             
     def build(self) -> bool:
-        with legacy():
+        with PROPERTIES.legacy():
             channels = sorted(self.verify(self.channels.getChannels()), key=itemgetter('number'))
             if not channels:
                 self.log('build, no verified channels found!')
@@ -123,12 +131,9 @@ class Builder:
                     self.pName  = citem['name']
                     self.pCount = int(idx*100//len(channels))
                     
-                    if stopTimes.get(citem['id'],start) > (now + ((self.maxDays * 86400) - 43200)):
-                        self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
-                    elif stopTimes.get(citem['id']):
-                        self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
-                    else:
-                        self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
+                    if stopTimes.get(citem['id'],start) > (now + ((self.maxDays * 86400) - 43200)): self.pMSG = '%s %s'%(LANGUAGE(32028),LANGUAGE(32023)) #Checking
+                    elif stopTimes.get(citem['id']):                                                self.pMSG = '%s %s'%(LANGUAGE(32022),LANGUAGE(32023)) #Updating
+                    else:                                                                           self.pMSG = '%s %s'%(LANGUAGE(32021),LANGUAGE(32023)) #Building
                     
                     cacheResponse = self.getFileList(citem, now, stopTimes.get(citem['id'],start))# {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
                     if cacheResponse:
@@ -163,10 +168,8 @@ class Builder:
             else:     cacheResponse = self.buildChannel(citem)
             
             if cacheResponse:
-                if self.fillBCTs and not radio:
-                    cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
-                cacheResponse = self.addScheduling(citem, cacheResponse, start)
-                return sorted(cacheResponse, key=itemgetter('start'))
+                if self.fillBCTs and not radio: cacheResponse = Fillers(self).injectBCTs(citem, cacheResponse)
+                return sorted(self.addScheduling(citem, cacheResponse, start), key=itemgetter('start'))
             return cacheResponse
         except Exception as e: self.log("getFileList, failed! %s"%(e), xbmc.LOGERROR)
         return False
@@ -229,15 +232,16 @@ class Builder:
                 else: 
                     if len(citem.get('path',[])) > 1: self.pName = '%s %s/%s'%(citem['name'],idx+1,len(citem.get('path',[])))
                     fileArray.append(self.buildFileList(citem, self.runActions(RULES_ACTION_CHANNEL_BUILD_PATH, citem, file, inherited=self), 'video', self.limit, self.sort, self.limits))
+
         fileArray = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILEARRAY_POST, citem, fileArray, inherited=self)
-        
         if not _validFileList(fileArray):#check that at least one fileList in array contains meta
             self.log("buildChannel, id: %s skipping channel fileArray empty!"%(citem['id']),xbmc.LOGINFO)
             return False
             
         self.log("buildChannel, id: %s fileArray arrays = %s"%(citem['id'],len(fileArray)))
         fileList = interleave(fileArray) #todo move intervleaving to adv. rules. RULES_ACTION_CHANNEL_BUILD_FILELIST
-        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self) #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        #Primary rule for handling adv. interleaving, must return single list to avoid default interleave() below. Add avd. rule to setDictLST duplicates.
+        fileList = self.runActions(RULES_ACTION_CHANNEL_BUILD_FILELIST, citem, fileList, inherited=self)
         self.log('buildChannel, id: %s, fileList items = %s'%(citem['id'],len(fileList)),xbmc.LOGINFO)
         return fileList
 
@@ -278,11 +282,11 @@ class Builder:
     def buildList(self, citem: dict, path: str, media: str='video', page: int=SETTINGS.getSettingInt('Page_Limit'), sort: dict={}, limits: dict={}, dirItem: dict={}, query: dict={}) -> tuple:
         self.log("buildList, id: %s, media = %s, path = %s\npage = %s, sort = %s, query = %s, limits = %s\ndirItem = %s"%(citem['id'],media,path,page,sort,query,limits,dirItem))
         dirList, fileList, seasoneplist, trailersdict = [], [], [], {}
-        items, olimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
+        items, nlimits, errors = self.jsonRPC.requestList(citem, path, media, page, sort, limits, query)
         if errors.get('message'):
             self.pErrors.append(errors['message'])
             return fileList, dirList
-        elif items == self.loopback and limits != olimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.
+        elif items == self.loopback and limits != nlimits:# malformed jsonrpc queries will return root response, catch a re-parse and return.
             self.log("buildList, id: %s, loopback detected using path = %s\nreturning: fileList (%s), dirList (%s)"%(citem['id'],path,len(fileList),len(dirList)))
             self.pErrors.append(LANGUAGE(32030))
             return fileList, dirList
@@ -327,7 +331,7 @@ class Builder:
                             continue
 
                         dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
-                        if dur > self.minDuration: #include media that's duration is above the players seek tolerance.
+                        if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule.
                             item['duration']     = dur
                             item['media']        = media
                             item['originalpath'] = path #use for path sorting/playback verification 
@@ -372,13 +376,12 @@ class Builder:
                             item['art']  = (item.get('art',{}) or dirItem.get('art',{}))
                             item.get('art',{})['icon'] = citem['logo']
                             
-                            if item.get('trailer') and bool(self.incPostroll) and self.incKODI:
+                            if item.get('trailer') and self.bctTypes['trailers'].get('enabled',False) and self.bctTypes['trailers'].get('incKODI',False):
                                 titem = item.copy()
                                 tdur  = self.jsonRPC.getDuration(titem.get('trailer'), accurate=True, save=False)
                                 if tdur > 0:
                                     titem.update({'duration':tdur, 'runtime':tdur, 'file':titem['trailer'], 'streamdetails':{}})
-                                    for genre in (titem.get('genre',[]) or ['resources']):
-                                        trailersdict.setdefault(genre.lower(),[]).append(titem)
+                                    [trailersdict.setdefault(genre.lower(),[]).append(titem) for genre in (titem.get('genre',[]) or ['resources'])]
                             
                             if sort.get("method","") == 'episode' and (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 
                                 seasoneplist.append([int(item.get("season","0")), int(item.get("episode","0")), item])
@@ -387,7 +390,7 @@ class Builder:
                         else: 
                             self.pErrors.append(LANGUAGE(32032))
                             self.log("buildList, id: %s, IDX = %s skipping content no duration meta found! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
-                    
+
             if sort.get("method","") == 'episode':
                 self.log("buildList, id: %s, sorting by episode"%(citem['id']))
                 seasoneplist.sort(key=lambda seep: seep[1])
@@ -407,7 +410,8 @@ class Builder:
  
     def isHD(self, item: dict) -> bool:
         if 'isHD' in item: return item['isHD']
-        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
+            item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
         if 'video' in details and len(details.get('video')) > 0:
             videowidth  = int(details['video'][0]['width']  or '0')
@@ -418,7 +422,8 @@ class Builder:
 
     def isUHD(self, item: dict) -> bool:
         if 'isUHD' in item: return item['isUHD']
-        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
+            item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
         if 'video' in details and len(details.get('video')) > 0:
             videowidth  = int(details['video'][0]['width']  or '0')
@@ -429,7 +434,8 @@ class Builder:
         
     def is3D(self, item: dict) -> bool:
         if 'is3D' in item: return item['is3D']
-        elif not 'streamdetails' in item: item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
+        elif not item.get('streamdetails',{}).get('video',[]) and not item.get('file','').startswith(tuple(VFS_TYPES)):
+            item['streamdetails'] = self.jsonRPC.getStreamDetails(item.get('file'), item.get('media','video'))
         details = item.get('streamdetails',{})
         if 'video' in details and details.get('video') != [] and len(details.get('video')) > 0:
             stereomode = (details['video'][0]['stereomode'] or [])
@@ -473,12 +479,3 @@ class Builder:
         items = (self.cache.get('kodiTrailers', json_data=True) or {})
         if nitems: items = self.cache.set('kodiTrailers', mergeDictLST(items,nitems), expiration=datetime.timedelta(days=28), json_data=True)
         return items
-
-        
-    def getAdvertPath(self, id: str='plugin.video.ispot.tv') -> list:
-        if hasAddon(id):
-            try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
-            except: folder = 'special://profile/addon_data/%s/resources/'%(id)
-            self.log('getAdvertPath, folder = %s'%(folder))
-            return [folder]
-        return []

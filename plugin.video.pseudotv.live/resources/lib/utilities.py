@@ -32,7 +32,7 @@ class Utilities:
 
     def showWelcome(self):
         try: 
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 fle   = FileAccess.open(WELCOME_FLE, "r")
                 ftext = fle.read()
                 fsize = fle.size()
@@ -67,7 +67,7 @@ class Utilities:
                 text = text.replace('-Warning'    ,'[COLOR=red][B]-Warning:[/B][/COLOR]')
                 return text  
                 
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 fle = FileAccess.open(CHANGELOG_FLE, "r")
                 txt = addColor(fle.read())
                 fle.close()
@@ -86,7 +86,7 @@ class Utilities:
                 markdown = '\n'.join(list([filelist for filelist in markdown.split('\n') if filelist[:2] not in ['![','[!','!.','!-','ht']]))
                 return markdown
                 
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 openAddonSettings((7,1))
                 fle = FileAccess.open(README_FLE, "r")
                 txt = convertMD2TXT(fle.read())
@@ -102,7 +102,7 @@ class Utilities:
                 
                 
     def showFile(self, file):
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             def openFile(fle):
                 if fle.lower().endswith('xml'):
                     fle = FileAccess.open(fle, "r")
@@ -123,8 +123,8 @@ class Utilities:
 
     def openChannelManager(self, chnum: int=1):
         self.log('openChannelManager, chnum = %s'%(chnum))
-        if not isRunning('MANAGER_RUNNING'):
-            with setRunning('MANAGER_RUNNING'), suspendActivity():
+        if not PROPERTIES.isRunning('MANAGER_RUNNING'):
+            with PROPERTIES.setRunning('MANAGER_RUNNING'), PROPERTIES.suspendActivity():
                 from manager import Manager
                 chmanager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
                 del chmanager
@@ -132,18 +132,11 @@ class Utilities:
         
     def openChannelBug(self):
         self.log('openChannelBug')
-        if not isRunning('OVERLAY_CHANNELBUG_RUNNING'):
+        if not PROPERTIES.isRunning('OVERLAY_CHANNELBUG_RUNNING'):
             from channelbug import ChannelBug
             channelbug = ChannelBug("%s.channelbug.xml"%(ADDON_ID), ADDON_PATH, "default")
             SETTINGS.setSetting("Channel_Bug_Position_XY",PROPERTIES.getProperty("Channel_Bug_Position_XY"))
             del channelbug
-
-
-    def scanLibrary(self):
-        from library import Library 
-        library = Library()
-        library.updateLibrary(force=True)
-        del library
 
 
     def togglePVR(self):
@@ -158,10 +151,11 @@ class Utilities:
                  {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                        , 'hide':False},    #"Force PTVL reload"
                  {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)          , 'hide':False},    #"Show M3U"
                  {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)        , 'hide':False},    #"Show XMLTV"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':self.scanLibrary                                         , 'hide':True},     #Rescan library
-                 ]            
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true'), 'hide':True}, #Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkFillers'%(ADDON_ID),'true'), 'hide':True}] #Build Filler Folders
+                
 
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             client    = isClient()
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide') & client)]
             if select is None: 
@@ -192,7 +186,7 @@ class Utilities:
         keys = list(files.keys())
         if not full: keys = keys[:2]
         if DIALOG.yesnoDialog('%s ?'%(msg)): 
-            with busy_dialog(), suspendActivity():
+            with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: setPendingRestart()
@@ -206,7 +200,7 @@ class Utilities:
         
         if param == 'Apply_PVR_Settings':
             ctl = (7,9)
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else:

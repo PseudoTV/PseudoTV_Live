@@ -84,7 +84,7 @@ class XSP:
             except Exception as e: self.log("parseXSP, parsing media failed! %s"%(e), xbmc.LOGDEBUG)
             
             try: limit = (int(dom.getElementsByTagName('limit')[0].childNodes[0].nodeValue) or limit)
-            except Exception as e: self.log("parseXSP, parsing limit failed! %s"%(e), xbmc.LOGDEBUG)
+            except Exception as e: self.log("parseXSP, no xsp limit set", xbmc.LOGDEBUG)
 
             try: sort.update({"method":dom.getElementsByTagName('order')[0].childNodes[0].nodeValue.lower()}) #todo pop rules to filter var.
             except Exception as e: self.log("parseXSP, parsing method failed! %s"%(e), xbmc.LOGDEBUG)

@@ -73,8 +73,7 @@ class JSONRPC:
         cacheResponse = self.cache.get(cacheName, checksum=checksum, json_data=True)
         if not cacheResponse:
             cacheResponse = self.sendJSON(param,timeout)
-            if cacheResponse.get('result',{}):
-                self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
+            if cacheResponse.get('result',{}): self.cache.set(cacheName, cacheResponse, checksum=checksum, expiration=life, json_data=True)
         return cacheResponse
 
 
@@ -106,15 +105,16 @@ class JSONRPC:
             return walk
 
         walk = dict()
-        self.log('walkListDirectory, walking %s, depth = %s\n exts = %s'%(path,depth,exts))
+        self.log('walkListDirectory, walking %s, depth = %s'%(path,depth))
         subs, files = self.getListDirectory(path,checksum,expiration)
         if len(files) > 0:
             if TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
             else: walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, f) for f in files if f.endswith(tuple(exts))] if _f]))
+        
         for sub in subs:
             if depth == 0:break
             depth -= 1
-            walk.update(self.walkListDirectory(sub, exts, depth, chkDuration, appendPath, checksum, expiration))
+            walk.update(self.walkListDirectory(os.path.join(path,sub), exts, depth, chkDuration, appendPath, checksum, expiration))
         return walk
                 
         
@@ -142,8 +142,8 @@ class JSONRPC:
     def getEnums(self, id, type='', key='enums'):
         self.log('getEnums id = %s, type = %s, key = %s' % (id, type, key))
         param = {"method":"JSONRPC.Introspect","params":{"getmetadata":True,"filterbytransport":True,"filter":{"getreferences":False,"id":id,"type":"type"}}}
-        json_response = self.sendJSON(param).get('result',{}).get('types',{}).get(id,{})
-        return (loadJSON(json_response).get('properties',{}).get(type,{}).get(key) or loadJSON(json_response).get(type,{}).get(key) or loadJSON(json_response).get(key,[]))
+        json_response = loadJSON(self.sendJSON(param).get('result',{}).get('types',{}).get(id,{}))
+        return (json_response.get('properties',{}).get(type,{}).get(key) or json_response.get(type,{}).get(key) or json_response.get(key,[]))
 
 
     def notifyAll(self, message, data, sender=ADDON_ID):
@@ -290,6 +290,13 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
+        if item.get('customproperties',{}).get('accurateduration',{}):
+            if item['customproperties']['accurateduration'].get('md5') == getMD5(path):
+                runtime = item['customproperties']['accurateduration'].get('duration',0)
+                if runtime > 0:
+                    self.log("getDuration, using previously parsed accurate duration data: path = %s, runtime = %s" % (path, runtime))
+                    return runtime
+                
         runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if (runtime == 0 or accurate):
             duration = 0
@@ -416,7 +423,7 @@ class JSONRPC:
             if 'filedetails' in results: key = 'filedetails'
             else:                        key = 'files'
         else:
-            results = self.getLibrary(query['method'],param)
+            results = self.getLibrary(query['method'],param, cache=False)
             key = query.get('key',list(results.keys())[0])
             
         limits = results.get('limits', param["limits"])
@@ -457,7 +464,7 @@ class JSONRPC:
         return {"end": start, "start": start, "total":total}
         
 
-    @cacheit(checksum=getInstanceID())
+    @cacheit(checksum=PROPERTIES.getInstanceID())
     def buildWebBase(self, local=False):
         port     = 80
         username = 'kodi'

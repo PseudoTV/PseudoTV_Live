@@ -93,7 +93,7 @@ class Channels:
         
         
     def getUUID(self) -> str:
-        return (self.channelDATA.get('uuid','') or getMYUUID())
+        return (self.channelDATA.get('uuid','') or SETTINGS.getMYUUID())
         
         
     def setUUID(self, uuid: str='') -> bool:

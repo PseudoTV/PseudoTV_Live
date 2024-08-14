@@ -42,9 +42,6 @@ ACTION_INVALID       = 999
 ACTION_SHOW_INFO     = [11,24,401]
 ACTION_PREVIOUS_MENU = [92, 10,110,521] #+ [9, 92, 216, 247, 257, 275, 61467, 61448]
      
-def forceUpdateTime(key):
-    PROPERTIES.setPropertyInt(key,0)
-
 def findItemsInLST(items, values, item_key='getLabel', val_key='', index=True):
     if not values: return [-1]
     matches = []
@@ -78,7 +75,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             DIALOG.notificationDialog(LANGUAGE(32058))
             return openAddonSettings((0,1))
         else:
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 self.cntrlStates  = {}
                 self.showingList  = True
                 
@@ -507,7 +504,7 @@ class Manager(xbmcgui.WindowXMLDialog):
             logo = citem.get('logo')
             if force: logo = ''
             if not logo or logo in [LOGO,COLOR_LOGO,ICON]:
-                with busy_dialog():
+                with BUILTIN.busy_dialog():
                     citem['logo'] = self.resources.getLogo(name, citem.get('type',"Custom"))
                 self.log('setLogo, id = %s, logo = %s'%(citem.get('id'),citem.get('logo')))
         return citem
@@ -541,11 +538,13 @@ class Manager(xbmcgui.WindowXMLDialog):
                 if channel.get('name','').lower() == name.lower(): return True
             return False
             
-        if not label or (len(label) < 1 or len(label) > 128): return None, citem
-        elif _chkName(label): return '', citem
-        else:
-            self.log('validateLabel, label = %s'%(label))
-            return label, self.setLogo(label, citem, force=True)
+        if label and (len(label) > 1 or len(label) < 128): 
+            label = validString(label)
+            if _chkName(label): return '', citem
+            else:
+                self.log('validateLabel, label = %s'%(label))
+                return label, self.setLogo(label, citem, force=True)
+        return None, citem
 
 
     def validatePaths(self, paths, citem):
@@ -587,7 +586,7 @@ class Manager(xbmcgui.WindowXMLDialog):
                 valid = False
                 media = 'music' if isRadio({'path':[path]}) else 'video'
                 dia   = DIALOG.progressDialog(message='%s %s, %s..\n%s'%(LANGUAGE(32098),'Path',LANGUAGE(32099),path))
-                with busy_dialog():
+                with BUILTIN.busy_dialog():
                     items = self.jsonRPC.walkFileDirectory(path, media, depth=5, retItem=True)
                 
                 for idx, dir in enumerate(items):
@@ -821,7 +820,7 @@ class Manager(xbmcgui.WindowXMLDialog):
 
     def closeManager(self):
         self.log('closeManager')
-        if self.madeChanges: forceUpdateTime('chkChannels')
+        if self.madeChanges: PROPERTIES.forceUpdateTime('chkChannels')
         self.close()
 
 

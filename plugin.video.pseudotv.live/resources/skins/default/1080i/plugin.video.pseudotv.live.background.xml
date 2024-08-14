@@ -10,7 +10,7 @@
             <description>Background !Playing</description>
             <control type="group">
                 <description>Background Dynamic</description>
-                <control type="image"> 
+                <control type="image" id="40001">
                     <description>Hide Background</description>
                     <width>auto</width>
                     <height>auto</height>
@@ -22,6 +22,7 @@
                     <width>auto</width>
                     <height>auto</height>
                     <texture>backgrounds/background.gif</texture>
+                    <visible>Control.IsVisible(40001)</visible>
                     <aspectratio scalediffuse="false" align="center" aligny="center">scale</aspectratio>
                 </control>
                 <control type="grouplist">
@@ -29,6 +30,7 @@
                     <posy>284</posy>
                     <itemgap>5</itemgap>
                     <orientation>vertical</orientation>
+                    <visible>Control.IsVisible(40001)</visible>
                     <control type="image" id="40002">
                         <description>Background Logo</description>
                         <height>512</height>
@@ -51,6 +53,7 @@
                     <autoscroll delay="5000" time="1000">false</autoscroll>
                     <animation effect="fade" start="75" end="75" condition="True">Conditional</animation>
                     <label></label>
+                    <visible>Control.IsVisible(40001)</visible>
                 </control>
                 <control type="grouplist">
                     <posx>1440</posx>
@@ -58,6 +61,7 @@
                     <width>480</width>
                     <itemgap>1</itemgap>
                     <orientation>vertical</orientation>
+                    <visible>Control.IsVisible(40001)</visible>
                     <control type="label">
                         <description>Time</description>
                         <align>center</align>

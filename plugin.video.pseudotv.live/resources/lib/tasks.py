@@ -50,14 +50,17 @@ class Tasks():
         
 
     def _initialize(self):
-        setInstanceID()
+        PROPERTIES.setInstanceID()
         isClient(silent=False)
         tasks = [self.chkWelcome,
                  self.chkVersion,
                  self.chkDebugging,
                  self.chkBackup,
                  self.chkPVRBackend]
-        [self._que(func) for func in tasks if not self.service._interrupt()]
+
+        for func in tasks:
+            if self.service._interrupt(): break
+            self._que(func)
         self.log('_initialize, finished...')
         
 
@@ -66,7 +69,7 @@ class Tasks():
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
               
                   
-    @cacheit(checksum=getInstanceID())
+    @cacheit(checksum=PROPERTIES.getInstanceID())
     def getOnlineVersion(self):
         try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(urllib.request.urlopen(ADDON_URL).read()))[0]
         except: ONLINE_VERSON = ADDON_VERSION
@@ -101,7 +104,7 @@ class Tasks():
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
-                with busy_dialog():
+                with BUILTIN.busy_dialog():
                     if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
                         DIALOG.notificationDialog(LANGUAGE(32152))
                     else: 
@@ -117,10 +120,20 @@ class Tasks():
             return True
         return False
 
-                     
+
     def chkQueTimer(self):
         if self.chkUpdateTime('chkQueTimer',runEvery=30):
+            self._chkPropQue()
             self._que(self._chkQueTimer)
+        
+        
+    def _chkPropQue(self):
+        if PROPERTIES.getEXTProperty('%s.chkFillers'%(ADDON_ID)) == 'true':
+            self._que(self.chkFillers,1)
+            PROPERTIES.clearEXTProperty('%s.chkFillers'%(ADDON_ID))
+        if PROPERTIES.getEXTProperty('%s.chkLibrary'%(ADDON_ID)) == 'true':
+            self._que(self.chkLibrary,1,*(True))
+            PROPERTIES.clearEXTProperty('%s.chkLibrary'%(ADDON_ID))
         
         
     def _chkQueTimer(self, client=isClient()):
@@ -139,15 +152,29 @@ class Tasks():
             self._que(self.chkHTTP)
         if self.chkUpdateTime('chkJSONQUE',runEvery=300):
             self._que(self.chkJSONQUE)
-                          
+            
 
     def chkFiles(self):
-        self.log('_chkFiles')
+        self.log('chkFiles')
         # check for missing files and run appropriate action to rebuild them only after init. startup.
-        if hasFirstrun():
+        if PROPERTIES.hasFirstrun():
             if not FileAccess.exists(LIBRARYFLEPATH): self._que(self.chkLibrary)
-            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)):
-                self._que(self.chkChannels)
+            if not (FileAccess.exists(CHANNELFLEPATH) & FileAccess.exists(M3UFLEPATH) & FileAccess.exists(XMLTVFLEPATH) & FileAccess.exists(GENREFLEPATH)): self._que(self.chkChannels)
+        elif not FileAccess.exists(LOGO_LOC): FileAccess.makedirs(LOGO_LOC) #check logo folder
+
+
+    def chkFillers(self):
+        self.log('chkFillers')
+        with DIALOG.sudo_dialog(LANGUAGE(32179)):
+            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,''))]
+            for citem in self.getChannels():
+                for ftype in FILLER_TYPES[1:]:
+                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,genre)) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,genre,''))]
+                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,citem.get('name'))):
+                        if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
+                        else:                          IGNORE = IGNORE_CHTYPE
+                        if citem.get('name') and not citem.get('radio',False) and citem.get('type','') not in IGNORE:
+                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,citem.get('name')))
 
 
     def chkRecommended(self):
@@ -158,14 +185,14 @@ class Tasks():
         except Exception as e: self.log('chkRecommended failed! %s'%(e), xbmc.LOGERROR)
 
         
-    def chkLibrary(self):
+    def chkLibrary(self, force=False):
         try: 
             library = Library(service=self.service)
             library.importPrompt()
-            complete = library.updateLibrary()
+            complete = library.updateLibrary(force)
             del library
-            if   not complete: self._que(self.chkLibrary)
-            elif not hasAutotuned(): self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            if   not complete: self._que(self.chkLibrary,1,*(force))
+            elif not PROPERTIES.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -175,23 +202,23 @@ class Tasks():
             complete = builder.build()
             channels = builder.verify()
             del builder
-            if complete:
-                if not hasFirstrun(): setFirstrun(state=True)
+            if not complete: self._que(self.chkChannels,2)
+            else: 
+                if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
                 self._que(togglePVR,1,*(False,True))
-            else: self._que(self.chkChannels)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
                
 
     def chkPVRSettings(self):
         try:
-            # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(30069))):
-            if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
-                SETTINGS.setSettingInt('Min_Days',min)
-                
-            if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
-                SETTINGS.setSettingInt('Max_Days',max)
+            with DIALOG.sudo_dialog(msg='%s %s %s'%(LANGUAGE(32028),LANGUAGE(30069),LANGUAGE(32053))):
+                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
+                    SETTINGS.setSettingInt('Min_Days',min)
+                    
+                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
+                    SETTINGS.setSettingInt('Max_Days',max)
         except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
          
          
@@ -201,8 +228,8 @@ class Tasks():
             
             
     def chkJSONQUE(self):
-        if not isRunning('chkJSONQUE'):
-            with setRunning('chkJSONQUE'):
+        if not PROPERTIES.isRunning('chkJSONQUE'):
+            with PROPERTIES.setRunning('chkJSONQUE'):
                 queuePool = (SETTINGS.getCacheSetting('queuePool', json_data=True) or {})
                 params = queuePool.get('params',[])
                 for param in (list(chunkLst(params,int((REAL_SETTINGS.getSetting('Page_Limit') or "25")))) or [[]])[0]:
@@ -217,9 +244,23 @@ class Tasks():
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()
-            if complete: setAutotuned()
+            if complete: PROPERTIES.setAutotuned()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
+    
+    
+    @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
+    def getGenreNames(self):
+        self.log('getGenres')
+        try:
+            if isClient(): return []
+            library = Library(self.service)
+            genres  = set([tvgenre.get('name') for tvgenre in library.getTVGenres() if tvgenre.get('name')] + [movgenre.get('name') for movgenre in library.getMovieGenres() if movgenre.get('name')])
+            del library
+            return list(genres)
+        except Exception as e: 
+            self.log('getGenres failed! %s'%(e), xbmc.LOGERROR)
+            return []
     
 
     def getChannels(self):
@@ -237,34 +278,34 @@ class Tasks():
 
     def chkChannelChange(self, channels=[]):
         if isClient(): return channels
-        # with sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
-        nChannels = self.getChannels()
-        if channels != nChannels:
-            self.log('chkChannelChange, resetting chkChannels')
-            self._que(self.chkChannels)
-            return nChannels
-        return channels
+        with DIALOG.sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
+            nChannels = self.getChannels()
+            if channels != nChannels:
+                self.log('chkChannelChange, resetting chkChannels')
+                self._que(self.chkChannels)
+                return nChannels
+            return channels
 
         
     def chkSettingsChange(self, settings=[]):
         self.log('chkSettingsChange')
-        # with sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
-        nSettings = dict(SETTINGS.getCurrentSettings())
-        for setting, value in list(settings.items()):
-            actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'userFolders':nSettings.get(setting)}},
-                       'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder' :nSettings.get(setting)}},
-                       'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL'    :nSettings.get(setting)}},
-                       'UDP_PORT'        :{'func':setPendingRestart},
-                       'TCP_PORT'        :{'func':setPendingRestart},
-                       'Client_Mode'     :{'func':setPendingRestart},
-                       'Disable_Cache'   :{'func':setPendingRestart},
-                       'Disable_Trakt'   :{'func':setPendingRestart},
-                       'Rollback_Watched':{'func':setPendingRestart}}
-                       
-            if nSettings.get(setting) != value and actions.get(setting):
-                self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                self._que(actions[setting].get('func'),1,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
-        return nSettings
+        with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
+            nSettings = dict(SETTINGS.getCurrentSettings())
+            for setting, value in list(settings.items()):
+                actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'userFolders':nSettings.get(setting)}},
+                           'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder' :nSettings.get(setting)}},
+                           'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL'    :nSettings.get(setting)}},
+                           'UDP_PORT'        :{'func':setPendingRestart},
+                           'TCP_PORT'        :{'func':setPendingRestart},
+                           'Client_Mode'     :{'func':setPendingRestart},
+                           'Disable_Cache'   :{'func':setPendingRestart},
+                           'Disable_Trakt'   :{'func':setPendingRestart},
+                           'Rollback_Watched':{'func':setPendingRestart}}
+                           
+                if nSettings.get(setting) != value and actions.get(setting):
+                    self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
+                    self._que(actions[setting].get('func'),1,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
+            return nSettings
 
 
     def setUserPath(self, userFolders):
@@ -273,7 +314,6 @@ class Tasks():
         if not isClient():
             files = [M3UFLE,XMLTVFLE,GENREFLE,LIBRARYFLE,CHANNELFLE]
             dia   = DIALOG.progressDialog(message=LANGUAGE(32050))
-            FileAccess.move(os.path.join(oldFolder,'logos'),os.path.join(newFolder,'logos'))
             for idx, file in enumerate(files):
                 pnt = int(((idx+1)*100)//len(files))
                 dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
@@ -288,10 +328,16 @@ class Tasks():
                             if FileAccess.copy(newFilePath,bakFilePath): #backup existing file.
                                 dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32151),bakFilePath,LANGUAGE(32025)))
                         else: continue
-                    if FileAccess.move(oldFilePath,newFilePath):
+                    if FileAccess.copy(oldFilePath,newFilePath):
                         dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32051),file,LANGUAGE(32025)))
                         continue
                 dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
+            if DIALOG.yesnoDialog((LANGUAGE(30150))): 
+                with BUILTIN.busy_dialog:
+                    FileAccess.copy(os.path.join(oldFolder,'logos')  ,os.path.join(newFolder,'logos'))
+            if DIALOG.yesnoDialog((LANGUAGE(30151))): 
+                with BUILTIN.busy_dialog:
+                    FileAccess.copy(os.path.join(oldFolder,'fillers'),os.path.join(newFolder,'fillers'))
         self.setPVRPath(newFolder)
         
         

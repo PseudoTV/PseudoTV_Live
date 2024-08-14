@@ -43,6 +43,7 @@ class Background(xbmcgui.WindowXML):
     def onInit(self):
         try:
             logo = (self.citem.get('logo',(BUILTIN.getInfoLabel('Art(icon)','Player') or  COLOR_LOGO)))
+            self.getControl(40001).setVisibleCondition('[!Player.Playing]')
             self.getControl(40002).setImage(COLOR_LOGO if logo.endswith('wlogo.png') else logo)
             self.getControl(40003).setText(LANGUAGE(32104)%(self.citem.get('name',(BUILTIN.getInfoLabel('ChannelName','VideoPlayer') or ADDON_NAME))))
         except Exception as e:
@@ -257,7 +258,7 @@ class Overlay():
                 self._channelBug.setPosition(self.channelBugX, self.channelBugY)
             except: pass
             
-            if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPES:
+            if state and self.player.isPseudoTV and self.enableChannelBug and not BUILTIN.getInfoLabel('Genre','VideoPlayer') in FILLER_TYPE:
                 if not self._hasControl(self._channelBug):
                     self._addControl(self._channelBug)
                     self._channelBug.setVisibleCondition('Player.Playing + [!String.Contains(VideoPlayer.Genre,Pre-Roll) | !String.Contains(VideoPlayer.Genre,Post-Roll)]')
@@ -292,7 +293,7 @@ class Overlay():
             remaining  = floor(self.player.getTimeLabel('TimeRemaining'))
             showTime   = (abs(totalTime - (totalTime * .75)) - (OVERLAY_DELAY * interval))
             intTime    = roundupDIV(showTime,interval)
-            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPES
+            showOnNext = remaining <= showTime and totalTime > SELECT_DELAY and not BUILTIN.getInfoLabel('NextGenre','VideoPlayer') in FILLER_TYPE
             
             if remaining < intTime: return getOnNextInterval(interval + 1)
             self.log('toggleOnNext, totalTime = %s, interval = %s, remaining = %s, intTime = %s, showOnNext = %s'%(totalTime,interval,remaining,intTime,showOnNext))

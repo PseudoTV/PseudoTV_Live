@@ -74,7 +74,7 @@ class Plugin:
         
         
     def quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO):
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             channelPlaylist = xbmc.PlayList(pltype)
             channelPlaylist.clear()
             xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
@@ -118,7 +118,7 @@ class Plugin:
             liz = LISTITEMS.buildItemListItem(item, 'music')
             return liz
 
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             jsonRPC = JSONRPC(self.cache)
             fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
             del jsonRPC
@@ -143,7 +143,7 @@ class Plugin:
         if listitems:
             channelPlaylist = self.quePlaylist(listitems)
             self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
-            if isPlaylistRandom(): channelPlaylist.unshuffle()
+            if BUILTIN.isPlaylistRandom(): channelPlaylist.unshuffle()
             PLAYER.play(channelPlaylist,windowed=True)
             BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
         else: self.resolveURL(False, xbmcgui.ListItem())
@@ -171,7 +171,7 @@ class Plugin:
         found = False
         fitem = self.sysInfo.get('fitem')
         
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
             if pvritem:
                 if pvritem.get('citem'): self.sysInfo['citem'].update(pvritem.get('citem',{}))
@@ -217,7 +217,7 @@ class Plugin:
                     for result in results:
                         if result.get('label','').lower().startswith(dir.lower()):
                             self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                            response = jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
+                            response = jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
                             for item in response:
                                 if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
                                     self.log('getCallback: _matchJSON, found file = %s'%(item.get('file')))
@@ -258,7 +258,7 @@ class Plugin:
             return pvritem
             
         cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
-        cacheResponse = (self.cache.get(cacheName, checksum=getInstanceID(), json_data=True) or {})
+        cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
             jsonRPC = JSONRPC(self.cache)
             pvritem = _match()
@@ -271,7 +271,7 @@ class Plugin:
                 pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
                 if isPlaylist and not radio: pvritem = _extend(pvritem)
                 del jsonRPC
-                cacheResponse = self.cache.set(cacheName, pvritem, checksum=getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+                cacheResponse = self.cache.set(cacheName, pvritem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
         return cacheResponse
 
 
@@ -329,7 +329,7 @@ class Plugin:
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
         if self.sysInfo.get('playcount') in [1,2,3]:
-            with busy_dialog():
+            with BUILTIN.busy_dialog():
                 DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
             self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
             MONITOR.waitForAbort(1.0) #allow a full second to pass beyond any msecs differential.

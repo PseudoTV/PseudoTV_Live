@@ -39,7 +39,7 @@ class Backup:
         
         
     def hasBackup(self, file: str=CHANNELFLE_BACKUP) -> bool:
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             self.log('hasBackup')
             if FileAccess.exists(file):
                 if file == CHANNELFLE_BACKUP:#main backup file, set meta.
@@ -70,7 +70,7 @@ class Backup:
             if not DIALOG.yesnoDialog('%s\n%s?'%(LANGUAGE(32108),SETTINGS.getSetting('Backup_Channels'))): 
                 return False
                 
-        with busy_dialog():
+        with BUILTIN.busy_dialog():
             if FileAccess.copy(CHANNELFLEPATH,file):
                 if file == CHANNELFLE_BACKUP: #main backup file, set meta.
                     PROPERTIES.setEXTProperty('%s.has.Backup'%(ADDON_ID),"true")
@@ -86,7 +86,7 @@ class Backup:
         elif not DIALOG.yesnoDialog('%s'%(LANGUAGE(32109)%(SETTINGS.getSetting('Recover_Channels').replace(LANGUAGE(30216),''),SETTINGS.getSetting('Backup_Channels')))): 
             return False
             
-        with busy_dialog(), suspendActivity():
+        with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
             if FileAccess.move(CHANNELFLEPATH,CHANNELFLE_RESTORE):
                 if FileAccess.copy(file,CHANNELFLEPATH):
                     library = Library()

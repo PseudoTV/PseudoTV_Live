@@ -35,7 +35,7 @@ EPG_ARTWORK         = int((REAL_SETTINGS.getSetting('EPG_Artwork') or "0"))
 
 #file paths
 LOGO_LOC            = os.path.join(USER_LOC,'logos')
-TEMP_LOC            = os.path.join(USER_LOC,'temp')
+FILLER_LOC          = os.path.join(USER_LOC,'fillers')
 M3UFLEPATH          = os.path.join(USER_LOC,M3UFLE)
 XMLTVFLEPATH        = os.path.join(USER_LOC,XMLTVFLE)
 GENREFLEPATH        = os.path.join(USER_LOC,GENREFLE)

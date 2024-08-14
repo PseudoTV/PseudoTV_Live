@@ -1,7 +1,15 @@
 v.0.5.2
+-Added removal of invalid characters from channel names.
+-Moved Logo's folder to user folder. ie. \cache\logos
+-Added local fillers folder. ie. \cache\fillers
+-Added Utility option to automatically create filler folders based on your current channels.
+-Changed default settings for accurate duration to "Prefer Kodi Metadata" & include fillers to "False".
 -Added Force Episode Sort Channel Rule. 
 -Improved queue priorities. 
--Added PVR backend refresh at the end of channel building; This will force Kodi to recognize recent PseudoTV additions.
+-Added PVR backend refresh at the end of channel building; 
+ - Forces Kodi to recognize recent channel/guidedata changes.
+ - May cause some channel EPGs to display a blank cell, until the PVR backend refreshes.
+ - I'm working on a long-term solution, for now your feedback is appreciated.
 -Fixed a few user reported issues that were introduced in recent iterations.
  - Channels not building due to limit Smartplaylist parsing error.
  - Channels ignoring auto pagination; leading to repeated content.
@@ -14,6 +22,7 @@ v.0.5.2
 -Improved Channel Content parsing.
 -Added Advanced Channel Rules UI to Channel Manager.
 -Added Dynamic Smartplaylist builder to path selections.
+ - Allows users to build on-the-fly dynamic smartplaylists without the need for a smartplaylist or node.
 -Added First round of Advanced Channel Rules, more to come...
 -Added Update Available notification.
 

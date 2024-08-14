@@ -104,7 +104,7 @@ class RulesList:
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        for myId, rule in list(self.ruleItems.get(citem.get('id'),{}).items()):
+        for myId, rule in list(sorted(self.ruleItems.get(citem.get('id'),{}).items())):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
                 parameter = rule.runAction(action, citem, parameter, inherited)
@@ -218,7 +218,6 @@ class BaseRule:
 
     def validateDigitBox(self, optionindex, minimum, maximum, default):
         if int(self.optionValues[optionindex]) == 0: return
-
         try:
             val = int(self.optionValues[optionindex])
             if val >= minimum and val <= maximum:
@@ -393,11 +392,11 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
         self.myId               = 3
         self.ignore             = False
         self.exclude            = False
-        self.name               = "Screen Vingette"
-        self.description        = "Add Channel Overlay to create a immersive viewing experince."
-        self.optionLabels       = ['Enable Screen Vingette','Vingette Image','Vingette Image offset']
+        self.name               = "Screen Vignette"
+        self.description        = "Add Channel Overlay to create a immersive viewing experience."
+        self.optionLabels       = ['Enable Screen Vignette','Vignette Image','Vignette Image offset']
         self.optionValues       = [False,'None',"(0,0)"]
-        self.optionDescriptions = ["Show Screen Vingette","Change Vingette Image","Change Vingette Offset"]
+        self.optionDescriptions = ["Show Screen Vignette","Change Vignette Image","Change Vignette Offset"]
         self.actions            = [RULES_ACTION_OVERLAY_OPEN,RULES_ACTION_OVERLAY_CLOSE]
         self.selectBoxOptions   = ["",self.optionValues[1],""]
         self.storedValues       = [[],[],[]]
@@ -408,8 +407,8 @@ class SetScreenVingette(BaseRule): #todo requires Kodi core changes. resize vide
 
 
     def getTitle(self):
-        if self.optionValues[0]: return 'Show Screen Vingette w/%s offset\n%s'%(self.optionValues[2],self.getImage(self.optionValues[1]))
-        else:                    return 'Hide Screen Vingette'
+        if self.optionValues[0]: return 'Show Screen Vignette w/%s offset\n%s'%(self.optionValues[2],self.getImage(self.optionValues[1]))
+        else:                    return 'Hide Screen Vignette'
             
             
     def getPosition(self, optionindex):
@@ -509,6 +508,7 @@ class MST3k(BaseRule): #todo requires Kodi core changes. resize videowindow cont
 
     def onAction(self, optionindex):
         if optionindex == 0: self.onActionToggleBool(optionindex)
+        return self.optionValues[optionindex]
 
 
     def runAction(self, actionid, citem, parameter, overlay):
@@ -583,7 +583,7 @@ class ForceSubtitles(BaseRule):
         self.name               = "Force Subtitles"
         self.description        = "Show Subtitles"
         self.optionLabels       = ['Force Subtitles?']
-        self.optionValues       = [isSubtitle()]
+        self.optionValues       = [BUILTIN.isSubtitle()]
         self.optionDescriptions = [""]
         self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [""]
@@ -1055,8 +1055,7 @@ class EvenShowsRule(BaseRule):
         if optionindex in [0,1]:
             self.onActionSelect(optionindex,self.optionLabels[optionindex])
             self.validate(optionindex)
-        elif optionindex ==2:
-            self.onActionToggleBool(optionindex)
+        elif optionindex ==2:    self.onActionToggleBool(optionindex)
         return self.optionValues[optionindex]
 
 

@@ -58,41 +58,18 @@ SETTINGS            = DIALOG.settings
 LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
-@contextmanager
-def legacy():
-    setLegacy(True)
-    try: yield
-    finally: setLegacy(False)
-
-def setLegacy(state=True):
-    PROPERTIES.setEXTProperty('PseudoTVRunning',str(state).lower() == "true")
-
-def getLegacy():
-    return PROPERTIES.getEXTProperty('PseudoTVRunning') == 'True'
-
-@contextmanager
-def setRunning(key):
-    PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'true')
-    try: yield
-    finally: PROPERTIES.setEXTProperty('%s.Running.%s'%(ADDON_ID,key),'false')
-
-def isRunning(key):
-    return PROPERTIES.getEXTProperty('%s.Running.%s'%(ADDON_ID,key)) == 'true'
-
-@contextmanager
-def suspendActivity(): #suspend/quit running background task.
-    PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'true')
-    try: yield
-    finally:
-        PROPERTIES.setEXTProperty('%s.pendingSuspend'%(ADDON_ID),'false')
-    
-def isPendingSuspend():
-    return PROPERTIES.getEXTProperty('%s.pendingSuspend'%(ADDON_ID)) == 'true'
-
 def setPendingRestart(state=True):
     if state: DIALOG.notificationWait(LANGUAGE(32124))
     return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
-           
+
+def isClient(silent=True):
+    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
+    state = Client_Mode > 0
+    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
+    PROPERTIES.setEXTProperty('%s.Client_Mode'%(ADDON_ID),str(Client_Mode))
+    if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
+    return state
+
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
   s = s.strip()
@@ -100,6 +77,9 @@ def slugify(s, lowercase=False):
   s = re.sub(r'[\s_-]+', '_', s)
   s = re.sub(r'^-+|-+$', '', s)
   return s
+        
+def validString(s):
+    return "".join( x for x in s if (x.isalnum() or x in "._- "))
         
 def stripNumber(s):
     return re.sub(r'\d+','',s)
@@ -112,25 +92,7 @@ def stripRegion(s):
     
 def chanceBool(percent=25):
     return random.randrange(100) <= percent
-    
-def unquoteString(text):
-    return urllib.parse.unquote(text)
-    
-def quoteString(text):
-    return urllib.parse.quote(text)
 
-def encodeString(text):
-    base64_bytes = base64.b64encode(zlib.compress(text.encode(DEFAULT_ENCODING)))
-    return base64_bytes.decode(DEFAULT_ENCODING)
-
-def decodeString(base64_bytes):
-    try:
-        message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
-        return message_bytes.decode(DEFAULT_ENCODING)
-    except Exception as e:
-        log('Globals: decodeString failed! %s'%(e), xbmc.LOGERROR)
-        return ''
-        
 def decodePlot(text: str = '') -> dict:
     plot = re.search(r'\[COLOR item=\"(.+?)\"]\[/COLOR]', text)
     if plot: return loadJSON(decodeString(plot.group(1)))
@@ -178,16 +140,6 @@ def diffLSTDICT(old, new):
     sDIFF = sOLD.symmetric_difference(sNEW)
     return setDictLST([loadJSON(e) for e in sDIFF])
 
-def setInstanceID():
-    instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-    if instanceID: PROPERTIES.clearTrash(instanceID)
-    PROPERTIES.setEXTProperty('%s.InstanceID'%(ADDON_ID),getMD5(uuid.uuid4()))
-
-def getInstanceID():
-    instanceID = PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-    if not instanceID: setInstanceID()
-    return PROPERTIES.getEXTProperty('%s.InstanceID'%(ADDON_ID))
-
 def genUUID(seed=None):
     if seed:
         m = hashlib.md5()
@@ -202,14 +154,7 @@ def getIP(wait=5):
         elif (MONITOR.waitForAbort(1.0)): break
         else: wait -= 1
     return gethostbyname(gethostname())
-           
-def getMYUUID():
-    uuid = SETTINGS.getCacheSetting('MY_UUID')
-    if not uuid: 
-        uuid = genUUID(seed=getIP())
-        SETTINGS.setCacheSetting('MY_UUID',uuid)
-    return uuid
-    
+
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
     tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
@@ -231,6 +176,7 @@ def splitYear(label):
     return label, None
 
 def getChannelSuffix(name, type):
+    name = validString(name)
     if   type == "TV Genres"    and not LANGUAGE(32014) in name: suffix = LANGUAGE(32014) #TV
     elif type == "Movie Genres" and not LANGUAGE(32015) in name: suffix = LANGUAGE(32015) #Movies
     elif type == "Mixed Genres" and not LANGUAGE(32010) in name: suffix = LANGUAGE(32010) #Mixed
@@ -252,22 +198,7 @@ def getLabel(item, addYear=False):
     year = (item.get('year','') or year)
     if year and addYear: return '%s (%s)'%(label, year)
     return label
-
-def hasPVR():
-    return BUILTIN.getInfoBool('HasTVChannels','Pvr')
-    
-def hasRadio():
-    return BUILTIN.getInfoBool('HasRadioChannels','Pvr')
-
-def hasMusic():
-    return BUILTIN.getInfoBool('HasContent(Music)','Library')
-    
-def hasTV():
-    return BUILTIN.getInfoBool('HasContent(TVShows)','Library')
-    
-def hasMovie():
-    return BUILTIN.getInfoBool('HasContent(Movies)','Library')
-               
+   
 def hasFile(file):
     if file.startswith(tuple(VFS_TYPES)):
         if file.startswith('plugin://'): return hasAddon(file)
@@ -306,10 +237,6 @@ def openAddonSettings(ctl=(0,1),id=ADDON_ID):
         try:    ctl = (ctl[0],{8:7,11:9}[ctl[1]])
         except: ctl = (ctl[0],ctl[1] + 1)
     BUILTIN.executebuiltin('SetFocus(%i)'%(ctl[1]-80))
-    
-def pagination(list, end):
-    for start in range(0, len(list), end):
-        yield seq[start:start+end]
 
 def diffRuntime(dur, roundto=15):
     def ceil_dt(dt, delta):
@@ -350,42 +277,13 @@ def randomShuffle(items=[]):
         random.shuffle(items)
     return items
     
-def interleave(seqs): 
-    #evenly interleave multi-lists of different sizes, while preserving seqs order
-    #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
-    return [_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f]
-        
-def intersperse(*seqs):
-    #interleave multi-lists, while preserving order distribution
-    def distribute(seq):
-        for i, x in enumerate(seq, 1):
-            yield i/(len(seq) + 1), x
-    distributions = list(map(distribute, seqs))
-    #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
-    for _, x in sorted(chain(*distributions), key=itemgetter(0)):
-        yield x
-        
-def distribute(*seq):
-    #randomly distribute multi-lists of different sizes.
-    #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
-    iters = list(map(iter, seqs))
-    while not MONITOR.abortRequested() and iters:
-        it = random.choice(iters)
-        try:   yield next(it)
-        except StopIteration:
-            iters.remove(it)
-
 def isStack(path): #is path a stack
     return path.startswith('stack://')
 
 def splitStacks(path): #split stack path for indv. files.
     if not isStack(path): return [path]
     return [_f for _f in ((path.split('stack://')[1]).split(' , ')) if _f]
-            
-def percentDiff(org, new):
-    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
-    except ZeroDivisionError: return -1
-    
+
 def escapeDirJSON(path):
     mydir = path
     if (mydir.find(":")): mydir = mydir.replace("\\", "\\\\")
@@ -452,56 +350,6 @@ def togglePVR(state=True, reverse=False, wait=15):
         if reverse:
             timerit(togglePVR)(wait,[not bool(state)])
             DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
-     
-def hasSubtitle():
-    return BUILTIN.getInfoBool('HasSubtitles','VideoPlayer')
-
-def isSubtitle():
-    return BUILTIN.getInfoBool('SubtitlesEnabled','VideoPlayer')
-
-def isPlaylistRandom():
-    return BUILTIN.getInfoLabel('Random','Playlist').lower() == 'on' # Disable auto playlist shuffling if it's on
-    
-def isPlaylistRepeat():
-    return BUILTIN.getInfoLabel('IsRepeat','Playlist').lower() == 'true' # Disable auto playlist repeat if it's on #todo
-
-def isPaused():
-    return BUILTIN.getInfoBool('Player.Paused')
-                
-def hasAutotuned():
-    return PROPERTIES.getPropertyBool('hasAutotuned')
-    
-def setAutotuned(state=True):
-    return PROPERTIES.setPropertyBool('hasAutotuned',state)
-         
-def hasFirstrun():
-    return PROPERTIES.getPropertyBool('hasFirstrun')
-    
-def setFirstrun(state=True):
-    return PROPERTIES.setPropertyBool('hasFirstrun',state)
-
-def isClient(silent=True):
-    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
-    state = Client_Mode > 0
-    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
-    PROPERTIES.setEXTProperty('%s.Client_Mode'%(ADDON_ID),str(Client_Mode))
-    if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
-    return state
-
-def getDiscovery():
-    return loadJSON(PROPERTIES.getEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID)))
-
-def setDiscovery(servers={}):
-    return PROPERTIES.setEXTProperty('%s.SERVER_DISCOVERY'%(ADDON_ID),dumpJSON(servers))
-
-def chunkLst(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
-
-def chunkDict(items, n):
-    it = iter(items)
-    for i in range(0, len(items), n):
-        yield {k:items[k] for k in islice(it, n)}
 
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True
@@ -513,20 +361,9 @@ def isMixed(item):
     for path in item.get('path',[item.get('file','')]):
         if path.lower().startswith('special://profile/playlists/mixed/'): return True
     return False
-    
-def roundupDIV(p, q):
-    try:
-        d, r = divmod(p, q)
-        if r: d += 1
-        return d
-    except ZeroDivisionError: 
-        return 1
-                
+         
 def playSFX(filename, cached=False):
     xbmc.playSFX(filename, useCached=cached)
-    
-def forceUpdateTime(key):
-    PROPERTIES.setPropertyInt(key,0)
 
 def cleanLabel(text):
     text = re.sub('\[COLOR=(.+?)\]', '', text)
@@ -574,10 +411,6 @@ def cleanMPAA(mpaa):
         mpaa = mpaa.strip()
     return mpaa
 
-def timeString2Seconds(string): #hh:mm:ss
-    try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
-    except: return -1
-
 def getIDbyPath(path):
     try:
         if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path).group(1)
@@ -588,9 +421,71 @@ def getIDbyPath(path):
 def mergeDictLST(dict1,dict2):
     for k, v in list(dict2.items()):
         dict1.setdefault(k,[]).extend(v)
-    return dict1    
+        setDictLST()
+    return dict1
+    
+def lstSetDictLst(lst=[]):
+    items = dict()
+    for key, dictlst in lst.items():
+        if isinstance(dictlst, list): dictlst = setDictLST(dictlst)
+        items[key] = dictlst
+    return items
     
 def compareDict(dict1,dict2,sortKey):
     a = sorted(dict1, key=itemgetter(sortKey))
     b = sorted(dict2, key=itemgetter(sortKey))
     return a == b
+    
+def timeString2Seconds(string): #hh:mm:ss
+    try:    return int(sum(x*y for x, y in zip(list(map(float, string.split(':')[::-1])), (1, 60, 3600, 86400))))
+    except: return -1
+
+def chunkLst(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+def chunkDict(items, n):
+    it = iter(items)
+    for i in range(0, len(items), n):
+        yield {k:items[k] for k in islice(it, n)}
+    
+def roundupDIV(p, q):
+    try:
+        d, r = divmod(p, q)
+        if r: d += 1
+        return d
+    except ZeroDivisionError: 
+        return 1
+       
+def interleave(seqs): 
+    #evenly interleave multi-lists of different sizes, while preserving seqs order
+    #[1, 'a', 'A', 2, 'b', 'B', 3, 'c', 'C', 4, 'd', 'D', 'e', 'E']
+    return [_f for _f in chain.from_iterable(zip_longest(*seqs)) if _f]
+        
+def intersperse(*seqs):
+    #interleave multi-lists, while preserving order distribution
+    def distribute(seq):
+        for i, x in enumerate(seq, 1):
+            yield i/(len(seq) + 1), x
+    distributions = list(map(distribute, seqs))
+    #['a', 'A', 1, 'b', 'B', 2, 'c', 'C', 3, 'd', 'D', 4, 'e', 'E']
+    for _, x in sorted(chain(*distributions), key=itemgetter(0)):
+        yield x
+        
+def distribute(*seq):
+    #randomly distribute multi-lists of different sizes.
+    #['a', 'A', 'B', 1, 2, 'C', 3, 'b', 4, 'D', 'c', 'd', 'e', 'E']
+    iters = list(map(iter, seqs))
+    while not MONITOR.abortRequested() and iters:
+        it = random.choice(iters)
+        try:   yield next(it)
+        except StopIteration:
+            iters.remove(it)
+            
+def percentDiff(org, new):
+    try: return (abs(float(org) - float(new)) / float(new)) * 100.0
+    except ZeroDivisionError: return -1
+        
+def pagination(list, end):
+    for start in range(0, len(list), end):
+        yield seq[start:start+end]
