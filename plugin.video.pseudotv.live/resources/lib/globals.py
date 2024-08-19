@@ -118,8 +118,7 @@ def setJSON(file, data):
 
 def getURL(url):
     try: return urllib.request.urlopen(url).read()
-    except Exception as e: 
-        log("getURL, failed! %s"%e, xbmc.LOGERROR)
+    except Exception as e: pass
      
 def setURL(url, file):
     try:
@@ -301,6 +300,7 @@ def togglePVR(state=True, reverse=False, wait=15):
         if reverse:
             timerit(togglePVR)(wait,[not bool(state)])
             DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
+    else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
 
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True

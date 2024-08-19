@@ -120,7 +120,6 @@ class Tasks():
         self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
         
         self._chkPropTimer('chkFillers'     , self.chkFillers)
-        self._chkPropTimer('chkLibrary'     , self.chkLibrary)
         self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
         self._chkPropTimer('runAutoTune'    , self.runAutoTune)
         
