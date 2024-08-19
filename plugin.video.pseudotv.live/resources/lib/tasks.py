@@ -312,7 +312,7 @@ class Tasks():
                 fileItems = self.jsonRPC.walkListDirectory(old, depth=-1, appendPath=True)
             
             cnt = 0
-            for dir, files in fileItems.items():
+            for dir, files in list(fileItems.items()):
                 ndir = dir.replace(old,new)
                 dia  = DIALOG.progressDialog(int(((cnt)*100)//len(list(fileItems.keys()))), dia, message='%s\n%s'%(LANGUAGE(32051),ndir))
                 if ndir and not FileAccess.exists(os.path.join(ndir,'')):

@@ -1661,5 +1661,5 @@ msgid "Force Autotune to run."
 msgstr ""
 
 msgctxt "#33182"
-msgid "When [COLOR=orange]Idle[/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in "Select Server" list."
+msgid "When [COLOR=orange]Idle[/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in Select Server list."
 msgstr ""

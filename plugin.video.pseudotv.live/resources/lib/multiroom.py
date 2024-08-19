@@ -134,7 +134,7 @@ class Multiroom:
     def chkPVRservers(self):
         changed = False
         servers = self.getDiscovery()
-        for server in servers.values():
+        for server in list(servers.values()):
             server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE)) else False
             self.log('chkPVRservers, %s online = %s'%(server.get('name'),server['online']))
             if SETTINGS.hasPVRInstance(server.get('name')):
@@ -163,7 +163,7 @@ class Multiroom:
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizlst  = poolit(_build)(servers.values())
+            lizlst  = poolit(_build)(list(servers.values()))
             selects = DIALOG.selectDialog(lizlst,LANGUAGE(32183))
             if not selects is None:
                 [servers.pop(liz.getLabel()) for idx, liz in enumerate(lizlst) if idx in selects]
@@ -178,7 +178,7 @@ class Multiroom:
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
-            lizlst  = poolit(_build)(servers.values())
+            lizlst  = poolit(_build)(list(servers.values()))
             selects = DIALOG.selectDialog(lizlst,LANGUAGE(30130),preselect=[idx for idx, listitem in enumerate(lizlst) if loadJSON(listitem.getPath()).get('enabled',False)])
             if not selects is None:
                 for idx, liz in enumerate(lizlst):
