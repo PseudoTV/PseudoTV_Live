@@ -27,7 +27,6 @@ class Channels:
         self.channelDATA = getJSON(CHANNELFLE_DEFAULT)
         self.channelTEMP = getJSON(CHANNEL_ITEM)
         self.channelDATA.update(self._load())
-        # self.setChannels(self.channelDATA['channels'])
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -41,6 +40,7 @@ class Channels:
     
     
     def _save(self, file=CHANNELFLEPATH) -> bool:
+        self.chkUUID()
         self.channelDATA['channels'] = sorted(self.channelDATA['channels'], key=itemgetter('number'))
         self.log('_save, channels = %s'%(len(self.channelDATA['channels'])))
         return setJSON(file,self.channelDATA)
@@ -92,8 +92,8 @@ class Channels:
         return self.setChannels()
         
         
-    def getUUID(self) -> str:
-        return (self.channelDATA.get('uuid','') or SETTINGS.getMYUUID())
+    def chkUUID(self) -> str:
+        return self.channelDATA.get('uuid',SETTINGS.getMYUUID())
         
         
     def setUUID(self, uuid: str='') -> bool:

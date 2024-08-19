@@ -202,7 +202,7 @@ msgid "Show On Next"
 msgstr ""
 
 msgctxt "#30046"
-msgid "Show Static (TV) Effect"
+msgid "Remove Server"
 msgstr ""
 
 msgctxt "#30047"
@@ -414,11 +414,11 @@ msgid "TCP Port:"
 msgstr ""
 
 msgctxt "#30099"
-msgid "Client Configuration"
+msgid "Servers Added (%s)"
 msgstr ""
 
 msgctxt "#30100"
-msgid "Client Mode"
+msgid "Removed Server (%s)"
 msgstr ""
 
 msgctxt "#30101"
@@ -430,7 +430,7 @@ msgid "Centralized Folder"
 msgstr ""
 
 msgctxt "#30103"
-msgid "Ports"
+msgid "Bonjour Information"
 msgstr ""
 
 msgctxt "#30104"
@@ -490,7 +490,7 @@ msgid "Remove Recording"
 msgstr ""
 
 msgctxt "#30118"
-msgid "Removed Recording!"
+msgid "Removed Recording"
 msgstr ""
 
 msgctxt "#30119"
@@ -506,7 +506,7 @@ msgid "Even Show Distribution"
 msgstr ""
 
 msgctxt "#30122"
-msgid "One Show"
+msgid "Enter Device Name"
 msgstr ""
 
 msgctxt "#30123"
@@ -534,11 +534,11 @@ msgid "Searching for %s logo"
 msgstr ""
 
 msgctxt "#30129"
-msgid "Start Server Announcement"
+msgid "Start Announcement"
 msgstr ""
 
 msgctxt "#30130"
-msgid "Start Client Pairing"
+msgid "Select Server to enable."
 msgstr ""
 
 msgctxt "#30131"
@@ -619,6 +619,10 @@ msgstr ""
 
 msgctxt "#30150"
 msgid "Copy Logo Folder?"
+msgstr ""
+
+msgctxt "#30151"
+msgid "Copy Fillers Folder?"
 msgstr ""
 
 msgctxt "#30151"
@@ -823,7 +827,7 @@ msgid "Discovered Server"
 msgstr ""
 
 msgctxt "#32048"
-msgid "Select Server"
+msgid "Select Servers"
 msgstr ""
 
 msgctxt "#32049"
@@ -831,7 +835,7 @@ msgid "Restarting..."
 msgstr ""
 
 msgctxt "#32050"
-msgid "Preparing to copy files"
+msgid "Preparing to copy"
 msgstr ""
 
 msgctxt "#32051"
@@ -863,7 +867,7 @@ msgid "%s is busy, try again later..."
 msgstr ""
 
 msgctxt "#32058"
-msgid "Not Available in Client Mode"
+msgid "Cancelling Autotune\nExisting Channels Detected..."
 msgstr ""
 
 msgctxt "#32059"
@@ -887,7 +891,7 @@ msgid "OK"
 msgstr ""
 
 msgctxt "#32064"
-msgid "Pre-defined Channels are currently non-configurable."
+msgid "Autotuned Channels are currently non-configurable."
 msgstr ""
 
 msgctxt "#32065"
@@ -1127,7 +1131,7 @@ msgid "Force background service to reload."
 msgstr ""
 
 msgctxt "#32124"
-msgid "Shutdown background service and restart."
+msgid "Restarting background service..."
 msgstr ""
 
 msgctxt "#32125"
@@ -1143,7 +1147,7 @@ msgid "Deleting %s"
 msgstr ""
 
 msgctxt "#32128"
-msgid "Player will be stop!"
+msgid "Rebuilding Autotuned Channels"
 msgstr ""
 
 msgctxt "#32129"
@@ -1159,7 +1163,7 @@ msgid "[COLOR=yellow][B]Notice!! [/B][/COLOR]Kodi's Webserver is disabled.\nIt's
 msgstr ""
 
 msgctxt "#32132"
-msgid "update unnecessary."
+msgid "Default device name [B]%s[/B] detected!\nPlease change your instance name to something unique this will assure proper multi-room functionality."
 msgstr ""
 
 msgctxt "#32133"
@@ -1223,11 +1227,11 @@ msgid "Media File Missing!"
 msgstr ""
 
 msgctxt "#32148"
-msgid "Waiting for system idle..."
+msgid "Please wait for announcements to finish, Try again later..."
 msgstr ""
 
 msgctxt "#32149"
-msgid "Force High-Power"
+msgid "[COLOR=orange]Idle[/COLOR]"
 msgstr ""
 
 msgctxt "#32150"
@@ -1259,11 +1263,11 @@ msgid "Would you like to Install %s?"
 msgstr ""
 
 msgctxt "#32157"
-msgid "Pending Changes, Stand-by..."
+msgid "Pending Changes..."
 msgstr ""
 
 msgctxt "#32158"
-msgid "Syncing"
+msgid "[COLOR=yellow]Waiting for pairing (%s)[/COLOR]"
 msgstr ""
 
 msgctxt "#32159"
@@ -1279,11 +1283,11 @@ msgid "[COLOR=yellow][B]- Create Path[/B][/COLOR]"
 msgstr ""
 
 msgctxt "#32162"
-msgid "Searching your network for %s Server\nTimeout in %s seconds."
+msgid "Waiting for pairing: Timeout in %ss"
 msgstr ""
 
 msgctxt "#32163"
-msgid "Announcing %s server!\n[B]%s[/B] on your client instance.\nTimeout in %s seconds, cancel when finished."
+msgid "Announcing [B]%s[/B]\nDialog will close when paired: Timeout in %s seconds."
 msgstr ""
 
 msgctxt "#32164"
@@ -1352,6 +1356,18 @@ msgstr ""
 
 msgctxt "#32180"
 msgid "Build Filler Folders"
+msgstr ""
+
+msgctxt "#32181"
+msgid "Run Autotune"
+msgstr ""
+
+msgctxt "#32182"
+msgid "Bonjour Announcement:"
+msgstr ""
+
+msgctxt "#32183"
+msgid "Select server to remove."
 msgstr ""
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
@@ -1425,7 +1441,7 @@ msgid "Set in Kodi PVR & LiveTV Settings"
 msgstr ""
 
 msgctxt "#33038"
-msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running, no media found or system configured as a client!\nClose settings to resume background tasks."
+msgid "If a selection is [COLOR=dimgray][B]dim[/B][/COLOR] either the background task is running or no media found!\nClose settings to resume background tasks."
 msgstr ""
 
 msgctxt "#33039"
@@ -1457,11 +1473,11 @@ msgid "Display On-Next information towards the end of a video.\nIf Playlist Play
 msgstr ""
 
 msgctxt "#33046"
-msgid "Display emulated static between broadcasts for a retro experience."
+msgid "Remove paired server from select list."
 msgstr ""
 
 msgctxt "#33048"
-msgid "Select from a list of discovered servers."
+msgid "Enable/Disable paired servers."
 msgstr ""
 
 msgctxt "#33049"
@@ -1589,11 +1605,11 @@ msgid "Group TV shows in blocks. [0 Disabled, 2 Default] (Pagination size influe
 msgstr ""
 
 msgctxt "#33129"
-msgid "Bonjour Announcement over your local network"
+msgid "Server Status:"
 msgstr ""
 
 msgctxt "#33130"
-msgid "Detect Bonjour Announcement over your local network"
+msgid "Announcement Received by %s"
 msgstr ""
 
 msgctxt "#33131"
@@ -1638,4 +1654,12 @@ msgstr ""
 
 msgctxt "#33180"
 msgid "Build Filler Template folders based on your channels."
+msgstr ""
+
+msgctxt "#33181"
+msgid "Force Autotune to run."
+msgstr ""
+
+msgctxt "#33182"
+msgid "When [COLOR=orange]Idle[/COLOR] click to begin beacon; Within 15mins start another Kodi instance w/PseudoTV Live installed\nThe two instances will pair, enabled in "Select Server" list."
 msgstr ""

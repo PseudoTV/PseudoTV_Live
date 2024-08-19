@@ -1,16 +1,36 @@
+v.0.5.3
+-Fixed channel manager "Add Path".
+-Tweaked PVR backend reload.
+-Improved user folder file transfer.
+-Improved directory walking for plugins and resources.
+-Added refactored "hack" method for writing PVR Instance settings. 
+-Added rename default device name w/prompt:
+ - New multi-room requires a unique device name.
+-Removed all client/server references and settings.
+-Added "Run Autotune" option to utility menu.
+-Added new Multi-room pairing:
+ - New method pairs instances together, no limit to paired devices.
+   Each instance has it's own channels to manage, The pairing process only shares m3u/xmltv/genre over http.
+   In-order for multi-room to work, Kodi needs to be configured with a centralized database and all media must use shared paths.
+   Start the pairing process by clicking "Bonjour Announcement" under multi-room settings.
+   You'll have 15mins to start Kodi on another device, which for the first 60secs at startup will look for pairing.
+   Once paired, you can enable the new server in multi-room settings "Select Servers".
+   PseudoTV Live will configure IPTV Simple PVR backend to use the selected servers files.
+   Feature is a W.I.P please provide feedback and debug logs when necessary. Thanks!
+
 v.0.5.2
 -Added removal of invalid characters from channel names.
 -Moved Logo's folder to user folder. ie. \cache\logos
 -Added local fillers folder. ie. \cache\fillers
--Added Utility option to automatically create filler folders based on your current channels.
+-Added automatically create filler folders based on your current channels and genres to the utilities menu.
 -Changed default settings for accurate duration to "Prefer Kodi Metadata" & include fillers to "False".
 -Added Force Episode Sort Channel Rule. 
 -Improved queue priorities. 
--Added PVR backend refresh at the end of channel building; 
- - Forces Kodi to recognize recent channel/guidedata changes.
+-Added PVR backend refresh at the end of channel building:
+ - Forces Kodi to recognize recent channel/epg changes.
  - May cause some channel EPGs to display a blank cell, until the PVR backend refreshes.
  - I'm working on a long-term solution, for now your feedback is appreciated.
--Fixed a few user reported issues that were introduced in recent iterations.
+-Fixed a few user reported issues that were introduced in recent iterations:
  - Channels not building due to limit Smartplaylist parsing error.
  - Channels ignoring auto pagination; leading to repeated content.
 -Completed Holiday channels.
@@ -21,7 +41,7 @@ v.0.5.2
 -Improved Channel Manager path utility.
 -Improved Channel Content parsing.
 -Added Advanced Channel Rules UI to Channel Manager.
--Added Dynamic Smartplaylist builder to path selections.
+-Added Dynamic Smartplaylist builder to path selections:
  - Allows users to build on-the-fly dynamic smartplaylists without the need for a smartplaylist or node.
 -Added First round of Advanced Channel Rules, more to come...
 -Added Update Available notification.

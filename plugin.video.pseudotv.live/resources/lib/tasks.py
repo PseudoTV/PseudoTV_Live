@@ -35,7 +35,8 @@ class Tasks():
         self.service     = service
         self.jsonRPC     = service.jsonRPC
         self.cache       = service.jsonRPC.cache
-        self.httpServer  = HTTP(service.monitor)
+        self.httpServer  = HTTP(service=service)
+        self.multiroom   = Multiroom(service=service)
         self.quePriority = CustomQueue(priority=True,service=self.service)
 
 
@@ -51,7 +52,6 @@ class Tasks():
 
     def _initialize(self):
         PROPERTIES.setInstanceID()
-        isClient(silent=False)
         tasks = [self.chkWelcome,
                  self.chkVersion,
                  self.chkDebugging,
@@ -71,7 +71,7 @@ class Tasks():
                   
     @cacheit(checksum=PROPERTIES.getInstanceID())
     def getOnlineVersion(self):
-        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(urllib.request.urlopen(ADDON_URL).read()))[0]
+        try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
         except: ONLINE_VERSON = ADDON_VERSION
         self.log('getOnlineVersion, ONLINE_VERSON = %s'%(ONLINE_VERSON))
         return ONLINE_VERSON
@@ -80,7 +80,7 @@ class Tasks():
     def chkVersion(self):
         self.log('chkVersion')
         ONLINE_VERSION = self.getOnlineVersion()
-        if ADDON_VERSION < ONLINE_VERSION: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32168),'Version (%s)'%(ONLINE_VERSION)))
+        if ADDON_VERSION < ONLINE_VERSION: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32168),'Version: [B]%s[/B]'%(ONLINE_VERSION)))
         if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
             SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
             BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
@@ -103,56 +103,46 @@ class Tasks():
     def chkPVRBackend(self): 
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
-            if SETTINGS.chkPVRInstance('special://profile/addon_data/%s'%(PVR_CLIENT_ID)) == False:
+            if SETTINGS.hasPVRInstance() == False:
                 with BUILTIN.busy_dialog():
-                    if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
-                        DIALOG.notificationDialog(LANGUAGE(32152))
-                    else: 
-                        DIALOG.notificationDialog(LANGUAGE(32046))
+                    SETTINGS.setPVRPath(USER_LOC, self.jsonRPC.getFriendlyName(), False)
         
         
-    def chkUpdateTime(self, key: str, runEvery: int, nextUpdate=None) -> bool:
-        #schedule updates, first boot always forces run!
-        if nextUpdate is None: nextUpdate = (PROPERTIES.getPropertyInt(key) or 0)
+    def _chkQueTimer(self):
+        self.log('_chkQueTimer')
+        self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
+        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 600)
+        self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
+        self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)
+        self._chkEpochTimer('chkLibrary'    , self.chkLibrary    , (MAX_GUIDEDAYS*3600))
+        self._chkEpochTimer('chkChannels'   , self.chkChannels   , (MAX_GUIDEDAYS*3600))
+        self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
+        self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
+        
+        self._chkPropTimer('chkFillers'     , self.chkFillers)
+        self._chkPropTimer('chkLibrary'     , self.chkLibrary)
+        self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
+        self._chkPropTimer('runAutoTune'    , self.runAutoTune)
+        
+        
+    def _chkEpochTimer(self, key, func, nextrun=None, *args, **kwargs):
+        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)
         epoch = int(time.time())
-        if (epoch >= nextUpdate) and not self.service._suspend():
-            PROPERTIES.setPropertyInt(key,(epoch+runEvery))
-            return True
-        return False
+        run = (epoch >= nextrun)
+        self.log('_chkEpochTimer, key = %s, run = %s'%(key,run))
+        if run and (not self.service._interrupt() and not self.service._suspend()):
+            PROPERTIES.setPropertyInt(key,(epoch+nextrun))
+            return self._que(func)
+        
 
+    def _chkPropTimer(self, key, func):
+        key = '%s.%s'%(ADDON_ID,key)
+        run = PROPERTIES.getEXTProperty(key) == 'true'
+        self.log('_chkPropTimer, key = %s, run = %s'%(key,run))
+        if run and (not self.service._interrupt() and not self.service._suspend()):
+            PROPERTIES.clearEXTProperty(key)
+            self._que(func)
 
-    def chkQueTimer(self):
-        if self.chkUpdateTime('chkQueTimer',runEvery=30):
-            self._chkPropQue()
-            self._que(self._chkQueTimer)
-        
-        
-    def _chkPropQue(self):
-        if PROPERTIES.getEXTProperty('%s.chkFillers'%(ADDON_ID)) == 'true':
-            self._que(self.chkFillers,1)
-            PROPERTIES.clearEXTProperty('%s.chkFillers'%(ADDON_ID))
-        if PROPERTIES.getEXTProperty('%s.chkLibrary'%(ADDON_ID)) == 'true':
-            self._que(self.chkLibrary,1,*(True))
-            PROPERTIES.clearEXTProperty('%s.chkLibrary'%(ADDON_ID))
-        
-        
-    def _chkQueTimer(self, client=isClient()):
-        self.log('chkQueTimer, client = %s'%(client))
-        if self.chkUpdateTime('chkFiles',runEvery=600) and not client:
-            self._que(self.chkFiles)
-        if self.chkUpdateTime('chkRecommended',runEvery=900) and not client:
-            self._que(self.chkRecommended)
-        if self.chkUpdateTime('chkLibrary',runEvery=(MAX_GUIDEDAYS*3600)):
-            self._que(self.chkLibrary)
-        if self.chkUpdateTime('chkChannels',runEvery=(MAX_GUIDEDAYS*3600)) and not client:
-            self._que(self.chkChannels)
-        if self.chkUpdateTime('chkPVRSettings',runEvery=(MAX_GUIDEDAYS*3600)) and not client:
-            self._que(self.chkPVRSettings)
-        if self.chkUpdateTime('chkHTTP',runEvery=900) and not client:
-            self._que(self.chkHTTP)
-        if self.chkUpdateTime('chkJSONQUE',runEvery=300):
-            self._que(self.chkJSONQUE)
-            
 
     def chkFiles(self):
         self.log('chkFiles')
@@ -166,15 +156,15 @@ class Tasks():
     def chkFillers(self):
         self.log('chkFillers')
         with DIALOG.sudo_dialog(LANGUAGE(32179)):
-            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,''))]
+            [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
             for citem in self.getChannels():
                 for ftype in FILLER_TYPES[1:]:
-                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,genre)) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,genre,''))]
-                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype,citem.get('name'))):
+                    [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
+                    if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
                         if ftype.lower() == 'adverts': IGNORE = IGNORE_CHTYPE + MOVIE_CHTYPE
                         else:                          IGNORE = IGNORE_CHTYPE
-                        if citem.get('name') and not citem.get('radio',False) and citem.get('type','') not in IGNORE:
-                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype,citem.get('name')))
+                        if citem.get('name') and not citem.get('radio',False) and citem.get('type') not in IGNORE:
+                            FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),citem['name'].lower()))
 
 
     def chkRecommended(self):
@@ -191,40 +181,51 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if   not complete: self._que(self.chkLibrary,1,*(force))
-            elif not PROPERTIES.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            if not complete: self._que(self.chkLibrary,1,force)
+            elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
     def chkChannels(self):
         try:
             builder  = Builder(self.service)
-            complete = builder.build()
+            complete, updated = builder.build()
             channels = builder.verify()
             del builder
-            if not complete: self._que(self.chkChannels,2)
+            if not complete:
+                if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
             else: 
                 if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
-                self._que(togglePVR,1,*(False,True))
+                if updated: self._que(togglePVR,1,*(False,True))
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
-               
+
+                
+    def chkPVRservers(self):
+        self.log('chkPVRservers')
+        if self.multiroom.chkPVRservers():
+            self._que(togglePVR,1,*(False,True))
+
 
     def chkPVRSettings(self):
         try:
-            with DIALOG.sudo_dialog(msg='%s %s %s'%(LANGUAGE(32028),LANGUAGE(30069),LANGUAGE(32053))):
-                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS:
-                    SETTINGS.setSettingInt('Min_Days',min)
-                    
-                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS:
-                    SETTINGS.setSettingInt('Max_Days',max)
+            with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))): #Kodi PVR & LiveTV Settings
+                if (self.jsonRPC.getSettingValue('epg.pastdaystodisplay')   or 1) != MIN_GUIDEDAYS: SETTINGS.setSettingInt('Min_Days',min)
+                if (self.jsonRPC.getSettingValue('epg.futuredaystodisplay') or 3) != MAX_GUIDEDAYS: SETTINGS.setSettingInt('Max_Days',max)
         except Exception as e: self.log('chkPVRSettings failed! %s'%(e), xbmc.LOGERROR)
          
+
+    def chkDiscovery(self):
+        self.log('chkDiscovery')
+        self.multiroom.hasServers()
+        self.multiroom.pairDiscovery(wait=60)
          
+
     def chkHTTP(self):
         self.log('chkHTTP')
-        self.httpServer._start()
+        timerit(self.httpServer._start)(1.0)
+        SETTINGS.setSetting('Remote_Status',{'True':'[COLOR=green]Online[/COLOR]','False':'[COLOR=red]Offline[/COLOR]'}[str(self.httpServer.isRunning)])
             
             
     def chkJSONQUE(self):
@@ -244,7 +245,7 @@ class Tasks():
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()
-            if complete: PROPERTIES.setAutotuned()
+            if complete: SETTINGS.setAutotuned()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     
@@ -253,7 +254,6 @@ class Tasks():
     def getGenreNames(self):
         self.log('getGenres')
         try:
-            if isClient(): return []
             library = Library(self.service)
             genres  = set([tvgenre.get('name') for tvgenre in library.getTVGenres() if tvgenre.get('name')] + [movgenre.get('name') for movgenre in library.getMovieGenres() if movgenre.get('name')])
             del library
@@ -266,7 +266,6 @@ class Tasks():
     def getChannels(self):
         self.log('getChannels')
         try:
-            if isClient(): return []
             builder  = Builder(self.service)
             channels = builder.verify()
             del builder
@@ -277,7 +276,6 @@ class Tasks():
         
 
     def chkChannelChange(self, channels=[]):
-        if isClient(): return channels
         with DIALOG.sudo_dialog(msg='%s %ss'%(LANGUAGE(32028),LANGUAGE(32023))):
             nChannels = self.getChannels()
             if channels != nChannels:
@@ -288,90 +286,51 @@ class Tasks():
 
         
     def chkSettingsChange(self, settings=[]):
-        self.log('chkSettingsChange')
+        self.log('chkSettingsChange, settings = %s'%(settings))
         with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(SETTINGS.getCurrentSettings())
             for setting, value in list(settings.items()):
-                actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'userFolders':nSettings.get(setting)}},
-                           'Network_Folder'  :{'func':self.setPVRPath   ,'kwargs':{'userFolder' :nSettings.get(setting)}},
-                           'Remote_URL'      :{'func':self.setPVRRemote ,'kwargs':{'userURL'    :nSettings.get(setting)}},
+                actions = {'User_Folder'     :{'func':self.setUserPath  ,'kwargs':{'old':value,'new':nSettings.get(setting)}},
                            'UDP_PORT'        :{'func':setPendingRestart},
                            'TCP_PORT'        :{'func':setPendingRestart},
-                           'Client_Mode'     :{'func':setPendingRestart},
                            'Disable_Cache'   :{'func':setPendingRestart},
                            'Disable_Trakt'   :{'func':setPendingRestart},
                            'Rollback_Watched':{'func':setPendingRestart}}
                            
                 if nSettings.get(setting) != value and actions.get(setting):
-                    self.log('chkSettingsChange, detected change in %s - from: %s to: %s'%(setting,value,nSettings.get(setting)))
-                    self._que(actions[setting].get('func'),1,*actions[settings].get('args',()),**actions[setting].get('kwargs',{}))
+                    action = actions.get(setting)
+                    self.log('chkSettingsChange, detected change in %s - from: %s to: %s\naction = %s'%(setting,value,nSettings.get(setting),action))
+                    self._que(action.get('func'),1,*action.get('args',()),**action.get('kwargs',{}))
             return nSettings
 
 
-    def setUserPath(self, userFolders):
-        oldFolder, newFolder = userFolders
-        self.log('setUserPath, oldFolder = %s, newFolder = %s, isClient = %s'%(oldFolder,newFolder,isClient()))
-        if not isClient():
-            files = [M3UFLE,XMLTVFLE,GENREFLE,LIBRARYFLE,CHANNELFLE]
-            dia   = DIALOG.progressDialog(message=LANGUAGE(32050))
-            for idx, file in enumerate(files):
-                pnt = int(((idx+1)*100)//len(files))
-                dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
-                oldFilePath = os.path.join(oldFolder,file)
-                newFilePath = os.path.join(newFolder,file)
-                bakFilePath = os.path.join(newFolder,'%s.bak'%(file))
-                if FileAccess.exists(oldFilePath):
-                    dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32051),file))
-                    if FileAccess.exists(newFilePath):
-                        if DIALOG.yesnoDialog((LANGUAGE(30120)%newFilePath)):
-                            dia = DIALOG.progressDialog(pnt, dia, message='%s: %s'%(LANGUAGE(32151),os.path.join(newFolder,'%s.bak'%(file))))
-                            if FileAccess.copy(newFilePath,bakFilePath): #backup existing file.
-                                dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32151),bakFilePath,LANGUAGE(32025)))
+    def setUserPath(self, old, new, overwrite=False):
+        with PROPERTIES.suspendActivity():
+            self.log('setUserPath, old = %s, new = %s'%(old,new))
+            dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
+            with BUILTIN.busy_dialog():
+                fileItems = self.jsonRPC.walkListDirectory(old, depth=-1, appendPath=True)
+            
+            cnt = 0
+            for dir, files in fileItems.items():
+                ndir = dir.replace(old,new)
+                dia  = DIALOG.progressDialog(int(((cnt)*100)//len(list(fileItems.keys()))), dia, message='%s\n%s'%(LANGUAGE(32051),ndir))
+                if ndir and not FileAccess.exists(os.path.join(ndir,'')):
+                    if not FileAccess.makedirs(os.path.join(ndir,'')): continue
+                    
+                pnt = 0
+                for idx, file in enumerate(files):
+                    pnt = int(((idx)*100)//len(files))
+                    nfile = file.replace(old,new)
+                    if FileAccess.exists(nfile) and not overwrite:
+                        retval = DIALOG.yesnoDialog((LANGUAGE(30120)%nfile),customlabel='Overwrite All')
+                        if retval in [1,2]: FileAccess.delete(nfile)
                         else: continue
-                    if FileAccess.copy(oldFilePath,newFilePath):
-                        dia = DIALOG.progressDialog(pnt, dia, message='%s: %s\n%s'%(LANGUAGE(32051),file,LANGUAGE(32025)))
-                        continue
-                dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(file))
-            if DIALOG.yesnoDialog((LANGUAGE(30150))): 
-                with BUILTIN.busy_dialog:
-                    FileAccess.copy(os.path.join(oldFolder,'logos')  ,os.path.join(newFolder,'logos'))
-            if DIALOG.yesnoDialog((LANGUAGE(30151))): 
-                with BUILTIN.busy_dialog:
-                    FileAccess.copy(os.path.join(oldFolder,'fillers'),os.path.join(newFolder,'fillers'))
-        self.setPVRPath(newFolder)
+                        if retval == 2: overwrite = True
+                    if FileAccess.copy(file,nfile): dia = DIALOG.progressDialog(pnt, dia, message='%s\n%s\n%s'%(LANGUAGE(32051),ndir,nfile))
+                    else:                           dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(nfile))
+            DIALOG.progressDialog(100, dia)
+            SETTINGS.setPVRPath(new)
+            setPendingRestart()
+            
         
-        
-    def setPVRPath(self, userFolder):
-        self.log('setPVRPath, userFolder = %s'%(userFolder)) #set local pvr folder
-        SETTINGS.setSetting('User_Folder' ,userFolder)
-        SETTINGS.setSetting('Remote_M3U'  ,'%s'%(os.path.join(userFolder,  M3UFLE).replace('special://profile/addon_data','/addon_data')))
-        SETTINGS.setSetting('Remote_XMLTV','%s'%(os.path.join(userFolder,XMLTVFLE).replace('special://profile/addon_data','/addon_data')))
-        SETTINGS.setSetting('Remote_GENRE','%s'%(os.path.join(userFolder,GENREFLE).replace('special://profile/addon_data','/addon_data')))
-        
-        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'm3uPath'       :os.path.join(userFolder,M3UFLE),
-                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'epgPath'       :os.path.join(userFolder,XMLTVFLE),
-                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
-                       'genresPath'    :os.path.join(userFolder,GENREFLE)}
-        SETTINGS.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        setPendingRestart()
-        
-        
-    def setPVRRemote(self, userURL):
-        self.log('setPVRRemote, userURL = %s'%(userURL)) #set remote pvr url
-        SETTINGS.setSetting('Remote_URL'  ,userURL)
-        SETTINGS.setSetting('Remote_M3U'  ,'%s/%s'%(userURL,M3UFLE))
-        SETTINGS.setSetting('Remote_XMLTV','%s/%s'%(userURL,XMLTVFLE))
-        SETTINGS.setSetting('Remote_GENRE','%s/%s'%(userURL,GENREFLE))
-        
-        Client_Mode = SETTINGS.getSettingInt('Client_Mode')
-        newSettings = {'m3uPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'm3uUrl'        :SETTINGS.getSetting('Remote_M3U'),
-                       'epgPathType'   :'%s'%('1' if Client_Mode == 1 else '0'),
-                       'epgUrl'        :SETTINGS.getSetting('Remote_XMLTV'),
-                       'genresPathType':'%s'%('1' if Client_Mode == 1 else '0'),
-                       'genresUrl'     :SETTINGS.getSetting('Remote_GENRE')}
-        SETTINGS.chkPluginSettings(PVR_CLIENT_ID,newSettings,prompt=False)
-        setPendingRestart()

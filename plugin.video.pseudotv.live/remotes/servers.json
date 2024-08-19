@@ -1,0 +1,15 @@
+{
+    "servers": {
+        "Example": {
+            "id": "",
+            "version": "",
+            "uuid": "",
+            "name": "",
+            "host": "",
+            "settings": {
+            },
+            "enabled": false,
+            "online": false
+        }
+    }
+}

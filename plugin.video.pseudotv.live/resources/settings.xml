@@ -3,19 +3,28 @@
 	<section id="plugin.video.pseudotv.live">
         <category id="channels" label="30108" help="">
 			<group id="1">
+                <setting id="hasAutotuned" type="boolean" label="30107">
+                    <level>3</level>
+                    <default>false</default>
+                    <visible>false</visible>
+                    <control type="toggle"/>
+                </setting>
+                <setting id="Server_List" type="string" label="30107">
+                    <level>3</level>
+                    <default></default>
+                    <visible>false</visible>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <control type="edit" format="string">
+                        <heading></heading>
+                    </control>
+                </setting>
 				<setting id="Select_Channels" type="string" label="30107" help="33107">
 					<level>1</level>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Channel_Manager)</data> -->
                         <close>true</close>
@@ -28,9 +37,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Channels),true)</condition>
 						</dependency>
@@ -47,9 +53,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Backup),true)</condition>
 						</dependency>
@@ -67,9 +70,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
                         <dependency type="enable">
                             <and>
                                 <condition on="property" name="InfoBool">System.HasAddon(plugin.library.node.editor)</condition>
@@ -88,14 +88,6 @@
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
-					<dependencies>
-						<dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-						<dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="button" format="action">
 						<data>ActivateWindow(10025,"library://video/playlists.xml/",return)</data>
                         <close>true</close>
@@ -113,9 +105,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Playlists),true)</condition>
 						</dependency>
@@ -132,9 +121,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Networks),true)</condition>
 						</dependency>
@@ -151,9 +137,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Shows),true)</condition>
 						</dependency>
@@ -170,9 +153,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.TV_Genres),true)</condition>
 						</dependency>
@@ -189,9 +169,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Genres),true)</condition>
 						</dependency>
@@ -208,9 +185,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Movie_Studios),true)</condition>
 						</dependency>
@@ -227,9 +201,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed_Genres),true)</condition>
 						</dependency>
@@ -246,9 +217,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Music_Genres),true)</condition>
 						</dependency>
@@ -265,9 +233,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition>
 						</dependency>
@@ -282,9 +247,6 @@
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Mixed),true)</condition>
 						</dependency>
@@ -297,9 +259,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Recommended),true)</condition>
 						</dependency>
@@ -316,9 +275,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Services),true)</condition>
 						</dependency>
@@ -335,9 +291,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.BlackList),true)</condition>
 						</dependency>
@@ -354,9 +307,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-						<dependency type="visible">
-                            <condition operator="!is" setting="Client_Mode">1</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Predefined),true)</condition>
 						</dependency>
@@ -377,11 +327,6 @@
 					<constraints>
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="button" format="addon">
 						<heading>30027</heading>
 						<show more="true" details="true">installed</show>
@@ -406,21 +351,11 @@
 					<level>2</level>
 					<default>true</default>
 					<control type="toggle"/>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="Enable_Grouping" type="boolean" label="30063" help="33063">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="User_Groups" type="string" label="30064" help="33064" parent="Enable_Grouping">
 					<level>1</level>
@@ -429,9 +364,6 @@
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="is" setting="Enable_Grouping">true</condition>
 						</dependency>
@@ -444,11 +376,6 @@
                 <setting id="EPG_Artwork" type="integer" label="30065" help="33022">
 					<level>0</level>
 					<default>0</default>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<constraints>
 						<options>
 							<option label="30066">0</option>
@@ -461,11 +388,6 @@
 					<level>3</level>
 					<default>true</default>
 					<control type="toggle"/>
-                    <dependencies>
-						<dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 			</group>               
             <group id="2" label="30011">
@@ -478,14 +400,6 @@
                         </sources>
                         <writable>true</writable>
                     </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
-                    </dependencies>
                     <control type="button" format="path">
                         <heading>30012</heading>
                     </control>
@@ -541,11 +455,6 @@
 						<step>1</step>
 						<maximum>3</maximum>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -559,11 +468,6 @@
 						<step>1</step>
 						<maximum>31</maximum>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -725,11 +629,6 @@
 						<step>25</step>
 						<maximum>500</maximum>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="slider" format="integer">
 						<popup>false</popup>
 					</control>
@@ -743,11 +642,6 @@
 							<option label="30051">1</option>
 						</options>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="spinner" format="string"/>
 				</setting>
 				<setting id="Store_Duration" type="boolean" label="30052" help="33052" parent="Duration_Type">
@@ -755,9 +649,6 @@
 					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="is" setting="Duration_Type">1</condition>
 						</dependency>
@@ -766,42 +657,22 @@
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
 					<default>false</default>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 					<control type="toggle"/>
 				</setting>
 				<setting id="Enable_Extras" type="boolean" label="30053" help="33053">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="Enable_Strms" type="boolean" label="30054" help="33054">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="Enable_3D" type="boolean" label="30055" help="33055">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
                 <setting id="Enable_Even" type="integer" label="30121" help="33121">
                     <level>1</level>
@@ -811,11 +682,6 @@
                         <step>1</step>
                         <maximum>5</maximum>
                     </constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
                     <control type="slider" format="integer">
                         <popup>false</popup>
                     </control>
@@ -834,9 +700,6 @@
 						</options>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="is" setting="Enable_Fillers">true</condition>
 						</dependency>
@@ -852,9 +715,6 @@
 						<maximum>100</maximum>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Preroll">0</condition>
 						</dependency>
@@ -873,9 +733,6 @@
 						</options>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="is" setting="Enable_Fillers">true</condition>
 						</dependency>
@@ -891,9 +748,6 @@
 						<maximum>100</maximum>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
@@ -907,9 +761,6 @@
 					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">3</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
@@ -924,9 +775,6 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Preroll">0</condition>
 						</dependency>
@@ -944,9 +792,6 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Preroll">0</condition>
 						</dependency>
@@ -964,9 +809,6 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
@@ -982,9 +824,6 @@
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
 						<dependency type="enable">
                             <and>
                                 <condition operator="!is" setting="Enable_Postroll">0</condition>
@@ -1000,9 +839,6 @@
 						<addontype>kodi.resource.images</addontype>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
 						<dependency type="enable">
                             <condition operator="!is" setting="Enable_Postroll">0</condition>
 						</dependency>
@@ -1018,9 +854,6 @@
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">Library.HasContent(Movies)</condition>
 						</dependency>
@@ -1031,9 +864,6 @@
 					<default>true</default>
 					<control type="toggle"/>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-                        </dependency>
 						<dependency type="enable">
                             <condition on="property" name="InfoBool">System.HasAddon(plugin.video.imdb.trailers)</condition>
 						</dependency>
@@ -1044,7 +874,27 @@
         
 		<category id="sharing" label="30092" help="33092">
             <group id="1" label="30093">
-				<setting id="Remote_M3U" type="string" label="30094">
+				<setting id="Remote_Status" type="string" label="33129">
+					<level>0</level>
+                    <default>[COLOR=red]Offline[/COLOR]</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+                    <control type="button" format="action">
+                        <data></data>
+                    </control>
+				</setting>
+				<setting id="TCP_PORT" type="integer" label="30098" help="33097" parent="Remote_Status">
+					<level>3</level>
+                    <default>50001</default>
+					<constraints>
+						<allowempty>false</allowempty>
+					</constraints>
+                    <control type="edit" format="integer">
+						<heading>40001</heading>
+					</control>
+				</setting>
+				<setting id="Remote_M3U" type="string" label="30094" parent="Remote_Status">
 					<level>0</level>
                     <default></default>
                     <enable>false</enable>
@@ -1055,7 +905,7 @@
 						<heading></heading>
 					</control>
 				</setting>
-				<setting id="Remote_XMLTV" type="string" label="30095">
+				<setting id="Remote_XMLTV" type="string" label="30095" parent="Remote_Status">
 					<level>0</level>
                     <default></default>
                     <enable>false</enable>
@@ -1066,7 +916,7 @@
 						<heading></heading>
 					</control>
 				</setting>
-				<setting id="Remote_GENRE" type="string" label="30096">
+				<setting id="Remote_GENRE" type="string" label="30096" parent="Remote_Status">
 					<level>0</level>
                     <default></default>
                     <enable>false</enable>
@@ -1079,143 +929,60 @@
 				</setting>
 			</group>
             <group id="2" label="30103">
-                <setting id="UDP_PORT" type="integer" label="30097" help="33097">
+				<setting id="Bonjour_Status" type="string" label="32182" help="33182">
+					<level>0</level>
+                    <default>[COLOR=orange]Idle[/COLOR]</default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action">
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Announcement)</data>
+						<close>true</close>
+					</control>
+				</setting>
+                <setting id="UDP_PORT" type="integer" label="30097" help="33097" parent="Bonjour_Status">
 					<level>3</level>
                     <default>50000</default>
 					<constraints>
 						<allowempty>false</allowempty>
 					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
                     <control type="edit" format="integer">
 						<heading>30359</heading>
 					</control>
 				</setting>
-				<setting id="TCP_PORT" type="integer" label="30098" help="33097">
-					<level>3</level>
-                    <default>50001</default>
-					<constraints>
-						<allowempty>false</allowempty>
-					</constraints>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
-                    <control type="edit" format="integer">
-						<heading>40001</heading>
-					</control>
-				</setting>
-			</group>
-            <group id="3" label="30099">
-                <setting id="Client_Mode" type="string" label="30100" help="33100">
-                    <level>1</level>
-                    <default>0</default>
-                    <constraints>
-                        <options>
-							<option label="30021">0</option>
-							<option label="30101">1</option>
-							<option label="30102">2</option>
-                        </options>
-                        <allowempty>false</allowempty>
-                    </constraints>
-                    <control type="spinner" format="string"/>
-                </setting>
-                <setting id="Remote_URL" type="string" label="30101" help="" parent="Client_Mode">
+                <setting id="Select_server" type="action" label="32048" help="33048" parent="Bonjour_Status">
 					<level>1</level>
+					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
-                        <dependency type="visible">
-                            <condition on="property" name="InfoBool">!String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.SERVER_DISCOVERY))</condition>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Servers),true)</condition>
 						</dependency>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">1</condition>
-                        </dependency>
+						<dependency type="visible">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Servers),true)</condition>
+						</dependency>
 					</dependencies>
 					<control type="button" format="action">
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)</data>
                         <close>true</close>
 					</control>
 				</setting>
-                <setting id="Network_Folder" type="path" label="30012" help="33012" parent="Client_Mode">
-                    <level>1</level>
-                    <default>special://profile/addon_data/plugin.video.pseudotv.live/cache</default>
-                    <constraints>
-                        <sources>
-                            <source>files</source>
-                        </sources>
-                        <writable>true</writable>
-                    </constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">2</condition>
-                        </dependency>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">2</condition>
-                        </dependency>
-                    </dependencies>
-                    <control type="button" format="path">
-                        <heading>30012</heading>
-                    </control>
-                </setting>
-                <setting id="Select_server" type="action" label="32048" help="33048" parent="Client_Mode">
+                <setting id="Remove_server" type="action" label="30046" help="33046" parent="Select_server">
 					<level>1</level>
-					<default/>
+					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <condition on="property" name="InfoBool">!String.IsEmpty(Window(10000).Property(plugin.video.pseudotv.live.SERVER_DISCOVERY))</condition>
-						</dependency>
-                        <dependency type="enable">
-                            <condition operator="is" setting="Client_Mode">1</condition>
-                        </dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Select_Server)</data>
-						<close>true</close>
-					</control>
-				</setting>
-                <setting id="Pair_Announcement" type="action" label="30129" help="33129" parent="Client_Mode">
-					<level>1</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-                    <dependencies>
-                        <dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Client_Mode">0</condition>
-                            </and>
+					<dependencies>
+						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Servers),true)</condition>
 						</dependency>
 					</dependencies>
 					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Announcement)</data>
-						<close>true</close>
-					</control>
-				</setting>
-                <setting id="Pair_Discovery" type="action" label="30130" help="33130" parent="Client_Mode">
-					<level>0</level>
-					<default/>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-                    <dependencies>
-						<dependency type="visible">
-                            <and>
-                                <condition operator="is" setting="Client_Mode">1</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Pair_Discovery)</data>
-						<close>true</close>
+						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/multiroom.py, Remove_server)</data>
+                        <close>true</close>
 					</control>
 				</setting>
 			</group>
@@ -1342,11 +1109,6 @@
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
-					<dependencies>
-                        <dependency type="visible">
-                            <condition operator="is" setting="Client_Mode">0</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="iptvsimple" type="action" label="30071" help="">
 					<level>0</level>

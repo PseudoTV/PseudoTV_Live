@@ -112,6 +112,7 @@ BROADCAST_URL       = 'plugin://{addon}/?mode=broadcast&name={name}&chid={chid}&
 PTVL_REPO           = 'repository.pseudotv'
 PVR_CLIENT_ID       = 'pvr.iptvsimple'
 PVR_CLIENT_NAME     = 'IPTV Simple Client'
+PVR_CLIENT_LOC      = 'special://profile/addon_data/%s'%(PVR_CLIENT_ID)
 
 #docs
 README_FLE          = os.path.join(ADDON_PATH,'README.md')
@@ -119,17 +120,11 @@ WELCOME_FLE         = os.path.join(ADDON_PATH,'welcome.txt')
 CHANGELOG_FLE       = os.path.join(ADDON_PATH,'changelog.txt')
 LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
-#folders
-IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
-MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
-SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
-BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
-CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
-TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 
 #files
 XMLTVFLE            = '%s.xml'%('pseudotv')
 M3UFLE              = '%s.m3u'%('pseudotv')
+SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
 LIBRARYFLE          = 'library.json'
 GENREFLE            = 'genres.xml'
@@ -139,11 +134,21 @@ PROVIDERFLE         = 'providers.xml'
 CHANNELBACKUPFLE    = 'channels.backup'
 CHANNELRESTOREFLE   = 'channels.restore'
 
+#exts
 VIDEO_EXTS          = xbmc.getSupportedMedia('video').split('|')[:-1]
 MUSIC_EXTS          = xbmc.getSupportedMedia('music').split('|')[:-1]
 IMAGE_EXTS          = xbmc.getSupportedMedia('picture').split('|')[:-1]
 IMG_EXTS            = ['.png','.jpg','.gif']
 TEXTURES            = 'Textures.xbt'
+
+#folders
+IMAGE_LOC           = os.path.join(ADDON_PATH,'resources','images')
+MEDIA_LOC           = os.path.join(ADDON_PATH,'resources','skins','default','media')
+SFX_LOC             = os.path.join(MEDIA_LOC,'sfx')
+SERVER_LOC          = os.path.join(SETTINGS_LOC,SERVERFLE)
+BACKUP_LOC          = os.path.join(SETTINGS_LOC,'backup')
+CACHE_LOC           = os.path.join(SETTINGS_LOC,'cache')
+TEMP_LOC            = os.path.join(SETTINGS_LOC,'temp')
 
 #file paths
 SETTINGS_FLE        = os.path.join(SETTINGS_LOC,'settings.xml')

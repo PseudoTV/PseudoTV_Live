@@ -145,30 +145,27 @@ class Utilities:
             
 
     def buildMenu(self, select=None):
-        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False), 'hide':True},     #"Rebuild M3U/XMLTV"
-                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True) , 'hide':True},     #"Clean Start"
-                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self.togglePVR                              , 'hide':False},    #"Force PVR reload"
-                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                        , 'hide':False},    #"Force PTVL reload"
-                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)          , 'hide':False},    #"Show M3U"
-                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)        , 'hide':False},    #"Show XMLTV"
-                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true'), 'hide':True}, #Rescan library
-                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkFillers'%(ADDON_ID),'true'), 'hide':True}] #Build Filler Folders
+        items = [{'label':LANGUAGE(32117),'label2':LANGUAGE(32120),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32120),False)              , 'hide':False},#"Rebuild M3U/XMLTV"
+                 {'label':LANGUAGE(32118),'label2':LANGUAGE(32119),'icon':COLOR_LOGO,'func':self.deleteFiles          ,'args':(LANGUAGE(32119),True)               , 'hide':False},#"Clean Start"
+                 {'label':LANGUAGE(32121)%(PVR_CLIENT_NAME),'label2':LANGUAGE(32122) ,'icon':COLOR_LOGO,'func':self.togglePVR                                      , 'hide':False},#"Force PVR reload"
+                 {'label':LANGUAGE(32123),'label2':LANGUAGE(32124),'icon':COLOR_LOGO,'func':setPendingRestart                                                      , 'hide':False},#"Force PTVL reload"
+                 {'label':LANGUAGE(32154),'label2':LANGUAGE(32154),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(M3UFLEPATH,)                        , 'hide':False},#"Show M3U"
+                 {'label':LANGUAGE(32155),'label2':LANGUAGE(32155),'icon':COLOR_LOGO,'func':self.showFile             ,'args':(XMLTVFLEPATH,)                      , 'hide':False}, #"Show XMLTV"
+                 {'label':LANGUAGE(32159),'label2':LANGUAGE(33159),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkLibrary'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkFillers'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
+                 {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.runAutoTune'%(ADDON_ID),'true') , 'hide':False}] #Run Autotune
                 
 
         with BUILTIN.busy_dialog():
-            client    = isClient()
-            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide') & client)]
-            if select is None: 
-                select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
+            listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
+            if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
             
         if not select is None:
             try: 
                 selectItem = [item for item in items if item.get('label') == listItems[select].getLabel()][0]
                 self.log('buildMenu, selectItem = %s'%selectItem)
-                if selectItem.get('args'): 
-                    selectItem['func'](*selectItem['args'])
-                else: 
-                    selectItem['func']()
+                if selectItem.get('args'): selectItem['func'](*selectItem['args'])
+                else:                      selectItem['func']()
             except Exception as e: 
                 self.log("buildMenu, failed! %s"%(e), xbmc.LOGERROR)
                 return DIALOG.notificationDialog(LANGUAGE(32000))
@@ -189,7 +186,9 @@ class Utilities:
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
-        if full: setPendingRestart()
+        if full: 
+            SETTINGS.setAutotuned(False)
+            setPendingRestart()
 
 
     def run(self):  
@@ -201,10 +200,12 @@ class Utilities:
         if param == 'Apply_PVR_Settings':
             ctl = (7,9)
             with BUILTIN.busy_dialog():
-                if SETTINGS.chkPluginSettings(PVR_CLIENT_ID,IPTV_SIMPLE_SETTINGS(),override=True):
+                from jsonrpc import JSONRPC
+                jsonRPC = JSONRPC()
+                if SETTINGS.setPVRPath(USER_LOC,jsonRPC.getFriendlyName(),prompt=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
-                else:
-                    DIALOG.notificationDialog(LANGUAGE(32165))
+                else: DIALOG.notificationDialog(LANGUAGE(32165))
+                del jsonRPC
         elif param.startswith('Channel_Manager'):
             ctl = (0,1)
             self.openChannelManager()

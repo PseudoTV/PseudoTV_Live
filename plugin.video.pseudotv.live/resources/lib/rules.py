@@ -949,7 +949,7 @@ class ForceEpisode(BaseRule):
 
     def runAction(self, actionid, citem, parameter, builder):
         def _episodeSort(showArray: dict={}):
-            for show, fileItems in showArray.items():
+            for show, fileItems in list(showArray.items()):
                 self.storedValues[3] = []
                 for item in fileItems:
                     if (int(item.get("season","0")) + int(item.get("episode","0"))) > 0: 

@@ -349,8 +349,9 @@ class Service():
         self.monitor.myService = self
         self.tasks             = Tasks(self)
         self.currentChannels   = self.tasks.getChannels()
-        self.currentSettings    = dict(SETTINGS.getCurrentSettings())
-        DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
+        self.currentSettings   = dict(SETTINGS.getCurrentSettings())
+        self.tasks.chkDiscovery()
+        # DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -381,9 +382,9 @@ class Service():
         return False
     
 
-    def __tasks(self): # general tasks
+    def __tasks(self):
         self.log('__tasks')
-        self.tasks.chkQueTimer()
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,OVERLAY_DELAY)
            
                 
     def __initialize(self):

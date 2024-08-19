@@ -27,10 +27,11 @@ from channels   import Channels
 REG_KEY = 'PseudoTV_Recommended.%s'
 
 class Service:
+    monitor = xbmc.Monitor()
     from jsonrpc import JSONRPC
     jsonRPC  = JSONRPC()
     def _interrupt(self, wait: float=.001) -> bool:
-        return MONITOR.waitForAbort(wait)
+        return self.monitor.waitForAbort(wait)
         
     def _suspend(self) -> bool:
         return PROPERTIES.isPendingSuspend()
@@ -114,23 +115,6 @@ class Library:
                 yield (type,items)
 
 
-    def fillClient(self):
-        self.log('fillClient')
-        self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32158),LANGUAGE(32041))))
-        for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt() or self.service._suspend():
-                self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
-                break
-            else:
-                self.parserMSG    = AUTOTUNE_TYPES[idx]
-                self.parserCount  = int((idx+1)*100//len(AUTOTUNE_TYPES))
-                self.parserDialog = DIALOG.progressBGDialog(self.parserCount,self.parserDialog,self.parserMSG,'%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(32158),LANGUAGE(32041))))
-                try:    items = self.getLibrary(type)
-                except: items = []
-                self.log('fillClient, returning %s (%s)'%(type,len(items)))
-                yield (type,items)
-
-
     def updateLibrary(self, force: bool=False) -> bool:
         def __clear():
             for label, func in list(self.libraryFUNCS.items()):
@@ -147,16 +131,11 @@ class Library:
             entry.update(item)
             return entry
 
-        if isClient():
-            if SETTINGS.getSettingInt('Client_Mode') != 2: return True
-            msg = LANGUAGE(32158)
-            libraryItems = dict(self.fillClient())
-        else:
-            msg = LANGUAGE(32022)
-            if force: #clear library cache.
-                with BUILTIN.busy_dialog():
-                    __clear()
-            libraryItems = dict(self.fillItems())
+        msg = LANGUAGE(32022)
+        if force: #clear library cache.
+            with BUILTIN.busy_dialog():
+                __clear()
+        libraryItems = dict(self.fillItems())
             
         complete = True 
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
@@ -408,7 +387,6 @@ class Library:
                 # self.log('searchRecommended, found addonid = %s, payload = %s'%(addonid,payload))
                 # return addonid,{"data":payload,"meta":addonMeta}
                 
-        # if isClient() or not SETTINGS.getSettingBool('Enable_Recommended'): return []
         # addonList = sorted(list(set([_f for _f in [addon.get('addonid') for addon in list([k for k in self.jsonRPC.getAddons() if k.get('addonid','') not in self.getBlackList()])] if _f])))
         # return dict([_f for _f in [_search(addonid) for addonid in addonList] if _f])
 
@@ -460,7 +438,6 @@ class Library:
 
                
     def importPrompt(self):
-        if isClient(): return
         addonList = self.searchRecommended()
         ignoreList = self.getWhiteList()
         ignoreList.extend(self.getBlackList()) #filter addons previously parsed.

@@ -97,6 +97,8 @@ class Builder:
 
     def verify(self, channels: list=[]):
         if not channels: channels = self.channels.getChannels()
+        PROPERTIES.setEXTProperty('%s.has.Channels'%(ADDON_ID),str(len(channels)>0).lower())
+        
         for idx, citem in enumerate(channels):
             if self.service._interrupt(): break
             elif not citem.get('name') or not citem.get('id') or len(citem.get('path',[])) == 0:
@@ -121,6 +123,7 @@ class Builder:
             self.pDialog = DIALOG.progressBGDialog()
             self.completeBuild = True
             
+            updated = False
             for idx, citem in enumerate(channels):
                 if self.service._interrupt() or self.service._suspend():
                     self.pErrors = [LANGUAGE(32160)]
@@ -138,6 +141,7 @@ class Builder:
                     cacheResponse = self.getFileList(citem, now, stopTimes.get(citem['id'],start))# {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
                     if cacheResponse:
                         if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
+                            if not updated: updated = True
                             self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
                     else: 
                         if self.completeBuild: self.pErrors.append(LANGUAGE(32026))
@@ -148,8 +152,8 @@ class Builder:
                     self.runActions(RULES_ACTION_CHANNEL_STOP, citem, inherited=self)
                         
             self.pDialog = DIALOG.progressBGDialog(100, self.pDialog, message='%s %s'%(self.pMSG,LANGUAGE(32025) if self.completeBuild else LANGUAGE(32135)))
-            self.log('build, completeBuild = %s, saved = %s'%(self.completeBuild,self.saveChannelLineups()))
-            return self.completeBuild
+            self.log('build, completeBuild = %s, updated = %s, saved = %s'%(self.completeBuild,updated,self.saveChannelLineups()))
+            return self.completeBuild, updated
 
         
     def getFileList(self, citem: dict, now: time, start: time) -> bool and list:

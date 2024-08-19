@@ -54,6 +54,18 @@ class FileAccess:
 
 
     @staticmethod
+    def copyFolder(path, newpath, verbose=None):
+        log('FileAccess: copying folder %s to %s'%(path,newpath))
+        return shutil.copytree(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath), copy_function=verbose)
+
+
+    @staticmethod
+    def moveFolder(path, newpath):
+        log('FileAccess: moving folder %s to %s'%(path,newpath))
+        return shutil.move(xbmcvfs.translatePath(path), xbmcvfs.translatePath(newpath))
+
+
+    @staticmethod
     def copy(orgfilename, newfilename):
         log('FileAccess: copying %s to %s'%(orgfilename,newfilename))
         dir, file = os.path.split(newfilename)

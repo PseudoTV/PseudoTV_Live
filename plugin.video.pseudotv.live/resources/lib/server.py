@@ -29,73 +29,69 @@ from socket                    import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, S
 class Discovery:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
+        
 
-
+    def __decodeString(self, base64_bytes):
+        message_bytes = base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING))
+        return message_bytes.decode(DEFAULT_ENCODING)
+    
+    
     def _start(self):
-        data  = ''
-        try: 
-            IP  = getIP()
-            TCP = SETTINGS.getSettingInt('TCP_PORT')
-            UDP = SETTINGS.getSettingInt('UDP_PORT')
-            local ='%s:%s'%(IP,TCP)
-            sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-            sock.bind(('', UDP))
-            sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-            data, addr = sock.recvfrom(1024) #wait for a packet
-            data = data.decode(DEFAULT_ENCODING)
-        except: pass #ignore except TimeoutError: timed out
-        if data.startswith(ADDON_ID):
-            response = data[len(ADDON_ID):]
-            if response:
-                self.log('_start: response = %s'%(response))
-                payload = loadJSON(decodeString(response.decode()))
-                host = payload.get('host','')
-                if host != local and 'md5' in payload:
-                    self.log('_start: discovered server @ host = %s'%(host),xbmc.LOGINFO)
-                    if payload.pop('md5') == getMD5(dumpJSON(payload)):
-                        payload['received'] = time.time()
-                        return payload
-                        
+        if not PROPERTIES.isRunning('Discovery'):
+            with PROPERTIES.setRunning('Discovery'):
+                data = ''
+                try: 
+                    IP  = getIP()
+                    TCP = SETTINGS.getSettingInt('TCP_PORT')
+                    UDP = SETTINGS.getSettingInt('UDP_PORT')
+                    local ='%s:%s'%(IP,TCP)
+                    sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
+                    sock.bind(('', UDP))
+                    sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
+                    data, addr = sock.recvfrom(1024) #wait for a packet
+                    data = data.decode(DEFAULT_ENCODING)
+                except: pass #ignore except TimeoutError: timed out
+                if data.startswith(ADDON_ID):
+                    response = data[len(ADDON_ID):]
+                    if response:
+                        self.log('_start: response = %s'%(response))
+                        payload = loadJSON(self.__decodeString(response))
+                        host = payload.get('host','')
+                        if host != local and 'md5' in payload:
+                            self.log('_start: discovered new server @ host = %s'%(host),xbmc.LOGINFO)
+                            if payload.pop('md5') == getMD5(dumpJSON(payload)) or payload.pop('received') == local:
+                                self.log('_start: discovered new server confirmed! received payload ',xbmc.LOGINFO)
+                                return payload 
+        return {}
+        
+                                
 class Announcement:
-    def __init__(self):
-        self._start()
+    def __init__(self, payload={}):
+        self._start(payload)
             
             
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
+
+    def __encodeString(self, text):
+        base64_bytes = base64.b64encode(text.encode(DEFAULT_ENCODING))
+        return base64_bytes.decode(DEFAULT_ENCODING)
+
         
-    def getSettings(self):
-        return {'Resource_Logos'      :SETTINGS.getSetting('Resource_Logos'),
-                'Resource_Bumpers'    :SETTINGS.getSetting('Resource_Bumpers'),
-                'Resource_Ratings'    :SETTINGS.getSetting('Resource_Ratings'),
-                'Resource_Adverts'    :SETTINGS.getSetting('Resource_Adverts'),
-                'Resource_Trailers'   :SETTINGS.getSetting('Resource_Trailers')}
-
-
-    def _start(self):
-        try:
-            IP  = getIP()
-            TCP = SETTINGS.getSettingInt('TCP_PORT')
-            UDP = SETTINGS.getSettingInt('UDP_PORT')
-            
-            payload = {'id'      :ADDON_ID,
-                       'version' :ADDON_VERSION,
-                       'name'    : BUILTIN.getInfoLabel('FriendlyName','System'),
-                       'host'    :'%s:%s'%(IP,TCP),
-                       'settings':self.getSettings()}
-                       
-            payload['md5'] = getMD5(dumpJSON(payload))
-            encodedPayload = encodeString(dumpJSON(payload))
-            data = '%s%s'%(ADDON_ID,encodedPayload)
-            sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-            sock.bind(('', 0))
-            sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
-            sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-            self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
-            sock.sendto(data.encode(), ('<broadcast>',UDP))
-        except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
+    def _start(self, payload):
+        if not PROPERTIES.isRunning('Announcement'):
+            with PROPERTIES.setRunning('Announcement'):
+                try:
+                    data = '%s%s'%(ADDON_ID,self.__encodeString(dumpJSON(payload)))
+                    sock = socket(AF_INET, SOCK_DGRAM) #create UDP socket
+                    sock.bind(('', 0))
+                    sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                    sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
+                    sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
+                    self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
+                    sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
+                except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -149,9 +145,9 @@ class RequestHandler(BaseHTTPRequestHandler):
 class HTTP:
     isRunning = False
 
-    def __init__(self, monitor=MONITOR):
+    def __init__(self, service=None):
         self.log('__init__')
-        self.monitor = monitor
+        self.service = service
         
                     
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -177,10 +173,8 @@ class HTTP:
 
 
     def _start(self):
-        if self.isRunning:
-            if isClient(): self._stop()
-        elif not isClient():
-            try:
+        try:
+            if not self.isRunning:
                 self.isRunning = True
                 IP  = getIP()
                 TCP = SETTINGS.getSettingInt('TCP_PORT')
@@ -189,18 +183,17 @@ class HTTP:
                 elif PORT != TCP: SETTINGS.setSettingInt('TCP_PORT',PORT)
                 LOCAL_HOST ='%s:%s'%(IP,PORT)
                 self.log("_start, starting server @ %s"%(LOCAL_HOST),xbmc.LOGINFO)
-                SETTINGS.setSetting('Remote_URL'  ,'http://%s'%(LOCAL_HOST))
                 SETTINGS.setSetting('Remote_M3U'  ,'http://%s/%s'%(LOCAL_HOST,M3UFLE))
                 SETTINGS.setSetting('Remote_XMLTV','http://%s/%s'%(LOCAL_HOST,XMLTVFLE))
                 SETTINGS.setSetting('Remote_GENRE','http://%s/%s'%(LOCAL_HOST,GENREFLE))
                 
-                self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.monitor))
+                self._server = ThreadedHTTPServer((IP, PORT), partial(RequestHandler,monitor=self.service.monitor))
                 self._server.allow_reuse_address = True
                 self._httpd_thread = Thread(target=self._server.serve_forever)
                 self._httpd_thread.daemon=True
                 self._httpd_thread.start()
-            except Exception as e: 
-                self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
+        except Exception as e: 
+            self.log("_start, Failed! %s"%(e), xbmc.LOGERROR)
         
         
     def _stop(self):

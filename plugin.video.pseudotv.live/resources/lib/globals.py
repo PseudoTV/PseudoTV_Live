@@ -59,16 +59,8 @@ LISTITEMS           = DIALOG.listitems
 BUILTIN             = DIALOG.builtin
 
 def setPendingRestart(state=True):
-    if state: DIALOG.notificationWait(LANGUAGE(32124))
+    if state: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32157),LANGUAGE(32124)))
     return PROPERTIES.setEXTProperty('pendingRestart',str(state).lower())
-
-def isClient(silent=True):
-    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
-    state = Client_Mode > 0
-    PROPERTIES.setEXTProperty('%s.isClient'%(ADDON_ID),str(state).lower())
-    PROPERTIES.setEXTProperty('%s.Client_Mode'%(ADDON_ID),str(Client_Mode))
-    if state and not silent: DIALOG.notificationWait(LANGUAGE(32115))
-    return state
 
 def slugify(s, lowercase=False):
   if lowercase: s = s.lower()
@@ -116,14 +108,19 @@ def getJSON(file):
         data = {}
     fle.close()
     return data
-    
+
 def setJSON(file, data):
     with FileLock():
         fle = FileAccess.open(file, 'w')
         fle.write(dumpJSON(data, idnt=4, sortkey=False))
         fle.close()
     return True
-    
+
+def getURL(url):
+    try: return urllib.request.urlopen(url).read()
+    except Exception as e: 
+        log("getURL, failed! %s"%e, xbmc.LOGERROR)
+     
 def setURL(url, file):
     try:
         contents = urllib.request.urlopen(url).read()
@@ -140,13 +137,6 @@ def diffLSTDICT(old, new):
     sDIFF = sOLD.symmetric_difference(sNEW)
     return setDictLST([loadJSON(e) for e in sDIFF])
 
-def genUUID(seed=None):
-    if seed:
-        m = hashlib.md5()
-        m.update(seed.encode(DEFAULT_ENCODING))
-        return str(uuid.UUID(m.hexdigest()))
-    return str(uuid.uuid1(clock_seq=70420))
-    
 def getIP(wait=5):
     while not MONITOR.abortRequested() and wait > 0:
         ip = xbmc.getIPAddress()
@@ -302,48 +292,9 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
             # 'epg.epgupdate':120,
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
-def IPTV_SIMPLE_SETTINGS(): #recommended IPTV Simple settings
-    Client_Mode = SETTINGS.getSettingInt('Client_Mode')
-    return {'kodi_addon_instance_name'      :ADDON_NAME,
-            'kodi_addon_instance_enabled'   :'true',
-            'm3uRefreshMode'                :'1',
-            'm3uRefreshIntervalMins'        :'15',
-            'm3uRefreshHour'                :'0',
-            'm3uCache'                      :'true',
-            'logoPathType'                  :'0',
-            'logoPath'                      :LOGO_LOC,
-            'm3uPathType'                   :'%s'%('1' if Client_Mode == 1 else '0'),
-            'm3uPath'                       :M3UFLEPATH,
-            'm3uUrl'                        :SETTINGS.getSetting('Remote_M3U') if Client_Mode == 1 else '',
-            'epgPathType'                   :'%s'%('1' if Client_Mode == 1 else '0'),
-            'epgPath'                       :XMLTVFLEPATH,
-            'epgUrl'                        :SETTINGS.getSetting('Remote_XMLTV') if Client_Mode == 1 else '',
-            'epgCache'                      :'true',
-            'genresPathType'                :'%s'%('1' if Client_Mode == 1 else '0'),
-            'genresPath'                    :GENREFLEPATH,
-            'genresUrl'                     :SETTINGS.getSetting('Remote_GENRE') if Client_Mode == 1 else '',
-            'timeshiftEnabled'              :'false',
-            'catchupPlayEpgAsLive'          :'false',
-            'catchupWatchEpgEndBufferMins'  :'0',
-            'catchupWatchEpgBeginBufferMins':'0',
-            # 'tvGroupMode'                 :'0',
-            # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
-            # 'radioGroupMode'              :'0',
-            # 'customRadioGroupsFile'       :(RADIOGROUPFLE),#todo
-            # 'enableProviderMappings'      :'true',
-            'defaultProviderName'         :ADDON_NAME,
-            # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
-            # 'useEpgGenreText'             :'true',
-            'logoFromEpg'                 :'1',
-            'catchupEnabled'              :'true',
-            'catchupPlayEpgAsLive'        :'false',
-            'allChannelsCatchupMode'      :'0',
-            'numberByOrder'               :'false',
-            'startNum'                    :'1'}
-
 def togglePVR(state=True, reverse=False, wait=15):
     log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
-    if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr')):
+    if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr')):
         isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
         if (state and isEnabled) or (not state and not isEnabled): return
         xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
@@ -426,7 +377,7 @@ def mergeDictLST(dict1,dict2):
     
 def lstSetDictLst(lst=[]):
     items = dict()
-    for key, dictlst in lst.items():
+    for key, dictlst in list(lst.items()):
         if isinstance(dictlst, list): dictlst = setDictLST(dictlst)
         items[key] = dictlst
     return items

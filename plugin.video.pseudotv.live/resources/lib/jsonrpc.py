@@ -63,7 +63,8 @@ class JSONRPC:
         params = queuePool.setdefault('params',[])
         params.append(param)
         queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('playcount',-1))
-        queuePool['params'].reverse() #prioritize playcount rollback over duration amendments.
+        queuePool['params'] = sorted(setDictLST(params), key=lambda d: d.get('params',{}).get('setting',''))
+        queuePool['params'].reverse() #prioritize setsetting,playcount rollback over duration amendments.
         self.log("queueJSON, queueing = %s\n%s"%(len(queuePool['params']),param))
         SETTINGS.setCacheSetting('queuePool', queuePool, json_data=True)
 
@@ -105,11 +106,12 @@ class JSONRPC:
             return walk
 
         walk = dict()
+        path = path.replace('\\','/')
         self.log('walkListDirectory, walking %s, depth = %s'%(path,depth))
         subs, files = self.getListDirectory(path,checksum,expiration)
-        if len(files) > 0:
-            if TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
-            else: walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, f) for f in files if f.endswith(tuple(exts))] if _f]))
+        if   len(files) > 0 and TEXTURES in files: return _parseXBT(re.sub('/resources','',path).replace('special://home/addons/','resource://'))
+        elif len(files) > 0 and exts: files = [file for file in files if file.endswith(tuple(exts))]
+        walk.setdefault(path,[]).extend(list([_f for _f in [_chkfile(path, file) for file in files] if _f]))
         
         for sub in subs:
             if depth == 0:break
@@ -290,13 +292,6 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
-        if item.get('customproperties',{}).get('accurateduration',{}):
-            if item['customproperties']['accurateduration'].get('md5') == getMD5(path):
-                runtime = item['customproperties']['accurateduration'].get('duration',0)
-                if runtime > 0:
-                    self.log("getDuration, using previously parsed accurate duration data: path = %s, runtime = %s" % (path, runtime))
-                    return runtime
-                
         runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if (runtime == 0 or accurate):
             duration = 0
@@ -505,3 +500,20 @@ class JSONRPC:
                 else: files.append(item)
         self.log("padItems; files Out = %s"%(len(files)))
         return files
+
+
+    @cacheit(expiration=datetime.timedelta(minutes=5),json_data=False)
+    def getFriendlyName(self):
+        with PROPERTIES.suspendActivity():
+            fn = self.getSettingValue("services.devicename")
+            self.log("getFriendlyName, name = %s"%(fn))
+            if not fn or fn.lower() == 'kodi':
+                if DIALOG.okDialog(LANGUAGE(32132)%(fn)):
+                    input = DIALOG.inputDialog(LANGUAGE(30122), fn)
+                    if not input or input.lower() == 'kodi':
+                        return self.getFriendlyName()
+                    else:
+                        self.setSettingValue("services.devicename",input)
+                        self.log('getFriendlyName, setting device name = %s'%(input))
+                        return input
+            return fn

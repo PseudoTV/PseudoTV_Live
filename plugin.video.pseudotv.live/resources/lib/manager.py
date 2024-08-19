@@ -71,38 +71,34 @@ class Manager(xbmcgui.WindowXMLDialog):
     
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        if isClient():
-            DIALOG.notificationDialog(LANGUAGE(32058))
-            return openAddonSettings((0,1))
-        else:
-            with BUILTIN.busy_dialog():
-                self.cntrlStates  = {}
-                self.showingList  = True
-                
-                self.cache        = Cache(mem_cache=True)
-                self.channels     = Channels()
-                self.eChannels    = self.channels.getChannels() #existing channels
-                self.rules        = RulesList()
-                self.jsonRPC      = JSONRPC()
-                self.resources    = Resources(self.jsonRPC, self.cache)
-                self.m3u          = M3U()
-                self.xmltv        = XMLTVS()
-                
-                self.newChannel   = self.channels.getTemplate()
-                self.channelList  = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=itemgetter('number'))
-                self.channelList.extend(self.channels.getAutotuned())
-                self.newChannels  = self.channelList.copy()
-                
-                self.startChannel = kwargs.get('channel',-1)
-                if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
-                self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
-                self.log('Manager, startChannel = %s, focusIndex = %s'%(self.startChannel, self.focusIndex))
-               
-            try:
-                if kwargs.get('start',True): self.doModal()
-            except Exception as e: 
-                self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
-                self.closeManager()
+        with BUILTIN.busy_dialog():
+            self.cntrlStates  = {}
+            self.showingList  = True
+            
+            self.cache        = Cache(mem_cache=True)
+            self.channels     = Channels()
+            self.eChannels    = self.channels.getChannels() #existing channels
+            self.rules        = RulesList()
+            self.jsonRPC      = JSONRPC()
+            self.resources    = Resources(self.jsonRPC, self.cache)
+            self.m3u          = M3U()
+            self.xmltv        = XMLTVS()
+            
+            self.newChannel   = self.channels.getTemplate()
+            self.channelList  = sorted(self.createChannelList(self.buildArray(), self.eChannels), key=itemgetter('number'))
+            self.channelList.extend(self.channels.getAutotuned())
+            self.newChannels  = self.channelList.copy()
+            
+            self.startChannel = kwargs.get('channel',-1)
+            if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
+            self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+            self.log('Manager, startChannel = %s, focusIndex = %s'%(self.startChannel, self.focusIndex))
+           
+        try:
+            if kwargs.get('start',True): self.doModal()
+        except Exception as e: 
+            self.log('Manager failed! %s'%(e), xbmc.LOGERROR)
+            self.closeManager()
 
 
     def log(self, msg, level=xbmc.LOGDEBUG):
@@ -340,8 +336,9 @@ class Manager(xbmcgui.WindowXMLDialog):
                      "rules"    : {'func':self.getRules   ,'kwargs':{'rules' :self.rules.loadRules([citem],incRez=False).get(citem['id'],{})}},
                      "radio"    : {'func':self.getBool    ,'kwargs':{'state' :value}},
                      "favorite" : {'func':self.getBool    ,'kwargs':{'state' :value}}}
-                     
-        retval, citem = KEY_INPUT[key]['func'](citem, *KEY_INPUT[key].get('args',()),**KEY_INPUT[key].get('kwargs',{}))
+              
+        action = KEY_INPUT.get(key)
+        retval, citem = action['func'](citem, *action.get('args',()),**action.get('kwargs',{}))
         retval, citem = self.validateInputs(key,retval,citem)
         if not retval is None:
             self.madeChanges = True
