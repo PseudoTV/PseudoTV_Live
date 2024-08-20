@@ -51,9 +51,8 @@ class Tasks():
         
 
     def _initialize(self):
-        PROPERTIES.setInstanceID()
+        PROPERTIES.getInstanceID()
         tasks = [self.chkWelcome,
-                 self.chkVersion,
                  self.chkDebugging,
                  self.chkBackup,
                  self.chkPVRBackend]
@@ -69,7 +68,7 @@ class Tasks():
         BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Welcome)')
               
                   
-    @cacheit(checksum=PROPERTIES.getInstanceID())
+    @cacheit(expiration=datetime.timedelta(hours=3),checksum=PROPERTIES.getInstanceID())
     def getOnlineVersion(self):
         try:    ONLINE_VERSON = re.compile('" version="(.+?)" name="%s"'%(ADDON_NAME)).findall(str(getURL(ADDON_URL)))[0]
         except: ONLINE_VERSON = ADDON_VERSION
@@ -77,15 +76,6 @@ class Tasks():
         return ONLINE_VERSON
         
         
-    def chkVersion(self):
-        self.log('chkVersion')
-        ONLINE_VERSION = self.getOnlineVersion()
-        if ADDON_VERSION < ONLINE_VERSION: DIALOG.notificationDialog('%s\n%s'%(LANGUAGE(32168),'Version: [B]%s[/B]'%(ONLINE_VERSION)))
-        if ADDON_VERSION != (SETTINGS.getCacheSetting('lastVersion') or 'v.0.0.0'):
-            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
-            BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
-
-
     def chkDebugging(self):
         self.log('chkDebugging')
         if SETTINGS.getSettingBool('Enable_Debugging'):
@@ -110,27 +100,28 @@ class Tasks():
         
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
+        self._chkEpochTimer('chkVersion'    , self.chkVersion    , 21600)
         self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
-        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 600)
+        self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
         self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
         self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)
         self._chkEpochTimer('chkLibrary'    , self.chkLibrary    , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkChannels'   , self.chkChannels   , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
         self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
+        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 600)
         
         self._chkPropTimer('chkFillers'     , self.chkFillers)
         self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
         self._chkPropTimer('runAutoTune'    , self.runAutoTune)
         
         
-    def _chkEpochTimer(self, key, func, nextrun=None, *args, **kwargs):
-        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)
+    def _chkEpochTimer(self, key, func, runevery, nextrun=None, *args, **kwargs):
+        if nextrun is None: nextrun = (PROPERTIES.getPropertyInt(key) or 0)# nextrun == 0 => force run
         epoch = int(time.time())
         run = (epoch >= nextrun)
-        self.log('_chkEpochTimer, key = %s, run = %s'%(key,run))
         if run and (not self.service._interrupt() and not self.service._suspend()):
-            PROPERTIES.setPropertyInt(key,(epoch+nextrun))
+            self.log('_chkEpochTimer, key = %s, run = %s'%(key,run))
+            PROPERTIES.setPropertyInt(key,(epoch+runevery))
             return self._que(func)
         
 
@@ -141,6 +132,19 @@ class Tasks():
         if run and (not self.service._interrupt() and not self.service._suspend()):
             PROPERTIES.clearEXTProperty(key)
             self._que(func)
+
+
+    def chkVersion(self):
+        self.log('chkVersion')
+        update = False
+        ONLINE_VERSION = self.getOnlineVersion()
+        if ADDON_VERSION < ONLINE_VERSION: 
+            update = True
+            DIALOG.notificationDialog('%s\nVersion: [B]%s[/B]'%(LANGUAGE(32168),ONLINE_VERSION))
+        elif ADDON_VERSION > (SETTINGS.getCacheSetting('lastVersion') or '0.0.0'):
+            SETTINGS.setCacheSetting('lastVersion',ADDON_VERSION)
+            BUILTIN.executebuiltin('RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py,Show_Changelog)')
+        SETTINGS.setSetting('Update_Status',{'True':'[COLOR=yellow]%s Version: [B]%s[/B][/COLOR]'%(LANGUAGE(32168),ONLINE_VERSION),'False':' '}[str(update)])
 
 
     def chkFiles(self):
@@ -224,7 +228,6 @@ class Tasks():
     def chkHTTP(self):
         self.log('chkHTTP')
         timerit(self.httpServer._start)(1.0)
-        SETTINGS.setSetting('Remote_Status',{'True':'[COLOR=green]Online[/COLOR]','False':'[COLOR=red]Offline[/COLOR]'}[str(self.httpServer.isRunning)])
             
             
     def chkJSONQUE(self):

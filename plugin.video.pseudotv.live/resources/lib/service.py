@@ -334,6 +334,7 @@ class Monitor(xbmc.Monitor):
 
 
 class Service():
+    PROPERTIES.getInstanceID()
     currentChannels = []
     currentSettings = []
     
@@ -350,7 +351,7 @@ class Service():
         self.tasks             = Tasks(self)
         self.currentChannels   = self.tasks.getChannels()
         self.currentSettings   = dict(SETTINGS.getCurrentSettings())
-        self.tasks.chkDiscovery()
+        timerit(self.tasks.chkDiscovery)(0.5)
         # DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         

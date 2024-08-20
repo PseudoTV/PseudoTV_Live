@@ -116,8 +116,10 @@ def setJSON(file, data):
         fle.close()
     return True
 
-def getURL(url):
-    try: return urllib.request.urlopen(url).read()
+def getURL(url, headers=HEADER):
+    try:
+        r = urllib.request.Request(url, None, headers)
+        return urllib.request.urlopen(r).read()
     except Exception as e: pass
      
 def setURL(url, file):

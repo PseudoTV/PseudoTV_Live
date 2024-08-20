@@ -115,7 +115,7 @@ class Builder:
             channels = sorted(self.verify(self.channels.getChannels()), key=itemgetter('number'))
             if not channels:
                 self.log('build, no verified channels found!')
-                return False
+                return False, False
                 
             now   = getUTCstamp()
             start = roundTimeDown(getUTCstamp(),offset=60)#offset time to start bottom of the hour

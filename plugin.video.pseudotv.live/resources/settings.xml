@@ -3,23 +3,6 @@
 	<section id="plugin.video.pseudotv.live">
         <category id="channels" label="30108" help="">
 			<group id="1">
-                <setting id="hasAutotuned" type="boolean" label="30107">
-                    <level>3</level>
-                    <default>false</default>
-                    <visible>false</visible>
-                    <control type="toggle"/>
-                </setting>
-                <setting id="Server_List" type="string" label="30107">
-                    <level>3</level>
-                    <default></default>
-                    <visible>false</visible>
-                    <constraints>
-                        <allowempty>true</allowempty>
-                    </constraints>
-                    <control type="edit" format="string">
-                        <heading></heading>
-                    </control>
-                </setting>
 				<setting id="Select_Channels" type="string" label="30107" help="33107">
 					<level>1</level>
 					<constraints>
@@ -94,6 +77,27 @@
 					</control>
 				</setting>
 			</group>
+            <setting id="Update_Status" type="string" label="">
+                <level>0</level>
+                <default></default>
+                <constraints>
+                    <allowempty>true</allowempty>
+                </constraints>
+                <dependencies>
+                    <dependency type="enable">
+                        <condition operator="!is" setting="Update_Status"> </condition>
+                    </dependency>
+                </dependencies>
+                <control type="button" format="action">
+                    <data></data>
+                </control>
+            </setting>
+            <setting id="hasAutotuned" type="boolean" label="30107">
+                <level>3</level>
+                <default>false</default>
+                <visible>false</visible>
+                <control type="toggle"/>
+            </setting>
         </category>
         
 		<category id="autotune" label="30038" help="33038">

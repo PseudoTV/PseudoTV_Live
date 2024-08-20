@@ -134,8 +134,10 @@ class Multiroom:
     def chkPVRservers(self):
         changed = False
         servers = self.getDiscovery()
+        headers = HEADER.copy()
+        headers["Content-type"] = "application/vnd.apple.mpegurl"
         for server in list(servers.values()):
-            server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE)) else False
+            server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE),headers) else False
             self.log('chkPVRservers, %s online = %s'%(server.get('name'),server['online']))
             if SETTINGS.hasPVRInstance(server.get('name')):
                 if server.get('enabled',False): continue

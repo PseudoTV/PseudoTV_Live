@@ -1,3 +1,7 @@
+v.0.5.4
+-Tweaked background queue ordering.
+-Fixed background service not idling.
+
 v.0.5.3
 -Fixed channel manager "Add Path".
 -Tweaked PVR backend reload.
