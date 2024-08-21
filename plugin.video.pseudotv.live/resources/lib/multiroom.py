@@ -161,7 +161,7 @@ class Multiroom:
     def delServer(self):
         self.log('delServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=red]Offline[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
@@ -176,7 +176,7 @@ class Multiroom:
     def selServer(self):
         self.log('selServer')
         def _build(payload):
-            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=red]Offline[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
+            return LISTITEMS.buildMenuListItem(payload['name'],'%s - %s'%(payload['host'],{"True":"[COLOR=green]Online[/COLOR]","False":"[COLOR=red]Offline[/COLOR]"}[str(payload.get('online',False))]),url=dumpJSON(payload))
       
         with BUILTIN.busy_dialog():
             servers = self.getDiscovery()
