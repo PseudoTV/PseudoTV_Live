@@ -49,9 +49,7 @@ def decodeString(base64_bytes):
     try:
         message_bytes = zlib.decompress(base64.b64decode(base64_bytes.encode(DEFAULT_ENCODING)))
         return message_bytes.decode(DEFAULT_ENCODING)
-    except Exception as e:
-        log('Kodi: decodeString failed! %s'%(e), xbmc.LOGERROR)
-        return ''
+    except Exception as e: return ''
         
 def getAbbr(text):
     words = text.split(' ')
@@ -119,16 +117,11 @@ def getCRC32(text):
     return binascii.crc32(text.encode('utf8'))
     
 def convertString(data):
-    if isinstance(data, dict):
-        return dumpJSON(data)
-    elif isinstance(data, list):
-        return ', '.join(data)
-    elif isinstance(data, bytes):
-        return data.decode(DEFAULT_ENCODING)
-    elif not isinstance(data, str):
-        return str(data)
-    else:
-        return data
+    if isinstance(data, dict):      return dumpJSON(data)
+    elif isinstance(data, list):    return ', '.join(data)
+    elif isinstance(data, bytes):   return data.decode(DEFAULT_ENCODING)
+    elif not isinstance(data, str): return str(data)
+    else:                           return data
              
 class Settings:
     #Kodi often breaks settings API with changes between versions. Stick with core setsettings/getsettings to avoid specifics; that may break.
@@ -357,7 +350,7 @@ class Settings:
                 'catchupWatchEpgBeginBufferMins':'0'}
 
 
-    def setPVRPath(self, path, instance=ADDON_NAME, prompt=False):
+    def setPVRPath(self, path, instance=ADDON_NAME, prompt=False, force=False):
         settings  = self.IPTV_SIMPLE_SETTINGS()
         nsettings = {'m3uPathType'                :'0',
                      'm3uPath'                    :os.path.join(path,M3UFLE),
@@ -369,7 +362,9 @@ class Settings:
                      'kodi_addon_instance_enabled':'true'}
         settings.update(nsettings)
         self.log('setPVRPath, new settings = %s'%(nsettings))
-        return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
+        if self.hasPVRInstance(instance) and not force:
+            return self.log('setPVRInstance, instance (%s) settings exists.'%(instance))
+        else: return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
         
         
     def setPVRRemote(self, host, instance=ADDON_NAME, prompt=False):
@@ -423,20 +418,20 @@ class Settings:
                 except Exception as e:
                     self.log('chkPVRInstance, path = %s, failed to open file = %s\n%s'%(PVR_CLIENT_LOC,file,e))
                     continue
+                        
+                match = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                try: name = match.group(1)
+                except:
+                    match = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
+                    try:    name = match.group(1)
+                    except: name = None
                     
-                name = re.compile('<setting id=\"kodi_addon_instance_name\">(.*?)\</setting>', re.IGNORECASE).search(txt)
-                if name: name = name.group(1)
-                else:
-                    name = re.compile('<setting id=\"kodi_addon_instance_name\" default=\"true\">(.*?)\</setting>', re.IGNORECASE).search(txt)
-                    if name: name = name.group(1)
-                    else: continue
-                
                 if name == instance:
                     if found ==  False: found = os.path.join(PVR_CLIENT_LOC,file)
-                    else:
+                    else: #auto remove any duplicate entries with the same instance name.
                         FileAccess.delete(os.path.join(PVR_CLIENT_LOC,file))
                         self.log('chkPVRInstance, removing duplicate entry %s'%(file))
-        self.log('chkPVRInstance, found %s file = %s'%(name,found))
+                self.log('chkPVRInstance, found %s file = %s'%(name,found))
         return found
 
 
@@ -472,7 +467,7 @@ class Settings:
             changes = {}
             name = addon.getAddonInfo('name')
             osettings = (self.getPVRInstanceSettings(instance) or {})
-            for setting, newvalue in list(nsettings.items()):
+            for setting, newvalue in nsettings.items():
                 if MONITOR.waitForAbort(.001): return False
                 default, oldvalue = osettings.get(setting,(None,None))
                 if str(newvalue).lower() != str(oldvalue).lower(): 

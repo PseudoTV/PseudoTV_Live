@@ -36,7 +36,7 @@ class Player(xbmc.Player):
         self.log('__init__')
         xbmc.Player.__init__(self)
         self.jsonRPC = jsonRPC
-        self.disableTrakt = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
+        self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
         
         """ 
@@ -351,7 +351,6 @@ class Service():
         self.tasks             = Tasks(self)
         self.currentChannels   = self.tasks.getChannels()
         self.currentSettings   = dict(SETTINGS.getCurrentSettings())
-        timerit(self.tasks.chkDiscovery)(0.5)
         # DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
         
         

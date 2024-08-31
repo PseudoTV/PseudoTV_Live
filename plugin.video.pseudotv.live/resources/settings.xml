@@ -506,7 +506,7 @@
 					<default>true</default>
 					<control type="toggle"/>
 				</setting>
-				<setting id="Resource_Overlay" type="list[addon]" label="30141" help="33160">
+				<setting id="Resource_Overlay" type="list[addon]" label="30141" help="33160" parent="Enable_Overlay">
 					<level>2</level>
 					<default>resource.images.overlays.crttv</default>
 					<constraints>
@@ -522,6 +522,18 @@
 						<show more="true" details="true">installed</show>
 						<multiselect>true</multiselect>
 					</control>
+				</setting>     
+				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
+					<level>1</level>
+					<default>true</default>
+                    <dependencies>
+						<dependency type="visible">
+							<and>
+                                <condition operator="is" setting="Enable_Overlay">true</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="toggle"/>
 				</setting>
 				<setting id="Enable_ChannelBug" type="boolean" label="30043" help="33043" parent="Enable_Overlay">
 					<level>1</level>
@@ -610,18 +622,6 @@
 						<data>RunScript(special://home/addons/plugin.video.pseudotv.live/resources/lib/utilities.py, Move_Channelbug)</data>
 						<close>true</close>
 					</control>
-				</setting>               
-				<setting id="Enable_OnNext" type="boolean" label="30045" help="33045" parent="Enable_Overlay">
-					<level>1</level>
-					<default>true</default>
-                    <dependencies>
-						<dependency type="visible">
-							<and>
-                                <condition operator="is" setting="Enable_Overlay">true</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="toggle"/>
 				</setting>
 			</group>
 			<group id="3" label="30014">
@@ -760,13 +760,13 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="Build_Post_Folders" type="boolean" label="30140" help="33140" parent="Enable_Postroll">
+				<setting id="Build_Post_Folders" type="boolean" label="30140" help="33140">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
 					<dependencies>
 						<dependency type="enable">
-                            <condition operator="!is" setting="Enable_Postroll">0</condition>
+                            <condition operator="is" setting="Enable_Fillers">true</condition>
 						</dependency>
 					</dependencies>
 				</setting>
@@ -955,7 +955,7 @@
 					</control>
 				</setting>
                 <setting id="Select_server" type="action" label="32048" help="33048" parent="Bonjour_Status">
-					<level>1</level>
+					<level>0</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
@@ -974,13 +974,16 @@
 					</control>
 				</setting>
                 <setting id="Remove_server" type="action" label="30046" help="33046" parent="Select_server">
-					<level>1</level>
+					<level>0</level>
 					<default></default>
 					<constraints>
 						<allowempty>true</allowempty>
 					</constraints>
 					<dependencies>
 						<dependency type="enable">
+                            <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Servers),true)</condition>
+						</dependency>
+						<dependency type="visible">
                             <condition on="property" name="InfoBool">String.Contains(Window(10000).Property(plugin.video.pseudotv.live.has.Servers),true)</condition>
 						</dependency>
 					</dependencies>

@@ -42,11 +42,10 @@ class Utilities:
                 SETTINGS.setCacheSetting('showWelcome', 'false', checksum=fsize)
                 DIALOG.textviewer(ftext.format(addon_name = ADDON_NAME,
                                                pvr_name   = PVR_CLIENT_NAME,
-                                               m3u        = M3UFLEPATH,
-                                               xmltv      = XMLTVFLEPATH,
-                                               genre      = GENREFLEPATH,
-                                               logo       = LOGO_LOC,
-                                               lang_30074 = LANGUAGE(30074)), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
+                                               m3u        = M3UFLEPATH.replace('special://profile','.'),
+                                               xmltv      = XMLTVFLEPATH.replace('special://profile','.'),
+                                               genre      = GENREFLEPATH.replace('special://profile','.'),
+                                               logo       = LOGO_LOC.replace('special://profile','.')), heading=(LANGUAGE(32043)%(ADDON_NAME,ADDON_VERSION)),usemono=True)
         except Exception as e: self.log('showWelcome failed! %s'%(e), xbmc.LOGERROR)
         
 
@@ -155,7 +154,6 @@ class Utilities:
                  {'label':LANGUAGE(32180),'label2':LANGUAGE(33180),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.chkFillers'%(ADDON_ID),'true')  , 'hide':False}, #Rescan library
                  {'label':LANGUAGE(32181),'label2':LANGUAGE(33181),'icon':COLOR_LOGO,'func':PROPERTIES.setEXTProperty ,'args':('%s.runAutoTune'%(ADDON_ID),'true') , 'hide':False}] #Run Autotune
                 
-
         with BUILTIN.busy_dialog():
             listItems = [LISTITEMS.buildMenuListItem(item.get('label'),item.get('label2'),item.get('icon')) for item in sorted(items,key=itemgetter('label')) if not (item.get('hide'))]
             if select is None: select = DIALOG.selectDialog(listItems, '%s - %s'%(ADDON_NAME,LANGUAGE(32126)),multi=False)
@@ -202,7 +200,7 @@ class Utilities:
             with BUILTIN.busy_dialog():
                 from jsonrpc import JSONRPC
                 jsonRPC = JSONRPC()
-                if SETTINGS.setPVRPath(USER_LOC,jsonRPC.getFriendlyName(),prompt=True):
+                if SETTINGS.setPVRPath(USER_LOC,jsonRPC.getFriendlyName(),prompt=True,force=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else: DIALOG.notificationDialog(LANGUAGE(32165))
                 del jsonRPC

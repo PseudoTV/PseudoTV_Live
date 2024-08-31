@@ -290,8 +290,8 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
-        self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration'), offset=SETTINGS.getSettingInt('Seek_Tolerance')):
+        self.log("getDuration, accurate = %s, path = %s, save = %s, offset = -%s" % (accurate, path, save, offset))
         runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if (runtime == 0 or accurate):
             duration = 0
@@ -299,6 +299,9 @@ class JSONRPC:
                 for file in splitStacks(path): duration += self.parseDuration(file)
             else: duration = self.parseDuration(path, item, save)
             if duration > 0: runtime = duration
+        if not accurate:
+            self.log("getDuration, applying offset = -%s" % (offset))
+            runtime -= offset
         self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
         return runtime
 
@@ -408,7 +411,7 @@ class JSONRPC:
                 self.log('requestList, id = %s generating random limits = %s'%(citem['id'],limits))
 
         param["limits"]          = {}
-        param["limits"]["start"] = limits.get('end', 0)
+        param["limits"]["start"] = 0 if limits.get('end', 0) == -1 else limits.get('end', 0)
         param["limits"]["end"]   = limits.get('end', 0) + page
         param["sort"] = sort
         self.log('requestList, id = %s, page = %s\nparam = %s'%(citem['id'], page, param))

@@ -163,10 +163,9 @@ class Overlay():
     
         
     def open(self):
-        self.log('open')
+        self.log('open, id = %s'%(self.player.sysInfo.get('citem',{}).get('id')))
         if not self.player.isPseudoTV: 
             return self.close()
-            
         self.runActions(RULES_ACTION_OVERLAY_OPEN, self.player.sysInfo.get('citem',{}), inherited=self)
         self.toggleBug(),self.toggleOnNext(),self.toggleBackground(),self.toggleVignette()
             

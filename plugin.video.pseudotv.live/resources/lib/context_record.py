@@ -38,6 +38,7 @@ class Record:
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                 if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
+                    togglePVR(False,True)
         del m3u
         del xmltv
     
@@ -51,6 +52,7 @@ class Record:
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
                 if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
+                    togglePVR(False,True)
         del m3u
         del xmltv
             

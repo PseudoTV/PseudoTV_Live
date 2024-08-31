@@ -96,15 +96,15 @@ class Plugin:
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+            if self.sysInfo.get('seek',0) > self.seekTOL: liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
             infoTag = ListItemInfoTag(liz,'video')
-            infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            if self.sysInfo.get('seek',0) > self.seekTOL: infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
             self.resolveURL(True, liz)
 
 
     def playBroadcast(self, name: str, chid: str, vid: str):
         with self.preparingPlayback():
-            self.log('playBroadcast, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
+            self.log('playBroadcast, id = %s'%(chid))
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))

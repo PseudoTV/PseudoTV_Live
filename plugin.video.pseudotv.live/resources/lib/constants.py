@@ -122,12 +122,12 @@ LICENSE_FLE         = os.path.join(ADDON_PATH,'LICENSE')
 
 
 #files
-XMLTVFLE            = '%s.xml'%('pseudotv')
-M3UFLE              = '%s.m3u'%('pseudotv')
+M3UFLE              = 'pseudotv.m3u'
+XMLTVFLE            = 'pseudotv.xml'
+GENREFLE            = 'genres.xml'
 SERVERFLE           = 'servers.json'
 CHANNELFLE          = 'channels.json'
 LIBRARYFLE          = 'library.json'
-GENREFLE            = 'genres.xml'
 TVGROUPFLE          = 'tv_groups.xml'
 RADIOGROUPFLE       = 'radio_groups.xml'
 PROVIDERFLE         = 'providers.xml'

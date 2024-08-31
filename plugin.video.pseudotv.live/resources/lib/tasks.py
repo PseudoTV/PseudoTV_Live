@@ -52,6 +52,7 @@ class Tasks():
 
     def _initialize(self):
         PROPERTIES.getInstanceID()
+        timerit(self.chkDiscovery)(0.1)
         tasks = [self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
@@ -95,20 +96,20 @@ class Tasks():
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.hasPVRInstance() == False:
                 with BUILTIN.busy_dialog():
-                    SETTINGS.setPVRPath(USER_LOC, self.jsonRPC.getFriendlyName(), False)
+                    SETTINGS.setPVRPath(USER_LOC, self.jsonRPC.getFriendlyName())
         
         
     def _chkQueTimer(self):
         self.log('_chkQueTimer')
-        self._chkEpochTimer('chkVersion'    , self.chkVersion    , 21600)
-        self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
+        self._chkEpochTimer('chkVersion'    , self.chkVersion    , 7200)
         self._chkEpochTimer('chkPVRSettings', self.chkPVRSettings, 900)
         self._chkEpochTimer('chkPVRservers' , self.chkPVRservers , 900)
+        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 300)
+        self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
         self._chkEpochTimer('chkRecommended', self.chkRecommended, 900)
         self._chkEpochTimer('chkLibrary'    , self.chkLibrary    , (MAX_GUIDEDAYS*3600))
         self._chkEpochTimer('chkChannels'   , self.chkChannels   , (MAX_GUIDEDAYS*3600))
-        self._chkEpochTimer('chkHTTP'       , self.chkHTTP       , 900)
-        self._chkEpochTimer('chkFiles'      , self.chkFiles      , 600)
+        self._chkEpochTimer('chkJSONQUE'    , self.chkJSONQUE    , 300)
         
         self._chkPropTimer('chkFillers'     , self.chkFillers)
         self._chkPropTimer('chkDiscovery'   , self.chkDiscovery)
@@ -184,7 +185,7 @@ class Tasks():
             library.importPrompt()
             complete = library.updateLibrary(force)
             del library
-            if not complete: self._que(self.chkLibrary,1,force)
+            if not complete: self._que(self.chkLibrary,1,True)
             elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
@@ -198,9 +199,9 @@ class Tasks():
             if not complete:
                 if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)
             else: 
-                if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
                 self.service.currentChannels = list(channels)
                 if updated: self._que(togglePVR,1,*(False,True))
+                if not PROPERTIES.hasFirstrun(): PROPERTIES.setFirstrun(state=True)
         except Exception as e:
             self.log('chkChannels failed! %s'%(e), xbmc.LOGERROR)
 
@@ -222,7 +223,7 @@ class Tasks():
     def chkDiscovery(self):
         self.log('chkDiscovery')
         self.multiroom.hasServers()
-        self.multiroom.pairDiscovery(wait=60)
+        self.multiroom.pairDiscovery()
          
 
     def chkHTTP(self):
@@ -287,7 +288,7 @@ class Tasks():
             return channels
 
         
-    def chkSettingsChange(self, settings=[]):
+    def chkSettingsChange(self, settings={}):
         self.log('chkSettingsChange, settings = %s'%(settings))
         with DIALOG.sudo_dialog(msg='%s %s'%(LANGUAGE(32028),LANGUAGE(32053))):
             nSettings = dict(SETTINGS.getCurrentSettings())
@@ -332,7 +333,7 @@ class Tasks():
                     if FileAccess.copy(file,nfile): dia = DIALOG.progressDialog(pnt, dia, message='%s\n%s\n%s'%(LANGUAGE(32051),ndir,nfile))
                     else:                           dia = DIALOG.progressDialog(pnt, dia, message=LANGUAGE(32052)%(nfile))
             DIALOG.progressDialog(100, dia)
-            SETTINGS.setPVRPath(new)
+            SETTINGS.setPVRPath(new,prompt=True,force=True)
             setPendingRestart()
             
         

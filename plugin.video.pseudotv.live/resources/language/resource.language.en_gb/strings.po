@@ -1625,7 +1625,7 @@ msgid "Probability a non-channel specific i.e generic video will be used when no
 msgstr ""
 
 msgctxt "#33140"
-msgid "Create Channel & Genre subfolders in template resource pack."
+msgid "Create local channel & genre subfolders in template resource pack."
 msgstr ""
 
 msgctxt "#33148"

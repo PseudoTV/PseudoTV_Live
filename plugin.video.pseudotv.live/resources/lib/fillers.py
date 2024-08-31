@@ -62,7 +62,7 @@ class Fillers:
     
     
     @cacheit(expiration=datetime.timedelta(minutes=15),json_data=False)
-    def buildSource(self, ftype, path):
+    def buildSource(self, ftype, path=''):
         self.log('buildSource, type = %s, path = %s'%(ftype, path))
         def _parseLocal(path):
             if FileAccess.exists(path): return self.jsonRPC.walkListDirectory(path,exts=VIDEO_EXTS,depth=CHANNEL_LIMIT,chkDuration=True)
@@ -85,16 +85,20 @@ class Fillers:
                         dur = self.jsonRPC.getDuration(os.path.join(path,file), accurate=True)
                         if dur > 0: tmpDCT.setdefault(key,[]).append({'file':os.path.join(path,file),'duration':dur,'label':'%s - %s'%(path.strip('/').split('/')[-1:][0],file.split('.')[0])})
             return tmpDCT
-
-        if path.startswith('resource.'):
-            if   ftype == 'ratings':                return __sortItems(_parseResource(path),'file')
-            elif ftype == 'bumpers':                return __sortItems(_parseResource(path))
-            elif ftype == 'adverts':                return __sortItems(_parseResource(path))
-            elif ftype == 'trailers':               return __sortItems(_parseResource(path))
-        elif     path.startswith('plugin://'):      return __sortItems(_parseVFS(path),'plugin')
-        elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
-        else:                                       return {}
         
+        try:
+            if path.startswith('resource.'):
+                if   ftype == 'ratings':                return __sortItems(_parseResource(path),'file')
+                elif ftype == 'bumpers':                return __sortItems(_parseResource(path))
+                elif ftype == 'adverts':                return __sortItems(_parseResource(path))
+                elif ftype == 'trailers':               return __sortItems(_parseResource(path))
+            elif     path.startswith('plugin://'):      return __sortItems(_parseVFS(path),'plugin')
+            elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
+            else:                                       return {}
+        except Exception as e:
+            self.log("buildSource, failed! %s\n path = %s"%(e,path), xbmc.LOGERROR)
+            DIALOG.notificationDialog("Error occurred adding fillers, please submit your Kodi debug log for review, Thanks...") #todo remove
+            
         
     def convertMPAA(self, ompaa):
         tmpLST = ompaa.split(' / ')

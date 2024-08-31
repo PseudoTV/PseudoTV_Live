@@ -58,7 +58,8 @@ M3U_MIN  = {"id"                : "",
             "radio"             : False,
             "label"             : "",
             "url"               : ""}
-
+            
+#todo append overlay/playback rules to m3u using KODIPROP for client parsing.
 class M3U:
     def __init__(self):
         stations, recordings = self.cleanSelf(list(self._load()))

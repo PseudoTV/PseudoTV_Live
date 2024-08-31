@@ -41,12 +41,9 @@ class Discovery:
             with PROPERTIES.setRunning('Discovery'):
                 data = ''
                 try: 
-                    IP  = getIP()
-                    TCP = SETTINGS.getSettingInt('TCP_PORT')
-                    UDP = SETTINGS.getSettingInt('UDP_PORT')
-                    local ='%s:%s'%(IP,TCP)
+                    local ='%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT'))
                     sock  = socket(AF_INET, SOCK_DGRAM) #create UDP socket
-                    sock.bind(('', UDP))
+                    sock.bind(('', SETTINGS.getSettingInt('UDP_PORT')))
                     sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
                     data, addr = sock.recvfrom(1024) #wait for a packet
                     data = data.decode(DEFAULT_ENCODING)
@@ -54,7 +51,7 @@ class Discovery:
                 if data.startswith(ADDON_ID):
                     response = data[len(ADDON_ID):]
                     if response:
-                        self.log('_start: response = %s'%(response))
+                        self.log('_start: response from %s\n%s'%(addr,response))
                         payload = loadJSON(self.__decodeString(response))
                         host = payload.get('host','')
                         if host != local and 'md5' in payload:
@@ -62,6 +59,7 @@ class Discovery:
                             if payload.pop('md5') == getMD5(dumpJSON(payload)) or payload.pop('received') == local:
                                 self.log('_start: discovered new server confirmed! received payload ',xbmc.LOGINFO)
                                 return payload 
+                else: self.log('_start: waiting for response...')
         return {}
         
                                 
@@ -89,8 +87,8 @@ class Announcement:
                     sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
                     sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1) #this is a broadcast socket
                     sock.settimeout(0.5) # it take 0.5 secs to connect to a port !
-                    self.log('_start, sending service announcements: %s'%(data[len(ADDON_ID):]),xbmc.LOGINFO)
                     sock.sendto(data.encode(), ('<broadcast>',SETTINGS.getSettingInt('UDP_PORT')))
+                    self.log('_start, sending service announcements: %s\n%s'%(data[len(ADDON_ID):],data.encode()),xbmc.LOGINFO)
                 except Exception as e: self.log('_start failed! %s'%(e),xbmc.LOGERROR)
 
 
@@ -100,12 +98,29 @@ class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, request, client_address, server, monitor):
         self.monitor = monitor
         try: BaseHTTPRequestHandler.__init__(self, request, client_address, server)
-        except (IOError, OSError) as e: pass
+        except (IOError, OSError) as e: self.log('__init__ failed! %s'%(e),xbmc.LOGERROR)
         
 
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
+
+    def _set_headers(self, content='*/*', size=None):
+        self.send_response(200, "OK")
+        self.send_header("Content-type",content)
+        self.send_header("Connection",'close')
+        if size:
+            self.send_header("Content-Length", len(size))
+        self.end_headers()
+
+
+    def do_HEAD(self):
+        return self._set_headers()
+
+
+    def do_POST(self):
+        return self.do_GET()
+        
         
     def do_GET(self):
         self.log('do_GET, path = %s'%(self.path))
@@ -117,30 +132,29 @@ class RequestHandler(BaseHTTPRequestHandler):
             content = "text/xml"
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
-            content = "text/xml"
-        else: return
+            content = "text/plain"
             
-        self.send_response(200)
-        self.send_header("Content-type",content)
-        self.end_headers()
-        
-        self.log('do_GET, sending = %s'%(path))
-        with FileLock():
-            fle = FileAccess.open(path, "r")
-            while not self.monitor.abortRequested():
-                chunk = fle.read(self.CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
-                if not chunk or self.monitor.myService._interrupt(.001): break
-                self.wfile.write(chunk)
+        if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
+            self.log('do_GET, sending = %s'%(path))
+            self._set_headers(content)
+            CHUNK_SIZE = 64 * 1024
+            with FileLock():
+                fle = FileAccess.open(path, "r")
+                while not self.monitor.abortRequested():
+                    chunk = fle.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
+                    if not chunk or self.monitor.myService._interrupt(.001): break
+                    self.wfile.write(chunk)
+                fle.close()
+                self.wfile.close()
+        else:
+            fle   = FileAccess.open(path, "r")
+            chunk = fle.read().encode(encoding=DEFAULT_ENCODING)
             fle.close()
+            self._set_headers(content,chunk)
+            self.log('do_GET, sending = %s, size = %s'%(path,len(chunk)))
+            self.wfile.write(chunk)
+            self.wfile.close()
             
-            
-    def do_HEAD(self):
-        return
-        
-        
-    def do_POST(self):
-        return self.do_GET()
-        
         
 class HTTP:
     isRunning = False

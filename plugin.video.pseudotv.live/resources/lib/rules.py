@@ -104,7 +104,8 @@ class RulesList:
     def runActions(self, action, citem, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        for myId, rule in list(sorted(self.ruleItems.get(citem.get('id'),{}).items())):
+        rules = (self.ruleItems.get(citem.get('id',{})) or self.loadRules([citem]).get(citem.get('id',{})) or {})
+        for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
                 parameter = rule.runAction(action, citem, parameter, inherited)

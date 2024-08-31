@@ -102,7 +102,7 @@ class Library:
     def fillItems(self):
         self.parserDialog = DIALOG.progressBGDialog(self.parserCount,header='%s, %s'%(ADDON_NAME,'%s %s'%(LANGUAGE(30014),LANGUAGE(32041))))
         for idx, type in enumerate(AUTOTUNE_TYPES):
-            if self.service._interrupt() or self.service._suspend():
+            if self.service._interrupt():
                 self.parserDialog = DIALOG.progressBGDialog(100,self.parserDialog)
                 break
             else:
@@ -141,7 +141,7 @@ class Library:
         self.parserDialog = DIALOG.progressBGDialog(header='%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
         for idx,type in enumerate(AUTOTUNE_TYPES):
             self.parserDialog = DIALOG.progressBGDialog(int(idx*100//len(AUTOTUNE_TYPES)),self.parserDialog,AUTOTUNE_TYPES[idx],'%s, %s'%(ADDON_NAME,'%s %s'%(msg,LANGUAGE(32041))))
-            if self.service._interrupt() or self.service._suspend():
+            if self.service._interrupt():
                 complete = False
                 break
             else: self.setLibrary(type, [__update(type,item) for item in libraryItems.get(type,[])])

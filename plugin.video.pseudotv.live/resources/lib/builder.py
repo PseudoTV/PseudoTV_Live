@@ -110,7 +110,7 @@ class Builder:
                 yield self.runActions(RULES_ACTION_CHANNEL_CITEM, citem, citem, inherited=self)
 
             
-    def build(self) -> bool:
+    def build(self):
         with PROPERTIES.legacy():
             channels = sorted(self.verify(self.channels.getChannels()), key=itemgetter('number'))
             if not channels:
@@ -141,8 +141,7 @@ class Builder:
                     cacheResponse = self.getFileList(citem, now, stopTimes.get(citem['id'],start))# {False:'In-Valid Channel w/o programmes)', True:'Valid Channel that exceeds MAX_DAYS', list:'Valid Channel w/ programmes}
                     if cacheResponse:
                         if self.addChannelStation(citem) and (isinstance(cacheResponse,list) and len(cacheResponse) > 0):
-                            if not updated: updated = True
-                            self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
+                            updated = self.addChannelProgrammes(citem, cacheResponse) #added xmltv lineup entries.
                     else: 
                         if self.completeBuild: self.pErrors.append(LANGUAGE(32026))
                         chanErrors = ' | '.join(list(sorted(set(self.pErrors))))
@@ -334,7 +333,7 @@ class Builder:
                             self.log("buildList, id: %s, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                             continue
 
-                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
+                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration, self.minDuration)
                         if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule.
                             item['duration']     = dur
                             item['media']        = media
@@ -464,10 +463,11 @@ class Builder:
         
         
     def addChannelProgrammes(self, citem: dict, fileList: list):
-        self.log('addProgrammes, id: %s, fileList = %s'%(citem['id'],len(fileList)))
+        self.log('addChannelProgrammes, id: %s, fileList = %s'%(citem['id'],len(fileList)))
         for idx, item in enumerate(fileList):
             self.xmltv.addProgram(citem['id'], self.xmltv.getProgramItem(citem, item))
-            
+        return True
+        
         
     def delChannelStation(self, citem: dict) -> bool:
         self.log('delChannelStation, id: %s'%(citem['id']))

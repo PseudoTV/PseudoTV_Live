@@ -485,12 +485,12 @@ class XMLTVS:
                     gen.appendChild(doc.createTextNode(key.title().replace('Tv','TV').replace('Nr','NR').replace('Na','NA')))
                     root.appendChild(gen)
                     
-                with FileLock():
-                    try:
+                try:
+                    with FileLock():
                         xmlData = FileAccess.open(GENREFLEPATH, "w")
-                        xmlData.write(doc.toprettyxml(indent='\t'))
+                        xmlData.write(doc.toprettyxml(indent='  ',encoding=DEFAULT_ENCODING))
                         xmlData.close()
-                    except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
+                except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
             except Exception as e: self.log("buildGenres failed! %s"%(e), xbmc.LOGERROR)
 
 
@@ -515,7 +515,7 @@ class XMLTVS:
         fItem['catchup-id']   = item['catchup-id']
             
         if (item['type'] != 'movie' and ((fItem.get("season",0) > 0) and (fItem.get("episode",0) > 0))):
-            item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1),
+            item['episode-num'] = {'xmltv_ns':'%s.%s'%(fItem.get("season",1)-1,fItem.get("episode",1)-1), # todo support totaleps <episode-num system="xmltv_ns">..44/47</episode-num>https://github.com/kodi-pvr/pvr.iptvsimple/pull/884
                                    'onscreen':'S%sE%s'%(str(fItem.get("season",0)).zfill(2),str(fItem.get("episode",0)).zfill(2))}
 
         item['rating']      = cleanMPAA(fItem.get('mpaa','') or 'NA')
@@ -523,7 +523,7 @@ class XMLTVS:
         item['writer']      = fItem.get('writer',[])[:5]   #trim list to five
         item['director']    = fItem.get('director',[])[:5] #trim list to five
         item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
-
+        
         fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference.
         item['fitem']       = fItem  #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
         

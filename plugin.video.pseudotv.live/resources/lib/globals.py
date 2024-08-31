@@ -38,7 +38,6 @@ from xml.sax.saxutils import escape, unescape
 from ast         import literal_eval
 from operator    import itemgetter
 
-
 from logger      import *
 from cache       import Cache, cacheit
 from pool        import killit, timeit, poolit, executeit, timerit, threadit
@@ -295,6 +294,7 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
 
 def togglePVR(state=True, reverse=False, wait=15):
     log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
+    #todo check for open pvr windows, don't toggle when open
     if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr')):
         isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
         if (state and isEnabled) or (not state and not isEnabled): return

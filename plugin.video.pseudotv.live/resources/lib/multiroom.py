@@ -46,22 +46,22 @@ class Multiroom:
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def pairDiscovery(self, wait=300):
+    def pairDiscovery(self, wait=60, prompt=SETTINGS.getSettingBool('Enable_Debugging')):
         if not PROPERTIES.isRunning('Multiroom'):
             added = False
             with PROPERTIES.setRunning('Multiroom'):
-                self.log('pairDiscovery')
+                self.log('pairDiscovery, wait = %s, prompt = %s'%(wait,prompt))
                 sec = 0
-                dia = DIALOG.progressBGDialog(message=LANGUAGE(32162)%(wait-sec))
+                if prompt: dia = DIALOG.progressBGDialog(message=LANGUAGE(32162)%(wait-sec))
+                else:      dia = None
                 while not self.service.monitor.abortRequested() and (sec < wait):
                     sec += 1  
                     msg = LANGUAGE(32162)%(wait-sec)
                     if dia: dia = DIALOG.progressBGDialog(int((sec)*100//wait),dia, msg)
                     SETTINGS.setSetting('Bonjour_Status',(LANGUAGE(32158)%(wait-sec)))
                     payload = Discovery()._start()
-                    added = self.addServer(payload)
-                    if added: break
-                    if self.service._interrupt(1.0) or dia is None: break
+                    added   = self.addServer(payload)
+                    if self.service._interrupt(0.5) or dia is None or added: break
                 SETTINGS.setSetting('Bonjour_Status',LANGUAGE(32149))
                 if dia: DIALOG.progressBGDialog(100,dia)
             if added: self.sendResponse(payload)
@@ -84,7 +84,7 @@ class Multiroom:
                     Announcement(payload)
                     npayload = Discovery()._start()
                     if self.addServer(npayload): break
-                    if self.service._interrupt(1.5) or dia is None: break
+                    if self.service._interrupt(0.5) or dia is None: break
                 if dia: DIALOG.progressDialog(100,dia)
         else: DIALOG.notificationDialog('Discovery Running, Try again later...')
     

@@ -1,6 +1,14 @@
 v.0.5.4
+-Added temporary debug logging to fix failed channel building during fillers.
+ - Further logs will be needed to help resolve the issue, please submit logs. THX
 -Tweaked background queue ordering.
+-Improved startup pairing.
 -Fixed background service not idling.
+-Added "Seek Tolerance" as a runtime offset to keep durations via meta-providers under actual runtimes.
+-Tweaked startup order, moved HTTP server to higher priority. 
+-Fixed http hosted genres.
+-Improved Multi-Room Adv. Rule support via paired clients.
+ - Advanced Rules for playback, overlays, etc are now shared between instances.
 
 v.0.5.3
 -Fixed channel manager "Add Path".
