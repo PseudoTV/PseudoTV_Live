@@ -47,7 +47,7 @@ class Plugin:
         self.sysInfo.update({"name"      : (unquoteString(self.sysInfo.get('name',''))  or BUILTIN.getInfoLabel('ChannelName')),
                              "title"     : (unquoteString(self.sysInfo.get('title','')) or BUILTIN.getInfoLabel('label')),
                              "vid"       : decodeString(self.sysInfo.get('vid','')),
-                             "duration"  : (int(self.sysInfo.get('duration','0')) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)'))),
+                             "duration"  : int((self.sysInfo.get('duration') or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')),
                              "progress"  : (BUILTIN.getInfoLabel('Progress'),BUILTIN.getInfoLabel('PercentPlayed')),
                              "chlabel"   : BUILTIN.getInfoLabel('ChannelNumberLabel'),
                              "chpath"    : BUILTIN.getInfoLabel('FileNameAndPath'),
@@ -59,7 +59,7 @@ class Plugin:
             self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
             self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
             
-        try:    self.sysInfo['seek'] = float(self.sysInfo['now']) - float(self.sysInfo['start'])
+        try:    self.sysInfo['seek'] = float((self.sysInfo.get('seek') or (self.sysInfo.get('now','0') - self.sysInfo.get('start','0'))))
         except: self.sysInfo['seek'] = -1
         
         try:    self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
@@ -87,6 +87,11 @@ class Plugin:
             self.log('playVOD, title = %s, vid = %s'%(title,vid))
             liz = xbmcgui.ListItem(title,path=vid)
             liz.setProperty("IsPlayable","true")
+            if self.sysInfo.get('seek',0) > 0:
+                self.log('playVOD, seek = %s, duration = %s'%(self.sysInfo['seek'],self.sysInfo['duration']))
+                liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                infoTag = ListItemInfoTag(liz,'video')
+                infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
             self.resolveURL(True, liz)
 
 
@@ -96,9 +101,10 @@ class Plugin:
             liz = xbmcgui.ListItem(name,path=vid)
             liz.setProperty("IsPlayable","true")
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            if self.sysInfo.get('seek',0) > self.seekTOL: liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-            infoTag = ListItemInfoTag(liz,'video')
-            if self.sysInfo.get('seek',0) > self.seekTOL: infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            if self.sysInfo.get('seek',0) > self.seekTOL:
+                liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                infoTag = ListItemInfoTag(liz,'video')
+                infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
             self.resolveURL(True, liz)
 
 

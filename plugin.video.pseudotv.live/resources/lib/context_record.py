@@ -24,37 +24,48 @@ from xmltvs     import XMLTVS
 class Record:
     def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Record: __init__, sysARG = %s, fitem = %s\npath = %s'%(sysARG,fitem,listitem.getPath()))
-        self.sysARG   = sysARG
-        self.fitem    = fitem
-        self.listitem = listitem
+        self.sysARG         = sysARG
+        self.fitem          = fitem
+        self.listitem       = listitem
+        self.fitem['label'] = (fitem.get('label') or listitem.getLabel())
         
         
     def add(self):
-        self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-        m3u   = M3U()
-        xmltv = XMLTVS()
-        ritem = m3u.getRecordItem(self.fitem)
-        if DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto recordings?'%(ritem['label'])):
+        now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
+        start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime','ListItem').split(' ')[0] +':00')
+        stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime','ListItem').split(' ')[0] +':00')
+        if (now > start and now < stop):
+            opt  ='Incl. Resume'
+            seek = (now - start) - OVERLAY_DELAY #add rollback buffer
+            msg  = '%s or %s'%(LANGUAGE(30119),LANGUAGE(30152))
+        else:
+            opt  = ''
+            seek = 0
+            msg  = LANGUAGE(30119)
+        retval = DIALOG.yesnoDialog('Would you like to add:\n[B]%s[/B]\nto %s recordings?'%(self.fitem['label'],msg),customlabel=opt)
+        if retval or int(retval) > 0:
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+                m3u   = M3U()
+                xmltv = XMLTVS()
+                ritem = m3u.getRecordItem(self.fitem,{'1':0,'2':seek}[str(int(retval))])
                 if (m3u.addRecording(ritem), xmltv.addRecording(ritem,self.fitem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30116)))
                     togglePVR(False,True)
-        del m3u
-        del xmltv
+                del m3u
+                del xmltv
     
-            
+    
     def remove(self):
-        self.fitem['label'] = (self.fitem.get('label') or self.listitem.getLabel())
-        m3u   = M3U()
-        xmltv = XMLTVS()
-        ritem = m3u.getRecordItem(self.fitem)
-        if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(ritem['label'])):
+        if DIALOG.yesnoDialog('Would you like to remove:\n[B]%s[/B]\nfrom recordings?'%(self.fitem['label'])):
             with BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
+                m3u   = M3U()
+                xmltv = XMLTVS()
+                ritem = m3u.getRecordItem(self.fitem)
                 if (m3u.delRecording(ritem), xmltv.delRecording(ritem)):
                     DIALOG.notificationWait('%s\n%s'%(ritem['label'],LANGUAGE(30118)))
                     togglePVR(False,True)
-        del m3u
-        del xmltv
+                del m3u
+                del xmltv
             
             
 if __name__ == '__main__': 

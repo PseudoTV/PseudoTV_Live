@@ -349,20 +349,22 @@ class M3U:
             return self._save()
     
     
-    def getRecordItem(self, fitem):
+    def getRecordItem(self, fitem, seek=0):
+        if seek <= 0: group = LANGUAGE(30119)
+        else:         group = LANGUAGE(30152)
         ritem = self.getMitem()
         ritem['label']      = (fitem.get('showlabel') or '%s%s'%(fitem.get('label',''),' - %s'%(fitem.get('episodelabel','')) if fitem.get('episodelabel','') else ''))
-        ritem['url']        = fitem.get('catchup-id','')
         ritem['name']       = ritem['label']
         ritem['number']     = random.Random(ritem['name']).random()
         ritem['logo']       = cleanImage(getThumb(fitem,opt=EPG_ARTWORK))
         ritem['media']      = True
         ritem['media-size'] = str(fitem.get('size',0))
         ritem['media-dir']  = ''#todo optional add parent directory via user prompt?
-        ritem['group']      = ['%s (%s)'%(LANGUAGE(30119),ADDON_NAME)]
-        ritem['id']         = getRecordID(ritem['name'], ritem['url'], ritem['number']) if ritem['url'] else ''
+        ritem['group']      = ['%s (%s)'%(group,ADDON_NAME)]
+        ritem['id']         = getRecordID(ritem['name'], ritem['url'], ritem['number'])
+        ritem['url']        = DVR_URL.format(addon=ADDON_ID,title=quoteString(ritem['label']),chid=quoteString(ritem['id']),vid=quoteString(encodeString((fitem.get('originalfile') or fitem.get('file','')))),seek=seek,duration=fitem.get('duration',0))#fitem.get('catchup-id','')
         return ritem
-    
+        
     
     def importM3U(self, file, filters={}, multiplier=1):
         self.log('importM3U, file = %s, filters = %s, multiplier = %s'%(file,filters,multiplier))

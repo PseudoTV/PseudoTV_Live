@@ -292,7 +292,7 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration'), offset=SETTINGS.getSettingInt('Seek_Tolerance')):
         self.log("getDuration, accurate = %s, path = %s, save = %s, offset = -%s" % (accurate, path, save, offset))
-        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or item.get('resume',{}).get('total') or 0)
         if (runtime == 0 or accurate):
             duration = 0
             if isStack(path):# handle "stacked" videos

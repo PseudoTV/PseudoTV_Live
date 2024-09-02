@@ -39,7 +39,7 @@ def run(sysARG):
         if hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
     elif chid and not vid:
         return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,SETTINGS.IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
-    elif mode == 'vod':                                     threadit(Plugin(sysARG).playVOD)(title,vid)
+    elif mode in ['vod','dvr']:                             threadit(Plugin(sysARG).playVOD)(title,vid)
     elif mode == 'live':
         if bool(SETTINGS.getSettingInt('Playback_Method')): threadit(Plugin(sysARG).playPlaylist)(name,chid)
         else:                                               threadit(Plugin(sysARG).playLive)(name,chid,vid)

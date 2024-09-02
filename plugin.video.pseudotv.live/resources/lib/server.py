@@ -108,9 +108,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _set_headers(self, content='*/*', size=None):
         self.send_response(200, "OK")
         self.send_header("Content-type",content)
-        self.send_header("Connection",'close')
-        if size:
-            self.send_header("Content-Length", len(size))
+        if size: self.send_header("Content-Length", len(size))
         self.end_headers()
 
 

@@ -629,6 +629,10 @@ msgctxt "#30151"
 msgid "Copy Fillers Folder?"
 msgstr ""
 
+msgctxt "#30152"
+msgid "Resume Later"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

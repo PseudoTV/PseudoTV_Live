@@ -1,6 +1,9 @@
 v.0.5.4
+-Added "Resume Later" recordings option.
+ - When using "Add to Recordings" on currently playing content an option to "Incl. Resume" will be offered.
+   Resume later will start the future playback at the resume position for easy viewing later... 
 -Added temporary debug logging to fix failed channel building during fillers.
- - Further logs will be needed to help resolve the issue, please submit logs. THX
+- Further logs will be needed to help resolve the issue, please submit logs. THX
 -Tweaked background queue ordering.
 -Improved startup pairing.
 -Fixed background service not idling.

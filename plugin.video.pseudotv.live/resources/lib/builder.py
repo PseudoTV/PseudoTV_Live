@@ -476,7 +476,7 @@ class Builder:
         
     def saveChannelLineups(self) -> bool:
         self.log('saveChannelLineups')
-        return self.m3u._save() & self.xmltv._save()
+        return self.xmltv._save() & self.m3u._save()
 
 
     def kodiTrailers(self, nitems: dict={}) -> dict:

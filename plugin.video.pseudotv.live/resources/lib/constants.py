@@ -103,6 +103,7 @@ HTML_ESCAPE         = {"&": "&amp;",
                        ">": "&gt;",
                        "<": "&lt;"}    
 
+DVR_URL             = 'plugin://{addon}/?mode=dvr&title={title}&chid={chid}&vid={vid}&seek={seek}&duration={duration}.pvr'
 VOD_URL             = 'plugin://{addon}/?mode=vod&title={title}&chid={chid}&vid={vid}.pvr'
 TV_URL              = 'plugin://{addon}/?mode=tv&name={name}&chid={chid}.pvr'
 RADIO_URL           = 'plugin://{addon}/?mode=radio&name={name}&chid={chid}&radio={radio}&vid={vid}.pvr'
