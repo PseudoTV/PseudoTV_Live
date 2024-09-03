@@ -59,7 +59,7 @@ class Plugin:
             self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
             self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
             
-        try:    self.sysInfo['seek'] = float((self.sysInfo.get('seek') or (self.sysInfo.get('now','0') - self.sysInfo.get('start','0'))))
+        try:    self.sysInfo['seek'] = float(self.sysInfo.get('seek',(float(self.sysInfo['now']) - float(self.sysInfo['start']))))
         except: self.sysInfo['seek'] = -1
         
         try:    self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
