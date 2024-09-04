@@ -18,7 +18,7 @@
 #
 # -*- coding: utf-8 -*-
 from globals    import *
-from overlay    import Overlay, Background
+from overlay    import Overlay, Background, Replay
 from rules      import RulesList
 from tasks      import Tasks
 from jsonrpc    import JSONRPC
@@ -26,9 +26,11 @@ from jsonrpc    import JSONRPC
 class Player(xbmc.Player):
     sysInfo      = {}
     myService    = None
+    replay       = None
     background   = None
     isPseudoTV   = False
     lastSubState = False
+    isIdle       = False
     rules        = RulesList()
     runActions   = rules.runActions
     
@@ -38,6 +40,7 @@ class Player(xbmc.Player):
         self.jsonRPC = jsonRPC
         self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
+        self.enableReplay      = SETTINGS.getSettingInt('Enable_Replay')
         
         """ 
         Player() Trigger Order
@@ -63,7 +66,7 @@ class Player(xbmc.Player):
         self.log('onAVChange')
         if self.isPseudoTV:
             self.lastSubState = BUILTIN.isSubtitle()
-            self.myService.monitor.chkIdle()
+            self.isIdle       = self.myService.monitor.chkIdle()
             
         
     def onAVStarted(self):
@@ -145,8 +148,8 @@ class Player(xbmc.Player):
                 
                 
     def getPlayerProgress(self):
-        try:    return float(BUILTIN.getInfoLabel('Player.Progress'))
-        except: return 0.0
+        try:    return int((self.getTimeLabel()*100)//self.getPlayerTime())
+        except: return -1
 
 
     def getElapsedTime(self):
@@ -159,6 +162,7 @@ class Player(xbmc.Player):
 
 
     def setTrakt(self, state: bool=SETTINGS.getSettingBool('Disable_Trakt')):
+        self.log('setTrakt, state = %s'%(state))
         if state: PROPERTIES.setEXTProperty('script.trakt.paused',str(state).lower())
         else:     PROPERTIES.clearEXTProperty('script.trakt.paused')
 
@@ -176,18 +180,23 @@ class Player(xbmc.Player):
 
 
     def _onPlay(self):
-        self.log('_onPlay')
-        self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
-        self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
+        oldInfo = self.sysInfo
+        newInfo = self.getPlayerSysInfo() #get current sysInfo
+        self.log('_onPlay\nnewInfo = %s\noldInfo = %s'%(newInfo,oldInfo))
+        self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
+        self.toggleReplay(False)
         self.toggleBackground(False)
-        if self.sysInfo.get('citem',{}).get('id') != self.sysInfo.get('citem',{}).get('id',random.random()): #playing new channel
-            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem,{}'), inherited=self)
+        if newInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
+            self.sysInfo = newInfo
+            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
+            self.toggleReplay()
         
         
     def _onChange(self):
         self.log('_onChange')
+        self.toggleReplay(False)
         self.toggleBackground()
         self.setTrakt(False)
         self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
@@ -213,14 +222,22 @@ class Player(xbmc.Player):
         self.onPlayBackStopped()
 
 
+    def toggleReplay(self, state: bool=True):
+        self.log('toggleReplay, state = %s, enableReplay = %s'%(state,self.enableReplay))
+        if state and bool(self.enableReplay) and not self.isIdle:
+            progress = self.getPlayerProgress()
+            if (progress >= self.enableReplay and progress < SETTINGS.getSettingInt('Seek_Threshold')):
+                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", sysInfo=self.sysInfo)
+                self.replay.doModal()
+        elif hasattr(self.replay, 'close'): self.replay.close()
+        
+        
     def toggleBackground(self, state: bool=True):
+        self.log('toggleBackground, state = %s'%(state))
         if state:
-            if hasattr(self.background, 'show'):
-                self.log('toggleBackground, state = %s'%(state))
-                self.background.show()
+            if hasattr(self.background, 'show'): self.background.show()
         else:
             if hasattr(self.background, 'close'): 
-                self.log('toggleBackground, state = %s'%(state))
                 self.background = self.background.close()
                 if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
@@ -240,7 +257,7 @@ class Monitor(xbmc.Monitor):
         self.jsonRPC          = jsonRPC
         self.pendingSuspend   = False
         self.pendingInterrupt = False
-        self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer') or 0)
+        self.sleepTime        = (SETTINGS.getSettingInt('Idle_Timer')      or 0)
         self.enableOverlay    = (SETTINGS.getSettingBool('Enable_Overlay') or True)
         
         
@@ -293,12 +310,12 @@ class Monitor(xbmc.Monitor):
         self.log('sleepTimer')
         sec = 0
         cnx = False
-        inc = int(100/OVERLAY_DELAY)
+        inc = int(100/EPOCH_TIMER)
         playSFX(NOTE_WAV)
         dia = DIALOG.progressDialog(message=LANGUAGE(30078))
-        while not self.abortRequested() and (sec < OVERLAY_DELAY):
+        while not self.abortRequested() and (sec < EPOCH_TIMER):
             sec += 1
-            msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%((OVERLAY_DELAY-sec)))
+            msg = '%s\n%s'%(LANGUAGE(32039),LANGUAGE(32040)%((EPOCH_TIMER-sec)))
             dia = DIALOG.progressDialog((inc*sec),dia, msg)
             if self.waitForAbort(1.0) or dia is None:
                 cnx = True
@@ -384,7 +401,7 @@ class Service():
 
     def __tasks(self):
         self.log('__tasks')
-        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,OVERLAY_DELAY)
+        self.tasks._chkEpochTimer('chkQueTimer',self.tasks._chkQueTimer,EPOCH_TIMER)
            
                 
     def __initialize(self):

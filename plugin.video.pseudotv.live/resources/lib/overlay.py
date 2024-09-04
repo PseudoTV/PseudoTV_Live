@@ -51,6 +51,42 @@ class Background(xbmcgui.WindowXML):
             self.close()
             
             
+class Replay(xbmcgui.WindowXMLDialog):
+    def __init__(self, *args, **kwargs):
+        xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
+        self.sysInfo     = kwargs.get('sysInfo',{})
+        self._closeTimer = Timer(OVERLAY_DELAY, self.onClose)
+        
+        
+    def onInit(self):
+        log("Replay: onInit")
+        try: 
+            self._closeTimer.name = "_closeTimer"
+            self._closeTimer.daemon=True
+            self._closeTimer.start()
+            self.setFocusId(40001)
+        except Exception as e:
+            log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
+            self.onClose()
+
+  
+    def onAction(self, act):
+        actionId = act.getId()
+        log('Replay: onAction: actionId = %s'%(actionId))
+        if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): BUILTIN.executebuiltin('PlayMedia(%s,noresume)'%(self.sysInfo.get('fitem',{}).get('catchup-id')))
+        self.onClose()
+        
+        
+    def onClose(self):
+        log("Replay: onClose")
+        try: 
+            if self._closeTimer.is_alive():
+                self._closeTimer.cancel()
+                self._closeTimer.join()
+        except: pass
+        self.close()
+  
+  
 class Overlay():
     controlManager = dict()
     
@@ -77,7 +113,7 @@ class Overlay():
          
         #init controls
         self._channelBug = xbmcgui.ControlImage(self.channelBugX, self.channelBugY, 128, 128, 'None', aspectRatio=2)
-        self._onNext     = xbmcgui.ControlTextBox(abs(self.window_w - self.channelBugX), 952, 1418, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
+        self._onNext     = xbmcgui.ControlTextBox(480, 810, 1920, 36, 'font12', '0xFFFFFFFF')#todo user sets size & location 
         self._background = xbmcgui.ControlImage(0, 0, self.window_w, self.window_h, 'None', aspectRatio=2, colorDiffuse='black')
         self._vignette   = xbmcgui.ControlImage(self._vinOffsetX, self._vinOffsetY, self.window_w, self.window_h, 'None', aspectRatio=0)
         
@@ -175,9 +211,7 @@ class Overlay():
         self.cancelOnNext()
         self.cancelChannelBug()
         self.runActions(RULES_ACTION_OVERLAY_CLOSE, self.player.sysInfo.get('citem',{}), inherited=self)
-        
-        for control, visible in list(self.controlManager.items()):
-            self._removeControl(control)
+        for control, visible in list(self.controlManager.items()): self._removeControl(control)
             
 
     def cancelOnNext(self):

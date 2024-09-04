@@ -185,7 +185,7 @@ class Utilities:
                  for key in keys:
                     if FileAccess.delete(files[key]): DIALOG.notificationDialog(LANGUAGE(32127)%(key.replace(':','')))
         if full: 
-            SETTINGS.setAutotuned(False)
+            PROPERTIES.setAutotuned(False)
             setPendingRestart()
 
 
@@ -200,7 +200,7 @@ class Utilities:
             with BUILTIN.busy_dialog():
                 from jsonrpc import JSONRPC
                 jsonRPC = JSONRPC()
-                if SETTINGS.setPVRPath(USER_LOC,jsonRPC.getFriendlyName(),prompt=True,force=True):
+                if SETTINGS.setPVRPath(USER_LOC,validString(jsonRPC.getFriendlyName()),prompt=True,force=True):
                     DIALOG.notificationDialog(LANGUAGE(32152))
                 else: DIALOG.notificationDialog(LANGUAGE(32165))
                 del jsonRPC

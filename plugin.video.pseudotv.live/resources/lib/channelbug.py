@@ -22,15 +22,6 @@
 from ast       import literal_eval
 from globals   import *
 
-# Actions
-ACTION_MOVE_LEFT     = 1
-ACTION_MOVE_RIGHT    = 2
-ACTION_MOVE_UP       = 3
-ACTION_MOVE_DOWN     = 4
-ACTION_SELECT_ITEM   = 7
-ACTION_INVALID       = 999
-ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
-
 class ChannelBug(xbmcgui.WindowXML):
     lastActionTime = time.time()
     

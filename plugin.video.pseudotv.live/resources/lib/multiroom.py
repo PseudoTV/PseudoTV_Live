@@ -134,11 +134,10 @@ class Multiroom:
     def chkPVRservers(self):
         changed = False
         servers = self.getDiscovery()
-        headers = HEADER.copy()
-        headers["Content-type"] = "application/vnd.apple.mpegurl"
         for server in list(servers.values()):
-            server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE),headers) else False
+            server['online'] = True if getURL('http://%s/%s'%(server.get('host'),M3UFLE),header={'Accept': 'text/plain; charset=utf-8'}) else False
             self.log('chkPVRservers, %s online = %s'%(server.get('name'),server['online']))
+            #todo check version, when old trigger update of server info.
             if SETTINGS.hasPVRInstance(server.get('name')):
                 if server.get('enabled',False): continue
                 else: FileAccess.delete(os.path.join(PVR_CLIENT_LOC,'instance-settings-%s.xml'%(SETTINGS.gePVRInstance(instance))))
@@ -207,7 +206,6 @@ class Multiroom:
             ctl = (6,6)
             self.delServer()
         elif param == 'Pair_Announcement': 
-            ctl = (6,7)
             with PROPERTIES.suspendActivity():
                 return self.pairAnnouncement(self.getPayload())
         return openAddonSettings(ctl)

@@ -96,7 +96,7 @@ class Tasks():
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.hasPVRInstance() == False:
                 with BUILTIN.busy_dialog():
-                    SETTINGS.setPVRPath(USER_LOC, self.jsonRPC.getFriendlyName())
+                    SETTINGS.setPVRPath(USER_LOC, validString(self.jsonRPC.getFriendlyName()))
         
         
     def _chkQueTimer(self):
@@ -186,7 +186,7 @@ class Tasks():
             complete = library.updateLibrary(force)
             del library
             if not complete: self._que(self.chkLibrary,1,True)
-            elif not SETTINGS.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
+            elif not PROPERTIES.hasAutotuned() and not force: self.runAutoTune() #run autotune for the first time this Kodi/PTVL instance.
         except Exception as e: self.log('chkLibrary failed! %s'%(e), xbmc.LOGERROR)
 
 
@@ -248,7 +248,7 @@ class Tasks():
         try:
             autotune = Autotune(service=self.service)
             complete = autotune._runTune()
-            if complete: SETTINGS.setAutotuned()
+            if complete: PROPERTIES.setAutotuned()
             del autotune
         except Exception as e: self.log('runAutoTune failed! %s'%(e), xbmc.LOGERROR)
     

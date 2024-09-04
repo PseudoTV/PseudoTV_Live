@@ -633,6 +633,14 @@ msgctxt "#30152"
 msgid "Resume Later"
 msgstr ""
 
+msgctxt "#30153"
+msgid "Set Replay Percentage"
+msgstr ""
+
+msgctxt "#30154"
+msgid "Channel Manager (PseudoTV)"
+msgstr ""
+
 # Skin - strings 31000 thru 31999 reserved for skins
 
 
@@ -1374,6 +1382,11 @@ msgctxt "#32183"
 msgid "Select server to remove."
 msgstr ""
 
+msgctxt "#32184"
+msgid "Replay Percentage (%s)"
+msgstr ""
+
+
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 
 msgctxt "#33001"
@@ -1642,6 +1655,10 @@ msgstr ""
 
 msgctxt "#33150"
 msgid "Parse Library & Build Channels while playing."
+msgstr ""
+
+msgctxt "#33153"
+msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled, 5% Default]."
 msgstr ""
 
 msgctxt "#33159"

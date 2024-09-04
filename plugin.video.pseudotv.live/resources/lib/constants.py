@@ -35,7 +35,8 @@ ADDON_URL           = 'https://raw.githubusercontent.com/PseudoTV/PseudoTV_Live/
 LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
 #constants
-OVERLAY_DELAY       = 15    #secs
+OVERLAY_DELAY       = 5   #secs
+EPOCH_TIMER         = 15   #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'
@@ -76,7 +77,8 @@ AUTOTUNE_TYPES      = ["Playlists",
 GROUP_TYPES         = ['Addon', 'Directory', 'TV', 'Movies', 'Music', 'Other', 'PVR', 'Plugin', 'Radio', 'Smartplaylist', 'UPNP', 'IPTV'] + AUTOTUNE_TYPES
 
 WEB_TYPES           = ["http",
-                       "ftp"]
+                       "ftp",
+                       "pvr"]
 
 VFS_TYPES           = ["plugin://",
                        "pvr://",
@@ -193,6 +195,15 @@ MST3K_1             = os.path.join(MEDIA_LOC,'overlays','MST3K_1.gif')
 MST3K_2             = os.path.join(MEDIA_LOC,'overlays','MST3K_2.gif')
 
 # https://github.com/xbmc/xbmc/blob/master/xbmc/addons/kodi-dev-kit/include/kodi/c-api/gui/input/action_ids.h
+
+# Actions
+ACTION_MOVE_LEFT     = 1
+ACTION_MOVE_RIGHT    = 2
+ACTION_MOVE_UP       = 3
+ACTION_MOVE_DOWN     = 4
+ACTION_INVALID       = 999
+ACTION_SELECT_ITEM   = [7,135]
+ACTION_PREVIOUS_MENU = [92,10,110,521,ACTION_SELECT_ITEM]
 
 #rules
 ##builder

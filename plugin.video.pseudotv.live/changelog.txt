@@ -1,4 +1,14 @@
 v.0.5.4
+-Improved PVR Provider meta.
+ - If you haven't installed Kodi master nightlies, you ought; Many PVR Improvements.
+-Moved all context menu under "PseudoTV Live".
+-Added Channel Manager to channel list context menu.
+-Fixed Autotune prompt not showing.
+-Fixed Disable Trakt, Playcount Rollback not triggering.
+-Added "Restart" replay prompt.
+ - When media is in-progress, a button will appear to restart the program from the beginning.
+   Media will be launched as a singular VOD event. 
+ - Global and Adv. Channel rule to disable/set restart parameters.
 -Added "Resume Later" recordings option.
  - When using "Add to Recordings" on currently playing content an option to "Incl. Resume" will be offered.
    Resume later will start the future playback at the resume position for easy viewing later... 

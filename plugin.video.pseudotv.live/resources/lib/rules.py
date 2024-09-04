@@ -29,6 +29,7 @@ class RulesList:
                           SetScreenVingette(),
                           MST3k(),
                           DisableOverlay(),
+                          DisableReplay(),
                           ForceSubtitles(),
                           DisableTrakt(),
                           RollbackPlaycount(),
@@ -101,7 +102,7 @@ class RulesList:
         return [rule.copy() for rule in tmpruleList]
                
         
-    def runActions(self, action, citem, parameter=None, inherited=None):
+    def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
         self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
         rules = (self.ruleItems.get(citem.get('id',{})) or self.loadRules([citem]).get(citem.get('id',{})) or {})
@@ -244,7 +245,7 @@ class BaseRule:
         log("onActionPickColor")
         value = self.dialog.colorDialog(colorlist, self.optionValues[optionindex], colorfile, self.name)
         if value: self.optionValues[optionindex] = value
-   
+        
 
     def onActionTextBox(self, optionindex):
         log("onActionTextBox")
@@ -693,6 +694,45 @@ class RollbackPlaycount(BaseRule):
         elif actionid == RULES_ACTION_PLAYER_STOP:
             player.rollbackPlaycount = self.storedValues[0]
         self.log("runAction, setting rollbackPlaycount = %s"%(player.rollbackPlaycount))
+        return parameter
+
+
+class DisableReplay(BaseRule):
+    def __init__(self):
+        self.myId               = 54
+        self.ignore             = False
+        self.exclude            = False
+        self.name               = LANGUAGE(30153)
+        self.description        = LANGUAGE(33153)
+        self.optionLabels       = [LANGUAGE(30153)]
+        self.optionValues       = [SETTINGS.getSettingInt('Enable_Replay')]
+        self.optionDescriptions = [LANGUAGE(33153)]
+        self.actions            = [RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
+        self.selectBoxOptions   = [list(range(0,100,5))]
+        self.storedValues       = [list() for idx in self.optionValues]
+
+
+    def copy(self):
+        return DisableReplay()
+
+
+    def getTitle(self):
+        return LANGUAGE(32184)%(self.optionValues[0])
+
+
+    def onAction(self, optionindex):
+        self.onActionSelect(optionindex, self.optionLabels[optionindex])
+        return self.optionValues[optionindex]
+
+
+    def runAction(self, actionid, citem, parameter, player):
+        if actionid == RULES_ACTION_PLAYER_START:
+            self.storedValues[0] = player.enableReplay
+            player.enableReplay = self.optionValues[0]
+            
+        elif actionid == RULES_ACTION_PLAYER_STOP:
+            player.enableReplay = self.storedValues[0]
+        self.log("runAction, setting enableReplay = %s"%(player.enableReplay))
         return parameter
 
 

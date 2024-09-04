@@ -315,7 +315,7 @@ class M3U:
         mitem['label']         = citem['name'] #todo channel manager opt to change channel 'label' leaving 'name' static for channelid purposes.
         mitem['logo']          = citem['logo']
         mitem['realtime']      = False
-        mitem['provider']      = ADDON_NAME
+        mitem['provider']      = '%s (%s)'%(ADDON_NAME,SETTINGS.getCacheSetting('Friendly_Name'))
         mitem['provider-type'] = 'addon'
         mitem['provider-logo'] = HOST_LOGO
         

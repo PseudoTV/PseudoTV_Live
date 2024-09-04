@@ -23,7 +23,7 @@ import shutil, subprocess, io
 import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
-import heapq
+import heapq, requests
 
 from threading        import Lock, Thread, Event, Timer, BoundedSemaphore
 from threading        import enumerate as thread_enumerate
@@ -100,11 +100,9 @@ def unescapeString(text, table=HTML_ESCAPE):
 
 def getJSON(file):
     fle  = (FileAccess.open(file, 'r') or '')
-    try:
-        data = loadJSON(fle.read())
-    except Exception as e:
-        log('Globals: getJSON failed! %s'%(e), xbmc.LOGERROR)
-        data = {}
+    data = {}
+    try: data = loadJSON(fle.read())
+    except Exception as e: log('Globals: getJSON failed! %s'%(e), xbmc.LOGERROR)
     fle.close()
     return data
 
@@ -115,10 +113,20 @@ def setJSON(file, data):
         fle.close()
     return True
 
-def getURL(url, headers=HEADER):
+def getURL(url, data={}, header=HEADER, json_data=False):
     try:
-        r = urllib.request.Request(url, None, headers)
-        return urllib.request.urlopen(r).read()
+        r = requests.get(url, params=data ,headers=HEADER.update(header))
+        log("Globals: getURL, url = %s, status = %s"%(r.url,r.status_code))
+        if json_data: return r.json()
+        else:         return r.text
+    except Exception as e: pass
+     
+def postURL(url, params={}, header=HEADER, json_data=False):
+    try:
+        r = requests.post(url, data=params ,headers=HEADER.update(header))
+        log("Globals: postURL, url = %s, status = %s"%(r.url,r.status_code))
+        if json_data: return r.json()
+        else:         return r.text
     except Exception as e: pass
      
 def setURL(url, file):
@@ -129,7 +137,7 @@ def setURL(url, file):
         fle.close()
         return FileAccess.exists(file)
     except Exception as e: 
-        log("saveURL, failed! %s"%e, xbmc.LOGERROR)
+        log("Globals: saveURL, failed! %s"%e, xbmc.LOGERROR)
 
 def diffLSTDICT(old, new):
     sOLD = set([dumpJSON(e) for e in old])
@@ -293,17 +301,19 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def togglePVR(state=True, reverse=False, wait=15):
-    log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
-    #todo check for open pvr windows, don't toggle when open
-    if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr')):
-        isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
-        if (state and isEnabled) or (not state and not isEnabled): return
-        xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
-        if reverse:
-            with BUILTIN.busy_dialog():
-                timerit(togglePVR)(wait,[not bool(state)])
-                DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
-    else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
+    if not PROPERTIES.isRunning('togglePVR'):
+        with PROPERTIES.setRunning('togglePVR'):
+            log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
+            #todo check for open pvr windows, don't toggle when open
+            if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr')):
+                isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
+                if (state and isEnabled) or (not state and not isEnabled): return
+                xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
+                if reverse:
+                    with BUILTIN.busy_dialog():
+                        timerit(togglePVR)(wait,[not bool(state)])
+                        DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
+            else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))
 
 def isRadio(item):
     if item.get('radio',False) or item.get('type','') == "Music Genres": return True
@@ -372,7 +382,7 @@ def getIDbyPath(path):
     except Exception as e: log('Globals: getIDbyPath failed! %s'%(e), xbmc.LOGERROR)
     return path
     
-def mergeDictLST(dict1,dict2):
+def mergeDictLST(dict1={},dict2={}):
     for k, v in list(dict2.items()):
         dict1.setdefault(k,[]).extend(v)
         setDictLST()

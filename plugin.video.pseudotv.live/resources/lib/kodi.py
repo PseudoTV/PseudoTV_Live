@@ -299,18 +299,12 @@ class Settings:
         if not uuid:
             from jsonrpc import JSONRPC
             jsonRPC = JSONRPC()
-            uuid = genUUID(seed=jsonRPC.getFriendlyName())
+            friendly= jsonRPC.getFriendlyName()
+            uuid = genUUID(seed=friendly)
             self.setCacheSetting('MY_UUID',uuid)
+            self.setCacheSetting('Friendly_Name',friendly)
             del jsonRPC
         return uuid
-
-
-    def hasAutotuned(self):
-        return self.getSettingBool('hasAutotuned')
-        
-        
-    def setAutotuned(self, state=True):
-        return self.setSettingBool('hasAutotuned',state)
 
 
     def IPTV_SIMPLE_SETTINGS(self): #recommended IPTV Simple settings
@@ -358,12 +352,12 @@ class Settings:
                      'epgPath'                    :os.path.join(path,XMLTVFLE),
                      'genresPathType'             :'0',
                      'genresPath'                 :os.path.join(path,GENREFLE),
-                     'kodi_addon_instance_name'   : '%s (%s)'%(ADDON_NAME,instance),
+                     'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true'}
         settings.update(nsettings)
         self.log('setPVRPath, new settings = %s'%(nsettings))
         if self.hasPVRInstance(instance) and not force:
-            return self.log('setPVRInstance, instance (%s) settings exists.'%(instance))
+            return self.log('setPVRPath, instance (%s) settings exists.'%(instance))
         else: return self.chkPluginSettings(PVR_CLIENT_ID,settings,instance,prompt)
         
         
@@ -375,7 +369,7 @@ class Settings:
                      'epgUrl'                     :'http://%s/%s'%(host,XMLTVFLE),
                      'genresPathType'             :'1',
                      'genresUrl'                  :'http://%s/%s'%(host,GENREFLE),
-                     'kodi_addon_instance_name'   : '%s (%s)'%(ADDON_NAME,instance),
+                     'kodi_addon_instance_name'   : '%s - %s'%(ADDON_NAME,instance),
                      'kodi_addon_instance_enabled':'true'}
         settings.update(nsettings)
         self.log('setPVRRemote, new settings = %s'%(nsettings))
@@ -387,7 +381,7 @@ class Settings:
         
         
     def setPVRInstance(self, instance=ADDON_NAME):
-        # https://github.com/xbmc/xbmc/pull/23648
+        # todo https://github.com/xbmc/xbmc/pull/23648
         if not FileAccess.exists(os.path.join(PVR_CLIENT_LOC,'settings.xml')):
             self.log('setPVRInstance, creating missing default settings.xml')
             return self.chkPluginSettings(PVR_CLIENT_ID,self.IPTV_SIMPLE_SETTINGS(),False)
@@ -675,6 +669,14 @@ class Properties:
         self.log('clearTrash, instanceID = %s'%(instanceID))
         tmpDCT = loadJSON(self.getEXTProperty('%s.TRASH'%(ADDON_ID)))
         for prop in tmpDCT.get(instanceID,[]): self.clearEXTProperty(prop)
+
+
+    def hasAutotuned(self):
+        return self.getEXTProperty('hasAutotuned')
+        
+        
+    def setAutotuned(self, state=True):
+        return self.setEXTProperty('hasAutotuned',state)
 
 
 class ListItems:
@@ -1020,7 +1022,7 @@ class Dialog:
     def infoDialog(self, listitem):
         xbmcgui.Dialog().info(listitem)
         
-        
+
     def notificationDialog(self, message, header=ADDON_NAME, sound=False, time=PROMPT_DELAY, icon=COLOR_LOGO):
         self.log('notificationDialog: %s'%(message))
         ## - Builtin Icons:

@@ -45,8 +45,8 @@ class Fillers:
             try:    folder = os.path.join(xbmcaddon.Addon(id).getSetting('Download_Folder'),'resources','').replace('/resources/resources','/resources').replace('\\','/')
             except: folder = 'special://profile/addon_data/%s/resources/'%(id)
             self.log('getAdvertPath, folder = %s'%(folder))
-            return [folder]
-        return []
+            return folder
+        return ''
        
 
     def fillSources(self):
@@ -95,9 +95,7 @@ class Fillers:
             elif     path.startswith('plugin://'):      return __sortItems(_parseVFS(path),'plugin')
             elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
             else:                                       return {}
-        except Exception as e:
-            self.log("buildSource, failed! %s\n path = %s"%(e,path), xbmc.LOGERROR)
-            DIALOG.notificationDialog("Error occurred adding fillers, please submit your Kodi debug log for review, Thanks...") #todo remove
+        except Exception as e: self.log("buildSource, failed! %s\n path = %s"%(e,path), xbmc.LOGERROR)
             
         
     def convertMPAA(self, ompaa):

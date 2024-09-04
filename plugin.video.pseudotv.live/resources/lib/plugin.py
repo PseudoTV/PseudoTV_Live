@@ -58,8 +58,8 @@ class Plugin:
         if not self.sysInfo.get('start') and self.sysInfo['fitem']:
             self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
             self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
-            
-        try:    self.sysInfo['seek'] = float(self.sysInfo.get('seek',(float(self.sysInfo['now']) - float(self.sysInfo['start']))))
+
+        try:    self.sysInfo['seek'] = float(self.sysInfo.get('seek') or (int(self.sysInfo['now']) - int(self.sysInfo['start'])))
         except: self.sysInfo['seek'] = -1
         
         try:    self.sysInfo["citem"] = self.sysInfo["fitem"].pop('citem')
@@ -223,7 +223,7 @@ class Plugin:
                     for result in results:
                         if result.get('label','').lower().startswith(dir.lower()):
                             self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
-                            response = jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=OVERLAY_DELAY)).get('files',[])
+                            response = jsonRPC.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=EPOCH_TIMER)).get('files',[])
                             for item in response:
                                 if item.get('label','').lower() == chname.lower() and item.get('uniqueid','') == id:
                                     self.log('getCallback: _matchJSON, found file = %s'%(item.get('file')))
@@ -277,7 +277,7 @@ class Plugin:
                 pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
                 if isPlaylist and not radio: pvritem = _extend(pvritem)
                 del jsonRPC
-                cacheResponse = self.cache.set(cacheName, pvritem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=OVERLAY_DELAY), json_data=True)
+                cacheResponse = self.cache.set(cacheName, pvritem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=EPOCH_TIMER), json_data=True)
         return cacheResponse
 
 

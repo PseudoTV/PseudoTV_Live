@@ -92,12 +92,6 @@
                     <data></data>
                 </control>
             </setting>
-            <setting id="hasAutotuned" type="boolean" label="30107">
-                <level>3</level>
-                <default>false</default>
-                <visible>false</visible>
-                <control type="toggle"/>
-            </setting>
         </category>
         
 		<category id="autotune" label="30038" help="33038">
@@ -501,6 +495,18 @@
 				</setting>
 			</group>
 			<group id="2" label="30048">
+				<setting id="Enable_Replay" type="integer" label="30153" help="33153">
+					<level>1</level>
+					<default>5</default>
+                    <constraints>
+                        <minimum>0</minimum>
+                        <step>5</step>
+                        <maximum>75</maximum>
+                    </constraints>
+                    <control type="slider" format="percentage">
+                        <popup>false</popup>
+                    </control>
+				</setting>
 				<setting id="Enable_Overlay" type="boolean" label="30042" help="33042">
 					<level>1</level>
 					<default>true</default>

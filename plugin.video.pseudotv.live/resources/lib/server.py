@@ -131,7 +131,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
             content = "text/plain"
-            
+
         if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
             self.log('do_GET, sending = %s'%(path))
             self._set_headers(content)
