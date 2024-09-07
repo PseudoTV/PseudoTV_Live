@@ -36,17 +36,17 @@ class Multiroom:
         self.log('__init__, sysARG = %s'%(sysARG))
         self.sysARG = sysARG
         if service is None: service = Service()
-        self.service = service
-        self.jsonRPC = service.jsonRPC
-        self.uuid    = SETTINGS.getMYUUID()
-        self.friendlyName = self.jsonRPC.getFriendlyName()
+        self.service  = service
+        self.jsonRPC  = service.jsonRPC
+        self.uuid     = SETTINGS.getMYUUID()
+        self.friendly = self.jsonRPC.getFriendlyName()
                
         
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def pairDiscovery(self, wait=60, prompt=SETTINGS.getSettingBool('Enable_Debugging')):
+    def pairDiscovery(self, wait=DISCOVERY_TIMER, prompt=True):
         if not PROPERTIES.isRunning('Multiroom'):
             added = False
             with PROPERTIES.setRunning('Multiroom'):
@@ -74,12 +74,12 @@ class Multiroom:
             with PROPERTIES.setRunning('Multiroom'):
                 sec = 0
                 inc = int(100/wait)
-                if not silent: dia = DIALOG.progressDialog(message=(LANGUAGE(32163)%(self.friendlyName,(wait-sec))))
+                if not silent: dia = DIALOG.progressDialog(message=(LANGUAGE(32163)%(self.friendly,(wait-sec))))
                 else:          dia = False
                 while not self.service.monitor.abortRequested() and (sec < wait):
                     self.log('pairAnnouncement, payload = %s, wait = %s, sec = %s'%(payload,wait,sec))
                     sec += 1
-                    msg = (LANGUAGE(32163)%(self.friendlyName,(wait-sec)))
+                    msg = (LANGUAGE(32163)%(self.friendly,(wait-sec)))
                     if dia: dia = DIALOG.progressDialog((inc*sec),dia, msg) 
                     Announcement(payload)
                     npayload = Discovery()._start()
@@ -100,7 +100,7 @@ class Multiroom:
         payload = {'id'      :ADDON_ID,
                    'version' :ADDON_VERSION,
                    'uuid'    :self.uuid,
-                   'name'    :self.friendlyName,
+                   'name'    :self.friendly,
                    'host'    :'%s:%s'%(getIP(),SETTINGS.getSettingInt('TCP_PORT')),
                    'settings':__getSettings()}
         payload['md5'] = getMD5(dumpJSON(payload))

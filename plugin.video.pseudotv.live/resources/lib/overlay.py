@@ -54,36 +54,49 @@ class Background(xbmcgui.WindowXML):
 class Replay(xbmcgui.WindowXMLDialog):
     def __init__(self, *args, **kwargs):
         xbmcgui.WindowXMLDialog.__init__(self, *args, **kwargs)
-        self.sysInfo     = kwargs.get('sysInfo',{})
-        self._closeTimer = Timer(OVERLAY_DELAY, self.onClose)
+        self._closing = False
+        self.myPlayer = kwargs.get('player' ,None)
+        self.sysInfo  = kwargs.get('sysInfo',{})
         
         
     def onInit(self):
         log("Replay: onInit")
-        try: 
-            self._closeTimer.name = "_closeTimer"
-            self._closeTimer.daemon=True
-            self._closeTimer.start()
+        try:
+            self._closing  = False
+            self.myService = self.myPlayer.myService
+            self.progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
             log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
             self.onClose()
 
-  
+
+    def progressLoop(self, control, wait=OVERLAY_DELAY):
+        tot = wait
+        while not self.myService.monitor.abortRequested():
+            log("Replay: progressLoop, wait = %s"%(wait))
+            if (self.myService._interrupt(1) or wait <= 0 or self._closing): break
+            control.setPercent((abs(wait-tot)*100)//tot)
+            wait -= 1
+        self.onClose()
+
+
     def onAction(self, act):
         actionId = act.getId()
         log('Replay: onAction: actionId = %s'%(actionId))
-        if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): BUILTIN.executebuiltin('PlayMedia(%s,noresume)'%(self.sysInfo.get('fitem',{}).get('catchup-id')))
+        if actionId in ACTION_SELECT_ITEM and self.getFocusId(40001): 
+            if   self.sysInfo.get('isPlaylist',False): self.myPlayer.seekTime(0)
+            elif self.sysInfo.get('fitem'): 
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem',{}))
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                self.myPlayer.play(self.sysInfo.get('fitem',{}).get('catchup-id'),liz)
+            else: DIALOG.notificationDialog(LANGUAGE(30154))
         self.onClose()
-        
-        
+
+
     def onClose(self):
         log("Replay: onClose")
-        try: 
-            if self._closeTimer.is_alive():
-                self._closeTimer.cancel()
-                self._closeTimer.join()
-        except: pass
+        self._closing = True
         self.close()
   
   

@@ -31,16 +31,20 @@ class Player(xbmc.Player):
     isPseudoTV   = False
     lastSubState = False
     isIdle       = False
+    minDuration  = None
+    accurateDuration = None
     rules        = RulesList()
     runActions   = rules.runActions
+    
     
     def __init__(self, jsonRPC=None):
         self.log('__init__')
         xbmc.Player.__init__(self)
-        self.jsonRPC = jsonRPC
+        self.jsonRPC           = jsonRPC
         self.disableTrakt      = SETTINGS.getSettingBool('Disable_Trakt') #todo adv. rule opt
         self.rollbackPlaycount = SETTINGS.getSettingBool('Rollback_Watched')#todo adv. rule opt
         self.enableReplay      = SETTINGS.getSettingInt('Enable_Replay')
+        self.saveDuration      = SETTINGS.getSettingBool('Store_Duration')
         
         """ 
         Player() Trigger Order
@@ -111,16 +115,10 @@ class Player(xbmc.Player):
         sysInfo = {}
         if self.isPlaying():
             sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-            sysInfo.update({'callback':self.getCallback(),'runtime' :self.getPlayerTime()})
-            citem = self.getChannelItem(sysInfo.get('citem',{}).get('id'))
-            fitem = decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))
-            nitem = decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))
-            
-            if fitem.get('citem'): sysInfo.update({'citem':fitem.pop('citem')})
-            if nitem.get('citem'): sysInfo.update({'citem':nitem.pop('citem')})
-            if citem: sysInfo.update({'citem':citem})
-            if fitem: sysInfo.update({"fitem":fitem})
-            if nitem: sysInfo.update({"nitem":nitem})
+            if not sysInfo.get('fitem'):    sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+            if not sysInfo.get('nitem'):    sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
+            if not sysInfo.get('callback'): sysInfo['callback'] = self.getCallback()
+            sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
             PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
@@ -186,22 +184,32 @@ class Player(xbmc.Player):
         self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
         self.toggleReplay(False)
         self.toggleBackground(False)
+        
+        #items that only run once per channel change. ie. set adv. rules and variables. 
+        self.sysInfo = newInfo
         if newInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
-            self.sysInfo = newInfo
-            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
+            self.runActions(RULES_ACTION_PLAYER_START, newInfo.get('citem',{}), inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-            self.toggleReplay()
-        
-        
+            self.toggleReplay(sysInfo=newInfo)
+            
+        if self.saveDuration: self.jsonRPC.queDuration(newInfo.get('fitem',{}), newInfo.get('runtime',0))
+        self.log('_onPlay, oldInfo sysInfo updated with newInfo')
+
+
     def _onChange(self):
         self.log('_onChange')
         self.toggleReplay(False)
         self.toggleBackground()
-        self.setTrakt(False)
-        self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
-        self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
-        if not self.sysInfo.get('isPlaylist',False):
+        if self.sysInfo.get('isPlaylist') and self.sysInfo.get('nitem'):
+            oldInfo = self.sysInfo
+            newInfo = self.getPlayerSysInfo()
+            if oldInfo.get('start') != newInfo.get('start',random.random()):
+                self.sysInfo = newInfo
+                self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
+                self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
+                self.log('_onChange, updated playlist newInfo = %s'%(newInfo))
+        else:
             self.log('_onChange, callback = %s'%(self.sysInfo['callback']))
             threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(self.sysInfo['callback']))
         
@@ -210,10 +218,11 @@ class Player(xbmc.Player):
         self.log('_onStop')
         self.setTrakt(False)
         self.setPlaycount(self.rollbackPlaycount,self.sysInfo.get('fitem',{}))
-        if self.sysInfo.get('isPlaylist',False): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
+        if self.sysInfo.get('isPlaylist'): xbmc.PlayList(xbmc.PLAYLIST_VIDEO).clear()
         self.runActions(RULES_ACTION_PLAYER_STOP, self.sysInfo.get('citem',{}), inherited=self)
         self.sysInfo = {}
         self.isPseudoTV = False
+        self.toggleReplay(False)
         self.toggleBackground(False)
 
 
@@ -222,12 +231,12 @@ class Player(xbmc.Player):
         self.onPlayBackStopped()
 
 
-    def toggleReplay(self, state: bool=True):
+    def toggleReplay(self, state: bool=True, sysInfo: dict={}):
         self.log('toggleReplay, state = %s, enableReplay = %s'%(state,self.enableReplay))
-        if state and bool(self.enableReplay) and not self.isIdle:
+        if state and bool(self.enableReplay) and not self.isIdle and sysInfo.get('fitem'):
             progress = self.getPlayerProgress()
             if (progress >= self.enableReplay and progress < SETTINGS.getSettingInt('Seek_Threshold')):
-                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", sysInfo=self.sysInfo)
+                self.replay = Replay("%s.replay.xml"%(ADDON_ID), ADDON_PATH, "default", "1080i", player=self, sysInfo=sysInfo)
                 self.replay.doModal()
         elif hasattr(self.replay, 'close'): self.replay.close()
         
@@ -239,7 +248,7 @@ class Player(xbmc.Player):
         else:
             if hasattr(self.background, 'close'): 
                 self.background = self.background.close()
-                if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+            if self.isPlaying(): BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
             self.background = Background("%s.background.xml"%(ADDON_ID), ADDON_PATH, "default", citem=self.sysInfo.get('citem',{}))
             
             
@@ -368,7 +377,8 @@ class Service():
         self.tasks             = Tasks(self)
         self.currentChannels   = self.tasks.getChannels()
         self.currentSettings   = dict(SETTINGS.getCurrentSettings())
-        # DIALOG.notificationWait(LANGUAGE(32054),wait=OVERLAY_DELAY)#startup delay; give Kodi PVR time to initialize. 
+        if not SETTINGS.getSettingBool('Bonjour_Startup'): 
+            DIALOG.notificationWait(LANGUAGE(32054),wait=EPOCH_TIMER)#startup delay; give Kodi PVR time to initialize. 
         
         
     def log(self, msg, level=xbmc.LOGDEBUG):

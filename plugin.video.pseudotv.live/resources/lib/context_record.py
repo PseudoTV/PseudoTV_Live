@@ -32,8 +32,8 @@ class Record:
         
     def add(self):
         now   = timeString2Seconds(BUILTIN.getInfoLabel('Time(hh:mm:ss)','System'))
-        start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime','ListItem').split(' ')[0] +':00')
-        stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime','ListItem').split(' ')[0] +':00')
+        start = timeString2Seconds(BUILTIN.getInfoLabel('StartTime').split(' ')[0] +':00')
+        stop  = timeString2Seconds(BUILTIN.getInfoLabel('EndTime').split(' ')[0] +':00')
         if (now > start and now < stop):
             opt  ='Incl. Resume'
             seek = (now - start) - OVERLAY_DELAY #add rollback buffer

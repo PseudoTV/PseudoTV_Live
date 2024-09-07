@@ -105,13 +105,22 @@ class RequestHandler(BaseHTTPRequestHandler):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
 
 
-    def _set_headers(self, content='*/*', size=None):
+    def _set_headers(self, content='*/*', size=None, gzip=False):
         self.send_response(200, "OK")
         self.send_header("Content-type",content)
         if size: self.send_header("Content-Length", len(size))
+        if gzip: self.send_header("Content-Encoding", "gzip")
         self.end_headers()
 
 
+    def _gzip_encode(self, content):
+        out = BytesIO()
+        f = gzip.GzipFile(fileobj=out, mode='w', compresslevel=5)
+        f.write(content)
+        f.close()
+        return out.getvalue()
+        
+        
     def do_HEAD(self):
         return self._set_headers()
 
@@ -131,17 +140,25 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path.lower() == '/%s'%(GENREFLE.lower()):
             path    = GENREFLEPATH
             content = "text/plain"
+        else: return
 
         if self.path.lower() == '/%s'%(XMLTVFLE.lower()):
             self.log('do_GET, sending = %s'%(path))
-            self._set_headers(content)
-            CHUNK_SIZE = 64 * 1024
             with FileLock():
-                fle = FileAccess.open(path, "r")
-                while not self.monitor.abortRequested():
-                    chunk = fle.read(CHUNK_SIZE).encode(encoding=DEFAULT_ENCODING)
-                    if not chunk or self.monitor.myService._interrupt(.001): break
-                    self.wfile.write(chunk)
+                fle  = FileAccess.open(path, "r")
+                if 'gzip' in self.headers.get('accept-encoding'):
+                    self.log('do_GET, gzip compressing')
+                    data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
+                    print(data)
+                    self._set_headers(content,data,True)
+                    self.wfile.write(data)
+                else:
+                    self._set_headers(content)
+                    while not self.monitor.abortRequested():
+                        chunk = fle.read(64 * 1024).encode(encoding=DEFAULT_ENCODING)
+                        if not chunk or self.monitor.myService._interrupt(.001): break
+                        self.send_header('content-length', len(content))
+                        self.wfile.write(chunk)
                 fle.close()
                 self.wfile.close()
         else:

@@ -524,8 +524,8 @@ class XMLTVS:
         item['director']    = fItem.get('director',[])[:5] #trim list to five
         item['actor']       = ['%s - %s'%(actor.get('name'),actor.get('role',LANGUAGE(32020))) for actor in fItem.get('cast',[])[:5] if actor.get('name')]
         
-        fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference.
-        item['fitem']       = fItem  #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
+        fItem['citem']      = citem #channel item (stale data due to xmltv storage) use for reference
+        item['fitem']       = fItem #raw kodi fileitem/listitem, contains citem both passed through 'plot' xmltv param.
         
         streamdetails = fItem.get('streamdetails',{})
         if streamdetails:

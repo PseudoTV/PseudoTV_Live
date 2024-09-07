@@ -658,11 +658,6 @@
 					<level>3</level>
 					<default>false</default>
 					<control type="toggle"/>
-					<dependencies>
-						<dependency type="enable">
-                            <condition operator="is" setting="Duration_Type">1</condition>
-						</dependency>
-					</dependencies>
 				</setting>
 				<setting id="Enable_Fillers" type="boolean" label="30056" help="33056">
 					<level>1</level>
@@ -766,7 +761,7 @@
 						<popup>false</popup>
 					</control>
 				</setting>
-				<setting id="Build_Post_Folders" type="boolean" label="30140" help="33140">
+				<setting id="Build_Filler_Folders" type="boolean" label="30140" help="33140">
 					<level>1</level>
 					<default>false</default>
 					<control type="toggle"/>
@@ -859,7 +854,7 @@
 						<multiselect>true</multiselect>
 					</control>
 				</setting>
-                <setting id="Include_Trailers_KODI" type="boolean" label="30126" help="" parent="Resource_Trailers">
+                <setting id="Include_Trailers_KODI" type="boolean" label="30126" help="33126" parent="Resource_Trailers">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
@@ -869,7 +864,7 @@
 						</dependency>
 					</dependencies>
 				</setting>
-                <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="" parent="Resource_Trailers">
+                <setting id="Include_Trailers_IMDB" type="boolean" label="30125" help="33125" parent="Resource_Trailers">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
@@ -959,6 +954,11 @@
                     <control type="edit" format="integer">
 						<heading>30359</heading>
 					</control>
+				</setting>
+                <setting id="Bonjour_Startup" type="boolean" label="30155" help="33155" parent="Bonjour_Status">
+					<level>1</level>
+					<default>true</default>
+					<control type="toggle"/>
 				</setting>
                 <setting id="Select_server" type="action" label="32048" help="33048" parent="Bonjour_Status">
 					<level>0</level>
@@ -1140,6 +1140,11 @@
 					<control type="button" format="action">
 						<close>true</close>
 					</control>
+				</setting>
+                <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155" parent="iptvsimple">
+					<level>1</level>
+					<default>true</default>
+					<control type="toggle"/>
 				</setting>
                 <setting id="Apply_PVR_Settings" type="action" label="30074" help="33074" parent="iptvsimple">
 					<level>1</level>

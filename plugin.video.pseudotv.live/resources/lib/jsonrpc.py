@@ -338,12 +338,13 @@ class JSONRPC:
                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "runtime": dur}},
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "runtime": dur}}}
         try:
-            params = param[item['type']]
-            if -1 in params: raise Exception('no dbid found')
-            elif params:
-                id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                self.log('queDuration, id = %s, media = %s, count = %s'%(id,item['type'],dur))
-                self.queueJSON(params)
+            if dur > 0:
+                params = param[item['type']]
+                if -1 in params: raise Exception('no dbid found')
+                elif params:
+                    id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
+                    self.log('queDuration, id = %s, media = %s, count = %s'%(id,item['type'],dur))
+                    self.queueJSON(params)
         except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         
         

@@ -104,8 +104,8 @@ class RulesList:
         
     def runActions(self, action, citem={}, parameter=None, inherited=None):
         if inherited is None: inherited = self
-        self.log("runActions, %s action = %s, channel = %s"%(inherited.__class__.__name__,action,citem.get('id')))
-        rules = (self.ruleItems.get(citem.get('id',{})) or self.loadRules([citem]).get(citem.get('id',{})) or {})
+        self.log("runActions, %s action = %s, id = %s"%(inherited.__class__.__name__,action,citem.get('id')))
+        rules = (self.ruleItems.get(citem.get('id','')) or self.loadRules([citem]).get(citem.get('id','')) or {})
         for myId, rule in list(sorted(rules.items())):
             if action in rule.actions:
                 self.log("runActions, %s performing channel rule: %s"%(inherited.__class__.__name__,rule.name))
@@ -746,7 +746,7 @@ class DurationOptions(BaseRule):
         self.optionLabels       = [LANGUAGE(30049),LANGUAGE(30052),"Minimum Duration"]
         self.optionValues       = [SETTINGS.getSettingInt('Duration_Type'),SETTINGS.getSettingBool('Store_Duration'),SETTINGS.getSettingInt('Seek_Tolerance')]
         self.optionDescriptions = [LANGUAGE(33015),LANGUAGE(33049),LANGUAGE(33052),"Minimum Duration"]
-        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP]
+        self.actions            = [RULES_ACTION_CHANNEL_START,RULES_ACTION_CHANNEL_STOP,RULES_ACTION_PLAYER_START,RULES_ACTION_PLAYER_STOP]
         self.selectBoxOptions   = [{LANGUAGE(30050):0,LANGUAGE(30051):1},[],list(range(0,605,5))]
         self.storedValues       = [[],[],[]]
 
@@ -768,22 +768,22 @@ class DurationOptions(BaseRule):
         return self.optionValues[optionindex]
 
 
-    def runAction(self, actionid, citem, parameter, builder):
+    def runAction(self, actionid, citem, parameter, inherited):
         if actionid == RULES_ACTION_CHANNEL_START:
-            self.storedValues[0] = builder.accurateDuration
-            self.storedValues[1] = builder.saveDuration
-            self.storedValues[2] = builder.minDuration
-            builder.accurateDuration = self.optionValues[0]
-            builder.saveDuration     = self.optionValues[1]
-            builder.minDuration      = self.optionValues[2]
+            self.storedValues[0] = inherited.accurateDuration
+            self.storedValues[1] = inherited.saveDuration
+            self.storedValues[2] = inherited.minDuration
+            inherited.accurateDuration = self.optionValues[0]
+            inherited.saveDuration     = self.optionValues[1]
+            inherited.minDuration      = self.optionValues[2]
             
         elif actionid == RULES_ACTION_CHANNEL_STOP:
-            builder.accurateDuration = self.storedValues[0]
-            builder.saveDuration     = self.storedValues[1]
-            builder.minDuration      = self.storedValues[2]
-        self.log("runAction, setting accurateDuration = %s"%(builder.accurateDuration))
-        self.log("runAction, setting saveDuration = %s"%(builder.saveDuration))
-        self.log("runAction, setting minDuration = %s"%(builder.minDuration))
+            inherited.accurateDuration = self.storedValues[0]
+            inherited.saveDuration     = self.storedValues[1]
+            inherited.minDuration      = self.storedValues[2]
+        self.log("runAction, setting accurateDuration = %s"%(inherited.accurateDuration))
+        self.log("runAction, setting saveDuration = %s"%(inherited.saveDuration))
+        self.log("runAction, setting minDuration = %s"%(inherited.minDuration))
         return parameter
 
 

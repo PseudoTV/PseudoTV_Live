@@ -53,7 +53,7 @@ class Fillers:
         for ftype, values in list(self.builder.bctTypes.items()):
             if not values.get('enabled',False) or self.builder.service._interrupt(): continue
             if self.builder.bctTypes['adverts'].get('incIspot',False) and ftype == 'adverts':  self.builder.bctTypes["adverts"]["sources"]["paths"].append(self.getAdvertPath())
-            if self.builder.bctTypes['trailers'].get('incIMDB',False) and ftype == 'trailers': self.builder.bctTypes["trailers"]["sources"]["paths"].append(IMDB_PATHS) 
+            if self.builder.bctTypes['trailers'].get('incIMDB',False) and ftype == 'trailers': self.builder.bctTypes["trailers"]["sources"]["paths"].extend(IMDB_PATHS) 
             if self.builder.bctTypes['trailers'].get('incKODI',False) and ftype == 'trailers': self.builder.bctTypes['trailers']['items'] = mergeDictLST(self.builder.bctTypes['trailers']['items'],self.builder.kodiTrailers())
 
             for id   in values["sources"].get("ids",[]):   values['items'] = mergeDictLST(values['items'],self.buildSource(ftype,id))   #parse resource packs
@@ -96,7 +96,8 @@ class Fillers:
             elif not path.startswith(tuple(VFS_TYPES)): return __sortItems(_parseLocal(path))
             else:                                       return {}
         except Exception as e: self.log("buildSource, failed! %s\n path = %s"%(e,path), xbmc.LOGERROR)
-            
+        return {}
+        
         
     def convertMPAA(self, ompaa):
         tmpLST = ompaa.split(' / ')

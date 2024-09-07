@@ -29,8 +29,8 @@ def run(sysARG):
     chid   = (params.get("chid",'')                 or None)
     vid    = decodeString(params.get("vid",'')      or None)
     radio  = (params.get("radio",'')                or 'False').lower() == "true"
-    isPlay = bool(SETTINGS.getSettingInt('Playback_Method'))
-    log("Default: run, params = %s, isPlaylist = %s"%(params,isPlay))
+    isPlaylist = bool(SETTINGS.getSettingInt('Playback_Method'))
+    log("Default: run, params = %s\nisPlaylist = %s"%(params,isPlaylist))
 
     if mode == 'guide':
         hasAddon(PVR_CLIENT_ID,install=True,enable=True)
@@ -38,11 +38,10 @@ def run(sysARG):
         BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
     elif mode == 'settings': 
         if hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
-    elif chid and not vid:
-        return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,SETTINGS.IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
+    elif not isPlaylist and chid and not vid: return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,SETTINGS.IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
     elif mode in ['vod','dvr']: threadit(Plugin(sysARG).playVOD)(title,vid)
     elif mode == 'live':
-        if isPlay:              threadit(Plugin(sysARG).playPlaylist)(name,chid)
+        if isPlaylist:          threadit(Plugin(sysARG).playPlaylist)(name,chid)
         else:                   threadit(Plugin(sysARG).playLive)(name,chid,vid)
     elif mode == 'broadcast':   threadit(Plugin(sysARG).playBroadcast)(name,chid,vid)
     elif mode == 'radio':       threadit(Plugin(sysARG).playRadio)(name,chid,vid)

@@ -52,7 +52,7 @@ class Tasks():
 
     def _initialize(self):
         PROPERTIES.getInstanceID()
-        timerit(self.chkDiscovery)(0.1)
+        if SETTINGS.getSettingBool('Bonjour_Startup'): timerit(self.chkDiscovery)(0.1)
         tasks = [self.chkWelcome,
                  self.chkDebugging,
                  self.chkBackup,
@@ -157,11 +157,12 @@ class Tasks():
         elif not FileAccess.exists(LOGO_LOC): FileAccess.makedirs(LOGO_LOC) #check logo folder
 
 
-    def chkFillers(self):
+    def chkFillers(self, channels=None):
         self.log('chkFillers')
+        if channels is None: channels = self.getChannels()
         with DIALOG.sudo_dialog(LANGUAGE(32179)):
             [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),'')) for ftype in FILLER_TYPES if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),''))]
-            for citem in self.getChannels():
+            for citem in channels:
                 for ftype in FILLER_TYPES[1:]:
                     [FileAccess.makedirs(os.path.join(FILLER_LOC,ftype.lower(),genre.lower())) for genre in self.getGenreNames() if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),genre.lower(),''))]
                     if not FileAccess.exists(os.path.join(FILLER_LOC,ftype.lower(),citem.get('name','').lower())):
@@ -195,6 +196,7 @@ class Tasks():
             builder  = Builder(self.service)
             complete, updated = builder.build()
             channels = builder.verify()
+            if SETTINGS.getSettingBool('Build_Filler_Folders'): self.chkFillers(channels)
             del builder
             if not complete:
                 if PROPERTIES.hasFirstrun(): self._que(self.chkChannels,2)

@@ -314,7 +314,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#30074"
-msgid "Manually Apply Recommended PVR settings."
+msgid "Apply Recommended PVR Backend settings."
 msgstr ""
 
 msgctxt "#30075"
@@ -578,7 +578,7 @@ msgid "Random Pre-Roll Filler"
 msgstr ""
 
 msgctxt "#30140"
-msgid "Build Subfolders for Post-Roll Content"
+msgid "Build Subfolders for Fillers Content"
 msgstr ""
 
 msgctxt "#30141"
@@ -638,7 +638,11 @@ msgid "Set Replay Percentage"
 msgstr ""
 
 msgctxt "#30154"
-msgid "Channel Manager (PseudoTV)"
+msgid "Restart Unavailable..."
+msgstr ""
+
+msgctxt "#30155"
+msgid "Enable PVR Backend Refresh"
 msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins
@@ -1621,6 +1625,14 @@ msgctxt "#33121"
 msgid "Group TV shows in blocks. [0 Disabled, 2 Default] (Pagination size influences grouping).\nChanges will propagate slowly over time and may not be instantaneous."
 msgstr ""
 
+msgctxt "#33125"
+msgid "Include "Coming Soon" Trailers from the IMDB Trailer plugin."
+msgstr ""
+
+msgctxt "#33126"
+msgid "Include Trailers from your Kodi library.\nTrailer genres are matched with channel genres when applicable."
+msgstr ""
+
 msgctxt "#33129"
 msgid "Server Status:"
 msgstr ""
@@ -1642,7 +1654,7 @@ msgid "Probability a non-channel specific i.e generic video will be used when no
 msgstr ""
 
 msgctxt "#33140"
-msgid "Create local channel & genre subfolders in template resource pack."
+msgid "Create local channel & genre subfolders for fillers."
 msgstr ""
 
 msgctxt "#33148"
@@ -1659,6 +1671,10 @@ msgstr ""
 
 msgctxt "#33153"
 msgid "[B]Restart[/B] prompt when media progress above % [0% Disabled, 5% Default]."
+msgstr ""
+
+msgctxt "#33155"
+msgid "Force Kodi's PVR Backend to reload after a channel update [May Cause System Instability]."
 msgstr ""
 
 msgctxt "#33159"

@@ -298,9 +298,9 @@ class Settings:
         uuid = self.getCacheSetting('MY_UUID')
         if not uuid:
             from jsonrpc import JSONRPC
-            jsonRPC = JSONRPC()
-            friendly= jsonRPC.getFriendlyName()
-            uuid = genUUID(seed=friendly)
+            jsonRPC  = JSONRPC()
+            friendly = jsonRPC.getFriendlyName()
+            uuid     = genUUID(seed=friendly)
             self.setCacheSetting('MY_UUID',uuid)
             self.setCacheSetting('Friendly_Name',friendly)
             del jsonRPC
@@ -322,7 +322,7 @@ class Settings:
                 'connectioncheckinterval'       :'10',
                 'connectionchecktimeout'        :'20',
                 'defaultProviderName'           :ADDON_NAME,
-                # 'enableProviderMappings'      :'true',
+                'enableProviderMappings'      :'true',
                 # 'providerMappingFile'         :PROVIDERFLEPATH,#todo
                 # 'tvGroupMode'                 :'0',
                 # 'customTvGroupsFile'          :(TVGROUPFLE),#todo
@@ -337,6 +337,7 @@ class Settings:
                 'genresUrl'                     :'0',
                 'logoPathType'                  :'0',
                 'logoPath'                      :LOGO_LOC,
+                'mediaTitleSeasonEpisode'       :'true',
                 'timeshiftEnabled'              :'false',
                 'catchupEnabled'                :'true',
                 'catchupPlayEpgAsLive'          :'false',
@@ -704,9 +705,8 @@ class ListItems:
         uniqueid   = (info.pop('uniqueid'         ,{}) or {})
         streamInfo = (info.pop('streamdetails'    ,{}) or {})
         properties = (info.pop('customproperties' ,{}) or {})
-        properties.update(info.get('citem'        ,{}))# write individual props for keys / needed? legacy!
-        properties['citem']   = info.pop('citem'  ,{}) # write dump to single key
-        properties['pvritem'] = info.pop('pvritem',{}) # write dump to single key
+        if 'citem'   in info: properties.update({'citem'  :info.pop('citem')})   # write dump to single key
+        if 'pvritem' in info: properties.update({'pvritem':info.pop('pvritem')}) # write dump to single key
         
         if media != 'video': #unify default artwork for music.
             art['poster'] = getThumb(info,opt=1)

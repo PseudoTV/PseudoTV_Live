@@ -1,4 +1,10 @@
 v.0.5.4
+-Added "Build Filler Subfolders" setting to "Fillers".
+-Added "Bonjour on startup" setting to "Multi-Room".
+-Added "Allow PVR Refresh" to "Misc." settings.
+-Added optional saving accurate duration meta directly from Kodi's videoplayer during playback.
+-Added gzip compression support to xmltv server.
+-Improved Playlist playback mode.
 -Improved PVR Provider meta.
  - If you haven't installed Kodi master nightlies, you ought; Many PVR Improvements.
 -Moved all context menu under "PseudoTV Live".

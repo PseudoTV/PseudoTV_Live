@@ -36,7 +36,8 @@ LANGUAGE            = REAL_SETTINGS.getLocalizedString
 
 #constants
 OVERLAY_DELAY       = 5   #secs
-EPOCH_TIMER         = 15   #secs
+DISCOVERY_TIMER     = 60  #secds
+EPOCH_TIMER         = 15  #secs
 DTFORMAT            = '%Y%m%d%H%M%S'
 DTZFORMAT           = '%Y%m%d%H%M%S +%z'
 DTJSONFORMAT        = '%Y-%m-%d %H:%M:%S'

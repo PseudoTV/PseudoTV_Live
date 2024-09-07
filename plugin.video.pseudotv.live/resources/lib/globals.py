@@ -24,7 +24,9 @@ import codecs, random
 import uuid, base64, binascii, hashlib
 import time, datetime
 import heapq, requests
+import gzip
 
+from io               import StringIO, BytesIO
 from threading        import Lock, Thread, Event, Timer, BoundedSemaphore
 from threading        import enumerate as thread_enumerate
 from xml.dom.minidom  import parse, parseString, Document
@@ -155,7 +157,7 @@ def getIP(wait=5):
 
 def getChannelID(name, path, number):
     if isinstance(path, list): path = '|'.join(path)
-    tmpid = '%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)))
+    tmpid = '%s.%s.%s.%s'%(number, name, hashlib.md5(path.encode(DEFAULT_ENCODING)),SETTINGS.getMYUUID())
     return '%s@%s'%((binascii.hexlify(tmpid.encode(DEFAULT_ENCODING))[:32]).decode(DEFAULT_ENCODING),slugify(ADDON_NAME))
     
 def getRecordID(name, path, number):
@@ -301,11 +303,11 @@ def KODI_LIVETV_SETTINGS(): #recommended Kodi LiveTV settings
            'pvrmanager.startgroupchannelnumbersfromone':'false'}
 
 def togglePVR(state=True, reverse=False, wait=15):
-    if not PROPERTIES.isRunning('togglePVR'):
+    if not PROPERTIES.isRunning('togglePVR') and SETTINGS.getSettingBool('Enable_PVR_RELOAD'):
         with PROPERTIES.setRunning('togglePVR'):
             log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
             #todo check for open pvr windows, don't toggle when open
-            if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr')):
+            if not (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | BUILTIN.getInfoBool('IsPlayingRecording','Pvr') | BUILTIN.getInfoBool('IsActive(FullscreenLiveTV)','Window') | BUILTIN.getInfoBool('IsActive(fullscreenradio)','Window')):
                 isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
                 if (state and isEnabled) or (not state and not isEnabled): return
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
@@ -375,12 +377,18 @@ def cleanMPAA(mpaa):
         mpaa = mpaa.strip()
     return mpaa
 
-def getIDbyPath(path):
+def getIDbyPath(url):
     try:
-        if   path.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(path).group(1)
-        elif path.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(path).group(1)
+        if   url.startswith('special://'): return re.compile('special://home/addons/(.*?)/resources', re.IGNORECASE).search(url).group(1)
+        elif url.startswith('plugin://'):  return re.compile('plugin://(.*?)/', re.IGNORECASE).search(url).group(1)
     except Exception as e: log('Globals: getIDbyPath failed! %s'%(e), xbmc.LOGERROR)
-    return path
+    return url
+    
+def combineDicts(dict1={}, dict2={}):
+    for k,v in list(dict1.items()):
+        if dict2.get(k): k = dict2.pop(k)
+    dict1.update(dict2)
+    return dict1
     
 def mergeDictLST(dict1={},dict2={}):
     for k, v in list(dict2.items()):
