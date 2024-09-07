@@ -1390,6 +1390,10 @@ msgctxt "#32184"
 msgid "Replay Percentage (%s)"
 msgstr ""
 
+msgctxt "#32185"
+msgid "Playing VOD:\n%s"
+msgstr ""
+
 
 # Help - strings 33000 thru 33999 reserved for common strings used in add-ons
 

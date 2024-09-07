@@ -833,8 +833,8 @@ class Builtin:
 
 
     @contextmanager
-    def busy_dialog(self):
-        if not self.isBusyDialog():
+    def busy_dialog(self, isPlaying=False):
+        if not self.isBusyDialog() and not isPlaying :
             self.executebuiltin('ActivateWindow(busydialognocancel)')
             try: yield
             finally: self.executebuiltin('Dialog.Close(busydialognocancel)')

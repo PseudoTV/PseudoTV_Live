@@ -133,7 +133,7 @@ class Library:
 
         msg = LANGUAGE(32022)
         if force: #clear library cache.
-            with BUILTIN.busy_dialog():
+            with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                 __clear()
         libraryItems = dict(self.fillItems())
             

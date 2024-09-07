@@ -149,7 +149,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                 if 'gzip' in self.headers.get('accept-encoding'):
                     self.log('do_GET, gzip compressing')
                     data = self._gzip_encode(fle.read().encode(encoding=DEFAULT_ENCODING))
-                    print(data)
                     self._set_headers(content,data,True)
                     self.wfile.write(data)
                 else:

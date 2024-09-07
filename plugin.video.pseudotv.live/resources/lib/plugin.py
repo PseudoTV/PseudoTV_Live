@@ -39,7 +39,6 @@ class Plugin:
         self.pageLimit  = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
         self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
-        
         try:    self.sysInfo = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
         except: self.sysInfo = {}
         
@@ -53,7 +52,6 @@ class Plugin:
                              "citem"     : {},
                              "fitem"     : decodePlot(BUILTIN.getInfoLabel('Plot')),
                              "nitem"     : decodePlot(BUILTIN.getInfoLabel('NextPlot')),
-                             "isPlaylist": bool(SETTINGS.getSettingInt('Playback_Method')),
                              "playcount" : 0})
                              
         if not self.sysInfo.get('now'): self.sysInfo['now'] = int(getUTCstamp())
@@ -70,7 +68,7 @@ class Plugin:
         
         try:    self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
         except: self.sysInfo.update({'citem':{'id':self.sysInfo['chid']}})
-            
+
         self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
 
                 
@@ -107,18 +105,27 @@ class Plugin:
 
     def playLive(self, name: str, chid: str, vid: str):
         with self.preparingPlayback():
-            self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
-            if self.sysInfo.get('fitem'):
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+            if self.sysInfo.get('vid',str(random.random())) != self.sysInfo.get('fitem',{}).get('file',str(random.random())):
+                self.log('playLive, live vid != listitem meta')
+                if int(self.sysInfo.get('fitem',{}).get('start',str(random.random()))) != int(self.sysInfo.get('start',str(random.random()))):
+                    self.log('playLive, using playBroadcast')
+                    self.sysInfo['title'] = self.sysInfo['fitem'].pop('label')
+                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['title']))
+                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo.get('fitem',{}).get('catchup-id',self.sysInfo.get('citem',{}).get('catchup-source')))])
+                    return self.resolveURL(False, xbmcgui.ListItem())
             else:
-                liz = xbmcgui.ListItem(name,path=vid)
-                liz.setProperty("IsPlayable","true")
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            if self.sysInfo.get('seek',0) > self.seekTOL:
-                liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-                infoTag = ListItemInfoTag(liz,'video')
-                infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-            self.resolveURL(True, liz)
+                self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
+                if self.sysInfo.get('fitem'):
+                    liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                else:
+                    liz = xbmcgui.ListItem(name,path=vid)
+                    liz.setProperty("IsPlayable","true")
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                if self.sysInfo.get('seek',0) > self.seekTOL:
+                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                    infoTag = ListItemInfoTag(liz,'video')
+                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+                self.resolveURL(True, liz)
 
 
     def playBroadcast(self, name: str, chid: str, vid: str):
@@ -198,17 +205,18 @@ class Plugin:
         with BUILTIN.busy_dialog():
             pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
             if pvritem:
-                if 'citem' in pvritem: self.sysInfo.update({'citem':combineDicts(self.sysInfo.get('citem'),pvritem.pop('citem'))})
+                if 'citem' in pvritem: self.sysInfo.update({'citem':combineDicts(pvritem.pop('citem'),self.sysInfo.get('citem'))})
                 pastItems = pvritem.get('broadcastpast',[])
                 nowitem   = pvritem.get('broadcastnow',{})
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
                 nextitems.insert(0,nowitem)
                 nextitems = pastItems + nextitems
                 
-                if self.sysInfo.get('fitem') or self.sysInfo.get('vid'):
+                if (self.sysInfo.get('fitem') or self.sysInfo.get('vid')):
                     for pos, nextitem in enumerate(nextitems):
                         fitem = decodePlot(nextitem.get('plot',{}))
-                        if ((self.sysInfo.get('fitem',{}).get('file') == fitem.get('file')) or (self.sysInfo.get('vid') == fitem.get('file'))) and self.sysInfo.get('citem') == fitem.get('citem',str(random.random())):
+                        match = self.sysInfo.get('fitem',{}).get('file') if self.sysInfo.get('fitem') else self.sysInfo.get('vid')
+                        if match == fitem.get('file') and self.sysInfo.get('citem',{}).get('id') == fitem.get('citem',{}).get('id',str(random.random())):
                             found = True
                             self.log('getPVRItems, id = %s found matching fitem'%(chid))
                             del nextitems[0:pos] # start array at correct position
@@ -293,6 +301,7 @@ class Plugin:
             
         cacheName = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
+        if DEBUG_ENABLED: cacheResponse = None
         if not cacheResponse:
             jsonRPC = JSONRPC(self.cache)
             pvritem = _match()
@@ -303,7 +312,7 @@ class Plugin:
                 self.sysInfo['isPlaylist'] = isPlaylist
                 self.sysInfo['callback']   = getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist)
                 pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
-                if isPlaylist and not radio: pvritem = _extend(pvritem)
+                pvritem = _extend(pvritem)
                 del jsonRPC
                 cacheResponse = self.cache.set(cacheName, pvritem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=EPOCH_TIMER), json_data=True)
         return cacheResponse
@@ -353,7 +362,7 @@ class Plugin:
             return True
 
         _chkPath()
-        _chkGuide()
+        # _chkGuide()
         _chkLoop()
         #todo take action on fail. for now log events and strategize actions. 
         return True

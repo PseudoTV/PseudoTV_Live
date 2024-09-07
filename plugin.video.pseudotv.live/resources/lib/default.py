@@ -29,8 +29,11 @@ def run(sysARG):
     chid   = (params.get("chid",'')                 or None)
     vid    = decodeString(params.get("vid",'')      or None)
     radio  = (params.get("radio",'')                or 'False').lower() == "true"
-    isPlaylist = bool(SETTINGS.getSettingInt('Playback_Method'))
-    log("Default: run, params = %s\nisPlaylist = %s"%(params,isPlaylist))
+    params['isLinear']   = True if mode == 'live' else False
+    params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
+    isPlaylist = params['isPlaylist']
+    isLinear   = params['isLinear']
+    log("Default: run, params = %s"%(params))
 
     if mode == 'guide':
         hasAddon(PVR_CLIENT_ID,install=True,enable=True)

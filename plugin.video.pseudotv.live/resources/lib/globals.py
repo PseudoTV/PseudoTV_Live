@@ -312,7 +312,7 @@ def togglePVR(state=True, reverse=False, wait=15):
                 if (state and isEnabled) or (not state and not isEnabled): return
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
                 if reverse:
-                    with BUILTIN.busy_dialog():
+                    with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                         timerit(togglePVR)(wait,[not bool(state)])
                         DIALOG.notificationWait('%s: %s'%(PVR_CLIENT_NAME,LANGUAGE(32125)),wait=wait)
             else: DIALOG.notificationWait(LANGUAGE(30023)%(PVR_CLIENT_NAME))

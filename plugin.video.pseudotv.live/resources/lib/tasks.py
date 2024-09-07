@@ -95,7 +95,7 @@ class Tasks():
         self.log('chkPVRBackend')
         if hasAddon(PVR_CLIENT_ID,True,True,True,True):
             if SETTINGS.hasPVRInstance() == False:
-                with BUILTIN.busy_dialog():
+                with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                     SETTINGS.setPVRPath(USER_LOC, validString(self.jsonRPC.getFriendlyName()))
         
         
@@ -313,7 +313,7 @@ class Tasks():
         with PROPERTIES.suspendActivity():
             self.log('setUserPath, old = %s, new = %s'%(old,new))
             dia = DIALOG.progressDialog(message='%s\n%s'%(LANGUAGE(32050),old))
-            with BUILTIN.busy_dialog():
+            with BUILTIN.busy_dialog(isPlaying=BUILTIN.getInfoBool('Playing','Player')):
                 fileItems = self.jsonRPC.walkListDirectory(old, depth=-1, appendPath=True)
             
             cnt = 0

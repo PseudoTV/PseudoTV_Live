@@ -1,12 +1,13 @@
 v.0.5.4
+-Added New guide (EPG) behavior. Play media from any future position within the EPG.
 -Added "Build Filler Subfolders" setting to "Fillers".
 -Added "Bonjour on startup" setting to "Multi-Room".
 -Added "Allow PVR Refresh" to "Misc." settings.
 -Added optional saving accurate duration meta directly from Kodi's videoplayer during playback.
 -Added gzip compression support to xmltv server.
 -Improved Playlist playback mode.
+ - Media can start by any EPG cell, ie. it's not bound to linear time.
 -Improved PVR Provider meta.
- - If you haven't installed Kodi master nightlies, you ought; Many PVR Improvements.
 -Moved all context menu under "PseudoTV Live".
 -Added Channel Manager to channel list context menu.
 -Fixed Autotune prompt not showing.
