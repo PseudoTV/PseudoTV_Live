@@ -21,13 +21,13 @@ from globals    import *
 from seasonal   import Seasonal 
 
 class Info:
-    def __init__(self, sysARG: dict={}, fitem: dict={}):
+    def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
             log('Info: __init__, sysARG = %s'%(sysARG))
         DIALOG.infoDialog(LISTITEMS.buildItemListItem(fitem))
             
 class Browse:
-    def __init__(self, sysARG: dict={}, fitem: dict={}):
+    def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         log('Browse: __init__, sysARG = %s'%(sysARG))
         with BUILTIN.busy_dialog():
             media = '%ss'%(fitem.get('media','video'))
@@ -45,7 +45,7 @@ class Match:
     GLOBAL_SCRIPT  = 'script.globalsearch'
     SIMILAR_SCRIPT = 'script.embuary.helper'
 
-    def __init__(self, sysARG: dict={}, fitem: dict={}):
+    def __init__(self, sysARG: dict={}, listitem: xbmcgui.ListItem=xbmcgui.ListItem(), fitem: dict={}):
         with BUILTIN.busy_dialog():
             title  = BUILTIN.getInfoLabel('Title')
             name   = BUILTIN.getInfoLabel('EpisodeName')
@@ -78,11 +78,9 @@ class Match:
 
 if __name__ == '__main__': 
     param = sys.argv[1]
-    fitem = decodePlot(BUILTIN.getInfoLabel('Plot'))
     log('Info: __main__, param = %s'%(param))
-    
-    if   param == 'info':   Info(sys.argv,fitem)
-    elif param == 'browse': Browse(sys.argv,fitem)
-    elif param == 'match':  Match(sys.argv,fitem)
+    if   param == 'info':   Info(sys.argv  ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'browse': Browse(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
+    elif param == 'match':  Match(sys.argv ,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')))
         
    

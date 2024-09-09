@@ -642,7 +642,11 @@ msgid "Restart Unavailable..."
 msgstr ""
 
 msgctxt "#30155"
-msgid "Enable PVR Backend Refresh"
+msgid "PVR Backend Refresh"
+msgstr ""
+
+msgctxt "#30156"
+msgid "Bonjour announcement on startup"
 msgstr ""
 
 # Skin - strings 31000 thru 31999 reserved for skins

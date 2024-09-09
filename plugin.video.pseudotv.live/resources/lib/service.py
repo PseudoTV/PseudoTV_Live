@@ -115,9 +115,9 @@ class Player(xbmc.Player):
         sysInfo = {}
         if self.isPlaying():
             sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-            if not sysInfo.get('fitem'):    sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
-            if not sysInfo.get('nitem'):    sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-            if not sysInfo.get('callback'): sysInfo['callback'] = self.getCallback()
+            if not sysInfo.get('callback') and sysInfo: sysInfo['callback'] = self.getCallback(sysInfo)
+            if not sysInfo.get('fitem'):                sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+            if not sysInfo.get('nitem'):                sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
             sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
             PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
@@ -129,8 +129,8 @@ class Player(xbmc.Player):
         except: return xbmcgui.ListItem()
         
         
-    def getCallback(self):
-        callback = BUILTIN.getInfoLabel('Filenameandpath','Player')
+    def getCallback(self, sysInfo={}):
+        callback = (self.jsonRPC.getCallback(sysInfo.get('name'),sysInfo.get('chid'),sysInfo.get('radio'),sysInfo.get('isPlaylist'),sysInfo=sysInfo) or BUILTIN.getInfoLabel('Filenameandpath','Player'))
         self.log('getCallback, callback = %s\n%s\n%s'%(callback,BUILTIN.getInfoLabel('Folderpath','Player'),BUILTIN.getInfoLabel('Filename','Player')))
         return callback
         
@@ -179,39 +179,36 @@ class Player(xbmc.Player):
 
     def _onPlay(self):
         oldInfo = self.sysInfo
-        newInfo = self.getPlayerSysInfo() #get current sysInfo
-        self.log('_onPlay\nnewInfo = %s\noldInfo = %s'%(newInfo,oldInfo))
+        self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
+        self.log('_onPlay\nsysInfo = %s\noldInfo = %s'%(self.sysInfo,oldInfo))
         self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
         self.toggleReplay(False)
         self.toggleBackground(False)
         
         #items that only run once per channel change. ie. set adv. rules and variables. 
-        self.sysInfo = newInfo
-        if newInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
-            self.runActions(RULES_ACTION_PLAYER_START, newInfo.get('citem',{}), inherited=self)
+        if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
+            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
             self.setTrakt(self.disableTrakt)
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
-            self.toggleReplay(sysInfo=newInfo)
+            self.toggleReplay(sysInfo=self.sysInfo)
             
-        if self.saveDuration: self.jsonRPC.queDuration(newInfo.get('fitem',{}), newInfo.get('runtime',0))
-        self.log('_onPlay, oldInfo sysInfo updated with newInfo')
+        if self.saveDuration: self.jsonRPC.queDuration(self.sysInfo.get('fitem',{}), self.sysInfo.get('runtime',0))
 
 
     def _onChange(self):
         self.log('_onChange')
         self.toggleReplay(False)
         self.toggleBackground()
-        if self.sysInfo.get('isPlaylist') and self.sysInfo.get('nitem'):
-            oldInfo = self.sysInfo
-            newInfo = self.getPlayerSysInfo()
-            if oldInfo.get('start') != newInfo.get('start',random.random()):
-                self.sysInfo = newInfo
+        oldInfo = self.sysInfo
+        if oldInfo.get('isPlaylist') and oldInfo.get('nitem'):
+            self.sysInfo = self.getPlayerSysInfo()
+            if oldInfo.get('start',random.random()) != self.sysInfo.get('start',random.random()):
                 self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
                 self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
-                self.log('_onChange, updated playlist newInfo = %s'%(newInfo))
+                self.log('_onChange, updated playlist sysInfo = %s'%(self.sysInfo))
         else:
-            self.log('_onChange, callback = %s'%(self.sysInfo['callback']))
-            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(self.sysInfo['callback']))
+            self.log('_onChange, callback = %s'%(oldInfo['callback']))
+            threadit(BUILTIN.executebuiltin)('PlayMedia(%s)'%(oldInfo['callback']))
         
         
     def _onStop(self):

@@ -338,7 +338,7 @@ class JSONRPC:
                  'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "runtime": dur}},
                  'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "runtime": dur}}}
         try:
-            if dur > 0:
+            if dur > 0 and 'type' in item:
                 params = param[item['type']]
                 if -1 in params: raise Exception('no dbid found')
                 elif params:
@@ -521,3 +521,28 @@ class JSONRPC:
                         self.log('getFriendlyName, setting device name = %s'%(input))
                         return input
             return fn
+            
+            
+    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),json_data=False)
+    def getCallback(self, chname, id, radio=False, isPlaylist=False, sysARG=[], sysInfo={}):
+        self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
+        def _matchJSON():
+            results = self.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={'True':'radio','False':'tv'}[str(radio)])}, cache=True).get('files',[])
+            for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
+                for result in results:
+                    if result.get('label','').lower().startswith(dir.lower()):
+                        self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
+                        channels = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=EPOCH_TIMER)).get('files',[])
+                        for item in channels:
+                            citem = decodePlot(item.get('plot','')).get('citem',{})
+                            if item.get('label','').lower() == chname.lower() and citem.get('id') == id:
+                                self.log('getCallback: _matchJSON, id = %s, found file = %s'%(id,item.get('file')))
+                                return item.get('file')
+
+        if (isPlaylist or radio) and len(sysARG) > 2 and sysInfo.get('vid'):
+            callback = (('%s%s'%(sysARG[0],sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0]
+        else:
+            callback = _matchJSON() #requires 'pvr://' json whitelisting.
+        self.log('getCallback: returning callback = %s'%(callback))
+        return callback
+         

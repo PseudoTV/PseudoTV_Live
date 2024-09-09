@@ -955,7 +955,7 @@
 						<heading>30359</heading>
 					</control>
 				</setting>
-                <setting id="Bonjour_Startup" type="boolean" label="30155" help="33155" parent="Bonjour_Status">
+                <setting id="Bonjour_Startup" type="boolean" label="30156" help="33156" parent="Bonjour_Status">
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
