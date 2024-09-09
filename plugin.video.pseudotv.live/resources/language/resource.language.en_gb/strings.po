@@ -1634,7 +1634,7 @@ msgid "Group TV shows in blocks. [0 Disabled, 2 Default] (Pagination size influe
 msgstr ""
 
 msgctxt "#33125"
-msgid "Include "Coming Soon" Trailers from the IMDB Trailer plugin."
+msgid "Include Coming Soon Trailers from the IMDB Trailer plugin."
 msgstr ""
 
 msgctxt "#33126"

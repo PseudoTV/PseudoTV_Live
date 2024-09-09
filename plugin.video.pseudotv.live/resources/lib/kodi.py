@@ -462,7 +462,7 @@ class Settings:
             changes = {}
             name = addon.getAddonInfo('name')
             osettings = (self.getPVRInstanceSettings(instance) or {})
-            for setting, newvalue in nsettings.items():
+            for setting, newvalue in list(nsettings.items()):
                 if MONITOR.waitForAbort(.001): return False
                 default, oldvalue = osettings.get(setting,(None,None))
                 if str(newvalue).lower() != str(oldvalue).lower(): 
