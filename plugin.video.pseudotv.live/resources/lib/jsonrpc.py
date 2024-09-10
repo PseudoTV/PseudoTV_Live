@@ -292,7 +292,7 @@ class JSONRPC:
 
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration'), offset=SETTINGS.getSettingInt('Seek_Tolerance')):
         self.log("getDuration, accurate = %s, path = %s, save = %s, offset = -%s" % (accurate, path, save, offset))
-        runtime = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or item.get('resume',{}).get('total') or 0)
+        runtime = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         if (runtime == 0 or accurate):
             duration = 0
             if isStack(path):# handle "stacked" videos
@@ -302,13 +302,13 @@ class JSONRPC:
         if not accurate:
             self.log("getDuration, applying offset = -%s" % (offset))
             runtime -= offset
-        self.log("getDuration, path = %s, runtime = %s" % (path, runtime))
+        self.log("getDuration, returning path = %s, runtime = %s" % (path, runtime))
         return runtime
 
 
     def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("parseDuration, path = %s, save = %s" % (path, save))
-        runtime  = (item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        runtime  = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
         duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
 
         if not path.startswith(tuple(VFS_TYPES)):
@@ -329,14 +329,14 @@ class JSONRPC:
     def queDuration(self, item, dur):
         #overcome inconsistent keys from Kodis jsonRPC.
         param = {'video'      : {},
-                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "runtime": dur}},
-                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "runtime": dur}},
-                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "runtime": dur}},
-                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "runtime": dur}},
-                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "runtime": dur}},
-                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "runtime": dur}},
-                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "runtime": dur}},
-                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "runtime": dur}}}
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"runtime": dur,"resume": {"position": item.get('position',0.0),"total": dur}}}}
         try:
             if dur > 0 and 'type' in item:
                 params = param[item['type']]
@@ -350,14 +350,14 @@ class JSONRPC:
         
     def quePlaycount(self, item):
         param = {'video'      : {},
-                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}},
-                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       , "playcount": item.get('playcount',0), "resume": {"position": item.get('position',0.0), "total": item.get('total',0.0)}}}}
+                 'movie'      : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'movies'     : {"method":"VideoLibrary.SetMovieDetails"     ,"params":{"movieid"     :item.get('movieid',-1)      ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'episode'    : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'episodes'   : {"method":"VideoLibrary.SetEpisodeDetails"   ,"params":{"episodeid"   :item.get('episodeid',-1)    ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'musicvideo' : {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'musicvideos': {"method":"VideoLibrary.SetMusicVideoDetails","params":{"musicvideoid":item.get('musicvideoid',-1) ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'song'       : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('id',-1)           ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}},
+                 'songs'      : {"method":"AudioLibrary.SetSongDetails"      ,"params":{"songid"      :item.get('songid',-1)       ,"playcount": item.get('playcount',0),"resume": {"position": item.get('position',0.0),"total": item.get('total',0.0)}}}}
         try:
             params = param[item['type']]
             if -1 in params: raise Exception('no dbid found')
@@ -523,26 +523,20 @@ class JSONRPC:
             return fn
             
             
-    @cacheit(expiration=datetime.timedelta(seconds=OVERLAY_DELAY),json_data=False)
-    def getCallback(self, chname, id, radio=False, isPlaylist=False, sysARG=[], sysInfo={}):
-        self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(id,radio,isPlaylist))
-        def _matchJSON():
-            results = self.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={'True':'radio','False':'tv'}[str(radio)])}, cache=True).get('files',[])
+    def getCallback(self, sysInfo={}):
+        self.log('getCallback, id = %s, radio = %s, isPlaylist = %s'%(sysInfo.get('chid'),sysInfo.get('radio',False),sysInfo.get('isPlaylist',False)))
+        def _matchJSON():#requires 'pvr://' json whitelisting.
+            results = self.getDirectory(param={"directory":"pvr://channels/{dir}/".format(dir={'True':'radio','False':'tv'}[str(sysInfo.get('radio',False))])}, cache=False).get('files',[])
             for dir in [ADDON_NAME,'All channels']: #todo "All channels" may not work with non-English translations!
                 for result in results:
                     if result.get('label','').lower().startswith(dir.lower()):
                         self.log('getCallback: _matchJSON, found dir = %s'%(result.get('file')))
                         channels = self.getDirectory(param={"directory":result.get('file')},checksum=PROPERTIES.getInstanceID(),expiration=datetime.timedelta(minutes=EPOCH_TIMER)).get('files',[])
                         for item in channels:
-                            citem = decodePlot(item.get('plot','')).get('citem',{})
-                            if item.get('label','').lower() == chname.lower() and citem.get('id') == id:
-                                self.log('getCallback: _matchJSON, id = %s, found file = %s'%(id,item.get('file')))
+                            if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
+                                self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
-
-        if (isPlaylist or radio) and len(sysARG) > 2 and sysInfo.get('vid'):
-            callback = (('%s%s'%(sysARG[0],sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0]
-        else:
-            callback = _matchJSON() #requires 'pvr://' json whitelisting.
+        callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
         return callback
          

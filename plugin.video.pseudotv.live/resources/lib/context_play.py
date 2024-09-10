@@ -21,10 +21,28 @@ from globals import *
 from plugin  import Plugin
      
 def run(sysARG):
-    log('Context_Play: __main__, mode = %s, param = %s'%(sysARG[1], sysARG))
-    citem = decodePlot(BUILTIN.getInfoLabel('Plot')).get('citem',{})
-    if   sysARG[1] == 'play':     threadit(Plugin(sysARG).playTV)(citem.get('name'),citem.get('id'))
-    elif sysARG[1] == 'playlist': threadit(Plugin(sysARG).playPlaylist)(citem.get('name'),citem.get('id'))
+    params = {}
+    log("Context_Play: run, In params = %s"%(params))
+    params['radio']      = (params.get("radio") or 'False').lower() == "true"
+    params['chnumlabel'] = BUILTIN.getInfoLabel('ChannelNumberLabel')
+    params['name']       = (unquoteString(params.get("name",''))  or BUILTIN.getInfoLabel('ChannelName'))
+    params['title']      = (unquoteString(params.get("title",'')) or BUILTIN.getInfoLabel('label'))
+    params['duration']   = int((params.get('duration')            or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0'))
+    params['vid']        = (decodeString(params.get("vid",'')     or None))
+    params['chpath']     = BUILTIN.getInfoLabel('FileNameAndPath')
+    params['fitem']      = decodePlot(BUILTIN.getInfoLabel('Plot'))
+    params['nitem']      = decodePlot(BUILTIN.getInfoLabel('NextPlot'))
+    params['citem']      = params.get('fitem',{}).get('citem',{})
+    params["chid"]       = params.get('citem',{}).get('id')
+    params['playcount']  = 0
+    params['isLinear']   = True if sysARG[1] == 'live' else False
+    params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
+    params['progress']   = (int((BUILTIN.getInfoLabel('Progress') or '0')),int((BUILTIN.getInfoLabel('PercentPlayed') or '0')))
+    params['now']        = int(params.get('now') or getUTCstamp())
+    log("Context_Play: run, Out params = %s"%(params))
+    
+    if   sysARG[1] == 'play':     threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
+    elif sysARG[1] == 'playlist': threadit(Plugin(sysARG, sysInfo=params).playPlaylist)(params["name"],params["chid"])
         
 if __name__ == '__main__': run(sys.argv)
 

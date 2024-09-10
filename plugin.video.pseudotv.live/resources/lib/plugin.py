@@ -42,7 +42,24 @@ class Plugin:
         self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
         
-        if not self.sysInfo.get('start') and self.sysInfo['fitem']:
+        self.sysInfo['radio']      = (sysInfo.get("radio")      or 'False').lower() == "true"
+        self.sysInfo['chnumlabel'] = (sysInfo.get('chnumlabel') or BUILTIN.getInfoLabel('ChannelNumberLabel'))
+        self.sysInfo['name']       = (sysInfo.get('name')       or BUILTIN.getInfoLabel('ChannelName'))
+        self.sysInfo['title']      = (sysInfo.get('title')      or BUILTIN.getInfoLabel('label'))
+        self.sysInfo['duration']   = (sysInfo.get('duration')   or int(timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0'))
+        self.sysInfo['vid']        =  sysInfo.get('vid')
+        self.sysInfo['chpath']     = (sysInfo.get('chpath')     or BUILTIN.getInfoLabel('FileNameAndPath'))
+        self.sysInfo['fitem']      = (sysInfo.get('fitem')      or decodePlot(BUILTIN.getInfoLabel('Plot')))
+        self.sysInfo['nitem']      = (sysInfo.get('nitem')      or decodePlot(BUILTIN.getInfoLabel('NextPlot')))
+        self.sysInfo['citem']      = (sysInfo.get('citem')      or combineDicts({'id':self.sysInfo.get("chid")},self.sysInfo.get('fitem',{}).get('citem',{})))
+        self.sysInfo["chid"]       = (sysInfo.get('chid')       or self.sysInfo.get('citem',{}).get('id'))
+        self.sysInfo['playcount']  = (sysInfo.get('playcount')  or 0)
+        self.sysInfo['isLinear']   = (sysInfo.get('isLinear')   or (True if sysInfo.get('mode') == 'live' else False))
+        self.sysInfo['isPlaylist'] = (sysInfo.get('isPlaylist') or bool(SETTINGS.getSettingInt('Playback_Method')))
+        self.sysInfo['progress']   = (sysInfo.get('progress')   or (int((BUILTIN.getInfoLabel('Progress') or '0')),int((BUILTIN.getInfoLabel('PercentPlayed') or '0'))))
+        self.sysInfo['now']        = int(sysInfo.get('now')        or int(getUTCstamp()))
+        
+        if not self.sysInfo.get('start') and self.sysInfo.get('fitem'):
             self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
             self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
         try:
@@ -68,107 +85,6 @@ class Plugin:
             xbmc.sleep(100) #give channelPlaylist.clear() enough time to clear queue.
             [channelPlaylist.add(liz.getPath(),liz,idx) for idx,liz in enumerate(listitems) if liz.getPath()]
             return channelPlaylist
-
-        
-    def playTV(self, name: str, chid: str):
-        with self.preparingPlayback():
-            self.log('playTV, id = %s'%(chid))
-            if self.sysInfo.get('fitem'):
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-            else:
-                liz = self.getPVRItems(name, chid)[0]
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            if self.sysInfo.get('seek',0) > self.seekTOL:
-                liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-                infoTag = ListItemInfoTag(liz,'video')
-                infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-            self.resolveURL(True, liz)
-        
-
-    def playLive(self, name: str, chid: str, vid: str):
-        with self.preparingPlayback():
-            if self.sysInfo.get('fitem',{}).get('file',self.sysInfo.get('vid','0')) != self.sysInfo.get('vid','0'):
-                self.log('playLive, VOD fitem != current VID')
-                if int(self.sysInfo['fitem'].get('start')) != int(self.sysInfo.get('start',self.sysInfo.get('now'))):
-                    self.log('playLive, using playBroadcast')
-                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
-                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo['fitem'].get('citem',{}).get('catchup-source',self.sysInfo['fitem'].get('catchup-id')))])
-                    return self.resolveURL(False, xbmcgui.ListItem())
-            else:
-                self.log('playLive, id = %s, seek = %s'%(chid,self.sysInfo['seek']))
-                if self.sysInfo.get('fitem'):
-                    liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-                else:
-                    liz = xbmcgui.ListItem(name,path=vid)
-                    liz.setProperty("IsPlayable","true")
-                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-                if self.sysInfo.get('seek',0) > self.seekTOL:
-                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-                    infoTag = ListItemInfoTag(liz,'video')
-                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-                self.resolveURL(True, liz)
-
-
-    def playBroadcast(self, name: str, chid: str, vid: str):
-        with self.preparingPlayback():
-            self.log('playBroadcast, id = %s'%(chid))
-            if self.sysInfo.get('fitem'):
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-            else:
-                liz = xbmcgui.ListItem(name,path=vid)
-                liz.setProperty("IsPlayable","true")
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            self.resolveURL(True, liz)
-            
-            
-    def playVOD(self, title: str, vid: str):
-        with self.preparingPlayback():
-            self.log('playVOD, title = %s, vid = %s'%(title,vid))
-            if self.sysInfo.get('fitem'):
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-            else:
-                liz = xbmcgui.ListItem(title,path=vid)
-                liz.setProperty("IsPlayable","true")
-                
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            if self.sysInfo.get('seek',0) > 0:
-                self.log('playVOD, seek = %s, duration = %s'%(self.sysInfo['seek'],self.sysInfo['duration']))
-                liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-                infoTag = ListItemInfoTag(liz,'video')
-                infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-            self.resolveURL(True, liz)
-            
-            
-    def playRadio(self, name: str, chid: str, vid: str):
-        self.log('playRadio, id = %s'%(chid))
-        def buildfItem(item: dict={}):
-            liz = LISTITEMS.buildItemListItem(item, 'music')
-            return liz
-
-        with BUILTIN.busy_dialog():
-            jsonRPC = JSONRPC(self.cache)
-            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
-            del jsonRPC
-
-        if len(fileList) > 0:
-            channelPlaylist = self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC)
-            channelPlaylist.shuffle()
-            self.log('playRadio, Playlist size = %s'%(channelPlaylist.size()))
-            PLAYER.play(channelPlaylist,windowed=True)
-            # BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
-        else: self.resolveURL(False, xbmcgui.ListItem())
-
-
-    def playPlaylist(self, name: str, chid: str):
-        self.log('playPlaylist, id = %s'%(chid))
-        listitems = self.getPVRItems(name, chid)
-        if listitems:
-            channelPlaylist = self.quePlaylist(listitems)
-            self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
-            if BUILTIN.isPlaylistRandom(): channelPlaylist.unshuffle()
-            PLAYER.play(channelPlaylist,windowed=True)
-            # BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
-        else: self.resolveURL(False, xbmcgui.ListItem())
 
 
     def getPVRItems(self, name: str, chid: str) -> list:
@@ -198,9 +114,8 @@ class Plugin:
             
         found = False
         with BUILTIN.busy_dialog():
-            pvritem = self.matchChannel(name,chid,radio=False,isPlaylist=True)
+            pvritem = self._matchChannel(name,chid,radio=False)
             if pvritem:
-                if 'citem' in pvritem: self.sysInfo.update({'citem':combineDicts(pvritem.pop('citem'),self.sysInfo.get('citem'))})
                 pastItems = pvritem.get('broadcastpast',[])
                 nowitem   = pvritem.get('broadcastnow',{})
                 nextitems = pvritem.get('broadcastnext',[]) # upcoming items
@@ -247,19 +162,19 @@ class Plugin:
             return []
     
 
-    def matchChannel(self, chname: str, id: str, radio: bool=False, isPlaylist: bool=False) -> str:
-        self.log('matchChannel, id = %s, chname = %s, radio = %s, isPlaylist = %s'%(id,chname,radio,isPlaylist))
-        def _match():
+    def _matchChannel(self, chname: str, id: str, radio: bool=False):
+        self.log('_matchChannel, id = %s, chname = %s, radio = %s'%(id,chname,radio))
+        def __match():
             channels = jsonRPC.getPVRChannels(radio)
             for channel in channels:
                 if channel.get('label').lower() == chname.lower():
                     for key in ['broadcastnow', 'broadcastnext']:
                         if decodePlot(channel.get(key,{}).get('plot','')).get('citem',{}).get('id') == id:
                             channel['broadcastnext'] = [channel.get('broadcastnext',{})]
-                            self.log('matchChannel, id = %s, found pvritem = %s'%(id,channel))
+                            self.log('_matchChannel: __match, id = %s, found pvritem = %s'%(id,channel))
                             return channel
         
-        def _extend(pvritem: dict={}) -> dict:
+        def __extend(pvritem: dict={}) -> dict:
             channelItem = {}
             def _parseBroadcast(broadcast={}):
                 if broadcast.get('progresspercentage',0) == 100:
@@ -270,27 +185,123 @@ class Plugin:
                     channelItem.setdefault('broadcastnext',[]).append(broadcast)
             
             poolit(_parseBroadcast)(jsonRPC.getPVRBroadcasts(pvritem.get('channelid',{})))
-            nextitems = channelItem.get('broadcastnext',pvritem['broadcastnext'])
-            pvritem['broadcastnext'] = nextitems
-            self.log('extendProgrammes, extend broadcastnext to %s entries'%(len(pvritem['broadcastnext'])))
+            pvritem['broadcastnext'] = channelItem.get('broadcastnext',pvritem['broadcastnext'])
+            self.log('_matchChannel: __extend, broadcastnext = %s entries'%(len(pvritem['broadcastnext'])))
             return pvritem
             
-        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s.%s'%(chname,id,radio,isPlaylist)))
+        cacheName     = 'matchChannel.%s'%(getMD5('%s.%s.%s'%(chname,id,radio)))
         cacheResponse = (self.cache.get(cacheName, checksum=PROPERTIES.getInstanceID(), json_data=True) or {})
         if not cacheResponse:
             jsonRPC = JSONRPC(self.cache)
-            pvritem = _match()
+            pvritem = __match()
             if not pvritem:
                 del jsonRPC
                 return self.resolveURL(False, xbmcgui.ListItem())
             else:
-                self.sysInfo['isPlaylist'] = isPlaylist
-                self.sysInfo['callback']   = self.jsonRPC.getCallback(pvritem.get('channel'),pvritem.get('uniqueid'),radio,isPlaylist,self.sysARG,self.sysInfo)
-                pvritem['citem'] = decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',{})
-                pvritem          = _extend(pvritem)
-                cacheResponse    = self.cache.set(cacheName, pvritem, checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=EPOCH_TIMER), json_data=True)
+                self.sysInfo.update({'citem':decodePlot(pvritem.get('broadcastnow',{}).get('plot','')).get('citem',self.sysInfo.get('citem'))})
+                self.sysInfo['callback'] = self.jsonRPC.getCallback(self.sysInfo)# or (('%s%s'%(self.sysARG[0],self.sysARG[2])).split('%s&'%(slugify(ADDON_NAME))))[0])
+                cacheResponse = self.cache.set(cacheName, __extend(pvritem), checksum=PROPERTIES.getInstanceID(), expiration=datetime.timedelta(seconds=EPOCH_TIMER), json_data=True)
                 del jsonRPC
         return cacheResponse
+
+
+    def playTV(self, name: str, chid: str):
+        with self.preparingPlayback():
+            self.log('playTV, id = %s'%(chid))
+            if self.sysInfo.get('fitem'):
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                if self.sysInfo.get('seek',0) > self.seekTOL:
+                    self.log('playTV, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
+                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                    infoTag = ListItemInfoTag(liz,'video')
+                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            else:
+                liz = self.getPVRItems(name, chid)[0]
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            self.resolveURL(True, liz)
+        
+
+    def playLive(self, name: str, chid: str, vid: str):
+        self.log('playLive, id = %s, name = %s'%(chid, name))
+        with self.preparingPlayback():
+            if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
+                if self.sysInfo.get('vid','0') !=  self.sysInfo.get('fitem',{}).get('file',self.sysInfo.get('vid','0')):
+                    self.log('playLive, VOD fitem != current VID')
+                    # if int(self.sysInfo['fitem'].get('start')) != int(self.sysInfo.get('start',self.sysInfo.get('now'))):
+                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
+                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo['fitem'].get('citem',{}).get('catchup-source',self.sysInfo['fitem'].get('catchup-id')))])
+                    return self.resolveURL(False, xbmcgui.ListItem())
+                else: #-> live event.
+                    liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+                    if self.sysInfo.get('seek',0) > self.seekTOL:
+                        self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
+                        liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                        infoTag = ListItemInfoTag(liz,'video')
+                        infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            else:#-> onChange callback from "live" or widget
+                liz = xbmcgui.ListItem(name,path=vid)
+                liz.setProperty("IsPlayable","true")
+                self.sysInfo["seek"] = 0
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            self.resolveURL(True, liz)
+
+
+    def playBroadcast(self, name: str, chid: str, vid: str): #-> catchup-source
+        with self.preparingPlayback():
+            self.log('playBroadcast, id = %s'%(chid))
+            if self.sysInfo.get('fitem'): #-> catchup-id called via ui "play programme"
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+            else:
+                liz = xbmcgui.ListItem(name,path=vid)
+                liz.setProperty("IsPlayable","true")
+            self.sysInfo["seek"] = 0
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            self.resolveURL(True, liz)
+            
+            
+    def playVOD(self, title: str, vid: str): #-> catchup-id
+        with self.preparingPlayback():
+            self.log('playVOD, title = %s, vid = %s'%(title,vid))
+            if self.sysInfo.get('fitem'): #-> live playback from UI incl. listitem
+                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
+            else:
+                liz = xbmcgui.ListItem(title,path=vid)
+                liz.setProperty("IsPlayable","true")
+            self.sysInfo["seek"] = 0
+            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+            self.resolveURL(True, liz)
+            
+            
+    def playRadio(self, name: str, chid: str, vid: str):
+        self.log('playRadio, id = %s'%(chid))
+        def buildfItem(item: dict={}):
+            liz = LISTITEMS.buildItemListItem(item, 'music')
+            return liz
+
+        with BUILTIN.busy_dialog():
+            jsonRPC = JSONRPC(self.cache)
+            fileList = interleave([jsonRPC.requestList({'id':chid}, path, 'music', page=RADIO_ITEM_LIMIT, sort={"method":"random"})[0] for path in vid.split('|')])
+            del jsonRPC
+
+        if len(fileList) > 0:
+            channelPlaylist = self.quePlaylist(poolit(buildfItem)(randomShuffle(fileList)),pltype=xbmc.PLAYLIST_MUSIC)
+            channelPlaylist.shuffle()
+            self.log('playRadio, Playlist size = %s'%(channelPlaylist.size()))
+            PLAYER.play(channelPlaylist,windowed=True)
+            # BUILTIN.executebuiltin('ReplaceWindow(visualisation)')
+        else: self.resolveURL(False, xbmcgui.ListItem())
+
+
+    def playPlaylist(self, name: str, chid: str):
+        self.log('playPlaylist, id = %s'%(chid))
+        listitems = self.getPVRItems(name, chid)
+        if listitems:
+            channelPlaylist = self.quePlaylist(listitems)
+            self.log('playPlaylist, Playlist size = %s'%(channelPlaylist.size()))
+            if BUILTIN.isPlaylistRandom(): channelPlaylist.unshuffle()
+            PLAYER.play(channelPlaylist,windowed=True)
+            # BUILTIN.executebuiltin('ReplaceWindow(fullscreenvideo)')
+        else: self.resolveURL(False, xbmcgui.ListItem())
 
 
     def playCheck(self, oldInfo: dict={}) -> bool:

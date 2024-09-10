@@ -53,6 +53,7 @@ class Utilities:
         try:  
             def addColor(text):
                 text = text.replace('-Added'      ,'[COLOR=green][B]-Added:[/B][/COLOR]')
+                text = text.replace('-New!'       ,'[COLOR=yellow][B]-New!:[/B][/COLOR]')
                 text = text.replace('-Optimized'  ,'[COLOR=yellow][B]-Optimized:[/B][/COLOR]')
                 text = text.replace('-Improved'   ,'[COLOR=yellow][B]-Improved:[/B][/COLOR]')
                 text = text.replace('-Refactored' ,'[COLOR=yellow][B]-Refactored:[/B][/COLOR]')

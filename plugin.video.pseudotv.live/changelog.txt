@@ -1,5 +1,8 @@
 v.0.5.4
--Added New guide (EPG) behavior. Play media from any future position within the EPG.
+-Refactored Playback:
+    -Improved Playlist/Broadcast/VOD callbacks and handling.
+    -New! EPG (Guide) behavior: Play media from any position regardless of playback type.
+    -New! On VOD finish channel will resume in realtime.
 -Added "Build Filler Subfolders" setting to "Fillers".
 -Added "Bonjour on startup" setting to "Multi-Room".
 -Added "Allow PVR Refresh" to "Misc." settings.
