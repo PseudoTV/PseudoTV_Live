@@ -302,7 +302,7 @@ msgid ""
 msgstr ""
 
 msgctxt "#30071"
-msgid "Open Settings [IPTV Simple]"
+msgid "IPTV Simple Settings"
 msgstr ""
 
 msgctxt "#30072"
@@ -649,6 +649,9 @@ msgctxt "#30156"
 msgid "Bonjour announcement on startup"
 msgstr ""
 
+msgctxt "#30157"
+msgid "PVR Settings"
+msgstr ""
 # Skin - strings 31000 thru 31999 reserved for skins
 
 

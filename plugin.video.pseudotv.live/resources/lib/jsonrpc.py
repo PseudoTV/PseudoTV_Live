@@ -290,18 +290,26 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
+    def setDuration(self, path, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
+        self.log("setDuration, path = %s, runtime = %s, save = %s" % (path,runtime,save))
+        self.cache.set('getPlayerLength.%s'%(getMD5(path)), runtime, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
+        if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, runtime)
+        
+        
     def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration'), offset=SETTINGS.getSettingInt('Seek_Tolerance')):
         self.log("getDuration, accurate = %s, path = %s, save = %s, offset = -%s" % (accurate, path, save, offset))
-        runtime = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
-        if (runtime == 0 or accurate):
-            duration = 0
-            if isStack(path):# handle "stacked" videos
-                for file in splitStacks(path): duration += self.parseDuration(file)
-            else: duration = self.parseDuration(path, item, save)
-            if duration > 0: runtime = duration
-        if not accurate:
-            self.log("getDuration, applying offset = -%s" % (offset))
-            runtime -= offset
+        runtime = (self.cache.get('getPlayerLength.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
+        if runtime == 0:
+            runtime = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+            if (runtime == 0 or accurate):
+                duration = 0
+                if isStack(path):# handle "stacked" videos
+                    for file in splitStacks(path): duration += self.parseDuration(file)
+                else: duration = self.parseDuration(path, item, save)
+                if duration > 0: runtime = duration
+            if not accurate:
+                self.log("getDuration, applying offset = -%s" % (offset))
+                runtime -= offset
         self.log("getDuration, returning path = %s, runtime = %s" % (path, runtime))
         return runtime
 
@@ -343,7 +351,7 @@ class JSONRPC:
                 if -1 in params: raise Exception('no dbid found')
                 elif params:
                     id = (item.get('id') or item.get('movieid') or item.get('episodeid') or item.get('musicvideoid') or item.get('songid'))
-                    self.log('queDuration, id = %s, media = %s, count = %s'%(id,item['type'],dur))
+                    self.log('queDuration, id = %s, media = %s, runtime = %s'%(id,item['type'],dur))
                     self.queueJSON(params)
         except Exception as e: self.log("queDuration, failed! %s\nitem = %s"%(e,item), xbmc.LOGERROR)
         

@@ -21,26 +21,26 @@
 from globals   import *
 from plugin    import Plugin
 
-def run(sysARG):
+def run(sysARG, fitem: dict={}, nitem: dict={}):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
+    mode   = (params.get("mode")  or 'guide')
     log("Default: run, In params = %s"%(params))
-    mode = (params.get("mode")  or 'guide')
+    params['fitem']      = fitem
+    params['nitem']      = nitem
+    params["chid"]       = (params.get("chid")                      or fitem.get('citem',{}).get('id'))
+    params['vid']        = (decodeString(params.get("vid",'')       or None))
+    params['citem']      = combineDicts({'id':params["chid"]},fitem.get('citem',{}))
+    params['name']       = (unquoteString(params.get("name",''))    or BUILTIN.getInfoLabel('ChannelName'))
+    params['title']      = (unquoteString(params.get("title",''))   or BUILTIN.getInfoLabel('label'))
     params['radio']      = (params.get("radio") or 'False').lower() == "true"
-    params['chnumlabel'] = BUILTIN.getInfoLabel('ChannelNumberLabel')
-    params['name']       = (unquoteString(params.get("name",''))  or BUILTIN.getInfoLabel('ChannelName'))
-    params['title']      = (unquoteString(params.get("title",'')) or BUILTIN.getInfoLabel('label'))
-    params['duration']   = int((params.get('duration')            or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0'))
-    params['vid']        = (decodeString(params.get("vid",'')     or None))
-    params['chpath']     = BUILTIN.getInfoLabel('FileNameAndPath')
-    params['fitem']      = decodePlot(BUILTIN.getInfoLabel('Plot'))
-    params['nitem']      = decodePlot(BUILTIN.getInfoLabel('NextPlot'))
-    params['citem']      = combineDicts({'id':params.get("chid")},params.get('fitem',{}).get('citem',{}))
-    params["chid"]       = (params.get("chid") or params.get('citem').get('id'))
     params['playcount']  = 0
+    params['now']        = int(params.get('now')                    or getUTCstamp())
+    params['duration']   = int(params.get('duration')               or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
+    params['progress']   = (int(BUILTIN.getInfoLabel('Progress')    or '0'),int(BUILTIN.getInfoLabel('PercentPlayed') or '0'))
+    params['chnumlabel'] = BUILTIN.getInfoLabel('ChannelNumberLabel')
+    params['chpath']     = BUILTIN.getInfoLabel('FileNameAndPath')
     params['isLinear']   = True if mode == 'live' else False
     params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
-    params['progress']   = (int((BUILTIN.getInfoLabel('Progress') or '0')),int((BUILTIN.getInfoLabel('PercentPlayed') or '0')))
-    params['now']        = int(params.get('now') or getUTCstamp())
     log("Default: run, Out params = %s"%(params))
 
     if mode == 'guide':
@@ -56,6 +56,5 @@ def run(sysARG):
         else:                      threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
     elif mode == 'broadcast':      threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
     elif mode == 'radio':          threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
-
     # elif not isPlaylist and chid and not vid: return DIALOG.notificationDialog(LANGUAGE(32166)%(PVR_CLIENT_NAME,SETTINGS.IPTV_SIMPLE_SETTINGS().get('m3uRefreshIntervalMins')))
-if __name__ == '__main__': run(sys.argv)
+if __name__ == '__main__': run(sys.argv,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')),nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))

@@ -57,7 +57,7 @@ class Plugin:
         self.sysInfo['isLinear']   = (sysInfo.get('isLinear')   or (True if sysInfo.get('mode') == 'live' else False))
         self.sysInfo['isPlaylist'] = (sysInfo.get('isPlaylist') or bool(SETTINGS.getSettingInt('Playback_Method')))
         self.sysInfo['progress']   = (sysInfo.get('progress')   or (int((BUILTIN.getInfoLabel('Progress') or '0')),int((BUILTIN.getInfoLabel('PercentPlayed') or '0'))))
-        self.sysInfo['now']        = int(sysInfo.get('now')        or int(getUTCstamp()))
+        self.sysInfo['now']        = int(sysInfo.get('now')     or int(getUTCstamp()))
         
         if not self.sysInfo.get('start') and self.sysInfo.get('fitem'):
             self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
@@ -238,10 +238,17 @@ class Plugin:
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                         infoTag = ListItemInfoTag(liz,'video')
                         infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-            else:#-> onChange callback from "live" or widget
+            else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")
-                self.sysInfo["seek"] = 0
+                if self.sysInfo.get('seek',0) > self.seekTOL and (int(self.sysInfo.get('progresspercentage',0)) > 0 and int(self.sysInfo.get('progresspercentage',0)) < 100):
+                    self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
+                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                    infoTag = ListItemInfoTag(liz,'video')
+                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+                else:
+                    self.sysInfo["seek"] = 0
+                    self.sysInfo["progresspercentage"] = 0
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self.resolveURL(True, liz)
 

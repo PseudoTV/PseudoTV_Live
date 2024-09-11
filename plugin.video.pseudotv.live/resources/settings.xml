@@ -76,6 +76,39 @@
                         <close>true</close>
 					</control>
 				</setting>
+				<setting id="iptvsimple" type="action" label="30071" help="">
+					<level>0</level>
+					<data>Addon.OpenSettings(pvr.iptvsimple)</data>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<dependencies>
+                        <dependency type="enable">
+                            <and>
+                                <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
+                                <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
+                            </and>
+						</dependency>
+					</dependencies>
+					<control type="button" format="action">
+						<close>true</close>
+					</control>
+				</setting>
+				<setting id="Launch_LiveSettings" type="string" label="30157" help="" parent="">
+					<level>1</level>
+					<default></default>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="button" format="action">
+						<data>ActivateWindow(10021,return)</data>
+                        <close>true</close>
+					</control>
+				</setting>
+                
+                
+                
+                
 			</group>
             <setting id="Update_Status" type="string" label="">
                 <level>0</level>
@@ -1122,24 +1155,6 @@
 					<level>1</level>
 					<default>true</default>
 					<control type="toggle"/>
-				</setting>
-				<setting id="iptvsimple" type="action" label="30071" help="">
-					<level>0</level>
-					<data>Addon.OpenSettings(pvr.iptvsimple)</data>
-					<constraints>
-						<allowempty>true</allowempty>
-					</constraints>
-					<dependencies>
-                        <dependency type="enable">
-                            <and>
-                                <condition on="property" name="InfoBool">System.HasAddon(pvr.iptvsimple)</condition>
-                                <condition on="property" name="InfoBool">System.AddonIsEnabled(pvr.iptvsimple)</condition>
-                            </and>
-						</dependency>
-					</dependencies>
-					<control type="button" format="action">
-						<close>true</close>
-					</control>
 				</setting>
                 <setting id="Enable_PVR_RELOAD" type="boolean" label="30155" help="33155" parent="iptvsimple">
 					<level>1</level>

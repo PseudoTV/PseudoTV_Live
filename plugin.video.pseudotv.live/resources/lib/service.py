@@ -112,17 +112,15 @@ class Player(xbmc.Player):
         
         
     def getPlayerSysInfo(self):
-        sysInfo = {}
-        if self.isPlaying():
-            sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-            sysInfo['Filename']        = BUILTIN.getInfoLabel('Filename','Player')
-            sysInfo['Folderpath']      = BUILTIN.getInfoLabel('Folderpath','Player')
-            sysInfo['Filenameandpath'] = BUILTIN.getInfoLabel('Filenameandpath','Player')
-            if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
-            if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
-            sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
-            if not sysInfo.get('callback'): sysInfo['callback'] = (self.jsonRPC.getCallback(sysInfo) or sysInfo.get('Filenameandpath'))
-            PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
+        sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
+        sysInfo['Filename']        = BUILTIN.getInfoLabel('Filename','Player')
+        sysInfo['Folderpath']      = BUILTIN.getInfoLabel('Folderpath','Player')
+        sysInfo['Filenameandpath'] = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
+        if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
+        sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
+        if not sysInfo.get('callback'): sysInfo['callback'] = (self.jsonRPC.getCallback(sysInfo) or sysInfo.get('Filenameandpath'))
+        PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
         
@@ -176,7 +174,7 @@ class Player(xbmc.Player):
 
     def setPlayruntime(self, state: bool=SETTINGS.getSettingBool('Store_Duration'), fitem: dict={}, runtime=0):
         self.log('setPlayruntime, state = %s, file = %s, runtime = %s'%(state,fitem.get('file'),runtime))
-        if state: self.jsonRPC.queDuration(fitem, runtime)
+        self.jsonRPC.setDuration(fitem.get('file'), fitem, runtime, state)
         
         
     def _onPlay(self):
