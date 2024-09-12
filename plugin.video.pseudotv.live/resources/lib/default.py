@@ -27,9 +27,9 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
     params['fitem']      = fitem
     params['nitem']      = nitem
     params['vid']        = decodeString(params.get("vid",''))
+    params["chid"]       = (params.get("chid")  or fitem.get('citem',{}).get('id'))
     params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
     params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
-    params["chid"]       = params.get("chid")
     params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
     log("Default: run, params = %s"%(params))
 

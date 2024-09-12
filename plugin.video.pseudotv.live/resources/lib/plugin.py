@@ -56,11 +56,10 @@ class Plugin:
             if self.sysInfo.get('start') == -1:
                 self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
                 self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
-            
 
-            self.sysInfo['duration']  = int(sysInfo.get('duration') or self.jsonRPC.getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
+            self.sysInfo['duration']  = float(sysInfo.get('duration')  or self.jsonRPC.getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
         else:
-            self.sysInfo['duration']  = int(sysInfo.get('duration','-1'))
+            self.sysInfo['duration']  = float((sysInfo.get('duration') or '-1'))
             
         try:
             self.sysInfo['seek']               = int(sysInfo.get('seek') or (abs(self.sysInfo['start'] - self.sysInfo['now']) if self.sysInfo['start'] > 0 else -1))
@@ -269,11 +268,19 @@ class Plugin:
         with self.preparingPlayback():
             if self.sysInfo.get('fitem'): #-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-            else:
+                self.sysInfo["seek"] = -1
+                self.sysInfo["progresspercentage"] = -1
+            else: #-> recordings, non UI callbacks.
                 liz = xbmcgui.ListItem(title,path=vid)
                 liz.setProperty("IsPlayable","true")
-            self.sysInfo["seek"] = -1
-            self.sysInfo["progresspercentage"] = -1
+                if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                    self.log('playVOD, vid = %s, seek = %s'%(vid, self.sysInfo['seek']))
+                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                    infoTag = ListItemInfoTag(liz,'video')
+                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+                else:
+                    self.sysInfo["seek"] = -1
+                    self.sysInfo["progresspercentage"] = -1
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self.resolveURL(True, liz)
             

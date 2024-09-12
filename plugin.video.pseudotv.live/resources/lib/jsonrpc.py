@@ -545,7 +545,7 @@ class JSONRPC:
                                 self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
                                 
-        if sysInfo.get('mode').lower() == 'live' and sysInfo.get('chpath'): callback = sysInfo.get('chpath')
+        if sysInfo.get('mode','').lower() == 'live' and sysInfo.get('chpath'): callback = sysInfo.get('chpath')
         else: callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
         return callback

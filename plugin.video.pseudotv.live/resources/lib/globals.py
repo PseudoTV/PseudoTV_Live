@@ -311,9 +311,9 @@ def togglePVR(state=True, reverse=False, wait=15):
                           BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | 
                           BUILTIN.getInfoBool('IsPlayingRecording','Pvr') | 
                           BUILTIN.getInfoBool('IsActive(FullscreenLiveTV)','Window') | 
-                          BUILTIN.getInfoBool('IsActive(fullscreenradio)','Window') | 
-                          BUILTIN.getInfoBool('IsActive(tvchannels)','Window') | 
-                          BUILTIN.getInfoBool('IsActive(tvguide)','Window'))
+                          BUILTIN.getInfoBool('IsActive(fullscreenradio)','Window'))# | 
+                          #BUILTIN.getInfoBool('IsActive(tvchannels)','Window') | 
+                          #BUILTIN.getInfoBool('IsActive(tvguide)','Window'))
             if not conditions:
                 isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
                 if (state and isEnabled) or (not state and not isEnabled): return
