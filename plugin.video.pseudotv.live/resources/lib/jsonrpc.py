@@ -290,7 +290,7 @@ class JSONRPC:
         return self.sendJSON(param).get('result', {}).get('broadcastdetails', [])
 
 
-    def setDuration(self, path, item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
+    def setDuration(self, path='', item={}, runtime=0, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("setDuration, path = %s, runtime = %s, save = %s" % (path,runtime,save))
         self.cache.set('getPlayerLength.%s'%(getMD5(path)), runtime, checksum=getMD5(path), expiration=datetime.timedelta(days=28), json_data=False)
         if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, runtime)

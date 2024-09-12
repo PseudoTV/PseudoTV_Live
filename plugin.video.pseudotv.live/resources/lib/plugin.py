@@ -27,10 +27,8 @@ class Plugin:
     def preparingPlayback(self):
         if self.playCheck(loadJSON(decodeString(PROPERTIES.getEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID))))):
             try: yield
-            finally:
-                PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        else:
-            yield self.playError()
+            finally: PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
+        else: yield self.playError()
 
 
     def __init__(self, sysARG=sys.argv, sysInfo={}):
@@ -234,6 +232,7 @@ class Plugin:
                 else: #-> VOD called by non-current EPG cell.
                     url = self.sysInfo['fitem'].get('catchup-id')
                     self.log('playLive, id = %s, VOD = %s'%(chid, url))
+                    self.sysInfo['vid'] = self.sysInfo['fitem'].get('file',url)
                     DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
                     timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(url)])
                     self.resolveURL(False, xbmcgui.ListItem())
@@ -321,21 +320,12 @@ class Plugin:
         self.log('playCheck, sysInfo=%s\noldInfo = %s'%(self.sysInfo,oldInfo))
         def _chkPath():
             if not self.sysInfo.get('vid'): return True 
-            elif self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): return True
-            elif self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)):
-                if hasAddon(self.sysInfo.get('vid','')): return True
-            elif FileAccess.exists(self.sysInfo.get('vid','')): return True
+            elif   self.sysInfo.get('vid','').startswith(tuple(WEB_TYPES)): return True
+            elif   self.sysInfo.get('vid','').startswith(tuple(VFS_TYPES)): return hasAddon(self.sysInfo.get('vid',''))
+            elif   FileAccess.exists(self.sysInfo.get('vid','')): return True
             self.log('playCheck _chkPath, failed! path (%s) not found.'%(self.sysInfo.get('vid','')))
             if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32167))
             return False
-            
-        def _chkGuide():
-            if self.sysInfo.get('chid') == self.sysInfo.get('citem',{}).get('id',random.random()):
-                if self.sysInfo.get('title') != self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')):
-                    self.log('playCheck _chkGuide, failed! Current EPG cell (%s) does not match PVR backend (%s).'%(self.sysInfo.get('fitem',{}).get('label',self.sysInfo.get('title')),self.sysInfo.get('title')))
-                    if DEBUG_ENABLED: DIALOG.notificationDialog(LANGUAGE(32129)%(PVR_CLIENT_NAME))
-                    return False
-            return True
             
         def _chkLoop():
             if self.sysInfo.get('chid') == oldInfo.get('chid',random.random()):
@@ -361,9 +351,8 @@ class Plugin:
                         return False
             return True
 
-        # _chkPath()
-        # _chkGuide()
-        # _chkLoop()
+        _chkPath()
+        _chkLoop()
         #todo take action on fail. for now log events and strategize actions. 
         return True
         
@@ -371,14 +360,14 @@ class Plugin:
     def playError(self):
         self.log('playError, id = %s, attempt = %s\n%s'%(self.sysInfo.get('chid','-1'),self.sysInfo.get('playcount'),self.sysInfo))
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(self.sysInfo)))
-        # if self.sysInfo.get('playcount') in [1,2,3]:
-            # with BUILTIN.busy_dialog():
-                # DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
-            # self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
-            # MONITOR.waitForAbort(1.0) #allow a full second to pass beyond any msecs differential.
-            # return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
-        # elif self.sysInfo.get('playcount') == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
-        # else: DIALOG.notificationWait(LANGUAGE(32000))
+        if self.sysInfo.get('playcount') in [1,2,3]:
+            with BUILTIN.busy_dialog():
+                DIALOG.notificationWait(LANGUAGE(32038)%(self.sysInfo.get('playcount',0)))
+            self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
+            MONITOR.waitForAbort(1.0) #allow a full second to pass beyond any msecs differential.
+            return BUILTIN.executebuiltin('PlayMedia(%s%s)'%(self.sysARG[0],self.sysARG[2])) #retry channel
+        elif self.sysInfo.get('playcount') == 4: DIALOG.okDialog(LANGUAGE(32134)%(ADDON_NAME))
+        else: DIALOG.notificationWait(LANGUAGE(32000))
         self.resolveURL(False, xbmcgui.ListItem()) #release pending playback.
         
         

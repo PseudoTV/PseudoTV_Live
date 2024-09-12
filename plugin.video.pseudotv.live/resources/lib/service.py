@@ -174,7 +174,7 @@ class Player(xbmc.Player):
 
     def setPlayruntime(self, state: bool=SETTINGS.getSettingBool('Store_Duration'), fitem: dict={}, runtime=0):
         self.log('setPlayruntime, state = %s, file = %s, runtime = %s'%(state,fitem.get('file'),runtime))
-        self.jsonRPC.setDuration(fitem.get('file'), fitem, runtime, state)
+        self.jsonRPC.setDuration(fitem.get('file',''), fitem, runtime, state)
         
         
     def _onPlay(self):

@@ -1,4 +1,5 @@
 v.0.5.4
+-Added Provider meta to recordings.
 -Refactored Playback:
     -Improved Playlist/Broadcast/VOD callbacks and handling.
     -New! EPG (Guide) behavior: Play media as VOD from any position regardless of playback type.

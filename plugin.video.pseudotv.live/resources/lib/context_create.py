@@ -61,7 +61,8 @@ class Create:
         
                 
 if __name__ == '__main__': 
-    param = sys.argv[1]
-    log('Create: __main__, param = %s'%(param))
-    if param == 'manage': Create(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot'))).open()
+    log('Create: __main__, param = %s'%(sys.argv))
+    try:    mode = sys.argv[1]
+    except: mode = ''
+    if mode == 'manage':  Create(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot'))).open()
     else:                 Create(sys.argv,listitem=sys.listitem,fitem=decodePlot(BUILTIN.getInfoLabel('Plot'))).add()

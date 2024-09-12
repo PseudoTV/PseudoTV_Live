@@ -276,10 +276,8 @@ class XMLTVS:
                   
         self.log('addChannel, mitem = %s'%(mitem))
         idx, channel = self.findChannel(mitem)
-        if idx is None: 
-            self.XMLTVDATA['channels'].append(mitem)
-        else: 
-            self.XMLTVDATA['channels'][idx] = mitem # replace existing channel meta
+        if idx is None: self.XMLTVDATA['channels'].append(mitem)
+        else:           self.XMLTVDATA['channels'][idx] = mitem # replace existing channel meta
         return True
 
 
