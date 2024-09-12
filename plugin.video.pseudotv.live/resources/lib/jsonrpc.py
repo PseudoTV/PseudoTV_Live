@@ -296,29 +296,29 @@ class JSONRPC:
         if save and not path.startswith(tuple(VFS_TYPES)): self.queDuration(item, runtime)
         
         
-    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration'), offset=SETTINGS.getSettingInt('Seek_Tolerance')):
-        self.log("getDuration, accurate = %s, path = %s, save = %s, offset = -%s" % (accurate, path, save, offset))
+    def getRuntime(self, item={}):
+        return (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration'))
+        
+        
+    def getDuration(self, path, item={}, accurate=bool(SETTINGS.getSettingInt('Duration_Type')), save=SETTINGS.getSettingBool('Store_Duration')):
+        self.log("getDuration, accurate = %s, path = %s, save = %s" % (accurate, path, save))
         runtime = (self.cache.get('getPlayerLength.%s'%(getMD5(path)), checksum=getMD5(path), json_data=False) or 0)
         if runtime == 0:
-            runtime = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+            runtime = (self.getRuntime(item) or 0)
             if (runtime == 0 or accurate):
                 duration = 0
                 if isStack(path):# handle "stacked" videos
                     for file in splitStacks(path): duration += self.parseDuration(file)
                 else: duration = self.parseDuration(path, item, save)
                 if duration > 0: runtime = duration
-            if not accurate:
-                self.log("getDuration, applying offset = -%s" % (offset))
-                runtime -= offset
         self.log("getDuration, returning path = %s, runtime = %s" % (path, runtime))
         return runtime
 
 
     def parseDuration(self, path, item={}, save=SETTINGS.getSettingBool('Store_Duration')):
         self.log("parseDuration, path = %s, save = %s" % (path, save))
-        runtime  = (item.get('resume',{}).get('total') or item.get('runtime') or item.get('duration') or (item.get('streamdetails',{}).get('video',[]) or [{}])[0].get('duration') or 0)
+        runtime  = (self.getRuntime(item) or 0)
         duration = self.videoParser.getVideoLength(path.replace("\\\\", "\\"), item, self)
-
         if not path.startswith(tuple(VFS_TYPES)):
             ## duration diff. safe guard, how different are the two values? if > 45% don't save to Kodi.
             rundiff = int(percentDiff(runtime, duration))
@@ -544,7 +544,11 @@ class JSONRPC:
                             if item.get('label','').lower() == sysInfo.get('name','').lower() and decodePlot(item.get('plot','')).get('citem',{}).get('id') == sysInfo.get('chid'):
                                 self.log('getCallback: _matchJSON, id = %s, found file = %s'%(sysInfo.get('chid'),item.get('file')))
                                 return item.get('file')
-        callback = _matchJSON()
+                                
+        if sysInfo.get('mode').lower() == 'live' and sysInfo.get('chpath'): callback = sysInfo.get('chpath')
+        else: callback = _matchJSON()
         self.log('getCallback: returning callback = %s'%(callback))
         return callback
-         
+        
+        
+        

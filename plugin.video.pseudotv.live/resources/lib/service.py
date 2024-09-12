@@ -113,13 +113,13 @@ class Player(xbmc.Player):
         
     def getPlayerSysInfo(self):
         sysInfo = loadJSON(decodeString(self.getPlayerItem().getProperty('sysInfo')))
-        sysInfo['Filename']        = BUILTIN.getInfoLabel('Filename','Player')
-        sysInfo['Folderpath']      = BUILTIN.getInfoLabel('Folderpath','Player')
-        sysInfo['Filenameandpath'] = BUILTIN.getInfoLabel('Filenameandpath','Player')
+        sysInfo['chfile']     = BUILTIN.getInfoLabel('Filename','Player')
+        sysInfo['chfolder']   = BUILTIN.getInfoLabel('Folderpath','Player')
+        sysInfo['chpath']     = BUILTIN.getInfoLabel('Filenameandpath','Player')
         if not sysInfo.get('fitem'): sysInfo.update({'fitem':decodePlot(BUILTIN.getInfoLabel('Plot','VideoPlayer'))})
         if not sysInfo.get('nitem'): sysInfo.update({'nitem':decodePlot(BUILTIN.getInfoLabel('NextPlot','VideoPlayer'))})
         sysInfo.update({'citem':combineDicts(sysInfo.get('citem',{}),self.getChannelItem(sysInfo.get('citem',{}).get('id'))),'runtime' :self.getPlayerTime()})
-        if not sysInfo.get('callback'): sysInfo['callback'] = (self.jsonRPC.getCallback(sysInfo) or sysInfo.get('Filenameandpath'))
+        if not sysInfo.get('callback'): sysInfo['callback'] = self.jsonRPC.getCallback(sysInfo)
         PROPERTIES.setEXTProperty('%s.lastPlayed.sysInfo'%(ADDON_ID),encodeString(dumpJSON(sysInfo)))
         self.log('getPlayerSysInfo, sysInfo = %s'%(sysInfo))
         return sysInfo
@@ -182,14 +182,12 @@ class Player(xbmc.Player):
         self.toggleReplay(False)
         self.toggleBackground(False)
         oldInfo = self.sysInfo
-        sysInfo = self.getPlayerSysInfo() #get current sysInfo
+        self.sysInfo = self.getPlayerSysInfo() #get current sysInfo
         
         #items that only run once per channel change. ie. set adv. rules and variables. 
         if self.sysInfo.get('chid') != oldInfo.get('chid',random.random()): #playing new channel
-            self.sysInfo = sysInfo
-            self.log('_onPlay, updated sysInfo')
-            self.runActions(RULES_ACTION_PLAYER_START, sysInfo.get('citem',{}), inherited=self)
-            self.setPlayruntime(self.saveDuration,sysInfo.get('fitem',{}),sysInfo.get('runtime'))
+            self.runActions(RULES_ACTION_PLAYER_START, self.sysInfo.get('citem',{}), inherited=self)
+            self.setPlayruntime(self.saveDuration,self.sysInfo.get('fitem',{}),self.sysInfo.get('runtime'))
             self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
             self.setSubtitles(self.lastSubState) #todo allow rules to set sub preference per channel.
             self.toggleReplay(sysInfo=self.sysInfo)
@@ -203,12 +201,11 @@ class Player(xbmc.Player):
         oldInfo = self.sysInfo
         
         if oldInfo.get('isPlaylist') and oldInfo.get('nitem'):
-            sysInfo = self.getPlayerSysInfo()
-            if oldInfo.get('start',random.random()) != sysInfo.get('start',random.random()):
-                self.sysInfo = sysInfo
+            self.sysInfo = self.getPlayerSysInfo()
+            if oldInfo.get('start',random.random()) != self.sysInfo.get('start',random.random()):
                 self.log('_onChange, updated sysInfo')
-                self.runActions(RULES_ACTION_PLAYER_CHANGE, sysInfo.get('citem',{}), inherited=self)
-                self.setPlayruntime(self.saveDuration,sysInfo.get('fitem',{}),sysInfo.get('runtime'))
+                self.runActions(RULES_ACTION_PLAYER_CHANGE, self.sysInfo.get('citem',{}), inherited=self)
+                self.setPlayruntime(self.saveDuration,self.sysInfo.get('fitem',{}),sysInfo.get('runtime'))
                 self.setPlaycount(self.rollbackPlaycount,oldInfo.get('fitem',{}))
         else:
             self.log('_onChange, callback = %s'%(oldInfo['callback']))

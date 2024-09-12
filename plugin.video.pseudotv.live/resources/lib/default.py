@@ -24,24 +24,14 @@ from plugin    import Plugin
 def run(sysARG, fitem: dict={}, nitem: dict={}):
     params = dict(urllib.parse.parse_qsl(sysARG[2][1:].replace('.pvr','')))
     mode   = (params.get("mode")  or 'guide')
-    log("Default: run, In params = %s"%(params))
     params['fitem']      = fitem
     params['nitem']      = nitem
-    params["chid"]       = (params.get("chid")                      or fitem.get('citem',{}).get('id'))
-    params['vid']        = (decodeString(params.get("vid",'')       or None))
-    params['citem']      = combineDicts({'id':params["chid"]},fitem.get('citem',{}))
-    params['name']       = (unquoteString(params.get("name",''))    or BUILTIN.getInfoLabel('ChannelName'))
-    params['title']      = (unquoteString(params.get("title",''))   or BUILTIN.getInfoLabel('label'))
-    params['radio']      = (params.get("radio") or 'False').lower() == "true"
-    params['playcount']  = 0
-    params['now']        = int(params.get('now')                    or getUTCstamp())
-    params['duration']   = int(params.get('duration')               or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
-    params['progress']   = (int(BUILTIN.getInfoLabel('Progress')    or '0'),int(BUILTIN.getInfoLabel('PercentPlayed') or '0'))
-    params['chnumlabel'] = BUILTIN.getInfoLabel('ChannelNumberLabel')
-    params['chpath']     = BUILTIN.getInfoLabel('FileNameAndPath')
-    params['isLinear']   = True if mode == 'live' else False
+    params['vid']        = decodeString(params.get("vid",''))
+    params['title']      = (params.get('title') or BUILTIN.getInfoLabel('label'))
+    params['name']       = (unquoteString(params.get("name",'')) or BUILTIN.getInfoLabel('ChannelName'))
+    params["chid"]       = params.get("chid")
     params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
-    log("Default: run, Out params = %s"%(params))
+    log("Default: run, params = %s"%(params))
 
     if mode == 'guide':
         hasAddon(PVR_CLIENT_ID,install=True,enable=True)

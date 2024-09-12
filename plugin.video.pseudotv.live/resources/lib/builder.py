@@ -333,7 +333,7 @@ class Builder:
                             self.log("buildList, id: %s, IDX = %s skipping 3D file! file = %s"%(citem['id'],idx,file),xbmc.LOGINFO)
                             continue
 
-                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration, self.minDuration)
+                        dur = self.jsonRPC.getDuration(file, item, self.accurateDuration, self.saveDuration)
                         if dur > self.minDuration: #include media that's duration is above the players seek tolerance & users adv. rule.
                             item['duration']     = dur
                             item['media']        = media
@@ -450,7 +450,7 @@ class Builder:
         self.log('addChannelStation, id: %s'%(citem['id']))
         if citem['catchup']:
             citem['url'] = LIVE_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
-            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}',now='{lutc}',start='{utc}',duration='{duration}',stop='{utcend}')
+            citem['catchup-source'] = BROADCAST_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),vid='{catchup-id}')
         elif citem['radio']:
             citem['url'] = RADIO_URL.format(addon=ADDON_ID,name=quoteString(citem['name']),chid=quoteString(citem['id']),radio=str(citem['radio']),vid='{catchup-id}')
         else:

@@ -90,8 +90,9 @@ class Manager(xbmcgui.WindowXMLDialog):
             self.newChannels  = self.channelList.copy()
             
             self.startChannel = kwargs.get('channel',-1)
-            if self.startChannel == -1: self.startChannel = self.getFirstAvailChannel()
-            self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+            if self.startChannel == -1:            self.startChannel = self.getFirstAvailChannel()
+            if self.startChannel <= CHANNEL_LIMIT: self.focusIndex   = (self.startChannel - 1) #Convert from Channel number to array index
+            else:                                  self.focusIndex   = self.findChannelIDXbyNum(self.startChannel)
             self.log('Manager, startChannel = %s, focusIndex = %s'%(self.startChannel, self.focusIndex))
            
         try:
@@ -896,3 +897,10 @@ class Manager(xbmcgui.WindowXMLDialog):
             if focusItems['label'] == LANGUAGE(32136):self.moveChannel(focusItems.get('citem'),focusItems.get('position'))#Move 
         elif controlId == 9004: #dynamic button
             if focusItems['label'] == LANGUAGE(32061): self.clearChannel(focusItems.get('citem'))#Delete
+            
+            
+    def findChannelIDXbyNum(self, chnum, channels=[]):
+        if not channels: channels = self.channelList
+        for idx, channel in enumerate(channels):
+            if channel.get('number') == chnum: return idx
+        return 1

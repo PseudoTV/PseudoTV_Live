@@ -38,39 +38,37 @@ class Plugin:
         self.sysInfo    = sysInfo
         self.cache      = Cache(mem_cache=True)
         self.jsonRPC    = JSONRPC(self.cache)
+        
         self.pageLimit  = int((REAL_SETTINGS.getSetting('Page_Limit') or "25"))
         self.seekTOL    = SETTINGS.getSettingInt('Seek_Tolerance')
         self.seekTHD    = SETTINGS.getSettingInt('Seek_Threshold')
         
-        self.sysInfo['radio']      = (sysInfo.get("radio")      or 'False').lower() == "true"
-        self.sysInfo['chnumlabel'] = (sysInfo.get('chnumlabel') or BUILTIN.getInfoLabel('ChannelNumberLabel'))
-        self.sysInfo['name']       = (sysInfo.get('name')       or BUILTIN.getInfoLabel('ChannelName'))
-        self.sysInfo['title']      = (sysInfo.get('title')      or BUILTIN.getInfoLabel('label'))
-        self.sysInfo['duration']   = (sysInfo.get('duration')   or int(timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0'))
-        self.sysInfo['vid']        =  sysInfo.get('vid')
-        self.sysInfo['chpath']     = (sysInfo.get('chpath')     or BUILTIN.getInfoLabel('FileNameAndPath'))
-        self.sysInfo['fitem']      = (sysInfo.get('fitem')      or decodePlot(BUILTIN.getInfoLabel('Plot')))
-        self.sysInfo['nitem']      = (sysInfo.get('nitem')      or decodePlot(BUILTIN.getInfoLabel('NextPlot')))
-        self.sysInfo['citem']      = (sysInfo.get('citem')      or combineDicts({'id':self.sysInfo.get("chid")},self.sysInfo.get('fitem',{}).get('citem',{})))
-        self.sysInfo["chid"]       = (sysInfo.get('chid')       or self.sysInfo.get('citem',{}).get('id'))
-        self.sysInfo['playcount']  = (sysInfo.get('playcount')  or 0)
-        self.sysInfo['isLinear']   = (sysInfo.get('isLinear')   or (True if sysInfo.get('mode') == 'live' else False))
-        self.sysInfo['isPlaylist'] = (sysInfo.get('isPlaylist') or bool(SETTINGS.getSettingInt('Playback_Method')))
-        self.sysInfo['progress']   = (sysInfo.get('progress')   or (int((BUILTIN.getInfoLabel('Progress') or '0')),int((BUILTIN.getInfoLabel('PercentPlayed') or '0'))))
-        self.sysInfo['now']        = int(sysInfo.get('now')     or int(getUTCstamp()))
+        self.sysInfo['radio'] = sysInfo.get('mode','').lower() == "radio"
+        self.sysInfo['now']   = int(sysInfo.get('now') or int(getUTCstamp()))
+        self.sysInfo['start'] = int(sysInfo.get('start','-1'))
+        self.sysInfo['stop']  = int(sysInfo.get('stop','-1'))
+        self.sysInfo['citem'] = (sysInfo.get('citem') or combineDicts({'id':sysInfo.get("chid")},sysInfo.get('fitem',{}).get('citem',{})))
         
-        if not self.sysInfo.get('start') and self.sysInfo.get('fitem'):
-            self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
-            self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
+        if sysInfo.get('fitem'):
+            if sysInfo.get("nitem"): self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
+            else:                    self.sysInfo.update({'citem':combineDicts(self.sysInfo["citem"],self.sysInfo["fitem"].pop('citem'))})
+            
+            if self.sysInfo.get('start') == -1:
+                self.sysInfo['start'] = self.sysInfo['fitem'].get('start')
+                self.sysInfo['stop']  = self.sysInfo['fitem'].get('stop')
+            
+
+            self.sysInfo['duration']  = int(sysInfo.get('duration') or self.jsonRPC.getRuntime(self.sysInfo['fitem']) or timeString2Seconds(BUILTIN.getInfoLabel('Duration(hh:mm:ss)')) or '0')
+        else:
+            self.sysInfo['duration']  = int(sysInfo.get('duration','-1'))
+            
         try:
-            self.sysInfo['seek']               = float(self.sysInfo.get('seek') or (int(self.sysInfo['now']) - int(self.sysInfo['start'])))
-            self.sysInfo["progresspercentage"] = (self.sysInfo["seek"]/self.sysInfo["duration"]) * 100
+            self.sysInfo['seek']               = int(sysInfo.get('seek') or (abs(self.sysInfo['start'] - self.sysInfo['now']) if self.sysInfo['start'] > 0 else -1))
+            self.sysInfo["progresspercentage"] = -1 if self.sysInfo['seek'] == -1 else (self.sysInfo["seek"]/self.sysInfo["duration"]) * 100
         except:
-            self.sysInfo['seek']               = -1
+            self.sysInfo['seek']               = int(sysInfo.get('seek','-1'))
             self.sysInfo["progresspercentage"] = -1
-        
-        if   self.sysInfo.get("nitem") and self.sysInfo.get("fitem"): self.sysInfo.update({'citem':combineDicts(self.sysInfo["nitem"].pop('citem'),self.sysInfo["fitem"].pop('citem'))})
-        elif self.sysInfo.get("fitem"):                               self.sysInfo.update({'citem':self.sysInfo["fitem"].pop('citem')})
+            
         self.log('__init__, sysARG = %s\nsysInfo = %s'%(sysARG,self.sysInfo))
 
                 
@@ -206,17 +204,17 @@ class Plugin:
 
 
     def playTV(self, name: str, chid: str):
+        self.log('playTV, id = %s'%(chid))
         with self.preparingPlayback():
-            self.log('playTV, id = %s'%(chid))
             if self.sysInfo.get('fitem'):
-                liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-                if self.sysInfo.get('seek',0) > self.seekTOL:
-                    self.log('playTV, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
-                    liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
-                    infoTag = ListItemInfoTag(liz,'video')
-                    infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-            else:
-                liz = self.getPVRItems(name, chid)[0]
+                liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
+                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')): #-> live
+                    if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
+                        self.log('playTV, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
+                        liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
+                        infoTag = ListItemInfoTag(liz,'video')
+                        infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+            else: liz = self.getPVRItems(name, chid)[0]
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self.resolveURL(True, liz)
         
@@ -225,56 +223,57 @@ class Plugin:
         self.log('playLive, id = %s, name = %s'%(chid, name))
         with self.preparingPlayback():
             if self.sysInfo.get('fitem'):#-> live playback from UI incl. listitem
-                if self.sysInfo.get('vid','0') !=  self.sysInfo.get('fitem',{}).get('file',self.sysInfo.get('vid','0')):
-                    self.log('playLive, VOD fitem != current VID')
-                    # if int(self.sysInfo['fitem'].get('start')) != int(self.sysInfo.get('start',self.sysInfo.get('now'))):
-                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
-                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(self.sysInfo['fitem'].get('citem',{}).get('catchup-source',self.sysInfo['fitem'].get('catchup-id')))])
-                    return self.resolveURL(False, xbmcgui.ListItem())
-                else: #-> live event.
-                    liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
-                    if self.sysInfo.get('seek',0) > self.seekTOL:
+                liz = LISTITEMS.buildItemListItem(self.sysInfo['fitem'])
+                if (self.sysInfo.get('fitem').get('file','-1') == self.sysInfo.get('vid','0')): #-> live
+                    if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
                         self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                         liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                         infoTag = ListItemInfoTag(liz,'video')
                         infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
+                    liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                    self.resolveURL(True, liz)
+                else: #-> VOD called by non-current EPG cell.
+                    url = self.sysInfo['fitem'].get('catchup-id')
+                    self.log('playLive, id = %s, VOD = %s'%(chid, url))
+                    DIALOG.notificationDialog(LANGUAGE(32185)%(self.sysInfo['fitem'].get('label',self.sysInfo.get('title',''))))
+                    timerit(BUILTIN.executebuiltin)(0.1,['PlayMedia(%s)'%(url)])
+                    self.resolveURL(False, xbmcgui.ListItem())
             else:#-> onChange callback from "live" or widget or channel switch (change via input not ui)
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")
-                if self.sysInfo.get('seek',0) > self.seekTOL and (int(self.sysInfo.get('progresspercentage',0)) > 0 and int(self.sysInfo.get('progresspercentage',0)) < 100):
+                if (self.sysInfo.get('seek',0) > self.seekTOL) and (self.sysInfo.get('progresspercentage') > 0 and self.sysInfo.get('progresspercentage') < 100 ):
                     self.log('playLive, id = %s, seek = %s'%(chid, self.sysInfo['seek']))
                     liz.setProperty('startoffset', str(self.sysInfo['seek'])) #secs
                     infoTag = ListItemInfoTag(liz,'video')
                     infoTag.set_resume_point({'ResumeTime':self.sysInfo['seek'],'TotalTime':(self.sysInfo['duration'] * 60)})
-                else:
-                    self.sysInfo["seek"] = 0
-                    self.sysInfo["progresspercentage"] = 0
-            liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
-            self.resolveURL(True, liz)
+                liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
+                self.resolveURL(True, liz)
 
 
     def playBroadcast(self, name: str, chid: str, vid: str): #-> catchup-source
+        self.log('playBroadcast, id = %s'%(chid))
         with self.preparingPlayback():
-            self.log('playBroadcast, id = %s'%(chid))
             if self.sysInfo.get('fitem'): #-> catchup-id called via ui "play programme"
                 liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 liz = xbmcgui.ListItem(name,path=vid)
                 liz.setProperty("IsPlayable","true")
-            self.sysInfo["seek"] = 0
+            self.sysInfo["seek"] = -1
+            self.sysInfo["progresspercentage"] = -1
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self.resolveURL(True, liz)
             
             
     def playVOD(self, title: str, vid: str): #-> catchup-id
+        self.log('playVOD, title = %s, vid = %s'%(title,vid))
         with self.preparingPlayback():
-            self.log('playVOD, title = %s, vid = %s'%(title,vid))
             if self.sysInfo.get('fitem'): #-> live playback from UI incl. listitem
                 liz = LISTITEMS.buildItemListItem(self.sysInfo.get('fitem'))
             else:
                 liz = xbmcgui.ListItem(title,path=vid)
                 liz.setProperty("IsPlayable","true")
-            self.sysInfo["seek"] = 0
+            self.sysInfo["seek"] = -1
+            self.sysInfo["progresspercentage"] = -1
             liz.setProperty('sysInfo',encodeString(dumpJSON(self.sysInfo)))
             self.resolveURL(True, liz)
             

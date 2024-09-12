@@ -56,9 +56,7 @@ class Create:
     def open(self):
         if not PROPERTIES.isRunning('MANAGER_RUNNING'):
             with PROPERTIES.setRunning('MANAGER_RUNNING'), BUILTIN.busy_dialog(), PROPERTIES.suspendActivity():
-                chnum   = self.fitem.get('citem',{}).get('number',1)
-                if chnum > CHANNEL_LIMIT: chnum = 1
-                manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=chnum)
+                manager = Manager("%s.manager.xml"%(ADDON_ID), ADDON_PATH, "default", channel=self.fitem.get('citem',{}).get('number',1))
             del manager
         
                 

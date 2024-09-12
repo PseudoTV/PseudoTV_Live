@@ -1,7 +1,8 @@
 v.0.5.4
 -Refactored Playback:
     -Improved Playlist/Broadcast/VOD callbacks and handling.
-    -New! EPG (Guide) behavior: Play media from any position regardless of playback type.
+    -New! EPG (Guide) behavior: Play media as VOD from any position regardless of playback type.
+    -"Play Programme" context will launch continued playback if enabled in Kodi's LiveTV Settings.
     -New! On VOD finish channel will resume in realtime.
 -Added "Build Filler Subfolders" setting to "Fillers".
 -Added "Bonjour on startup" setting to "Multi-Room".

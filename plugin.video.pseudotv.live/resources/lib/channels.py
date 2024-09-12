@@ -51,7 +51,7 @@ class Channels:
         
         
     def getChannels(self) -> list:
-        return self.channelDATA.get('channels',[])
+        return sorted(self.channelDATA['channels'], key=itemgetter('number'))
         
                 
     def popChannels(self, type: str, channels: list=[]) -> list:
