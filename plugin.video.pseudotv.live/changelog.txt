@@ -1,3 +1,11 @@
+v.0.5.5
+-Added "Smart" TV-guide loading as the default when launching PseudoTV Live via Kodi UI.
+ - If multiple-instances guide will open to "PseudoTV Live [All channels]"
+   else the guide will open to your local instance name "PseudoTV Live".
+   Fallback to "[All channels]" if not match is found. 
+-Improved "Restart" Button.
+-Improved PVR Backend refresh.
+
 v.0.5.4
 -Added Provider meta to recordings.
 -Refactored Playback:

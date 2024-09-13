@@ -144,6 +144,28 @@ class Settings:
         #todo build json of third-party addon settings
         # self.pluginMeta.setdefault(addonID,{})['settings'] = [{'key':'value'}]
  
+                
+    def openGuide(self, instance=ADDON_NAME):
+        def __match(label):
+            items = jsonRPC.getDirectory({"directory":baseURL}).get('files',[])
+            for item in items:
+                if label.lower() == item.get('label','').lower(): return item
+            for item in items:
+                if item.get('label','').lower().startswith(instance.lower()): return item
+
+        with Builtin().busy_dialog():
+            from jsonrpc import JSONRPC
+            jsonRPC = JSONRPC()
+            baseURL = 'pvr://channels/tv/'
+            for name in ['%s [All channels]'%(instance), instance, 'All channels']:
+                item = __match(name)
+                if item: break
+            del jsonRPC
+            if not item: item = {'file':baseURL}
+        self.log('openGuide, opening %s'%(item.get('file',baseURL)))
+        Builtin().executebuiltin("Dialog.Close(all)") 
+        Builtin().executebuiltin("ReplaceWindow(TVGuide,%s)"%(item.get('file',baseURL)))
+                
         
     def openSettings(self):
         self.log('openSettings')

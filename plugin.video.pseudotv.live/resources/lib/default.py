@@ -33,10 +33,7 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
     params['isPlaylist'] = bool(SETTINGS.getSettingInt('Playback_Method'))
     log("Default: run, params = %s"%(params))
 
-    if mode == 'guide':
-        hasAddon(PVR_CLIENT_ID,install=True,enable=True)
-        BUILTIN.executebuiltin("Dialog.Close(all)") 
-        BUILTIN.executebuiltin("ReplaceWindow(TVGuide,pvr://channels/tv/%s)"%(quoteString(ADDON_NAME)))
+    if   mode == 'guide'    and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openGuide()
     elif mode == 'settings' and hasAddon(PVR_CLIENT_ID,install=True,enable=True): SETTINGS.openSettings()
     elif not params["chid"]:       DIALOG.notificationDialog(LANGUAGE(32000))
     elif mode in ['vod','dvr']:    threadit(Plugin(sysARG, sysInfo=params).playVOD)(params["title"],params["vid"])
@@ -46,4 +43,5 @@ def run(sysARG, fitem: dict={}, nitem: dict={}):
         else:                      threadit(Plugin(sysARG, sysInfo=params).playTV)(params["name"],params["chid"])
     elif mode == 'broadcast':      threadit(Plugin(sysARG, sysInfo=params).playBroadcast)(params["name"],params["chid"],params["vid"])
     elif mode == 'radio':          threadit(Plugin(sysARG, sysInfo=params).playRadio)(params["name"],params["chid"],params["vid"])
+    
 if __name__ == '__main__': run(sys.argv,fitem=decodePlot(BUILTIN.getInfoLabel('Plot')),nitem=decodePlot(BUILTIN.getInfoLabel('NextPlot')))

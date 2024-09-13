@@ -64,21 +64,10 @@ class Replay(xbmcgui.WindowXMLDialog):
         try:
             self._closing  = False
             self.myService = self.myPlayer.myService
-            self.progressLoop(self.getControl(40000))
             self.setFocusId(40001)
         except Exception as e:
             log("Replay: onInit, failed! %s\ncitem = %s"%(e,self.sysInfo), xbmc.LOGERROR)
             self.onClose()
-
-
-    def progressLoop(self, control, wait=OVERLAY_DELAY):
-        tot = wait
-        while not self.myService.monitor.abortRequested():
-            log("Replay: progressLoop, wait = %s"%(wait))
-            if (self.myService._interrupt(1) or wait <= 0 or self._closing): break
-            control.setPercent((abs(wait-tot)*100)//tot)
-            wait -= 1
-        self.onClose()
 
 
     def onAction(self, act):

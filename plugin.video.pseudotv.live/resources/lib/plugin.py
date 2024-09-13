@@ -72,7 +72,7 @@ class Plugin:
     def log(self, msg, level=xbmc.LOGDEBUG):
         return log('%s: %s'%(self.__class__.__name__,msg),level)
         
-        
+
     def quePlaylist(self, listitems, pltype=xbmc.PLAYLIST_VIDEO):
         with BUILTIN.busy_dialog():
             channelPlaylist = xbmc.PlayList(pltype)

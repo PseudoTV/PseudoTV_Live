@@ -307,14 +307,7 @@ def togglePVR(state=True, reverse=False, wait=15):
         with PROPERTIES.setRunning('togglePVR'):
             log('globals: togglePVR, state = %s, reverse = %s, wait = %s'%(state,reverse,wait))
             #todo check for open pvr windows, don't toggle when open
-            conditions = (BUILTIN.getInfoBool('IsPlayingTv','Pvr') | 
-                          BUILTIN.getInfoBool('IsPlayingRadio','Pvr') | 
-                          BUILTIN.getInfoBool('IsPlayingRecording','Pvr') | 
-                          BUILTIN.getInfoBool('IsActive(FullscreenLiveTV)','Window') | 
-                          BUILTIN.getInfoBool('IsActive(fullscreenradio)','Window'))# | 
-                          #BUILTIN.getInfoBool('IsActive(tvchannels)','Window') | 
-                          #BUILTIN.getInfoBool('IsActive(tvguide)','Window'))
-            if not conditions:
+            if not BUILTIN.getInfoBool('Playing','Player'):
                 isEnabled = BUILTIN.getInfoBool('AddonIsEnabled(%s)'%(PVR_CLIENT_ID),'System')
                 if (state and isEnabled) or (not state and not isEnabled): return
                 xbmc.executeJSONRPC('{"jsonrpc":"2.0","method":"Addons.SetAddonEnabled","params":{"addonid":"%s","enabled":%s}, "id": 1}'%(PVR_CLIENT_ID,str(state).lower()))
